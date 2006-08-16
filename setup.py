@@ -16,7 +16,7 @@ distrib = setup(
 	description="Version %s of PyMC" % version,
 	license="Academic Free License",
 	name="PyMC",
-	url="pymc.sourceforge.net",
+	url="trichech.us",
 	packages=["PyMC"],
 	ext_modules = [flib]	
 )
