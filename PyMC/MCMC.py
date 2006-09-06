@@ -18,7 +18,7 @@ from numpy import mean, cov, std
 from numpy import ndim, ones,eye
 from numpy import pi
 from numpy import ravel, resize
-from numpy import searchsorted, shape, sqrt, sort, sum, swapaxes, where
+from numpy import searchsorted, shape, sqrt, sort, swapaxes, where
 from numpy import tan, transpose, vectorize, zeros
 permutation = random.permutation
 
@@ -105,10 +105,10 @@ def invlogit(x):
 
 """ Random number generation """
 
-def randint(upper, lower):
+def randint(upper, lower, size=None):
     """Returns a random integer. Accepts float arguments."""
     
-    return randint(int(upper), int(lower))
+    return randint(int(upper), int(lower), size=size)
 
 def runiform(lower, upper, n=None):
     """Returns uniform random numbers"""
@@ -188,9 +188,9 @@ def rhyperg(draws, red, total, n=None):
     urn = [1]*red + [0]*(total-red)
     
     if n:
-        return [sum([urn[i] for i in permutation(total)[:draws]]) for j in range(n)]
+        return [sum(urn[i] for i in permutation(total)[:draws]) for j in range(n)]
     else:
-        return sum([urn[i] for i in permutation(total)[:draws]])
+        return sum(urn[i] for i in permutation(total)[:draws])
 
 def rmvhyperg(draws, colors, n=None):
     """ Returns n multivariate hypergeometric draws of size 'draws'"""
@@ -261,18 +261,18 @@ def expand_triangular(X,k):
     return Y
 
 # Centered normal random deviate
-normal_deviate = lambda var : rnormal(0,var)
+normal_deviate = lambda var, shape : rnormal(0, var, size=shape)
 
 # Centered uniform random deviate
-uniform_deviate = lambda half_width: uniform(-half_width, half_width)
+uniform_deviate = lambda half_width, shape: uniform(-half_width, half_width, size=shape)
 
 # Centered discrete uniform random deviate
-discrete_uniform_deviate = lambda half_width: randint(-half_width, half_width)
+discrete_uniform_deviate = lambda half_width, shape: randint(-half_width, half_width, size=shape)
 
-def double_exponential_deviate(beta):
+def double_exponential_deviate(beta, size):
     """Centered double-exponential random deviate"""
     
-    u = random_number()
+    u = random_number(size)
     
     if u<0.5:
         return beta*log(2*u)
@@ -699,15 +699,15 @@ class Parameter(Node):
         elif dist == 'multivariate_normal':
             if self.get_value().ndim > 1:
                 raise AttributeError, 'The multivariate_normal case is only intended for 1D arrays.'
-            self._dist = lambda S : rmvnormal(zeros(self.dim), S)
+            self._dist = lambda S, size : rmvnormal(zeros(self.dim), S)
         else:
             print 'Proposal distribution for', name, 'not recognized'
             sys.exit()
         
         # Vectorize proposal distribution if parameter is vector-valued
         # But not multivariate_normal, since it is already vectorized
-        if self.dim and dist != 'multivariate_normal':
-            self._dist = vectorize(self._dist)
+        #if self.dim and dist != 'multivariate_normal':
+            #self._dist = vectorize(self._dist)
         
         # Scale parameter for proposal distribution
         if scale is None:
@@ -746,13 +746,13 @@ class Parameter(Node):
                 
                 value = self.get_value().copy()
                 
-                value += self._dist(self._hyp*self._asf)
+                value += self._dist(self._hyp*self._asf, shape(value))
                 
                 return value
             
             except AttributeError:
                 
-                return self.get_value() + self._dist(self._hyp*self._asf)
+                return self.get_value() + self._dist(self._hyp*self._asf, shape(self.get_value()))
         
         except ValueError:
             print 'Hyperparameter approaching zero:', self._hyp
@@ -967,23 +967,22 @@ class Sampler:
     def profile(self, name='pymc', iterations=2000, burn=1000):
         """Profile sampler with hotshot"""
         
-        import hotshot
-        stats = hotshot.stats
+        from hotshot import Profile, stats
         
         # Create profile object
-        prof = hotshot.Profile("%s.prof" % name)
+        prof = Profile("%s.prof" % name)
         
         # Run profile
         results = prof.runcall(self.sample, iterations, burn=burn, plot=False, verbose=False)
         prof.close()
         
         # Load stats
-        stats = hotshot.stats.load("%s.prof" % name)
-        stats.strip_dirs()
-        stats.sort_stats('time','calls')
+        s = stats.load("%s.prof" % name)
+        s.strip_dirs()
+        s.sort_stats('time','calls')
         
         # Print
-        stats.print_stats()
+        s.print_stats()
         
         # Clear traces of each parameter and node after profiling
         for node in self.parameters.values()+self.nodes.values():
@@ -999,7 +998,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(lower) > 1:
             
-            return sum([self.uniform_like(y, l, u, name, prior) for y, l, u in zip(x, lower, upper)])
+            return sum(self.uniform_like(y, l, u, name, prior) for y, l, u in zip(x, lower, upper))
         
         else:
             
@@ -1049,7 +1048,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(lower) > 1:
             
-            return sum([self.uniform_mixture_like(y, l, m, u, name, prior) for y, l, m, u in zip(x, lower, median, upper)])
+            return sum(self.uniform_mixture_like(y, l, m, u, name, prior) for y, l, m, u in zip(x, lower, median, upper))
         
         else:
             
@@ -1096,7 +1095,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(alpha) > 1:
             
-            return sum([self.beta_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta)])
+            return sum(self.beta_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta))
         
         else:
             
@@ -1128,7 +1127,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fbeta(y, a, b) for y, a, b in zip(x, alpha, beta)])
+            return sum(fbeta(y, a, b) for y, a, b in zip(x, alpha, beta))
     
     def beta_prior(self, parameter, alpha, beta):
         """Beta prior distribution"""
@@ -1141,7 +1140,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(theta) > 1:
             
-            return sum([self.dirichlet_like(y, t, name, prior) for y, t in zip(x, theta)])
+            return sum(self.dirichlet_like(y, t, name, prior) for y, t in zip(x, theta))
         
         else:
             
@@ -1187,7 +1186,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(theta) > 1:
             
-            return sum([self.dirichlet_multinomial_like(y, t, name, prior) for y, t in zip(x, theta)])
+            return sum(self.dirichlet_multinomial_like(y, t, name, prior) for y, t in zip(x, theta))
         
         else:
             
@@ -1234,7 +1233,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(r) > 1:
             
-            return sum([self.negative_binomial_like(y, _r, _p, name, prior) for y, _r, _p in zip(x, r, p)])
+            return sum(self.negative_binomial_like(y, _r, _p, name, prior) for y, _r, _p in zip(x, r, p))
         
         else:
             
@@ -1266,7 +1265,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fnegbin(_x, _r, _p) for _x, _r, _p in zip(x, r, p)])
+            return sum(fnegbin(_x, _r, _p) for _x, _r, _p in zip(x, r, p))
     
     def negative_binomial_prior(self, parameter, r, p):
         """Negative binomial prior distribution"""
@@ -1279,7 +1278,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(p) > 1:
             
-            return sum([self.geometric_like(y, q, name, prior) for y, q in zip(x, p)])
+            return sum(self.geometric_like(y, q, name, prior) for y, q in zip(x, p))
         
         else:
             
@@ -1309,7 +1308,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fnegbin(y, 1, q) for y, q in zip(x, p)])
+            return sum(fnegbin(y, 1, q) for y, q in zip(x, p))
     
     def geometric_prior(self, parameter, p):
         """Geometric prior distribution"""
@@ -1329,7 +1328,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(n) > 1:
             
-            return sum([self.hypergeometric_like(y, _n, _m, _N, name, prior) for y, _n, _m, _N in zip(x, n, m, N)])
+            return sum(self.hypergeometric_like(y, _n, _m, _N, name, prior) for y, _n, _m, _N in zip(x, n, m, N))
         
         else:
             
@@ -1362,7 +1361,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fhyperg(_x, _n, _m, _N) for _x, _n, _m, _N in zip(x, n, m, N)])
+            return sum(fhyperg(_x, _n, _m, _N) for _x, _n, _m, _N in zip(x, n, m, N))
     
     def hypergeometric_prior(self, parameter, n, m, N):
         """Hypergeometric prior distribution"""
@@ -1375,7 +1374,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(m) > 1:
             
-            return sum([self.multivariate_hypergeometric_like(y, _m, name, prior) for y, _m in zip(x, m)])
+            return sum(self.multivariate_hypergeometric_like(y, _m, name, prior) for y, _m in zip(x, m))
         
         else:
             
@@ -1419,7 +1418,7 @@ class Sampler:
         
         if ndim(n) > 1:
             
-            return sum([self.binomial_like(y, _n, _p, name, prior) for y, _n, _p in zip(x, n, p)])
+            return sum(self.binomial_like(y, _n, _p, name, prior) for y, _n, _p in zip(x, n, p))
         
         else:
             
@@ -1451,7 +1450,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fbinomial(xx, nn, pp) for xx, nn, pp in zip(x, n, p)])
+            return sum(fbinomial(xx, nn, pp) for xx, nn, pp in zip(x, n, p))
     
     def binomial_prior(self, parameter, n, p):
         """Binomial prior distribution"""
@@ -1463,7 +1462,7 @@ class Sampler:
         
         if ndim(p) > 1:
             
-            return sum([self.bernoulli_like(y, _p, name, prior) for y, _p in zip(x, p)])
+            return sum(self.bernoulli_like(y, _p, name, prior) for y, _p in zip(x, p))
         
         else:
             
@@ -1493,7 +1492,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fbernoulli(y, _p) for y, _p in zip(x, p)])
+            return sum(fbernoulli(y, _p) for y, _p in zip(x, p))
     
     def bernoulli_prior(self, parameter, p):
         """Bernoulli prior distribution"""
@@ -1505,7 +1504,7 @@ class Sampler:
         
         if ndim(n) > 1:
             
-            return sum([self.multinomial_like(y, _n, _p, name, prior) for y, _n, _p in zip(x, n, p)])
+            return sum(self.multinomial_like(y, _n, _p, name, prior) for y, _n, _p in zip(x, n, p))
         
         else:
             
@@ -1542,10 +1541,10 @@ class Sampler:
     
     def poisson_like(self, x, mu, name='poisson', prior=False):
         """Poisson log-likelihood"""
-        
+
         if ndim(mu) > 1:
             
-            return sum([self.poisson_like(y, m) for y, m in zip(x, mu)])
+            return sum(self.poisson_like(y, m) for y, m in zip(x, mu))
         
         else:
             
@@ -1575,7 +1574,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fpoisson(y, m) for y, m in zip(x, mu)])
+            return sum(fpoisson(y, m) for y, m in zip(x, mu))
     
     def poisson_prior(self, parameter, mu):
         """Poisson prior distribution"""
@@ -1590,7 +1589,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(alpha) > 1:
             
-            return sum([self.gamma_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta)])
+            return sum(self.gamma_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta))
         
         # Ensure valid values of parameters
         self.constrain(x, lower=0)
@@ -1624,7 +1623,7 @@ class Sampler:
             
             self._gof_loss.append(gof_points)
         
-        return sum([fgamma(y, a, b) for y, a, b in zip(x, alpha, beta)])
+        return sum(fgamma(y, a, b) for y, a, b in zip(x, alpha, beta))
     
     def gamma_prior(self, parameter, alpha, beta):
         """Gamma prior distribution"""
@@ -1636,7 +1635,7 @@ class Sampler:
         
         if ndim(df) > 1:
             
-            return sum([self.chi2_like(y, d, name, prior) for y, d in zip(x, df)])
+            return sum(self.chi2_like(y, d, name, prior) for y, d in zip(x, df))
         
         else:
             
@@ -1666,7 +1665,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fgamma(y, 0.5*d, 2) for y, d in zip(x, df)])
+            return sum(fgamma(y, 0.5*d, 2) for y, d in zip(x, df))
     
     def chi2_prior(self, parameter, df):
         """Chi-squared prior distribution"""
@@ -1681,7 +1680,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(alpha) > 1:
             
-            return sum([self.inverse_gamma_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta)])
+            return sum(self.inverse_gamma_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta))
         else:
             
             # Ensure valid values of parameters
@@ -1714,7 +1713,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([figamma(xx, a, b) for xx, a, b in zip(x, alpha, beta)])
+            return sum(figamma(xx, a, b) for xx, a, b in zip(x, alpha, beta))
     
     def inverse_gamma_prior(self, parameter, alpha, beta):
         """Inverse gamma prior distribution"""
@@ -1727,7 +1726,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(beta) > 1:
             
-            return sum([self.exponential_like(y, b, name, prior) for y, b in zip(x, beta)])
+            return sum(self.exponential_like(y, b, name, prior) for y, b in zip(x, beta))
         
         else:
             
@@ -1759,7 +1758,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fgamma(xx, 1, b) for xx, b in zip(x, beta)])
+            return sum(fgamma(xx, 1, b) for xx, b in zip(x, beta))
     
     def exponential_prior(self, parameter, beta):
         """Exponential prior distribution"""
@@ -1773,7 +1772,7 @@ class Sampler:
         
         if ndim(mu) > 1:
             
-            return sum([self.normal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau)])
+            return sum(self.normal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau))
         
         else:
             
@@ -1805,7 +1804,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fnormal(y, m, t) for y, m, t in zip(x, mu, tau)])
+            return sum(fnormal(y, m, t) for y, m, t in zip(x, mu, tau))
     
     def normal_prior(self, parameter, mu, tau):
         """Normal prior distribution"""
@@ -1817,7 +1816,7 @@ class Sampler:
         
         if ndim(tau) > 1:
             
-            return sum([self.half_normal_like(y, t, name, prior) for y, t in zip(x, tau)])
+            return sum(self.half_normal_like(y, t, name, prior) for y, t in zip(x, tau))
         
         else:
             
@@ -1849,7 +1848,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fhalfnormal(_x, _tau) for _x, _tau in zip(x, tau)])
+            return sum(fhalfnormal(_x, _tau) for _x, _tau in zip(x, tau))
     
     def half_normal_prior(self, parameter, tau):
         """Half-normal prior distribution"""
@@ -1863,7 +1862,7 @@ class Sampler:
         
         if ndim(mu) > 1:
             
-            return sum([self.lognormal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau)])
+            return sum(self.lognormal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau))
         
         else:
             
@@ -1896,7 +1895,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([flognormal(y, m, t) for y, m, t in zip(x, mu, tau)])
+            return sum(flognormal(y, m, t) for y, m, t in zip(x, mu, tau))
     
     def lognormal_prior(self, parameter, mu, tau):
         """Log-normal prior distribution"""
@@ -1908,7 +1907,7 @@ class Sampler:
         
         if ndim(tau) > 2:
             
-            return sum([self.multivariate_normal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau)])
+            return sum(self.multivariate_normal_like(y, m, t, name, prior) for y, m, t in zip(x, mu, tau))
         
         else:
             
@@ -1950,7 +1949,7 @@ class Sampler:
         
         if ndim(Tau) > 2:
             
-            return sum([self.wishart_like(x, m, t, name, prior) for x, m, t in zip(X, n, Tau)])
+            return sum(self.wishart_like(x, m, t, name, prior) for x, m, t in zip(X, n, Tau))
         
         else:
             
@@ -1993,7 +1992,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(alpha) > 1:
             
-            return sum([self.weibull_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta)])
+            return sum(self.weibull_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta))
         
         else:
             
@@ -2025,7 +2024,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fweibull(y, a, b) for y, a, b in zip(x, alpha, beta)])
+            return sum(fweibull(y, a, b) for y, a, b in zip(x, alpha, beta))
     
     def weibull_prior(self, parameter, alpha, beta):
         """Weibull prior distribution"""
@@ -2040,7 +2039,7 @@ class Sampler:
         # Allow for multidimensional arguments
         if ndim(alpha) > 1:
             
-            return sum([self.cauchy_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta)])
+            return sum(self.cauchy_like(y, a, b, name, prior) for y, a, b in zip(x, alpha, beta))
         
         else:
             
@@ -2070,7 +2069,7 @@ class Sampler:
                 
                 self._gof_loss.append(gof_points)
             
-            return sum([fcauchy(y, a, b) for y, a, b in zip(x, alpha, beta)])
+            return sum(fcauchy(y, a, b) for y, a, b in zip(x, alpha, beta))
     
     def cauchy_prior(self, parameter, alpha, beta):
         """Cauchy prior distribution"""
@@ -2497,7 +2496,7 @@ class Sampler:
             except KeyError:
                 plots[name] = points
             
-            count = sum([s>o for o,s in t(points)])
+            count = sum(s>o for o,s in t(points))
             
             try:
                 stats[name] += array([count,iterations])
