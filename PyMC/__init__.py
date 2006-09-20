@@ -11,7 +11,7 @@ Required external components: TclTk
 """
 
 __author__ = "Christopher Fonnesbeck <chris@trichech.us>"
-__version__ = "1.0"
+__version__ = "1.0.2"
 
 __modules__ = ["MCMC", "TimeSeries"]
 

@@ -35,51 +35,51 @@ c
       return
       end
 
-	    real function uniform()
+        real function uniform()
 c
-c	Generate uniformly distributed random numbers using the 32-bit
-c	generator from figure 3 of:
-c	L`Ecuyer, P. Efficient and portable combined random number
-c	generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
+c    Generate uniformly distributed random numbers using the 32-bit
+c    generator from figure 3 of:
+c    L`Ecuyer, P. Efficient and portable combined random number
+c    generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
 c
-c	The cycle length is claimed to be 2.30584E+18
+c    The cycle length is claimed to be 2.30584E+18
 c
-c	Seeds can be set by calling the routine set_uniform
+c    Seeds can be set by calling the routine set_uniform
 c
-c	It is assumed that the Fortran compiler supports long variable
-c	names, and integer*4.
+c    It is assumed that the Fortran compiler supports long variable
+c    names, and integer*4.
 c
-	    integer*4 z, k, s1, s2
-	    common /unif_seeds/ s1, s2
-	    save /unif_seeds/
+        integer*4 z, k, s1, s2
+        common /unif_seeds/ s1, s2
+        save /unif_seeds/
 c
-	    k = s1 / 53668
-	    s1 = 40014 * (s1 - k * 53668) - k * 12211
-	    if (s1 .lt. 0) s1 = s1 + 2147483563
+        k = s1 / 53668
+        s1 = 40014 * (s1 - k * 53668) - k * 12211
+        if (s1 .lt. 0) s1 = s1 + 2147483563
 c
-	    k = s2 / 52774
-	    s2 = 40692 * (s2 - k * 52774) - k * 3791
-	    if (s2 .lt. 0) s2 = s2 + 2147483399
+        k = s2 / 52774
+        s2 = 40692 * (s2 - k * 52774) - k * 3791
+        if (s2 .lt. 0) s2 = s2 + 2147483399
 c
-	    if (z .lt. 1) z = z + 2147483562
+        if (z .lt. 1) z = z + 2147483562
 c
-	    uniform = z / 2147483563.
-	    return
-	    end
+        uniform = z / 2147483563.
+        return
+        end
 
-	    subroutine set_uniform(seed1, seed2)
+        subroutine set_uniform(seed1, seed2)
 c
-c	Set seeds for the uniform random number generator.
+c    Set seeds for the uniform random number generator.
 c
-	    integer*4 s1, s2, seed1, seed2
-	    common /unif_seeds/ s1, s2
-	    save /unif_seeds/
+        integer*4 s1, s2, seed1, seed2
+        common /unif_seeds/ s1, s2
+        save /unif_seeds/
 
-	    s1 = seed1
-	    s2 = seed2
-	    return
+        s1 = seed1
+        s2 = seed2
+        return
       END
-	  
+      
 
       SUBROUTINE rcat(hist,mn,step,n,s,k)
 
@@ -731,7 +731,7 @@ cf2py integer intent(hide),depend(mat2) :: p=len(mat2),q=shape(mat2,1)
 20        continue
 30      continue
       else
-        pause 'Matrix dimensions do not match'
+        write (*,*) 'Matrix dimensions do not match'
       end if
       return
       END
@@ -891,7 +891,7 @@ C Table initialized with 0! only.
       DATA ntop,a(1)/0,1./
 
       if (n.lt.0) then 
-        pause 'negative factorial in factrl' 
+        write (*,*) 'negative factorial in factrl' 
       else if (n.le.ntop) then 
 C Already in table. 
         factrl=a(n+1) 
@@ -920,7 +920,7 @@ C USES gammln Returns ln(n!).
       SAVE a 
 C Initialize the table to negative values. 
       DATA a/100*-1./ 
-      if (n.lt.0) pause 'negative factorial in factln' 
+      if (n.lt.0) write (*,*) 'negative factorial in factln' 
 C In range of the table. 
       if (n.le.99) then
 C If not already in the table, put it in.  
