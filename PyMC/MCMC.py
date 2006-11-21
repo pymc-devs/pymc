@@ -9,9 +9,9 @@ import sys, time, unittest, pdb, csv
 from numpy import random, linalg
 # Generalized inverse
 inverse = linalg.pinv
-from numpy import absolute, any, arange, around, array, atleast_1d
+from numpy import absolute, any, arange, around, array, atleast_1d, asarray
 from numpy import concatenate
-from numpy import diagonal
+from numpy import diagonal, diag
 from numpy import exp
 from numpy import log
 from numpy import mean, cov, std
@@ -34,13 +34,15 @@ random_number = random.random
 random_integers = random.random_integers
 uniform = random.uniform
 randint = random.randint
+from flib import categor as _categorical
+from flib import rcat as rcategorical
 rexponential = random.exponential
 from flib import binomial as fbinomial
 rbinomial = random.binomial
 from flib import bernoulli as fbernoulli
 from flib import hyperg as fhyperg
 from flib import mvhyperg as fmvhyperg
-from flib import negbin as fnegbin
+from flib import negbin2 as fnegbin
 rnegbin = random.negative_binomial
 from flib import normal as fnormal
 rnormal = random.normal
@@ -715,21 +717,18 @@ class Parameter(Node):
                 self._hyp = eye(*self.dim)
             else:
                 self._hyp = 1.0
-            """
-            elif self.dim:  # Vector case
-                self._hyp = ones(self.dim)
-            else:           # Scalar case
-                self._hyp = 1.0
-            """
+
         elif dist == 'multivariate_normal':
-                if shape(scale) == shape(init_val):
-                    self._hyp = diagonal(scale)
-                elif array((shape(scale)) == array(shape(init_val))).all():
-                    self._hyp = array(scale)
-        elif shape(scale) != self.dim:
-            raise AttributeError, 'The scale for parameter %s must have a shape coherent with init_val.' % self.name
+            # Only the std variations are given. 
+            if shape(scale) == shape(init_val):
+                self._hyp = diag(scale)
+            # The complete covariance matrix is given
+            elif shape(scale) == shape(init_val)*2:
+                self._hyp = asarray(scale)
         else:
-             self._hyp = scale
+            # Scalar or vector scale. Will raise an error if scale is not 
+            # compatible with init_val.
+            self._hyp = ones(self.dim) * asarray(scale)
         
         # Adaptative scaling factor
         self._asf = 1.
@@ -741,18 +740,7 @@ class Parameter(Node):
         """Samples a candidate value based on proposal distribution"""
         
         try:
-            
-            try:
-                
-                value = self.get_value().copy()
-                
-                value += self._dist(self._hyp*self._asf, shape(value))
-                
-                return value
-            
-            except AttributeError:
-                
-                return self.get_value() + self._dist(self._hyp*self._asf, shape(self.get_value()))
+            return self.get_value() + self._dist(self._hyp*self._asf, shape(self.get_value()))
         
         except ValueError:
             print 'Hyperparameter approaching zero:', self._hyp
@@ -868,29 +856,28 @@ class Parameter(Node):
                 # Length of trace containing non-zero elements (= current iteration)
                 it = where(self._traces[-1]==0.)[0][0]
                 
+                # Computes the variance over the last 3 intervals.
+                _var = cov(self._traces[-1][max(0, it-3 * int_length):it],axis=0)
+                
                 # Uncorrelated multivariate case
                 if self._dist_name != 'multivariate_normal':
                     
-                    # Computes the standard variation over the last 3 intervals.
-                    hyp = std(self._traces[-1][max(0, it-3 * int_length):it])
-                    
                     # Ensure that there are no null values before commiting to self.
-                    if (hyp > 0).all():
-                        self._hyp = hyp
+                    if (_var > 0).all():
+                        self._hyp = sqrt(_var)
                 
                 # Correlated multivariate case
+                # Compute correlation coefficients and clip correlation to .9 to
+                # in order to avoid perfect correlations. 
+                # Compute the covariance matrix and set it as _hyp.
                 else:
-                    
-                    hyp = cov(self._traces[-1][max(0, it-3 * int_length):it], rowvar=0)
-                    
-                    if (hyp.diagonal() > 0).all(): self._hyp = hyp
-                    
-                    # Reset the correlation coefficients to 0 once in a while to
-                    # avoid staying trapped on a N-D line, due to previous high correlations.
-					# I need to find a better solution to this problem, this one is unpredictable.
-                    
-                    if random_number() < 0.1: self._hyp = self._hyp.diagonal()*eye(*self.dim)
-        
+                    d = diag(_var)
+                    if (d > 0).all():
+                        corr = _var / sqrt(outer(d,d))
+                        corr = corr.clip(-.9, .9)
+                        corr[range(self.ndim), range(self.ndim)] = 1.
+                        covariance = corr * sqrt(outer(d,d)) 
+                        self._hyp = covariance                       
         
         except AttributeError:
                 pass
@@ -964,7 +951,7 @@ class Sampler:
         # Goodness of Fit flag
         self._gof = False
     
-    def profile(self, name='pymc', iterations=2000, burn=1000):
+    def profile(self, iterations=2000, burn=1000, name='pymc'):
         """Profile sampler with hotshot"""
         
         from hotshot import Profile, stats
@@ -989,6 +976,35 @@ class Sampler:
             node.clear_trace()
     
     # Log likelihood functions
+    
+    def categorical_like(self, x, probs, minval=0, step=1, name='categorical', prior=False):
+        """Categorical log-likelihood. Accepts an array of probabilities associated with the histogram, the minimum value of the histogram (defaults to zero), and a step size (defaults to 1)."""
+        
+        x = atleast_1d(x)
+        
+        # Normalize, if not already
+        if sum(probs) != 1.0: probs = probs/sum(probs)
+        
+        if self._gof and not prior:
+            
+            try:
+                self._like_names.append(name)
+            except AttributeError:
+                pass
+            
+            expval = sum([p*(minval + i*step) for i, p in enumerate(probs)])
+            
+            self._gof_loss.append(array([self.loss(x, expval), self.loss(rcategorical(probs, minval, step), expval)], dtype=float))
+            
+            try:
+                return sum([_categorical(y, p, mn, s) for y, p, mn, s in zip(x, probs, minval, step)])
+            except TypeError:
+                return _categorical(x, probs, minval, step)
+    
+    def categorical_prior(self, parameters, probs, minval=0, step=1):
+        """Categorical prior distribution"""
+        
+        return self.categorical_like(parameters, probs, minval=0, step=1, prior=True)
     
     def uniform_like(self, x, lower, upper, name='uniform', prior=False):
         """Beta log-likelihood"""
@@ -1024,7 +1040,7 @@ class Sampler:
                 y = array([runiform(a, b) for a, b in zip(lower, upper)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1076,7 +1092,7 @@ class Sampler:
                 y = array([rmixeduniform(a, m, b) for a, m, b in zip(lower, median, upper)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1123,7 +1139,7 @@ class Sampler:
                 y = array([rbeta(a, b) for a, b in zip(alpha, beta)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1169,7 +1185,7 @@ class Sampler:
                     y = rdirichlet(theta)
                     
                     # Generate GOF points
-                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                     
                     self._gof_loss.append(gof_points)
             
@@ -1214,7 +1230,7 @@ class Sampler:
                     y = rdirmultinom(theta, sum(x))
                     
                     # Generate GOF points
-                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                     
                     self._gof_loss.append(gof_points)
             
@@ -1225,27 +1241,27 @@ class Sampler:
         
         return self.dirichlet_multinomial_like(parameter, theta, prior=True)
     
-    def negative_binomial_like(self, x, r, p, name='negative_binomial', prior=False):
+    def negative_binomial_like(self, x, mu, alpha, name='negative_binomial', prior=False):
         """Negative binomial log-likelihood"""
         
-        if not shape(r) == shape(p): raise ParameterError, 'Parameters must have same dimensions'
+        if not shape(mu) == shape(alpha): raise ParameterError, 'Parameters must have same dimensions'
         
         # Allow for multidimensional arguments
-        if ndim(r) > 1:
+        if ndim(mu) > 1:
             
-            return sum(self.negative_binomial_like(y, _r, _p, name, prior) for y, _r, _p in zip(x, r, p))
+            return sum(self.negative_binomial_like(y, _l, _p, name, prior) for y, _l, _p in zip(x, mu, alpha))
         
         else:
             
             # Ensure valid values of parameters
-            self.constrain(p, 0, 1)
-            self.constrain(r, lower=0)
+            self.constrain(mu, lower=0)
+            self.constrain(alpha, lower=0)
             self.constrain(x, lower=0)
             
             # Enforce array type
             x = atleast_1d(x)
-            r = resize(r, shape(x))
-            p = resize(p, shape(x))
+            mu = resize(mu, shape(x))
+            alpha = resize(alpha, shape(x))
             
             # Goodness-of-fit
             if self._gof and not prior:
@@ -1255,22 +1271,22 @@ class Sampler:
                 except AttributeError:
                     pass
                 
-                expval = r * (1. - p) / p
+                expval = mu
                 
                 # Simulated values
-                y = array([rnegbin(_r, _p) for _r, _p in zip(r, p)])
+                y = array([rnegbin(_r, _p) for _r, _p in zip(alpha, alpha / (mu + alpha))])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
-            return sum(fnegbin(_x, _r, _p) for _x, _r, _p in zip(x, r, p))
+            return sum(fnegbin(xi, mi, ai) for xi, mi, ai in zip(x, mu, alpha))
     
-    def negative_binomial_prior(self, parameter, r, p):
+    def negative_binomial_prior(self, parameter, lamda, omega):
         """Negative binomial prior distribution"""
         
-        return self.negative_binomial_like(parameter, r, p, prior=True)
+        return self.negative_binomial_like(parameter, lamda, omega, prior=True)
     
     def geometric_like(self, x, p, name='geometric', prior=False):
         """Geometric log-likelihood"""
@@ -1304,7 +1320,7 @@ class Sampler:
                 y = array([rnegbin(1, q) for q in p])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1357,7 +1373,7 @@ class Sampler:
                 y = array([rhyperg(_n, _m, _N) for _n, _m, _N in zip(n, m, N)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1400,7 +1416,7 @@ class Sampler:
                     y = rmvhyperg(n, m)
                     
                     # Generate GOF points
-                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                     
                     self._gof_loss.append(gof_points)
             
@@ -1441,12 +1457,12 @@ class Sampler:
                     pass
                 
                 expval = p * n
-                
+
                 # Simulated values
                 y = array([rbinomial(_n, _p) for _n, _p in zip(n, p)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1488,7 +1504,7 @@ class Sampler:
                 y = array([rbinomial(1, _p) for _p in p])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1528,7 +1544,7 @@ class Sampler:
                 y = rmultinomial(n, p)
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1541,7 +1557,7 @@ class Sampler:
     
     def poisson_like(self, x, mu, name='poisson', prior=False):
         """Poisson log-likelihood"""
-
+        
         if ndim(mu) > 1:
             
             return sum(self.poisson_like(y, m) for y, m in zip(x, mu))
@@ -1570,7 +1586,7 @@ class Sampler:
                 y = array([rpoisson(a) for a in mu])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1619,7 +1635,7 @@ class Sampler:
             y = array([rgamma(b, a) for b, a in zip(ibeta, alpha)])
             
             # Generate GOF points
-            gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+            gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
             
             self._gof_loss.append(gof_points)
         
@@ -1661,7 +1677,7 @@ class Sampler:
                 y = array([rchi2(d) for d in df])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1709,7 +1725,7 @@ class Sampler:
                 y = array([rgamma(b, a) for b, a in zip(ibeta, alpha)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1754,7 +1770,7 @@ class Sampler:
                 y = array([rexponential(b) for b in ibeta])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1800,7 +1816,7 @@ class Sampler:
                 y = array([rnormal(_mu, _sig) for _mu, _sig in zip(mu, sigma)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1844,7 +1860,7 @@ class Sampler:
                 y = absolute([rnormal(0, sig) for sig in sigma])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1891,7 +1907,7 @@ class Sampler:
                 y = exp([rnormal(m, s) for m, s in zip(mu, sigma)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -1930,7 +1946,7 @@ class Sampler:
                     y = rmvnormal(mu, inverse(tau))
                     
                     # Generate GOF points
-                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                     
                     self._gof_loss.append(gof_points)
             
@@ -1973,7 +1989,7 @@ class Sampler:
                     y = rwishart(n, inverse(Tau))
                     
                     # Generate GOF points
-                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                    gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                     
                     self._gof_loss.append(gof_points)
             
@@ -2020,7 +2036,7 @@ class Sampler:
                 y = beta * (-log(runiform(0, 1, len(x))) ** (1. / alpha))
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -2065,7 +2081,7 @@ class Sampler:
                 y = array([rcauchy(a, b) for a, b in zip(alpha, beta)])
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]))
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -2076,11 +2092,16 @@ class Sampler:
         
         return self.cauchy_like(parameter, alpha, beta, prior=True)
     
-    def constrain(self, value, lower=-inf, upper=inf):
+    def constrain(self, value, lower=-inf, upper=inf, allow_equal=False):
         """Apply interval constraint on parameter value"""
         
         value = ravel(value)
         
+        if allow_equal:
+            if any(lower >= value) or any(value >= upper):
+            
+                raise LikelihoodError
+            
         if any(lower > value) or any(value > upper):
             
             raise LikelihoodError
@@ -2834,13 +2855,13 @@ class DisasterSampler(MetropolisHastings):
         
         # Constrain k with prior
         like = self.uniform_prior(k, 1, len(self.data)-2)
-        
+
         # Joint likelihood of parameters based on 2 assumed Poisson densities
         like += self.poisson_like(self.data[:k], theta0, name='early_mean')
-        like += self.poisson_like(self.data[k:], theta1, name='late_mean')
-        
-        return like
 
+        like += self.poisson_like(self.data[k:], theta1, name='late_mean')
+
+        return like
 
 
 class MCMCTest(unittest.TestCase):
@@ -2865,14 +2886,15 @@ class MCMCTest(unittest.TestCase):
             self.failUnless(self.sampler.sample(iterations, burn=burn, thin=thin, plot=True))
             
             # Run convergence diagnostics
-            self.sampler.convergence()
+            self.sampler.convergence(burn=burn, thin=thin)
             
             # Plot autocorrelation
-            self.sampler.autocorrelation()
+            self.sampler.autocorrelation(burn=burn, thin=thin)
         
         # Goodness of fit
-        x, n = self.sampler.goodness(iterations/10)['overall']
+        x, n = self.sampler.goodness(iterations/10, burn=burn, thin=thin)['overall']
         self.failIf(x/n < 0.05 or x/n > 0.95)
+
 
 if __name__=='__main__':
     # Run unit tests

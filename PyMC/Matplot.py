@@ -3,7 +3,7 @@ Plotting module using matplotlib.
 """
 
 # Import matplotlib functions
-from matplotlib import use
+import matplotlib
 from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter, setp
 
 # Import numpy functions
@@ -16,7 +16,7 @@ class PlotFactory:
         # Class initialization
         
         # Specify pylab backend
-        use(backend)
+        matplotlib.use(backend)
         
         # Store output format
         self.format = format
@@ -44,7 +44,7 @@ class PlotFactory:
             
             if last:
                 savefig("%s%s.%s" % (name, suffix, self.format))
-                close()
+                #close()
         
         else:
             # ... otherwise plot recursively
@@ -99,7 +99,7 @@ class PlotFactory:
             if standalone:
                 # Save to file
                 savefig("%s%s.%s" % (name, suffix, self.format))
-                close()
+                #close()
         
         except OverflowError:
             print '... cannot generate histogram'
@@ -133,7 +133,7 @@ class PlotFactory:
         if standalone:
             # Save to file
             savefig("%s%s.%s" % (name, suffix, self.format))
-            close()
+            #close()
     
     def geweke_plot(self, data, name, suffix='-diagnostic'):
         # Generate Geweke (1992) diagnostic plots
@@ -159,7 +159,7 @@ class PlotFactory:
         
         # Save to file
         savefig("%s%s.%s" % (name, suffix, self.format))
-        close()
+        #close()
     
     def gof_plot(self, data, name, suffix='-gof'):
         # Generate goodness-of-fit scatter plot
@@ -185,7 +185,7 @@ class PlotFactory:
         
         # Save to file
         savefig("%s%s.%s" % (name, suffix, self.format))
-        close()
+        #close()
     
     def bar_series_plot(self, values, ylab='Y', suffix=''):
         """Generate bar plot of a series, usually autocorrelation
@@ -229,4 +229,4 @@ class PlotFactory:
                 xlabel('Lag', fontsize='x-small')
                 
                 savefig("%s%s.%s" % (name, suffix, self.format))
-                close()
+                #close()

@@ -5,10 +5,14 @@
 
 from numpy import random
 from numpy import arange, array, atleast_1d, concatenate, dot, resize
-from Matplot import PlotFactory
 import unittest, pdb
 
-_plotter = PlotFactory()
+_plotter = None
+try:
+    from Matplot import PlotFactory
+    _plotter = PlotFactory()
+except ImportError:
+    print 'Matplotlib module not detected ... plotting disabled.'
         
 def autocov(series, lag, n_minus_k=False):
     # Sample autocovariance function at specified lag. Use n - k as
@@ -179,9 +183,9 @@ class TimeSeriesTests(unittest.TestCase):
         # Autocovariance tests
         
         n = len(self.ts)
-        
+
         # Confirm that covariance at lag 0 equals variance
-        self.assertAlmostEqual(autocov(self.ts, 0), (n-1.)/n * self.ts.var(), 10, "Covariance at lag 0 not equal to variance")
+        self.assertAlmostEqual(autocov(self.ts, 0), self.ts.var(), 10, "Covariance at lag 0 not equal to variance")
         
         self.failIf(sum([self.ts.var() < autocov(self.ts, k) for k in range(1, n)]), "All covariances not less than or equal to variance")
         

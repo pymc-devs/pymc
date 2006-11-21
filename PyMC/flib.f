@@ -297,6 +297,31 @@ cf2py real intent(out) :: like
       enddo
       return
       END
+      
+      
+      SUBROUTINE negbin2(x,mu,a,n,like)
+
+c Negative binomial log-likelihood function 
+c (alternative parameterization)    
+      
+cf2py integer dimension(n),intent(in) :: x
+cf2py real dimension(n),intent(in) :: a,mu
+cf2py integer intent(hide),depend(x) :: m=len(x)
+cf2py real intent(out) :: like      
+      
+      REAL like
+      REAL a(n),mu(n)
+      INTEGER n,i
+      INTEGER x(n)
+
+      like = 0.0
+      do i=1,n
+        like = like + gammln(x(i)+a(i)) - factln(x(i)) - gammln(a(i))
+		  like = like + x(i) * (log(mu(i)/a(i)) - log(1.0 + mu(i)/a(i)))
+		  like = like - a(i) * log(1.0 + mu(i)/a(i))
+      enddo
+      return
+      END
 
 
       SUBROUTINE binomial(x,n,p,m,like)
