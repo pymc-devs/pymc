@@ -1007,7 +1007,7 @@ class Sampler:
         return self.categorical_like(parameters, probs, minval=0, step=1, prior=True)
     
     def uniform_like(self, x, lower, upper, name='uniform', prior=False):
-        """Beta log-likelihood"""
+        """Uniform log-likelihood"""
         
         if not shape(lower) == shape(upper): raise ParameterError, 'Parameters must have same dimensions in uniform(like)'
         

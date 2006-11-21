@@ -1,8 +1,13 @@
 # Decorate fortran functions from flib to ease argument passing
+# TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
+# TODO: Deal with functions that have no fortran counterpart. uniform_like, categorical
+# TODO: Think about a structure to deal with GOF tests. 
+# TODO: Write a wrapper for random generation functions.
+
 import PyMC.flib as flib
 from PyMC import Sampler, LikelihoodError
 import numpy as np
-from numpy import inf
+from numpy import inf, random
 import string
 from flib import categor as _fcategorical
 from flib import beta as _fbeta
@@ -24,6 +29,16 @@ from flib import mvnorm as _fmvnorm
 from flib import poisson as _fpoisson
 from flib import weibull as _fweibull
 from flib import wishart as _fwishart
+
+
+""" Loss functions """
+
+absolute_loss = lambda o,e: absolute(o - e)
+
+squared_loss = lambda o,e: (o - e)**2
+
+chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
+    
 
 def fwrap(f, prior=False):
     """Decorator function.
@@ -96,16 +111,37 @@ def constrain(value, lower=-inf, upper=inf, allow_equal=False):
         if np.any(lower >= value) or np.any(value >= upper):
             raise LikelihoodError
 
-def categorical_like( x, probs, minval=0, step=1):
-    """Categorical log-likelihood. 
-    Accepts an array of probabilities associated with the histogram, 
-    the minimum value of the histogram (defaults to zero), 
-    and a step size (defaults to 1).
-    """
-    # Normalize, if not already
-    if sum(probs) != 1.0: probs = probs/sum(probs)
-    return _fcategorical(x, probs, minval, step)
 
+# Bernoulli----------------------------------------------
+@fwrap    
+def bernoulli_like(x, p):
+    """Bernoulli log-likelihood
+    bernoulli_like(x, p)
+    """
+    constrain(p, 0, 1)
+    constrain(x, 0, 1)
+    return _fbernouilli(x, p)
+        
+def rbernoulli(p):
+    return random.binomial(1,p)
+        
+        
+def _bernoulli_gof(x,p):
+    """Goodness of fit for bernouilli."""
+    expval = p
+                
+    # Simulated values
+    y = rbernoulli(p)
+    
+    # Generate GOF points
+    gof_points = GOFpoints(x,y,expval,loss)
+    
+    return gof_points
+    
+def GOFpoints(x,y,expval,loss):
+    return sum(transpose([loss(x, expval), loss(y, expval)]), 0)
+
+# Beta----------------------------------------------
 @fwrap
 def beta_like(x, alpha, beta):
     """Beta log-likelihood
@@ -116,29 +152,23 @@ def beta_like(x, alpha, beta):
     constrain(x, 0, 1)
     return _fbeta(x, alpha, beta)
 
-@fwrap    
-def bernoulli_like(x, p):
-    """Bernoulli log-likelihood
-    bernoulli_like(x, p)
-    """
-    constrain(p, 0, 1)
-    constrain(x, 0, 1)
-    return _fbernouilli(x, p)
-        
-        
-def _bernoulli_gof(x,p,loss):
-    """Goodness of fit for bernouilli."""
-    expval = p
+def rbeta(alpha, beta):
+    return random.beta(alpha, beta)
+
+def _beta_gof(x,alpha, beta):
+    """Goodness of fit for beta."""
+    expval = 1.0 * alpha / (alpha + beta)
                 
     # Simulated values
-    y = array([rbinomial(1, _p) for _p in p])
+    y = array([rbeta(a, b) for a, b in zip(alpha, beta)])
     
     # Generate GOF points
     gof_points = sum(transpose([loss(x, expval), loss(y, expval)]), 0)
     
     return gof_points
+
     
-    
+# Binomial----------------------------------------------
 @fwrap
 def binomial_like(x, n, p):
     """Binomial log-likelihood
@@ -149,6 +179,23 @@ def binomial_like(x, n, p):
     constrain(x, 0)
     return _fbinomial(x,n,p)
 
+def rbinomial(n,p):
+    return random.binomial(n,p)
+
+
+# Categorical----------------------------------------------
+def categorical_like( x, probs, minval=0, step=1):
+    """Categorical log-likelihood. 
+    Accepts an array of probabilities associated with the histogram, 
+    the minimum value of the histogram (defaults to zero), 
+    and a step size (defaults to 1).
+    """
+    # Normalize, if not already
+    if sum(probs) != 1.0: probs = probs/sum(probs)
+    return _fcategorical(x, probs, minval, step)
+
+
+# Cauchy----------------------------------------------
 @fwrap
 def cauchy_like(x, alpha, beta):
     """Cauchy log-likelhood
@@ -157,6 +204,14 @@ def cauchy_like(x, alpha, beta):
     constrain(beta, lower=0)
     return _fcauchy(x,alpha,beta)
 
+#@rwrap #?
+def rcauchy(alpha, beta, n=None):
+    """Returns Cauchy random variates"""
+    N = n or max(size(alpha), size(beta))
+    return alpha + beta*tan(pi*random_number(n) - pi/2.0)
+
+
+# Chi square----------------------------------------------
 @fwrap
 def chi2_like(x, df):
     """Chi-squared log-likelihood
@@ -166,6 +221,10 @@ def chi2_like(x, df):
     constrain(df, lower=0)
     return _fgamma(y, 0.5*df, 2)
 
+
+def rchi2(df):
+    return random.chisquare(df)
+    
 @fwrap
 def dirichlet_like(x, theta):
     """Dirichlet log-likelihood
@@ -246,9 +305,43 @@ def lognormal_like(x, mu, tau):
     constrain(x, lower=0)
     return _flognormal(x,mu,tau)
 
+@fwrap
+def multinomial_like(x, n, p):
+    """Multinomial log-likelihood with k-1 bins"""
+    constrain(p, lower=0)
+    constrain(x, lower=0)
+    constrain(sum(p), upper=1)
+    constrain(sum(x), upper=n)
+    return _fmultinomial(x, n, p)
 
+@fwrap
+def multivariate_hypergeometric_like(x, m):
+    """Multivariate hypergeometric log-likelihood"""
+    constrain(x, upper=m)
+    return _fmvhyperg(x, m)
 
-@fwrap        
+# Won't work if tau is a correlation matrix.
+@fwrap
+def multivariate_normal_like(x, mu, tau):
+    """Multivariate normal log-likelihood"""
+    constrain(diagonal(tau), lower=0)
+    return _fmvnorm(x, mu, tau)
+
+@fwrap
+def negative_binomial_like(x, mu, alpha):
+    """Negative binomial log-likelihood"""
+    constrain(mu, lower=0)
+    constrain(alpha, lower=0)
+    constrain(x, lower=0)
+    return _fnegbin(x, mu, alpha)
+    
+@fwrap
+def normal_like(x, mu, tau):
+    """Normal log-likelihood"""
+    constrain(tau, lower=0)
+    return _fnormal(x, mu, tau)
+    
+@fwrap
 def poisson_like(x,mu):
     """Poisson log-likelihood
     poisson_like(x,mu)"""
@@ -256,7 +349,25 @@ def poisson_like(x,mu):
     constrain(mu, lower=0)
     return _fpoisson(x,mu)
     
+def uniform_like(x, lower, upper):
+    """Uniform log-likelihood"""
+    constrain(x, lower=lower, upper=upper)
+    return sum(log(1. / (array(upper) - array(lower))))
 
+@fwrap
+def weibull_like(self, x, alpha, beta, name='weibull', prior=False):
+    """Weibull log-likelihood"""
+    constrain(alpha, lower=0)
+    constrain(beta, lower=0)
+    constrain(x, lower=0)
+    return _fweibull(x, alpha, beta)
+    
+# This won't work if Tau is a matrix.
+def wishart_like(X, n, Tau):
+    """Wishart log-likelihood"""
+    constrain(diagonal(Tau), lower=0)
+    constrain(n, lower=0)
+    return _fwishart(X, n, Tau)
 
 
 all_names = locals().copy()
