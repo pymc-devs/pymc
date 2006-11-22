@@ -1,5 +1,7 @@
 import copy
 
+# This is a very basic decorator that initialize the Parameter class.
+# Another implementation is found in test2.py. 
 def parameter(f):
     """Decorator function instantiating the Parameter class."""
     def wrapper(*args, **kwargs):
@@ -58,6 +60,7 @@ class Parameter(object):
 
 
 
+# Testing zone
 from test_decorator import normal_like
 @parameter
 def beta(self):
