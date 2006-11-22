@@ -351,8 +351,11 @@ def poisson_like(x,mu):
     
 def uniform_like(x, lower, upper):
     """Uniform log-likelihood"""
+    x = np.atleast_1d(x)
+    lower = np.atleast_1d(lower)
+    upper = np.atleast_1d(upper)
     constrain(x, lower=lower, upper=upper)
-    return sum(log(1. / (array(upper) - array(lower))))
+    return sum(np.log(1. / (np.array(upper) - np.array(lower))))
 
 @fwrap
 def weibull_like(self, x, alpha, beta, name='weibull', prior=False):

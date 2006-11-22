@@ -10,7 +10,9 @@
 # You can get this likelihood by caling the object
 # >>> object() 
 
+
 class structure:
+    value = None
     pass
     
 def Parameter(f):
@@ -43,22 +45,53 @@ def Node(f):
 
 # Data must return its own value.
 # Data must have the docstring of the function object. x
-# When called, a Data object returns its likelihood. x
-def Data1(f):
+# When called, a Data object returns its likelihood, which is constant.
+def Data(f):
     """Decorator function for data objects."""
-    answer = f()
-    if type(answer) is type('function'):
-        def wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
-    else:
-        def wrapper = lambda x: answer
+    C = structure()
+    # Get value of self.
+    f(C.value)
+    def wrapper():
+        return C.value
     wrapper.__doc__ = f.__doc__
     return wrapper  
 
-@Data1
+# Testing
+from test_decorator import normal_like, uniform_like
+
+@Data
 def input(self):
     """Measured input driving toy model."""
     # input value
     self = [1,2,3,4]
     # input likelihood     
     return 0
+    
+@Data
+def exp_output(self):
+    """Experimental output."""
+    # output value
+    self = [45,34,34,65]
+    # likelihood a value or a function
+    return 0
+    
+@Parameter
+def alpha(self):
+    """Parameter alpha of toy model."""
+    # The return value is the prior. 
+    return uniform_like(self, 0, 10)
+    
+@Node
+def sim_output(self, alpha, input, exp_output):
+    """Compute the simulated output and return its likelihood.
+    Usage: sim_output(alpha, beta, input, exp_output)
+    """
+    self = alpha * input
+    return normal_like(self, exp_output, 2)
+    
+print input
+print input()
+print alpha
+print alpha()
+print sim_output
+print sim_output()
