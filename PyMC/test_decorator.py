@@ -45,7 +45,7 @@ squared_loss = lambda o,e: (o - e)**2
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
     
 def node_to_NDarray(arg):
-	if isinstance(arg,proposition4.Node) or isinstance(arg,proposition4.Parameter):
+	if isinstance(arg,proposition4.Node):
 		return arg.value
 	else:
 		return arg

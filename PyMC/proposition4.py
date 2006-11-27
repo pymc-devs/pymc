@@ -4,14 +4,23 @@
 # to be faster, that's a pretty compelling reason.
 #
 # Parameter and Node attribute self.value is a NodeValue descriptor:
-# >>> object.value = 3: sets object.__value to 3 and increments object.timestamp
-# >>> object.value: returns object.__value.
+# >>> object.value = 3: sets object._value to 3 and increments object.timestamp
+# >>> object.value: returns object._value.
 #
 # TODO: Put in caches, get_likelihood function for Parameter.
 #
 # See test_prop_4.py
 
 import copy
+from numpy import ones as ones
+from numpy import zeros as zeros
+
+def array_push(array_to_push,new_value):
+	length = len(array_to_push)
+	if length > 0:
+		array_to_push[1:length-1] = array_to_push[0:length-2]
+	array_to_push[0] = new_value
+
 
 def parameter(**kwargs):
 	"""Decorator function instantiating the Parameter class."""
@@ -23,16 +32,18 @@ def parameter(**kwargs):
 		
 	return __instantiate_parameter
 
-def node(**kwargs):
-	"""Decorator function instantiating the Node class."""
 
-	def __instantiate_node(f):
-		N = Node(eval_fun=f,**kwargs)
-		N.__doc__ = f.__doc__
-		return N
+def logical(**kwargs):
+	"""Decorator function instantiating the Logical class."""
+
+	def __instantiate_logical(f):
+		L =Logical(eval_fun=f,**kwargs)
+		L.__doc__ = f.__doc__
+		return L
 		
-	return __instantiate_node
+	return __instantiate_logical
 	
+
 def data(**kwargs):
 	"""Decorator function instantiating the Parameter class, with flag 'data' set to True."""
 
@@ -42,77 +53,121 @@ def data(**kwargs):
 		return D
 		
 	return __instantiate_data
+
 	
-
-
 class Node(object):
+	"""
+	Node and Parameter inherit from this class.
+	It handles the parent/children business and the timestamp
+	initialization.
+	"""
+	def __init__(self, cache_depth = 2, **parents):
+
+		self.parents = parents
+		
+		self._cache_depth = cache_depth
+		self._parent_timestamp_caches = {}
+
+		for key in self.parents.keys():
+			if isinstance(self.parents[key],Node):
+				self.parents[key].children.add(self)
+				self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
+
+		self.children = set()		
+		self.recompute = True
+		self.timestamp = 0
+		self._value = None
+
+
+class Logical(Node):
 
 	def __init__(self, eval_fun, **parents):
 
-		self.eval_fun = eval_fun
-		self.parent = parents
-		self.__doc__ = eval_fun.__doc__		
-		self.recompute = True
+		Node.__init__(self,**parents)
 
-		self.__value = None
-		self.timestamp = 0		
+		self.eval_fun = eval_fun
+		self.__doc__ = eval_fun.__doc__
+		self._value = None
+		self._cached_value = zeros(self._cache_depth, dtype='float')
 
 	# Define the attribute value
 	def get_value(self, *args, **kwargs):
-		self.__check_for_recompute()
+
+		self._check_for_recompute()
+
 		if self.recompute:
-			self.__value = self.eval_fun(**self.parent)
+
+			#Recompute
+			self._value = self.eval_fun(**self.parents)
 			self.timestamp += 1
-		return self.__value
+
+			# Cache
+			array_push(self._cached_value, self._value)			
+			for key in self.parents.keys():
+				if isinstance(self.parents[key],Node):
+					array_push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
+
+							
+		return self._value
 		
 	value = property(fget=get_value)
 
-	def __check_for_recompute(self):
-		# Look through caches
+	# Look through caches
+	def _check_for_recompute(self):
 		pass
 
-		
-class Parameter(object):
+class Parameter(Node):
 
 	def __init__(self, prob, value=None, isdata=False, **parents):
 
+		Node.__init__(self,**parents)
+
 		self.isdata = isdata
 		self.prob = prob
-		self.parent = parents
-		self.__doc__ = prob.__doc__		
-		self.recompute = True
-
-		self.__prob = None
-		self.__value = None
-		self.timestamp = 0		
+		self.__doc__ = prob.__doc__
+		self._prob = None
+		self._cached_prob = zeros(self._cache_depth,dtype='float')
+		self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')		
 
 		if value:
-			self.__value = value
+			self._value = value
 
+	
 	# Define the attribute value
 	def get_value(self, *args, **kwargs):
-		return self.__value
+		return self._value
 		
 	def set_value(self, value):
 		if self.isdata: print 'Warning, data value updated'
 		self.timestamp += 1
-		self.__value = value
+		self._value = value
 		
 	value = property(fget=get_value, fset=set_value)
 
-	def __check_for_recompute(self):
-		# Look through caches
+
+	# Look through caches
+	def _check_for_recompute(self):
 		pass
 	
+	# Return probability
 	def __call__(self):
-		# Return probability
-		self.__check_for_recompute()
+		self._check_for_recompute()
 		if self.recompute:
-			self.__prob = self.prob(self.value, **self.parent)
-		return self.__prob
+
+			#Recompute
+			self._prob = self.prob(self.value, **self.parents)
+			
+			#Cache
+			array_push(self._self_timestamp_caches, self.timestamp)
+			array_push(self._cached_prob, self._prob)
+			for key in self.parents.keys():
+				if isinstance(self.parents[key],Node):
+					array_push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
+							
+		return self._prob
 	
 	def revert(self):
-		self.__prob = self.__cached_prob
-		self.__value = self.__cached_value
+		self._prob = self._cached_prob
+		self._value = self._cached_value
 		self.timestamp -= 1
 	
