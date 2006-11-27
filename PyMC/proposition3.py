@@ -1,18 +1,19 @@
 # Proposition 3
 # This is proposition 2, but working...
 
-import numpy as N
+import numpy as np
 from inspect import getargs
 
-class structure:
-    self = None
-    pass
+# Decorator to define decorator with args... recursion baby !
+decorator_with_args = lambda decorator: lambda *args, **kwargs: lambda func: decorator(func, *args, **kwargs)
+    
 
-def parameter(*args, **kwds):
+@decorator_with_args
+def Parameter(func, *args, **kwds):
     """Decorator function for PyMC parameter.
     
     Input
-        like: a function returning the likelihood of the parameter, ie its prior. 
+        func: function returning the likelihood of the parameter, ie its prior. 
         init_val: Initial value to start the sampling.
     
     Example
@@ -23,54 +24,68 @@ def parameter(*args, **kwds):
     """
     if len(kwds) == 0:
         kwds['init_val'] = args[0]
-    def wrapper(func):
-        func.__dict__.update(kwds)
-        func.parents = getargs(func.func_code)[0]
-        func.parents.remove('self')
-        return func
-    return wrapper
-
-
-def data(func):
+    func.__dict__.update(kwds)
+    func.parents = getargs(func.func_code)[0]
+    func.parents.remove('self')
+    return func
+    
+    
+@decorator_with_args
+def Data(func, *args,  **kwds):
     """Decorator function for PyMC data.
     
     Input
-        A function taking as argument the value of the data, 
-       and returning the likelihood of the data.
+        'value': The data.
+        func: A function returning the likelihood of the data.
         
     Example
-        @data
-        def input(value=[1,2,3,4]):
+        @Data(value=[1,2,3,4])
+        def input():
             "Input data to force model."
             return 0
     """
-    def wrapper(*args, **kwds):
-        func.__dict__.update(kw)
-        if len(kwds) == 0:
-            func.value = args[0]
-        func.parents = getargs(func.func_code)[0]
-        return func
-    return wrapper
-
-
-def Node(func):
-    """Decorator function for PyMC Node.
-
-    A Node can set itself and return None, or
-    set itself and return its likelihood.
-    """
-    def wrapper(*args, **kw):
-        like = f(func.self, *args, **kw)
+    if len(kwds) == 0:
+        kwds['value'] = np.asarray(args[0])
+    func.__dict__.update(kwds)
+    func.value = np.asarray(func.value)
+    func.parents = getargs(func.func_code)[0]
+    try:
+        func.parents.remove('self')        
+    except:pass
     
+    return func
+    
+def Node(func):
+    """Decorator function for PyMC node.
+
+    Input
+        func: A function returning the likelihood of the node.
         
-        
-        
-    return wrapper
+    Example
+        @Node
+        def posterior(sim_output, exp_output, var):
+            return normal_like(sim_output, exp_output, 1./var)
+    
+    Note
+        All arguments to the likelihood of a Node must be somewhere in the 
+        namespace, in order for Node to find the parents (dependencies).
+        In the example, sim_output must be a function, and var a constant or a 
+        Parameter. 
+    """
+    
+    parents = getargs(func.func_code)[0]
+    func.parents = {}
+    for p in parents:
+        try:
+            func.parents[p] = globals()[p].parents
+        except AttributeError:
+            func.parents[p] = getargs(globals()[p].func_code)[0]
+    return func
 
 # Testing
 from test_decorator import normal_like, uniform_like
 
-@parameter(4)
+@parameter(init_val = 4)
 def alpha(self):
     """Parameter alpha of toy model."""
     # The return value is the prior. 
@@ -81,64 +96,27 @@ def beta(self, alpha):
     """Parameter beta of toy model."""
     return normal_like(self, alpha, 2)
 
-@data
-def input(value = [1,2,3,4]):
+@data(value = [1,2,3,4])
+def input():
     """Measured input driving toy model."""
     like = 0
     return like
     
-@data
-def exp_output(value = [45,34,34,65]):
+@data(value = [45,34,34,65])
+def exp_output():
     """Experimental output."""
     # likelihood a value or a function
     return 0
     
-
-@Node
-def sim_output(alpha, beta, input, exp_output):
-    """Compute the simulated output and return its likelihood.
-    Usage: sim_output(alpha, beta, input, exp_output)
+def sim_output(alpha, beta, input):
+    """Return the simulated output.
+    Usage: sim_output(alpha, beta, input)
     """
-    self = toy_model(alpha, beta, input)
-    like = normal_like(self, exp_output, 2)
+    self = alpha + beta * input
     return like
-##
-##
-##print input.value
-##print input()
-##
-##sim_output(3,4,input.value, exp_output.value):
+    
+@Node
+def posterior(sim_output, exp_output):
+    """Return likelihood of simulation given the experimental data."""
+    return normal_like(sim_output, exp_output, 2)
 
-
-##class Parameter(N.ndarray):
-##    def __new__(subtype, data, func, info=None, dtype=None, copy=True):
-##        # When data is an InfoArray
-##        if isinstance(data, Parameter):
-##            if not copy and dtype==data.dtype:
-##                return data.view(subtype)
-##            else:
-##                return data.astype(dtype).view(subtype)
-##        subtype._info = info
-##        subtype.info = subtype._info
-##        subtype._func = func
-##        return N.array(data).view(subtype)
-##
-##    def __array_finalize__(self,obj):
-##        if hasattr(obj, "info"):
-##            # The object already has an info tag: just use it
-##            self.info = obj.info
-##        else:
-##            # The object has no info tag: use the default
-##            self.info = self._info
-##    
-##    def like(self, *args, **kw):
-##        """Likelihood of parameter, or if you prefer, its prior."""
-##        if len(args) > 0 or len(kw)>0:
-##            return self._func(*args, **kw)
-##        else:
-##            return self._func(self.__array__())
-##
-##    def __repr__(self):
-##        desc="""Parameter array( %(data)s,
-##      tag=%(tag)s)"""
-##        return desc % {'data': str(self), 'tag':self.info }
