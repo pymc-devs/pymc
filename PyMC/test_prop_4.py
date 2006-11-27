@@ -19,3 +19,6 @@ def C(value, mu, tau):
 @logical(a=A,b=2.)
 def D(a,b):
 	return node_to_NDarray(a) ** node_to_NDarray(b)
+
+# This returns an error
+B.prob()

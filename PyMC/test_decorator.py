@@ -8,6 +8,7 @@
 # TODO: Replace flat's with ravel's, and if possible avoid resize-ing (try to
 # avoid any memory allocation, in fact).
 
+
 from PyMC import flib
 from PyMC import Sampler, LikelihoodError
 import numpy as np

@@ -94,26 +94,26 @@ def Node(func):
 from test_decorator import normal_like, uniform_like
 
 # Define model parameters
-@parameter(init_val = 4)
+@Parameter(init_val = 4)
 def alpha(self):
     """Parameter alpha of toy model."""
     # The return value is the prior. 
     return uniform_like(self, 0, 10)
 
-@parameter(init_val=5)
+@Parameter(init_val=5)
 def beta(self, alpha):
     """Parameter beta of toy model."""
     return normal_like(self, alpha, 2)
 
 
 # Define the data
-@data(value = [1,2,3,4])
+@Data(value = [1,2,3,4])
 def input():
     """Measured input driving toy model."""
     like = 0
     return like
     
-@data(value = [45,34,34,65])
+@Data(value = [45,34,34,65])
 def exp_output():
     """Experimental output."""
     # likelihood a value or a function
