@@ -1,10 +1,16 @@
 # Proposition 3
-# This is proposition 2, but working...
+
+# Here is the interface I'm proposing for PyMC. The general idea is to create 
+# objects that return their likelihood. The dependencies are stored in an 
+# attribute named 'parents'. Once the user has defined his parameters, data and 
+# nodes, he instantiates a sampler class using those elements. 
+#
+# See example below.
 
 import numpy as np
 from inspect import getargs
 
-# Decorator to define decorator with args... recursion baby !
+# Decorator to define decorators with arguments... recursion baby !
 decorator_with_args = lambda decorator: lambda *args, **kwargs: lambda func: decorator(func, *args, **kwargs)
     
 
@@ -71,6 +77,8 @@ def Node(func):
         namespace, in order for Node to find the parents (dependencies).
         In the example, sim_output must be a function, and var a constant or a 
         Parameter. 
+    
+    TODO: Implement higher level of recursion in the parent finding. 
     """
     
     parents = getargs(func.func_code)[0]
@@ -82,9 +90,10 @@ def Node(func):
             func.parents[p] = getargs(globals()[p].func_code)[0]
     return func
 
-# Testing
+# Example ------------------------------------------------------------------
 from test_decorator import normal_like, uniform_like
 
+# Define model parameters
 @parameter(init_val = 4)
 def alpha(self):
     """Parameter alpha of toy model."""
@@ -96,6 +105,8 @@ def beta(self, alpha):
     """Parameter beta of toy model."""
     return normal_like(self, alpha, 2)
 
+
+# Define the data
 @data(value = [1,2,3,4])
 def input():
     """Measured input driving toy model."""
@@ -108,6 +119,8 @@ def exp_output():
     # likelihood a value or a function
     return 0
     
+# Model function
+# No decorator is needed, its just a function.
 def sim_output(alpha, beta, input):
     """Return the simulated output.
     Usage: sim_output(alpha, beta, input)
@@ -115,8 +128,21 @@ def sim_output(alpha, beta, input):
     self = alpha + beta * input
     return like
     
+
+# Finally, the posterior node that combines everything. 
 @Node
 def posterior(sim_output, exp_output):
     """Return likelihood of simulation given the experimental data."""
     return normal_like(sim_output, exp_output, 2)
 
+
+# The last step would be to call 
+# Sampler(posterior, 'Metropolis')
+# i.e. sample the parameters from posterior using a Metropolis algorithm.
+# Sampler recursively looks at the parents of posterior, namely sim_output and
+# exp_output, identifies the Parameters and sample over them according to the
+# posterior likelihood. 
+# Since the parents are known for each element, we can find the children of the 
+# Parameters, so when one Parameter is sampled, we only need to compute the 
+# likelihood of its children, and avoid computing elements that are not modified 
+# by the current Parameter. 
