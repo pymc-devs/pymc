@@ -1,34 +1,39 @@
-# Decorate fortran functions from flib to ease argument passing
+# Decorate fortran functions from PyMC.flib to ease argument passing
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: Deal with functions that have no fortran counterpart. uniform_like, categorical
 # TODO: Think about a structure to deal with GOF tests. 
 # TODO: Write a wrapper for random generation functions.
+#
+# TODO: Make node_to_NDarray decorator better.
+# TODO: Replace flat's with ravel's, and if possible avoid resize-ing (try to
+# avoid any memory allocation, in fact).
 
-import PyMC.flib as flib
+from PyMC import flib
 from PyMC import Sampler, LikelihoodError
 import numpy as np
+import proposition4
 from numpy import inf, random
 import string
-from flib import categor as _fcategorical
-from flib import beta as _fbeta
-from flib import bernoulli as _fbernoulli
-from flib import binomial as _fbinomial
-from flib import cauchy as _fcauchy
-from flib import dirichlet as _fdirichlet
-from flib import dirmultinom as _fdirmultinom
-from flib import gamma as _fgamma
-from flib import hnormal as _fhalfnormal
-from flib import hyperg as _fhyperg
-from flib import igamma as _figamma
-from flib import lognormal as _flognormal
-from flib import multinomial as _fmultinomial
-from flib import mvhyperg as _fmvhyperg
-from flib import negbin2 as _fnegbin
-from flib import normal as _fnormal
-from flib import mvnorm as _fmvnorm
-from flib import poisson as _fpoisson
-from flib import weibull as _fweibull
-from flib import wishart as _fwishart
+from PyMC.flib import categor as _fcategorical
+from PyMC.flib import beta as _fbeta
+from PyMC.flib import bernoulli as _fbernoulli
+from PyMC.flib import binomial as _fbinomial
+from PyMC.flib import cauchy as _fcauchy
+from PyMC.flib import dirichlet as _fdirichlet
+from PyMC.flib import dirmultinom as _fdirmultinom
+from PyMC.flib import gamma as _fgamma
+from PyMC.flib import hnormal as _fhalfnormal
+from PyMC.flib import hyperg as _fhyperg
+from PyMC.flib import igamma as _figamma
+from PyMC.flib import lognormal as _flognormal
+from PyMC.flib import multinomial as _fmultinomial
+from PyMC.flib import mvhyperg as _fmvhyperg
+from PyMC.flib import negbin2 as _fnegbin
+from PyMC.flib import normal as _fnormal
+from PyMC.flib import mvnorm as _fmvnorm
+from PyMC.flib import poisson as _fpoisson
+from PyMC.flib import weibull as _fweibull
+from PyMC.flib import wishart as _fwishart
 
 
 """ Loss functions """
@@ -39,6 +44,12 @@ squared_loss = lambda o,e: (o - e)**2
 
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
     
+def node_to_NDarray(arg):
+	if isinstance(arg,proposition4.Node) or isinstance(arg,proposition4.Parameter):
+		return arg.value
+	else:
+		return arg
+		
 
 def fwrap(f, prior=False):
     """Decorator function.
@@ -49,11 +60,14 @@ def fwrap(f, prior=False):
     
     def wrapper(*args, **kwargs):
         """wrapper doc"""
-        xshape = np.shape(args[0])
-        newargs = [np.asarray(args[0]).flat]
+        xshape = np.shape(node_to_NDarray(args[0]))
+        newargs = [np.asarray(node_to_NDarray(args[0])).flat]
         for arg in args[1:]:
-            newargs.append(np.resize(arg, xshape).flat)
+            newargs.append(np.resize(node_to_NDarray(arg), xshape).flat)
+        for key in kwargs.iterkeys():
+            kwargs[key] = node_to_NDarray(kwargs[key])
         return f(*newargs, **kwargs)
+		
     wrapper.__doc__ = f.__doc__
     wrapper._prior = prior
     wrapper._PyMC = True
@@ -337,9 +351,9 @@ def negative_binomial_like(x, mu, alpha):
     
 @fwrap
 def normal_like(x, mu, tau):
-    """Normal log-likelihood"""
-    constrain(tau, lower=0)
-    return _fnormal(x, mu, tau)
+	"""Normal log-likelihood"""
+	constrain(tau, lower=0)
+	return _fnormal(x, mu, tau)
     
 @fwrap
 def poisson_like(x,mu):
