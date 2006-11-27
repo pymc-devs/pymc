@@ -1,7 +1,12 @@
 # Proposition 3
+# This is proposition 2, but working...
+
 import numpy as N
 from inspect import getargs
 
+class structure:
+    self = None
+    pass
 
 def parameter(*args, **kwds):
     """Decorator function for PyMC parameter.
@@ -48,6 +53,19 @@ def data(func):
     return wrapper
 
 
+def Node(func):
+    """Decorator function for PyMC Node.
+
+    A Node can set itself and return None, or
+    set itself and return its likelihood.
+    """
+    def wrapper(*args, **kw):
+        like = f(func.self, *args, **kw)
+    
+        
+        
+        
+    return wrapper
 
 # Testing
 from test_decorator import normal_like, uniform_like
@@ -69,25 +87,21 @@ def input(value = [1,2,3,4]):
     like = 0
     return like
     
-##    
-##
-##@data
-##def exp_output():
-##    """Experimental output."""
-##    # output value
-##    value = [45,34,34,65]
-##    # likelihood a value or a function
-##    like = 0
-##    return locals()
-##
-###@Node
-##def sim_output(alpha, beta, input, exp_output):
-##    """Compute the simulated output and return its likelihood.
-##    Usage: sim_output(alpha, beta, input, exp_output)
-##    """
-##    value = toy_model(alpha, beta, input)
-##    like = normal_like(value, exp_output, 2)
-##    return locals()
+@data
+def exp_output(value = [45,34,34,65]):
+    """Experimental output."""
+    # likelihood a value or a function
+    return 0
+    
+
+@Node
+def sim_output(alpha, beta, input, exp_output):
+    """Compute the simulated output and return its likelihood.
+    Usage: sim_output(alpha, beta, input, exp_output)
+    """
+    self = toy_model(alpha, beta, input)
+    like = normal_like(self, exp_output, 2)
+    return like
 ##
 ##
 ##print input.value

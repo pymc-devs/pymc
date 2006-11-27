@@ -1,7 +1,12 @@
 import copy
 
+# In this proposition, the decorator initializes classes. 
+# That is, the parameter decorator initializes a basic Parameter class, 
+# the data decorator instantiates a Data class and the node decorator 
+# a Node class. 
+
+
 # This is a very basic decorator that initialize the Parameter class.
-# Another implementation is found in test2.py. 
 def parameter(f):
     """Decorator function instantiating the Parameter class."""
     def wrapper(*args, **kwargs):
