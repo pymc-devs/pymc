@@ -30,9 +30,10 @@ def Parameter(func, *args, **kwds):
     """
     if len(kwds) == 0:
         kwds['init_val'] = args[0]
-    func.__dict__.update(kwds)
+    func.__dict__['value'] = kwds['init_val']
     func.parents = getargs(func.func_code)[0]
     func.parents.remove('self')
+    func.type = 'Parameter'
     return func
     
     
@@ -54,6 +55,7 @@ def Data(func, *args,  **kwds):
         kwds['value'] = np.asarray(args[0])
     func.__dict__.update(kwds)
     func.value = np.asarray(func.value)
+    func.type = 'Data'
     func.parents = getargs(func.func_code)[0]
     try:
         func.parents.remove('self')        
@@ -83,12 +85,67 @@ def Node(func):
     
     parents = getargs(func.func_code)[0]
     func.parents = {}
+    func.type = 'Node'
     for p in parents:
         try:
             func.parents[p] = globals()[p].parents
         except AttributeError:
             func.parents[p] = getargs(globals()[p].func_code)[0]
     return func
+
+class Bunch(object):
+    def __init__(self, obj, *args, **kwds):
+        # Get all parent objects        
+        self.parents = {}
+        self.get_parents([obj])
+        
+        # Create attributes from these objects.
+        for k,o in self.parents.iteritems():        
+            self.create_attributes(k,o)
+        
+        # All objects are attributed a value and a like. 
+        # underlying the fget method of those attribute is the caching mechanism.
+        # All objects are linked, so that the value of parents is known.
+        
+    
+    def get_parents(self, obj):
+        """Get the parents from object from the global namespace."""
+        for o in obj:
+            if o is not None:
+                self.parents[o]=globals()[o]
+                get_parents(self, self.parents[o].parents])
+
+    def create_attributes(self, name, obj):
+        # For each parent, create a node, parameter or data attribute.
+        # Attributes cannot be called... subclass NDarray to add a like method?
+        if obj.type == 'Data':
+            def fget(self): return self.value
+            attribute = property(fget, doc=obj.__doc__)
+            setattr(self.__class__, name, attribute)
+            attr = getattr(self, name)
+            setattr(attr, value, obj.value)
+             
+            
+                
+        elif obj.type == 'Parameter':
+            
+        elif obj.type == 'Node':
+        
+        else:
+            raise('Object not recognized.')
+        
+        
+                    
+    def get_value(self):
+        return self.value
+    def get_node_value(self):
+        if self.recompute:
+            self._cached_value = self.value
+            self.value = self.compute_self(**self.parents)
+            self.recompute = False
+        else:
+            return self._cached_value
+    
 
 # Example ------------------------------------------------------------------
 from test_decorator import normal_like, uniform_like

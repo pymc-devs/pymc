@@ -9,8 +9,9 @@ def A(value, mu, tau):
 class Normal(Parameter):
 	def __init__(self,value,mu,tau):
 		Parameter.__init__(self,normal_like,value=value,mu=mu,tau=tau)
-B=Normal(value=3., mu=A, tau=3.)
 
+B=Normal(value=3., mu=A, tau=3.)
+B.__doc__='Bla bla bla'
 
 @data(value=20., mu=A, tau=23.)
 def C(value, mu, tau):

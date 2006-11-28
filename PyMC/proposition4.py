@@ -15,6 +15,8 @@ import copy
 from numpy import *
 
 def push(seq,new_value):
+    """Put new_value a the beginning of seq, and kick out the last value.
+    """
 	length = len(seq)
 	seq[1:length] = seq[0:length-1]
 	seq[0] = new_value
