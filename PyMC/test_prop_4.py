@@ -20,5 +20,11 @@ def C(value, mu, tau):
 def D(a,b):
 	return node_to_NDarray(a) ** node_to_NDarray(b)
 
-# This returns an error
-B.prob()
+# Return probability of A conditional on parents
+print A()
+
+# Set A._value = 16 and increment A.timestamp
+A.value = 16
+
+# Return A.value
+print A.value
