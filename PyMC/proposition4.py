@@ -12,15 +12,12 @@
 # See test_prop_4.py
 
 import copy
-from numpy import ones as ones
-from numpy import zeros as zeros
+from numpy import *
 
-def array_push(array_to_push,new_value):
-	length = len(array_to_push)
-	if length > 0:
-		array_to_push[1:length-1] = array_to_push[0:length-2]
-	array_to_push[0] = new_value
-
+def push(seq,new_value):
+	length = len(seq)
+	seq[1:length] = seq[0:length-1]
+	seq[0] = new_value
 
 def parameter(**kwargs):
 	"""Decorator function instantiating the Parameter class."""
@@ -71,10 +68,10 @@ class Node(object):
 		for key in self.parents.keys():
 			if isinstance(self.parents[key],Node):
 				self.parents[key].children.add(self)
-				self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
+			self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
 
 		self.children = set()		
-		self.recompute = True
+		self._recompute = True
 		self.timestamp = 0
 		self._value = None
 
@@ -88,33 +85,44 @@ class Logical(Node):
 		self.eval_fun = eval_fun
 		self.__doc__ = eval_fun.__doc__
 		self._value = None
-		self._cached_value = zeros(self._cache_depth, dtype='float')
+		self._cached_value = []
+		for i in range(self._cache_depth): self._cached_value.append(None)
+		
+	# Look through caches
+	def _check_for_recompute(self):
+		indices = range(self._cache_depth)
+		for key in self.parents.keys():
+			if isinstance(self.parents[key],Node):
+				indices = where(self._parent_timestamp_caches[key][indices] == self.parents[key].timestamp)[0]
+
+		if len(indices)==0:
+			self._recompute = True				
+		else:
+			self._recompute = False
+			self._cache_index = indices[0]
+		return
 
 	# Define the attribute value
 	def get_value(self, *args, **kwargs):
 
 		self._check_for_recompute()
 
-		if self.recompute:
+		if self._recompute:
 
 			#Recompute
 			self._value = self.eval_fun(**self.parents)
 			self.timestamp += 1
 
 			# Cache
-			array_push(self._cached_value, self._value)			
+			push(self._cached_value, self._value)			
 			for key in self.parents.keys():
 				if isinstance(self.parents[key],Node):
-					array_push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
+					push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
 
-							
+		else: self._value = self._cached_value[self._cache_index]
 		return self._value
 		
 	value = property(fget=get_value)
-
-	# Look through caches
-	def _check_for_recompute(self):
-		pass
 
 class Parameter(Node):
 
@@ -127,7 +135,7 @@ class Parameter(Node):
 		self.__doc__ = prob.__doc__
 		self._prob = None
 		self._cached_prob = zeros(self._cache_depth,dtype='float')
-		self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')		
+		self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')
 
 		if value:
 			self._value = value
@@ -147,23 +155,35 @@ class Parameter(Node):
 
 	# Look through caches
 	def _check_for_recompute(self):
-		pass
+
+		indices = where(self._self_timestamp_caches == self.timestamp)[0]
+		for key in self.parents.keys():
+			if isinstance(self.parents[key],Node):
+				indices = where(self._parent_timestamp_caches[key][indices] == self.parents[key].timestamp)[0]
+
+		if len(indices)==0:
+			self._recompute = True
+		else:
+			self._recompute = False
+			self._cache_index = indices[0]
+		return
 	
 	# Return probability
 	def __call__(self):
 		self._check_for_recompute()
-		if self.recompute:
+		if self._recompute:
 
 			#Recompute
 			self._prob = self.prob(self.value, **self.parents)
 			
 			#Cache
-			array_push(self._self_timestamp_caches, self.timestamp)
-			array_push(self._cached_prob, self._prob)
+			push(self._self_timestamp_caches, self.timestamp)
+			push(self._cached_prob, self._prob)
 			for key in self.parents.keys():
 				if isinstance(self.parents[key],Node):
-					array_push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
-							
+					push(self._parent_timestamp_caches[key], self.parents[key].timestamp)
+
+		else: self._prob = self._cached_prob[self._cache_index]					
 		return self._prob
 	
 	def revert(self):
