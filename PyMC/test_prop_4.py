@@ -21,11 +21,24 @@ def C(value, mu, tau):
 def D(a,b):
 	return node_to_NDarray(a) ** node_to_NDarray(b)
 
-# Return probability of A conditional on parents
-print A()
+# Take value and prob out for a spin
+print "A's old value: ", A.value, " A's old timestamp:", A.timestamp, " B's old probability:", B.prob
+A.value = 16.
+print "A's new value: ", A.value, " A's new timestamp:", A.timestamp, " B's new probability:", B.prob
+print ""
 
-# Set A._value = 16 and increment A.timestamp
-A.value = 16
+# Instantiate a SamplingMethod with one parameter and one logical
+A_D_sampling_method = OneAtATimeMetropolis([A,D])
+# Introspect it
+print "Contents of A_D_sampling_method:"
+print A_D_sampling_method.__dict__
+print ""
 
-# Return A.value
-print A.value
+# Instantiate a Sampler. Doesn't need any arguments, it searches the base namespace
+# and scoops up all Parameters, Data, and SamplingMethods.
+#
+# If any Parameters aren't already covered by SamplingMethods, it makes a new
+# anonymous SamplingMethod for each.
+my_sampler = Sampler()
+print "Contents of my_sampler:"
+print my_sampler.__dict__

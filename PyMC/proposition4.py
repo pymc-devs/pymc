@@ -25,7 +25,7 @@ def parameter(**kwargs):
 	"""Decorator function instantiating the Parameter class."""
 
 	def __instantiate_parameter(f):
-		P = Parameter(prob=f,**kwargs)
+		P = Parameter(prob_fun=f,**kwargs)
 		P.__doc__ = f.__doc__
 		return P
 		
@@ -47,7 +47,7 @@ def data(**kwargs):
 	"""Decorator function instantiating the Parameter class, with flag 'data' set to True."""
 
 	def __instantiate_data(f):
-		D = Parameter(prob=f,isdata=True,**kwargs)
+		D = Parameter(prob_fun=f,isdata=True,**kwargs)
 		D.__doc__ = f.__doc__
 		return D
 		
@@ -105,7 +105,7 @@ class Logical(Node):
 		return
 
 	# Define the attribute value
-	def get_value(self, *args, **kwargs):
+	def _get_value(self, *args, **kwargs):
 
 		self._check_for_recompute()
 
@@ -124,18 +124,28 @@ class Logical(Node):
 		else: self._value = self._cached_value[self._cache_index]
 		return self._value
 		
-	value = property(fget=get_value)
+	value = property(fget=_get_value)
+	
+	# Define attribute prob, which returns parents' prob attributes
+	def _get_prob(self):
+		if len(self.children) > 0:
+			return sum([child.prob for child in self.children])
+		else:
+			return 0
+			
+	prob = property(fget = _get_prob)
 
 class Parameter(Node):
 
-	def __init__(self, prob, value=None, isdata=False, **parents):
+	def __init__(self, prob_fun, value=0, isdata=False, **parents):
 
 		Node.__init__(self,**parents)
 
 		self.isdata = isdata
-		self.prob = prob
-		self.__doc__ = prob.__doc__
+		self._prob_fun = prob_fun
+		self.__doc__ = prob_fun.__doc__
 		self._prob = None
+		self._last_value = None
 		self._cached_prob = zeros(self._cache_depth,dtype='float')
 		self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')
 
@@ -144,15 +154,16 @@ class Parameter(Node):
 
 	
 	# Define the attribute value
-	def get_value(self, *args, **kwargs):
+	def _get_value(self, *args, **kwargs):
 		return self._value
 		
-	def set_value(self, value):
+	def _set_value(self, value):
 		if self.isdata: print 'Warning, data value updated'
 		self.timestamp += 1
+		self._last_value = self._value
 		self._value = value
 		
-	value = property(fget=get_value, fset=set_value)
+	value = property(fget=_get_value, fset=_set_value)
 
 
 	# Look through caches
@@ -170,13 +181,13 @@ class Parameter(Node):
 			self._cache_index = indices[0]
 		return
 	
-	# Return probability
-	def __call__(self):
+	# Define attribute prob
+	def _get_prob(self):
 		self._check_for_recompute()
 		if self._recompute:
 
 			#Recompute
-			self._prob = self.prob(self.value, **self.parents)
+			self._prob = self._prob_fun(self.value, **self.parents)
 			
 			#Cache
 			push(self._self_timestamp_caches, self.timestamp)
@@ -187,9 +198,95 @@ class Parameter(Node):
 
 		else: self._prob = self._cached_prob[self._cache_index]					
 		return self._prob
+		
+	prob = property(fget = _get_prob)
 	
 	def revert(self):
 		self._prob = self._cached_prob
-		self._value = self._cached_value
+		self._value = self._last_value
 		self.timestamp -= 1
+
+
+
+# Was SubSampler:
+class SamplingMethod(object):
+	def __init__(self, nodes):
 	
+		self.logicals = set()
+		self.parameters = set()
+		self.data = set()
+		self.children = set()
+		
+		# File away the nodes
+		for node in nodes:
+			if isinstance(node,Logical):
+				self.logicals.add(node)
+			elif isinstance(node,Parameter):
+				if node.isdata:
+					self.data.add(node)
+				else:
+					self.parameters.add(node)
+					
+		# Find children, no need to find parents; each node takes care of those.
+		for node in nodes:
+			self.children |= node.children
+			
+	def step(self):
+		# Must be overridden in subclasses
+		pass
+		
+class OneAtATimeMetropolis(SamplingMethod):
+	def __init__(self,nodes):
+		SamplingMethod.__init__(self,nodes)
+		
+	def step(self):
+		#One-at-a-time Metropolis-Hastings
+		pass
+		
+		
+# Constructor of Sampler doesn't need any arguments, it searches the base namespace for
+# any PyMC objects and files them away for sampling commands.
+class Sampler(object):
+
+	def __init__(self):
+	
+		self.logicals = set()
+		self.parameters = set()
+		self.data = set()
+		self.sampling_methods = set()
+	
+		# Search the base namespace and file PyMC objects
+		import __main__
+		snapshot = __main__.__dict__
+
+		for item in snapshot.itervalues():
+
+			if isinstance(item,Logical):  
+				self.logicals.add(item)
+
+			elif isinstance(item,Parameter):
+				if item.isdata: 
+					self.data.add(item)
+				else:  self.parameters.add(item)
+				
+			elif isinstance(item,SamplingMethod): 
+				self.sampling_methods.add(item)
+		
+		# Take care of singleton parameters
+		for parameter in self.parameters:
+		
+			# Is it a member of any SamplingMethod?
+			homeless = True			
+			for sampling_method in self.sampling_methods:
+				if parameter in sampling_method.parameters:
+					homeless = False
+					break
+					
+			# If not, make it a new one-at-a-time Metropolis-Hastings SamplingMethod
+			if homeless:
+				self.sampling_methods.add(OneAtATimeMetropolis([parameter]))
+				
+	def sample(self,iter):
+		for i in range(iter):
+			for sampling_method in self.sampling_methods:
+				sampling_method.step()
