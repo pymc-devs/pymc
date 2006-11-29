@@ -15,8 +15,9 @@ import copy
 from numpy import *
 
 def push(seq,new_value):
-    """Put new_value a the beginning of seq, and kick out the last value.
-    """
+	"""
+	Put new_value a the beginning of seq, and kick out the last value.
+	"""
 	length = len(seq)
 	seq[1:length] = seq[0:length-1]
 	seq[0] = new_value
@@ -53,6 +54,7 @@ def data(**kwargs):
 		
 	return __instantiate_data
 
+
 	
 class Node(object):
 	"""
@@ -76,7 +78,19 @@ class Node(object):
 		self._recompute = True
 		self.timestamp = 0
 		self._value = None
-
+								
+	def extend_children(self):
+		need_recursion = False
+		logical_children = set()
+		for child in self.children:
+			if isinstance(child,Logical):
+				self.children |= child.children
+				logical_children.add(child)
+				need_recursion = True
+		self.children -= logical_children
+		if need_recursion:
+			self.extend_children()
+		return
 
 class Logical(Node):
 
@@ -84,7 +98,7 @@ class Logical(Node):
 
 		Node.__init__(self,**parents)
 
-		self.eval_fun = eval_fun
+		self._eval_fun = eval_fun
 		self.__doc__ = eval_fun.__doc__
 		self._value = None
 		self._cached_value = []
@@ -112,7 +126,7 @@ class Logical(Node):
 		if self._recompute:
 
 			#Recompute
-			self._value = self.eval_fun(**self.parents)
+			self._value = self._eval_fun(**self.parents)
 			self.timestamp += 1
 
 			# Cache
@@ -135,11 +149,13 @@ class Logical(Node):
 			
 	prob = property(fget = _get_prob)
 
+
+
 class Parameter(Node):
 
 	def __init__(self, prob_fun, value=0, isdata=False, **parents):
 
-		Node.__init__(self,**parents)
+		Node.__init__(self, **parents)
 
 		self.isdata = isdata
 		self._prob_fun = prob_fun
@@ -151,12 +167,11 @@ class Parameter(Node):
 
 		if value:
 			self._value = value
-
 	
 	# Define the attribute value
 	def _get_value(self, *args, **kwargs):
 		return self._value
-		
+	
 	def _set_value(self, value):
 		if self.isdata: print 'Warning, data value updated'
 		self.timestamp += 1
@@ -201,6 +216,7 @@ class Parameter(Node):
 		
 	prob = property(fget = _get_prob)
 	
+	# Call this when rejecting a jump
 	def revert(self):
 		self._prob = self._cached_prob
 		self._value = self._last_value
@@ -210,15 +226,17 @@ class Parameter(Node):
 
 # Was SubSampler:
 class SamplingMethod(object):
+
 	def __init__(self, nodes):
 	
+		self.nodes = set(nodes)
 		self.logicals = set()
 		self.parameters = set()
 		self.data = set()
 		self.children = set()
 		
 		# File away the nodes
-		for node in nodes:
+		for node in self.nodes:
 			if isinstance(node,Logical):
 				self.logicals.add(node)
 			elif isinstance(node,Parameter):
@@ -228,13 +246,40 @@ class SamplingMethod(object):
 					self.parameters.add(node)
 					
 		# Find children, no need to find parents; each node takes care of those.
-		for node in nodes:
+		for node in self.nodes:
 			self.children |= node.children
 			
+		self.extend_children()
+			
+		self.children -= self.logicals
+		self.children -= self.parameters
+		self.children -= self.data
+
+	# Must be overridden in subclasses							
 	def step(self):
-		# Must be overridden in subclasses
 		pass
 		
+	def extend_children(self):
+		need_recursion = False
+		logical_children = set()
+		for child in self.children:
+			if isinstance(child,Logical):
+				self.children |= child.children
+				logical_children.add(child)
+				need_recursion = True
+		self.children -= logical_children
+		if need_recursion:
+			self.extend_children()
+		return
+	
+	# Define attribute likelihood
+	def _get_likelihood(self):
+		return sum([child.prob for child in self.children])
+		
+	likelihood = property(fget = _get_likelihood)
+			
+
+# The default SamplingMethod, which Sampler uses to handle singleton parameters.		
 class OneAtATimeMetropolis(SamplingMethod):
 	def __init__(self,nodes):
 		SamplingMethod.__init__(self,nodes)
@@ -271,6 +316,12 @@ class Sampler(object):
 				
 			elif isinstance(item,SamplingMethod): 
 				self.sampling_methods.add(item)
+		
+		self.nodes = self.logicals | self.parameters | self.data
+		
+		# Tell all nodes to extend their children sets
+		for node in self.nodes:
+			node.extend_children()
 		
 		# Take care of singleton parameters
 		for parameter in self.parameters:
