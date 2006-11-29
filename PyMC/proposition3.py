@@ -11,11 +11,8 @@ import numpy as np
 from inspect import getargs
 import types
 
-# Decorator to define decorators with arguments... recursion baby !
-#decorator_with_args = lambda decorator: lambda *args, **kwargs: lambda func: decorator(func, *args, **kwargs)
-
-class PyArray(np.ndarray):
-    def __new__(subtype, data, like, MCType, info=None, dtype=None, copy=True):
+class MCArray(np.ndarray):
+    def __new__(subtype, data, class_ref, like, MCType, info=None, dtype=None, copy=True):
         """data: array
         like: likelihood
         MCType: Data or Parameter.
@@ -23,25 +20,28 @@ class PyArray(np.ndarray):
         subtype._info = info
         subtype.info = subtype._info
         subtype._like = like
+        subtype._cref = class_ref
         return np.array(data).view(subtype)
 
     def __array_finalize__(self,obj):
         if hasattr(obj, "info"):
             # The object already has an info tag: just use it
             self.info = obj.info
+            self.like = obj._like
         else:
             # The object has no info tag: use the default
             self.info = self._info
     
-    like = self._func
+    def like(self, **kwargs):
+       return self._like(self._cref, **kwargs)
 
     def __repr__(self):
         desc="""Parameter array( %(data)s,
       tag=%(tag)s)"""
         return desc % {'data': str(self), 'tag':self.info }
 
-def Parameter(func, **kwds):
-    """Decorator function for PyMC parameter.
+class Parameter:
+    """Decorator class for PyMC parameter.
     
     Input
         func: function returning the likelihood of the parameter, ie its prior. 
@@ -53,15 +53,22 @@ def Parameter(func, **kwds):
             "Parameter alpha of model M."
             return uniform_like(self, 0, 10)
     """
+    def __init__(func, **kwds):
+        func.__dict__.update(kwds)
+        func.type = 'Parameter'
+            
+    def __call__(self, func):
+        self.parents = getargs(func.func_code)[0]
+        try:
+            self.parents.remove('self')
+        except:pass
+        def wrapper(*args, **kwds):
+            return func(*args, **kwds)
+        wrapper.__dict__.update(self.__dict__)
+        wrapper.__doc__ = func.__doc__
+        return wrapper
     
-    func.__dict__.update(kwds)
-    func.parents = getargs(func.func_code)[0]
-    func.parents.remove('self')
-    func.type = 'Parameter'
-    return func
-    
-    
-def Data(func, **kwds):
+class Data(Parameter):
     """Decorator function for PyMC data.
     
     Input
@@ -74,16 +81,11 @@ def Data(func, **kwds):
             "Input data to force model."
             return 0
     """
-    func.__dict__.update(kwds)
-    func.value = np.asarray(func.value)
-    func.type = 'Data'
-    func.parents = getargs(func.func_code)[0]
-    try:
-        func.parents.remove('self')        
-    except:pass
-    
-    return func
-    
+ 
+    def __init__(func, **kwds):
+        func.__dict__.update(kwds)
+        func.type = 'Data'
+        
 def Node(func):
     """Decorator function for PyMC node.
 
@@ -131,7 +133,7 @@ class Bunch(object):
         # Get all parent objects        
         # Create a dictionnary linking each object to its parents.        
         self.object_dic = {}
-        self.parent = {}        
+        self.parent_dic = {}        
         self.__parse_objects([obj.__name__])
         
         # Create attributes from these objects and fill the attributes 
@@ -157,58 +159,67 @@ class Bunch(object):
                 except AttributeError:
                     # Object is a plain function.
                     parent_names = getargs(self.object_dic[name].func_code)[0]
-                self.parent[name]=parent_names                
+                self.parent_dic[name]=parent_names                
                 self.__parse_objects(parent_names)
                 
     def get_parents(self, attr_name):
-        """Return a dictionary with the attribute parents and their
+        """Return a dictionary with the attribute's parents and their
         current values."""
-        parents = self.parents[attr_name]
-        return dict([(p, self.attributes[p]) for p in parents])
+        parents = self.parent_dic[attr_name]
+        values = dict([(p, self.attributes[p].fget(self)) for p in parents])
+        return values
 
     def create_attributes(self, name, obj):
         # For each parent, create a node, parameter or data attribute.
-
-        if obj.type == 'Data':
-            # Instead of creating an attribute with a dumb object, create it
-            # with a PyArray. 
-            def like(self):
-                parents = self.get_parents(name)
-                return obj(**parents)
-            setattr(self, '__'+name, MCArray(obj.value, like, obj.type))            
-            #setattr(self, '__'+name, obj.value)
-            def fget(self):
-                """Return value of data."""
-                return getattr(self, '__'+name)
-            attribute = property(fget, doc=obj.__doc__)
-            setattr(self.__class__, name, attribute)
+        try:
+            if obj.type == 'Data':
+                # Instead of creating an attribute with a dumb object, create it
+                # with a PyArray. 
+                def like(self):
+                    parents = self.get_parents(name)
+                    return obj(**parents)
+                setattr(self, '__'+name, MCArray(obj.value, self, like, obj.type))            
+                #setattr(self, '__'+name, obj.value)
+                def fget(self):
+                    """Return value of data."""
+                    return getattr(self, '__'+name)
+                attribute = property(fget, doc=obj.__doc__)
+                setattr(self.__class__, name, attribute)
+                
+            elif obj.type == 'Parameter':
+                def like(self):
+                    parents = self.get_parents(name)
+                    return obj(getattr(self.__class__, name), **parents)
+                setattr(self, '__'+name, MCArray(obj.init_val, self, like, obj.type)) 
+                #setattr(self, '__'+name, obj.init_val)
+                
+                def fget(self):
+                    """Return value of parameter.""" 
+                    return getattr(self, '__'+name)
+    
+                def fset(self, value):
+                    """Set value of parameter.""" 
+                    setattr(self, '__'+name, value)
+                attribute = property(fget, fset, doc=obj.__doc__)
+                setattr(self.__class__, name, attribute)
+                
+            elif obj.type == 'Node':
+                def fget(self):
+                    parents = self.get_parents(name)
+                    return obj(**parents)
+                attribute = property(fget, doc=obj.__doc__)
+                setattr(self.__class__, name, attribute)
             
-        elif obj.type == 'Parameter':
-            def like(self):
-                parents = self.get_parents(name)
-                return obj(getattr(self.__class__, name), **parents)
-            setattr(self, '__'+name, MCArray(obj.init_val, like, obj.type)) 
-            setattr(self, '__'+name, obj.init_val)
-            def fget(self):
-                """Return value of parameter.""" 
-                return getattr(self, '__'+name)
-
-            def fset(self, value):
-                """Set value of parameter.""" 
-                setattr(self, '__'+name, value)
-            attribute = property(fget, fset, doc=obj.__doc__)
-            setattr(self.__class__, name, attribute)
-            
-        elif (obj.__class__ is types.FunctionType) or (obj.type == 'Node'):
-            def fget(self):
-                parents = self.get_parents(name)
-                return obj(**parents)
-            attribute = property(fget, doc=obj.__doc__)
-            setattr(self.__class__, name, attribute)
-        
-        else:
-            raise('Object not recognized.')
-        
+            else:
+                raise('Object not recognized.')
+        except AttributeError:
+            if obj.__class__ is types.FunctionType:
+                def fget(self):
+                    parents = self.get_parents(name)
+                    return obj(**parents)
+                attribute = property(fget, doc=obj.__doc__)
+                setattr(self.__class__, name, attribute)
+                
         self.attributes[name]=getattr(self.__class__, name)
         
 
@@ -257,6 +268,14 @@ def likelihood(sim_output, exp_output):
     """Return likelihood of simulation given the experimental data."""
     return normal_like(sim_output, exp_output, 2)
 
+
+# Put everything together
+model = Bunch(likelihood)
+print model.alpha
+print model.beta
+print model.exp_output
+print model.sim_output
+print model.likelihood
 
 # The last step would be to call 
 # Sampler(posterior, 'Metropolis')
