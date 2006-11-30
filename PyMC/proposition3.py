@@ -59,9 +59,7 @@ class Parameter:
             
     def __call__(self, func):
         self.parents = getargs(func.func_code)[0]
-        try:
-            self.parents.remove('self')
-        except:pass
+                    
         def wrapper(*args, **kwds):
             return func(*args, **kwds)
         wrapper.__dict__.update(self.__dict__)
@@ -155,43 +153,49 @@ class Bunch(object):
                 self.object_dic[name]=globals()[name]
                 try:
                     # Object is a Data, Parameter or Node instance.
-                    parent_names = self.object_dic[name].parents
+                    parent_names = self.object_dic[name].parents[:]
                 except AttributeError:
                     # Object is a plain function.
                     parent_names = getargs(self.object_dic[name].func_code)[0]
-                self.parent_dic[name]=parent_names                
+
+                self.parent_dic[name]=parent_names[:]
+                if 'self' in parent_names:
+                    parent_names.remove('self')
                 self.__parse_objects(parent_names)
                 
     def get_parents(self, attr_name):
         """Return a dictionary with the attribute's parents and their
         current values."""
         parents = self.parent_dic[attr_name]
-        values = dict([(p, self.attributes[p].fget(self)) for p in parents])
+        if 'self' in parents:
+            parents.remove('self')
+            values = dict([(p, self.attributes[p].fget(self)) for p in parents])
+            values['self'] = self.attributes[attr_name].fget(self)
+        else:
+            values = dict([(p, self.attributes[p].fget(self)) for p in parents])
         return values
 
     def create_attributes(self, name, obj):
         # For each parent, create a node, parameter or data attribute.
         try:
             if obj.type == 'Data':
-                # Instead of creating an attribute with a dumb object, create it
-                # with a PyArray. 
-                def like(self):
-                    parents = self.get_parents(name)
-                    return obj(**parents)
-                setattr(self, '__'+name, MCArray(obj.value, self, like, obj.type))            
-                #setattr(self, '__'+name, obj.value)
+                #setattr(self, '__'+name, MCArray(obj.value, self, like, obj.type))            
+                setattr(self, '__'+name, np.asarray(obj.value))
                 def fget(self):
                     """Return value of data."""
                     return getattr(self, '__'+name)
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
-            elif obj.type == 'Parameter':
-                def like(self):
+                def lget(self):
+                    """Return likelihood of data."""
                     parents = self.get_parents(name)
-                    return obj(getattr(self.__class__, name), **parents)
-                setattr(self, '__'+name, MCArray(obj.init_val, self, like, obj.type)) 
-                #setattr(self, '__'+name, obj.init_val)
+                    return obj(**parents)
+                attribute = property(lget, doc=obj.__doc__)
+                setattr(self.__class__, name+'_like', attribute)
+                
+            elif obj.type == 'Parameter':
+                setattr(self, '__'+name, np.asarray(obj.init_val))
                 
                 def fget(self):
                     """Return value of parameter.""" 
@@ -202,6 +206,13 @@ class Bunch(object):
                     setattr(self, '__'+name, value)
                 attribute = property(fget, fset, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
+                
+                def lget(self):
+                    """Return likelihood of parameter."""
+                    parents = self.get_parents(name)
+                    return obj(**parents)
+                attribute = property(lget, doc=obj.__doc__)
+                setattr(self.__class__, name+'_like', attribute)
                 
             elif obj.type == 'Node':
                 def fget(self):
@@ -276,7 +287,7 @@ print model.beta
 print model.exp_output
 print model.sim_output
 print model.likelihood
-
+print model.alpha_like
 # The last step would be to call 
 # Sampler(posterior, 'Metropolis')
 # i.e. sample the parameters from posterior using a Metropolis algorithm.
