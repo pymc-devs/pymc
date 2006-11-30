@@ -22,12 +22,15 @@ def autocov(series, lag, n_minus_k=False):
     zbar = series.mean()
     
     return sum([(series[i] - zbar) * (series[i + lag] - zbar) for i in range(n - lag)]) / ((n - lag) * n_minus_k or n)
-    
-def autocorr(series, lag):
-    # Sample autocorrelation function at specified lag, calculated
-    # as autocov(lag)/autocov(0)
-    
-    return autocov(series, lag) / autocov(series, 0)
+       
+def autocorr(x, lag=1):
+    """Sample autocorrelation at specified lag.
+    The autocorrelation is the correlation of x_i with x_{i+lag}.
+    """
+    x = squeeze(asarray(x))
+    mu = x.mean()
+    v = x.var()
+    return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
     
 def correlogram(series, maxlag, name='', plotter=None):
     # Plot correlogram up to specified maximum lag
