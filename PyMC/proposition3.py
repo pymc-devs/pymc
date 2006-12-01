@@ -53,12 +53,16 @@ class Parameter:
             "Parameter alpha of model M."
             return uniform_like(self, 0, 10)
     """
-    def __init__(func, **kwds):
-        func.__dict__.update(kwds)
-        func.type = 'Parameter'
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+        self.type = 'Parameter'
             
     def __call__(self, func):
+        self.args = getargs(func.func_code)[0]
         self.parents = getargs(func.func_code)[0]
+        if 'self' in self.parents:
+            self.parents.remove('self')
+            
                     
         def wrapper(*args, **kwds):
             return func(*args, **kwds)
@@ -67,7 +71,7 @@ class Parameter:
         return wrapper
     
 class Data(Parameter):
-    """Decorator function for PyMC data.
+    """Decorator class for PyMC data.
     
     Input
         'value': The data.
@@ -80,20 +84,20 @@ class Data(Parameter):
             return 0
     """
  
-    def __init__(func, **kwds):
-        func.__dict__.update(kwds)
-        func.type = 'Data'
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+        self.type = 'Data'
         
-def Node(func):
-    """Decorator function for PyMC node.
+class Node(Parameter):
+    """Decorator class for PyMC node.
 
     Input
-        func: A function returning the likelihood of the node.
+        self: A function returning the likelihood of the node.
         
     Example
-        @Node
-        def posterior(sim_output, exp_output, var):
-            return normal_like(sim_output, exp_output, 1./var)
+        @Node(self = func)
+        def simulation(self, exp_output, var):
+            return normal_like(self, exp_output, 1./var)
     
     Note
         All arguments to the likelihood of a Node must be somewhere in the 
@@ -101,11 +105,25 @@ def Node(func):
         In the example, sim_output must be a function, and var a constant or a 
         Parameter. 
     
-    TODO: Implement higher level of recursion in the parent finding. 
     """
-    func.parents = getargs(func.func_code)[0]
-    func.type = 'Node'
-    return func
+    def __init__(cself, **kwds):
+        cself.__dict__.update(kwds)
+        cself.type = 'Node'
+        
+
+    def __call__(self, func):
+        self.args = getargs(func.func_code)[0]
+        self.parents = getargs(func.func_code)[0]
+        if 'self' in self.parents:
+            self.parents.remove('self')
+            self.parents.append(self.self.__name__)
+                    
+        def wrapper(*args, **kwds):
+            return func(*args, **kwds)
+        wrapper.__dict__.update(self.__dict__)
+        wrapper.__doc__ = func.__doc__
+        wrapper.__name__ = func.__name__
+        return wrapper
 
 class Bunch(object):
     """Instantiation: Bunch(top object)
@@ -127,12 +145,17 @@ class Bunch(object):
     likelihood(): Return the global likelihood.
     
     """
-    def __init__(self, obj, *args, **kwds):
+    def __init__(self, *args, **kwds):
         # Get all parent objects        
         # Create a dictionnary linking each object to its parents.        
         self.object_dic = {}
-        self.parent_dic = {}        
-        self.__parse_objects([obj.__name__])
+        self.parent_dic = {}
+        self.call_args = {}
+        self.call_attr = {}
+        for obj in args:
+            self.__parse_objects([obj.__name__])
+        self.__get_args()
+        self.__find_children()
         
         # Create attributes from these objects and fill the attributes 
         # dictionary.
@@ -159,27 +182,51 @@ class Bunch(object):
                     parent_names = getargs(self.object_dic[name].func_code)[0]
 
                 self.parent_dic[name]=parent_names[:]
-                if 'self' in parent_names:
-                    parent_names.remove('self')
                 self.__parse_objects(parent_names)
-                
+
+    def __find_children(self):
+        pass
+        
+    def __get_args(self):
+        for name, obj in self.object_dic.iteritems():
+            try:
+                self.call_args[name] = obj.args[:]
+            except:
+                self.call_args[name] = self.parent_dic[name][:]
+            self.call_attr[name] = \
+                dict(zip(self.call_args[name][:],self.call_args[name][:]))
+            try:
+                self.call_attr[name]['self'] = name
+            except:
+                pass
+        
     def get_parents(self, attr_name):
         """Return a dictionary with the attribute's parents and their
         current values."""
-        parents = self.parent_dic[attr_name]
-        if 'self' in parents:
-            parents.remove('self')
-            values = dict([(p, self.attributes[p].fget(self)) for p in parents])
-            values['self'] = self.attributes[attr_name].fget(self)
-        else:
-            values = dict([(p, self.attributes[p].fget(self)) for p in parents])
-        return values
-
+        parents = self.parent_dic[attr_name][:]
+        return dict([(p, self.attributes[p].fget(self)) for p in parents])
+        
+    def get_args(self, attr_name):
+        """Return a dictionary with the attribute's calling arguments and their 
+        current value."""
+        conversion = self.call_attr[attr_name]
+        return dict([(call, self.attributes[a].fget(self)) for call, a in conversion.iteritems()])
+        
+        
     def create_attributes(self, name, obj):
-        # For each parent, create a node, parameter or data attribute.
+        """Create attributes from the object.
+        The first attribute, name, returns its own value. 
+        If the object is a Data, Parameter or a Node, a second attribute is 
+        created, name_like, and it returns the object's likelihood.
+        
+        Name: name of attribute.
+        obj:  reference to the object.
+        
+        TODO: implement time stamps and cacheing.
+        """
+        
         try:
-            if obj.type == 'Data':
-                #setattr(self, '__'+name, MCArray(obj.value, self, like, obj.type))            
+            if obj.type == 'Data':            
                 setattr(self, '__'+name, np.asarray(obj.value))
                 def fget(self):
                     """Return value of data."""
@@ -187,13 +234,7 @@ class Bunch(object):
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
-                def lget(self):
-                    """Return likelihood of data."""
-                    parents = self.get_parents(name)
-                    return obj(**parents)
-                attribute = property(lget, doc=obj.__doc__)
-                setattr(self.__class__, name+'_like', attribute)
-                
+                   
             elif obj.type == 'Parameter':
                 setattr(self, '__'+name, np.asarray(obj.init_val))
                 
@@ -207,22 +248,25 @@ class Bunch(object):
                 attribute = property(fget, fset, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
-                def lget(self):
-                    """Return likelihood of parameter."""
-                    parents = self.get_parents(name)
-                    return obj(**parents)
-                attribute = property(lget, doc=obj.__doc__)
-                setattr(self.__class__, name+'_like', attribute)
                 
             elif obj.type == 'Node':
                 def fget(self):
-                    parents = self.get_parents(name)
-                    return obj(**parents)
+                    selfname = obj.self.__name__
+                    return self.attributes[selfname].fget(self)
+
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
             
             else:
-                raise('Object not recognized.')
+                raise('Object type not recognized.')
+                
+            def lget(self):
+                """Return likelihood."""
+                kwds = self.get_args(name)
+                return obj(**kwds)
+            attribute = property(lget, doc=obj.__doc__)
+            setattr(self.__class__, name+'_like', attribute)
+        
         except AttributeError:
             if obj.__class__ is types.FunctionType:
                 def fget(self):
@@ -231,6 +275,7 @@ class Bunch(object):
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
+        
         self.attributes[name]=getattr(self.__class__, name)
         
 
@@ -265,7 +310,7 @@ def exp_output():
     
 # Model function
 # No decorator is needed, its just a function.
-def sim_output(alpha, beta, input):
+def model(alpha, beta, input):
     """Return the simulated output.
     Usage: sim_output(alpha, beta, input)
     """
@@ -274,20 +319,31 @@ def sim_output(alpha, beta, input):
     
 
 # The likelihood node. 
-@Node
-def likelihood(sim_output, exp_output):
+# The keyword specifies the function to call to get the node's value.
+@Node(self=model)
+def sim_output(self, exp_output):
     """Return likelihood of simulation given the experimental data."""
-    return normal_like(sim_output, exp_output, 2)
+    return normal_like(self, exp_output, 2)
 
+# Just a function we want to compute along the way.
+def residuals(sim_output, exp_output):
+    """Model's residuals"""
+    return sim_output-exp_output
 
 # Put everything together
-model = Bunch(likelihood)
-print model.alpha
-print model.beta
-print model.exp_output
-print model.sim_output
-print model.likelihood
-print model.alpha_like
+bunch = Bunch(sim_output, residuals)
+print 'alpha: ', bunch.alpha
+print 'alpha_like: ', bunch.alpha_like
+print 'beta: ', bunch.beta
+print 'beta_like: ', bunch.beta_like
+print 'exp_output: ', bunch.exp_output
+print 'sim_output: ', bunch.sim_output
+print 'sim_output_like: ', bunch.sim_output_like
+print 'residuals: ', bunch.residuals
+
+
+#print bunch.parent_dic
+#print bunch.call_args
 # The last step would be to call 
 # Sampler(posterior, 'Metropolis')
 # i.e. sample the parameters from posterior using a Metropolis algorithm.
