@@ -9,36 +9,51 @@
 
 import numpy as np
 from inspect import getargs
-import types
+import types, copy
 
 class MCArray(np.ndarray):
-    def __new__(subtype, data, class_ref, like, MCType, info=None, dtype=None, copy=True):
+    def __new__(subtype, name, data, like, class_ref, MCType, info=None, dtype=None, copy=True):
         """data: array
         like: likelihood
-        MCType: Data or Parameter.
+        MCType: Data, Parameter.
         """
         subtype._info = info
-        subtype.info = subtype._info
-        subtype._like = like
+        subtype.__like = like
         subtype._cref = class_ref
+        subtype._name  = name[:]
+        subtype._type = MCType[:]
         return np.array(data).view(subtype)
 
     def __array_finalize__(self,obj):
-        if hasattr(obj, "info"):
-            # The object already has an info tag: just use it
-            self.info = obj.info
-            self.like = obj._like
-        else:
-            # The object has no info tag: use the default
-            self.info = self._info
+        self.info = self._info
+        self.name = self._name
+        self.type = self._type
+        self.__repr__ = self.make_repr()
+        self._like = self.__like
     
-    def like(self, **kwargs):
-       return self._like(self._cref, **kwargs)
-
-    def __repr__(self):
-        desc="""Parameter array( %(data)s,
-      tag=%(tag)s)"""
-        return desc % {'data': str(self), 'tag':self.info }
+    def like(cself):
+            kw = cself._cref.get_args(cself.name)
+            return cself._like( **kw)
+        
+    def make_repr(self):
+        if self._type == 'Parameter':
+            def repr(self):
+                desc="""PyMC Parameter( %(data)s,
+              tag=%(tag)s)"""
+                return desc % {'data': str(self), 'tag':self.info }
+        elif self._type == 'Data':
+            def repr(self):
+                desc="""PyMC Data( %(data)s,
+              tag=%(tag)s)"""
+                return desc % {'data': str(self), 'tag':self.info }
+        elif self._type == 'Node':
+            def repr(self):
+                desc="""PyMC Node( %(data)s,
+              tag=%(tag)s)"""
+                return desc % {'data': str(self), 'tag':self.info }
+        return repr
+        
+    
 
 class Parameter:
     """Decorator class for PyMC parameter.
@@ -56,6 +71,7 @@ class Parameter:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
         self.type = 'Parameter'
+        self.shape = np.shape(self.init_val)
             
     def __call__(self, func):
         self.args = getargs(func.func_code)[0]
@@ -87,6 +103,7 @@ class Data(Parameter):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
         self.type = 'Data'
+        self.shape = np.shape(self.value)
         
 class Node(Parameter):
     """Decorator class for PyMC node.
@@ -163,12 +180,10 @@ class Bunch(object):
         for k,o in self.object_dic.iteritems():        
             self.create_attributes(k,o)
             
-        
         # All objects are attributed a value and a like. 
         # underlying the fget method of those attribute is the caching mechanism.
         # All objects are linked, so that the value of parents is known.
-        
-            
+
     def __parse_objects(self, obj_name):
         """Get the parents of obj_name from the global namespace."""
         for name in obj_name:
@@ -189,16 +204,15 @@ class Bunch(object):
         
     def __get_args(self):
         for name, obj in self.object_dic.iteritems():
+            # Case 
             try:
                 self.call_args[name] = obj.args[:]
             except:
                 self.call_args[name] = self.parent_dic[name][:]
             self.call_attr[name] = \
                 dict(zip(self.call_args[name][:],self.call_args[name][:]))
-            try:
+            if self.call_attr[name].has_key('self'):
                 self.call_attr[name]['self'] = name
-            except:
-                pass
         
     def get_parents(self, attr_name):
         """Return a dictionary with the attribute's parents and their
@@ -224,10 +238,18 @@ class Bunch(object):
         
         TODO: implement time stamps and cacheing.
         """
-        
+        def lget(self):
+            """Return likelihood."""
+            kwds = self.get_args(name)
+            return obj(**kwds)
+        attribute = property(lget, doc=obj.__doc__)
+        setattr(self.__class__, name+'_like', attribute)
+        like = getattr(self.__class__, name+'_like')
         try:
             if obj.type == 'Data':            
-                setattr(self, '__'+name, np.asarray(obj.value))
+                #setattr(self, '__'+name, np.asarray(obj.value))
+                setattr(self, '__'+name, MCArray(name, obj.value, obj.__call__, self, 'Data', obj.__doc__))
+                setattr(getattr(self, '__'+name), 'alike', like)
                 def fget(self):
                     """Return value of data."""
                     return getattr(self, '__'+name)
@@ -236,23 +258,30 @@ class Bunch(object):
                 
                    
             elif obj.type == 'Parameter':
-                setattr(self, '__'+name, np.asarray(obj.init_val))
                 
+                #setattr(self, '__'+name, np.asarray(obj.init_val))
+                setattr(self, '__'+name, MCArray(name, obj.init_val, obj.__call__, self, 'Parameter', obj.__doc__))
                 def fget(self):
                     """Return value of parameter.""" 
                     return getattr(self, '__'+name)
     
                 def fset(self, value):
                     """Set value of parameter.""" 
-                    setattr(self, '__'+name, value)
+                    ar = getattr(self, '__'+name)
+                    ar.itemset(value)
                 attribute = property(fget, fset, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
                 
             elif obj.type == 'Node':
+                setattr(self, '__'+name, MCArray(name, np.empty(obj.shape), obj.__call__, self, 'Parameter', obj.__doc__))
                 def fget(self):
                     selfname = obj.self.__name__
-                    return self.attributes[selfname].fget(self)
+                    value = self.attributes[selfname].fget(self)
+                    o = getattr(self, '__'+name)
+                    #o.itemset(value)
+                    o[:] = value
+                    return o
 
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
@@ -260,18 +289,13 @@ class Bunch(object):
             else:
                 raise('Object type not recognized.')
                 
-            def lget(self):
-                """Return likelihood."""
-                kwds = self.get_args(name)
-                return obj(**kwds)
-            attribute = property(lget, doc=obj.__doc__)
-            setattr(self.__class__, name+'_like', attribute)
+
         
         except AttributeError:
             if obj.__class__ is types.FunctionType:
                 def fget(self):
-                    parents = self.get_parents(name)
-                    return obj(**parents)
+                    args = self.get_args(name)
+                    return obj(**args)
                 attribute = property(fget, doc=obj.__doc__)
                 setattr(self.__class__, name, attribute)
                 
@@ -320,7 +344,7 @@ def model(alpha, beta, input):
 
 # The likelihood node. 
 # The keyword specifies the function to call to get the node's value.
-@Node(self=model)
+@Node(self=model, shape=input.shape)
 def sim_output(self, exp_output):
     """Return likelihood of simulation given the experimental data."""
     return normal_like(self, exp_output, 2)
@@ -334,11 +358,14 @@ def residuals(sim_output, exp_output):
 bunch = Bunch(sim_output, residuals)
 print 'alpha: ', bunch.alpha
 print 'alpha_like: ', bunch.alpha_like
+print 'alpha.like(): ', bunch.alpha.like()
 print 'beta: ', bunch.beta
 print 'beta_like: ', bunch.beta_like
+print 'beta.like(): ', bunch.beta.like()
 print 'exp_output: ', bunch.exp_output
 print 'sim_output: ', bunch.sim_output
 print 'sim_output_like: ', bunch.sim_output_like
+print 'sim_output.like(): ', bunch.sim_output.like()
 print 'residuals: ', bunch.residuals
 
 
