@@ -165,18 +165,19 @@ class Bunch(object):
     def __init__(self, *args, **kwds):
         # Get all parent objects        
         # Create a dictionnary linking each object to its parents.        
+       
         self.object_dic = {}
         self.parent_dic = {}
-        self.call_args = {}
-        self.call_attr = {}
         for obj in args:
             self.__parse_objects([obj.__name__])
         self.__get_args()
         self.__find_children()
+        self.__find_types()
         
         # Create attributes from these objects and fill the attributes 
         # dictionary.
         self.attributes = {}
+        self.likelihoods = {}
         for k,o in self.object_dic.iteritems():        
             self.create_attributes(k,o)
             
@@ -200,9 +201,49 @@ class Bunch(object):
                 self.__parse_objects(parent_names)
 
     def __find_children(self):
-        pass
+        self.children = {}
+        for p in self.parent_dic.keys():
+            self.children[p] = set()
+        for child, parents in self.parent_dic.iteritems():
+            for p in parents:
+                self.children[p].add(child)
+        self.ext_children = {}
+        for k,v in self.children.iteritems():
+            self.ext_children[k] = v.copy()
+            
+        for child in self.children.keys():
+            self.__find_ext_children(child)
+        
+    def __find_ext_children(self, name):
+        children = self.ext_children[name].copy()
+        
+        if len(children) != 0:
+            for child in children:
+                if not self.ext_children[name].issuperset(self.children[child]):
+                    self.ext_children[name].update(self.children[child])
+                    self.__find_ext_children(name)
+                
+    def __find_types(self):
+        self.parameters = set()
+        self.nodes = set()
+        self.data = set()
+        self.logicals = set()
+        for name, obj in self.object_dic.iteritems():
+            try:
+                if obj.type=='Parameter':
+                    self.parameters.add(name)
+                elif obj.type =='Node':
+                    self.nodes.add(name)
+                elif obj.type == 'Data':
+                    self.data.add(name)
+            except AttributeError:
+                self.logicals.add(name)
+        
         
     def __get_args(self):
+        self.call_args = {}
+        self.call_attr = {}
+
         for name, obj in self.object_dic.iteritems():
             # Case 
             try:
@@ -226,7 +267,14 @@ class Bunch(object):
         conversion = self.call_attr[attr_name]
         return dict([(call, self.attributes[a].fget(self)) for call, a in conversion.iteritems()])
         
-        
+    def likelihood(self, name):
+        likes = {}
+        if type(name) == str:
+            name = [name]
+        for n in name:
+            likes[n] = self.likelihoods[n].fget(self)
+        return likes
+    
     def create_attributes(self, name, obj):
         """Create attributes from the object.
         The first attribute, name, returns its own value. 
@@ -244,6 +292,7 @@ class Bunch(object):
             return obj(**kwds)
         attribute = property(lget, doc=obj.__doc__)
         setattr(self.__class__, name+'_like', attribute)
+        self.likelihoods[name] = getattr(self.__class__, name+'_like')
         like = getattr(self.__class__, name+'_like')
         try:
             if obj.type == 'Data':            
@@ -303,6 +352,35 @@ class Bunch(object):
         self.attributes[name]=getattr(self.__class__, name)
         
 
+
+class SamplingMethod(object):
+    def __init__(self, model, parameters):
+        self.model = model
+        if type(parameters) == str:        
+            self.parameters = [parameters]            
+        else:
+            self.parameters = parameters
+        
+        self.__find_probabilistic_children()
+        
+    def step(self):
+        pass
+        
+    def tune(self):
+        pass
+        
+    def __find_probabilistic_children(self):
+        self.children = set()
+        for p in self.parameters:
+            self.children.update(self.model.ext_children[p])
+        
+        self.children -= self.model.logicals
+        self.children -= self.model.data
+        
+    def _get_likelihood(self):
+        return sum(self.model.likelihood(self.children).values())
+            
+    likelihood = property(fget = _get_likelihood)
 # Example ------------------------------------------------------------------
 from test_decorator import normal_like, uniform_like
 
@@ -357,16 +435,19 @@ def residuals(sim_output, exp_output):
 # Put everything together
 bunch = Bunch(sim_output, residuals)
 print 'alpha: ', bunch.alpha
-print 'alpha_like: ', bunch.alpha_like
+#print 'alpha_like: ', bunch.alpha_like
 print 'alpha.like(): ', bunch.alpha.like()
 print 'beta: ', bunch.beta
-print 'beta_like: ', bunch.beta_like
+#print 'beta_like: ', bunch.beta_like
 print 'beta.like(): ', bunch.beta.like()
 print 'exp_output: ', bunch.exp_output
 print 'sim_output: ', bunch.sim_output
-print 'sim_output_like: ', bunch.sim_output_like
+#print 'sim_output_like: ', bunch.sim_output_like
 print 'sim_output.like(): ', bunch.sim_output.like()
 print 'residuals: ', bunch.residuals
+
+
+S = SamplingMethod(bunch, 'alpha')
 
 
 #print bunch.parent_dic
