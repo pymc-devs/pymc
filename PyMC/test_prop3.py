@@ -1,9 +1,13 @@
 # Test proposition 3
 # Based on the Disaster Sampler
-from proposition3 import Data, Parameter, Node, Merge
+
+DEBUG = True
+from proposition3 import Data, Parameter, Node, Merge, JointSampling, Sampler,\
+SamplingMethod, LikelihoodError
 #from proposition3 import *
 #import test_decorator
-from test_decorator import normal_like, uniform_like, poisson_like, uniform_prior
+from test_decorator import normal_like, uniform_like, poisson_like, \
+uniform_prior, rnormal
 
 # Define the data and parameters
 @Data(value = (4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -21,23 +25,30 @@ def disasters():
 def switchpoint(self, disasters):
     return uniform_like(self, 1, len(disasters)-2)
 
-@Parameter(init_val=1)
+@Parameter(init_val=1.)
 def early_mean(self, disasters, switchpoint):
     """Rate parameter of poisson distribution."""
     return poisson_like(disasters[:switchpoint], self)
 
-@Parameter(init_val=1)
+@Parameter(init_val=1.)
 def late_mean(self, disasters, switchpoint):
     """Rate parameter of poisson distribution."""
     return poisson_like(disasters[switchpoint:], self)
 
 # Create the model
 model = Merge(early_mean, late_mean)
-model.likelihood()
+print model.likelihood()
 model.switchpoint = 60
-model.switchpoint.like()
+print model.switchpoint
+print model.late_mean.like()
 
 
+s = SamplingMethod(model, 'early_mean', debug=True)
+for i in range(10):
+    s.step()
+#JS = JointSampling(model, ['early_mean', 'late_mean'])
+#S = Sampler(JS)
+#S.sample()
 
 
 # Second example ------------------------------------------------------------------

@@ -10,6 +10,12 @@
 import numpy as np
 from inspect import getargs
 import types, copy
+from test_decorator import rnormal
+from numpy.random import rand
+
+class LikelihoodError(ValueError):
+    "Log-likelihood is invalid or negative informationnite"
+
 
 class MCArray(np.ndarray):
     def __new__(subtype, name, data, like, class_ref, MCType, info=None, dtype=None, copy=True):
@@ -279,15 +285,36 @@ class Merge(object):
         name: name or list of name of the attributes.
         """
         
-        likes = {}
         if type(name) == str:
-            name = [name]
+            return self.likelihoods[name].fget(self)
+        
+        likes = {}    
         if name is None:
             name = self.parameters | self.nodes
         for n in name:
             likes[n] = self.likelihoods[n].fget(self)
         return likes
     
+    def get_value(self, name=None):
+        """Return the values of the attributes.
+        If only one name is given, return the value. 
+        If a sequence of name is given, return a dictionary. 
+        
+        Default return all attributes.
+        """
+        if (type(name) == str):
+            return self.attributes[name].fget(self)
+        
+        values = {}
+        if name is None:
+            name = self.parameters | self.nodes |self.data
+        for n in name:
+            values[n] = self.attributes[n].fget(self)
+        return values
+        
+    def set_value(self, name, value):
+        self.attributes[name].fset(self, value)
+        
     def create_attributes(self, name, obj):
         """Create attributes from the object.
         The first attribute, name, returns its own value. 
@@ -367,31 +394,85 @@ class Merge(object):
 
 
 class SamplingMethod(object):
-    def __init__(self, model, parameters):
+    """Basic Metropolis sampling for scalars."""
+    def __init__(self, model, parameter, dist=rnormal, debug=False):
         self.model = model
-        if type(parameters) == str:        
-            self.parameters = [parameters]            
-        else:
-            self.parameters = parameters
-        
+        self.parameters = parameter
+        self.asf = 1
+        self.dist = dist
+        self.DEBUG = debug
         self.__find_probabilistic_children()
+        self.current = copy.copy(self.model.get_value(self.parameters))
+        self.current_like = self._get_likelihood()
+        
         
     def step(self):
-        pass
+        self.sample_candidate()
+        accept = self.test()
         
+        if self.DEBUG:
+            print '%-20s%20s%20s' % (self.parameters, 'Value', 'Likelihood')
+            print '%10s%-10s%20f%20f' % ('', 'Current', self.current, self.current_like)
+            print '%10s%-10s%20f%20f' % ('', 'Candidate', self.candidate, self.candidate_like)
+            print '%10s%-10s%20s\n' % ('', 'Accepted', str(accept))
+        
+        if accept:
+            self.accept()
+        else:
+            self.reject()
+        
+    def sample_candidate(self):
+        self.candidate = self.current + self.dist(0, self.asf)
+        self.model.set_value(self.parameters, self.candidate)
+        self.candidate_like = self._get_likelihood()
+
     def tune(self):
         pass
         
+        
+    def test(self):
+        alpha = self.candidate_like - self.current_like
+        if alpha > 0 or np.exp(alpha) >= rand():
+            return True
+        else:
+            return False
+            
+    def accept(self):
+        self.current = self.candidate
+        self.current_like = self.candidate_like
+        
+    def reject(self):
+        self.model.set_value(self.parameters, self.current)
+        
     def __find_probabilistic_children(self):
         self.children = set()
-        for p in self.parameters:
+        if type(self.parameters) == str:
+            params = [self.parameters]
+        else:
+            params = self.parameters
+        for p in params:
             self.children.update(self.model.ext_children[p])
         
         self.children -= self.model.logicals
         self.children -= self.model.data
         
     def _get_likelihood(self):
-        return sum(self.model.likelihood(self.children).values())
-            
+        try:
+            ownlike = self.model.likelihood(self.parameters)
+            childlike = sum(self.model.likelihood(self.children).values())
+            like = ownlike+childlike
+        except (LikelihoodError, OverflowError, ZeroDivisionError):
+            like -np.Inf
+        return like
+        
     likelihood = property(fget = _get_likelihood)
 
+class JointSampling(SamplingMethod):
+    def step(self):
+        pass
+        
+    def tune(self):
+        pass
+        
+class Sampler(object):
+    pass

@@ -1,19 +1,19 @@
 # Decorate fortran functions from PyMC.flib to ease argument passing
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: Deal with functions that have no fortran counterpart. uniform_like, categorical
-# TODO: Think about a structure to deal with GOF tests. 
 # TODO: Write a wrapper for random generation functions.
 #
 # TODO: Make node_to_NDarray decorator better.
 # TODO: Replace flat's with ravel's, and if possible avoid resize-ing (try to
 # avoid any memory allocation, in fact).
-
+# For GOF tests, the wrapper fwrap could check the value of a global variable
+# _GOF, and call the gof function instead of the likelihood. 
 
 from PyMC import flib
 from PyMC import Sampler, LikelihoodError
 import numpy as np
 import proposition4
-from numpy import inf, random
+from numpy import inf, random, sqrt
 import string
 from PyMC.flib import categor as _fcategorical
 from PyMC.flib import beta as _fbeta
@@ -51,7 +51,7 @@ def node_to_NDarray(arg):
 	else:
 		return arg
 		
-
+_GOF = False
 def fwrap(f, prior=False):
     """Decorator function.
     Assume the arguments are x, par1, par2, ...
@@ -59,16 +59,26 @@ def fwrap(f, prior=False):
     Pass x and parameters as one dimensional arrays to the fortran function.
     """
     
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwds):
         """wrapper doc"""
         xshape = np.shape(node_to_NDarray(args[0]))
         newargs = [np.asarray(node_to_NDarray(args[0])).flat]
         for arg in args[1:]:
             newargs.append(np.resize(node_to_NDarray(arg), xshape).flat)
-        for key in kwargs.iterkeys():
-            kwargs[key] = node_to_NDarray(kwargs[key])
-        return f(*newargs, **kwargs)
-		
+        for key in kwds.iterkeys():
+            kwds[key] = node_to_NDarray(kwds[key])  
+        
+        if _GOF is False:
+            try:
+                return f(*newargs, **kwds)
+            except LikelihoodError:
+                return -np.Inf
+        else:
+            expval = expval_func(*newargs[1:], **kwds)
+            y = random_func(*newargs[1:], **kwds)
+            gof_points = GOFpoints(newargs[0],y,expval,loss)
+            return gof_points
+            
     wrapper.__doc__ = f.__doc__
     wrapper._prior = prior
     wrapper._PyMC = True
