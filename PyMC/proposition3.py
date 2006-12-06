@@ -84,6 +84,7 @@ class Parameter:
             return func(*args, **kwds)
         wrapper.__dict__.update(self.__dict__)
         wrapper.__doc__ = func.__doc__
+        wrapper.__name__ = func.__name__
         return wrapper
     
 class Data(Parameter):
@@ -142,7 +143,7 @@ class Node(Parameter):
         wrapper.__name__ = func.__name__
         return wrapper
 
-class Bunch(object):
+class Merge(object):
     """Instantiation: Bunch(top object)
     
     For each object and parents of object, create an attribute. 
@@ -168,6 +169,9 @@ class Bunch(object):
        
         self.object_dic = {}
         self.parent_dic = {}
+        import __main__
+        self.snapshot = __main__.__dict__
+
         for obj in args:
             self.__parse_objects([obj.__name__])
         self.__get_args()
@@ -189,14 +193,16 @@ class Bunch(object):
         """Get the parents of obj_name from the global namespace."""
         for name in obj_name:
             if name is not None:
-                self.object_dic[name]=globals()[name]
                 try:
-                    # Object is a Data, Parameter or Node instance.
-                    parent_names = self.object_dic[name].parents[:]
-                except AttributeError:
-                    # Object is a plain function.
-                    parent_names = getargs(self.object_dic[name].func_code)[0]
-
+                    self.object_dic[name]=self.snapshot[name]
+                    try:
+                        # Object is a Data, Parameter or Node instance.
+                        parent_names = self.object_dic[name].parents[:]
+                    except AttributeError:
+                        # Object is a plain function.
+                        parent_names = getargs(self.object_dic[name].func_code)[0]
+                except KeyError:
+                    raise 'Object %s has not been defined.' % name
                 self.parent_dic[name]=parent_names[:]
                 self.__parse_objects(parent_names)
 
@@ -267,10 +273,17 @@ class Bunch(object):
         conversion = self.call_attr[attr_name]
         return dict([(call, self.attributes[a].fget(self)) for call, a in conversion.iteritems()])
         
-    def likelihood(self, name):
+    def likelihood(self, name=None):
+        """Return the likelihood of the attributes.
+        
+        name: name or list of name of the attributes.
+        """
+        
         likes = {}
         if type(name) == str:
             name = [name]
+        if name is None:
+            name = self.parameters | self.nodes
         for n in name:
             likes[n] = self.likelihoods[n].fget(self)
         return likes
@@ -381,84 +394,4 @@ class SamplingMethod(object):
         return sum(self.model.likelihood(self.children).values())
             
     likelihood = property(fget = _get_likelihood)
-# Example ------------------------------------------------------------------
-from test_decorator import normal_like, uniform_like
 
-# Define model parameters
-@Parameter(init_val = 4)
-def alpha(self):
-    """Parameter alpha of toy model."""
-    # The return value is the prior. 
-    return uniform_like(self, 0, 10)
-
-@Parameter(init_val=5)
-def beta(self, alpha):
-    """Parameter beta of toy model."""
-    return normal_like(self, alpha, 2)
-
-
-# Define the data
-@Data(value = [1,2,3,4])
-def input():
-    """Measured input driving toy model."""
-    like = 0
-    return like
-    
-@Data(value = [45,34,34,65])
-def exp_output():
-    """Experimental output."""
-    # likelihood a value or a function
-    return 0
-    
-# Model function
-# No decorator is needed, its just a function.
-def model(alpha, beta, input):
-    """Return the simulated output.
-    Usage: sim_output(alpha, beta, input)
-    """
-    self = alpha + beta * input
-    return self
-    
-
-# The likelihood node. 
-# The keyword specifies the function to call to get the node's value.
-@Node(self=model, shape=input.shape)
-def sim_output(self, exp_output):
-    """Return likelihood of simulation given the experimental data."""
-    return normal_like(self, exp_output, 2)
-
-# Just a function we want to compute along the way.
-def residuals(sim_output, exp_output):
-    """Model's residuals"""
-    return sim_output-exp_output
-
-# Put everything together
-bunch = Bunch(sim_output, residuals)
-print 'alpha: ', bunch.alpha
-#print 'alpha_like: ', bunch.alpha_like
-print 'alpha.like(): ', bunch.alpha.like()
-print 'beta: ', bunch.beta
-#print 'beta_like: ', bunch.beta_like
-print 'beta.like(): ', bunch.beta.like()
-print 'exp_output: ', bunch.exp_output
-print 'sim_output: ', bunch.sim_output
-#print 'sim_output_like: ', bunch.sim_output_like
-print 'sim_output.like(): ', bunch.sim_output.like()
-print 'residuals: ', bunch.residuals
-
-
-S = SamplingMethod(bunch, 'alpha')
-
-
-#print bunch.parent_dic
-#print bunch.call_args
-# The last step would be to call 
-# Sampler(posterior, 'Metropolis')
-# i.e. sample the parameters from posterior using a Metropolis algorithm.
-# Sampler recursively looks at the parents of posterior, namely sim_output and
-# exp_output, identifies the Parameters and sample over them according to the
-# posterior likelihood. 
-# Since the parents are known for each element, we can find the children of the 
-# Parameters, so when one Parameter is sampled, we only need to compute the 
-# likelihood of its children, and avoid computing elements that are not modified 
-# by the current Parameter. 

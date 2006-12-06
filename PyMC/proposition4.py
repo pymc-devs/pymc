@@ -28,7 +28,7 @@ from copy import deepcopy
 from numpy import *
 from scipy import weave
 from scipy.weave import converters
-from check_for_recompute import checkparameter
+#from check_for_recompute import checkparameter
 
 def push(seq,new_value):
 	"""
