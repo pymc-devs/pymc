@@ -28,7 +28,6 @@ from copy import deepcopy
 from numpy import *
 from scipy import weave
 from scipy.weave import converters
-#from check_for_recompute import checkparameter
 
 def push(seq,new_value):
 	"""
@@ -185,7 +184,8 @@ class Node(object):
 
 		self.parents = parents
 		self.children = set()
-		self.timestamp = 0		
+		self.timestamp = 0
+						
 		self._cache_depth = cache_depth
 		
 		# Find self's parents that are nodes, to speed up cache checking,
@@ -208,6 +208,9 @@ class Node(object):
 				# Initialize a timestamp cache for this parent
 				self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
 				
+				# Record a reference to this parent's value
+				self._parent_values[key] = self.parents[key].value
+				
 			else:
 				
 				# Record a reference to this value
@@ -217,7 +220,7 @@ class Node(object):
 		self._value = None
 		self._match_indices = zeros(self._cache_depth,dtype='int')
 		self._cache_index = 1
-	
+
 #
 # Define the attribute parent_values. This should be eventually be written in C.
 #
@@ -249,21 +252,9 @@ class Node(object):
 		self.children -= logical_children
 		if need_recursion:
 			self._extend_children()
-		return
-		
-#
-# Not implemented yet
-#		
-	def init_trace(self, length):
-		pass
-
-	def tally(self):
-		pass
-		
-		
+		return		
 		
 
-# Nodes that are deterministic conditional on their parents
 class Logical(Node):
 	"""
 	A Node that is deterministic conditional on its parents.
@@ -292,9 +283,9 @@ class Logical(Node):
 	as well as parameter(), and data().
 	"""
 
-	def __init__(self, eval_fun, **parents):
+	def __init__(self, eval_fun, tallyable = True, **parents):
 
-		Node.__init__(self,**parents)
+		Node.__init__(self, tallyable, **parents)
 
 		self._eval_fun = eval_fun
 		self._value = None
@@ -379,9 +370,9 @@ class Parameter(Node):
 	as well as logical().
 	"""
 
-	def __init__(self, prob_fun, init_val=0, isdata=False, **parents):
+	def __init__(self, prob_fun, init_val=0, isdata=False, tallyable=True, **parents):
 
-		Node.__init__(self, **parents)
+		Node.__init__(self, tallyable, **parents)
 
 		self.isdata = isdata
 		self._prob_fun = prob_fun
