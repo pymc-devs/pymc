@@ -147,6 +147,121 @@ c increment log-likelihood
       END
 
 
+
+      SUBROUTINE constrain(x, a, b, n, allow_equal)
+      
+c Check that x is in [a, b] if allow_equal, or
+c that x is in ]a, b[ if not. 
+
+cf2py real dimension(n), intent(in) :: x
+cf2py real, intent(in) :: a, b
+cf2py real, intent(hide) :: n = len(x)
+cf2py logical, intent(in) :: allow_equal
+      
+      IMPLICIT NONE
+      INTEGER n, i
+      REAL x(n)
+      REAL a,b
+      LOGICAL allow_equal
+      
+      
+      if (allow_equal) then
+        do i=1,n
+          if ((x(i) .LT. a) .OR. (x(i) .GT. b)) then
+            PRINT*, 'Bad parameters.' 
+            RETURN
+          endif
+        enddo
+      else 
+        do i=1,n
+          if ((x(i) <= a) .OR. (x(i) >= b)) then 
+            PRINT*, 'Bad parameters.' 
+            RETURN
+          endif
+        enddo
+      endif
+      END
+      
+      
+      SUBROUTINE standardize(x, loc, scale, n, nloc, nscale, z)
+      
+c Compute z = (x-mu)/scale
+
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(n), intent(out) :: z
+cf2py real dimension(nloc), intent(in) :: loc
+cf2py real dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+
+
+      REAL x(n), loc(nloc), scale(nscale), z(n)
+      REAL mu, sigma
+      INTEGER n, nloc, nscale, i
+      LOGICAL not_scalar_loc, not_scalar_scale
+      
+      mu = loc(1)
+      sigma = scale(1)
+      not_scalar_loc = (nloc .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+      
+      do i=1,n
+        if (not_scalar_loc) mu = loc(i)     
+        if (not_scalar_scale) sigma = scale(i)
+        z(i) = (x(i) - mu)/sigma
+      enddo
+      END
+
+      SUBROUTINE exponweib(x,a,c,loc,scale,n,na,nc,nloc,nscale,like)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nc), intent(in) :: c
+cf2py real dimension(nloc), intent(in) :: loc
+cf2py real dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(a) :: na=len(a)
+cf2py integer intent(hide),depend(c) :: nc=len(c)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py real intent(out) :: like
+
+      REAL x(n), z(n), a(na), c(nc), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nc, nloc, nscale
+      REAL like
+      LOGICAL not_scalar_a, not_scalar_c, not_scalar_scale
+      REAL aa, cc, sigma, pdf
+      
+      aa = a(1)
+      cc = c(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_c = (nc .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Check parameter c > 0
+c      CALL constrain(c, 0.0, Inf, nc, .FALSE.)
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+c Check z > 0
+c      CALL constrain(z, 0.0, Inf, n, .FALSE.)
+     
+      like = 0.0
+      do i=1,n
+        if (not_scalar_a) aa = a(i)
+        if (not_scalar_c) cc = c(i)
+        if (not_scalar_scale) sigma = scale(i)
+        t1 = exp(-z(i)**cc)
+        pdf = aa*cc*(1.0-t1)**(aa-1.0)*t1*z(i)**(cc-1.0)
+        like = like + log(pdf/sigma)
+      enddo
+      END
+
       SUBROUTINE hyperg(x,d,red,total,n,like)
 
 c Hypergeometric log-likelihood function

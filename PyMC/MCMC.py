@@ -64,6 +64,7 @@ rmultinomial = random.multinomial
 from flib import weibull as fweibull
 from flib import cauchy as fcauchy
 from flib import lognormal as flognormal
+from flib import exponweib as fexponweib
 from flib import igamma as figamma
 from flib import wshrt
 from flib import gamfun
@@ -1736,6 +1737,12 @@ class Sampler:
         
         return self.inverse_gamma_like(parameter, alpha, beta, prior=True)
     
+
+    def exponweib_like(self, x, a, c, loc=0, scale=1, name='exponweib', prior=False):
+        """Exponentiated Weibull log-likelihood"""
+        
+        return fexponweib(x, a, c, loc, scale)
+
     def exponential_like(self, x, beta, name='exponential', prior=False):
         """Exponential log-likelihood"""
         
