@@ -2,7 +2,7 @@
 # Based on the Disaster Sampler
 
 DEBUG = True
-from proposition3 import Data, Parameter, Node, Merge, JointSampling, Sampler,\
+from proposition3 import Data, Parameter, Node, BuildModel, JointSampling, Sampler,\
 SamplingMethod, LikelihoodError
 #from proposition3 import *
 #import test_decorator
@@ -36,15 +36,19 @@ def late_mean(self, disasters, switchpoint):
     return poisson_like(disasters[switchpoint:], self)
 
 # Create the model
-model = Merge(early_mean, late_mean)
-print model.likelihood()
+model = BuildModel(early_mean, late_mean)
+print 'Parents: ', model.parents
+print 'Children: ', model.children
+print 'Extended children: ', model.ext_children
+print 'Current values: ', model.get_value()
+print 'Current likelihoods: ', model.likelihood()
 model.switchpoint = 60
 print model.switchpoint
 print model.late_mean.like()
 
-
+print '\nNow a couple of Metropolis steps.\n'
 s = SamplingMethod(model, 'early_mean', debug=True)
-for i in range(10):
+for i in range(3):
     s.step()
 #JS = JointSampling(model, ['early_mean', 'late_mean'])
 #S = Sampler(JS)
