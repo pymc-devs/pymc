@@ -66,7 +66,8 @@ c
         uniform = z / 2147483563.
         return
         end
-
+      
+        
         subroutine set_uniform(seed1, seed2)
 c
 c    Set seeds for the uniform random number generator.
@@ -148,34 +149,47 @@ c increment log-likelihood
 
 
 
-      SUBROUTINE constrain(x, a, b, n, allow_equal)
+      SUBROUTINE constrain(pass, x, a, b, allow_equal, n, na, nb)
       
 c Check that x is in [a, b] if allow_equal, or
 c that x is in ]a, b[ if not. 
 
+cf2py integer, intent(out) :: pass
 cf2py real dimension(n), intent(in) :: x
-cf2py real, intent(in) :: a, b
-cf2py real, intent(hide) :: n = len(x)
-cf2py logical, intent(in) :: allow_equal
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nb), intent(in) :: b
+cf2py integer intent(hide), depend(x) :: n = len(x)
+cf2py integer intent(hide), depend(a) :: na = len(a)
+cf2py integer intent(hide), depend(b) :: nb = len(b)
+cf2py logical intent(in) :: allow_equal
+
       
       IMPLICIT NONE
-      INTEGER n, i
-      REAL x(n)
-      REAL a,b
-      LOGICAL allow_equal
+      INTEGER n, na, nb, i, pass
+      REAL x(n), a(na), b(nb), ta, tb
+      LOGICAL allow_equal, not_scalar_a, not_scalar_b
+      pass = 1 
       
+      ta = a(1)
+      tb = b(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
       
       if (allow_equal) then
         do i=1,n
-          if ((x(i) .LT. a) .OR. (x(i) .GT. b)) then
-            PRINT*, 'Bad parameters.' 
+          if (not_scalar_a) ta = a(i)
+          if (not_scalar_b) tb = b(i) 
+          if ((x(i) .LT. ta) .OR. (x(i) .GT. tb)) then
+            pass = 0 
             RETURN
           endif
         enddo
       else 
         do i=1,n
-          if ((x(i) <= a) .OR. (x(i) >= b)) then 
-            PRINT*, 'Bad parameters.' 
+          if (not_scalar_a) ta = a(i)
+          if (not_scalar_b) tb = b(i) 
+          if ((x(i) <= ta) .OR. (x(i) >= tb)) then 
+            pass = 0 
             RETURN
           endif
         enddo
@@ -213,6 +227,46 @@ cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
       enddo
       END
 
+
+        subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
+        
+c Return the uniform likelihood of x.
+
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(nlower), intent(in) :: lower
+cf2py real dimension(nupper), intent(in) :: upper 
+cf2py integer intent(hide), depend(x) :: n=len(x)
+cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
+cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
+cf2py real intent(out) :: like
+
+        IMPLICIT NONE
+        
+        INTEGER n, nlower, nupper, i
+        REAL x(n), lower(nlower), upper(nupper)
+        REAL like, low, high
+        LOGICAL not_scalar_lower,not_scalar_upper
+        
+        
+        low = lower(1)
+        high = upper(1)  
+        not_scalar_upper = (nupper .NE. 1)  
+        not_scalar_lower = (nlower .NE. 1)
+        
+        like = 0.0
+        
+        do i=1,n
+          if (not_scalar_lower) low = lower(i)
+          if (not_scalar_upper) high = upper(i)
+          if ((x(i) < low) .OR. (x(i) > high)) then
+            like = -3.4028235E+38
+            RETURN
+          else
+            like = like - log(high-low)
+          endif
+        enddo
+        END subroutine uniform_like
+
       SUBROUTINE exponweib(x,a,c,loc,scale,n,na,nc,nloc,nscale,like)
       
 c Exponentiated log-likelihood function
@@ -245,11 +299,11 @@ cf2py real intent(out) :: like
       not_scalar_scale = (nscale .NE. 1)
 
 c Check parameter c > 0
-c      CALL constrain(c, 0.0, Inf, nc, .FALSE.)
+c      CALL constrain(c, 0.0, Infinity, nc, .FALSE.)
 c Compute z
       CALL standardize(x, loc, scale, n, nloc, nscale, z)
 c Check z > 0
-c      CALL constrain(z, 0.0, Inf, n, .FALSE.)
+c      CALL constrain(z, 0.0, Infinity, n, .FALSE.)
      
       like = 0.0
       do i=1,n
