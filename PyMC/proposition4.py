@@ -26,6 +26,7 @@ For usage examples, see test_prop_4.py
 """
 from copy import deepcopy
 from numpy import *
+from numpy.random import randint
 from scipy import weave
 from scipy.weave import converters
 
@@ -118,27 +119,27 @@ def data(**kwargs):
 	"""
 	Decorator function instantiating the Parameter class with the 'isdata' flag set to True. 
 	That means that the attribute value cannot be changed after instantiation. Usage:
-	
+
 	@data(init_val = some value, parent_1_name = some object, parent_2_name = some object, ...):
 	def D(value, parent_1_name, parent_2_name, ...):
 		return foo(value, parent_1_name, parent_2_name, ...):
-		
+
 	will create a Parameter named D whose log-probability is computed by foo, with the property
 	that P.value cannot be changed from init_val. Example:
-	
+
 	@data(init_val = value, mu = A, tau = 6.0):
 	def D(12.3, mu, tau):
 		return normal_like(value, mu[10,63], tau)
-		
+
 	creates a parameter called D with two parents, A and 6.0. D.value will be set to
 	12.3 forever. When D.prob is computed, it will be set to 
-	
+
 	normal_like(D.value, A[10,63], 6.0)				if A is a numpy ndarray
-	
+
 	OR
-	
+
 	normal_like(D.value, A.value[10,63], 6.0)		if A is a Node.
-	
+
 	See also parameter() and logical(),
 	as well as Parameter, Logical and Node.
 	"""
@@ -147,7 +148,7 @@ def data(**kwargs):
 		D = Parameter(prob_fun=f,isdata=True,**kwargs)
 		D.__doc__ = f.__doc__
 		return D
-		
+
 	return __instantiate_data
 
 
@@ -253,43 +254,43 @@ class Node(object):
 		if need_recursion:
 			self._extend_children()
 		return		
-		
+
 
 class Logical(Node):
 	"""
 	A Node that is deterministic conditional on its parents.
-	
+
 	Externally-accessible attributes:
-	
+
 	value :	Value conditional on parents. Retrieved from cache when possible,
 			recomputed only when necessary. This descriptor should eventually
 			be written in C.
-			
+
 	Externally-accessible attributes inherited from Node:
-	
+
 		parents
 		children
 		timestamp
 		parent_values
-	
+
 	Externally-accessible methods inherited from Node:
-	
+
 		init_trace(length)
 		tally()
-	
+
 	To instantiate: see logical()
-	
+
 	See also Parameter and Node,
 	as well as parameter(), and data().
 	"""
 
-	def __init__(self, eval_fun, tallyable = True, **parents):
+	def __init__(self, eval_fun, **parents):
 
-		Node.__init__(self, tallyable, **parents)
+		Node.__init__(self, **parents)
 
 		self._eval_fun = eval_fun
 		self._value = None
-		
+
 		# Caches
 		self._cached_value = []
 		for i in range(self._cache_depth): self._cached_value.append(None)
@@ -327,7 +328,7 @@ class Logical(Node):
 
 		else: self._value = self._cached_value[self._cache_index]
 		return self._value
-		
+
 	value = property(fget=_get_value)
 
 
@@ -370,9 +371,9 @@ class Parameter(Node):
 	as well as logical().
 	"""
 
-	def __init__(self, prob_fun, init_val=0, isdata=False, tallyable=True, **parents):
+	def __init__(self, prob_fun, init_val=0, isdata=False, **parents):
 
-		Node.__init__(self, tallyable, **parents)
+		Node.__init__(self, **parents)
 
 		self.isdata = isdata
 		self._prob_fun = prob_fun
@@ -488,13 +489,13 @@ class SamplingMethod(object):
 	"""
 
 	def __init__(self, nodes):
-	
+
 		self.nodes = set(nodes)
 		self.logicals = set()
 		self.parameters = set()
 		self.data = set()
 		self.children = set()
-		
+
 		# File away the nodes
 		for node in self.nodes:
 			if isinstance(node,Logical):
@@ -504,13 +505,13 @@ class SamplingMethod(object):
 					self.data.add(node)
 				else:
 					self.parameters.add(node)
-					
+
 		# Find children, no need to find parents; each node takes care of those.
 		for node in self.nodes:
 			self.children |= node.children
-			
+
 		self._extend_children()
-			
+
 		self.children -= self.logicals
 		self.children -= self.parameters
 		self.children -= self.data
@@ -520,9 +521,9 @@ class SamplingMethod(object):
 #
 	def step(self):
 		pass
-		
+
 #
-# Not implemented yet
+# Must be overridden in subclasses
 #
 	def tune(self):
 		pass
@@ -548,9 +549,9 @@ class SamplingMethod(object):
 #
 	def _get_likelihood(self):
 		return sum([child.prob for child in self.children])
-		
+
 	likelihood = property(fget = _get_likelihood)
-			
+
 
 # The default SamplingMethod, which Sampler uses to handle singleton parameters.		
 class OneAtATimeMetropolis(SamplingMethod):
@@ -619,8 +620,7 @@ class Sampler(object):
 		self.sampling_methods = set()
 	
 		# Search the base namespace and file PyMC objects
-		import __main__
-		snapshot = __main__.__dict__
+		from __main__ import __dict__ as snapshot
 
 		for item in snapshot.itervalues():
 
@@ -650,10 +650,87 @@ class Sampler(object):
 				if parameter in sampling_method.parameters:
 					homeless = False
 					break
-					
+
 			# If not, make it a new one-at-a-time Metropolis-Hastings SamplingMethod
 			if homeless:
 				self.sampling_methods.add(OneAtATimeMetropolis([parameter]))
+
+#
+# Initialize traces
+#
+	def init_traces(self, length, nodes_to_not_tally = set()):
+		"""
+		init_traces(length, nodes_to_not_tally = None)
+
+		Enumerates the nodes that are to be tallied and initializes traces
+		for them. 
+		
+		To be tallyable, a node has to pass the following criteria:
+
+			-	It is not included in the argument nodes_not_to_tally.
+
+			-	Its value has a shape.
+
+			-	Its value can be made into a numpy array with a numerical
+				dtype.
+		"""	
+		self.traces = {}
+		self._nodes_to_tally = set()
+		self._cur_trace_index = 0
+		self.max_trace_length = length
+		
+		for node in self.nodes:
+			# Try initializing the trace and writing the current value.
+			try:
+			
+				# Check condition 1 from docstring
+				if not node in nodes_to_not_tally:
+
+					# Check conditions 2 and 3 from docstring.
+					# This is kind of hacky, how the #$^&* do you concatenate
+					# a scalar and a tuple?
+					self.traces[node] = zeros(((0,length) + shape(node.value))[1:])
+	
+					# This is kind of hacky too. I want to 1) check that array() works, and
+					# 2) silently upcast the trace to the type of the node ahead of time.
+					self.traces[node][0,] = 0 * array(node.value)
+					
+					self._nodes_to_tally.add(node) 
+
+			except TypeError:
+				if self.traces.has_key(node):
+					self.traces.pop(node)
+
+#
+# Tally
+#					
+	def tally(self):
+		"""
+		tally()
+		
+		Records the value of all tallyable nodes.
+		"""
+		if self._cur_trace_index < self.max_trace_length:
+			for node in self._nodes_to_tally:
+				self.traces[node][self.cur_trace_index,] = node.value
+			
+		self._cur_trace_index += 1
+		
+#
+# Return to a sampled state
+#
+	def remember(self, trace_index = None):
+		"""
+		remember(trace_index = randint(trace length to date))
+		
+		Sets the value of all tallyable nodes to a value recorded in 
+		their traces.
+		"""
+		if trace_index is None:
+			trace_index = randint(self.cur_trace_index)
+			
+		for node in self._nodes_to_tally:
+			node.value = self.traces[node][trace_index,]
 
 #
 # Run the MCMC loop!
@@ -664,3 +741,7 @@ class Sampler(object):
 				sampling_method.step()
 				
 		# Tally as appropriate.
+		if i > burn and (i - burn) % thin == 0:
+			self.tally()
+			
+		# Tuning, etc.

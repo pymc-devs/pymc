@@ -1,4 +1,4 @@
-from test_decorator import normal_like, uniform_like, node_to_NDarray
+from test_fortran_module import normal as normal_like
 from numpy import *
 from proposition4 import *
 
@@ -8,7 +8,6 @@ def A(value, q, p):
 	A ~ N(q ** 2, p ** 127).
 	"""
 	return normal_like(value, q ** 2, p / 127.)
-
 
 @parameter(init_val = 3., mu = array([[2,3],[4,16]], dtype='float'), tau = array([2,3,4,16], dtype='float'))
 def B(value, mu, tau):
