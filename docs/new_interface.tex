@@ -1,0 +1,71 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{amsmath}
+
+\begin{document}
+I think we should separate numerical objects from conceptual ones.
+
+\subsection{Conceptual objects}
+\begin{description}
+\item[Parameter] Variable whose value is unknown, but can be inferred from known quantities.
+\item[Data] Known quantity.
+\item[probability density function] Function returning the probability that a statement is true.
+\end{description}
+
+\subsection{Numerical objects}
+\begin{description}
+\item[Parameters] Objects whose value can be set, and that return a prior log-probability.
+\item[Data] Objects whose value is fixed at definition, and that return a prior log-probability.
+\item[Logical] Objects whose value cannot be set, but can be computed from data and parameters. They do not return a probability, but only a value of interest.
+\item[Conditional?] Object returning a log probability corresponding to a valid probabilistic statement.
+\end{description}
+
+We generally express a probabilistic statement as the following:
+$p(\textrm{unknown parameters}| \textrm{known data})$. In the standard usage, we then use Bayes' theorem to inverse the equation
+$$p(\textrm{known}| \textrm{unknown})p(\textrm{unknown} )/p(\textrm{known} ).$$ There are multiple ways to define a single model, however, and we cannot assume  a particular one. For example, if $\alpha$ and $\beta$ are parameters and $x,y $ are data, then we could write
+\begin{align}
+p(\alpha, \beta|x,y) & = p(x,y|\alpha , \beta)p(\alpha,\beta)/p(x,y)\\
+& =p(y|x,\alpha,\beta)p(\alpha,\beta|x)/p(y|x )\\
+& = p(\alpha, x|\beta ,y)p(\beta|y)/p(x|y)
+\end{align}
+
+So we have to define a numerical object that allows us to express all those variations. In other words, it must do two things: 1. convey a probabilistic meaning, and 2. return a numerical value, a log-probability dependent on the values of its parents. The function itself does not need to known whether $x$ or $\alpha $ is known or unknown (data or parameter), but we need to make sure that the probabilistic model combining all the probabilistic statements, conveys the intended meaning. One way to do so is to tell each probabilistic statement its logical meaning, ie
+\begin{verbatim}
+@Conditional('y|x,alpha,beta')
+def likelihood(y,x,alpha,beta):
+    return normal_like(y|func(x,alpha, beta), 1)
+\end{verbatim}
+So that when all probabilistic statements are combined in the Sampler instance, it is possible to write the complete expression and check its validity. In fact, the ideal would be to call
+\texttt{Sampler('alpha, beta|x,y')} and let the sampler find the expression that matches what has been defined by the user.
+
+\begin{verbatim}
+@Parameter
+def beta(self, alpha):
+    return ...
+
+@Parameter
+def alpha(self):
+    return ...
+
+@Data(value = ...)
+def x(self):
+    return ...
+
+@Data(value = ...)
+def y(self):
+    return ...
+
+@Conditional('y|x,alpha,beta')
+def likelihood(y,x,alpha,beta):
+    return normal_like(y|func(x,alpha, beta), 1)
+
+Sampler('alpha, beta|x,y')
+\end{verbatim}
+The sampler would look for a conditional instance, and get its meaning (\texttt{'y|x,alpha,beta'}). Then, it would use Baye's theorem to go from \texttt{'alpha, beta|x,y'} to \texttt{'y|x,alpha,beta'}, obtaining
+\begin{verbatim}\frac{'y|x,alpha,beta', 'alpha, beta|x'}{'y|x'}\end{verbatim}
+Since it wouldn't find a Conditional with alpha or beta, it would go through the parameters and find that while beta depends on alpha, alpha does not depend on beta, so \texttt{'alpha, beta|x'} would transform into \texttt{['beta|alpha', 'alpha']}, and \texttt{'y|x'} into \texttt{'y'} by the same reasoning. Finally, we would have the expression
+\begin{verbatim}\frac{['y|x,alpha,beta', 'beta|alpha', 'alpha']}{'y'}\end{verbatim} which could easily be written in latex and checked by the user.
+
+Some time ago I wanted to write a class to play with probabilities. I never finished but there are some things that work. Its added as bayes.py. 
+\end{document}
+ 
