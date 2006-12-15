@@ -314,7 +314,49 @@ c      CALL constrain(z, 0.0, Infinity, n, .FALSE.)
         pdf = aa*cc*(1.0-t1)**(aa-1.0)*t1*z(i)**(cc-1.0)
         like = like + log(pdf/sigma)
       enddo
-      END
+      END SUBROUTINE EXPONWEIB
+
+      SUBROUTINE exponweib_ppf(q,a,c,n,na,nc,ppf)
+      
+c     Compute the percentile point function for the 
+c     Exponentiated Weibull distribution.
+c     Accept parameters a,c of length 1 or n.
+
+cf2py real dimension(n), intent(in) :: q
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nc), intent(in) :: c      
+cf2py integer intent(hide),depend(q) :: n=len(q)
+cf2py integer intent(hide),depend(a) :: na=len(a)
+cf2py integer intent(hide),depend(c) :: nc=len(c)
+cf2py real dimension(n), intent(out) :: ppf
+
+
+      IMPLICIT NONE
+      INTEGER n,na,nc,i
+      REAL q(n), a(na), c(nc), ppf(n),ta,tc
+      LOGICAL not_scalar_a, not_scalar_c
+      
+c     Check length of input arrays.
+      not_scalar_a = (na .NE. 1)
+      not_scalar_c = (nc .NE. 1)
+      if ((not_scalar_a) .AND. (na .NE. n)) return
+      if ((not_scalar_c) .AND. (nc .NE. n)) return
+             
+      ta = a(1)
+      tc = c(1)
+
+      DO i=1,n
+        if (not_scalar_a) ta = a(i)
+        if (not_scalar_c) tc = c(i)
+        ppf(i) = (-log(1.0 - q(i)**(1.0/ta)))**(1.0/tc)
+      ENDDO
+
+      END SUBROUTINE exponweib_ppf
+
+
+
+
+
 
       SUBROUTINE hyperg(x,d,red,total,n,like)
 
@@ -537,6 +579,57 @@ cf2py real intent(out) :: like
       return
       END
 
+
+      SUBROUTINE gev(x,xi,mu,sigma,n,nxi,nmu,nsigma,like)
+C
+C     COMPUTE THE LIKELIHOOD OF THE GENERALIZED EXTREME VALUE DISTRIBUTION.
+C
+Cf2py real dimension(n), intent(in):: x
+Cf2py real dimension(nxi), intent(in):: xi
+Cf2py real dimension(nmu), intent(in):: mu
+Cf2py real dimension(nsigma), intent(in):: sigma
+Cf2py integer intent(hide), depend(x) :: n=len(x)
+Cf2py integer intent(hide), depend(x) :: nxi=len(xi)
+Cf2py integer intent(hide), depend(x) :: nmu=len(mu)
+Cf2py integer intent(hide), depend(x) :: nsigma=len(sigma)
+Cf2py real intent(out):: like
+
+      INTEGER n, nmu, nxi, nsigma, i
+      REAL X(N), xi(nxi), mu(nmu), sigma(nsigma), LIKE
+      REAL Z(N), EX(N), PEX(N)
+      REAL XIt, SIGMAt
+	  LOGICAL not_scalar_xi, not_scalar_sigma
+
+C     Check parameter size
+      not_scalar_xi =  (nxi .NE. 1)
+      not_scalar_sigma =  (nsigma .NE. 1)
+   
+	  CALL standardize(x,mu,sigma,n,nu,nsigma,z)
+
+	  xit = xi(1)
+      sigmat = sigma(1)
+
+      LIKE = 0.0
+      
+      DO I=1,N
+        if (not_scalar_xi) xit = xi(i)
+        if (not_scalar_sigma) sigmat = sigma(i)          
+    
+        IF (ABS(XIT) .LT. 10.**(-5.)) THEN
+          LIKE = LIKE - Z(I) - EXP(-Z(I))/SIGMAT
+        ELSE 
+          EX(I) = 1. - xit*z(I)
+          IF (EX(I) .LT. 0.) THEN
+            LIKE = -3.4028235E+38
+            RETURN
+          ENDIF
+          PEX(I) = EX(I)**(1./xit)  
+          LIKE = LIKE - LOG(sigmat) - PEX(I) + LOG(PEX(I)) -LOG(EX(I))
+        ENDIF
+      ENDDO
+
+      end subroutine gev	
+	
 
       SUBROUTINE multinomial(x,n,p,m,like)
 
@@ -835,6 +928,50 @@ c multiply dtau by d
       return
       END
 
+        SUBROUTINE vec_mvnorm(x,mu,tau,k,n,like)
+
+c Vectorized multivariate normal log-likelihood function      
+      
+cf2py real dimension(k,n),intent(in) :: x,mu
+cf2py real dimension(k,k),intent(in) :: tau
+cf2py real intent(out) :: like
+cf2py integer intent(hide),depend(x) :: k=shape(x,0)
+cf2py integer, intent(hide), depend(x):: n=shape(x,1)
+
+      INTEGER i,j,k,n
+      REAL x(k,n), mu(k,n), tau(k,k)
+      REAL dt(n,k),dtau(n,k),d(k,n), s(n)
+      REAL like,det
+      
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+
+c calculate determinant of precision matrix     
+      call dtrm(tau,k,det)
+
+c calculate d=(x-mu)
+      do i=1,k
+        do j=1,n
+          d(i,j) = x(i,j)-mu(i,j)
+        enddo
+      enddo
+      
+c transpose 
+      call trans(d,dt,k,n)
+c mulitply t(d) by tau -> dtau (n,k)
+      call matmult(dt,tau,dtau,n,k,k,k)
+      
+      like = 0.0
+      do j=1,n
+        s(j) = 0.0
+        do i=1,k
+          s(j) = s(j) + dtau(j,i)*d(i,j)
+        enddo
+        like = like + s(j)
+      enddo
+            
+      like = n*0.5*log(det) - n*(k/2.0)*log(2.0*PI) - (0.5*like)
+      END subroutine
       
       SUBROUTINE trace(mat,k,tr)
 
@@ -853,7 +990,8 @@ c matrix trace (sum of diagonal elements)
       
       SUBROUTINE gamfun(xx,gx)
 
-c the gamma function
+c Return the logarithm of the gamma function
+c Corresponds to scipy.special.gammaln
 
 cf2py real intent(in) :: xx
 cf2py real intent(out) :: gx

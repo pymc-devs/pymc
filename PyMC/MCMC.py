@@ -20,6 +20,7 @@ from numpy import pi
 from numpy import ravel, resize
 from numpy import searchsorted, shape, sqrt, sort, swapaxes, where
 from numpy import tan, transpose, vectorize, zeros
+from test_decorator import add_decorated_likelihoods
 permutation = random.permutation
 
 from TimeSeries import autocorr as acf
@@ -951,6 +952,7 @@ class Sampler:
         
         # Goodness of Fit flag
         self._gof = False
+        
     
     def profile(self, iterations=2000, burn=1000, name='pymc'):
         """Profile sampler with hotshot"""
@@ -997,10 +999,10 @@ class Sampler:
             
             self._gof_loss.append(array([self.loss(x, expval), self.loss(rcategorical(probs, minval, step), expval)], dtype=float))
             
-            try:
-                return sum([_categorical(y, p, mn, s) for y, p, mn, s in zip(x, probs, minval, step)])
-            except TypeError:
-                return _categorical(x, probs, minval, step)
+        try:
+            return sum([_categorical(y, p, mn, s) for y, p, mn, s in zip(x, probs, minval, step)])
+        except TypeError:
+            return _categorical(x, probs, minval, step)
     
     def categorical_prior(self, parameters, probs, minval=0, step=1):
         """Categorical prior distribution"""
@@ -2604,7 +2606,7 @@ class Sampler:
         except LikelihoodError:
             return -inf
 
-
+add_decorated_likelihoods(Sampler)
 
 class Slice(Sampler):
     """
