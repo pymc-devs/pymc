@@ -20,7 +20,7 @@ from numpy import pi
 from numpy import ravel, resize
 from numpy import searchsorted, shape, sqrt, sort, swapaxes, where
 from numpy import tan, transpose, vectorize, zeros
-from test_decorator import add_decorated_likelihoods
+from distributions import add_decorated_likelihoods
 permutation = random.permutation
 
 from TimeSeries import autocorr as acf
@@ -838,7 +838,7 @@ class Parameter(Node):
         
         # Compute covariance matrix in the multivariate case and the standard
         # variation in all other cases.
-        #self.compute_scale(acc_rate,  int_length)
+        self.compute_scale(acc_rate,  int_length)
         
         if verbose:
             print '\tacceptance rate:', acc_rate
