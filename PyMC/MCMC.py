@@ -718,7 +718,7 @@ class Parameter(Node):
             if dist == 'multivariate_normal':
                 self._hyp = eye(*self.dim)
             else:
-                self._hyp = 1.0
+                self._hyp = ones(self.dim)
 
         elif dist == 'multivariate_normal':
             # Only the std variations are given. 
@@ -859,7 +859,7 @@ class Parameter(Node):
                 it = where(self._traces[-1]==0.)[0][0]
                 
                 # Computes the variance over the last 3 intervals.
-                _var = cov(self._traces[-1][max(0, it-3 * int_length):it],axis=0)
+                _var = cov(self._traces[-1][max(0, it-3 * int_length):it],rowvar=0)
                 
                 # Uncorrelated multivariate case
                 if self._dist_name != 'multivariate_normal':

@@ -5,7 +5,7 @@
 # TODO: Make node_to_NDarray decorator better.
 # TODO: test vectorized multivariate normal like. 
 
-__likelihoods__ = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet', 
+availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet', 
 'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric', 
 'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric', 
 'multivariate_normal', 'negative_binomial', 'normal', 'poisson', 'uniform', 
@@ -16,10 +16,30 @@ import flib
 import numpy as np
 import proposition4
 from numpy import inf, random, sqrt
-from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
+#from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
 inverse = np.linalg.pinv
 
+
+#-------------------------------------------------------------
+# Light decorators
+#-------------------------------------------------------------
+
+def Vectorize(f):
+    """Wrapper to vectorize a scalar function."""
+    return np.vectorize(f)
+
+def randomwrap(f):
+    """
+    Decorator for random value generators
+    =====================================
+    
+    Vectorize random value generation functions so an array of parameters may 
+    be passed.
+    """
+    def wrapper(*args, **kwds):
+        return [f(a,dict(kwds.keys(), v)) for a,v in zip(args, kwds.values())]
+    return wrapper
 
 #-------------------------------------------------------------
 # Utility functions
@@ -81,7 +101,7 @@ def GOFpoints(x,y,expval,loss):
 def rbernoulli(p):
     return random.binomial(1,p)
         
-def _bernoulli_expval(p):
+def bernoulli_expval(p):
     """Goodness of fit for bernoulli."""
     return p
                 
@@ -103,7 +123,7 @@ def bernoulli_like(x, p):
 def rbeta(alpha, beta):
     return random.beta(alpha, beta)
 
-def _beta_expval(x,alpha, beta):
+def beta_expval(x,alpha, beta):
     expval = 1.0 * alpha / (alpha + beta)
     return expval
 
@@ -124,7 +144,7 @@ def beta_like(x, alpha, beta):
 def rbinomial(n,p):
     return random.binomial(n,p)
 
-def _binomial_expval(x,n,p):
+def binomial_expval(x,n,p):
     expval = p * n
     return expval
 
@@ -146,7 +166,7 @@ def binomial_like(x, n, p):
 def rcategorical(probs, minval=0, step=1):
     return flib.rcat(probs, minval, step)
 
-def _categorical_expval(probs, minval=0, step=1):
+def categorical_expval(probs, minval=0, step=1):
     return sum([p*(minval + i*step) for i, p in enumerate(probs)])
 
 def categorical_like( x, probs, minval=0, step=1):
@@ -167,7 +187,7 @@ def rcauchy(alpha, beta, n=None):
     N = n or max(size(alpha), size(beta))
     return alpha + beta*tan(pi*random_number(n) - pi/2.0)
 
-def _cauchy_expval(alpha, beta):
+def cauchy_expval(alpha, beta):
     return alpha
 
 
@@ -186,7 +206,7 @@ def cauchy_like(x, alpha, beta):
 def rchi2(df):
     return random.chisquare(df)
     
-def _chi2_expval(df):
+def chi2_expval(df):
     return df
 
 
@@ -214,7 +234,7 @@ def rdirichlet(alphas, n=None):
         
         return gammas/sum(gammas)
 
-def _dirichlet_expval(theta):
+def dirichlet_expval(theta):
     sumt = sum(theta)
     expval = theta/sumt
     return expval
@@ -237,11 +257,11 @@ def dirichlet_like(x, theta):
 def rexponential(beta):
     return random.exponential(beta)
 
-def _exponential_expval(beta):
+def exponential_expval(beta):
     return beta
 
 
-def exponential_like(beta):
+def exponential_like(x, beta):
     """Exponential log-likelihood
     
     exponential_like(x, beta)
@@ -272,7 +292,7 @@ def exponweib_like(x, a, c, loc=0, scale=1):
 def rgamma(alpha, beta):
     return random.gamma(1./beta, alpha)
 
-def _gamma_expval(alpha, beta):
+def gamma_expval(alpha, beta):
     expval = array(alpha) / beta
     return expval
 
@@ -312,7 +332,7 @@ def gev_like(x, xi, loc=0, scale=0):
 def rgeometric(p):
     return random.negative_binomial(1, p)
 
-def _geometric_expval(p):
+def geometric_expval(p):
     return (1. - p) / p
 
 
@@ -331,7 +351,7 @@ def geometric_like(x, p):
 def rhalf_normal(tau):
     return random.normal(0, sqrt(1/tau))    
     
-def _half_normal_expval(tau):
+def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
 
 
@@ -357,7 +377,7 @@ def rhypergeometric(draws, red, total, n=None):
     else:
         return sum(urn[i] for i in permutation(total)[:draws])
 
-def _hypergeometric_expval(n,m,N):
+def hypergeometric_expval(n,m,N):
     return n * (m / N)
 
 
@@ -382,7 +402,7 @@ def hypergeometric_like(x, n, m, N):
 def rinverse_gamma(alpha, beta):
     pass 
 
-def _inverse_gamma_expval(alpha, beta):
+def inverse_gamma_expval(alpha, beta):
     return array(alpha) / beta
 
 
@@ -403,7 +423,7 @@ def inverse_gamma_like(x, alpha, beta):
 def rlognormal(mu, tau):
     return random.normal(mu, sqrt(1./tau))
 
-def _lognormal_expval(mu, tau):
+def lognormal_expval(mu, tau):
     return mu
 
 
@@ -423,7 +443,7 @@ def lognormal_like(x, mu, tau):
 def rmultinomial(n,p):
     return random.multinomial
 
-def _multinomial_expval(n,p):
+def multinomial_expval(n,p):
     array([pr * n for pr in p])
 
 
@@ -457,7 +477,7 @@ def rmultivariate_hypergeometric(draws, colors, n=None):
         
         return [sum(draw==i) for i in range(len(colors))]
 
-def _multivariate_hypergeometric_expval(m):
+def multivariate_hypergeometric_expval(m):
     return n * (array(m) / sum(m))
 
 
@@ -476,7 +496,7 @@ def multivariate_hypergeometric_like(x, m):
 def rmultivariate_normal(mu, tau):
     return random.multivariate_normal(mu, inverse(tau))
 
-def _multivariate_normal_expval(mu, tau):
+def multivariate_normal_expval(mu, tau):
     return mu
 
 
@@ -495,7 +515,7 @@ def multivariate_normal_like(x, mu, tau):
 def rnegative_binomial(mu, alpha):
     return random.negative_binomial(alpha, alpha / (mu + alpha))
 
-def _negative_binomial_expval(mu, alpha):
+def negative_binomial_expval(mu, alpha):
     return mu
 
 
@@ -516,7 +536,7 @@ def negative_binomial_like(x, mu, alpha):
 def rnormal(mu, tau):
     return random.normal(mu, 1./sqrt(tau))
 
-def _normal_expval(mu, tau):
+def normal_expval(mu, tau):
     return mu
 
 
@@ -536,7 +556,7 @@ def normal_like(x, mu, tau):
 def rpoisson(mu):
     return random.poisson(mu)
     
-def _poisson_expval(mu):
+def poisson_expval(mu):
     return mu
 
 
@@ -556,7 +576,7 @@ def poisson_like(x,mu):
 def runiform(lower, upper, size=1):
     return random.uniform(lower, upper, size)
 
-def _uniform_expval(lower, upper):
+def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like_python(x, lower, upper):
@@ -582,7 +602,7 @@ def uniform_like(x,lower, upper):
 def rweibull(alpha, beta):
     return beta * (-log(runiform(0, 1, len(alpha))) ** (1. / alpha))
 
-def _weibull_expval(alpha,beta):
+def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha) 
 
 
@@ -610,7 +630,7 @@ def rwishart(n, Tau, m=None):
     else:
         return expand_triangular(flib.wshrt(D, n, np), np)
 
-def _wishart_expval(n, Tau):
+def wishart_expval(n, Tau):
     return n * array(Tau)
 
 def wishart_like(X, n, Tau):
@@ -627,25 +647,9 @@ def wishart_like(X, n, Tau):
 
 # -----------------------------------------------------------
 
-# Local dictionary of the likelihood objects
-# The presence of objects must be confirmed in __likelihoods__, defined at the
-# top of the file.
-snapshot = locals().copy()
-likelihoods = {}
-for name, obj in snapshot.iteritems():
-    if name[-5:] == '_like' and name[:-5] in __likelihoods__:
-        likelihoods[name[:-5]] = snapshot[name]
 
-def add_decorated_likelihoods(obj):
-    """Decorate the likelihoods present in the local namespace and
-    assign them as methods to obj."""
-    for name, like in likelihoods.iteritems():
-        magic_set(obj, fortranlike_method(like, snapshot),name+'_like_dec')
-        magic_set(obj, priorwrap(fortranlike_method(like, snapshot)),name+'_prior_dec')
-#        setattr(obj, name+'_like_dec', classmethod(fortranlike_method(like, obj, snapshot)))
-#        setattr(obj, name+'_prior_dec', classmethod(priorwrap(fortranlike_method(like, obj, snapshot))))
-            
-    
+
+
        
 
     

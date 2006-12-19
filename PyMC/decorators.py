@@ -10,9 +10,7 @@ from numpy import inf, random, sqrt
 import string
 import inspect
 import types
-
-class LikelihoodError(ValueError):
-    "Log-likelihood is invalid or negative informationnite"
+from distributions import *
 
 def fortranlike_method(f, snapshot, mv=False):
     """
@@ -44,7 +42,7 @@ def fortranlike_method(f, snapshot, mv=False):
     # Take a snapshot of the main namespace.
         
     # Find the functions needed to compute the gof points.
-    expval_func = snapshot['_'+name+'_expval']
+    expval_func = snapshot[name+'_expval']
     random_func = snapshot['r'+name]
     
     def wrapper(self, *args, **kwds):
@@ -85,7 +83,7 @@ def fortranlike_method(f, snapshot, mv=False):
     return wrapper
 
 
-def fortranlike(f, mv=False):
+def fortranlike(f, snapshot, mv=False):
     """
     Decorator function for fortran likelihoods
     ==========================================
@@ -101,17 +99,19 @@ def fortranlike(f, mv=False):
     Add compatibility with GoF (Goodness of Fit) tests 
     --------------------------------------------------
     * Add a 'prior' keyword (True/False)
-    * If the keyword 'gof' is given and is True, return the GoF (Goodness of Fit)
+    * If the keyword gof is given and is True, return the GoF (Goodness of Fit)
     points instead of the likelihood. 
     * A 'loss' keyword can be given, to specify the loss function used in the 
     computation of the GoF points. 
+    * If the keyword random is given and True, return a random variate instead
+    of the likelihood.
     """
     name = f.__name__[:-5]
     # Take a snapshot of the main namespace.
     
     
     # Find the functions needed to compute the gof points.
-    expval_func = snapshot['_'+name+'_expval']
+    expval_func = snapshot[name+'_expval']
     random_func = snapshot['r'+name]
     
     def wrapper(*args, **kwds):
@@ -144,6 +144,8 @@ def fortranlike(f, mv=False):
             y = random_func(*newargs[1:], **kwds)
             gof_points = GOFpoints(newargs[0],y,expval,loss)
             return gof_points
+        elif kwds.pop('random', False):
+            return random_func(*newargs[1:], **kwds)
         else:
             """Return likelihood."""
             try:
@@ -159,21 +161,6 @@ def fortranlike(f, mv=False):
     wrapper.name = name
     return wrapper
 
-
-
-def Vectorize(f):
-    """Wrapper to vectorize a scalar function."""
-    return np.vectorize(f)
-
-def randomwrap(f):
-    """
-    Decorator for random value generators
-    =====================================
-    
-    Vectorize random value generation functions so an array of parameters may 
-    be passed.
-    """
-    return np.vectorize(f)
 
 
 def priorwrap(f):
@@ -271,4 +258,31 @@ def magic_set(obj, func, name=None):
         name = func.func_name
     setattr(obj, name, replacement)
 
+# Local dictionary of the likelihood objects
+# The presence of objects must be confirmed in __likelihoods__, defined at the
+# top of the file.
+snapshot = locals().copy()
+likelihoods = {}
+for name, obj in snapshot.iteritems():
+    if name[-5:] == '_like' and name[:-5] in availabledistributions:
+        likelihoods[name[:-5]] = snapshot[name]
 
+def add_decorated_likelihoods(obj):
+    """Decorate the likelihoods present in the local namespace and
+    assign them as methods to obj."""
+    for name, like in likelihoods.iteritems():
+        magic_set(obj, fortranlike_method(like, snapshot),name+'_like_dec')
+        magic_set(obj, priorwrap(fortranlike_method(like, snapshot)),name+'_prior_dec')
+#        setattr(obj, name+'_like_dec', classmethod(fortranlike_method(like, obj, snapshot)))
+#        setattr(obj, name+'_prior_dec', classmethod(priorwrap(fortranlike_method(like, obj, snapshot))))
+            
+def local_decorated_likelihoods(obj):
+    """New interface likelihoods""" 
+    for name, like in likelihoods.iteritems():
+        obj[name+'_like'] = fortranlike(like, snapshot)
+
+if __name__=='__main__':
+    import __main__
+    local_decorated_likelihoods(__main__.__dict__)
+else:
+    local_decorated_likelihoods(locals())
