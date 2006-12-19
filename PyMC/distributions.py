@@ -44,6 +44,9 @@ def randomwrap(f):
 #-------------------------------------------------------------
 # Utility functions
 #-------------------------------------------------------------
+class LikelihoodError(ValueError):
+    "Log-likelihood is invalid or negative informationnite"
+
 def constrain(value, lower=-inf, upper=inf, allow_equal=False):
     """Apply interval constraint on parameter value."""
     ok = flib.constrain(value, lower, upper, allow_equal)
@@ -84,11 +87,11 @@ squared_loss = lambda o,e: (o - e)**2
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
 
 def node_to_NDarray(arg):
-	if isinstance(arg,proposition4.Node):
-		return arg.value
-	else:
-		return arg
-		
+    if isinstance(arg,proposition4.Node):
+        return arg.value
+    else:
+        return arg
+        
 def GOFpoints(x,y,expval,loss):
     return sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)    
 

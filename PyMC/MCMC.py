@@ -17,10 +17,10 @@ from numpy import log
 from numpy import mean, cov, std
 from numpy import ndim, ones,eye
 from numpy import pi
-from numpy import ravel, resize
+from numpy import ravel, resize,prod, reshape
 from numpy import searchsorted, shape, sqrt, sort, swapaxes, where
 from numpy import tan, transpose, vectorize, zeros
-from distributions import add_decorated_likelihoods
+from decorators import add_decorated_likelihoods
 permutation = random.permutation
 
 from TimeSeries import autocorr as acf
@@ -852,39 +852,43 @@ class Parameter(Node):
         # hyperparameter on last segment of computed trace.
         # Make sure that acceptance rate is high enough to ensure
         # nonzero covariance
-        try :
-            if (self._hyp.ndim) and (acc_rate > 0.05):
+        
+        if (self._hyp.ndim) and (acc_rate > 0.05):
+            # Length of trace containing non-zero elements (= current iteration)
+            it = where(self._traces[-1]==0.)[0][0]
+            # Pick the last 5 intervals.
+            arr = self._traces[-1][max(0, it-5 * int_length):it]
                 
-                # Length of trace containing non-zero elements (= current iteration)
-                it = where(self._traces[-1]==0.)[0][0]
-                
-                # Computes the variance over the last 3 intervals.
-                _var = cov(self._traces[-1][max(0, it-3 * int_length):it],rowvar=0)
-                
-                # Uncorrelated multivariate case
-                if self._dist_name != 'multivariate_normal':
-                    
-                    # Ensure that there are no null values before commiting to self.
-                    if (_var > 0).all():
-                        self._hyp = sqrt(_var)
-                
-                # Correlated multivariate case
+            # If parameter is 2-D, flatten it to compute the variance.
+            if self._hyp.ndim > 1:
+                newshape=(shape(arr)[0], prod(shape(arr)[1:]))
+                arr = reshape(arr, newshape)
+            
+            if self._dist_name == 'multivariate_normal':
                 # Compute correlation coefficients and clip correlation to .9 to
                 # in order to avoid perfect correlations. 
                 # Compute the covariance matrix and set it as _hyp.
-                else:
-                    d = diag(_var)
-                    if (d > 0).all():
-                        corr = _var / sqrt(outer(d,d))
-                        corr = corr.clip(-.9, .9)
-                        corr[range(self.ndim), range(self.ndim)] = 1.
-                        covariance = corr * sqrt(outer(d,d)) 
-                        self._hyp = covariance                       
-        
-        except AttributeError:
-                pass
 
-
+                _var = cov(arr,rowvar=0)
+                d = diag(_var)
+                if (d > 0).all():
+                    corr = _var / sqrt(outer(d,d))
+                    corr = corr.clip(-.9, .9)
+                    corr[range(self.ndim), range(self.ndim)] = 1.
+                    covariance = corr * sqrt(outer(d,d)) 
+                    self._hyp = covariance           
+                    
+            else:
+                # Independent multiparameter case
+                _std = std(arr, 0)
+                
+                if self._hyp.ndim > 1:
+                    _std = reshape(_std, self.dim)
+            
+                    # Ensure that there are no null values before commiting to self.
+                if (_std > 0).all():
+                    self._hyp = _std
+            
 
 class DiscreteParameter(Parameter):
     

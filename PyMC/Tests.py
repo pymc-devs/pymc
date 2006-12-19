@@ -86,7 +86,8 @@ class MCMCTest(unittest.TestCase):
         print 'Running MultiParametersSampler test case ...'
         self.sampler = MultiParametersSampler()
         self.failUnless(self.sampler.sample(1000,100, verbose=False, plot=False))
-        
-unittest.main()
+
+if __name__=='__main__':
+    unittest.main()
     
 
