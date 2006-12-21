@@ -37,7 +37,7 @@ from numpy.random import normal as rnormal
 from scipy import weave
 from scipy.weave import converters
 from weakref import proxy
-import inspect
+import inspect,sys
 
 def _push(seq,new_value):
     """
@@ -86,9 +86,9 @@ def add_draw_fun(draw_fun):
             
     return _add_draw_fun
 
-def parameter(**kwargs):
+class parameter:
     """
-    Decorator function instantiating the Parameter class. Usage:
+    Decorator instantiating the Parameter class. Usage:
     
     @parameter( init_val, traceable = True, caching = True,
                 parent_1_name = some object, parent_2_name = some object, ...):
@@ -128,20 +128,43 @@ def parameter(**kwargs):
     See also data() and node(),
     as well as Parameter, Node and PyMCBase.    
     """         
-    
-    def __instantiate_parameter(f):
-
-        (args, varargs, varkw, defaults) = inspect.getargspec(f)
-        parents = dict(zip(args[-len(defaults):], defaults))
-        P = Parameter(prob_fun=f,parents=parents, **kwargs)
-        P.__doc__ = f.__doc__
-        P.__name__ = f.__name__
-        return P
+    def __init__(self, **kwds):
+        self.kwds = kwds
+        self.keys = ['logprob', 'random']    
         
-    return __instantiate_parameter
+    def instantiate(self, *pargs, **kwds):
+        """Instantiate the appropriate class."""
+        return Parameter(*pargs, **kwds)
+    
+    def __call__(self, func):
+        self.kwds.update({'doc':func.__doc__, 'name':func.__name__})
+        
+        def probeFunc(frame, event, arg):
+            if event == 'return':
+                locals = frame.f_locals
+                self.kwds.update(dict((k,locals.get(k)) for k in self.keys))
+                sys.settrace(None)
+            return probeFunc        
+        
+        # Get the functions logprob and random (complete interface).
+        try:
+            sys.settrace(probeFunc)
+            func()
+        except TypeError:
+            print 'Assign func to logprob directly (medium interface).'
+            self.kwds['logprob']=func
+        
+        # Build parents dictionary by parsing the function's arguments.
+        (args, varargs, varkw, defaults) = inspect.getargspec(func)
+        self.kwds['parents'] = dict(zip(args[-len(defaults):], defaults))
+        
+        # Instantiate Class
+        func = self.kwds.pop('logprob')
+        C = self.instantiate(func, **self.kwds)
+        return C
+            
 
-
-def node(**kwargs):
+class node(parameter):
     """
     Decorator function instantiating the Node class. Usage:
     
@@ -180,18 +203,11 @@ def node(**kwargs):
     as well as Parameter, Node and PyMCBase.    
     """
 
-    def __instantiate_node(f):
-        (args, varargs, varkw, defaults) = inspect.getargspec(f)
-        parents = dict(zip(args[-len(defaults):], defaults))
-        N =Node(eval_fun=f,parents=parents, **kwargs)
-        N.__doc__ = f.__doc__
-        N.__name__ = f.__name__
-        return N
-        
-    return __instantiate_node
+    def instantiate(self, *pargs, **kwds):
+        return Node(*pargs, **kwds)
     
 
-def data(**kwargs):
+class data(parameter):
     """
     Decorator function instantiating the Parameter class with the 'isdata' flag set to True. 
     That means that the attribute value cannot be changed after instantiation. Usage:
@@ -220,21 +236,10 @@ def data(**kwargs):
     as well as Parameter, Node and PyMCBase.
     """
 
-    def __instantiate_data(f):
-        parents = get_parents(f)
-        D = Parameter(prob_fun=f,isdata=True,parents=parents, **kwargs)
-        D.__doc__ = f.__doc__
-        D.__name__ = f.__name__
-        return D
-    
-    def get_parents(f):
-        (args, varargs, varkw, defaults) = inspect.getargspec(f)
-        parents = {}
-        for a, d in zip(args[:0:-1], defaults[::-1]):
-            try:parents[a] = d
-            except:pass
-        return parents
-    return __instantiate_data
+    def instantiate(self, *pargs, **kwds):
+        """Instantiate the appropriate class."""
+        kwds['isdata']=True
+        return Parameter(*pargs, **kwds)
 
 
     
@@ -298,7 +303,7 @@ class PyMCBase(object):
                 self._pymc_object_parent_keys.add(key)
                 
                 # Initialize a timestamp cache for this parent
-                self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
+                self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype=int)
                 
                 # Record a reference to this parent's value
                 self._parent_values[key] = self.parents[key].value
@@ -310,7 +315,7 @@ class PyMCBase(object):
 
         self._recompute = True
         self._value = None
-        self._match_indices = zeros(self._cache_depth,dtype='int')
+        self._match_indices = zeros(self._cache_depth,dtype=int)
         self._cache_index = 1
 
     #
@@ -375,11 +380,11 @@ class Node(PyMCBase):
     as well as parameter(), and data().
     """
 
-    def __init__(self, eval_fun, traceable=True, caching=False, **parents):
+    def __init__(self, func, traceable=True, caching=False, **parents):
 
         PyMCBase.__init__(self, **parents)
 
-        self._eval_fun = eval_fun
+        self._eval_fun = eval_func
         self._value = None
         self._traceable = traceable
         self._caching = caching
@@ -475,11 +480,10 @@ class Parameter(PyMCBase):
     as well as node().
     """
 
-    def __init__(self, prob_fun, traceable=True, caching=False, init_val=0, isdata=False, parents={}):
+    def __init__(self, prob_fun, random=None, parents={}, traceable=True, 
+        caching=False, init_val=0, isdata=False, doc=None, name=None):
 
         PyMCBase.__init__(self, **parents)
-
-
     
         self.isdata = isdata
         self._prob_fun = prob_fun
@@ -487,11 +491,13 @@ class Parameter(PyMCBase):
         self._last_value = None
         self._traceable = traceable
         self._caching = caching
+        self.__doc__ = doc
+        self.__name__ = name
         
         # Caches, if necessary
         if self._caching:
-            self._cached_prob = zeros(self._cache_depth,dtype='float')
-            self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')
+            self._cached_prob = zeros(self._cache_depth,dtype=float)
+            self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype=int)
 
         self._value = init_val
 
