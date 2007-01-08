@@ -35,4 +35,4 @@ posterior = weight([M1,M2,M3],100000)
 
 print 'Log posterior probability of changepoint model: ',log(posterior[M1])
 print 'Log posterior probability of constant rate model: ',log(posterior[M2])
-print 'Log posterior probability of expo. varying rate model: ',log(posterior[M3])
+print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])

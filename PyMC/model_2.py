@@ -7,20 +7,24 @@ disasters[t] ~ Po(global_rate)
 
 from proposition5 import *
 from numpy.random import exponential as rexpo
-		
-def poisson_like(val,rate):
-	return sum(log(rate) * val - rate)
 
-"""
-Define the data and parameters
-"""
+def poisson_like(value, rate):
+	return sum(log(rate) * value - rate)
 
-@add_draw_fun(lambda rate: rexpo(rate))
-@parameter(init_val=1., rate = 3.)
-def global_rate(value, rate):
+
+
+# Define the data and parameters
+
+@parameter(init_val=1.)
+def global_rate(rate=3.):
 	"""Rate parameter of poisson distribution."""
-	if value>0: return -rate * value
-	else: return -Inf 
+	
+	def logp_fun(value, rate):
+		if value>0: return -rate * value
+		else: return -Inf 
+		
+	def random(rate):
+		return rexpo(rate)
 	
 
 @data(init_val = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -29,12 +33,9 @@ def global_rate(value, rate):
 						1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
 						0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
 						3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-						0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]),
-	rate = global_rate,  
-	caching = False)
-def disasters(value,rate):
+						0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]), caching = False)
+def disasters(rate = global_rate):
 	"""Annual occurences of coal mining disasters."""
-	return poisson_like(value,rate)
-
+	logp_fun = poisson_like
 
 

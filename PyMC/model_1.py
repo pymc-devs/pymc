@@ -18,42 +18,65 @@ With likelihoods,
 
 from proposition5 import *
 from numpy.random import exponential as rexpo
-from decorators import poisson_like, uniform_like, exponential_like
+		
+def poisson_like(val,rate):
+	return sum(log(rate) * val - rate)
 
-"""
-Define the data and parameters
-"""
 
-#@add_draw_fun(lambda length: randint(length))
+
+# Define data and parameters
+
 @parameter(init_val=50)
-def switchpoint(value,  length=110):
-    """Change time for rate parameter."""
-    return uniform_like(value, 0, length)
-    
-#@add_draw_fun(lambda rate: rexpo(rate))
-@parameter(init_val=1.)
-def early_mean(value, rate = 1.):
-    """Rate parameter of poisson distribution."""
-    return exponential_like(value, rate)
+def switchpoint(length=110):
+	"""Change time for rate parameter."""
 
-#@add_draw_fun(lambda rate: rexpo(rate))
+	def logp_fun(value, length):
+		if value >= 0 and value <= length: return 0.
+		else: return -Inf
+		
+	def random(length):
+		return randint(length)
+
+
 @parameter(init_val=1.)
-def late_mean(value,  rate = 1.):
-    """Rate parameter of poisson distribution."""
-    return exponential_like(value, rate)
+def early_mean(rate=1.):
+	"""Rate parameter of poisson distribution."""
+
+	def logp_fun(value, rate):
+		if value>0: return -rate * value
+		else: return -Inf 
+		
+	def random(rate):
+		return rexpo(rate)
+
+@parameter(init_val=1.)
+def late_mean(rate = 1.):
+	"""Rate parameter of poisson distribution."""
+
+	def logp_fun(value, rate):
+		if value>0: return -rate * value
+		else: return -Inf 
+		
+	def random(rate):
+		return rexpo(rate)
+	
 
 @data(init_val = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                        3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                        2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                        1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                        0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                        3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                        0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]),
-    caching = True)
-def disasters(value,early_mean=early_mean,late_mean=late_mean,switchpoint=switchpoint):
-    """Annual occurences of coal mining disasters."""
-    return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint:],late_mean)
-    
+						3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+						2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+						1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+						0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+						3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+						0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]), caching = True)
+def disasters(	early_mean = early_mean, 
+				late_mean = late_mean, 
+				switchpoint = switchpoint, 
+):
+	"""Annual occurences of coal mining disasters."""
+	
+	def logp_fun(value, early_mean, late_mean, switchpoint):
+		return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint+1:],late_mean)
+	
 
 
 

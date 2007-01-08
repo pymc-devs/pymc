@@ -7,9 +7,9 @@ import model_1
 M = Model(model_1)
 
 # Sample
-M.sample(5000,1000,10)
+M.sample(10000,100,10)
 
-"""
+
 # Get and plot traces.
 from pylab import *
 
@@ -23,4 +23,3 @@ figure()
 title('late mean')
 plot(M.trace(M.late_mean))
 show()
-"""
