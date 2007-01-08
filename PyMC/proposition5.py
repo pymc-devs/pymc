@@ -34,9 +34,6 @@ from numpy import *
 import sys, inspect
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
-from scipy import weave
-from scipy.weave import converters
-from weakref import proxy
 
 def _push(seq,new_value):
 	"""

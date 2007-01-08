@@ -49,6 +49,7 @@ def early_mean(rate=1.):
 	def random(rate):
 		return rexpo(rate)
 
+
 @parameter(init_val=1.)
 def late_mean(rate = 1.):
 	"""Rate parameter of poisson distribution."""
