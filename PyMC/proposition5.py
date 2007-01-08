@@ -136,7 +136,6 @@ class parameter:
 		C = self.instantiate(**self.kwds)
 		return C
 
-
 class node(parameter):
 	"""
 	Decorator function instantiating the Node class. Usage:
@@ -181,36 +180,7 @@ class node(parameter):
 
 	def instantiate(self, *pargs, **kwds):
 		"""Instantiate the appropriate class."""
-		print pargs
-		print kwds
 		return Node(*pargs, **kwds)
-
-	def __call__(self, func):
-		self.kwds.update({'doc':func.__doc__, 'name':func.__name__})
-
-		def probeFunc(frame, event, arg):
-			if event == 'return':
-				locals = frame.f_locals
-				self.kwds.update(dict((k,locals.get(k)) for k in self.keys))
-				sys.settrace(None)
-			return probeFunc		
-
-		# Get the functions logp and random (complete interface).
-		try:
-			sys.settrace(probeFunc)
-			func()
-		except TypeError:
-			print 'Assign func to logp directly (medium interface).'
-			self.kwds['eval_fun']=func
-
-		# Build parents dictionary by parsing the function's arguments.
-		(args, varargs, varkw, defaults) = inspect.getargspec(func)
-		self.kwds.update(dict(zip(args[-len(defaults):], defaults)))
-
-		# Instantiate Class
-		C = self.instantiate(**self.kwds)
-		return C
-
 
 class data(parameter):
 	"""
@@ -224,7 +194,7 @@ class data(parameter):
 			# Return the log-probability of value given parent values
 		
 		#Optional:	
-		observed_mask = an ndarray of booleans
+		observed_mask = an ndarray of booleans (not implemented yet)
 
 	will create a Parameter named D whose log-probability is computed by foo, with the property
 	that P.value cannot be changed from init_val. Example:
@@ -366,7 +336,6 @@ class PyMCBase(object):
 			self._extend_children()
 		return
 
-
 class Node(PyMCBase):
 	"""
 	A PyMCBase that is deterministic conditional on its parents.
@@ -460,7 +429,6 @@ class Node(PyMCBase):
 		return self._value
 		
 	value = property(fget = _get_value)
-
 
 class Parameter(PyMCBase):
 	"""
@@ -622,37 +590,7 @@ class Parameter(PyMCBase):
 			self.value = self._random(**self.parent_values)
 		else:
 			raise AttributeError, self.__name__+' does not know how to draw its value, see documentation'
-
-
-class PartiallyObserved(Parameter):
-	"""
-	This Parameter's value cannot be updated under the mask.
-	"""
-	def __init__(self, init_val, mask, doc, name, **kwargs):
-		Parameter.__init__(self, init_val, isdata=False, doc=doc, name=name, **kwargs)
-		self._mask = mask		
-		assert(isinstance(init_val, ndarray)), 'init_val must be a numpy array.'
-		assert(isinstance(mask, ndarray) and mask.dtype == 'bool'), 'init_mask must be a numpy array of dtype bool.'
-
-	#
-	# Define attribute value. Value cannot be changed where mask is true.
-	#
-	def _get_value(self):
-		return self._value
-
-	# Record new value and increment timestamp
-	def _set_value(self, value):
-		self.timestamp += 1
-		# Save a deep copy of current value
-		self.last_value = deepcopy(self._value)
-
-		for index in where(self._mask == False):
-			self._value[index] = value[index]
-
-	value = property(fget=_get_value, fset=_set_value)
-
 			
-
 # Was SubModel:
 class SamplingMethod(object):
 	"""
@@ -748,7 +686,7 @@ class SamplingMethod(object):
 		return
 
 	#	
-	# Define attribute loglike, eventually write in C.
+	# Define attribute loglike.
 	#
 	def _get_loglike(self):
 		sum = 0.
@@ -757,8 +695,6 @@ class SamplingMethod(object):
 		#return sum([child.logp for child in self.children])
 
 	loglike = property(fget = _get_loglike)
-
-
 
 # The default SamplingMethod, which Model uses to handle singleton parameters.		
 class OneAtATimeMetropolis(SamplingMethod):
@@ -824,8 +760,6 @@ class OneAtATimeMetropolis(SamplingMethod):
 	#
 	def tune(self):
 		pass
-
-
 		
 class Model(object):
 	"""
@@ -928,7 +862,6 @@ class Model(object):
 					self.data.add(item[1])
 				else:  self.parameters.add(item[1])
 
-	
 	#
 	# Override __setattr__ so that PyMC objects are read-only once instantiated
 	#
@@ -947,7 +880,6 @@ class Model(object):
 		else:
 			self.__dict__[name] = value
 				
-
 	#
 	# Prepare for sampling
 	#
@@ -1049,7 +981,6 @@ class Model(object):
 				if self._traces.has_key(pymc_object):
 					self._traces.pop(pymc_object)					
 		
-
 	#
 	# Tally
 	#					
@@ -1064,8 +995,7 @@ class Model(object):
 				self._traces[pymc_object][self._cur_trace_index,] = pymc_object.value
 			
 		self._cur_trace_index += 1
-		
-		
+				
 	#
 	# Return to a sampled state
 	#
