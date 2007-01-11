@@ -71,8 +71,7 @@ def late_mean(rate = 1.):
 						0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]), caching = True)
 def disasters(	early_mean = early_mean, 
 				late_mean = late_mean, 
-				switchpoint = switchpoint, 
-):
+				switchpoint = switchpoint):
 	"""Annual occurences of coal mining disasters."""
 	
 	def logp_fun(value, early_mean, late_mean, switchpoint):

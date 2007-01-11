@@ -22,27 +22,29 @@ def normal_like(val,mu,tau):
 
 # Define data and parameters
 
-@parameter(init_val=-.1)
-def slope_of_mean(tau=.1):
-	"""Rate constant of rate parameter of poisson distribution"""
-	def logp_fun(value, tau):
-		val= normal_like(value,0,tau)
-		return val
-		
-	def random(tau):
-		val= rnormal(scale=sqrt(1./tau))
-		return val
+@parameter(init_val=array([-.1, 1.]))
+def params_of_mean(tau=.1, rate = 4.):
+	"""
+	Intercept and slope of rate parameter of poisson distribution
+	Rate parameter must be positive for t in [0,T]
+	
+	p(intercept, slope|tau,rate) = 
+	N(slope|0,tau) Exp(intercept|rate) 1(intercept>0) 1(intercept + slope * T>0)
+	"""
 
-@parameter(init_val=1.)
-def intercept_of_mean(rate = 4.):
-	"""Amplitude of rate parameter of poisson distribution."""
-
-	def logp_fun(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf  
+	def logp_fun(value, tau, rate):
+		if value[1]>0 and value[1] + value[0] * 110 > 0:
+			return normal_like(value[0],0,tau) - rate * value[1]
+		else:
+			return -inf
 		
-	def random(rate):
-		val= rexpo(rate)
+	def random(tau, rate):
+		val = zeros(2)
+		val[0] = rnormal(scale=sqrt(1./tau))
+		val[1] = rexpo(rate)
+		while val[1]<0 or val[1] + val[0] * 110 <= 0:
+			val[0] = rnormal(scale=sqrt(1./tau))
+			val[1] = rexpo(rate)
 		return val
 	
 @data(init_val = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -53,9 +55,9 @@ def intercept_of_mean(rate = 4.):
 						3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
 						0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]), caching = True)
 						
-def disasters(slope_of_mean = slope_of_mean, intercept_of_mean = intercept_of_mean):
+def disasters(params_of_mean = params_of_mean):
 	"""Annual occurences of coal mining disasters."""
-	def logp_fun(value, slope_of_mean, intercept_of_mean):
-		val = intercept_of_mean + slope_of_mean * arange(111)
+	def logp_fun(value, params_of_mean):
+		val = params_of_mean[1] + params_of_mean[0] * arange(111)
 		return poisson_like(value,val)
 

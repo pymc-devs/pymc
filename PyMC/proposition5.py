@@ -31,6 +31,7 @@ Basically all the underscored functions should eventually be written in C.
 """
 from copy import deepcopy
 from numpy import *
+from numpy.linalg import cholesky, eigh
 import sys, inspect
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -634,6 +635,9 @@ class SamplingMethod(object):
 		self.parameters = set()
 		self.data = set()
 		self.children = set()
+		self._asf = .1
+		self._accepted = 0
+		self._rejected = 0		
 
 		# File away the pymc_objects
 		for pymc_object in self.pymc_objects:
@@ -743,14 +747,15 @@ class OneAtATimeMetropolis(SamplingMethod):
 		
 		# Test
 		if log(random()) > logp_p + loglike_p - logp - loglike:
-			
 			# Revert parameter if fail
 			self.parameter.revert()
+			self._rejected+=1
+		else:
+			self._accepted += 1
 		
 	def propose(self):
 		if self._dist == 'RoundedNormal':
 			self.parameter.value += round(rnormal(0,self.proposal_sig))
-		
 		# Default to normal random-walk proposal
 		else:
 			self.parameter.value += rnormal(0,self.proposal_sig)
@@ -759,7 +764,201 @@ class OneAtATimeMetropolis(SamplingMethod):
 	# Tune the proposal width.
 	#
 	def tune(self):
+		#
+		# Adjust _asf according to some heuristic
+		#
 		pass
+		
+class Joint(SamplingMethod):
+	"""
+	S = Joint(pymc_objects, epoch=1000, memory=10, interval=1, delay=1000)
+	
+	Applies the Metropolis-Hastings algorithm to several parameters
+	together. Jumping density is a multivariate normal distribution
+	with mean zero and covariance equal to the empirical covariance
+	of the parameters, times _asf ** 2.
+	
+	Externally-accessible attributes:	
+		
+		pymc_objects: 	A sequence of pymc objects to handle using 
+						this SamplingMethod.
+						
+		interval:		The interval at which S's parameters' values
+						should be written to S's internal traces
+						(NOTE: If the traces are moved back into the
+						PyMC objects, it should be possible to avoid this
+						double-tallying. As it stands, though, the traces
+						are stored in Model, and SamplingMethods have no
+						way to know which Model they're going to be a
+						member of.)
+						
+		epoch:			After epoch values are stored in the internal
+						traces, the covariance is recomputed.
+						
+		memory:			The maximum number of epochs to consider when
+						computing the covariance.
+						
+		delay:			Number of one-at-a-time iterations to do before
+						starting to record values for computing the joint
+						covariance.
+						
+		_asf:			Adaptive scale factor.
+		
+	Externally-accessible methods:
+	
+		step():			Make a Metropolis step. Applies the one-at-a-time
+						Metropolis algorithm until the first time the 
+						covariance is computed, then applies the joint
+						Metropolis algorithm.
+						
+		tune():			sets _asf according to a heuristic.
+	
+	"""
+	def __init__(self, pymc_objects, epoch=1000, memory=10, interval = 1, delay = 0):
+		
+		SamplingMethod.__init__(self,pymc_objects)		
+		
+		self.epoch = epoch
+		self.memory = memory
+		self.interval = interval
+		self.delay = delay
+		
+		# How many values have been recorded this epoch
+		self._counter = 0
+		# How many epochs have been completed
+		self._epoch_counter = 0
+		# Flag indicating whether covariance has been computed
+		self._ready = False
+		# Flag indicating whether to begin joint mode
+		self._delaying = True
+		
+		# Use OneAtATimeMetropolis instances to handle independent jumps
+		# before first epoch is complete
+		self._single_param_handlers = set()
+		for parameter in self.parameters:
+			self._single_param_handlers.add(OneAtATimeMetropolis(parameter))
+			
+		# Allocate memory for internal traces and get parameter slices
+		self._slices = {}
+		self._len = 0
+		for parameter in self.parameters:
+			if isinstance(parameter.value, ndarray):
+				param_len = len(parameter.value.ravel())
+			else:
+				param_len = 1
+			self._slices[parameter] = slice(self._len, self._len + param_len)
+			self._len += param_len
+
+		self._trace = zeros((self._len, self.memory * self.epoch),dtype='float')
+		
+		# __init__ should also check that each parameter's value is an ndarray or
+		# a numerical type.
+			
+	#
+	# Write current value to trace
+	#
+	def record(self):
+		insertion_index = self._epoch_counter * self.epoch + self._counter / self.interval
+		for	parameter in self.parameters:
+			if isinstance(parameter.value, ndarray):
+				self._trace[self._slices[parameter], insertion_index] = parameter.value.ravel()
+			else:
+				self._trace[self._slices[parameter], insertion_index] = parameter.value
+			
+	#
+	# Compute and store matrix square root of covariance every epoch
+	#
+	def compute_sig(self):
+		
+		# Compute matrix square root
+		self._cov = cov(self._trace[: , :(self._epoch_counter+1)*self.epoch])
+		try:
+			self._sig = cholesky(self._cov)
+		except linalg.linalg.LinAlgError:
+			val, vec = eigh(self._cov)
+			self._sig = vec * sqrt(val)
+
+		self._ready = True			
+
+
+	
+	def tune(self):
+		if self._ready == False:
+			for handler in self._single_param_handlers:
+				handler.tune()
+		else:
+			#
+			# Adjust _asf according to some heuristic			
+			#
+			pass
+	
+	def propose(self):
+		# Eventually, round the proposed values for discrete parameters.
+		self._proposed_vals = self._asf * inner(rnormal(size=self._len) , transpose(self._sig))
+		for parameter in self.parameters:
+			parameter.value = reshape(self._proposed_vals[self._slices[parameter]],shape(parameter.value))
+	
+	#
+	# Make a step
+	#
+	def step(self):
+		# Step
+		if self._ready == False:
+			for handler in self._single_param_handlers:
+				handler.step()
+		else:
+			# Probability and likelihood for parameter's current value:
+			logp = sum([parameter.logp for parameter in self.parameters])
+			loglike = self.loglike
+
+			# Sample a candidate value
+			self.propose()
+
+			# Probability and likelihood for parameter's proposed value:
+			logp_p = sum([parameter.logp for parameter in self.parameters])
+
+			# Skip the rest if a bad value is proposed
+			if logp_p == -Inf:
+				for parameter in self.parameters:
+					parameter.revert()
+				return
+				
+			loglike_p = self.loglike
+
+			# Test
+			if log(random()) > logp_p + loglike_p - logp - loglike:
+				# Revert parameter if fail
+				for parameter in self.parameters:
+					parameter.revert()
+		
+		# When the delay period expires, reset the counter to 0
+		if self._counter == self.delay:
+			self._delaying = False
+			self._counter = 0
+
+		if self._delaying == False:
+			# If an interval has passed, record the parameter values.
+			if self._counter % self.interval ==0:
+			
+				# If an epoch has passed, recompute covariance.
+				if self._counter / self.interval % self.epoch == 0 and self._counter > 0:
+					self.compute_sig()
+				
+					# Increment epoch
+					self._epoch_counter += 1
+
+					# If the trace is full, shift it back an epoch
+					if self._epoch_counter == self.memory:
+						self._trace[: , :(self.memory-1)*self.epoch] = self._trace[: , self.epoch:self.memory*self.epoch]
+						self._epoch_counter -= 1
+				
+					# Start counter over for new epoch
+					self._counter = 0
+				
+				self.record()
+
+		self._counter+=1
+			
 		
 class Model(object):
 	"""
@@ -1116,8 +1315,10 @@ class Model(object):
 		./'name'.'format'. If self.__name__ is undefined and path is None,
 		the output file is ./model.'format'.
 		
-		Format is a string, options are 'ps', 'gif', 'jpeg', and several others;
-		see PyDot documentation.
+		Format is a string. Options are:
+		'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg',	
+		'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp',	
+		'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
 		
 		format='raw' outputs a GraphViz dot file.
 		"""

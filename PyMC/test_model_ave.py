@@ -15,6 +15,13 @@ import model_1
 import model_2
 import model_3
 
+print 'Docstring of model 1:'
+print model_1.__doc__
+print 'Docstring of model 2:'
+print model_2.__doc__
+print 'Docstring of model 3:'
+print model_3.__doc__
+
 # Changepoint model
 M1 = Model(model_1)
 
@@ -24,14 +31,7 @@ M2 = Model(model_2)
 # Exponentially varying rate model
 M3 = Model(model_3)
 
-print 'Docstring of model 1:'
-print model_1.__doc__
-print 'Docstring of model 2:'
-print model_2.__doc__
-print 'Docstring of model 3:'
-print model_3.__doc__
-
-posterior = weight([M1,M2,M3],100000)
+posterior = weight([M1,M2,M3],10000)
 
 print 'Log posterior probability of changepoint model: ',log(posterior[M1])
 print 'Log posterior probability of constant rate model: ',log(posterior[M2])
