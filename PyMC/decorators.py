@@ -3,6 +3,7 @@
 #-------------------------------------------------------------
 # TODO: Replace flat's with ravel's, and if possible avoid resize-ing (try to
 # avoid any memory allocation, in fact).
+# TODO: Write a random decorator accepting keyword arguments.
 
 import numpy as np
 import proposition4
@@ -242,6 +243,7 @@ def magic_set(obj, func, name=None):
                 return func(obj, *args, **kw)
             try:
                 replacement.func_name = func.func_name
+                replacement.__doc__ = func.__doc__
             except:
                 pass
     else:
@@ -252,6 +254,7 @@ def magic_set(obj, func, name=None):
                 return func(obj.__class__, *args, **kw)
             try:
                 replacement.func_name = func.func_name
+                replacement.__doc__ = func.__doc__
             except:
                 pass
     if name is None:

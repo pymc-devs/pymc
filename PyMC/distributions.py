@@ -6,6 +6,8 @@
 # TODO: test and finalize vectorized multivariate normal like. 
 # TODO: Add exponweib_expval (how?)
 
+
+
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet', 
 'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric', 
 'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric', 
@@ -514,7 +516,6 @@ def multivariate_hypergeometric_like(x, m):
     return flib.mvhyperg(x, m)
 
 # Multivariate normal--------------------------------------
-# Wrapper won't work if tau is a correlation matrix.
 def rmultivariate_normal(mu, tau):
     return random.multivariate_normal(mu, inverse(tau))
 
@@ -526,10 +527,13 @@ def multivariate_normal_like(x, mu, tau):
     
     multivariate_normal_like(x, mu, tau)
     
+    x: (k,n)
+    mu: (k,n) or (k,1)
+    tau: (k,k)
     \trace(tau) > 0
     """
     constrain(np.diagonal(tau), lower=0)
-    return flib.mvnorm(x, mu, tau)
+    return flib.vec_mvnorm(x, mu, tau)
 
 # Negative binomial----------------------------------------
 @randomwrap

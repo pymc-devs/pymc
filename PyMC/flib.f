@@ -528,8 +528,8 @@ cf2py real intent(out) :: like
       like = 0.0
       do i=1,n
         like = like + gammln(x(i)+a(i)) - factln(x(i)) - gammln(a(i))
-		  like = like + x(i) * (log(mu(i)/a(i)) - log(1.0 + mu(i)/a(i)))
-		  like = like - a(i) * log(1.0 + mu(i)/a(i))
+          like = like + x(i) * (log(mu(i)/a(i)) - log(1.0 + mu(i)/a(i)))
+          like = like - a(i) * log(1.0 + mu(i)/a(i))
       enddo
       return
       END
@@ -598,15 +598,15 @@ Cf2py real intent(out):: like
       REAL X(N), xi(nxi), mu(nmu), sigma(nsigma), LIKE
       REAL Z(N), EX(N), PEX(N)
       REAL XIt, SIGMAt
-	  LOGICAL not_scalar_xi, not_scalar_sigma
+      LOGICAL not_scalar_xi, not_scalar_sigma
 
 C     Check parameter size
       not_scalar_xi =  (nxi .NE. 1)
       not_scalar_sigma =  (nsigma .NE. 1)
    
-	  CALL standardize(x,mu,sigma,n,nu,nsigma,z)
+      CALL standardize(x,mu,sigma,n,nu,nsigma,z)
 
-	  xit = xi(1)
+      xit = xi(1)
       sigmat = sigma(1)
 
       LIKE = 0.0
@@ -628,8 +628,8 @@ C     Check parameter size
         ENDIF
       ENDDO
 
-      end subroutine gev	
-	
+      end subroutine gev    
+    
 
       SUBROUTINE multinomial(x,n,p,m,like)
 
@@ -928,31 +928,37 @@ c multiply dtau by d
       return
       END
 
-        SUBROUTINE vec_mvnorm(x,mu,tau,k,n,like)
+        SUBROUTINE vec_mvnorm(x,mu,tau,k,n,nmu,like)
 
 c Vectorized multivariate normal log-likelihood function      
       
-cf2py real dimension(k,n),intent(in) :: x,mu
+cf2py real dimension(k,n),intent(in) :: x
+cf2py real dimension(k,nmu),intent(in) :: mu
 cf2py real dimension(k,k),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: k=shape(x,0)
 cf2py integer, intent(hide), depend(x):: n=shape(x,1)
-
-      INTEGER i,j,k,n
-      REAL x(k,n), mu(k,n), tau(k,k)
+cf2py integer, intent(hide), depend(mu):: nmu=shape(mu,1)
+    
+      INTEGER i,j,k,n,nmu
+      REAL x(k,n), mu(k,n), tau(k,k),mut(k)
       REAL dt(n,k),dtau(n,k),d(k,n), s(n)
       REAL like,det
+      LOGICAL mu_not_1d
       
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
-
+      mu_not_1d = (nmu .NE. 1)
 c calculate determinant of precision matrix     
       call dtrm(tau,k,det)
 
+      
 c calculate d=(x-mu)
       do i=1,k
+        mut(i) = mu(i,1)
         do j=1,n
-          d(i,j) = x(i,j)-mu(i,j)
+          if (mu_not_1d) mut(i) = mu(i,j)
+          d(i,j) = x(i,j)-mut(i)
         enddo
       enddo
       
@@ -970,7 +976,7 @@ c mulitply t(d) by tau -> dtau (n,k)
         like = like + s(j)
       enddo
             
-      like = n*0.5*log(det) - n*(k/2.0)*log(2.0*PI) - (0.5*like)
+      like = n*0.5*log(det) - (n*k/2.0)*log(2.0*PI) - (0.5*like)
       END subroutine
       
       SUBROUTINE trace(mat,k,tr)
