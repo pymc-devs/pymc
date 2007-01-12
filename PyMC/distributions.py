@@ -3,7 +3,8 @@
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: Make node_to_NDarray decorator better.
-# TODO: test vectorized multivariate normal like. 
+# TODO: test and finalize vectorized multivariate normal like. 
+# TODO: Add exponweib_expval (how?)
 
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet', 
 'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric', 
@@ -18,6 +19,7 @@ import proposition4
 from numpy import inf, random, sqrt
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
+import inspect
 inverse = np.linalg.pinv
 
 
@@ -29,16 +31,29 @@ def Vectorize(f):
     """Wrapper to vectorize a scalar function."""
     return np.vectorize(f)
 
-def randomwrap(f):
+def randomwrap(func):
     """
     Decorator for random value generators
     =====================================
     
     Vectorize random value generation functions so an array of parameters may 
-    be passed.
+    be passed. 
     """
+    # Vectorized functions do not accept keyword arguments, so they 
+    # must be translated into positional arguments.
+    
+    # Find the order of the arguments.
+    refargs, varargs, varkw, defaults = inspect.getargspec(func)   
+    vfunc = np.vectorize(func)
     def wrapper(*args, **kwds):
-        return [f(a,dict(kwds.keys(), v)) for a,v in zip(args, kwds.values())]
+        """Transform keywords arguments into positional arguments and feed them
+        to a vectorized random function."""
+        if len(kwds) > 0:
+            args = list(args)
+            for k in refargs:
+                if k in kwds.keys(): args.append(kwds[k])
+        
+        return vfunc(*args)
     return wrapper
 
 #-------------------------------------------------------------
@@ -101,6 +116,7 @@ def GOFpoints(x,y,expval,loss):
 #--------------------------------------------------------
 
 # Bernoulli----------------------------------------------
+@randomwrap
 def rbernoulli(p):
     return random.binomial(1,p)
         
@@ -144,6 +160,7 @@ def beta_like(x, alpha, beta):
     return flib.beta(x, alpha, beta)
 
 # Binomial----------------------------------------------
+@randomwrap
 def rbinomial(n,p):
     return random.binomial(n,p)
 
@@ -166,6 +183,7 @@ def binomial_like(x, n, p):
 
 # Categorical----------------------------------------------
 # GOF not working yet, because expval not conform to wrapper spec.
+@randomwrap
 def rcategorical(probs, minval=0, step=1):
     return flib.rcat(probs, minval, step)
 
@@ -225,9 +243,9 @@ def chi2_like(x, df):
     return flib.gamma(y, 0.5*df, 2)
 
 # Dirichlet----------------------------------------------
+@randomwrap
 def rdirichlet(alphas, n=None):
     """Returns Dirichlet random variates"""
-    
     if n:
         gammas = transpose([rgamma(alpha,1,n) for alpha in alphas])
         
@@ -241,7 +259,6 @@ def dirichlet_expval(theta):
     sumt = sum(theta)
     expval = theta/sumt
     return expval
-
 
 def dirichlet_like(x, theta):
     """Dirichlet log-likelihood
@@ -276,6 +293,7 @@ def exponential_like(x, beta):
     return flib.gamma(x, 1, beta)
 
 # Exponentiated Weibull-----------------------------------
+@randomwrap
 def rexponweib(a, c, loc, scale, size=1):
     q = random.uniform(size)
     r = flib.exponweib_ppf(q,a,c)
@@ -351,6 +369,7 @@ def geometric_like(x, p):
     return flib.negbin2(x, 1, p)
 
 # Half-normal----------------------------------------------
+@randomwrap
 def rhalf_normal(tau):
     return random.normal(0, sqrt(1/tau))    
     
@@ -383,7 +402,6 @@ def rhypergeometric(draws, red, total, n=None):
 def hypergeometric_expval(n,m,N):
     return n * (m / N)
 
-
 def hypergeometric_like(x, n, m, N):
     """
     Hypergeometric log-likelihood
@@ -402,6 +420,7 @@ def hypergeometric_like(x, n, m, N):
 
 # Inverse gamma----------------------------------------------
 # Looks this one is identical to rgamma, this is strange.    
+@randomwrap
 def rinverse_gamma(alpha, beta):
     pass 
 
@@ -501,7 +520,6 @@ def rmultivariate_normal(mu, tau):
 
 def multivariate_normal_expval(mu, tau):
     return mu
-
 
 def multivariate_normal_like(x, mu, tau):
     r"""Multivariate normal log-likelihood
@@ -607,7 +625,6 @@ def rweibull(alpha, beta):
 
 def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha) 
-
 
 def weibull_like(x, alpha, beta):
     """Weibull log-likelihood

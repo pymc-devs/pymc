@@ -1,4 +1,11 @@
-# TODO: Simplify expressions as a/a.
+greek = ['alpha', 'eta', 'nu', 'tau',   
+     'beta', 'theta', 'xi', 'upsilon',
+     'gamma', 'iota', 'phi', 'delta',
+     'kappa', 'pi', 'chi', 'epsilon',
+     'lambda', 'rho', 'psi', 'zeta',
+     'mu', 'sigma', 'omega', 'Gamma',
+     'Lambda', 'Sigma', 'Psi', 'Delta',
+     'Xi', 'Upsilon', 'Omega', 'Theta', 'Pi']   
 
 class probability:
     def __init__(self, bra, ket=set(), pos='n'):
@@ -41,6 +48,27 @@ class probability:
 #            s = n*'-' + '\n' + s
         return s
     
+    def __eq__(self, p):
+        if self.bra == p.bra and self.ket == p.ket and self.pos == p.pos:
+            return True
+        else:
+            return False
+        
+    def inverse(self):
+        if self.pos == 'n':
+            self.pos = 'd'
+        elif self.pos =='d':
+            self.pos ='n'
+        else:
+            raise 'Bad attribute for pos.'
+        
+    def __rdiv__(self, x):
+        if x != 1:
+            raise 'Division by anything other than 1 is not allowed.'
+        C = copy.copy(self)
+        C.inverse()
+        return C
+
     def shift(self, element):
         """Shift element from bra to ket, or ket to bra, depending on initial
         position."""
@@ -65,11 +93,12 @@ class probability:
         else:
             return set(x)
         
-    def inverse(self):
+    def reverse(self):
         """All kets become bras and all bras become kets."""
         if len(self.ket) == 0 :
-            raise AttributeError, 'Cannot inverse, probability is not conditional.'
+            raise AttributeError, 'Cannot reverse, probability is not conditional.'
         self.ket, self.bra = self.bra, self.ket
+       
 
 class Bayes(probability):
     """Group multiple instances of probability."""
@@ -83,6 +112,33 @@ class Bayes(probability):
         for g in self.group:
             s += g.__str__()
             s += ' '
+        return s
+
+    def latex(self):
+        """Return the LaTeX description."""
+        up = []
+        down = []       
+        for g in self.group:
+            if g.pos == 'n':
+                up.append(g)
+            if g.pos == 'd':
+                down.append(g)
+        
+        if len(down) > 0:
+            s = r'\frac{'
+            for g in up:
+                s += g.__str__()
+            s += '}{'
+            for g in down:
+                s += g.__str__()[:-3]
+            s += '}'
+        else:
+            s = ''
+            for g in up:
+                s += g.__str__()
+            
+        s = s.replace('|', r' \mid ')
+
         return s
     
     def shift(self, element, key = 0):
@@ -102,6 +158,7 @@ class Bayes(probability):
             g.shift(ket)
         
         self.clear_empty()
+        self.clear_redundant()
 
     def clear_empty(self):
         to_clear = []
@@ -111,11 +168,29 @@ class Bayes(probability):
         to_clear.sort()
         for i in to_clear[::-1]:
             self.group.pop(i)
+    
+    def clear_redundant(self):
+        """Remove instances of a/a."""
+        indicestoclear = []
+        for i,g in enumerate(self.group):
+            for j,g2 in enumerate(self.group[i+1:]):
+                if g == 1/g2:
+                    indicestoclear.append(i)
+                    indicestoclear.append(j+i+1)
+                elif g == g2:
+                    indicestoclear.append(i)
+                    
+        for i in indicestoclear[::-1]:
+            self.group.pop(i)
 
 # Example
 p = Bayes(['alpha', 'beta'], ['x', 'y'])
+p.shift('x');print p
+p.shift('x', 0);print p
+print '---'
 print p
 p.shift(['alpha', 'beta', 'y'])
 print p
 p.shift('alpha', 1)
-print p 
+print p
+print p.latex() 
