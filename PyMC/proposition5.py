@@ -1002,7 +1002,7 @@ class Model(object):
     See also SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
     """
 
-    def __init__(self, input):
+    def __init__(self, input, dbase=None):
 
         self.nodes = set()
         self.parameters = set()
@@ -1030,7 +1030,7 @@ class Model(object):
         for item in input_dict.iteritems():
             self._fileitem(item)
         
-        self._assign_trace_methods(dbase=None)
+        self._assign_trace_methods(dbase)
 
     def _fileitem(self, item):
 
@@ -1061,7 +1061,9 @@ class Model(object):
         # File away the PyMC objects
         elif isinstance(item[1],PyMCBase):
             self.__dict__[item[0]] = item[1]
-
+            # Add an attribute to the object referencing the model instance.
+            setattr(self.__dict__[item[0]], '_model', self)
+            
             if isinstance(item[1],Node):
                 self.nodes.add(item[1])
 
@@ -1114,9 +1116,12 @@ class Model(object):
     #
     def _prepare(self):
 
+        # Initialize database
+        self._init_dbase()
+        
         # Seed new initial values for the parameters.
         for parameters in self.parameters:
-            if parameters.rseed:
+            if parameters._rseed:
                 parameters.value = parameters.random(**parameters.parent_values)
 
         if self._prepared == True:
@@ -1278,6 +1283,9 @@ class Model(object):
 
         # Tuning, etc.
 
+        # Finalize
+        self._finalize_dbase()
+        
     def tune(self):
         """
         Tell all samplingmethods to tune themselves.
