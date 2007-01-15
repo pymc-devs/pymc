@@ -226,6 +226,7 @@ class data(parameter):
     def instantiate(self, *pargs, **kwds):
         """Instantiate the appropriate class."""
         kwds['isdata']=True
+        kwds['traceable']=False
         return Parameter(*pargs, **kwds)
 
 class PyMCBase(object):
@@ -1098,7 +1099,7 @@ class Model(object):
           - Txt: Traces stored in memory and saved in txt files at end of 
                 sampling. Not implemented.
           - SQLlite: Traces stored in sqllite database. Not implemented. 
-          - HDF5: Traces stored in HDF5 database. Not implemented.
+          - HDF5: Traces stored in HDF5 database. Partially implemented.
         """
         if dbase is None:
             dbase = 'memory_trace'
@@ -1199,26 +1200,9 @@ class Model(object):
         self.max_trace_length = length
 
         for pymc_object in self.pymc_objects:
-            # Try initializing the trace and writing the current value.
-            try:
-
-                # Check condition 1 from docstring
-                if pymc_object._traceable:
-
-                    # Check conditions 2 and 3 from docstring.
-                    # This is kind of hacky, how the #$^&* do you concatenate
-                    # a scalar and a tuple?
-                    self._traces[pymc_object] = zeros(((0,length) + shape(pymc_object.value))[1:])
-
-                    # This is kind of hacky too. I want to 1) check that array() works, and
-                    # 2) silently upcast the trace to the type of the pymc_object ahead of time.
-                    self._traces[pymc_object][0,] = 0 * array(pymc_object.value)
-
-                    self._pymc_objects_to_tally.add(pymc_object)
-
-            except TypeError:
-                if self._traces.has_key(pymc_object):
-                    self._traces.pop(pymc_object)
+            if pymc_object._traceable:
+                pymc_object._init_trace(length)
+                self._pymc_objects_to_tally.add(pymc_object)
 
     #
     # Tally
@@ -1231,7 +1215,7 @@ class Model(object):
         """
         if self._cur_trace_index < self.max_trace_length:
             for pymc_object in self._pymc_objects_to_tally:
-                self._traces[pymc_object][self._cur_trace_index,] = pymc_object.value
+                pymc_object.tally(self._cur_trace_index)
 
         self._cur_trace_index += 1
 
@@ -1249,7 +1233,7 @@ class Model(object):
             trace_index = randint(self.cur_trace_index)
 
         for pymc_object in self._pymc_objects_to_tally:
-            pymc_object.value = self._traces[pymc_object][trace_index,]
+            pymc_object.value = pymc_object.trace()[trace_index]
 
     #
     # Run the MCMC loop!

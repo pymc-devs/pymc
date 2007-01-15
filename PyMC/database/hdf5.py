@@ -1,6 +1,10 @@
 ###
 # HDF5 database module
 # Store the traces in an HDF5 array using pytables.
+# Dependencies
+# pytables: <http://sourceforge.net/projects/pytables/>
+# HDF5 >= 1.6.5 
+# Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
 
 ###
