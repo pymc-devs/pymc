@@ -6,7 +6,6 @@
 # TODO: Write a random decorator accepting keyword arguments.
 
 import numpy as np
-import proposition4
 from numpy import inf, random, sqrt
 import string
 import inspect

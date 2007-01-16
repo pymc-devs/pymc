@@ -2,7 +2,6 @@
 # Decorate fortran functions from PyMC.flib to ease argument passing
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
-# TODO: Make node_to_NDarray decorator better.
 # TODO: test and finalize vectorized multivariate normal like. 
 # TODO: Add exponweib_expval (how?)
 
@@ -17,7 +16,6 @@ availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'di
 
 import flib
 import numpy as np
-import proposition4
 from numpy import inf, random, sqrt
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
@@ -56,6 +54,7 @@ def randomwrap(func):
                 if k in kwds.keys(): args.append(kwds[k])
         
         return vfunc(*args)
+    wrapper.__doc__ = func.__doc__
     return wrapper
 
 #-------------------------------------------------------------
@@ -102,13 +101,7 @@ absolute_loss = lambda o,e: absolute(o - e)
 squared_loss = lambda o,e: (o - e)**2
 
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
-
-def node_to_NDarray(arg):
-    if isinstance(arg,proposition4.Node):
-        return arg.value
-    else:
-        return arg
-        
+       
 def GOFpoints(x,y,expval,loss):
     return sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)    
 
@@ -134,8 +127,8 @@ def bernoulli_like(x, p):
 
     p \in [0,1], x \in [0,1]
     """
-    constrain(p, 0, 1)
-    constrain(x, 0, 1)
+    constrain(p, 0, 1,allow_equal=True)
+    constrain(x, 0, 1,allow_equal=True)
     return flib.bernoulli(x, p)
         
 
@@ -156,9 +149,9 @@ def beta_like(x, alpha, beta):
     
     x in [0,1], alpha >= 0, beta >= 0 
     """
-    constrain(alpha, lower=0)
-    constrain(beta, lower=0)
-    constrain(x, 0, 1)
+    constrain(alpha, lower=0, allow_equal=True)
+    constrain(beta, lower=0, allow_equal=True)
+    constrain(x, 0, 1, allow_equal=True)
     return flib.beta(x, alpha, beta)
 
 # Binomial----------------------------------------------

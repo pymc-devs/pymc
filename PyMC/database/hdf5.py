@@ -50,7 +50,7 @@ def parameter_methods():
         return ar.read(burn, stop, step=thin)
         
     def _finalize_trace(self):
-        """We could export the trace to a txt file."""
+        """Nothing done here."""
         pass
         
     return locals()

@@ -1,5 +1,5 @@
 ###
-#Basic trace module
+# Basic trace module
 # Simply store the trace in memory
 ###
 
@@ -43,17 +43,17 @@ def parameter_methods():
         return self._trace[chain][slicing]
         
     def _finalize_trace(self):
-        """We could export the trace to a txt file."""
+        """Nothing done here."""
         pass
         
     return locals()
     
 def model_methods():
     """Define the methods that will be assigned to the Model class"""
-    def _init_dbase(self):
+    def _init_dbase(self, *args, **kwds):
         """Initialize database."""
         pass
-    def _finalize_dbase(self):
+    def _finalize_dbase(self, *args, **kwds):
         """Close database."""
         pass
         
