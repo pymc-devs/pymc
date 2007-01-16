@@ -558,23 +558,30 @@ cf2py real intent(out) :: like
       END
 
 
-      SUBROUTINE bernoulli(x,p,m,like)
+      SUBROUTINE bernoulli(x,p,nx,np,like)
 
 c Binomial log-likelihood function     
-      
-cf2py integer dimension(m),intent(in) :: x
-cf2py real dimension(m),intent(in) :: p
-cf2py integer intent(hide),depend(x) :: m=len(x)
-cf2py real intent(out) :: like      
-      
-      REAL like
-      REAL p(m)
-      INTEGER m,i
-      INTEGER x(m)
+c Modified on Jan 16 2007 by D. Huard to allow scalar p.
 
+cf2py integer dimension(nx),intent(in) :: x
+cf2py real dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(p) :: np=len(p)
+cf2py real intent(out) :: like      
+      IMPLICIT NONE
+      
+      INTEGER np,nx,i
+      REAL p(np), ptmp, like
+      INTEGER x(nx)
+      LOGICAL not_scalar_p
+
+C     Check parameter size
+      not_scalar_p = (np .NE. 1)
+    
       like = 0.0
-      do i=1,m
-        like = like + log(p(i)**x(i) * (1-p(i))**(1-x(i)))
+      do i=1,nx
+        if (not_scalar_p) ptmp = p(i)
+        like = like + log(ptmp**x(i) * (1-ptmp)**(1-x(i)))
       enddo
       return
       END

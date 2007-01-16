@@ -12,6 +12,12 @@ import inspect
 import types
 from distributions import *
 
+def node_to_NDarray(arg):
+    if isinstance(arg,proposition5.Node):
+        return arg.value
+    else:
+        return arg
+
 def fortranlike_method(f, snapshot, mv=False):
     """
     Decorator function building likelihood method for Sampler
@@ -119,12 +125,12 @@ def fortranlike(f, snapshot, mv=False):
         
         # Shape manipulations
         if not mv:
-            xshape = np.shape(node_to_NDarray(args[0]))
-            newargs = [np.asarray(node_to_NDarray(args[0]))]
+            xshape = np.shape(args[0])
+            newargs = [np.asarray(args[0])]
             for arg in args[1:]:
-                newargs.append(np.resize(node_to_NDarray(arg), xshape))
+                newargs.append(np.resize(arg, xshape))
             for key in kwds.iterkeys():
-                kwds[key] = node_to_NDarray(kwds[key])  
+                kwds[key] = kwds[key]
         else:
             """x, mu, Tau
             x: (kxN)

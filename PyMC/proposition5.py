@@ -140,8 +140,11 @@ class parameter:
 
         # Build parents dictionary by parsing the function's arguments.
         (args, varargs, varkw, defaults) = inspect.getargspec(func)
-        self.kwds.update(dict(zip(args[-len(defaults):], defaults)))
-
+        try:
+            self.kwds.update(dict(zip(args[-len(defaults):], defaults)))
+        except TypeError: pass
+            # No parents at all
+            
         # Instantiate Class
         C = self.instantiate(**self.kwds)
         return C
