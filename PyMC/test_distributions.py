@@ -1,4 +1,4 @@
-"""Test the distributions and their random generators to check 
+"""Test the distributions from flib and their random generators to check 
 they are consistent with one another.
 For each distribution:
 1. Select parameters (params = {'alpha':.., 'beta'=...}).
@@ -15,6 +15,7 @@ For each distribution:
 
 from decorators import *
 import unittest 
+import flib
 
 from numpy.testing import *
 import numpy as np
@@ -60,25 +61,26 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15, r
 # Check Bernoulli
 class test_bernoulli(NumpyTestCase):
     def check_consistency(self):
-        N = 3000
+        N = 5000
         params = {'p':.6}
         samples = []
         for i in range(N):
             samples.append(rbernoulli(**params))
         H = np.bincount(samples)*1./N
-        l0 = exp(bernoulli_like(0, **params))
-        l1 = exp(bernoulli_like(1, **params))
+        l0 = exp(flib.bernoulli(0, **params))
+        l1 = exp(flib.bernoulli(1, **params))
         assert_array_almost_equal(H, [l0,l1], 2)
     
     def test_calling(self):
-        a = bernoulli_like([0,1,1,0], .4)
-        b = bernoulli_like([0,1,1,0], [.4, .4, .4, .4])
+        a = flib.bernoulli([0,1,1,0], .4)
+        b = flib.bernoulli([0,1,1,0], [.4, .4, .4, .4])
         assert_array_equal(b,a)
 
+# Beta not vectorized yet in flib.
 class test_beta(NumpyTestCase):
     def check_consistency(self):
-        params ={'alpha':3, 'beta':5}
-        hist, like = consistency(rbeta, beta_like, params, nrandom=5000, range=[0,1])
+        params ={'a':3, 'b':5}
+        hist, like = consistency(rbeta, flib.beta, params, nrandom=5000, range=[0,1])
         assert_array_almost_equal(hist, like,1)
     
     

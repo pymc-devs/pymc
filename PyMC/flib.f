@@ -566,7 +566,7 @@ c Modified on Jan 16 2007 by D. Huard to allow scalar p.
 cf2py integer dimension(nx),intent(in) :: x
 cf2py real dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=len(x)
-cf2py integer intent(hide),depend(p) :: np=len(p)
+cf2py integer intent(hide),depend(p),check(len(p)==1 || len(p)==len(x)):: np=len(p) 
 cf2py real intent(out) :: like      
       IMPLICIT NONE
       
@@ -579,9 +579,10 @@ C     Check parameter size
       not_scalar_p = (np .NE. 1)
     
       like = 0.0
+      ptmp = p(1)
       do i=1,nx
         if (not_scalar_p) ptmp = p(i)
-        like = like + log(ptmp**x(i) * (1-ptmp)**(1-x(i)))
+        like = like + log(ptmp**x(i)) + log((1.-ptmp)**(1-x(i)))
       enddo
       return
       END
