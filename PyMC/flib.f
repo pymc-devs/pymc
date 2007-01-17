@@ -231,7 +231,7 @@ cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
         subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
         
 c Return the uniform likelihood of x.
-c UPDATED, DH?
+c CREATED 12/06 DH
 
 cf2py real dimension(n), intent(in) :: x
 cf2py real dimension(nlower), intent(in) :: lower
@@ -273,7 +273,7 @@ cf2py real intent(out) :: like
 c Exponentiated log-likelihood function
 c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
 c Where z is standardized, ie z = (x-mu)/scale
-c UPDATED, DH?
+c CREATED 12/06 DH
 
 cf2py real dimension(n), intent(in) :: x
 cf2py real dimension(na), intent(in) :: a
@@ -324,7 +324,7 @@ c     Compute the percentile point function for the
 c     Exponentiated Weibull distribution.
 c     Accept parameters a,c of length 1 or n.
 
-c UPDATED, DH?
+c CREATED 12/06 DH.
 
 cf2py real dimension(n), intent(in) :: q
 cf2py real dimension(na), intent(in) :: a
@@ -837,22 +837,37 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
       END
 
 
-      SUBROUTINE beta(x,a,b,n,like)
+      SUBROUTINE beta_like(x,alpha,beta,nx,na,nb,like)
 
 c Beta log-likelihood function      
-      
-cf2py real dimension(n),intent(in) :: x,a,b
+c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
+c Renamed to use alpha and beta arguments for compatibility with 
+c random.beta.
+
+cf2py real dimension(nx),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 cf2py real intent(out) :: like
-cf2py integer intent(hide),depend(x) :: n=len(x)
 
-      INTEGER i,n
+      INTEGER i,nx,na,nb
       REAL like
-      REAL x(n),a(n),b(n)
+      REAL x(nx),alpha(na),beta(nb), atmp, btmp
+      LOGICAL not_scalar_a, not_scalar_b
 
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+      
+      atmp = alpha(1)
+      btmp = beta(1)
       like = 0.0
-      do i=1,n
-        like = like + (gammln(a(i)+b(i)) - gammln(a(i)) - gammln(b(i)))
-        like = like + (a(i)-1.0)*log(x(i)) + (b(i)-1.0)*log(1.0-x(i))
+      do i=1,nx
+        if (not_scalar_a) atmp = alpha(i)
+        if (not_scalar_b) btmp = beta(i)
+        like = like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
+        like = like + (atmp-1.0)*log(x(i)) + (btmp-1.0)*log(1.0-x(i))
       enddo   
 
       return
@@ -992,7 +1007,8 @@ c multiply dtau by d
 
         SUBROUTINE vec_mvnorm(x,mu,tau,k,n,nmu,like)
 
-c Vectorized multivariate normal log-likelihood function      
+c Vectorized multivariate normal log-likelihood function 
+c CREATED 12/06 DH.     
 c TODO: link BLAS/LAPACK, eliminate explicit transposition
       
 cf2py real dimension(k,n),intent(in) :: x

@@ -16,7 +16,7 @@ availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'di
 
 import flib
 import numpy as np
-from numpy import inf, random, sqrt
+from numpy import inf, random, sqrt,log
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
 import inspect
@@ -152,7 +152,7 @@ def beta_like(x, alpha, beta):
     constrain(alpha, lower=0, allow_equal=True)
     constrain(beta, lower=0, allow_equal=True)
     constrain(x, 0, 1, allow_equal=True)
-    return flib.beta(x, alpha, beta)
+    return flib.beta_like(x, alpha, beta)
 
 # Binomial----------------------------------------------
 @randomwrap
@@ -592,6 +592,10 @@ def poisson_like(x,mu):
 # Uniform--------------------------------------------------
 @randomwrap
 def runiform(lower, upper, size=1):
+    """Uniform random generator
+    
+    runiform(lower, upper, size=1)
+    """
     return random.uniform(lower, upper, size)
 
 def uniform_expval(lower, upper):
@@ -617,8 +621,12 @@ def uniform_like(x,lower, upper):
     return flib.uniform_like(x,lower, upper)
 
 # Weibull--------------------------------------------------
+#@randomwrap
 def rweibull(alpha, beta):
-    return beta * (-log(runiform(0, 1, len(alpha))) ** (1. / alpha))
+    alpha = np.atleast_1d(alpha)
+    tmp = -log(runiform(0, 1, len(alpha)))
+    return beta * (tmp ** (1. / alpha))
+    
 
 def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha) 
