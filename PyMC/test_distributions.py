@@ -82,7 +82,38 @@ class test_beta(NumpyTestCase):
         params ={'a':3, 'b':5}
         hist, like = consistency(rbeta, flib.beta, params, nrandom=5000, range=[0,1])
         assert_array_almost_equal(hist, like,1)
-    
+
+class test_poisson(NumpyTestCase):
+	def __init__(self):
+		from np.random import poisson
+		params = {'mu':2.}
+		hist,like = consistency(poisson, flib.poisson, params, nrandom=5000, range=[0,10])
+
+"""
+Weibull is parametrized differently in flib than in numpy.random
+numpy.random: alpha (you need to multiply by beta)
+flib: alpha, beta
+
+class test_weibull(NumpyTestCase):
+	def __init__(self):
+		from np.random import weibull
+		params = {'alpha': 2., 'beta': 3.}
+		hist,like = consistency(weibull, flib.weibull, params, nrandom=5000, range=[0,10])
+"""			
+
+"""
+Hyperg is parametrized differently in flib than is hypergeometric in numpy.random.
+numpy.random: good, bad, sample
+flib: red (=bad), d (=sample), total (=good+bad)
+
+What to do about this?
+
+class test_hyperg(NumpyTestCase):
+	def __init__(self):
+		from np.random import poisson
+		params = {'ngood':2, 'nbad':5, 'nsample':3}
+		hist,like = consistency(poisson, flib.poisson, params, nrandom=5000, range=[0,10])		
+"""    
     
 if __name__ == '__main__':
     NumpyTest().run()

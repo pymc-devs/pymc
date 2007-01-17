@@ -231,6 +231,7 @@ cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
         subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
         
 c Return the uniform likelihood of x.
+c UPDATED, DH?
 
 cf2py real dimension(n), intent(in) :: x
 cf2py real dimension(nlower), intent(in) :: lower
@@ -272,6 +273,7 @@ cf2py real intent(out) :: like
 c Exponentiated log-likelihood function
 c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
 c Where z is standardized, ie z = (x-mu)/scale
+c UPDATED, DH?
 
 cf2py real dimension(n), intent(in) :: x
 cf2py real dimension(na), intent(in) :: a
@@ -322,6 +324,8 @@ c     Compute the percentile point function for the
 c     Exponentiated Weibull distribution.
 c     Accept parameters a,c of length 1 or n.
 
+c UPDATED, DH?
+
 cf2py real dimension(n), intent(in) :: q
 cf2py real dimension(na), intent(in) :: a
 cf2py real dimension(nc), intent(in) :: c      
@@ -358,31 +362,56 @@ c     Check length of input arrays.
 
 
 
-      SUBROUTINE hyperg(x,d,red,total,n,like)
+      SUBROUTINE hyperg(x,d,red,total,n,nd,nred,ntotal,like)
 
 c Hypergeometric log-likelihood function
 
 c Distribution models the probability of drawing x red balls in d
 c draws from an urn of 'red' red balls and 'total' total balls.
 
-cf2py integer dimension(n),intent(in) :: x, d,red,total
+cf2py integer dimension(n),intent(in) :: x
+cf2py integer dimension(nd),intent(in) :: d
+cf2py integer dimension(nred),intent(in) :: red
+cf2py integer dimension(ntotal),intent(in) :: total
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(d) :: nd=len(d)
+cf2py integer intent(hide),depend(red) :: nred=len(red)
+cf2py integer intent(hide),depend(total) :: ntotal=len(total)
 cf2py real intent(out) :: like
 
-      INTEGER x(n),d(n),red(n),total(n)
-      INTEGER i,n
+      INTEGER x(n)
+      INTEGER d(nd)
+      INTEGER red(nred)
+      INTEGER total(ntotal)
+      INTEGER i,n,nd,nred,ntotal
       REAL like
+      LOGICAL not_scalar_d, not_scalar_red, not_scalar_total
+
+c      CALL constrain(d,x,total,allow_equal=1)
+c      CALL constrain(red,x,total,allow_equal=1)
+c      CALL constrain(x, 0, d, allow_equal=1)
+
+      not_scalar_d = (nd .NE. 1)
+      not_scalar_red = (nred .NE. 1)
+      not_scalar_total = (ntotal .NE. 1)
+
+      dt = d(1)
+      redt = red(1)
+      totalt = total(1)
       
       like = 0.0
       do i=1,n
-c Combinations of x red balls      
-        like = like + factln(red(i))-factln(x(i))-factln(red(i)-x(i))
+c Combinations of x red balls
+        if (not_scalar_d) dt = d(i)
+        if (not_scalar_red) redt = red(i)
+        if (not_scalar_total) totalt = total(i)
+        like = like + factln(redt)-factln(x(i))-factln(redt-x(i))
 c Combinations of d-x other balls        
-        like = like + factln(total(i)-red(i))-factln(d(i)-x(i))
-     +-factln(total(i)-red(i)-d(i)+x(i))
+        like = like + factln(totalt-redt)-factln(dt-x(i))
+     +-factln(totalt-redt-dt+x(i))
 c Combinations of d draws from total
-        like = like - (factln(total(i))-factln(d(i))- 
-     +-factln(total(i)-d(i)))
+        like = like - (factln(totalt)-factln(dt)- 
+     +-factln(totalt-dt))
       enddo
       return
       END
@@ -416,24 +445,35 @@ c Combinations of d draws from total
       END
 
 
-      SUBROUTINE poisson(x,mu,n,like)
+      SUBROUTINE poisson(x,mu,n,nmu,like)
       
 c Poisson log-likelihood function      
+c UPDATED 1/16/07 AP
 
 cf2py integer dimension(n),intent(in) :: x
-cf2py real dimension(n),intent(in) :: mu
+cf2py real dimension(nmu),intent(in) :: mu
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
      
       INTEGER x(n)
-      REAL mu(n)
-      REAL like,sumx
+      REAL mu(nmu)
+      REAL like,sumx, mut
       INTEGER n,i
+      LOGICAL not_scalar_mu
+
+      not_scalar_mu =  (nmu .NE. 1)
+      mut = mu(1)
+
+c      CALL constrain(x,0,INFINITY,allow_equal=1)
+c      CALL constrain(mu,0,INFINITY,allow_equal=0)
 
       sumx = 0.0
       sumfact = 0.0
       do i=1,n
-        sumx = sumx + x(i)*log(mu(i)) - mu(i)
+        if (not_scalar_mu) mut = mu(i)
+
+        sumx = sumx + x(i)*log(mut) - mut
         sumfact = sumfact + factln(x(i))
       enddo
       like = sumx - sumfact
@@ -441,26 +481,39 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
       END
 
 
-      SUBROUTINE weibull(x,alpha,beta,n,like)
+      SUBROUTINE weibull(x,alpha,beta,n,nalpha,nbeta,like)
 
 c Weibull log-likelihood function      
+c UPDATED 1/16/07 AP
 
-cf2py real dimension(n),intent(in) :: x,alpha,beta 
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nalpha),intent(in) :: alpha
+cf2py real dimension(nbeta),intent(in) :: beta
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
 
-      REAL x(n),alpha(n),beta(n)
+      REAL x(n),alpha(nalpha),beta(nbeta)
       REAL like
-      INTEGER n,i
+      INTEGER n,nalpha,nbeta,i
+      LOGICAL not_scalar_alpha
+      LOGICAL not_scalar_beta
 
+      not_scalar_alpha = (nalpha .NE. 1)
+      not_scalar_beta = (nbeta .NE. 1)
+      alphat = alpha(1)
+      betat = beta(1)
 
       like = 0.0      
       do i=1,n
+        if (not_scalar_alpha) alphat = alpha(i)
+        if (not_scalar_beta) betat = beta(i)
 c normalizing constant
-        like = like + (log(alpha(i)) - alpha(i)*log(beta(i)))
+        like = like + (log(alphat) - alphat*log(betat))
 c kernel of distribution
-        like = like + (alpha(i)-1) * log(x(i))
-        like = like - (x(i)/beta(i))**alpha(i)
+        like = like + (alphat-1) * log(x(i))
+        like = like - (x(i)/betat)**alphat
       enddo
       return
       END
@@ -936,9 +989,11 @@ c multiply dtau by d
       return
       END
 
+
         SUBROUTINE vec_mvnorm(x,mu,tau,k,n,nmu,like)
 
 c Vectorized multivariate normal log-likelihood function      
+c TODO: link BLAS/LAPACK, eliminate explicit transposition
       
 cf2py real dimension(k,n),intent(in) :: x
 cf2py real dimension(k,nmu),intent(in) :: mu

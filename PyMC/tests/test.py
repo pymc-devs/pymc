@@ -1,25 +1,26 @@
-class value_desc(object):
+from numpy import *
+from copy import deepcopy
+
+class dummy_class(object):
 	def __init__(self):
-		self.__value = 0
-	def __get__(self,instance,owner):
-		print 'self' , self
-		print 'instance' , instance
-		print 'owner' , owner
-		return self.__value
-	def __set__(self,instance,value):
-		self.__value = value
-	def __call__(self):
-		return self.__value ** 2
+		self._value = array([1.,2.])
 		
+	def _get_value(self):
+		return self._value
 		
-class ParameterHolder(object):
-	def __init__(self):
-		self.__value = 3
-	def getval(self):
-		return self.__value
-	def setval(self,new_value):
-		self.__value = new_value
-	value = value_desc()
-	
-B=ParameterHolder()
-A=value_desc()
+	def _set_value(self, value):
+		self.last_value = deepcopy(self._value)
+		self._value = value
+		print ' Value changed from ',self.last_value,' to ',self._value
+		return self._value
+		
+	value = property(fget=_get_value,fset=_set_value)
+
+A = dummy_class()
+
+
+print 'Correct: '
+A.value = array([3., 3.])
+
+print 'Wrong: '
+A.value += array([1., 1.])

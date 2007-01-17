@@ -1,3 +1,5 @@
+
+
 from proposition5 import *
 from numpy import ma, random, where
 from numpy.random import random
