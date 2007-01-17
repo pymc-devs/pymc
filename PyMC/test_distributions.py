@@ -7,6 +7,10 @@ For each distribution:
 4. Compute histogram of samples.
 5. Compare histogram with likelihood.
 6. Assert if they fit or not.
+
+David- constrain() in flib is giving me bus errors, try for instance
+uncommenting the constrain lines in poisson().
+-A
 """
 
 # TODO: Add plots to show the fit between histograms and flib probability.
