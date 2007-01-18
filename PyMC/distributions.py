@@ -384,6 +384,8 @@ def half_normal_like(x, tau):
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
+# TODO: replace with random.hypergeometric
+# TODO: Select a uniform convention across functions.
 def rhypergeometric(draws, red, total, n=None):
     """Returns n hypergeometric random variates of size 'draws'"""
 

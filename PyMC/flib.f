@@ -532,9 +532,10 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 
-      INTEGER nx,na,nb
+      IMPLICIT NONE
+      INTEGER nx,na,nb,i
       REAL x(nx),alpha(na),beta(nb)
-      REAL like, atmp, btmp
+      REAL like, atmp, btmp, PI
       LOGICAL not_scalar_alpha, not_scalar_beta
       PARAMETER (PI=3.141592653589793238462643d0) 
       
@@ -543,8 +544,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       
       atmp = alpha(1)
       btmp = beta(1)
-      like = -n*log(PI)
-      do i=1,n
+      like = -nx*log(PI)
+      do i=1,nx
         if (not_scalar_alpha) atmp = alpha(i)
         if (not_scalar_beta) btmp = beta(i)
         like = like + log(btmp)
@@ -614,13 +615,14 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
 cf2py integer intent(hide),depend(p),check(np==1 || np==len(x)) :: np=len(p)
 cf2py real intent(out) :: like      
-      
-      INTEGER nx,nn,np
+      IMPLICIT NONE
+      INTEGER nx,nn,np,i
       REAL like, p(np)
       INTEGER x(nx),n(nn)
       LOGICAL not_scalar_n,not_scalar_p
       INTEGER ntmp
       REAL ptmp
+      REAL factln
       
       not_scalar_n = (nn .NE. 1)
       not_scalar_p = (np .NE. 1) 
@@ -629,7 +631,7 @@ cf2py real intent(out) :: like
       ptmp = p(1)
 
       like = 0.0
-      do i=1,m
+      do i=1,nx
         if (not_scalar_n) ntmp = n(i)
         if (not_scalar_p) ptmp = p(i)
         like = like + x(i)*log(ptmp) + (ntmp-x(i))*log(1.-ptmp)
@@ -1321,12 +1323,10 @@ C a nicety that you can omit if five-figure accuracy is good enough.
       return 
       END
 
-      FUNCTION factrl(n) 
+      REAL FUNCTION factrl(n) 
 C Returns the value n! as a floating-point number. 
 
-
       INTEGER n 
-      REAL factrl 
 
       INTEGER j,ntop 
 C Table to be filled in only as required. 
@@ -1356,11 +1356,10 @@ C but no harm in trying.
       return 
       END 
 
-      FUNCTION factln(n) 
+      REAL FUNCTION factln(n) 
 C USES gammln Returns ln(n!). 
 
       INTEGER n 
-      REAL factln 
       REAL a(100),gammln 
       SAVE a 
 C Initialize the table to negative values. 
