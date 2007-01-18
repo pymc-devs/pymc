@@ -379,11 +379,10 @@ cf2py integer intent(hide),depend(red) :: nred=len(red)
 cf2py integer intent(hide),depend(total) :: ntotal=len(total)
 cf2py real intent(out) :: like
 
-      INTEGER x(n)
-      INTEGER d(nd)
-      INTEGER red(nred)
-      INTEGER total(ntotal)
+C      IMPLICIT NONE
       INTEGER i,n,nd,nred,ntotal
+      INTEGER x(n),d(nd), red(nred),total(ntotal)
+      INTEGER dt, redt, totalt
       REAL like
       LOGICAL not_scalar_d, not_scalar_red, not_scalar_total
 
@@ -410,7 +409,7 @@ c Combinations of d-x other balls
         like = like + factln(totalt-redt)-factln(dt-x(i))
      +-factln(totalt-redt-dt+x(i))
 c Combinations of d draws from total
-        like = like - (factln(totalt)-factln(dt)- 
+       like = like - (factln(totalt)-factln(dt)- 
      +-factln(totalt-dt))
       enddo
       return
@@ -519,23 +518,37 @@ c kernel of distribution
       END
 
 
-      SUBROUTINE cauchy(x,alpha,beta,n,like)
+      SUBROUTINE cauchy(x,alpha,beta,nx, na, nb,like)
 
 c Cauchy log-likelihood function      
 
-cf2py real dimension(n),intent(in) :: x,alpha,beta
-cf2py real intent(out) :: like
-cf2py integer intent(hide),depend(x) :: n=len(x)
+c UPDATED 17/01/2007 DH. 
 
-      REAL x(n),alpha(n),beta(n)
-      REAL like
-      INTEGER n,i
+cf2py real dimension(nx),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
+cf2py real intent(out) :: like
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+
+      INTEGER nx,na,nb
+      REAL x(nx),alpha(na),beta(nb)
+      REAL like, atmp, btmp
+      LOGICAL not_scalar_alpha, not_scalar_beta
       PARAMETER (PI=3.141592653589793238462643d0) 
       
+      not_scalar_alpha = (na .NE. 1)
+      not_scalar_beta = (nb .NE. 1)
+      
+      atmp = alpha(1)
+      btmp = beta(1)
       like = -n*log(PI)
       do i=1,n
-        like = like + log(beta(i))
-        like = like -  log( 1. + ((x(i)-alpha(i)) / beta(i)) ** 2 )
+        if (not_scalar_alpha) atmp = alpha(i)
+        if (not_scalar_beta) btmp = beta(i)
+        like = like + log(btmp)
+        like = like -  log( 1. + ((x(i)-atmp) / btmp) ** 2 )
       enddo
       return
       END
@@ -588,24 +601,39 @@ cf2py real intent(out) :: like
       END
 
 
-      SUBROUTINE binomial(x,n,p,m,like)
+      SUBROUTINE binomial(x,n,p,nx,nn,np,like)
 
 c Binomial log-likelihood function     
-      
-cf2py integer dimension(m),intent(in) :: x,n
-cf2py real dimension(m),intent(in) :: p
-cf2py integer intent(hide),depend(x) :: m=len(x)
+
+c  Updated 17/01/2007. DH. 
+
+cf2py integer dimension(nx),intent(in) :: x
+cf2py integer dimension(nn),intent(in) :: n
+cf2py real dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
+cf2py integer intent(hide),depend(p),check(np==1 || np==len(x)) :: np=len(p)
 cf2py real intent(out) :: like      
       
-      REAL like
-      REAL p(m)
-      INTEGER m,i
-      INTEGER x(m),n(m)
+      INTEGER nx,nn,np
+      REAL like, p(np)
+      INTEGER x(nx),n(nn)
+      LOGICAL not_scalar_n,not_scalar_p
+      INTEGER ntmp
+      REAL ptmp
+      
+      not_scalar_n = (nn .NE. 1)
+      not_scalar_p = (np .NE. 1) 
+      
+      ntmp = n(1)
+      ptmp = p(1)
 
       like = 0.0
       do i=1,m
-        like = like + x(i)*log(p(i)) + (n(i)-x(i))*log(1.-p(i))
-        like = like + factln(n(i))-factln(x(i))-factln(n(i)-x(i)) 
+        if (not_scalar_n) ntmp = n(i)
+        if (not_scalar_p) ptmp = p(i)
+        like = like + x(i)*log(ptmp) + (ntmp-x(i))*log(1.-ptmp)
+        like = like + factln(ntmp)-factln(x(i))-factln(ntmp-x(i)) 
       enddo
       return
       END
@@ -650,9 +678,9 @@ Cf2py real dimension(nxi), intent(in):: xi
 Cf2py real dimension(nmu), intent(in):: mu
 Cf2py real dimension(nsigma), intent(in):: sigma
 Cf2py integer intent(hide), depend(x) :: n=len(x)
-Cf2py integer intent(hide), depend(x) :: nxi=len(xi)
-Cf2py integer intent(hide), depend(x) :: nmu=len(mu)
-Cf2py integer intent(hide), depend(x) :: nsigma=len(sigma)
+Cf2py integer intent(hide), depend(x),check(nxi==1 || nxi==len(x)) :: nxi=len(xi)
+Cf2py integer intent(hide), depend(x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
+Cf2py integer intent(hide), depend(x),check(nsigma==1 || nsigma==len(x)) :: nsigma=len(sigma)
 Cf2py real intent(out):: like
 
       INTEGER n, nmu, nxi, nsigma, i

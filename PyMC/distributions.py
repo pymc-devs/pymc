@@ -2,24 +2,25 @@
 # Decorate fortran functions from PyMC.flib to ease argument passing
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
-# TODO: test and finalize vectorized multivariate normal like. 
+# TODO: test and finalize vectorized multivariate normal like.
 # TODO: Add exponweib_expval (how?)
 
 
 
-availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet', 
-'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric', 
-'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric', 
-'multivariate_normal', 'negative_binomial', 'normal', 'poisson', 'uniform', 
+availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
+'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
+'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric',
+'multivariate_normal', 'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull']
 
 
 import flib
 import numpy as np
-from numpy import inf, random, sqrt,log
+from numpy import inf, random, sqrt, log, size, tan, pi
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
 import inspect
+random_number = random.random
 inverse = np.linalg.pinv
 
 
@@ -35,15 +36,15 @@ def randomwrap(func):
     """
     Decorator for random value generators
     =====================================
-    
-    Vectorize random value generation functions so an array of parameters may 
-    be passed. 
+
+    Vectorize random value generation functions so an array of parameters may
+    be passed.
     """
-    # Vectorized functions do not accept keyword arguments, so they 
+    # Vectorized functions do not accept keyword arguments, so they
     # must be translated into positional arguments.
-    
+
     # Find the order of the arguments.
-    refargs, varargs, varkw, defaults = inspect.getargspec(func)   
+    refargs, varargs, varkw, defaults = inspect.getargspec(func)
     vfunc = np.vectorize(func)
     def wrapper(*args, **kwds):
         """Transform keywords arguments into positional arguments and feed them
@@ -52,7 +53,7 @@ def randomwrap(func):
             args = list(args)
             for k in refargs:
                 if k in kwds.keys(): args.append(kwds[k])
-        
+
         return vfunc(*args)
     wrapper.__doc__ = func.__doc__
     return wrapper
@@ -71,7 +72,7 @@ def constrain(value, lower=-inf, upper=inf, allow_equal=False):
 
 def standardize(x, loc=0, scale=1):
     """Standardize x
-    
+
     Return (x-loc)/scale
     """
     return flib.standardize(x,loc,scale)
@@ -80,7 +81,7 @@ def standardize(x, loc=0, scale=1):
 def gammaln(x):
     """Logarithm of the Gamma function"""
     return flib.gamfun(x)
-    
+
 def expand_triangular(X,k):
     """Expand flattened triangular matrix."""
     X = X.tolist()
@@ -92,8 +93,8 @@ def expand_triangular(X,k):
         for j in range(k):
             Y[j, i] = Y[i, j]
     return Y
-    
-    
+
+
 """ Loss functions """
 
 absolute_loss = lambda o,e: absolute(o - e)
@@ -101,9 +102,9 @@ absolute_loss = lambda o,e: absolute(o - e)
 squared_loss = lambda o,e: (o - e)**2
 
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
-       
+
 def GOFpoints(x,y,expval,loss):
-    return sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)    
+    return sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)
 
 #--------------------------------------------------------
 # Statistical distributions
@@ -114,15 +115,15 @@ def GOFpoints(x,y,expval,loss):
 @randomwrap
 def rbernoulli(p):
     return random.binomial(1,p)
-        
+
 def bernoulli_expval(p):
     """Goodness of fit for bernoulli."""
     return p
-                
-    
+
+
 def bernoulli_like(x, p):
     """Bernoulli log-likelihood
-    
+
     bernoulli_like(x, p)
 
     p \in [0,1], x \in [0,1]
@@ -130,7 +131,7 @@ def bernoulli_like(x, p):
     constrain(p, 0, 1,allow_equal=True)
     constrain(x, 0, 1,allow_equal=True)
     return flib.bernoulli(x, p)
-        
+
 
 # Beta----------------------------------------------
 @randomwrap
@@ -141,13 +142,13 @@ def beta_expval(x,alpha, beta):
     expval = 1.0 * alpha / (alpha + beta)
     return expval
 
-        
+
 def beta_like(x, alpha, beta):
     """Beta log-likelihood
-    
+
     beta_like(x, alpha, beta)
-    
-    x in [0,1], alpha >= 0, beta >= 0 
+
+    x in [0,1], alpha >= 0, beta >= 0
     """
     constrain(alpha, lower=0, allow_equal=True)
     constrain(beta, lower=0, allow_equal=True)
@@ -166,10 +167,10 @@ def binomial_expval(x,n,p):
 
 def binomial_like(x, n, p):
     """Binomial log-likelihood
-    
+
     binomial_like(x, n, p)
-    
-    p \in [0,1], n > x, x > 0 
+
+    p \in [0,1], n > x, x > 0
     """
     constrain(p, 0, 1)
     constrain(n, lower=x)
@@ -186,9 +187,9 @@ def categorical_expval(probs, minval=0, step=1):
     return sum([p*(minval + i*step) for i, p in enumerate(probs)])
 
 def categorical_like( x, probs, minval=0, step=1):
-    """Categorical log-likelihood. 
-    Accepts an array of probabilities associated with the histogram, 
-    the minimum value of the histogram (defaults to zero), 
+    """Categorical log-likelihood.
+    Accepts an array of probabilities associated with the histogram,
+    the minimum value of the histogram (defaults to zero),
     and a step size (defaults to 1).
     """
     # Normalize, if not already
@@ -206,10 +207,9 @@ def rcauchy(alpha, beta, n=None):
 def cauchy_expval(alpha, beta):
     return alpha
 
-
 def cauchy_like(x, alpha, beta):
     """Cauchy log-likelhood
-    
+
     cauchy_like(x, alpha, beta)
 
     beta > 0
@@ -221,7 +221,7 @@ def cauchy_like(x, alpha, beta):
 @randomwrap
 def rchi2(df):
     return random.chisquare(df)
-    
+
 def chi2_expval(df):
     return df
 
@@ -230,7 +230,7 @@ def chi2_like(x, df):
     """Chi-squared log-likelihood
 
     chi2_like(x, df)
-    
+
     x > 0, df > 0
     """
     constrain(x, lower=0)
@@ -243,11 +243,11 @@ def rdirichlet(alphas, n=None):
     """Returns Dirichlet random variates"""
     if n:
         gammas = transpose([rgamma(alpha,1,n) for alpha in alphas])
-        
+
         return array([g/sum(g) for g in gammas])
     else:
         gammas = array([rgamma(alpha,1) for alpha in alphas])
-        
+
         return gammas/sum(gammas)
 
 def dirichlet_expval(theta):
@@ -257,9 +257,9 @@ def dirichlet_expval(theta):
 
 def dirichlet_like(x, theta):
     """Dirichlet log-likelihood
-    
+
     dirichlet_like(x, theta)
-    
+
     theta > 0, x > 0, \sum x < 1
     """
     constrain(theta, lower=0)
@@ -278,7 +278,7 @@ def exponential_expval(beta):
 
 def exponential_like(x, beta):
     """Exponential log-likelihood
-    
+
     exponential_like(x, beta)
 
     x > 0, beta > 0
@@ -293,16 +293,16 @@ def rexponweib(a, c, loc, scale, size=1):
     q = random.uniform(size)
     r = flib.exponweib_ppf(q,a,c)
     return loc + r*scale
-    
+
 def exponweib_like(x, a, c, loc=0, scale=1):
     """Exponentiated Weibull log-likelihood
-    
+
     exponweib_like(x,a,c,loc=0,scale=1)
-    
+
     x > 0, c > 0, scale >0
     """
     return flib.exponweib(x,a,c,loc,scale)
-    
+
 # Gamma----------------------------------------------
 @randomwrap
 def rgamma(alpha, beta):
@@ -312,26 +312,26 @@ def gamma_expval(alpha, beta):
     expval = array(alpha) / beta
     return expval
 
-   
+
 def gamma_like(x, alpha, beta):
     """Gamma log-likelihood
-    
+
     gamma_like(x, alpha, beta)
 
     x > 0, alpha > 0, beta > 0
     """
     constrain(x, lower=0)
     constrain(alpha, lower=0)
-    constrain(beta, lower=0)        
+    constrain(beta, lower=0)
     return flib.gamma(x, alpha, beta)
-        
+
 
 # GEV Generalized Extreme Value ------------------------
 def gev_like(x, xi, loc=0, scale=0):
     r"""GEV log-likelihood
-    
+
     gev_like(x, xi, mu=0, sigma=0)
-    
+
     .. latex-math::
     pdf(x|xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}'
     where z=\frac{x-\mu}{\sigma}
@@ -366,15 +366,15 @@ def geometric_like(x, p):
 # Half-normal----------------------------------------------
 @randomwrap
 def rhalf_normal(tau):
-    return random.normal(0, sqrt(1/tau))    
-    
+    return random.normal(0, sqrt(1/tau))
+
 def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
 
 
 def half_normal_like(x, tau):
     """Half-normal log-likelihood
-    
+
     half_normal_like(x, tau)
 
     x > 0, tau > 0
@@ -382,13 +382,13 @@ def half_normal_like(x, tau):
     constrain(tau, lower=0)
     constrain(x, lower=0)
     return flib.hnormal(x, tau)
-    
+
 # Hypergeometric----------------------------------------------
 def rhypergeometric(draws, red, total, n=None):
     """Returns n hypergeometric random variates of size 'draws'"""
-    
+
     urn = [1]*red + [0]*(total-red)
-    
+
     if n:
         return [sum(urn[i] for i in permutation(total)[:draws]) for j in range(n)]
     else:
@@ -400,11 +400,11 @@ def hypergeometric_expval(n,m,N):
 def hypergeometric_like(x, n, m, N):
     """
     Hypergeometric log-likelihood
-    
+
     hypergeometric_like(x, n, m, N)
-    
+
     x \in [\max(0, n-N+m), \min(m,n)], m < N, n < N
-    
+
     Models the probability of drawing x successful draws in n
     draws from N total balls of which m are successes.
     """
@@ -414,10 +414,10 @@ def hypergeometric_like(x, n, m, N):
     return flib.hyperg(x, n, m, N)
 
 # Inverse gamma----------------------------------------------
-# Looks this one is identical to rgamma, this is strange.    
+# Looks this one is identical to rgamma, this is strange.
 @randomwrap
 def rinverse_gamma(alpha, beta):
-    pass 
+    pass
 
 def inverse_gamma_expval(alpha, beta):
     return array(alpha) / beta
@@ -425,7 +425,7 @@ def inverse_gamma_expval(alpha, beta):
 
 def inverse_gamma_like(x, alpha, beta):
     """Inverse gamma log-likelihood
-    
+
     inverse_gamma_like(x, alpha, beta)
 
     x > 0, alpha > 0, beta > 0
@@ -434,7 +434,7 @@ def inverse_gamma_like(x, alpha, beta):
     constrain(alpha, lower=0)
     constrain(beta, lower=0)
     return flib.igamma(x, alpha, beta)
-    
+
 # Lognormal----------------------------------------------
 @randomwrap
 def rlognormal(mu, tau):
@@ -446,10 +446,10 @@ def lognormal_expval(mu, tau):
 
 def lognormal_like(x, mu, tau):
     """Log-normal log-likelihood
-    
+
     lognormal_like(x, mu, tau)
 
-    x > 0, tau > 0 
+    x > 0, tau > 0
     """
     constrain(tau, lower=0)
     constrain(x, lower=0)
@@ -466,9 +466,9 @@ def multinomial_expval(n,p):
 
 def multinomial_like(x, n, p):
     """Multinomial log-likelihood with k-1 bins
-    
+
     multinomial_like(x, n, p)
-    
+
     x > 0, p > 0, \sum p < 1, \sum x < n
     """
     constrain(p, lower=0)
@@ -476,22 +476,22 @@ def multinomial_like(x, n, p):
     constrain(sum(p), upper=1)
     constrain(sum(x), upper=n)
     return flib.multinomial(x, n, p)
-    
+
 # Multivariate hypergeometric------------------------------
 # Hum, this is weird. multivariate_hypergeometric_like takes one parameters m
 # and rmultivariate_hypergeometric has two. n= sum(x) ???
 def rmultivariate_hypergeometric(draws, colors, n=None):
     """ Returns n multivariate hypergeometric draws of size 'draws'"""
-    
+
     urn = concatenate([[i]*count for i,count in enumerate(colors)])
-    
+
     if n:
         draw = [[urn[i] for i in permutation(len(urn))[:draws]] for j in range(n)]
-        
+
         return [[sum(draw[j]==i) for i in range(len(colors))] for j in range(n)]
     else:
         draw = [urn[i] for i in permutation(len(urn))[:draws]]
-        
+
         return [sum(draw==i) for i in range(len(colors))]
 
 def multivariate_hypergeometric_expval(m):
@@ -500,9 +500,9 @@ def multivariate_hypergeometric_expval(m):
 
 def multivariate_hypergeometric_like(x, m):
     """Multivariate hypergeometric log-likelihood
-    
+
     multivariate_hypergeometric_like(x, m)
-    
+
     x < m
     """
     constrain(x, upper=m)
@@ -517,9 +517,9 @@ def multivariate_normal_expval(mu, tau):
 
 def multivariate_normal_like(x, mu, tau):
     r"""Multivariate normal log-likelihood
-    
+
     multivariate_normal_like(x, mu, tau)
-    
+
     x: (k,n)
     mu: (k,n) or (k,1)
     tau: (k,k)
@@ -539,9 +539,9 @@ def negative_binomial_expval(mu, alpha):
 
 def negative_binomial_like(x, mu, alpha):
     """Negative binomial log-likelihood
-    
+
     negative_binomial_like(x, mu, alpha)
-    
+
     x > 0, mu > 0, alpha > 0
     """
     constrain(mu, lower=0)
@@ -562,38 +562,38 @@ def normal_like(x, mu, tau):
     """Normal log-likelihood
 
     normal_like(x, mu, tau)
-    
+
     tau > 0
-    """    
+    """
     constrain(tau, lower=0)
     return flib.normal(x, mu, tau)
-    
-    
+
+
 # Poisson--------------------------------------------------
 @randomwrap
 def rpoisson(mu):
     return random.poisson(mu)
-    
+
 def poisson_expval(mu):
     return mu
 
 
 def poisson_like(x,mu):
     """Poisson log-likelihood
-    
+
     poisson_like(x,mu)
-    
+
     x \geq 0, mu \geq 0
     """
     constrain(x, lower=0,allow_equal=True)
     constrain(mu, lower=0,allow_equal=True)
     return flib.poisson(x,mu)
-    
+
 # Uniform--------------------------------------------------
 @randomwrap
 def runiform(lower, upper, size=1):
     """Uniform random generator
-    
+
     runiform(lower, upper, size=1)
     """
     return random.uniform(lower, upper, size)
@@ -613,9 +613,9 @@ uniform_like_python._PyMC = True
 
 def uniform_like(x,lower, upper):
     """Uniform log-likelihood
-    
+
     uniform_like(x,lower, upper)
-    
+
     x \in [lower, upper]
     """
     return flib.uniform_like(x,lower, upper)
@@ -626,30 +626,30 @@ def rweibull(alpha, beta):
     alpha = np.atleast_1d(alpha)
     tmp = -log(runiform(0, 1, len(alpha)))
     return beta * (tmp ** (1. / alpha))
-    
+
 
 def weibull_expval(alpha,beta):
-    return beta * gammaln((alpha + 1.) / alpha) 
+    return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
     """Weibull log-likelihood
-    
+
     weibull_like(x, alpha, beta)
-    
+
     x > 0, alpha > 0, beta > 0
     """
     constrain(alpha, lower=0)
     constrain(beta, lower=0)
     constrain(x, lower=0)
     return flib.weibull(x, alpha, beta)
-    
+
 # Wishart---------------------------------------------------
 def rwishart(n, Tau, m=None):
     """Returns Wishart random matrices"""
     sigma = inverse(Tau)
     D = [i for i in ravel(t(chol(sigma))) if i]
     np = len(sigma)
-    
+
     if m:
         return [expand_triangular(flib.wshrt(D, n, np), np) for i in range(m)]
     else:
@@ -660,9 +660,9 @@ def wishart_expval(n, Tau):
 
 def wishart_like(X, n, Tau):
     """Wishart log-likelihood
-    
+
     wishart_like(X, n, Tau)
-    
+
     X, T symmetric and positive definite
     n > 0
     """
@@ -675,6 +675,6 @@ def wishart_like(X, n, Tau):
 
 
 
-       
 
-    
+
+
