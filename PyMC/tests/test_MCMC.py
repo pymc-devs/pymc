@@ -1,5 +1,8 @@
 """
 The DisasterSampler example.
+
+.7s for 10k iterations with SamplingMethod,step() commented out,
+
 """
 
 from proposition5 import Model

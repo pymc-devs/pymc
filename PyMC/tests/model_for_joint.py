@@ -6,16 +6,13 @@ from flib import mvnorm
 
 mu_A = array([0.,0.])
 tau_A = eye(2)
-@parameter(init_val = ones(2,dtype=float), mu=mu_A, tau = tau_A)
-def A():
-	def logp_fun(value,mu,tau):
-		return mvnorm(value,mu,tau)
-
+@parameter
+def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
+	return mvnorm(value,mu,tau)
 
 tau_B = eye(2) * 100.		   
-@parameter(init_val = ones(2,dtype=float), mu = A, tau = tau_B)
-def B():
-	def logp_fun(value,mu,tau):
-		return mvnorm(value,mu,tau) 
+@parameter
+def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
+	return mvnorm(value,mu,tau) 
 
 S = Joint([A,B],epoch=1000, memory=10, interval = 10, delay = 0)

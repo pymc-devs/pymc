@@ -1,26 +1,20 @@
-from numpy import *
-from copy import deepcopy
+from proposition5 import *
 
-class dummy_class(object):
-	def __init__(self):
-		self._value = array([1.,2.])
+	
 		
-	def _get_value(self):
-		return self._value
+@parameter(caching=True)
+def B(value = 1., haha=3.):
+
+	def logp(value,haha):
+		return 3.		
 		
-	def _set_value(self, value):
-		self.last_value = deepcopy(self._value)
-		self._value = value
-		print ' Value changed from ',self.last_value,' to ',self._value
-		return self._value
+	def random(haha):
+		return 1.
 		
-	value = property(fget=_get_value,fset=_set_value)
-
-A = dummy_class()
-
-
-print 'Correct: '
-A.value = array([3., 3.])
-
-print 'Wrong: '
-A.value += array([1., 1.])
+@data
+def A(value = 1., lala=B):
+	return lala**2		
+		
+@node
+def C(hmhm=A, zmzm=B):
+	return hmhm-zmzm

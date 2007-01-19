@@ -18,49 +18,7 @@ With likelihoods,
 
 from proposition5 import *
 from numpy.random import exponential as rexpo
-		
-def poisson_like(val,rate):
-	return sum(log(rate) * val - rate)
-
-
-
-# Define data and parameters
-
-@parameter(init_val=50)
-def switchpoint(length=110):
-	"""Change time for rate parameter."""
-
-	def logp_fun(value, length):
-		if value >= 0 and value <= length: return 0.
-		else: return -Inf
-		
-	def random(length):
-		return randint(length)
-
-
-@parameter(init_val=1.)
-def early_mean(rate=1.):
-	"""Rate parameter of poisson distribution."""
-
-	def logp_fun(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf 
-		
-	def random(rate):
-		return rexpo(rate)
-
-
-@parameter(init_val=1.)
-def late_mean(rate = 1.):
-	"""Rate parameter of poisson distribution."""
-
-	def logp_fun(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf 
-		
-	def random(rate):
-		return rexpo(rate)
-	
+from flib import poisson
 
 disasters_array = 	array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 							3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -68,15 +26,53 @@ disasters_array = 	array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 							1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
 							0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
 							3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-							0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]) 
-@data(init_val = disasters_array, caching = True)
-def disasters(	early_mean = early_mean, 
+							0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+
+# Define data and parameters
+
+@parameter
+def switchpoint(value=50, length=110):
+	"""Change time for rate parameter."""
+
+	def logp(value, length):
+		if value >= 0 and value <= length: return 0.
+		else: return -Inf
+		
+	def random(length):
+		return randint(length)
+
+
+@parameter
+def early_mean(value=1., rate=1.):
+	"""Rate parameter of poisson distribution."""
+
+	def logp(value, rate):
+		if value>0: return -rate * value
+		else: return -Inf 
+		
+	def random(rate):
+		return rexpo(rate)
+
+
+@parameter
+def late_mean(value=.1, rate = 1.):
+	"""Rate parameter of poisson distribution."""
+
+	def logp(value, rate):
+		if value>0: return -rate * value
+		else: return -Inf 
+		
+	def random(rate):
+		return rexpo(rate)
+
+	
+@data(caching = True)
+def disasters(	value = disasters_array, 
+				early_mean = early_mean, 
 				late_mean = late_mean, 
 				switchpoint = switchpoint):
 	"""Annual occurences of coal mining disasters."""
-	
-	def logp_fun(value, early_mean, late_mean, switchpoint):
-		return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint+1:],late_mean)
+	return poisson(value[:switchpoint],early_mean) + poisson(value[switchpoint+1:],late_mean)
 	
 
 
