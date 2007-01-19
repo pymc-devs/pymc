@@ -312,7 +312,6 @@ def gamma_expval(alpha, beta):
     expval = array(alpha) / beta
     return expval
 
-
 def gamma_like(x, alpha, beta):
     """Gamma log-likelihood
 

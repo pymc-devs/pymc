@@ -548,7 +548,7 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,nx
         if (not_scalar_alpha) atmp = alpha(i)
         if (not_scalar_beta) btmp = beta(i)
-        like = like + log(btmp)
+        like = like - log(btmp)
         like = like -  log( 1. + ((x(i)-atmp) / btmp) ** 2 )
       enddo
       return
@@ -824,22 +824,38 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
       END
       
       
-      SUBROUTINE gamma(x,alpha,beta,n,like)
+      SUBROUTINE gamma(x,alpha,beta,n,na,nb,like)
 
 c Gamma log-likelihood function      
 
-cf2py real dimension(n),intent(in) :: x,alpha,beta
+c Updated 19/01/2007 DH.
+
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 
-      INTEGER i,n
+
+      INTEGER i,n,na,nb
       REAL like
-      REAL x(n),alpha(n),beta(n)
+      REAL x(n),alpha(na),beta(nb)
+	  REAL beta_tmp, alpha_tmp
+	  LOGICAL not_scalar_a, not_scalar_b
 
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
       like = 0.0
       do i=1,n
-        like = like - (gammln(alpha(i)) + alpha(i)*log(beta(i)))
-        like = like + (alpha(i) - 1.0)*log(x(i)) - x(i)/beta(i)
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        like = like - gammln(alpha_tmp) - alpha_tmp*log(beta_tmp)
+        like = like + (alpha_tmp - 1.0)*log(x(i)) - x(i)/beta_tmp
       enddo     
 
       return

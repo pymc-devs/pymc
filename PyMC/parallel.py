@@ -63,7 +63,8 @@ class Parallel(Model):
         # Push the individual models in each process
         # Works with ipython1 since jan 18. 2007. Buggy before that. 
         rc.pushModule(input)
-        
+        # still buggy
+        rc.executeAll('import input') # input.__name__?
         # Initiate Model instances in each process
         rc.pushModule(proposition5)
         

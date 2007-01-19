@@ -16,37 +16,38 @@ At first, I wanted to constrain everything from fortran, but g77 doesn't
 really handle exceptions. I finally wrapped the fortran constrain and called
 it from python. We'll need a brainstorm on this. One idea is to use f2py for this.
 There is some checking that can be done using the check argument. Maybe we can
-insert C code to do  a loop on each argument and check the constraints.
+insert C code to do a loop on each argument and check the constraints.
 With pure fortran, the only way I see out of it is to return a very large
 negative number to approximate -inf. For the time being, let's leave the
 constraining to python.
 -D
 """
 
-# TODO: Add plots to show the fit between histograms and flib probability.
 # TODO: Improve the assertion of consistency.
 #       Maybe compare the relative error (hist-like)/like. Doesn't work so well.
 #       Tried (hist-like)/sqrt(like), seems to work better. 
-# TODO: Add a normalization test, ie check \int f(x)dx == 1.
+
 
 from decorators import *
 import unittest
 import flib
-
 from numpy.testing import *
 import numpy as np
 from numpy import exp
+import utils
 PLOT=True
 try:
     from scipy import integrate
+    SP = True
 except:
     print 'You really should install SciPy. Some of the tests might not pass.'
+    SP= False
 try:
     import pylab as P
 except:
     print 'Plotting disabled'
     PLOT=False
-    
+SP = False
 def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
     """Check the random generator is consistent with the likelihood.
@@ -69,8 +70,9 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     for i in np.arange(nrandom):
         samples.append(random(**params))
     samples = np.array(samples)
+    
     # Numpy's histogram is shitty. Use something else.
-    hist,bins = np.histogram(samples, range=range, bins=nbins, normed=True)
+    hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
     if range is None:
@@ -81,7 +83,7 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
         l.append(like(x, **params))
     L = exp(np.array(l))
     
-    figuredata = {'samples':samples, 'bins':bins, \
+    figuredata = {'samples':samples, 'bins':output['edges'][:-1], \
         'like':L.copy(), 'x':X}
     
     L = L.reshape(nbins, nintegration)
@@ -104,10 +106,18 @@ def compare_hist(samples, bins, like, x, figname):
     P.savefig(figname)
     P.close() 
     
-def normalization(like, params, domain, N):
+def normalization(like, params, domain, N=100):
     f = lambda x: exp(like(x, **params))
-    out = integrate.quad(f, domain[0], domain[1])
-    return out[0]
+    if SP:
+        out = integrate.quad(f, domain[0], domain[1])
+        return out[0]
+    else:
+        y = []
+        X = np.linspace(domain[0], domain[1], N)
+        for x in X:
+            y.append(f(x))
+        return np.trapz(y,x)
+            
     
 class test_bernoulli(NumpyTestCase):
     def check_consistency(self):
@@ -187,7 +197,23 @@ class test_cauchy(NumpyTestCase):
     def check_normalization(self):
         params={'alpha':0, 'beta':.5}
         integral = normalization(flib.cauchy, params, [-100,100], 600)
-        assert_almost_equal(integral, 1, 3)
+        assert_almost_equal(integral, 1, 2)
+        
+class test_gamma(NumpyTestCase):
+    def check_consistency(self):
+        params={'alpha':3, 'beta':2}
+        hist, like, figdata = consistency(rgamma, flib.gamma, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='gamma', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+        
+    def check_normalization(self):
+        params={'alpha':3, 'beta':2}
+        integral = normalization(flib.cauchy, params, [.01,20], 200)
+        assert_almost_equal(integral, 1, 2)
+        
         
 class test_poisson(NumpyTestCase):
     def check_consistency(self):
