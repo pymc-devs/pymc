@@ -3,9 +3,9 @@
 
 from distutils.core import setup, Extension
 
-PyMCObjects = Extension('PyMCObjects', sources = ['PyMCObjects.c'])
+PyMCObjects = Extension('PyMCObjects', sources = ['PyMCBase.c','Parameter.c','Node.c','PyMCObjects.c'])
 
 setup (name = 'PyMCObjects',
        version = '1.0',
-       description = 'Lalala',
+       description = 'C versions of the basic PyMC objects',
        ext_modules = [PyMCObjects])

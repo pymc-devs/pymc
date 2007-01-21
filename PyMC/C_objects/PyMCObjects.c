@@ -2,23 +2,19 @@
 #define _PYMCOBJECTS_C_
 
 #include "Python.h"
-#include "PyMCBase.h"
-#include "Parameter.h"
-#include "Node.h"
+#include "PyMCBase.c"
+#include "Parameter.c"
+#include "Node.c"
 
 /* List of methods defined in the module */
-
 static struct PyMethodDef PYMC_methods[] = {
-	
 	{NULL,	 (PyCFunction)NULL, 0, NULL}		/* sentinel */
 };
 
 
 /* Initialization function for the module (*must* be called initPyMCObjects) */
-
 static char PyMCObjects_module_documentation[] = 
-""
-;
+"The basic PyMC objects";
 
 void
 initPyMCObjects()
@@ -30,14 +26,13 @@ initPyMCObjects()
 		PyMCObjects_module_documentation,
 		(PyObject*)NULL,PYTHON_API_VERSION);
 		
-	Paramtype.tp_new = PyType_GenericNew;
-	Paramtype.tp_base = &PyMCBasetype;
-	Paramtype.tp_methods = Param_methods;
+	/* Add Parameter and Node */
+	if(PyType_Ready(&PyMCBasetype)<0) return;
+	PyModule_AddObject(m, "PyMCBase", (PyObject *)&PyMCBasetype); 	
+	
 	if(PyType_Ready(&Paramtype)<0) return;
 	PyModule_AddObject(m, "Parameter", (PyObject *)&Paramtype); 
-
-	Nodetype.tp_new = PyType_GenericNew;
-	Nodetype.tp_base = &PyMCBasetype;	
+	
 	if(PyType_Ready(&Nodetype)<0) return;
 	PyModule_AddObject(m, "Node", (PyObject *)&Nodetype);	 		
 
@@ -45,8 +40,6 @@ initPyMCObjects()
 	d = PyModule_GetDict(m);
 	ErrorObject = PyString_FromString("PyMCObjects.error");
 	PyDict_SetItemString(d, "error", ErrorObject);
-
-	/* XXXX Add constants here */
 	
 	/* Check for errors */
 	if (PyErr_Occurred())

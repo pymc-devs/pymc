@@ -198,12 +198,6 @@ class PyMCBase(object):
 
 		timestamp :		A counter indicating how many times self's value has been updated.
 
-	Externally-accessible methods:
-
-		init_trace(length): Initializes trace of given length.
-
-		tally():			Writes current value of self to trace.
-
 	PyMCBase should not usually be instantiated directly.
 
 	See also Parameter and Node,
@@ -269,27 +263,6 @@ class PyMCBase(object):
 
 	parent_values = property(fget=_get_parent_values)
 
-	#
-	# Overrideable, if anything needs to be done after Model is initialized.
-	#
-	def _prepare(self):
-		pass
-
-	#
-	# Find self's random children. Will be called by Model.__init__().
-	#
-	def _extend_children(self):
-		need_recursion = False
-		node_children = set()
-		for child in self.children:
-			if isinstance(child,Node):
-				self.children |= child.children
-				node_children.add(child)
-				need_recursion = True
-		self.children -= node_children
-		if need_recursion:
-			self._extend_children()
-		return
 
 class Node(PyMCBase):
 	"""
@@ -307,11 +280,6 @@ class Node(PyMCBase):
 		children
 		timestamp
 		parent_values
-
-	Externally-accessible methods inherited from PyMCBase:
-
-		init_trace(length)
-		tally()
 
 	To instantiate: see node()
 
@@ -415,11 +383,6 @@ class Parameter(PyMCBase):
 		random():	If random_fun is defined, this draws a value for self.value from
 					self's distribution conditional on self.parents. Used for
 					model averaging.
-
-	Externally-accessible methods inherited from PyMCBase:
-
-		init_trace(length)
-		tally()
 
 	To instantiate with isdata = False: see parameter().
 	To instantiate with isdata = True: see data().
@@ -1129,8 +1092,7 @@ class Model(object):
 		# Tell all pymc_objects to get ready for sampling
 		self.pymc_objects = self.nodes | self.parameters | self.data
 		for pymc_object in self.pymc_objects:
-			pymc_object._extend_children()
-			pymc_object._prepare()
+			self._extend_children(pymc_object)
 
 		# Take care of singleton parameters
 		for parameter in self.parameters:
@@ -1145,6 +1107,23 @@ class Model(object):
 			# If not, make it a new one-at-a-time Metropolis-Hastings SamplingMethod
 			if homeless:
 				self.sampling_methods.add(OneAtATimeMetropolis(parameter))
+				
+	#
+	# Find PyMC object's random children.
+	#
+	def _extend_children(self,pymc_object):
+		need_recursion = False
+		node_children = set()
+		for child in pymc_object.children:
+			if isinstance(child,Node):
+				pymc_object.children |= child.children
+				node_children.add(child)
+				need_recursion = True
+		pymc_object.children -= node_children
+		if need_recursion:
+			self._extend_children(pymc_object)
+		return
+				
 
 	#
 	# Initialize traces
