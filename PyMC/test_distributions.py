@@ -103,10 +103,22 @@ def compare_hist(samples, bins, like, x, figname):
     ax = P.subplot(111)
     ax.hist(samples, bins=bins,normed=True, alpha=.5)
     ax.plot(x, like)
-    P.savefig(figname)
+    P.savefig('figs/' + figname)
     P.close() 
     
 def normalization(like, params, domain, N=100):
+    """Integrate the distribution over domain.
+    
+    Arguments:
+      - like: log probability density.
+      - params: {}: distribution parameters.
+      - domain: domain of integration. 
+      - N:  Number of samples for trapezoidal integration.
+      
+    Note:
+      The integration is performed using scipy.integrate.quadg if available.
+      Otherwise, a trapezoidal integration is done. 
+    """
     f = lambda x: exp(like(x, **params))
     if SP:
         out = integrate.quad(f, domain[0], domain[1])
@@ -185,9 +197,10 @@ class test_cauchy(NumpyTestCase):
         params={'alpha':0, 'beta':.5}
         hist, like, figdata = consistency(rcauchy, flib.cauchy, params, \
         nrandom=5000, range=[-10,10], nbins=21)
-        assert_array_almost_equal(hist, like,1)
         if PLOT:
             compare_hist(figname='cauchy', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
             
     def test_calling(self):
         a = flib.cauchy([3,4], 2, 6)
@@ -198,6 +211,20 @@ class test_cauchy(NumpyTestCase):
         params={'alpha':0, 'beta':.5}
         integral = normalization(flib.cauchy, params, [-100,100], 600)
         assert_almost_equal(integral, 1, 2)
+
+class test_chi2(NumpyTestCase):
+    """Based on flib.gamma, so no need to make the calling check and 
+    normalization check."""
+    def check_consistency(self):
+        params = {'df':2}
+        hist, like, figdata = consistency(rchi2, chi2_like, params, range=[0,30])
+        if PLOT:
+            compare_hist(figname='chi2', **figdata)
+        assert_array_almost_equal(hist, like, 1)
+        
+class test_dirichlet(NumpyTestCase):
+    def check_consistency(self):
+        params={}
         
 class test_gamma(NumpyTestCase):
     def check_consistency(self):
@@ -208,30 +235,55 @@ class test_gamma(NumpyTestCase):
             compare_hist(figname='gamma', **figdata)
         assert_array_almost_equal(hist, like,1)
 
+    def test_calling(self):
+        a = flib.gamma([4,5],3,2)
+        b = flib.gamma([4,5], [3,3],[2,2])
+        assert_equal(a,b)
         
     def check_normalization(self):
         params={'alpha':3, 'beta':2}
-        integral = normalization(flib.cauchy, params, [.01,20], 200)
+        integral = normalization(flib.gamma, params, [.01,20], 200)
         assert_almost_equal(integral, 1, 2)
         
         
 class test_poisson(NumpyTestCase):
     def check_consistency(self):
-        #from np.random import poisson
         params = {'mu':2.}
         hist,like, figdata = consistency(rpoisson, flib.poisson, params, nrandom=5000, range=[0,10])
+        if PLOT:
+            compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)
-"""
-Weibull is parametrized differently in flib than in numpy.random
-numpy.random: alpha (you need to multiply by beta)
-flib: alpha, beta
-Use the wrapped up random generators. DH.
-"""
+    
+    def normalization(self):
+        params = {'mu':2.}
+        integral = normalization(flib.poisson, params, [0.1, 20], 200)
+        assert_almost_equal(integral, 1, 2)
+        
+    def test_calling(self):
+        a = flib.poisson([1,2,3], 2)
+        b = flib.poisson([1,2,3], [2,2,2])
+        assert_equal(a,b)
+        
 class test_weibull(NumpyTestCase):
     def check_consistency(self):
         params = {'alpha': 2., 'beta': 3.}
         hist,like, figdata = consistency(rweibull, flib.weibull, params, nrandom=5000, range=[0,10])
+        if PLOT:
+            compare_hist(figname='weibull', **figdata)
         assert_array_almost_equal(hist, like,1)
+
+    def check_norm(self):
+        params = {'alpha': 2., 'beta': 3.}
+        integral = normalization(flib.weibull, params, [0,10], N=200)
+        assert_almost_equal(integral, 1, 2)
+        
+    def test_calling(self):
+        a = flib.weibull([1,2], 2,3)
+        b = flib.weibull([1,2], [2,2], [3,3])
+        assert_equal(a,b)
+
+
+
 
 """
 Hyperg is parametrized differently in flib than is hypergeometric in numpy.random.

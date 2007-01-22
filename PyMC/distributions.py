@@ -4,7 +4,9 @@
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: test and finalize vectorized multivariate normal like.
 # TODO: Add exponweib_expval (how?)
-
+# TODO: Complete docstrings with LaTeX formulas from the tutorial.
+# TODO: Do we add size arguments to random generators ? It shouldn't be a 
+#   problem, except that vector arguments + size arg. is a bit confusing.   
 
 
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
@@ -114,6 +116,10 @@ def GOFpoints(x,y,expval,loss):
 # Bernoulli----------------------------------------------
 @randomwrap
 def rbernoulli(p):
+    """rbernoulli(p)
+    
+    Random Bernoulli variates.
+    """
     return random.binomial(1,p)
 
 def bernoulli_expval(p):
@@ -122,11 +128,23 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    """Bernoulli log-likelihood
+    r"""bernoulli_like(x, p)
+    
+    Bernoulli log-likelihood
 
-    bernoulli_like(x, p)
+    The Bernoulli distribution describes the probability of successes (x=1) and 
+    failures (x=0).   
 
-    p \in [0,1], x \in [0,1]
+    .. math:: 
+        f(x \mid p) = p^{x- 1} (1-p)^{1-x}
+
+    Arguments:
+      - x: Series of successes (1) and failures (0). :math: `x=0,1`
+      - p: Probability of success. :math: `0 < p < 1`
+    
+    Notes:
+      - E(x): p
+      - Var(x): p(1-p) 
     """
     constrain(p, 0, 1,allow_equal=True)
     constrain(x, 0, 1,allow_equal=True)
@@ -225,7 +243,6 @@ def rchi2(df):
 def chi2_expval(df):
     return df
 
-
 def chi2_like(x, df):
     """Chi-squared log-likelihood
 
@@ -238,6 +255,7 @@ def chi2_like(x, df):
     return flib.gamma(y, 0.5*df, 2)
 
 # Dirichlet----------------------------------------------
+# Use standard calling convention among functions.
 @randomwrap
 def rdirichlet(alphas, n=None):
     """Returns Dirichlet random variates"""
