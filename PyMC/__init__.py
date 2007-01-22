@@ -13,7 +13,7 @@ Required external components: TclTk
 __author__ = "Christopher Fonnesbeck <chris@trichech.us>"
 __version__ = "1.1"
 
-__modules__ = ["MCMC", "TimeSeries"]
+__modules__ = ["MCMC", "TimeSeries", "utils"]
 
 for mod in __modules__:
     exec "from %s import *" % mod

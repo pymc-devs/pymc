@@ -8,7 +8,7 @@
 # TODO: Do we add size arguments to random generators ? It shouldn't be a 
 #   problem, except that vector arguments + size arg. is a bit confusing.   
 
-
+__docformat__='reStructuredText'
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
 'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric',
@@ -18,6 +18,7 @@ availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'di
 
 import flib
 import numpy as np
+from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
@@ -37,7 +38,6 @@ def Vectorize(f):
 def randomwrap(func):
     """
     Decorator for random value generators
-    =====================================
 
     Vectorize random value generation functions so an array of parameters may
     be passed.
@@ -63,8 +63,6 @@ def randomwrap(func):
 #-------------------------------------------------------------
 # Utility functions
 #-------------------------------------------------------------
-class LikelihoodError(ValueError):
-    "Log-likelihood is invalid or negative informationnite"
 
 def constrain(value, lower=-inf, upper=inf, allow_equal=False):
     """Apply interval constraint on parameter value."""
@@ -138,13 +136,19 @@ def bernoulli_like(x, p):
     .. math:: 
         f(x \mid p) = p^{x- 1} (1-p)^{1-x}
 
-    Arguments:
-      - x: Series of successes (1) and failures (0). :math: `x=0,1`
-      - p: Probability of success. :math: `0 < p < 1`
+    :Parameters:
+      x : int 
+        Series of successes (1) and failures (0). :math:`x=0,1`
+      p : float 
+        Probability of success. :math:`0 < p < 1`
     
-    Notes:
+    :Note:
       - E(x): p
       - Var(x): p(1-p) 
+    
+    :Example: 
+      >>> bernoulli_like([0,1,0,1], .4)
+      -2.8542325496673584
     """
     constrain(p, 0, 1,allow_equal=True)
     constrain(x, 0, 1,allow_equal=True)
@@ -162,9 +166,9 @@ def beta_expval(x,alpha, beta):
 
 
 def beta_like(x, alpha, beta):
-    """Beta log-likelihood
-
-    beta_like(x, alpha, beta)
+    """beta_like(x, alpha, beta)
+    
+    Beta log-likelihood
 
     x in [0,1], alpha >= 0, beta >= 0
     """
@@ -252,21 +256,23 @@ def chi2_like(x, df):
     """
     constrain(x, lower=0)
     constrain(df, lower=0)
-    return flib.gamma(y, 0.5*df, 2)
+    return flib.gamma(x, 0.5*df, 2)
 
 # Dirichlet----------------------------------------------
-# Use standard calling convention among functions.
-@randomwrap
-def rdirichlet(alphas, n=None):
-    """Returns Dirichlet random variates"""
+#@randomwrap
+def rdirichlet(theta, n=None):
+    """rdirichlet(theta, n=None)
+    
+    Returns Dirichlet random variates."""
+    theta = np.atleast_1d(theta)
     if n:
-        gammas = transpose([rgamma(alpha,1,n) for alpha in alphas])
+        gammas = np.transpose([rgamma(alpha,1,n) for alpha in theta])
 
-        return array([g/sum(g) for g in gammas])
+        return np.array([g/np.sum(g) for g in gammas])
     else:
-        gammas = array([rgamma(alpha,1) for alpha in alphas])
+        gammas = np.array([rgamma(alpha,1) for alpha in theta])
 
-        return gammas/sum(gammas)
+        return gammas/np.sum(gammas)
 
 def dirichlet_expval(theta):
     sumt = sum(theta)
@@ -274,12 +280,23 @@ def dirichlet_expval(theta):
     return expval
 
 def dirichlet_like(x, theta):
-    """Dirichlet log-likelihood
+    r"""dirichlet_like(x, theta)
+    
+    Dirichlet log-likelihood.
+    
+    This is a multivariate continuous distribution.
 
-    dirichlet_like(x, theta)
+    .. math::
+        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
-    theta > 0, x > 0, \sum x < 1
+    :Parameters:
+      x : (n,k) array 
+        Where `n` is the number of samples and `k` the dimension. 
+        :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^k x_i = 1`
+      theta : (n,k) or (1,k) float
+        :math:`\theta > 0`
     """
+    #    theta > 0, x > 0, \sum x < 1
     constrain(theta, lower=0)
     constrain(x, lower=0)
     constrain(sum(x), upper=1)
@@ -295,11 +312,25 @@ def exponential_expval(beta):
 
 
 def exponential_like(x, beta):
-    """Exponential log-likelihood
-
-    exponential_like(x, beta)
-
-    x > 0, beta > 0
+    r"""exponential_like(x, beta)
+    
+    Exponential log-likelihood. 
+    
+    The exponential distribution is a special case of the gamma distribution 
+    with alpha=1. It often describes the duration of an event. 
+    
+    .. math::
+        f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
+    
+    :Parameters:
+      x : float
+        :math:`x \ge 0`
+      beta : float
+        Survival parameter :math:`\beta > 0`
+    
+    :Note:
+      - :math:`E(X) = \beta`
+      - :math:`Var(X) = \beta^2`
     """
     constrain(x, lower=0)
     constrain(beta, lower=0)
@@ -323,19 +354,32 @@ def exponweib_like(x, a, c, loc=0, scale=1):
 
 # Gamma----------------------------------------------
 @randomwrap
-def rgamma(alpha, beta):
-    return random.gamma(1./beta, alpha)
+def rgamma(alpha, beta,n=1):
+    return random.gamma(alpha,beta,n)
 
 def gamma_expval(alpha, beta):
     expval = array(alpha) / beta
     return expval
 
 def gamma_like(x, alpha, beta):
-    """Gamma log-likelihood
+    r"""gamma_like(x, alpha, beta)
+    
+    Gamma log-likelihood.
 
-    gamma_like(x, alpha, beta)
-
-    x > 0, alpha > 0, beta > 0
+    Represents the sum of alpha exponentially distributed random variables, each
+    of which has mean beta.
+    
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x/\beta}}{\Gamma(\alpha) \beta^{\alpha}}
+    
+    :Parameters:
+      x : float
+        :math:`x \ge 0`
+      alpha : float
+        Shape parameter :math:`\alpha > 0`.
+      beta : float
+        Scale parameter :math:`\beta > 0`.
+    
     """
     constrain(x, lower=0)
     constrain(alpha, lower=0)
@@ -344,19 +388,22 @@ def gamma_like(x, alpha, beta):
 
 
 # GEV Generalized Extreme Value ------------------------
-def gev_like(x, xi, loc=0, scale=0):
-    r"""GEV log-likelihood
+def gev_like(x, xi, mu=0, sigma=0):
+    r"""gev_like(x, xi, mu=0, sigma=0)
+    
+    Generalized Extreme Value log-likelihood
 
-    gev_like(x, xi, mu=0, sigma=0)
-
-    .. latex-math::
-    pdf(x|xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}'
-    where z=\frac{x-\mu}{\sigma}
-
-    \sigma > 0,
-    x > \mu-\sigma/\xi\, if \xi > 0,
-    x < \mu-\sigma/\xi\,\;(\xi < 0)
-    x \in [-\infty,\infty]\,\;(\xi = 0)
+    .. math::
+        pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}
+    
+    where :math:`z=\frac{x-\mu}{\sigma}`
+    
+    .. math::
+        \sigma & > 0,\\
+        x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
+        x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
+        x & \in [-\infty,\infty] \text{ if } \xi = 0
+        
     """
     return flib.gev(x,xi,loc, scale)
 
@@ -691,9 +738,11 @@ def wishart_like(X, n, Tau):
 
 # -----------------------------------------------------------
 
+def _test():
+    import doctest
+    doctest.testmod()
 
-
-
-
+if __name__ == "__main__":
+    _test()
 
 

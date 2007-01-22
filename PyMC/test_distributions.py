@@ -125,9 +125,9 @@ def normalization(like, params, domain, N=100):
         return out[0]
     else:
         y = []
-        X = np.linspace(domain[0], domain[1], N)
-        for x in X:
-            y.append(f(x))
+        x = np.linspace(domain[0], domain[1], N)
+        for i in x:
+            y.append(f(i))
         return np.trapz(y,x)
             
     
@@ -217,15 +217,17 @@ class test_chi2(NumpyTestCase):
     normalization check."""
     def check_consistency(self):
         params = {'df':2}
-        hist, like, figdata = consistency(rchi2, chi2_like, params, range=[0,30])
+        hist, like, figdata = consistency(rchi2, chi2_like, params, range=[0,15])
         if PLOT:
             compare_hist(figname='chi2', **figdata)
         assert_array_almost_equal(hist, like, 1)
         
 class test_dirichlet(NumpyTestCase):
+    """Multivariate Dirichlet distribution"""
     def check_consistency(self):
-        params={}
+        pass
         
+
 class test_gamma(NumpyTestCase):
     def check_consistency(self):
         params={'alpha':3, 'beta':2}

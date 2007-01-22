@@ -4,8 +4,15 @@
 # License: Scipy compatible
 # Author: David Huard, 2006
 # A bit slow. try to optimize
-from numpy import *
+import numpy as np
 from scipy import special
+
+"""Exceptions"""
+
+class LikelihoodError(ValueError):
+    "Log-likelihood is invalid or negative informationnite"
+
+
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None) 
                                                                    -> H, dict
@@ -46,25 +53,25 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):
     See also: histogramnd
     """
     
-    a = asarray(a)
+    a = np.asarray(a)
     if axis is None:
-        a = atleast_1d(a.ravel())
+        a = np.atleast_1d(a.ravel())
         axis = 0 
         
     # Bin edges.   
-    if not iterable(bins):
+    if not np.iterable(bins):
         if range is None:
             range = (a.min(), a.max())
         mn, mx = [mi+0.0 for mi in range]
         if mn == mx:
             mn -= 0.5
             mx += 0.5
-        edges = linspace(mn, mx, bins+1, endpoint=True)
+        edges = np.linspace(mn, mx, bins+1, endpoint=True)
     else:
-        edges = asarray(bins, float)
+        edges = np.asarray(bins, float)
 
-    dedges = diff(edges)
-    decimal = int(-log10(dedges.min())+6)
+    dedges = np.diff(edges)
+    decimal = int(-np.log10(dedges.min())+6)
     bincenters = edges[:-1] + dedges/2.
 
     # apply_along_axis accepts only one array input, but we need to pass the 
@@ -72,17 +79,17 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):
     # weights array along axis, so the passed array contains [sample, weights]. 
     # The array is then split back in  __hist1d.
     if weights is not None:
-        aw = concatenate((a, weights), axis)
+        aw = np.concatenate((a, weights), axis)
         weighted = True
     else:
         aw = a
         weighted = False
         
-    count = apply_along_axis(hist1d, axis, aw, edges, decimal, weighted, normed)
+    count = np.apply_along_axis(hist1d, axis, aw, edges, decimal, weighted, normed)
     
     # Outlier count
-    upper = count.take(array([-1]), axis)
-    lower = count.take(array([0]), axis)
+    upper = count.take(np.array([-1]), axis)
+    lower = count.take(np.array([0]), axis)
     
     # Non-outlier count
     core = a.ndim*[slice(None)]
@@ -90,8 +97,8 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):
     hist = count[core]
     
     if normed:
-        normalize = lambda x: atleast_1d(x/(x*dedges).sum())
-        hist = apply_along_axis(normalize, axis, hist)
+        normalize = lambda x: np.atleast_1d(x/(x*dedges).sum())
+        hist = np.apply_along_axis(normalize, axis, hist)
 
     return hist, {'edges':edges, 'lower':lower, 'upper':upper, \
         'bincenters':bincenters}
@@ -108,29 +115,29 @@ def hist1d(aw, edges, decimal, weighted, normed):
     """
     nbin = edges.shape[0]+1
     if weighted:
-        count = zeros(nbin, dtype=float)
-        a,w = hsplit(aw,2)
+        count = np.zeros(nbin, dtype=float)
+        a,w = np.hsplit(aw,2)
         if normed:
             w = w/w.mean()
     else:
         a = aw
-        count = zeros(nbin, dtype=int)
+        count = np.zeros(nbin, dtype=int)
         w = None
         
     
-    binindex = digitize(a, edges)
+    binindex = np.digitize(a, edges)
     
     # Values that fall on an edge are put in the right bin.
     # For the rightmost bin, we want values equal to the right 
     # edge to be counted in the last bin, and not as an outlier. 
-    on_edge = where(around(a,decimal) == around(edges[-1], decimal))[0]
+    on_edge = np.where(np.around(a,decimal) == np.around(edges[-1], decimal))[0]
     binindex[on_edge] -= 1
     
     # Count the number of identical indices.
-    flatcount = bincount(binindex, w)
+    flatcount = np.bincount(binindex, w)
     
     # Place the count in the histogram array.
-    i = arange(len(flatcount))
+    i = np.arange(len(flatcount))
     count[i] = flatcount
        
     return count
@@ -143,20 +150,20 @@ class test_histogram(NumpyTestCase):
         v=rand(n)
         (a,b)=histogram(v)
         #check if the sum of the bins equals the number of samples
-        assert(sum(a,axis=0)==n)
+        assert(np.sum(a,axis=0)==n)
         #check that the bin counts are evenly spaced when the data is from a linear function
-        (a,b)=histogram(linspace(0,10,100))
-        assert(all(a==10))
+        (a,b)=histogram(np.linspace(0,10,100))
+        assert(np.all(a==10))
         #Check the construction of the bin array
         a, b = histogram(v, bins=4, range=[.2,.8])
-        assert(all(b['edges']==linspace(.2, .8, 5)))
+        assert(np.all(b['edges']==np.linspace(.2, .8, 5)))
         #Check the number of outliers
         assert((v<.2).sum() == b['lower'])
         assert((v>.8).sum() == b['upper'])
         #Check the normalization
         bins = [0,.5,.75,1]
         a,b = histogram(v, bins, normed=True)
-        assert_almost_equal((a*diff(bins)).sum(), 1)
+        assert_almost_equal((a*np.diff(bins)).sum(), 1)
         
     def check_axis(self):
         n,m = 100,20
@@ -172,10 +179,10 @@ class test_histogram(NumpyTestCase):
         assert_array_equal(a.shape,[7, m])
         # Check normalization is consistent 
         a,b = histogram(v, bins = 7, axis=0, normed=True)
-        assert_array_almost_equal((a.T*diff(b['edges'])).sum(1), ones((m)))
+        assert_array_almost_equal((a.T*np.diff(b['edges'])).sum(1), np.ones((m)))
         a,b = histogram(v, bins = 7, axis=1, normed=True)
         assert_array_equal(a.shape, [n,7])
-        assert_array_almost_equal((a*diff(b['edges'])).sum(1), ones((n)))
+        assert_array_almost_equal((a*np.diff(b['edges'])).sum(1), np.ones((n)))
         # Check results are consistent with 1d estimate
         a1, b1 = histogram(v[0,:], bins=b['edges'], normed=True)
         assert_array_equal(a1, a[0,:])
@@ -183,7 +190,7 @@ class test_histogram(NumpyTestCase):
     def check_weights(self):
         # Check weights = constant gives the same answer as no weights.
         v = rand(100)
-        w = ones(100)*5
+        w = np.ones(100)*5
         a,b = histogram(v)
         na,nb = histogram(v, normed=True)
         wa,wb = histogram(v, weights=w)
@@ -191,9 +198,9 @@ class test_histogram(NumpyTestCase):
         assert_array_equal(a*5, wa)
         assert_array_equal(na, nwa)
         # Check weights are properly applied.
-        v = linspace(0,10,10)
-        w = concatenate((zeros(5), ones(5)))
-        wa,wb = histogram(v, bins=arange(11),weights=w)
+        v = np.linspace(0,10,10)
+        w = np.concatenate((np.zeros(5), np.ones(5)))
+        wa,wb = histogram(v, bins=np.arange(11),weights=w)
         assert_array_almost_equal(wa, w)
         
         
@@ -204,6 +211,25 @@ def cauchy(x, x0, gamma):
     
 def gamma(x, alpha, beta):
     return x**(alpha-1) * exp(-x/beta)/(special.gamma(alpha) * beta**alpha)
+
+def multinomial_beta(alpha):
+        nom = (special.gamma(alpha)).prod(1)
+        den = special.gamma(alpha.sum(1))
+        return nom/den
+        
+def dirichlet(x, theta):
+    r"""Dirichlet multivariate probability density.
+    
+    :Parameters:
+      x : (n,k) array
+        Input data
+      theta : (n,k) or (1,k) array
+        Distribution parameter
+    """
+    x = np.atleast_2d(x)
+    theta = np.atleast_2d(theta)
+    f = (x**(theta-1)).prod(1)
+    return f/multinomial_beta(theta)
     
 if __name__ == "__main__":
     NumpyTest().run()

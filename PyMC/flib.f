@@ -920,31 +920,48 @@ cf2py real intent(out) :: like
       END
 
 
-      SUBROUTINE dirichlet(x,theta,k,like)
+      SUBROUTINE dirichlet(x,theta,k,nx,nt,like)
 
-c Dirichlet log-likelihood function      
+c Dirichlet multivariate log-likelihood function      
       
-cf2py real dimension(k),intent(in) :: x,theta      
-cf2py real intent(out) :: like
-cf2py integer intent(hide),depend(x) :: k=len(x)
+c Updated 22/01/2007 DH. 
 
-      INTEGER i,k
+cf2py real dimension(k, nx),intent(in) :: x
+cf2py real dimension(k, nt),intent(in) :: theta
+cf2py real intent(out) :: like
+cf2py integer intent(hide), depend(x),check(k==shape(theta,0)) :: k=shape(x,0)
+cf2py integer intent(hide),depend(x) :: nx=shape(x,1)
+cf2py integer intent(hide),depend(theta),check(nt==1 || nt==shape(x,1)) :: nt=shape(theta,1)
+
+	  IMPLICIT NONE
+      INTEGER i,j,nx,nt,k
       REAL like,sumt
-      REAL x(k),theta(k)
+      REAL x(k,nx),theta(k,nt)
+	  REAL theta_tmp(k)
+	  LOGICAL not_scalar_theta
+	  REAL gammln
+
+	  not_scalar_theta = (nt .NE. 1)
 
       like = 0.0
-      sumt = 0.0
-      do 111 i=1,k
-c kernel of distribution      
-        like = like + (theta(i)-1.0)*log(x(i))  
-c normalizing constant        
-        like = like - gammln(theta(i))
-        sumt = sumt + theta(i)
-  111 continue
-      like = like + gammln(sumt)
+	  do j=1,k
+   	    theta_tmp(j) = theta(j,1)
+	  enddo
 
+      do i=1,nx
+        sumt = 0.0
+        do j=1,k
+          if (not_scalar_theta) theta_tmp(j) = theta(j,i)      
+c kernel of distribution      
+          like = like + (theta_tmp(j)-1.0)*log(x(j,i))  
+c normalizing constant        
+          like = like - gammln(theta_tmp(j))
+          sumt = sumt + theta_tmp(j)
+	    enddo
+      	like = like + gammln(sumt)
+	  enddo
       return
-      END
+      END SUBROUTINE dirichlet
       
 
       SUBROUTINE dirmultinom(x,theta,k,like)

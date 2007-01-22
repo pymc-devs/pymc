@@ -11,6 +11,7 @@ import string
 import inspect
 import types
 from distributions import *
+from utils import LikelihoodError
 
 def node_to_NDarray(arg):
     if isinstance(arg,proposition5.Node):
