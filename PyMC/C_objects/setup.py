@@ -1,5 +1,5 @@
 # do python setup.py build
-# then the module PyMCObjects is in build/lib.<system>
+# then the module PyMCObjects is in build/lib.<system>.
 
 from distutils.core import setup, Extension
 
@@ -7,5 +7,5 @@ PyMCObjects = Extension('PyMCObjects', sources = ['PyMCBase.c','Parameter.c','No
 
 setup (name = 'PyMCObjects',
        version = '1.0',
-       description = 'C versions of the basic PyMC objects',
+       description = "Parameter and Node in C",
        ext_modules = [PyMCObjects])

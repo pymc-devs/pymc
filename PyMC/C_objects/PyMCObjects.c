@@ -14,7 +14,7 @@ static struct PyMethodDef PYMC_methods[] = {
 
 /* Initialization function for the module (*must* be called initPyMCObjects) */
 static char PyMCObjects_module_documentation[] = 
-"The basic PyMC objects";
+"Constructors:\n\tParameter(logp, name, value, parents, children=set() | doc, random, trace, rseed, isdata),\n\tNode(eval, name, parents, children=set() | doc, trace)\n\tOptional after |";
 
 void
 initPyMCObjects()

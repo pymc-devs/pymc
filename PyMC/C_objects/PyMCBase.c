@@ -7,17 +7,6 @@
 
 static PyObject *ErrorObject;
 
-
-// Docstring for PyMCBase
-static char PyMCBasetype__doc__[] = 
-"Abstract base class.";
-
-
-// Empty methods table
-static struct PyMethodDef PyMCBase_methods[] = {
-	{NULL,		NULL}		/* sentinel */
-};
-
 // Appease the demons
 static PyTypeObject PyMCBasetype = {
 	PyObject_HEAD_INIT(&PyType_Type)

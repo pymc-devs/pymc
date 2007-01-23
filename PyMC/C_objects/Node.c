@@ -8,29 +8,59 @@
 #include "PyMCObjects.h"
 
 
-// Docstring for Node
-static char Nodetype__doc__[] = 
-"Node in C";
+//__init__
+static int 
+Node_init(Node *self, PyObject *args, PyObject *kwds) 
+{	
+	int i;
+	static char *kwlist[] = {	"eval",
+								"name",
+								"parents",
+								"children",
+								"doc",
+								"trace",
+								NULL};
+								
+	if (!PyArg_ParseTupleAndKeywords(	args, kwds, "OOOO|OO", kwlist, 
+										&self->eval_fun,
+										&self->__name__,
+										&self->parents,
+										&self->children,
+										&self->__doc__,
+										&self->trace)) 
+	{
+		return -1;
+	}
+	
+	if(!self->__doc__) self->__doc__ = self->__name__;
+										
+	Py_INCREF(self->eval_fun);
+	Py_INCREF(self->__name__);
+	Py_INCREF(self->parents);
+	Py_XINCREF(self->__doc__);
+	Py_XINCREF(self->trace);
+	
+	self->value = Py_BuildValue("");
+	for(i=0;i<2;i++)
+	{
+		self->value_caches[i] = Py_BuildValue("");
+		Py_INCREF(self->value_caches[i]);
+	}
+	Py_INCREF(self->value);
+	
+	if(!PyDict_Check(self->parents)) PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
+	else parse_parents_of_node(self);
+	
+	self->timestamp = 0;
+	compute_value(self);
+	node_cache(self);	
+	
+	Py_INCREF(self->children);	
+	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);	
 
+	return 0;
+}
 
-// Empty methods table for Node
-static PyMethodDef Node_methods[] = { 
-	{NULL,		NULL}		/* sentinel */
-};
-
-
-// Node's member table
-static PyMemberDef Node_members[] = { 
-{"children", T_OBJECT, offsetof(Node, children), 0, 
-"children"},
-{"__doc__", T_OBJECT, offsetof(Node, __doc__), 0, 
-"__doc__"},
-{"__name__", T_OBJECT, offsetof(Node, __name__), 0, 
-"__name__"},
-{"trace", T_OBJECT, offsetof(Node, trace), 0, 
-"trace"},
-{NULL} /* Sentinel */ 
-};
 
 static void parse_parents_of_node(Node *self)
 {
@@ -38,7 +68,7 @@ static void parse_parents_of_node(Node *self)
 	PyObject *parent_items; 
 	PyObject *parent_now;
 	PyObject *key_now;
-	int i;	
+	int i, j;	
 	
 	self->N_parents = (int) PyDict_Size(self->parents);
 	parent_items =  PyDict_Items(self->parents);	
@@ -73,6 +103,7 @@ static void parse_parents_of_node(Node *self)
 			self->node_parent_indices[self->N_node_parents] = i;
 			self->N_node_parents++;
 			self->parent_values[i] = ((Node*) parent_now)->value;
+			PyObject_CallMethodObjArgs(((Node*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);							
 		}
 		else
 		{	
@@ -81,62 +112,32 @@ static void parse_parents_of_node(Node *self)
 				self->param_parent_indices[self->N_param_parents] = i;
 				self->N_param_parents++;
 				self->parent_values[i] = ((Parameter*) parent_now)->value;
+				Py_INCREF(self->parent_values[i]);				
+				PyObject_CallMethodObjArgs(((Parameter*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);
 			}
 			else
 			{
 				self->constant_parent_indices[self->N_constant_parents] = i;
 				self->N_constant_parents++;
 				self->parent_values[i] = parent_now;
+				Py_INCREF(self->parent_values[i]);				
 			}	
 		}
 		
 		PyDict_SetItem(self->parent_value_dict, key_now, self->parent_values[i]);
 	}
-}
-
-
-//__init__
-static int 
-Node_init(Node *self, PyObject *args, PyObject *kwds) 
-{	
-	
-	static char *kwlist[] = {	"eval",
-								"name",
-								"parents",
-								"doc",
-								"caching",
-								"trace",
-								NULL};
-								
-	if (!PyArg_ParseTupleAndKeywords(	args, kwds, "OOO|OiO", kwlist, 
-										&self->eval_fun,
-										&self->__name__,
-										&self->parents,
-										&self->__doc__,
-										&self->caching,
-										&self->trace)) 
+	for(i=0;i<2;i++) 
 	{
-		return -1;
+		self->parent_timestamp_caches[i] = malloc(sizeof(int) * self->N_parents );
+		for(j=0;j<self->N_parents;j++) self->parent_timestamp_caches[i][j] = -1;
 	}
-										
-	Py_INCREF(self->eval_fun);
-	Py_INCREF(self->__name__);
-	Py_INCREF(self->parents);
-	Py_XINCREF(self->__doc__);
-	Py_XINCREF(self->trace);
-	
-	self->value = Py_BuildValue("");
-	Py_INCREF(self->value);
-	
-	if(!PyDict_Check(self->parents)) PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
-	else parse_parents_of_node(self);
-
-	return 0;
 }
 
 static void node_parent_values(Node *self)
 {
 	int index_now, i;
+	void *closure_arg;
+	Node* parent_now;
 
 	for( i = 0; i < self->N_param_parents; i++ )
 	{
@@ -150,8 +151,8 @@ static void node_parent_values(Node *self)
 	for( i = 0; i < self->N_node_parents; i++ )
 	{
 		index_now = self->node_parent_indices[i];
-		Py_DECREF(self->parent_values[i]);		
-		self->parent_values[index_now] = ((Node*) self->parent_pointers[index_now])->value;				
+		Py_DECREF(self->parent_values[i]);
+		self->parent_values[index_now] = Node_getvalue((Node*) (self->parent_pointers[index_now]), closure_arg);				
 		Py_INCREF(self->parent_values[i]);		
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}
@@ -167,27 +168,92 @@ static void compute_value(Node *self)
 	self->value = new_value;
 }
 
-// Get and set parents
-static PyObject * 
-Node_getparents(Node *self, void *closure) 
-{ 
-	Py_INCREF(self->parents); 
-	return self->parents; 
-} 
-static int 
-Node_setparents(Node *self, PyObject *value, void *closure) 
-{ 
-	PyErr_SetString(PyExc_TypeError, "Node.parents cannot be changed after initialization."); 
-	return -1; 
-} 
+static int node_check_for_recompute(Node *self)
+{
+	int i,j,recompute,index_now;
+	recompute = 0;
+	for(i=0;i<2;i++)
+	{
+		for(j=0;j<self->N_node_parents;j++)
+		{
+			index_now = self->node_parent_indices[j];
+			if(self->parent_timestamp_caches[i][index_now]!=((Node*) self->parent_pointers[index_now])->timestamp)
+			{
+				recompute = 1;
+				break;
+			}
+		}
+		
+		if(recompute==0)
+		{
+			for(j=0;j<self->N_param_parents;j++)
+			{
+				index_now = self->param_parent_indices[j];
+				if(self->parent_timestamp_caches[i][index_now]!=((Parameter*) self->parent_pointers[index_now])->timestamp)
+				{
+					recompute = 1;
+					break;
+				}
+			}				
+		}		
+		if(recompute==0)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+static void node_cache(Node *self)
+{
+	int j, index_now, dummy;
+	Py_INCREF(self->value);
+	Py_DECREF(self->value_caches[1]);
+	self->value_caches[1] = self->value_caches[0];
+	self->value_caches[0] = self->value;
+	
+	self->timestamp++;
+	
+	for(j=0;j<self->N_node_parents;j++)
+	{
+		index_now = self->node_parent_indices[j];
+		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
+		dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
+		self->parent_timestamp_caches[0][index_now] = dummy;
+	}
+	
+	for(j=0;j<self->N_param_parents;j++)
+	{
+		index_now = self->param_parent_indices[j];
+		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
+		dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
+		self->parent_timestamp_caches[0][index_now] = dummy;
+	}
+}
 
 // Get and set value
 static PyObject * 
 Node_getvalue(Node *self, void *closure) 
 {
-	compute_value(self);
-	Py_XINCREF(self->value); 
-	return self->value; 
+	int i;
+	i=node_check_for_recompute(self);
+	
+	if(i<0) 
+	{
+		compute_value(self);
+		node_cache(self);		
+	}
+	
+	else
+	{
+		Py_INCREF(self->value_caches[i]);
+		Py_DECREF(self->value);
+		self->value = self->value_caches[i];
+	}
+	
+	Py_INCREF(self->value); 
+	//return Py_BuildValue("(O,[O,O])",self->value, self->value_caches[0], self->value_caches[1]); 
+	return self->value;
 } 
 static int 
 Node_setvalue(Node *self, PyObject *value, void *closure) 
@@ -203,11 +269,6 @@ static PyGetSetDef Node_getseters[] = {
 	(getter)Node_getvalue, (setter)Node_setvalue, 
 	"value of Node", 
 	NULL}, 
-	
-	{"parents", 
-	(getter)Node_getparents, (setter)Node_setparents, 
-	"parents of Node", 
-	NULL},	
 
 	{NULL} /* Sentinel */ 
 }; 

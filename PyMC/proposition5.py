@@ -80,8 +80,6 @@ def _extract(__func__, kwds, keys):
 	except:
 		if 'logp' in keys:	
 			kwds['logp']=__func__
-		else:
-			kwds['eval_fun'] = __func__
 	if 'logp' in keys:
 		if kwds['logp'] is None:
 			kwds['logp'] = __func__
@@ -105,7 +103,7 @@ def parameter(__func__=None, **kwds):
 		def A(value = ., parent_name = .,  ...):
 			return foo(value, parent_name, ...)
 		
-		@parameter(caching=True, tracing=False)
+		@parameter(trace = trace_object)
 		def A(value = ., parent_name = .,  ...):
 			return foo(value, parent_name, ...)
 			
@@ -121,7 +119,7 @@ def parameter(__func__=None, **kwds):
 				return bar(parent_name, ...)
 				
 	
-		@parameter(caching=True, tracing=False)
+		@parameter(trace = trace_object)
 		def A(value = ., parent_name = .,  ...):
 			
 			def logp(value, parent_name, ...):
@@ -152,18 +150,22 @@ def parameter(__func__=None, **kwds):
 
 def node(__func__ = None, **kwds):
 	"""
-	Decorator function instantiating nodes. Usage:
+	Decorator function instantiating nodes. Usages:
 	
-	@node
-	def B(parent_name = ., ...)
-		return baz(parent_name, ...)
+		@node
+		def B(parent_name = ., ...)
+			return baz(parent_name, ...)
+			
+		@node(trace = trace_object)
+		def B(parent_name = ., ...)
+			return baz(parent_name, ...)			
 		
 	where baz returns the node B's value conditional
 	on its parents.
 	"""
 	def instantiate_n(__func__):
 		_extract(__func__, kwds, keys=[])
-		return Node(**kwds)		
+		return Node(eval_fun = __func__, **kwds)		
 
 	if __func__ is None:
 		return instantiate_n
@@ -177,7 +179,7 @@ def node(__func__ = None, **kwds):
 def data(__func__=None, **kwds):
 	"""
 	Decorator instantiating data objects. Usage is just like
-	parameter.
+	parameter, but once instantiated value cannot be changed.
 	"""
 	return parameter(__func__, isdata=True, tracing=False, **kwds)
 
