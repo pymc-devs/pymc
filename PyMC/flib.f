@@ -926,17 +926,17 @@ c Dirichlet multivariate log-likelihood function
       
 c Updated 22/01/2007 DH. 
 
-cf2py real dimension(k, nx),intent(in) :: x
-cf2py real dimension(k, nt),intent(in) :: theta
+cf2py real dimension(nx,k),intent(in) :: x
+cf2py real dimension(nt,k),intent(in) :: theta
 cf2py real intent(out) :: like
-cf2py integer intent(hide), depend(x),check(k==shape(theta,0)) :: k=shape(x,0)
-cf2py integer intent(hide),depend(x) :: nx=shape(x,1)
-cf2py integer intent(hide),depend(theta),check(nt==1 || nt==shape(x,1)) :: nt=shape(theta,1)
+cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)) :: k=shape(x,1)
+cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
+cf2py integer intent(hide),depend(theta,x),check(nt==1 || nt==shape(x,0)) :: nt=shape(theta,0)
 
 	  IMPLICIT NONE
       INTEGER i,j,nx,nt,k
       REAL like,sumt
-      REAL x(k,nx),theta(k,nt)
+      REAL x(nx,k),theta(nt,k)
 	  REAL theta_tmp(k)
 	  LOGICAL not_scalar_theta
 	  REAL gammln
@@ -951,9 +951,9 @@ cf2py integer intent(hide),depend(theta),check(nt==1 || nt==shape(x,1)) :: nt=sh
       do i=1,nx
         sumt = 0.0
         do j=1,k
-          if (not_scalar_theta) theta_tmp(j) = theta(j,i)      
+          if (not_scalar_theta) theta_tmp(j) = theta(i,j)      
 c kernel of distribution      
-          like = like + (theta_tmp(j)-1.0)*log(x(j,i))  
+          like = like + (theta_tmp(j)-1.0)*log(x(i,j))  
 c normalizing constant        
           like = like - gammln(theta_tmp(j))
           sumt = sumt + theta_tmp(j)

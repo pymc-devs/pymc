@@ -213,8 +213,8 @@ def gamma(x, alpha, beta):
     return x**(alpha-1) * exp(-x/beta)/(special.gamma(alpha) * beta**alpha)
 
 def multinomial_beta(alpha):
-        nom = (special.gamma(alpha)).prod(1)
-        den = special.gamma(alpha.sum(1))
+        nom = (special.gamma(alpha)).prod(0)
+        den = special.gamma(alpha.sum(0))
         return nom/den
         
 def dirichlet(x, theta):
@@ -228,7 +228,7 @@ def dirichlet(x, theta):
     """
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
-    f = (x**(theta-1)).prod(1)
+    f = (x**(theta-1)).prod(0)
     return f/multinomial_beta(theta)
     
 if __name__ == "__main__":

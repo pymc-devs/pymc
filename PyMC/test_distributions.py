@@ -52,18 +52,18 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
     """Check the random generator is consistent with the likelihood.
 
-    Arguments:
-      - random: function: Random generator.
-      - like: function: Log probability.
-      - params: dict:  Parameters for the distribution.
-      - nbins: int: Number of bins in histogram.
-      - nrandom: int: Number of random samples.
-      - nintegration: int: Number of divisions in each bin.
-      - range: (float,float): Range of histogram.
+    :Parameters:
+      - `random`: function: Random generator.
+      - `like`: function: Log probability.
+      - `params`: dict:  Parameters for the distribution.
+      - `nbins`: int: Number of bins in histogram.
+      - `nrandom`: int: Number of random samples.
+      - `nintegration`: int: Number of divisions in each bin.
+      - `range`: (float,float): Range of histogram.
 
-    Return: (hist, like)
-      - hist: Histogram of random samples from random(**params).
-      - like: integrated likelihood over histogram bins.
+    :Return (hist, like):
+      - `hist`: Histogram of random samples from random(**params).
+      - `like`: integrated likelihood over histogram bins.
     """
     # Samples values and compute histogram.
     samples = []
@@ -71,7 +71,6 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
         samples.append(random(**params))
     samples = np.array(samples)
     
-    # Numpy's histogram is shitty. Use something else.
     hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
@@ -81,7 +80,7 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     l = []
     for x in X:
         l.append(like(x, **params))
-    L = exp(np.array(l))
+    L = np.exp(np.array(l))
     
     figuredata = {'samples':samples, 'bins':output['edges'][:-1], \
         'like':L.copy(), 'x':X}
@@ -90,15 +89,24 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     like = L.mean(1)
     return hist, like, figuredata
 
+def mv_consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
+    range=None, plot=None):
+    samples = random(n=nrandom, **params)
+    hist, edges = np.histogramdd(samples.T, nbins, range, True)
+    z = []
+    for s in samples:
+        z.append(like(s, **params))
+    P = np.exp(np.array(z))
+
 def compare_hist(samples, bins, like, x, figname):
     """Plot and save a figure comparing the histogram with the 
     probability.
     
-    Arguments:
-      - samples: random variables.
-      - like: probability values.
-      - bins: histogram bins. 
-      - x: values at which like is computed. 
+    :Parameters:
+      - `samples`: random variables.
+      - `like`: probability values.
+      - `bins`: histogram bins. 
+      - `x`: values at which like is computed. 
     """
     ax = P.subplot(111)
     ax.hist(samples, bins=bins,normed=True, alpha=.5)
@@ -109,11 +117,11 @@ def compare_hist(samples, bins, like, x, figname):
 def normalization(like, params, domain, N=100):
     """Integrate the distribution over domain.
     
-    Arguments:
-      - like: log probability density.
-      - params: {}: distribution parameters.
-      - domain: domain of integration. 
-      - N:  Number of samples for trapezoidal integration.
+    :Parameters:
+      - `like`: log probability density.
+      - `params`: {}: distribution parameters.
+      - `domain`: domain of integration. 
+      - `N`:  Number of samples for trapezoidal integration.
       
     Note:
       The integration is performed using scipy.integrate.quadg if available.
@@ -224,9 +232,27 @@ class test_chi2(NumpyTestCase):
         
 class test_dirichlet(NumpyTestCase):
     """Multivariate Dirichlet distribution"""
-    def check_consistency(self):
-        pass
+    def check_random(self):
+        theta = np.array([2.,3.])
+        r = rdirichlet(theta, n=2000)
+        s = theta.sum()
+        m = r.mean(0)
+        cov_ex = np.cov(r.T)
         
+        # Theoretical mean
+        M = theta/s
+        # Theoretical covariance
+        cov_th = -np.outer(theta, theta)/s**2/(s+1.)
+        
+        assert_array_almost_equal(m,M, 2)
+        assert_array_almost_equal(cov_ex, cov_th,1)
+        
+    def check_like(self):
+        theta = np.array([2.,3.])
+        x = [4.,2]
+        l = flib.dirichlet(x, theta)
+        f = utils.dirichlet(x, theta)
+        assert_almost_equal(l, sum(np.log(f)), 5)
 
 class test_gamma(NumpyTestCase):
     def check_consistency(self):

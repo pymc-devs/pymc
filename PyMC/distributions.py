@@ -137,18 +137,17 @@ def bernoulli_like(x, p):
         f(x \mid p) = p^{x- 1} (1-p)^{1-x}
 
     :Parameters:
-      x : int 
-        Series of successes (1) and failures (0). :math:`x=0,1`
-      p : float 
-        Probability of success. :math:`0 < p < 1`
-    
-    :Note:
-      - E(x): p
-      - Var(x): p(1-p) 
+      - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
+      - `p`: Probability of success. :math:`0 < p < 1`
     
     :Example: 
       >>> bernoulli_like([0,1,0,1], .4)
       -2.8542325496673584
+    
+    :Note:
+      - :math:`E(x)= p`
+      - :math:`Var(x)= p(1-p)`
+    
     """
     constrain(p, 0, 1,allow_equal=True)
     constrain(x, 0, 1,allow_equal=True)
@@ -158,6 +157,10 @@ def bernoulli_like(x, p):
 # Beta----------------------------------------------
 @randomwrap
 def rbeta(alpha, beta):
+    """rbeta(alpha, beta)
+    
+    Random beta variates.
+    """
     return random.beta(alpha, beta)
 
 def beta_expval(x,alpha, beta):
@@ -166,11 +169,26 @@ def beta_expval(x,alpha, beta):
 
 
 def beta_like(x, alpha, beta):
-    """beta_like(x, alpha, beta)
+    r"""beta_like(x, alpha, beta)
     
-    Beta log-likelihood
+    Beta log-likelihood.
 
-    x in [0,1], alpha >= 0, beta >= 0
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
+        
+    :Parameters:
+      - `x`: 0 < x < 1
+      - `alpha`: > 0
+      - `beta`: > 0
+
+    :Example:
+      >>> flib.beta(.4,1,2)
+      0.18232160806655884
+
+    :Note:
+      - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
+      - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    
     """
     constrain(alpha, lower=0, allow_equal=True)
     constrain(beta, lower=0, allow_equal=True)
