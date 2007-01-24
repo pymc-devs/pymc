@@ -254,6 +254,16 @@ class test_dirichlet(NumpyTestCase):
         f = utils.dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
 
+class test_exponential(NumpyTestCase):
+    def check_consistency(self):
+        params={'beta':4}
+        hist, like, figdata = consistency(rexponential, exponential_like, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='exponential', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
+       
 class test_gamma(NumpyTestCase):
     def check_consistency(self):
         params={'alpha':3, 'beta':2}
@@ -273,6 +283,9 @@ class test_gamma(NumpyTestCase):
         integral = normalization(flib.gamma, params, [.01,20], 200)
         assert_almost_equal(integral, 1, 2)
         
+class test_geometric(NumpyTestCase):
+    pass
+
         
 class test_poisson(NumpyTestCase):
     def check_consistency(self):
