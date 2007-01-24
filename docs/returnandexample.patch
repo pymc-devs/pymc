@@ -1,0 +1,218 @@
+Index: src/epydoc/apidoc.py
+===================================================================
+--- src/epydoc/apidoc.py	(révision 1418)
++++ src/epydoc/apidoc.py	(copie de travail)
+@@ -1398,6 +1398,9 @@
+        <epydoc.markup.ParsedDocstring>} describing the circumstances
+        under which the exception specified by C{exc} is raised.
+        @type: C{list}"""
++    examples = UNKNOWN
++    """@ivar: A list of examples for the routine
++       @type: C{list}"""
+     #} end of "information extracted from docstrings" group
+ 
+     def all_args(self):
+Index: src/epydoc/markup/restructuredtext.py
+===================================================================
+--- src/epydoc/markup/restructuredtext.py	(révision 1418)
++++ src/epydoc/markup/restructuredtext.py	(copie de travail)
+@@ -94,6 +94,7 @@
+ #: field names that should be used for the individual fields.
+ CONSOLIDATED_FIELDS = {
+     'parameters': 'param',
++    'return':'return',
+     'arguments': 'arg',
+     'exceptions': 'except',
+     'variables': 'var',
+@@ -101,14 +102,14 @@
+     'cvariables': 'cvar',
+     'groups': 'group',
+     'types': 'type',
+-    'keywords': 'keyword',
++    'keywords': 'keyword'        
+     }
+ 
+ #: A list of consolidated fields whose bodies may be specified using a
+ #: definition list, rather than a bulleted list.  For these fields, the
+ #: 'classifier' for each term in the definition list is translated into
+ #: a @type field.
+-CONSOLIDATED_DEFLIST_FIELDS = ['param', 'arg', 'var', 'ivar', 'cvar', 'keyword']
++CONSOLIDATED_DEFLIST_FIELDS = ['param', 'return', 'arg', 'var', 'ivar', 'cvar', 'keyword']
+ 
+ def parse_docstring(docstring, errors, **options):
+     """
+Index: src/epydoc/docstringparser.py
+===================================================================
+--- src/epydoc/docstringparser.py	(révision 1418)
++++ src/epydoc/docstringparser.py	(copie de travail)
+@@ -100,6 +100,7 @@
+     #: output.
+     
+     # If it's deprecated, put that first.
++    
+     DocstringField(['deprecated', 'depreciated'],
+              'Deprecated', multivalue=0),
+ 
+@@ -144,6 +145,7 @@
+ 
+     # Permissions (used by zope-based projects)
+     DocstringField(['permission', 'permissions'], 'Permission', 'Permissions')
++    
+     ]
+ 
+ ######################################################################
+@@ -264,11 +266,13 @@
+         if api_doc.arg_types is UNKNOWN:
+             api_doc.arg_types = {}
+         if api_doc.return_descr is UNKNOWN:
+-            api_doc.return_descr = None
++            api_doc.return_descrs = []
+         if api_doc.return_type is UNKNOWN:
+-            api_doc.return_type = None
++            api_doc.return_types = {}
+         if api_doc.exception_descrs is UNKNOWN:
+             api_doc.exception_descrs = []
++        if api_doc.examples is UNKNOWN:
++            api_doc.examples = []
+     if isinstance(api_doc, (VariableDoc, PropertyDoc)):
+         if api_doc.type_descr is UNKNOWN:
+             api_doc.type_descr = None
+@@ -549,7 +553,7 @@
+     if api_doc.summary is not None:
+         raise ValueError(REDEFINED % tag)
+     api_doc.summary = descr
+-
++    
+ def process_include_field(api_doc, docindex, tag, arg, descr):
+     """Copy the docstring contents from the object named in C{descr}"""
+     _check(api_doc, tag, arg, expect_arg=False)
+@@ -683,11 +687,15 @@
+ # [xx] '@return: foo' used to get used as a descr if no other
+ # descr was present.  is that still true?
+ def process_return_field(api_doc, docindex, tag, arg, descr):
+-    _check(api_doc, tag, arg, context=RoutineDoc, expect_arg=False)
+-    if api_doc.return_descr is not None:
+-        raise ValueError(REDEFINED % 'return value description')
+-    api_doc.return_descr = descr
+-
++    _check(api_doc, tag, arg, context=RoutineDoc, expect_arg=True)
++    # In the :Return: field.
++    if arg:
++        idents = re.split('[:;, ] *', arg)
++        api_doc.return_descrs.append( (idents, descr) )
++    # In the signature.
++    else:
++        api_doc.return_descrs = [descr]
++        
+ def process_rtype_field(api_doc, docindex, tag, arg, descr):
+     _check(api_doc, tag, arg, context=RoutineDoc, expect_arg=False)
+     if api_doc.return_type is not None:
+@@ -711,6 +719,11 @@
+     idents = re.split('[:;, ] *', arg)
+     api_doc.arg_descrs.append( (idents, descr) )
+ 
++def process_example_field(api_doc, docindex, tag, arg, descr):
++    """Store C{descr} in C{api_doc.example}"""
++    _check(api_doc, tag, arg, expect_arg=False)
++    api_doc.examples.append(descr)
++
+ register_field_handler(process_group_field, 'group')
+ register_field_handler(process_deffield_field, 'deffield', 'newfield')
+ register_field_handler(process_sort_field, 'sort')
+@@ -728,6 +741,7 @@
+ register_field_handler(process_kwarg_field, 'kwarg', 'keyword', 'kwparam')
+ register_field_handler(process_raise_field, 'raise', 'raises',
+                                             'except', 'exception')
++register_field_handler(process_example_field, 'example', 'examples', 'ex')
+ 
+ # Tags related to function parameters
+ PARAMETER_TAGS = ('arg', 'argument', 'parameter', 'param',
+@@ -979,7 +993,7 @@
+ 
+     # Extract the return type/value from the signature
+     if rtype:
+-        func_doc.return_descr = markup.parse(rtype, 'plaintext')
++        func_doc.return_descrs.append([None, markup.parse(rtype, 'plaintext')])
+ 
+     # Add the self parameter, if it was specified.
+     if selfparam:
+Index: src/epydoc/docwriter/latex.py
+===================================================================
+--- src/epydoc/docwriter/latex.py	(révision 1418)
++++ src/epydoc/docwriter/latex.py	(copie de travail)
+@@ -625,9 +625,8 @@
+         # Parameters
+         if func_doc.arg_descrs or func_doc.arg_types:
+             # Find the longest name.
+-            longest = max([0]+[len(n) for n in func_doc.arg_types])
+             for names, descrs in func_doc.arg_descrs:
+-                longest = max([longest]+[len(n) for n in names])
++                longest = max([len(n) for n in names])
+             # Table header.
+             out(' '*6+'\\textbf{Parameters}\n')
+             out(' '*6+'\\begin{quote}\n')
+@@ -653,18 +652,37 @@
+             out('    \\vspace{1ex}\n\n')
+                 
+         # Returns
+-        rdescr = func_doc.return_descr
+-        rtype = func_doc.return_type
+-        if rdescr not in (None, UNKNOWN) or rtype not in (None, UNKNOWN):
+-            out(' '*6+'\\textbf{Return Value}\n')
++        if func_doc.return_descrs or func_doc.return_types:
++            try:
++                # Find the longest name.
++                for names, descrs in func_doc.return_descrs:
++                    longest = max([len(n) for n in names])
++            except TypeError:
++                longest = 0
++            # Table header.
++            out(' '*6+'\\textbf{Return}\n')
+             out(' '*6+'\\begin{quote}\n')
+-            if rdescr not in (None, UNKNOWN):
+-                out(self.docstring_to_latex(rdescr, 6))
+-                if rtype not in (None, UNKNOWN):
+-                    out(' '*6+'\\textit{(type=%s)}\n\n' %
+-                        self.docstring_to_latex(rtype, 6).strip())
+-            elif rtype not in (None, UNKNOWN):
+-                out(self.docstring_to_latex(rtype, 6))
++            out('        \\begin{Ventry}{%s}\n\n' % (longest*'x'))
++            # Params that have @type but not @param info:
++            unseen_types = set(func_doc.return_types)
++            # List everything that has a @param:
++            for (arg_names, arg_descr) in func_doc.return_descrs:
++                if arg_names is not None:
++                    arg_name = plaintext_to_latex(', '.join(arg_names))
++                    out('%s\\item[%s]\n\n' % (' '*10, arg_name))
++                    out(self.docstring_to_latex(arg_descr, 10))
++                    for arg_name in arg_names:
++                        arg_typ = func_doc.return_types.get(arg_name)
++                        if arg_typ is not None:
++                            if len(arg_names) == 1:
++                                lhs = 'type'
++                            else:
++                                lhs = 'type of %s' % arg_name
++                            rhs = self.docstring_to_latex(arg_typ).strip()
++                            out('%s\\textit{(%s=%s)}\n\n' % (' '*12, lhs, rhs))
++                elif arg_descr not in (None, UNKNOWN):
++                    out(self.docstring_to_latex(arg_descr))
++            out('        \\end{Ventry}\n\n')
+             out(' '*6+'\\end{quote}\n\n')
+             out('    \\vspace{1ex}\n\n')
+ 
+@@ -690,6 +708,15 @@
+                 out(' \textit{(inherited documentation)}')
+             out('\n\n')
+ 
++        # Examples
++        if func_doc.examples not in (None, UNKNOWN, [], ()):
++            out(' '*6+'\\textbf{Examples}\n')
++            out(' '*6+'\\begin{quote}\n')
++            for ex in func_doc.examples:
++                out(' '*10 + self.docstring_to_latex(ex, 10))
++            out(' '*6+'\\end{quote}\n\n')
++            out('    \\vspace{1ex}\n\n')
++            
+         # Add version, author, warnings, requirements, notes, etc.
+         self.write_standard_fields(out, func_doc)
+ 
