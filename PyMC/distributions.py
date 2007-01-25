@@ -3,9 +3,9 @@
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: test and finalize vectorized multivariate normal like.
-# TODO: Add exponweib_expval, is it simply the mean of the distribution ?
+# TODO: Add exponweib_expval (how?)
 # TODO: Complete docstrings with LaTeX formulas from the tutorial.
-# TODO: Add size arguments to random generators ? It shouldn't be a 
+# TODO: Do we add size arguments to random generators ? It shouldn't be a 
 #   problem, except that vector arguments + size arg. is a bit confusing.   
 
 __docformat__='reStructuredText'
@@ -34,7 +34,7 @@ inverse = np.linalg.pinv
 def Vectorize(f):
     """Wrapper to vectorize a scalar function."""
     return np.vectorize(f)
-    
+
 def randomwrap(func):
     """
     Decorator for random value generators
@@ -243,7 +243,6 @@ def beta_like(x, alpha, beta):
 
 # Binomial----------------------------------------------
 @randomwrap
-<<<<<<< .mine
 def rbinomial(n,p,size=1):
     """rbinomial(n,p,size=1)
     
@@ -252,16 +251,29 @@ def rbinomial(n,p,size=1):
     return random.binomial(n,p,size)
     
 def binomial_expval(x,n,p):
-    expval = p * n
-    return expval
-
+    return p*n
 
 def binomial_like(x, n, p):
-    """Binomial log-likelihood
+    """binomial_like(x, n, p)
+    
+    Binomial log-likelihood.  The discrete probability distribution of the 
+    number of successes in a sequence of n independent yes/no experiments, 
+    each of which yields success with probability p.
+    
+    .. math::
+        f(x \mid n, p) = \frac{n!}{x!(n-x)!}p^x (1-p)^{1-x}
+        
+    :Parameters:
+      x : float 
+        Number of successes, > 0.
+      n : int
+        Number of Bernoulli trials, > x.
+      p : float
+        Probability of success in each trial, :math:`p \in [0,1]`.     
 
-    binomial_like(x, n, p)
-
-    p \in [0,1], n > x, x > 0
+    :Note:
+      :math:`E(X)=np`
+      :math:`Var(X)=np(1-p)`   
     """
     constrain(p, 0, 1)
     constrain(n, lower=x)
@@ -300,12 +312,22 @@ def rcauchy(alpha, beta, size=1):
 def cauchy_expval(alpha, beta):
     return alpha
 
+# In wikipedia, the arguments name are k, x0. 
 def cauchy_like(x, alpha, beta):
-    """Cauchy log-likelhood
+    """cauchy_like(x, alpha, beta)
+    
+    Cauchy log-likelihood. The Cauchy distribution is also known as the
+    Lorentz or the Breit-Wigner distribution. 
 
-    cauchy_like(x, alpha, beta)
-
-    beta > 0
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+    
+    :Parameters:
+      - `alpha` : Location parameter.
+      - `beta`: Scale parameter > 0.
+    
+    :Note:
+      - Mode and median are at alpha.
     """
     constrain(beta, lower=0)
     return flib.cauchy(x,alpha,beta)
@@ -319,16 +341,27 @@ def rchi2(k, size=1):
     """
     return random.chisquare(k, size)
 
+def chi2_expval(k):
+    return k
 
-def chi2_expval(df):
-    return df
+def chi2_like(x, k):
+    """chi2_like(x, k)
+    
+    Chi-squared :math:`\chi^2` log-likelihood.
 
-def chi2_like(x, df):
-    """Chi-squared log-likelihood
+    .. math::
+        f(x \mid k) = \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}} 
 
-    chi2_like(x, df)
-
-    x > 0, df > 0
+    :Parameters:
+      x : float
+        :math:`\ge 0`
+      k : int 
+        Degrees of freedom > 0
+    
+    :Note:
+      - :math:`E(X)=k`
+      - :math:`Var(X)=2k`
+      
     """
     constrain(x, lower=0)
     constrain(df, lower=0)
@@ -371,15 +404,19 @@ def dirichlet_like(x, theta):
       theta : (n,k) or (1,k) float
         :math:`\theta > 0`
     """
-    #    theta > 0, x > 0, \sum x < 1
+    
     constrain(theta, lower=0)
     constrain(x, lower=0)
-    constrain(sum(x), upper=1)
+    constrain(sum(x), upper=1) #??
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------
 @randomwrap
 def rexponential(beta, size=1):
+    """rexponential(beta)
+    
+    Exponential random variates.
+    """
     return random.exponential(beta,size)
 
 def exponential_expval(beta):
@@ -414,16 +451,30 @@ def exponential_like(x, beta):
 # Exponentiated Weibull-----------------------------------
 @randomwrap
 def rexponweib(a, c, loc, scale, size=1):
+    """rexponweib(a, c, loc, scale, size=1)
+    
+    Random exponentiated Weibull variates.
+    """
     q = random.uniform(size)
     r = flib.exponweib_ppf(q,a,c)
     return loc + r*scale
 
 def exponweib_like(x, a, c, loc=0, scale=1):
-    """Exponentiated Weibull log-likelihood
+    """exponweib_like(x,a,c,loc=0,scale=1)
+    
+    Exponentiated Weibull log-likelihood.
 
-    exponweib_like(x,a,c,loc=0,scale=1)
+    .. math::
+        pdf(x) & = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1) \\
+        z & = \frac{x-loc}{scale}
+    
+    :Parameters:
+      - `x` : > 0
+      - `a` : Shape parameter
+      - `c` : > 0
+      - `loc` : Location parameter
+      - `scale` : Scale parameter > 0.
 
-    x > 0, c > 0, scale >0
     """
     return flib.exponweib(x,a,c,loc,scale)
 
@@ -498,13 +549,25 @@ def rgeometric(p, size=1):
 def geometric_expval(p):
     return (1. - p) / p
 
-
 def geometric_like(x, p):
-    """Geometric log-likelihood
+    """geometric_like(x, p)
+    
+    Geometric log-likelihood. The probability that the first success in a 
+    sequence of Bernoulli trials occurs after x trials. 
 
-    geometric_like(x, p)
+    .. math::
+        f(x \mid p) = p(1-p)^{x-1}
+        
+    :Parameters:
+      x : int
+        Number of trials before first success, > 0.
+      p : float 
+        Probability of success on each trial, :math:`p \in [0,1]`
 
-    x > 0, p \in [0,1]
+    :Note:
+      - :math:`E(X)=1/p`
+      - :math:`Var(X)=\frac{1-p}{p^2}
+    
     """
     constrain(p, 0, 1)
     constrain(x, lower=0)
