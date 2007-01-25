@@ -554,49 +554,75 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       return
       END
 
-      SUBROUTINE negbin(x,r,p,n,like)
+      SUBROUTINE negbin(x,r,p,n,nr,np,like)
 
 c Negative binomial log-likelihood function     
+
+c Updated 24/01/2007. 
       
-cf2py integer dimension(n),intent(in) :: x,r
-cf2py real dimension(n),intent(in) :: p
-cf2py integer intent(hide),depend(x) :: m=len(x)
+cf2py integer dimension(n),intent(in) :: x
+cf2py integer dimension(nr),intent(in) :: r
+cf2py real dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(r,n),check(nr==1 || nr==n) :: nr=len(r)
+cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
 cf2py real intent(out) :: like      
       
+      IMPLICIT NONE
+      INTEGER n,nr,np,i
       REAL like
-      REAL p(n)
-      INTEGER n,i
-      INTEGER x(n),r(n)
-
+      REAL p(np),p_tmp
+      INTEGER x(n),r(nr),r_tmp
+      LOGICAL not_scalar_r, not_scalar_p
+      REAL factln
+      
+      not_scalar_r = (nr .NE. 1)
+      not_scalar_p = (np .NE. 1)
+      
+      r_tmp = r(1)
+      p_tmp = p(1)
       like = 0.0
       do i=1,n
-        like = like + r(i)*log(p(i)) + x(i)*log(1.-p(i))
-        like = like + factln(x(i)+r(i)-1)-factln(x(i))-factln(r(i)-1) 
+        if (not_scalar_r) r_tmp = r(i)
+        if (not_scalar_p) p_tmp = p(i)
+        like = like + r_tmp*log(p_tmp) + x(i)*log(1.-p_tmp)
+        like = like + factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
       enddo
       return
       END
       
       
-      SUBROUTINE negbin2(x,mu,a,n,like)
+      SUBROUTINE negbin2(x,mu,a,n,nmu,na,like)
 
 c Negative binomial log-likelihood function 
 c (alternative parameterization)    
-      
+c Updated 24/01/2007 DH.
+
 cf2py integer dimension(n),intent(in) :: x
-cf2py real dimension(n),intent(in) :: a,mu
-cf2py integer intent(hide),depend(x) :: m=len(x)
+cf2py real dimension(na),intent(in) :: a
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
+cf2py integer intent(hide),depend(a,x),check(na==1 || na==len(x)) :: na=len(a)
 cf2py real intent(out) :: like      
       
+      INTEGER n,i,nmu,na
       REAL like
-      REAL a(n),mu(n)
-      INTEGER n,i
+      REAL a(na),mu(nmu), a_tmp, mu_tmp
       INTEGER x(n)
+      LOGICAL not_scalar_a, not_scalar_mu
+      REAL gammaln, factln
 
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_a = (na .NE. 1)
+      
+      mu_tmp = mu(1)
+      a_tmp = a(1)
       like = 0.0
       do i=1,n
-        like = like + gammln(x(i)+a(i)) - factln(x(i)) - gammln(a(i))
-          like = like + x(i) * (log(mu(i)/a(i)) - log(1.0 + mu(i)/a(i)))
-          like = like - a(i) * log(1.0 + mu(i)/a(i))
+        like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
+        like=like+x(i)*(log(mu_tmp/a_tmp)-log(1.0+mu_tmp/a_tmp))
+        like=like-a_tmp * log(1.0 + mu_tmp/a_tmp)
       enddo
       return
       END
@@ -776,25 +802,34 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
       END
 
 
-      SUBROUTINE hnormal(x,tau,n,like)
+      SUBROUTINE hnormal(x,tau,n,ntau,like)
 
 c Half-normal log-likelihood function    
 
-cf2py real dimension(n),intent(in) :: x,tau
+c Updated 24/01/2007 DH.
+
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(ntau),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(tau)
       
-      INTEGER n,i
+      IMPLICIT NONE
+      INTEGER n,i,ntau
       REAL like
-      REAL x(n),tau(n)
+      REAL x(n),tau(ntau),tau_tmp
+      LOGICAL not_scalar_tau
 
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
 
+      not_scalar_tau = (ntau .NE. 1)
+      
+      tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-        like = like + 0.5 * (log(2. * tau(i) / PI)) 
-        like = like - (0.5 * x(i)**2 * tau(i))
+        like = like + 0.5 * (log(2. * tau_tmp / PI)) 
+        like = like - (0.5 * x(i)**2 * tau_tmp)
       enddo
       return
       END
