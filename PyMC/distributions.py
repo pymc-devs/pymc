@@ -68,9 +68,6 @@ def randomwrap(func):
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     vfunc = np.vectorize(func)
     def wrapper(*args, **kwds):
-        """
-               
-        """
         # First transform keyword arguments into positional arguments.
         if len(kwds) > 0:
             args = list(args)
@@ -246,13 +243,14 @@ def beta_like(x, alpha, beta):
 
 # Binomial----------------------------------------------
 @randomwrap
+<<<<<<< .mine
 def rbinomial(n,p,size=1):
     """rbinomial(n,p,size=1)
     
     Random binomial variates.
     """
     return random.binomial(n,p,size)
-
+    
 def binomial_expval(x,n,p):
     expval = p * n
     return expval
@@ -314,8 +312,13 @@ def cauchy_like(x, alpha, beta):
 
 # Chi square----------------------------------------------
 @randomwrap
-def rchi2(df):
-    return random.chisquare(df)
+def rchi2(k, size=1):
+    """rchi2(k, size=1)
+    
+    Random :math:`\chi^2` variates.
+    """
+    return random.chisquare(k, size)
+
 
 def chi2_expval(df):
     return df
@@ -332,21 +335,20 @@ def chi2_like(x, df):
     return flib.gamma(x, 0.5*df, 2)
 
 # Dirichlet----------------------------------------------
-#@randomwrap
-def rdirichlet(theta, n=None):
-    """rdirichlet(theta, n=None)
+@randomwrap
+def rdirichlet(theta, size=1):
+    """rdirichlet(theta, size=1)
     
-    Returns Dirichlet random variates."""
-    theta = np.atleast_1d(theta)
-    if n:
-        gammas = np.transpose([rgamma(alpha,1,n) for alpha in theta])
-
-        return np.array([g/np.sum(g) for g in gammas])
+    Dirichlet random variates.
+    """
+    gammas = rgamma(alpha,size)
+    if size > 1 and len(theta) > 1:
+        return (gammas.tranpose()/gammas.sum(1)).transpose()
+    elif len(theta)>1:
+        return gammas/gammas.sum()
     else:
-        gammas = np.array([rgamma(alpha,1) for alpha in theta])
-
-        return gammas/np.sum(gammas)
-
+        return gammas
+        
 def dirichlet_expval(theta):
     sumt = sum(theta)
     expval = theta/sumt
@@ -377,8 +379,8 @@ def dirichlet_like(x, theta):
 
 # Exponential----------------------------------------------
 @randomwrap
-def rexponential(beta):
-    return random.exponential(beta)
+def rexponential(beta, size=1):
+    return random.exponential(beta,size)
 
 def exponential_expval(beta):
     return beta
@@ -427,8 +429,12 @@ def exponweib_like(x, a, c, loc=0, scale=1):
 
 # Gamma----------------------------------------------
 @randomwrap
-def rgamma(alpha, beta,n=1):
-    return random.gamma(alpha,beta,n)
+def rgamma(alpha, beta,size=1):
+    """rgamma(alpha, beta,size=1)
+    
+    Random gamma variates.
+    """
+    return random.gamma(alpha,beta,size)
 
 def gamma_expval(alpha, beta):
     expval = array(alpha) / beta
@@ -482,8 +488,12 @@ def gev_like(x, xi, mu=0, sigma=0):
 
 # Geometric----------------------------------------------
 @randomwrap
-def rgeometric(p):
-    return random.negative_binomial(1, p)
+def rgeometric(p, size=1):
+    """rgeometric(p, size=1)
+    
+    Random geometric variates.
+    """
+    return random.negative_binomial(1, p, size)
 
 def geometric_expval(p):
     return (1. - p) / p
@@ -502,12 +512,15 @@ def geometric_like(x, p):
 
 # Half-normal----------------------------------------------
 @randomwrap
-def rhalf_normal(tau):
-    return random.normal(0, sqrt(1/tau))
+def rhalf_normal(tau, size=1):
+    """rhalf_normal(tau, size=1)
+    
+    Random half-normal variates.
+    """
+    return random.normal(0, sqrt(1/tau), size)
 
 def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
-
 
 def half_normal_like(x, tau):
     """Half-normal log-likelihood
@@ -555,7 +568,11 @@ def hypergeometric_like(x, n, m, N):
 # Inverse gamma----------------------------------------------
 # Looks this one is identical to rgamma, this is strange.
 @randomwrap
-def rinverse_gamma(alpha, beta):
+def rinverse_gamma(alpha, beta,size=1):
+    """rinverse_gamma(alpha, beta,size=1)
+    
+    Random inverse gamma variates.
+    """
     pass
 
 def inverse_gamma_expval(alpha, beta):
@@ -563,10 +580,10 @@ def inverse_gamma_expval(alpha, beta):
 
 
 def inverse_gamma_like(x, alpha, beta):
-    """Inverse gamma log-likelihood
-
-    inverse_gamma_like(x, alpha, beta)
-
+    """inverse_gamma_like(x, alpha, beta)
+    
+    Inverse gamma log-likelihood
+   
     x > 0, alpha > 0, beta > 0
     """
     constrain(x, lower=0)
