@@ -254,14 +254,14 @@ def binomial_expval(x,n,p):
     return p*n
 
 def binomial_like(x, n, p):
-    """binomial_like(x, n, p)
+    r"""binomial_like(x, n, p)
     
     Binomial log-likelihood.  The discrete probability distribution of the 
     number of successes in a sequence of n independent yes/no experiments, 
     each of which yields success with probability p.
     
     .. math::
-        f(x \mid n, p) = \frac{n!}{x!(n-x)!}p^x (1-p)^{1-x}
+        f(x \mid n, p) = \frac{n !}{x !(n-x) !} p^x (1-p)^{1-x}
         
     :Parameters:
       x : float 
@@ -314,7 +314,7 @@ def cauchy_expval(alpha, beta):
 
 # In wikipedia, the arguments name are k, x0. 
 def cauchy_like(x, alpha, beta):
-    """cauchy_like(x, alpha, beta)
+    r"""cauchy_like(x, alpha, beta)
     
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution. 
@@ -345,7 +345,7 @@ def chi2_expval(k):
     return k
 
 def chi2_like(x, k):
-    """chi2_like(x, k)
+    r"""chi2_like(x, k)
     
     Chi-squared :math:`\chi^2` log-likelihood.
 
@@ -449,28 +449,28 @@ def exponential_like(x, beta):
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap
-def rexponweib(a, c, loc, scale, size=1):
-    """rexponweib(a, c, loc, scale, size=1)
+def rexponweib(alpha, k, loc, scale, size=1):
+    """rexponweib(alpha, k, loc, scale, size=1)
     
     Random exponentiated Weibull variates.
     """
     q = random.uniform(size)
-    r = flib.exponweib_ppf(q,a,c)
+    r = flib.exponweib_ppf(q,alpha,k)
     return loc + r*scale
 
-def exponweib_like(x, a, c, loc=0, scale=1):
-    """exponweib_like(x,a,c,loc=0,scale=1)
+def exponweib_like(x, alpha, k, loc=0, scale=1):
+    r"""exponweib_like(x,alpha,k,loc=0,scale=1)
     
     Exponentiated Weibull log-likelihood.
 
     .. math::
-        pdf(x) & = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1) \\
+        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
         z & = \frac{x-loc}{scale}
     
     :Parameters:
       - `x` : > 0
-      - `a` : Shape parameter
-      - `c` : > 0
+      - `alpha` : Shape parameter
+      - `k` : > 0
       - `loc` : Location parameter
       - `scale` : Scale parameter > 0.
 
@@ -549,7 +549,7 @@ def geometric_expval(p):
     return (1. - p) / p
 
 def geometric_like(x, p):
-    """geometric_like(x, p)
+    r"""geometric_like(x, p)
     
     Geometric log-likelihood. The probability that the first success in a 
     sequence of Bernoulli trials occurs after x trials. 
@@ -565,7 +565,7 @@ def geometric_like(x, p):
 
     :Note:
       - :math:`E(X)=1/p`
-      - :math:`Var(X)=\frac{1-p}{p^2}
+      - :math:`Var(X)=\frac{1-p}{p^2}`
     
     """
     constrain(p, 0, 1)
@@ -612,7 +612,7 @@ def hypergeometric_expval(n,m,N):
     return n * (m / N)
 
 def hypergeometric_like(x, n, m, N):
-    """
+    r"""
     Hypergeometric log-likelihood
 
     hypergeometric_like(x, n, m, N)

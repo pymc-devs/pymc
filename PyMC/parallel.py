@@ -1,6 +1,9 @@
 import subprocess
 import ipython1.kernel.api as kernel
 import proposition5
+"""The devs of ipython are refactoring the chainsaw branch. We should probably 
+wait awhile before commiting to much time on this, until their API is stable."""
+
 
 class Parallel(Model):
     """
