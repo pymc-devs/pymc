@@ -246,19 +246,13 @@ cf2py real intent(out) :: like
         INTEGER n, nlower, nupper, i
         REAL x(n), lower(nlower), upper(nupper)
         REAL like, low, high
-        LOGICAL not_scalar_lower,not_scalar_upper
-        
-        
+                
         low = lower(1)
-        high = upper(1)  
-        not_scalar_upper = (nupper .NE. 1)  
-        not_scalar_lower = (nlower .NE. 1)
-        
+        high = upper(1)       
         like = 0.0
-        
         do i=1,n
-          if (not_scalar_lower) low = lower(i)
-          if (not_scalar_upper) high = upper(i)
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
           if ((x(i) < low) .OR. (x(i) > high)) then
             like = -3.4028235E+38
             RETURN
@@ -356,10 +350,6 @@ c     Check length of input arrays.
       ENDDO
 
       END SUBROUTINE exponweib_ppf
-
-
-
-
 
 
       SUBROUTINE hyperg(x,d,red,total,n,nd,nred,ntotal,like)
@@ -471,7 +461,6 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       sumfact = 0.0
       do i=1,n
         if (not_scalar_mu) mut = mu(i)
-
         sumx = sumx + x(i)*log(mut) - mut
         sumfact = sumfact + factln(x(i))
       enddo
@@ -606,12 +595,13 @@ cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(
 cf2py integer intent(hide),depend(a,x),check(na==1 || na==len(x)) :: na=len(a)
 cf2py real intent(out) :: like      
       
+	  IMPLICIT NONE
       INTEGER n,i,nmu,na
       REAL like
       REAL a(na),mu(nmu), a_tmp, mu_tmp
       INTEGER x(n)
       LOGICAL not_scalar_a, not_scalar_mu
-      REAL gammaln, factln
+      REAL gammln, factln
 
       not_scalar_mu = (nmu .NE. 1)
       not_scalar_a = (na .NE. 1)
@@ -620,6 +610,8 @@ cf2py real intent(out) :: like
       a_tmp = a(1)
       like = 0.0
       do i=1,n
+		if (not_scalar_mu) mu_tmp=mu(i)
+		if (not_scalar_a) a_tmp=a(i)
         like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
         like=like+x(i)*(log(mu_tmp/a_tmp)-log(1.0+mu_tmp/a_tmp))
         like=like-a_tmp * log(1.0 + mu_tmp/a_tmp)
@@ -778,25 +770,40 @@ cf2py real intent(out) :: like
       END
       
 
-      SUBROUTINE normal(x,mu,tau,n,like)
+      SUBROUTINE normal(x,mu,tau,n,nmu, ntau, like)
 
 c Normal log-likelihood function      
 
-cf2py real dimension(n),intent(in) :: x,mu,tau
+c Updated 26/01/2007 DH.
+
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(ntau),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
-      INTEGER n,i
+	  IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
       REAL like
-      REAL x(n),mu(n),tau(n)
-
+      REAL x(n),mu(nmu),tau(ntau)
+	  REAL mu_tmp, tau_tmp
+	  LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
 
+	  not_scalar_mu = (nmu .NE. 1)
+	  not_scalar_tau = (ntau .NE. 1)
+
+	  mu_tmp = mu(1)
+ 	  tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-        like = like - 0.5 * tau(i) * (x(i)-mu(i))**2
-        like = like + 0.5*log(0.5*tau(i)/PI)
+		if (not_scalar_mu) mu_tmp=mu(i)
+	  	if (not_scalar_tau) tau_tmp=tau(i)
+        like = like - 0.5 * tau_tmp * (x(i)-mu_tmp)**2
+        like = like + 0.5*log(0.5*tau_tmp/PI)
       enddo
       return
       END
@@ -828,6 +835,7 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
       tau_tmp = tau(1)
       like = 0.0
       do i=1,n
+		if (not_scalar_tau) tau_tmp = tau(i)
         like = like + 0.5 * (log(2. * tau_tmp / PI)) 
         like = like - (0.5 * x(i)**2 * tau_tmp)
       enddo
@@ -835,25 +843,40 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
       END
 
 
-      SUBROUTINE lognormal(x,mu,tau,n,like)
+      SUBROUTINE lognormal(x,mu,tau,n,nmu,ntau,like)
 
 c Log-normal log-likelihood function
 
-cf2py real dimension(n),intent(in) :: x,mu,tau
+c Updated 26/01/2007 DH.
+
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(ntau),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
-      INTEGER n,i
+	  IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
       REAL like
-      REAL x(n),mu(n),tau(n)
-
+      REAL x(n),mu(nmu),tau(ntau)
+	  REAL mu_tmp, tau_tmp
+	  LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
 
+	  not_scalar_mu = (nmu .NE. 1)
+	  not_scalar_tau = (ntau .NE. 1)
+
+	  mu_tmp = mu(1)
+ 	  tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-        like = like + 0.5 * (log(tau(i)) - log(2.0*PI)) 
-        like = like - 0.5*tau(i)*(log(x(i))-mu(i))**2 - log(x(i))
+	    if (not_scalar_mu) mu_tmp=mu(i)
+	  	if (not_scalar_tau) tau_tmp=tau(i)
+        like = like + 0.5 * (log(tau_tmp) - log(2.0*PI)) 
+        like = like - 0.5*tau_tmp*(log(x(i))-mu_tmp)**2 - log(x(i))
       enddo
       return
       END
@@ -896,20 +919,33 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       return
       END
       
-      SUBROUTINE igamma(x,alpha,beta,n,like)
+      SUBROUTINE igamma(x,alpha,beta,n,na,nb,like)
 
 c Inverse gamma log-likelihood function      
 
-cf2py real dimension(n),intent(in) :: x,alpha,beta
+c Updated 26/01/2007 DH.
+
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha,n),check(na==1||na==n) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
 
-      INTEGER i,n
+	  IMPLICIT NONE
+      INTEGER i,n,na,nb
       REAL like
-      REAL x(n),alpha(n),beta(n)
-      
+      REAL x(n),alpha(na),beta(nb)
+	  REAL alpha_tmp, beta_tmp
+	  REAL gammln
+
+      alpha_tmp=alpha(1)
+	  beta_tmp=beta(1)
       like = 0.0
       do i=1,n
+  		if (na .NE. 1) alpha_tmp=alpha(i)
+		if (nb .NE. 1) beta_tmp=beta(i)
         like = like - (gammln(alpha(i)) + alpha(i)*log(beta(i)))
         like = like - (alpha(i)+1.0)*log(x(i)) - 1./(x(i)*beta(i)) 
       enddo
@@ -932,21 +968,18 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 cf2py real intent(out) :: like
-
+	  IMPLICIT NONE
       INTEGER i,nx,na,nb
       REAL like
       REAL x(nx),alpha(na),beta(nb), atmp, btmp
-      LOGICAL not_scalar_a, not_scalar_b
+      REAL gammln
 
-      not_scalar_a = (na .NE. 1)
-      not_scalar_b = (nb .NE. 1)
-      
       atmp = alpha(1)
       btmp = beta(1)
       like = 0.0
       do i=1,nx
-        if (not_scalar_a) atmp = alpha(i)
-        if (not_scalar_b) btmp = beta(i)
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
         like = like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
         like = like + (atmp-1.0)*log(x(i)) + (btmp-1.0)*log(1.0-x(i))
       enddo   

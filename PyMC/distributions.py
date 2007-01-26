@@ -364,20 +364,19 @@ def chi2_like(x, k):
       
     """
     constrain(x, lower=0)
-    constrain(df, lower=0)
-    return flib.gamma(x, 0.5*df, 2)
+    constrain(k, lower=0)
+    return flib.gamma(x, 0.5*k, 2)
 
 # Dirichlet----------------------------------------------
-@randomwrap
 def rdirichlet(theta, size=1):
     """rdirichlet(theta, size=1)
     
     Dirichlet random variates.
     """
-    gammas = rgamma(alpha,size)
-    if size > 1 and len(theta) > 1:
-        return (gammas.tranpose()/gammas.sum(1)).transpose()
-    elif len(theta)>1:
+    gammas = rgamma(theta,1,size)
+    if size > 1 and np.size(theta) > 1:
+        return (gammas.transpose()/gammas.sum(1)).transpose()
+    elif np.size(theta)>1:
         return gammas/gammas.sum()
     else:
         return gammas
@@ -790,8 +789,8 @@ def normal_like(x, mu, tau):
 
 # Poisson--------------------------------------------------
 @randomwrap
-def rpoisson(mu):
-    return random.poisson(mu)
+def rpoisson(mu,size=1):
+    return random.poisson(mu,size)
 
 def poisson_expval(mu):
     return mu
@@ -840,12 +839,10 @@ def uniform_like(x,lower, upper):
     return flib.uniform_like(x,lower, upper)
 
 # Weibull--------------------------------------------------
-#@randomwrap
-def rweibull(alpha, beta):
-    alpha = np.atleast_1d(alpha)
-    tmp = -log(runiform(0, 1, len(alpha)))
+@randomwrap
+def rweibull(alpha, beta,size=1):
+    tmp = -log(runiform(0, 1, size))
     return beta * (tmp ** (1. / alpha))
-
 
 def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)

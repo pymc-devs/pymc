@@ -66,11 +66,8 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
       - `like`: integrated likelihood over histogram bins.
     """
     # Samples values and compute histogram.
-    samples = []
-    for i in np.arange(nrandom):
-        samples.append(random(**params))
-    samples = np.array(samples)
-    
+    samples = random(size=nrandom, **params)
+        
     hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
@@ -224,7 +221,7 @@ class test_chi2(NumpyTestCase):
     """Based on flib.gamma, so no need to make the calling check and 
     normalization check."""
     def check_consistency(self):
-        params = {'df':2}
+        params = {'k':2}
         hist, like, figdata = consistency(rchi2, chi2_like, params, range=[0,15])
         if PLOT:
             compare_hist(figname='chi2', **figdata)
@@ -234,7 +231,7 @@ class test_dirichlet(NumpyTestCase):
     """Multivariate Dirichlet distribution"""
     def check_random(self):
         theta = np.array([2.,3.])
-        r = rdirichlet(theta, n=2000)
+        r = rdirichlet(theta, 2000)
         s = theta.sum()
         m = r.mean(0)
         cov_ex = np.cov(r.T)
@@ -253,6 +250,9 @@ class test_dirichlet(NumpyTestCase):
         l = flib.dirichlet(x, theta)
         f = utils.dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
+    
+    def normalization_2d(self):
+        pass
 
 class test_exponential(NumpyTestCase):
     def check_consistency(self):
