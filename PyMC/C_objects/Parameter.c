@@ -39,9 +39,11 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 		return -1;
 	}
 	
+	// Initialize optional arguments.
 	if(!self->__doc__) self->__doc__ = self->__name__;
 	if(!self->isdata) self->isdata = 0;
-										
+	
+	// Incref all PyObjects so they don't go away.
 	Py_INCREF(self->logp_fun);
 	Py_INCREF(self->__name__);
 	Py_INCREF(self->value);
@@ -49,7 +51,9 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	Py_XINCREF(self->__doc__);
 	Py_XINCREF(self->random_fun);
 	Py_XINCREF(self->trace);
-
+	Py_INCREF(self->children);	
+	
+	// Initialize PyObjects that aren't passed in.
 	self->val_tuple = PyTuple_New(1);
 	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
 	
@@ -72,7 +76,6 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	compute_logp(self);
 	param_cache(self);
 
-	Py_INCREF(self->children);
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);		
 	
 	return 0; 
@@ -159,7 +162,8 @@ static void param_parent_values(Parameter *self)
 	{
 		index_now = self->param_parent_indices[i];
 		Py_DECREF(self->parent_values[i]);
-		self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;				
+		//self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;
+		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
 		Py_INCREF(self->parent_values[i]);
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}
@@ -168,7 +172,8 @@ static void param_parent_values(Parameter *self)
 	{
 		index_now = self->node_parent_indices[i];
 		Py_DECREF(self->parent_values[i]);		
-		self->parent_values[index_now] = Node_getvalue(((Node*) self->parent_pointers[index_now]), closure_arg);	
+		//self->parent_values[index_now] = Node_getvalue(((Node*) self->parent_pointers[index_now]), closure_arg);	
+		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
 		Py_INCREF(self->parent_values[i]);		
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}	
@@ -179,9 +184,8 @@ static void compute_logp(Parameter *self)
 {
 	PyObject *new_logp, *val_tuple;	
 	param_parent_values(self);
-	val_tuple = PyTuple_New(1);
-	PyTuple_SET_ITEM(val_tuple,0,self->value);	
-	new_logp = PyObject_Call(self->logp_fun, val_tuple, self->parent_value_dict);
+	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
+	new_logp = PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
 	Py_INCREF(new_logp);	
 	Py_DECREF(self->logp);
 	self->logp = new_logp;
@@ -199,7 +203,8 @@ static int param_check_for_recompute(Parameter *self)
 			for(j=0;j<self->N_node_parents;j++)
 			{
 				index_now = self->node_parent_indices[j];
-				if(self->parent_timestamp_caches[i][index_now]!=((Node*) self->parent_pointers[index_now])->timestamp)
+				if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
+				//if(self->parent_timestamp_caches[i][index_now]! =((Node*) self->parent_pointers[index_now])->timestamp)
 				{
 					recompute = 1;
 					break;
@@ -211,7 +216,8 @@ static int param_check_for_recompute(Parameter *self)
 				for(j=0;j<self->N_param_parents;j++)
 				{
 					index_now = self->param_parent_indices[j];
-					if(self->parent_timestamp_caches[i][index_now]!=((Parameter*) self->parent_pointers[index_now])->timestamp)
+					if(self->parent_timestamp_caches[i][index_now]!=(int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
+					//if(self->parent_timestamp_caches[i][index_now]!=((Parameter*) self->parent_pointers[index_now])->timestamp)
 					{
 						recompute = 1;
 						break;
@@ -242,16 +248,18 @@ static void param_cache(Parameter *self)
 	{
 		index_now = self->node_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
-		self->parent_timestamp_caches[0][index_now] = dummy;
+		//dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
+		//self->parent_timestamp_caches[0][index_now] = dummy;
+		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
 	}
 	
 	for(j=0;j<self->N_param_parents;j++)
 	{
 		index_now = self->param_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
-		self->parent_timestamp_caches[0][index_now] = dummy;
+		//dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
+		//self->parent_timestamp_caches[0][index_now] = dummy;
+		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
 	}
 }
 
@@ -312,8 +320,30 @@ Parameter_setlogp(Parameter *self, PyObject *value, void *closure)
 	return -1;
 }
 
+// Get and set timestamp
+static PyObject * 
+Parameter_gettimestamp(Parameter *self, void *closure) 
+{
+	PyObject *timestamp;
+	timestamp = Py_BuildValue("i", self->timestamp);
+	
+	Py_INCREF(timestamp); 
+	return timestamp;
+}
+static int 
+Parameter_settimestamp(Parameter *self, PyObject *value, void *closure) 
+{ 
+	PyErr_SetString(PyExc_TypeError, "Parameter.timestamp cannot be set."); 
+	return -1;
+}
+
 // Get/set function table
 static PyGetSetDef Param_getseters[] = { 
+
+	{"timestamp", 
+	(getter)Parameter_gettimestamp, (setter)Parameter_settimestamp, 
+	"timestamp of Parameter", 
+	NULL}, 
 
 	{"logp", 
 	(getter)Parameter_getlogp, (setter)Parameter_setlogp, 

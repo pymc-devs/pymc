@@ -1,3 +1,6 @@
+// TODO: Go through and comment while looking for memory leaks,
+// TODO: memory leaks most likely being the product of unmatched increfs.
+
 #ifndef _PYMCOBJECTS_H_
 #define _PYMCOBJECTS_H_
 
@@ -59,7 +62,7 @@ typedef struct {
 	PyObject_HEAD
 	PyObject *value;
 	PyObject *eval_fun;
-	int timestamp;
+	int *timestamp;
 	PyObject *parents;
 	PyObject *children;
 	PyObject *__doc__;

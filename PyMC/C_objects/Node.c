@@ -143,7 +143,8 @@ static void node_parent_values(Node *self)
 	{
 		index_now = self->param_parent_indices[i];
 		Py_DECREF(self->parent_values[i]);
-		self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;				
+		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
+		//self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;				
 		Py_INCREF(self->parent_values[i]);
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);		
 	}
@@ -152,7 +153,8 @@ static void node_parent_values(Node *self)
 	{
 		index_now = self->node_parent_indices[i];
 		Py_DECREF(self->parent_values[i]);
-		self->parent_values[index_now] = Node_getvalue((Node*) (self->parent_pointers[index_now]), closure_arg);				
+		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
+		//self->parent_values[index_now] = Node_getvalue((Node*) (self->parent_pointers[index_now]), closure_arg);				
 		Py_INCREF(self->parent_values[i]);		
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}
@@ -177,7 +179,8 @@ static int node_check_for_recompute(Node *self)
 		for(j=0;j<self->N_node_parents;j++)
 		{
 			index_now = self->node_parent_indices[j];
-			if(self->parent_timestamp_caches[i][index_now]!=((Node*) self->parent_pointers[index_now])->timestamp)
+			//if(self->parent_timestamp_caches[i][index_now]!=(((Node*) self->parent_pointers[index_now])->timestamp))
+			if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
 			{
 				recompute = 1;
 				break;
@@ -189,7 +192,8 @@ static int node_check_for_recompute(Node *self)
 			for(j=0;j<self->N_param_parents;j++)
 			{
 				index_now = self->param_parent_indices[j];
-				if(self->parent_timestamp_caches[i][index_now]!=((Parameter*) self->parent_pointers[index_now])->timestamp)
+				//if(self->parent_timestamp_caches[i][index_now]!=(((Parameter*) self->parent_pointers[index_now])->timestamp))
+				if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
 				{
 					recompute = 1;
 					break;
@@ -218,16 +222,19 @@ static void node_cache(Node *self)
 	{
 		index_now = self->node_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
-		self->parent_timestamp_caches[0][index_now] = dummy;
+		//dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
+		//self->parent_timestamp_caches[0][index_now] = dummy;
+		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
+		
 	}
 	
 	for(j=0;j<self->N_param_parents;j++)
 	{
 		index_now = self->param_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
-		self->parent_timestamp_caches[0][index_now] = dummy;
+		//dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
+		//self->parent_timestamp_caches[0][index_now] = dummy;
+		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
 	}
 }
 
@@ -262,12 +269,34 @@ Node_setvalue(Node *self, PyObject *value, void *closure)
 	return -1;
 }
 
+// Get and set timestamp
+static PyObject * 
+Node_gettimestamp(Node *self, void *closure) 
+{
+	PyObject *timestamp;
+	timestamp = Py_BuildValue("i", self->timestamp);
+	
+	Py_INCREF(timestamp); 
+	return timestamp;
+}
+static int 
+Node_settimestamp(Node *self, PyObject *value, void *closure) 
+{ 
+	PyErr_SetString(PyExc_TypeError, "Node.timestamp cannot be set."); 
+	return -1;
+}
+
 // Get/set function table
 static PyGetSetDef Node_getseters[] = { 
 
 	{"value", 
 	(getter)Node_getvalue, (setter)Node_setvalue, 
 	"value of Node", 
+	NULL},
+	
+	{"timestamp", 
+	(getter)Node_gettimestamp, (setter)Node_settimestamp,
+	"timestamp of Node",
 	NULL}, 
 
 	{NULL} /* Sentinel */ 
