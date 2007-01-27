@@ -81,19 +81,54 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	return 0; 
 } 
 
+static void Param_dealloc(Parameter *self)
+{
+	int i;
+	
+	Py_DECREF(self->value);
+	Py_DECREF(self->last_value);
+	Py_DECREF(self->logp);
+	Py_DECREF(self->logp_fun);
+	Py_DECREF(self->parents);
+	Py_DECREF(self->children);
+	Py_DECREF(self->__doc__);
+	Py_DECREF(self->__name__);
+	Py_DECREF(self->random_fun);
+	Py_DECREF(self->trace);
+	Py_DECREF(self->rseed);
+	Py_DECREF(self->val_tuple);	
+	Py_DECREF(self->parent_value_dict);
+	
+	for(  i = 0; i < self->N_parents; i ++ )
+	{
+		Py_DECREF(self->parent_pointers[i]);
+		Py_XDECREF(self->parent_values[i]);
+		Py_DECREF(self->parent_keys[i]);
+	}
+
+	PyObject *logp_caches[2];	
+	for(i=0;i<2;i++) Py_DECREF(self->logp_caches[i]);
+	
+	
+	free(self->parent_keys);
+	free(self->parent_pointers);
+	free(self->parent_values);
+	free(self->pymc_parent_indices);
+	free(self->constant_parent_indices);
+}
+
 static void parse_parents_of_param(Parameter *self)
 {
 
 	PyObject *parent_items; 
 	PyObject *parent_now;
 	PyObject *key_now;
-	int i, j;
+	int i, j;	
 	
 	self->N_parents = (int) PyDict_Size(self->parents);
 	parent_items =  PyDict_Items(self->parents);	
 
-	self->node_parent_indices = malloc(sizeof(int) * self->N_parents);
-	self->param_parent_indices = malloc(sizeof(int) * self->N_parents);	
+	self->pymc_parent_indices = malloc(sizeof(int) * self->N_parents);
 	self->constant_parent_indices = malloc(sizeof(int) * self->N_parents);
 	
 	self->parent_pointers = malloc(sizeof(int) * self->N_parents );
@@ -101,13 +136,13 @@ static void parse_parents_of_param(Parameter *self)
 	self->parent_values = malloc(sizeof(PyObject*) * self->N_parents );
 	self->parent_value_dict = PyDict_New();
 	
-	self->N_node_parents = 0;
-	self->N_param_parents = 0;	
+	self->N_pymc_parents = 0;
 	self->N_constant_parents = 0;
 	
 	for(i=0;i<self->N_parents;i++)
 	{
-
+		
+		//PyTuple_GetItem and PyDict_GetItem return borrowed references
 		key_now = PyTuple_GetItem(PyList_GetItem(parent_items, i), 0);
 		parent_now = PyTuple_GetItem(PyList_GetItem(parent_items, i), 1);
 		
@@ -117,30 +152,18 @@ static void parse_parents_of_param(Parameter *self)
 		Py_INCREF(parent_now);
 		Py_INCREF(key_now);
 
-		if(PyObject_IsInstance(parent_now, (PyObject*) &Nodetype))
+		if(PyObject_IsInstance(parent_now, (PyObject*) &PyMCBasetype))
 		{
-			self->node_parent_indices[self->N_node_parents] = i;
-			self->N_node_parents++;
-			self->parent_values[i] = ((Node*) parent_now)->value;
-			Py_INCREF(self->parent_values[i]);
-			PyObject_CallMethodObjArgs(((Node*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);
+			self->pymc_parent_indices[self->N_pymc_parents] = i;
+			self->N_pymc_parents++;
+			self->parent_values[i] = PyObject_GetAttrString(self->parent_pointers[i], "value");
+			PyObject_CallMethodObjArgs(PyObject_GetAttrString(self->parent_pointers[i], "children"), Py_BuildValue("s","add"), self, NULL);							
 		}
 		else
 		{	
-			if(PyObject_IsInstance(parent_now, (PyObject*) &Paramtype))
-			{
-				self->param_parent_indices[self->N_param_parents] = i;
-				self->N_param_parents++;
-				self->parent_values[i] = ((Parameter*) parent_now)->value;
-				Py_INCREF(self->parent_values[i]);
-				PyObject_CallMethodObjArgs(((Parameter*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);				
-			}
-			else
-			{
-				self->constant_parent_indices[self->N_constant_parents] = i;
-				self->N_constant_parents++;
-				self->parent_values[i] = parent_now;
-			}	
+			self->constant_parent_indices[self->N_constant_parents] = i;
+			self->N_constant_parents++;
+			self->parent_values[i] = parent_now;
 		}
 		
 		PyDict_SetItem(self->parent_value_dict, key_now, self->parent_values[i]);
@@ -150,6 +173,7 @@ static void parse_parents_of_param(Parameter *self)
 		self->parent_timestamp_caches[i] = malloc(sizeof(int) * self->N_parents );
 		for(j=0;j<self->N_parents;j++) self->parent_timestamp_caches[i][j] = -1;
 	}
+	Py_DECREF(parent_items);
 }
 
 
@@ -157,24 +181,12 @@ static void param_parent_values(Parameter *self)
 {
 	int index_now, i;
 	void *closure_arg;
-
-	for( i = 0; i < self->N_param_parents; i ++ )
-	{
-		index_now = self->param_parent_indices[i];
-		Py_DECREF(self->parent_values[i]);
-		//self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;
-		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
-		Py_INCREF(self->parent_values[i]);
-		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
-	}
 	
-	for( i = 0; i < self->N_node_parents; i ++ )
+	for( i = 0; i < self->N_pymc_parents; i ++ )
 	{
-		index_now = self->node_parent_indices[i];
-		Py_DECREF(self->parent_values[i]);		
-		//self->parent_values[index_now] = Node_getvalue(((Node*) self->parent_pointers[index_now]), closure_arg);	
-		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
-		Py_INCREF(self->parent_values[i]);		
+		index_now = self->pymc_parent_indices[i];
+		Py_DECREF(self->parent_values[index_now]);		
+		self->parent_values[index_now] = PyObject_GetAttrString(self->parent_pointers[index_now], "value");
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}	
 }
@@ -183,47 +195,35 @@ static void param_parent_values(Parameter *self)
 static void compute_logp(Parameter *self)
 {
 	PyObject *new_logp, *val_tuple;	
+	Py_DECREF(self->logp);
 	param_parent_values(self);
 	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
 	new_logp = PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
-	Py_INCREF(new_logp);	
-	Py_DECREF(self->logp);
 	self->logp = new_logp;
 }
 
 static int param_check_for_recompute(Parameter *self)
 {
 	int i,j,recompute,index_now;
+	//PyObject *timestamp;
 	recompute = 1;
 	for(i=0;i<2;i++)
 	{
 		if(self->timestamp_caches[i]==self->timestamp)
 		{
 			recompute = 0;
-			for(j=0;j<self->N_node_parents;j++)
+			for(j=0;j<self->N_pymc_parents;j++)
 			{
-				index_now = self->node_parent_indices[j];
-				if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
-				//if(self->parent_timestamp_caches[i][index_now]! =((Node*) self->parent_pointers[index_now])->timestamp)
+				index_now = self->pymc_parent_indices[j];
+				//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");				
+				//if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(timestamp))
+				if(self->parent_timestamp_caches[i][index_now] != downlow_gettimestamp((Parameter*) self->parent_pointers[index_now]))
 				{
 					recompute = 1;
 					break;
 				}
-			}
-			
-			if(recompute==0)
-			{
-				for(j=0;j<self->N_param_parents;j++)
-				{
-					index_now = self->param_parent_indices[j];
-					if(self->parent_timestamp_caches[i][index_now]!=(int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
-					//if(self->parent_timestamp_caches[i][index_now]!=((Parameter*) self->parent_pointers[index_now])->timestamp)
-					{
-						recompute = 1;
-						break;
-					}
-				}				
-			}
+				//Py_DECREF(timestamp);
+			}			
 		}
 		if(recompute==0)
 		{
@@ -243,23 +243,16 @@ static void param_cache(Parameter *self)
 	
 	self->timestamp_caches[1] = self->timestamp_caches[0];
 	self->timestamp_caches[0] = self->timestamp;
-	
-	for(j=0;j<self->N_node_parents;j++)
+
+	for(j=0;j<self->N_pymc_parents;j++)
 	{
-		index_now = self->node_parent_indices[j];
+		index_now = self->pymc_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		//dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
-		//self->parent_timestamp_caches[0][index_now] = dummy;
-		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
-	}
-	
-	for(j=0;j<self->N_param_parents;j++)
-	{
-		index_now = self->param_parent_indices[j];
-		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		//dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
-		//self->parent_timestamp_caches[0][index_now] = dummy;
-		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
+		//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
+		//self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(timestamp);
+		self->parent_timestamp_caches[0][index_now] = downlow_gettimestamp((Parameter*) self->parent_pointers[index_now]);
+		//Py_DECREF(timestamp);
+
 	}
 }
 
@@ -276,8 +269,8 @@ Parameter_setvalue(Parameter *self, PyObject *value, void *closure)
 	if(self->isdata == 1) PyErr_SetString(PyExc_AttributeError, "Data objects' values cannot be set.");
 	else{	
 		Py_DECREF(self->last_value);
-		Py_INCREF(value);	
 		self->last_value = self->value;
+		Py_INCREF(value);	
 		self->value = value;
 		if(self->reverted <1) self->timestamp++;
 		else{
@@ -294,6 +287,7 @@ Parameter_getlogp(Parameter *self, void *closure)
 {
 	int i;
 	i=param_check_for_recompute(self);
+	//i=-1;
 	
 	if(i<0) 
 	{
@@ -309,7 +303,7 @@ Parameter_getlogp(Parameter *self, void *closure)
 	}
 	
 	Py_INCREF(self->logp); 
-	//return Py_BuildValue("(O,[O,O])",self->logp, self->logp_caches[0], self->logp_caches[1]); 
+	//return Py_BuildValue("(O,[i,i])",self->logp, self->parent_timestamp_caches[0][1]); 
 	return self->logp;
 } 
 
@@ -320,14 +314,13 @@ Parameter_setlogp(Parameter *self, PyObject *value, void *closure)
 	return -1;
 }
 
+
 // Get and set timestamp
 static PyObject * 
 Parameter_gettimestamp(Parameter *self, void *closure) 
 {
 	PyObject *timestamp;
 	timestamp = Py_BuildValue("i", self->timestamp);
-	
-	Py_INCREF(timestamp); 
 	return timestamp;
 }
 static int 
@@ -379,15 +372,12 @@ Param_revert(Parameter *self)
 static PyObject*
 Param_random(Parameter *self)
 {
-	PyObject *new_value;
 	if (!self->random_fun) PyErr_SetString(PyExc_TypeError, "No random() function specified.");
 	
 	param_parent_values(self);
-	new_value = PyObject_Call(self->random_fun, PyTuple_New(0), self->parent_value_dict);
-	Py_INCREF(new_value);
 	Py_DECREF(self->last_value);
 	self->last_value = self->value;
-	self->value = new_value;
+	self->value = PyObject_Call(self->random_fun, PyTuple_New(0), self->parent_value_dict);
 	if(self->reverted <1) self->timestamp++;
 	else{
 		self->timestamp += 2;
@@ -398,14 +388,14 @@ Param_random(Parameter *self)
 	return self->value;
 }
 
-// Lord alone knows what this is.
+// Type declaration
 static PyTypeObject Paramtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,						/*ob_size*/
 	"Parameter",			/*tp_name*/
 	sizeof(Parameter),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
-	(destructor)0,	/*tp_dealloc*/
+	(destructor)Param_dealloc,	/*tp_dealloc*/
 	(printfunc)0,		/*tp_print*/
 	0,//(getattrfunc)Param_getattr,	/*tp_getattr*/
 	0,//(setattrfunc)Param_setattr,	/*tp_setattr*/

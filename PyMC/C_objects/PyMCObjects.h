@@ -71,12 +71,10 @@ typedef struct {
 
 	int N_parents;
 
-	int N_node_parents;
-	int N_param_parents;
+	int N_pymc_parents;
 	int N_constant_parents;
 
-	int *node_parent_indices;
-	int *param_parent_indices;
+	int *pymc_parent_indices;
 	int *constant_parent_indices;
 	
 	PyObject **parent_pointers;
@@ -103,6 +101,8 @@ static void node_cache(Node *self);
 
 static PyObject *Node_getvalue(Node *self, void *closure);
 static int Node_setvalue(Node *self, PyObject *value, void *closure);
+
+static void Node_dealloc(Node* self);
 
 
 // Empty methods table for Node
@@ -190,12 +190,10 @@ typedef struct {
 	
 	int N_parents;
 
-	int N_node_parents;
-	int N_param_parents;
+	int N_pymc_parents;
 	int N_constant_parents;
 
-	int *node_parent_indices;
-	int *param_parent_indices;
+	int *pymc_parent_indices;
 	int *constant_parent_indices;
 	
 	PyObject **parent_pointers;
@@ -203,7 +201,6 @@ typedef struct {
 	PyObject **parent_values;
 	PyObject *parent_value_dict;
 
-	PyObject *value_caches[2];
 	PyObject *logp_caches[2];	
 	int timestamp_caches[2];
 	int *parent_timestamp_caches[2];
@@ -232,6 +229,8 @@ static PyObject* Param_random(Parameter *self);
 static char Param_revert__doc__[] = "Call this when rejecting a jump.";
 static PyObject* Param_revert(Parameter *self);
 
+static void Param_dealloc(Parameter *self);
+
 
 
 // Members table for Parameter
@@ -259,5 +258,7 @@ static PyMethodDef Param_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
+static int downlow_gettimestamp(Parameter *self)
+{return self->timestamp;}
 
 #endif /* _PYMCOBJECTS_H_ */

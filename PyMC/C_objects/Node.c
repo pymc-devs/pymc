@@ -61,6 +61,38 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	return 0;
 }
 
+static void Node_dealloc(Node* self)
+{
+	
+	int i, index_now;
+	
+	Py_DECREF(self->value);
+	Py_DECREF(self->eval_fun);
+	
+	Py_DECREF(self->parents);
+	Py_DECREF(self->children);
+	Py_DECREF(self->__doc__);
+	Py_DECREF(self->__name__);
+	Py_DECREF(self->trace);
+	Py_DECREF(self->parent_value_dict);
+	
+	for( i = 0; i < self->N_parents; i++ )
+	{
+		Py_DECREF(self->parent_pointers[i]);
+		Py_XDECREF(self->parent_values[i]);
+		Py_DECREF(self->parent_keys[i]);
+	}
+	
+	for(i=0;i<2;i++) Py_DECREF(self->value_caches[i]);
+	
+	free(self->parent_keys);
+	free(self->parent_pointers);
+	free(self->parent_values);
+	free(self->pymc_parent_indices);
+	free(self->constant_parent_indices);
+	
+}
+
 
 static void parse_parents_of_node(Node *self)
 {
@@ -73,8 +105,7 @@ static void parse_parents_of_node(Node *self)
 	self->N_parents = (int) PyDict_Size(self->parents);
 	parent_items =  PyDict_Items(self->parents);	
 
-	self->node_parent_indices = malloc(sizeof(int) * self->N_parents);
-	self->param_parent_indices = malloc(sizeof(int) * self->N_parents);	
+	self->pymc_parent_indices = malloc(sizeof(int) * self->N_parents);
 	self->constant_parent_indices = malloc(sizeof(int) * self->N_parents);
 	
 	self->parent_pointers = malloc(sizeof(int) * self->N_parents );
@@ -82,8 +113,7 @@ static void parse_parents_of_node(Node *self)
 	self->parent_values = malloc(sizeof(PyObject*) * self->N_parents );
 	self->parent_value_dict = PyDict_New();
 	
-	self->N_node_parents = 0;
-	self->N_param_parents = 0;	
+	self->N_pymc_parents = 0;
 	self->N_constant_parents = 0;
 	
 	for(i=0;i<self->N_parents;i++)
@@ -98,30 +128,19 @@ static void parse_parents_of_node(Node *self)
 		Py_INCREF(parent_now);
 		Py_INCREF(key_now);
 
-		if(PyObject_IsInstance(parent_now, (PyObject*) &Nodetype))
+		if(PyObject_IsInstance(parent_now, (PyObject*) &PyMCBasetype))
 		{
-			self->node_parent_indices[self->N_node_parents] = i;
-			self->N_node_parents++;
-			self->parent_values[i] = ((Node*) parent_now)->value;
-			PyObject_CallMethodObjArgs(((Node*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);							
+			self->pymc_parent_indices[self->N_pymc_parents] = i;
+			self->N_pymc_parents++;
+			self->parent_values[i] = PyObject_GetAttrString(self->parent_pointers[i], "value");
+			PyObject_CallMethodObjArgs(PyObject_GetAttrString(self->parent_pointers[i], "children"), Py_BuildValue("s","add"), self, NULL);							
 		}
 		else
 		{	
-			if(PyObject_IsInstance(parent_now, (PyObject*) &Paramtype))
-			{
-				self->param_parent_indices[self->N_param_parents] = i;
-				self->N_param_parents++;
-				self->parent_values[i] = ((Parameter*) parent_now)->value;
-				Py_INCREF(self->parent_values[i]);				
-				PyObject_CallMethodObjArgs(((Parameter*) parent_now)->children, Py_BuildValue("s","add"), self, NULL);
-			}
-			else
-			{
-				self->constant_parent_indices[self->N_constant_parents] = i;
-				self->N_constant_parents++;
-				self->parent_values[i] = parent_now;
-				Py_INCREF(self->parent_values[i]);				
-			}	
+			self->constant_parent_indices[self->N_constant_parents] = i;
+			self->N_constant_parents++;
+			self->parent_values[i] = parent_now;
+			//Py_INCREF(self->parent_values[i]);				
 		}
 		
 		PyDict_SetItem(self->parent_value_dict, key_now, self->parent_values[i]);
@@ -139,24 +158,13 @@ static void node_parent_values(Node *self)
 	void *closure_arg;
 	Node* parent_now;
 
-	for( i = 0; i < self->N_param_parents; i++ )
+	for( i = 0; i < self->N_pymc_parents; i++ )
 	{
-		index_now = self->param_parent_indices[i];
-		Py_DECREF(self->parent_values[i]);
-		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
-		//self->parent_values[index_now] = ((Parameter*) self->parent_pointers[index_now])->value;				
-		Py_INCREF(self->parent_values[i]);
-		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);		
-	}
-	
-	for( i = 0; i < self->N_node_parents; i++ )
-	{
-		index_now = self->node_parent_indices[i];
-		Py_DECREF(self->parent_values[i]);
-		PyObject_GetAttrString(self->parent_pointers[index_now], "value");
-		//self->parent_values[index_now] = Node_getvalue((Node*) (self->parent_pointers[index_now]), closure_arg);				
-		Py_INCREF(self->parent_values[i]);		
-		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
+		index_now = self->pymc_parent_indices[i];
+		Py_DECREF(self->parent_values[index_now]);			
+		self->parent_values[index_now] = PyObject_GetAttrString(self->parent_pointers[index_now], "value");
+		//Py_INCREF(self->parent_values[index_now]);		
+		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);
 	}
 }
 
@@ -165,7 +173,7 @@ static void compute_value(Node *self)
 	PyObject *new_value;
 	node_parent_values(self);
 	new_value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
-	Py_INCREF(new_value);	
+	//Py_INCREF(new_value);	
 	Py_DECREF(self->value);
 	self->value = new_value;
 }
@@ -173,44 +181,32 @@ static void compute_value(Node *self)
 static int node_check_for_recompute(Node *self)
 {
 	int i,j,recompute,index_now;
+	//PyObject *timestamp;
 	recompute = 0;
 	for(i=0;i<2;i++)
 	{
-		for(j=0;j<self->N_node_parents;j++)
+		for(j=0;j<self->N_pymc_parents;j++)
 		{
-			index_now = self->node_parent_indices[j];
-			//if(self->parent_timestamp_caches[i][index_now]!=(((Node*) self->parent_pointers[index_now])->timestamp))
-			if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
+			index_now = self->pymc_parent_indices[j];
+			//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
+			//if(self->parent_timestamp_caches[i][index_now] != PyInt_AS_LONG(timestamp));
+			if(self->parent_timestamp_caches[i][index_now] != downlow_gettimestamp((Parameter *)(self->parent_pointers[index_now])))
 			{
 				recompute = 1;
 				break;
 			}
+			//Py_DECREF(timestamp);
 		}
-		
-		if(recompute==0)
-		{
-			for(j=0;j<self->N_param_parents;j++)
-			{
-				index_now = self->param_parent_indices[j];
-				//if(self->parent_timestamp_caches[i][index_now]!=(((Parameter*) self->parent_pointers[index_now])->timestamp))
-				if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp")))
-				{
-					recompute = 1;
-					break;
-				}
-			}				
-		}		
-		if(recompute==0)
-		{
-			return i;
-		}
+
+		if(recompute==0) return i;
 	}
 	return -1;
 }
 
 static void node_cache(Node *self)
 {
-	int j, index_now, dummy;
+	int j, index_now;
+	//PyObject *timestamp;
 	Py_INCREF(self->value);
 	Py_DECREF(self->value_caches[1]);
 	self->value_caches[1] = self->value_caches[0];
@@ -218,23 +214,14 @@ static void node_cache(Node *self)
 	
 	self->timestamp++;
 	
-	for(j=0;j<self->N_node_parents;j++)
+	for(j=0;j<self->N_pymc_parents;j++)
 	{
-		index_now = self->node_parent_indices[j];
+		index_now = self->pymc_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		//dummy = ((Node*) self->parent_pointers[index_now])->timestamp;
-		//self->parent_timestamp_caches[0][index_now] = dummy;
-		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
-		
-	}
-	
-	for(j=0;j<self->N_param_parents;j++)
-	{
-		index_now = self->param_parent_indices[j];
-		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		//dummy = ((Parameter*) self->parent_pointers[index_now])->timestamp;
-		//self->parent_timestamp_caches[0][index_now] = dummy;
-		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp"));
+		//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
+		//self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(timestamp);
+		self->parent_timestamp_caches[0][index_now] = downlow_gettimestamp((Parameter *)(self->parent_pointers[index_now]));
+		//Py_DECREF(timestamp);
 	}
 }
 
@@ -244,6 +231,7 @@ Node_getvalue(Node *self, void *closure)
 {
 	int i;
 	i=node_check_for_recompute(self);
+	//i=-1;
 	
 	if(i<0) 
 	{
@@ -269,16 +257,16 @@ Node_setvalue(Node *self, PyObject *value, void *closure)
 	return -1;
 }
 
+
 // Get and set timestamp
 static PyObject * 
 Node_gettimestamp(Node *self, void *closure) 
 {
 	PyObject *timestamp;
 	timestamp = Py_BuildValue("i", self->timestamp);
-	
-	Py_INCREF(timestamp); 
 	return timestamp;
 }
+
 static int 
 Node_settimestamp(Node *self, PyObject *value, void *closure) 
 { 
@@ -303,14 +291,14 @@ static PyGetSetDef Node_getseters[] = {
 }; 
 
 
-// Ancient Egyptian heiroglyphics
+// Type declaration
 static PyTypeObject Nodetype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
 	"Node",			/*tp_name*/
 	sizeof(Node),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
-	(destructor)0,	/*tp_dealloc*/
+	(destructor)Node_dealloc,	/*tp_dealloc*/
 	(printfunc)0,		/*tp_print*/
 	0,//(getattrfunc)Node_getattr,	/*tp_getattr*/
 	0,//(setattrfunc)Node_setattr,	/*tp_setattr*/
