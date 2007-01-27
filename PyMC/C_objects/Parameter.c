@@ -180,7 +180,6 @@ static void parse_parents_of_param(Parameter *self)
 static void param_parent_values(Parameter *self)
 {
 	int index_now, i;
-	void *closure_arg;
 	
 	for( i = 0; i < self->N_pymc_parents; i ++ )
 	{
@@ -194,12 +193,10 @@ static void param_parent_values(Parameter *self)
 
 static void compute_logp(Parameter *self)
 {
-	PyObject *new_logp, *val_tuple;	
 	Py_DECREF(self->logp);
 	param_parent_values(self);
-	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
-	new_logp = PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
-	self->logp = new_logp;
+	PyTuple_SET_ITEM(self->val_tuple,0,self->value);
+	self->logp = PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
 }
 
 static int param_check_for_recompute(Parameter *self)
@@ -235,7 +232,7 @@ static int param_check_for_recompute(Parameter *self)
 
 static void param_cache(Parameter *self)
 {
-	int j, index_now, dummy;
+	int j, index_now;
 	Py_INCREF(self->logp);
 	Py_DECREF(self->logp_caches[1]);
 	self->logp_caches[1] = self->logp_caches[0];

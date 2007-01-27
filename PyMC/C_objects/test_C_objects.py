@@ -1,6 +1,8 @@
 from C_decorators import *
+from numpy import zeros
 from numpy.random import randn
 from sys import getrefcount
+from gc import *
 
 def my_fun(First):
 	return float(First)
@@ -26,11 +28,14 @@ def P1(value=4.,First = A, Second = B):
 		return rmy_dist(First, Second)
 		#return 0.
 
+
 @node
 def N1(Base = P1, Exponent = B):
 	"""Node_A = Exp(Base, Exponent)"""
 	return Base ** Exponent
 	#return 0.
+
+
 	
 @parameter
 def P2(value=3.,First = P1, Second = N1):
@@ -39,14 +44,21 @@ def P2(value=3.,First = P1, Second = N1):
 	#return 0.
 
 """
-The following test is 5.5X faster on my laptop than with pure-Python objects,
-with all functions above returning 0.
-
-BUT it gets slower on subsequent runs, indicating there's a memory leak.
+Way faster than not in C.
 """
-for i in range(100000):
-	#print getrefcount(P2)
+collect()
+set_debug(DEBUG_LEAK)
+
+A1 = get_objects()
+
+for i in range(1000000):
 	P1.random()
 	N1.value
 	P2.logp
-	#A=raw_input()
+	
+A2 = get_objects()
+
+print len(A2) - len(A1)
+
+collect()
+print garbage

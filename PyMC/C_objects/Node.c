@@ -155,8 +155,6 @@ static void parse_parents_of_node(Node *self)
 static void node_parent_values(Node *self)
 {
 	int index_now, i;
-	void *closure_arg;
-	Node* parent_now;
 
 	for( i = 0; i < self->N_pymc_parents; i++ )
 	{
@@ -170,12 +168,9 @@ static void node_parent_values(Node *self)
 
 static void compute_value(Node *self)
 {
-	PyObject *new_value;
 	node_parent_values(self);
-	new_value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
-	//Py_INCREF(new_value);	
 	Py_DECREF(self->value);
-	self->value = new_value;
+	self->value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
 }
 
 static int node_check_for_recompute(Node *self)

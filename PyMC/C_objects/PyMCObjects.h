@@ -258,6 +258,10 @@ static PyMethodDef Param_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
+// Eventually, this can check whether self is an Avatar.
+// Avatars can be just C containers for a timestamp and a pure-Python
+// object, and their 'get' methods will call the pure-Python object's
+// 'get' methods, which will communicate over the network.
 static int downlow_gettimestamp(Parameter *self)
 {return self->timestamp;}
 
