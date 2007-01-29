@@ -48,7 +48,7 @@ except:
     print 'Plotting disabled'
     PLOT=False
 SP = False
-def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
+def consistency(randomf, likef, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
     """Check the random generator is consistent with the likelihood.
 
@@ -66,26 +66,40 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
       - `like`: integrated likelihood over histogram bins.
     """
     # Samples values and compute histogram.
-    samples = random(size=nrandom, **params)
+    samples = randomf(size=nrandom, **params)
 
     hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
     if range is None:
         range = samples.min(), samples.max()
-    X = np.linspace(range[0], range[1], nbins*nintegration)
+    x = np.linspace(range[0], range[1], nbins*nintegration)
     l = []
-    for x in X:
-        l.append(like(x, **params))
+    for z in x:
+        l.append(likef(z, **params))
     L = np.exp(np.array(l))
 
-    figuredata = {'samples':samples, 'bins':output['edges'][:-1], \
-        'like':L.copy(), 'x':X}
+    figuredata = {'hist':hist, 'bins':output['edges'][:-1], \
+        'like':L.copy(), 'x':x}
 
     L = L.reshape(nbins, nintegration)
     like = L.mean(1)
     return hist, like, figuredata
 
+def discrete_consistency(randomf, likef, params,nrandom=1000, \
+    range=None,plot=None):
+    samples = randomf(size=nrandom, **params)
+    hist = np.bincount(samples)*1./nrandom
+    x = np.arange(len(hist))
+    l = []
+    for z in x:
+        l.append(likef(z, **params))
+    like = np.exp(np.array(l))
+    figuredata = {'hist':hist, 'bins':x, \
+        'like':like.copy(), 'x':x, 'discrete':True}
+    return hist, like, figuredata
+    
+    
 def mv_consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
     samples = random(n=nrandom, **params)
@@ -95,7 +109,7 @@ def mv_consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15
         z.append(like(s, **params))
     P = np.exp(np.array(z))
 
-def compare_hist(samples, bins, like, x, figname):
+def compare_hist(hist, bins, like, x, figname, discrete=False):
     """Plot and save a figure comparing the histogram with the
     probability.
 
@@ -106,8 +120,13 @@ def compare_hist(samples, bins, like, x, figname):
       - `x`: values at which like is computed.
     """
     ax = P.subplot(111)
-    ax.hist(samples, bins=bins,normed=True, alpha=.5)
-    ax.plot(x, like)
+    width = 0.9*(bins[1]-bins[0])
+    ax.bar(bins, hist, width)
+    P.setp(ax.patches, alpha=.5)
+    if discrete:
+        ax.plot(x, like, 'k', linestyle='steps')
+    else:
+        ax.plot(x, like, 'k')
     P.savefig('figs/' + figname)
     P.close()
 
@@ -176,16 +195,11 @@ class test_beta(NumpyTestCase):
 class test_binomial(NumpyTestCase):
     def check_consistency(self):
         params={'n':7, 'p':.7}
-        N = 2000
-        samples =[]
-        for i in range(N):
-            samples.append(rbinomial(**params))
-        H = np.bincount(samples)*1./N
-        like = []
-        for i in range(params['n']+1):
-            like.append(exp(flib.binomial(i, **params)))
-        like = np.array(like)
-        assert_array_almost_equal(H, like,1)
+        hist, like, figdata = discrete_consistency(rbinomial, flib.binomial, \
+            params, nrandom=2000)
+        assert_array_almost_equal(hist, like,1)
+        if PLOT:
+            compare_hist(figname='binomial', **figdata)
         # Check_normalization
         assert_almost_equal(like.sum(), 1, 4)
 
@@ -255,7 +269,7 @@ class test_dirichlet(NumpyTestCase):
         pass
 
 class test_exponential(NumpyTestCase):
-	"""Based on gamma."""
+    """Based on gamma."""
     def check_consistency(self):
         params={'beta':4}
         hist, like, figdata = consistency(rexponential, exponential_like, params,\
@@ -285,28 +299,28 @@ class test_gamma(NumpyTestCase):
         assert_almost_equal(integral, 1, 2)
 
 class test_geometric(NumpyTestCase):
-	"""Based on gamma."""
+    """Based on gamma."""
     def check_consistency(self):
         params={'p':.6}
-        hist, like, figdata = consistency(rgeometric, geometric_like, params,\
+        hist, like, figdata = discrete_consistency(rgeometric, geometric_like, params,\
             nrandom=5000)
         if PLOT:
             compare_hist(figname='geometric', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-class test_hnormal(NumpyTestCase):
-	def check_consistency(self):
-		params={'tau':.5}
-        hist, like, figdata = consistency(rhnormal, flib.hnormal, params,\
+class test_half_normal(NumpyTestCase):
+    def check_consistency(self):
+        params={'tau':.5}
+        hist, like, figdata = consistency(rhalf_normal, flib.hnormal, params,\
             nrandom=5000)
         if PLOT:
             compare_hist(figname='hnormal', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-	    def normalization(self):
+    def normalization(self):
         params = {'tau':2.}
-        integral = normalization(flib.hnormal, params, [0.1, 20], 200)
-        assert_almost_equal(integral, 1, 2)
+        integral = normalization(flib.hnormal, params, [0, 20], 200)
+        assert_almost_equal(integral, 1, 3)
 
 class test_poisson(NumpyTestCase):
     def check_consistency(self):

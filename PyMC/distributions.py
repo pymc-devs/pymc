@@ -54,12 +54,12 @@ def randomwrap(func):
       >>> rbernoulli(.1)
       0
       >>> rbernoulli([.1,.9])
-      array([0,1])
+      array([0, 1])
       >>> rbernoulli(.9, size=2)
-      array([1,1])
+      array([1, 1])
       >>> rbernoulli([.1,.9], 2)
       array([[0, 1],
-      [0, 1]])
+             [0, 1]])
     """
     # Vectorized functions do not accept keyword arguments, so they
     # must be translated into positional arguments.
@@ -67,22 +67,48 @@ def randomwrap(func):
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     vfunc = np.vectorize(func)
+    npos = len(refargs)-len(defaults) # Number of pos. arg.
+    nkwds = len(defaults) # Number of kwds args. 
+    
+    def wrapper2(*args, **kwds):
+        # First transform positional arguments into keywds args. 
+        if len(args)>0:
+            for a,n in zip(args, refargs):
+                kwds[n]=a
+        l = {}
+        for k, v in kwds.iteritems():
+            l[k] = len(v)
+        N = max(l.values())
+        if N ==1 :
+            return func(**kwds)
+        else:
+            result = []
+            for i in range(N):
+                tmp_kwds=jk
+                result.append(func(**tmp_kwds))
+                
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
+        n = len(args)
         if len(kwds) > 0:
             args = list(args)
-            for k in refargs:
-                if k in kwds.keys(): args.append(kwds[k])
-
+            for i,k in enumerate(refargs[n:]):
+                if k in kwds.keys(): 
+                    args.append(kwds[k])
+                else:
+                    args.append(defaults[n-npos+i])
+        
         r = [];s=[];largs=[];length=[1]
         for arg in args:
             length.append(np.size(arg))
         N = max(length)
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
+
         for arg in args:
-            arr = np.empty(N)
             s = np.size(arg)
+            t = type(arg)
+            arr = np.empty(N, type)
             if s == 1:
                 arr.fill(arg)
             elif s == N:
@@ -90,7 +116,6 @@ def randomwrap(func):
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
-
         for arg in zip(*largs):
             r.append(func(*arg))
 
@@ -228,7 +253,7 @@ def beta_like(x, alpha, beta):
       - `beta`: > 0
 
     :Example:
-      >>> flib.beta(.4,1,2)
+      >>> beta_like(.4,1,2)
       0.18232160806655884
 
     :Note:
@@ -261,7 +286,7 @@ def binomial_like(x, n, p):
     each of which yields success with probability p.
 
     .. math::
-        f(x \mid n, p) = \frac{n !}{x !(n-x) !} p^x (1-p)^{1-x}
+        f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
 
     :Parameters:
       x : float
@@ -454,7 +479,7 @@ def rexponweib(alpha, k, loc, scale, size=1):
 
     Random exponentiated Weibull variates.
     """
-    q = random.uniform(size)
+    q = random.uniform(size=size)
     r = flib.exponweib_ppf(q,alpha,k)
     return loc + r*scale
 
@@ -517,6 +542,18 @@ def gamma_like(x, alpha, beta):
 
 
 # GEV Generalized Extreme Value ------------------------
+@randomwrap
+def rgev(xi, mu=0, sigma=1, size=1):
+    """rgev(xi, mu=0, sigma=0, size=1)
+    
+    Random generalized extreme value (GEV) variates.
+    """
+    print size,mu,sigma
+    q = random.uniform(size=size)
+    z = flib.gev_ppf(q,xi)
+    print z
+    return (z+mu)*sigma
+    
 def gev_like(x, xi, mu=0, sigma=0):
     r"""gev_like(x, xi, mu=0, sigma=0)
 
@@ -537,13 +574,14 @@ def gev_like(x, xi, mu=0, sigma=0):
     return flib.gev(x,xi,loc, scale)
 
 # Geometric----------------------------------------------
+# Changed the return value
 @randomwrap
 def rgeometric(p, size=1):
     """rgeometric(p, size=1)
 
     Random geometric variates.
     """
-    return random.negative_binomial(1, p, size)
+    return random.geometric(p, size)
 
 def geometric_expval(p):
     return (1. - p) / p
@@ -561,7 +599,7 @@ def geometric_like(x, p):
       x : int
         Number of trials before first success, > 0.
       p : float
-        Probability of success on each trial, :math:`p \in [0,1]`
+        Probability of success on an individual trial, :math:`p \in [0,1]`
 
     :Note:
       - :math:`E(X)=1/p`
@@ -570,7 +608,7 @@ def geometric_like(x, p):
     """
     constrain(p, 0, 1)
     constrain(x, lower=0)
-    return flib.negbin2(x, 1, p)
+    return flib.geometric(x, p)
 
 # Half-normal----------------------------------------------
 @randomwrap
@@ -579,20 +617,28 @@ def rhalf_normal(tau, size=1):
 
     Random half-normal variates.
     """
-    return random.normal(0, sqrt(1/tau), size)
+    return np.abs(random.normal(0, sqrt(1/tau), size))
 
 def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
 
 def half_normal_like(x, tau):
-    """Half-normal log-likelihood
-
-    half_normal_like(x, tau)
-
-    x > 0, tau > 0
+    """half_normal_like(x, tau)
+    
+    Half-normal log-likelihood, a normal distribution with mean 0 and limited
+    to the domain :math:`x \in [0, \infty)`.
+    
+    .. math::
+        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}} \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+    
+    :Parameters:
+      x : float
+        :math:`x \ge 0`
+      tau : float 
+        :math:`\tau > 0`
     """
     constrain(tau, lower=0)
-    constrain(x, lower=0)
+    constrain(x, lower=0, allow_equal=True)
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------

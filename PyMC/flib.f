@@ -620,6 +620,34 @@ cf2py real intent(out) :: like
       END
 
 
+	  SUBROUTINE geometric(x,p,n,np,like)
+
+c Geometric log-likelihood
+
+c Created 29/01/2007 DH.
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py real dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
+cf2py real intent(out) :: like      
+
+	  IMPLICIT NONE
+	  INTEGER n,np,i
+	  INTEGER x(n)
+	  REAL p(np), p_tmp
+	  REAL like
+
+	  p_tmp = p(1)
+	  like = 0.0
+	  do i=1, n
+	  	if (np .NE. 1) p_tmp = p(i)
+		like = like + log(p_tmp) + (x(i)-1)* log(1-p_tmp)
+	  enddo
+	  return
+	  END SUBROUTINE geometric
+
+ 
       SUBROUTINE binomial(x,n,p,nx,nn,np,like)
 
 c Binomial log-likelihood function     
@@ -706,39 +734,57 @@ Cf2py real intent(out):: like
       INTEGER n, nmu, nxi, nsigma, i
       REAL X(N), xi(nxi), mu(nmu), sigma(nsigma), LIKE
       REAL Z(N), EX(N), PEX(N)
-      REAL XIt, SIGMAt
-      LOGICAL not_scalar_xi, not_scalar_sigma
-
-C     Check parameter size
-      not_scalar_xi =  (nxi .NE. 1)
-      not_scalar_sigma =  (nsigma .NE. 1)
-   
+      REAL XI_tmp, SIGMA_tmp
+        
       CALL standardize(x,mu,sigma,n,nu,nsigma,z)
 
-      xit = xi(1)
-      sigmat = sigma(1)
-
+      xi_tmp = xi(1)
+      sigma_tmp = sigma(1)
       LIKE = 0.0
-      
       DO I=1,N
-        if (not_scalar_xi) xit = xi(i)
-        if (not_scalar_sigma) sigmat = sigma(i)          
-    
-        IF (ABS(XIT) .LT. 10.**(-5.)) THEN
-          LIKE = LIKE - Z(I) - EXP(-Z(I))/SIGMAT
+        if (nxi .NE. 1) xi_tmp = xi(i)
+        if (nsigma .NE. 1) sigma_tmp = sigma(i)          
+        IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
+          LIKE = LIKE - Z(I) - EXP(-Z(I))/SIGMA_TMP
         ELSE 
-          EX(I) = 1. - xit*z(I)
+          EX(I) = 1. + xi_tmp*z(I)
           IF (EX(I) .LT. 0.) THEN
             LIKE = -3.4028235E+38
             RETURN
           ENDIF
-          PEX(I) = EX(I)**(1./xit)  
-          LIKE = LIKE - LOG(sigmat) - PEX(I) + LOG(PEX(I)) -LOG(EX(I))
+          PEX(I) = EX(I)**(-1./xi_tmp)  
+          LIKE = LIKE - LOG(sigma_tmp) - PEX(I) + LOG(PEX(I)) - 	LOG(EX(I))
         ENDIF
       ENDDO
 
       end subroutine gev    
     
+
+	  SUBROUTINE gev_ppf(q,xi,n,nxi,ppf)
+C
+C     COMPUTE THE Percentile Point function (PPF) OF THE 
+C	  GENERALIZED EXTREME VALUE DISTRIBUTION.
+C
+C Created 29/01/2007 DH.
+C
+Cf2py real dimension(n), intent(in):: q
+Cf2py real dimension(nxi), intent(in):: xi
+Cf2py integer intent(hide), depend(q)::n=len(q)
+Cf2py integer intent(hide), depend(xi,n),check(nxi==1 || nxi==n) :: nxi=len(xi)
+Cf2py real dimension(n), intent(out):: ppf
+
+	  IMPLICIT NONE
+      INTEGER n,nxi,i
+      REAL q(n), xi(nxi), ppf(n)
+      REAL xi_tmp
+	
+  	  xi_tmp = xi(1)
+	  do i=1,n
+		if (nxi .NE. 1) xi_tmp= xi(i)
+		ppf(i) = 1./xi_tmp * (1-(-log(q(i)))**(xi_tmp))
+	  enddo
+	  return 
+	  END SUBROUTINE gev_ppf
 
       SUBROUTINE multinomial(x,n,p,m,like)
 
