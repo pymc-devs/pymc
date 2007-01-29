@@ -1,9 +1,8 @@
 import subprocess
 import ipython1.kernel.api as kernel
-import proposition5
-"""The devs of ipython are refactoring the chainsaw branch. We should probably 
-wait awhile before commiting to much time on this, until their API is stable."""
-
+from Model import Model
+from PyMCObjects import Parameter, Node, PyMCBase
+from SamplingMethods import SamplingMethod
 
 class Parallel(Model):
     """
@@ -66,8 +65,7 @@ class Parallel(Model):
         # Push the individual models in each process
         # Works with ipython1 since jan 18. 2007. Buggy before that. 
         rc.pushModule(input)
-        # still buggy
-        rc.executeAll('import input') # input.__name__?
+        
         # Initiate Model instances in each process
         rc.pushModule(proposition5)
         

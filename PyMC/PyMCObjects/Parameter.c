@@ -43,15 +43,7 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	if(!self->__doc__) self->__doc__ = self->__name__;
 	if(!self->isdata) self->isdata = 0;
 	
-	// Incref all PyObjects so they don't go away.
-	Py_INCREF(self->logp_fun);
-	Py_INCREF(self->__name__);
-	Py_INCREF(self->value);
-	Py_INCREF(self->parents);
-	Py_XINCREF(self->__doc__);
-	Py_XINCREF(self->random_fun);
-	Py_XINCREF(self->trace);
-	Py_INCREF(self->children);	
+	self->reverted = 1;
 	
 	// Initialize PyObjects that aren't passed in.
 	self->val_tuple = PyTuple_New(1);
@@ -68,11 +60,41 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	self->last_value = Py_BuildValue("");
 	Py_INCREF(self->last_value);		
 	
-	if(!PyDict_Check(self->parents)) PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
-	else parse_parents_of_param(self);
+	if(!PyDict_Check(self->parents)){
+		PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
+		return -1;	
+	}
+	
+	if(!PyFunction_Check(self->logp_fun)){
+		PyErr_SetString(PyExc_TypeError, "Argument logp must be a function.");
+		return -1;
+	}
+	
+	if(!PyAnySet_Check(self->children)){
+		PyErr_SetString(PyExc_TypeError, "Argument children must be an empty set");
+		return -1;
+	}
+	
+	// Guard against subclassing
+	if(!PyObject_TypeCheck(self, &Paramtype)){
+		PyErr_SetString(PyExc_TypeError, "Parameter cannot be subclassed");
+		return -1;
+	}
+
+	// Incref all PyObjects so they don't go away.
+	Py_INCREF(self->logp_fun);
+	Py_INCREF(self->__name__);
+	Py_INCREF(self->value);
+	Py_INCREF(self->parents);
+	Py_XINCREF(self->__doc__);
+	Py_XINCREF(self->random_fun);
+	Py_XINCREF(self->trace);
+	Py_INCREF(self->children);
+
+	parse_parents_of_param(self);
 	
 	self->timestamp = 0;
-	self->reverted = 0;
+	self->max_timestamp = self->timestamp;
 	compute_logp(self);
 	param_cache(self);
 
@@ -85,29 +107,29 @@ static void Param_dealloc(Parameter *self)
 {
 	int i;
 	
-	Py_DECREF(self->value);
-	Py_DECREF(self->last_value);
-	Py_DECREF(self->logp);
-	Py_DECREF(self->logp_fun);
-	Py_DECREF(self->parents);
-	Py_DECREF(self->children);
-	Py_DECREF(self->__doc__);
-	Py_DECREF(self->__name__);
-	Py_DECREF(self->random_fun);
-	Py_DECREF(self->trace);
-	Py_DECREF(self->rseed);
-	Py_DECREF(self->val_tuple);	
-	Py_DECREF(self->parent_value_dict);
+	Py_XDECREF(self->value);
+	Py_XDECREF(self->last_value);
+	Py_XDECREF(self->logp);
+	Py_XDECREF(self->logp_fun);
+	Py_XDECREF(self->parents);
+	Py_XDECREF(self->children);
+	Py_XDECREF(self->__doc__);
+	Py_XDECREF(self->__name__);
+	Py_XDECREF(self->random_fun);
+	Py_XDECREF(self->trace);
+	Py_XDECREF(self->rseed);
+	Py_XDECREF(self->val_tuple);	
+	Py_XDECREF(self->parent_value_dict);
 	
 	for(  i = 0; i < self->N_parents; i ++ )
 	{
-		Py_DECREF(self->parent_pointers[i]);
+		Py_XDECREF(self->parent_pointers[i]);
 		Py_XDECREF(self->parent_values[i]);
-		Py_DECREF(self->parent_keys[i]);
+		Py_XDECREF(self->parent_keys[i]);
 	}
 
 	PyObject *logp_caches[2];	
-	for(i=0;i<2;i++) Py_DECREF(self->logp_caches[i]);
+	for(i=0;i<2;i++) Py_XDECREF(self->logp_caches[i]);
 	
 	
 	free(self->parent_keys);
@@ -115,6 +137,7 @@ static void Param_dealloc(Parameter *self)
 	free(self->parent_values);
 	free(self->pymc_parent_indices);
 	free(self->constant_parent_indices);
+	free(self->proxy_parent_indices);
 }
 
 static void parse_parents_of_param(Parameter *self)
@@ -130,14 +153,17 @@ static void parse_parents_of_param(Parameter *self)
 
 	self->pymc_parent_indices = malloc(sizeof(int) * self->N_parents);
 	self->constant_parent_indices = malloc(sizeof(int) * self->N_parents);
+	self->proxy_parent_indices = malloc(sizeof(int) * self->N_parents);	
 	
 	self->parent_pointers = malloc(sizeof(int) * self->N_parents );
 	self->parent_keys = malloc(sizeof(PyObject*) * self->N_parents );
 	self->parent_values = malloc(sizeof(PyObject*) * self->N_parents );
+	
 	self->parent_value_dict = PyDict_New();
 	
 	self->N_pymc_parents = 0;
 	self->N_constant_parents = 0;
+	self->N_proxy_parents = 0;
 	
 	for(i=0;i<self->N_parents;i++)
 	{
@@ -157,13 +183,22 @@ static void parse_parents_of_param(Parameter *self)
 			self->pymc_parent_indices[self->N_pymc_parents] = i;
 			self->N_pymc_parents++;
 			self->parent_values[i] = PyObject_GetAttrString(self->parent_pointers[i], "value");
-			PyObject_CallMethodObjArgs(PyObject_GetAttrString(self->parent_pointers[i], "children"), Py_BuildValue("s","add"), self, NULL);							
+			PyObject_CallMethodObjArgs(PyObject_GetAttrString(self->parent_pointers[i], "children"), Py_BuildValue("s","add"), self, NULL);
 		}
-		else
-		{	
-			self->constant_parent_indices[self->N_constant_parents] = i;
-			self->N_constant_parents++;
-			self->parent_values[i] = parent_now;
+		else{
+			if(PyObject_IsInstance(parent_now, (PyObject*) &RemoteProxyBasetype))
+			{
+				self->proxy_parent_indices[self->N_proxy_parents] = i;
+				self->N_proxy_parents++;
+				self->parent_values[i] = PyObject_GetAttrString(self->parent_pointers[i], "value");
+				PyObject_CallMethodObjArgs(PyObject_GetAttrString(self->parent_pointers[i], "children"), Py_BuildValue("s","add"), self, NULL);
+			}
+			else
+			{	
+				self->constant_parent_indices[self->N_constant_parents] = i;
+				self->N_constant_parents++;
+				self->parent_values[i] = parent_now;
+			}
 		}
 		
 		PyDict_SetItem(self->parent_value_dict, key_now, self->parent_values[i]);
@@ -188,6 +223,13 @@ static void param_parent_values(Parameter *self)
 		self->parent_values[index_now] = PyObject_GetAttrString(self->parent_pointers[index_now], "value");
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}	
+	for( i = 0; i < self->N_proxy_parents; i ++ )
+	{
+		index_now = self->proxy_parent_indices[i];
+		Py_DECREF(self->parent_values[index_now]);		
+		self->parent_values[index_now] = PyObject_GetAttrString(self->parent_pointers[index_now], "value");
+		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
+	}
 }
 
 
@@ -202,7 +244,7 @@ static void compute_logp(Parameter *self)
 static int param_check_for_recompute(Parameter *self)
 {
 	int i,j,recompute,index_now;
-	//PyObject *timestamp;
+	PyObject *timestamp;
 	recompute = 1;
 	for(i=0;i<2;i++)
 	{
@@ -212,15 +254,27 @@ static int param_check_for_recompute(Parameter *self)
 			for(j=0;j<self->N_pymc_parents;j++)
 			{
 				index_now = self->pymc_parent_indices[j];
-				//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");				
-				//if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(timestamp))
 				if(self->parent_timestamp_caches[i][index_now] != downlow_gettimestamp((Parameter*) self->parent_pointers[index_now]))
 				{
 					recompute = 1;
 					break;
 				}
-				//Py_DECREF(timestamp);
-			}			
+			}
+			if(recompute==0)
+			{
+				for(j=0;j<self->N_proxy_parents;j++)
+				{
+					index_now = self->proxy_parent_indices[j];		
+					timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
+					if(self->parent_timestamp_caches[i][index_now] != (int) PyInt_AS_LONG(timestamp));
+					{
+						recompute = 1;
+						Py_DECREF(timestamp);
+						break;
+					}
+					Py_DECREF(timestamp);
+				}	
+			}		
 		}
 		if(recompute==0)
 		{
@@ -235,6 +289,7 @@ static void param_cache(Parameter *self)
 	int j, index_now;
 	Py_INCREF(self->logp);
 	Py_DECREF(self->logp_caches[1]);
+	PyObject *timestamp;
 	self->logp_caches[1] = self->logp_caches[0];
 	self->logp_caches[0] = self->logp;
 	
@@ -245,12 +300,17 @@ static void param_cache(Parameter *self)
 	{
 		index_now = self->pymc_parent_indices[j];
 		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
-		//timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
-		//self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(timestamp);
 		self->parent_timestamp_caches[0][index_now] = downlow_gettimestamp((Parameter*) self->parent_pointers[index_now]);
-		//Py_DECREF(timestamp);
 
 	}
+	for(j=0;j<self->N_proxy_parents;j++)
+	{
+		index_now = self->proxy_parent_indices[j];
+		self->parent_timestamp_caches[1][index_now] = self->parent_timestamp_caches[0][index_now];
+		timestamp = PyObject_GetAttrString(self->parent_pointers[index_now], "timestamp");
+		self->parent_timestamp_caches[0][index_now] = (int) PyInt_AS_LONG(timestamp);
+		Py_DECREF(timestamp);
+	}	
 }
 
 // Get and set value
@@ -263,17 +323,19 @@ Parameter_getvalue(Parameter *self, void *closure)
 static int 
 Parameter_setvalue(Parameter *self, PyObject *value, void *closure) 
 {
-	if(self->isdata == 1) PyErr_SetString(PyExc_AttributeError, "Data objects' values cannot be set.");
-	else{	
+	if(self->isdata == 1) 
+	{
+		PyErr_SetString(PyExc_AttributeError, "Data objects' values cannot be set.");
+		return -1;
+	}
+	else{
+		self->reverted = 0;	
 		Py_DECREF(self->last_value);
 		self->last_value = self->value;
 		Py_INCREF(value);	
 		self->value = value;
-		if(self->reverted <1) self->timestamp++;
-		else{
-			self->timestamp += 2;
-			self->reverted = 0;
-		}
+		self->max_timestamp++;
+		self->timestamp = self->max_timestamp;
 		return 0;
 	}
 }
@@ -307,7 +369,7 @@ Parameter_getlogp(Parameter *self, void *closure)
 static int 
 Parameter_setlogp(Parameter *self, PyObject *value, void *closure) 
 {
-	PyErr_SetString(PyExc_TypeError, "Parameter.logp cannot be set."); 
+	PyErr_SetString(PyExc_AttributeError, "Parameter.logp cannot be set."); 
 	return -1;
 }
 
@@ -323,12 +385,34 @@ Parameter_gettimestamp(Parameter *self, void *closure)
 static int 
 Parameter_settimestamp(Parameter *self, PyObject *value, void *closure) 
 { 
-	PyErr_SetString(PyExc_TypeError, "Parameter.timestamp cannot be set."); 
+	PyErr_SetString(PyExc_AttributeError, "Parameter.timestamp cannot be set."); 
 	return -1;
 }
 
+
+// Get and set isdata
+static PyObject * 
+Parameter_getisdata(Parameter *self, void *closure) 
+{
+	PyObject *isdata;
+	isdata = Py_BuildValue("i", self->isdata);
+	return isdata;
+}
+static int 
+Parameter_setisdata(Parameter *self, PyObject *value, void *closure) 
+{ 
+	PyErr_SetString(PyExc_AttributeError, "Parameter.isdata cannot be set."); 
+	return -1;
+}
+
+
 // Get/set function table
 static PyGetSetDef Param_getseters[] = { 
+	
+	{"isdata", 
+	(getter)Parameter_getisdata, (setter)Parameter_setisdata, 
+	"Flag indicating whether Parameter is data or no", 
+	NULL}, 
 
 	{"timestamp", 
 	(getter)Parameter_gettimestamp, (setter)Parameter_settimestamp, 
@@ -353,14 +437,17 @@ static PyGetSetDef Param_getseters[] = {
 static PyObject*
 Param_revert(Parameter *self)
 {
+	if(self->reverted == 1)
+	{
+		PyErr_SetString(PyExc_RuntimeError, "Parameter objects' values must be changed between calls to revert().");
+		return NULL;		
+	}
+	self->reverted = 1;
 	Py_INCREF(self->last_value);
 	Py_DECREF(self->value);
 	
 	self->value = self->last_value;
-	self->timestamp--;	
-	Parameter_getlogp(self, self);
-	
-	self->reverted = 1;
+	self->timestamp--;
 	
 	return Py_None;
 }
@@ -369,17 +456,27 @@ Param_revert(Parameter *self)
 static PyObject*
 Param_random(Parameter *self)
 {
-	if (!self->random_fun) PyErr_SetString(PyExc_TypeError, "No random() function specified.");
+	if(self->isdata == 1) 
+	{
+		PyErr_SetString(PyExc_AttributeError, "Data objects' values cannot be set.");
+		return NULL;
+	}
+	else{
+		if (!self->random_fun | self->random_fun == Py_None) 
+		{
+			PyErr_SetString(PyExc_AttributeError, "No random() function specified.");
+			return NULL;
+		}		
+	}
+	
+	self->reverted = 0;
 	
 	param_parent_values(self);
 	Py_DECREF(self->last_value);
 	self->last_value = self->value;
 	self->value = PyObject_Call(self->random_fun, PyTuple_New(0), self->parent_value_dict);
-	if(self->reverted <1) self->timestamp++;
-	else{
-		self->timestamp += 2;
-		self->reverted = 0;
-	}
+	self->max_timestamp++;
+	self->timestamp = self->max_timestamp;
 	
 	Py_INCREF(self->value);
 	return self->value;

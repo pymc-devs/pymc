@@ -9,12 +9,29 @@ Pre-requisite modules: numpy, matplotlib
 Required external components: TclTk
 
 """
-
-__author__ = "Christopher Fonnesbeck <chris@trichech.us>"
-__version__ = "1.1"
-
-__modules__ = ["MCMC", "TimeSeries", "utils"]
-
+__modules__ = [ 'distributions',
+                'PyMCObjects',
+                'PyMCObjectDecorators',
+                'SamplingMethods',
+                'Model',
+                ]
+                
+__optmodules__ = [  'MultiModelInference',
+                    'DisasterModel']
+#ClosedCapture, OpenCapture                 
+          
 for mod in __modules__:
     exec "from %s import *" % mod
+
+for mod in __optmodules__:
+	try:
+	  exec "import %s" % mod
+	except ImportError:
+	    print 'Error importing module ', mod
+
+try:
+    import parallel
+except ImportError:
+    print 'For parallel-processing functionality install IPython1.'
+
 del mod

@@ -7,7 +7,7 @@
 
 static PyObject *ErrorObject;
 
-// Appease the demons
+// Declaration
 static PyTypeObject PyMCBasetype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
@@ -35,6 +35,9 @@ static PyTypeObject PyMCBasetype = {
 
 
 /* Some utility functions */
+
+
+
 
 
 #endif /* _PYMCBASE_H_ */

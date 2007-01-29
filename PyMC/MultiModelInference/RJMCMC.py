@@ -1,6 +1,6 @@
+from PyMCObjects import Parameter, Node, PyMCBase
+from SamplingMethods import SamplingMethod
 
-
-from proposition5 import *
 from numpy import ma, random, where
 from numpy.random import random
 from copy import deepcopy

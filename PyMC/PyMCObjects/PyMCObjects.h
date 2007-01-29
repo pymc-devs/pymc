@@ -1,9 +1,5 @@
-// TODO: Go through and comment while looking for memory leaks,
-// TODO: memory leaks most likely being the product of unmatched increfs.
-
 #ifndef _PYMCOBJECTS_H_
 #define _PYMCOBJECTS_H_
-
 
 
 /*****************
@@ -30,6 +26,28 @@ static char PyMCBasetype__doc__[] =
 
 
 
+
+/*******************
+ *
+ *	REMOTEPROXYBASE
+ *
+ *******************/
+
+// Declarations for dummy object RemoteProxyBase.
+typedef struct {
+	PyObject_HEAD
+	PyObject *value;
+} RemoteProxyBase;
+
+static PyTypeObject RemoteProxyBasetype;
+
+static char RemoteProxyBasetype__doc__[] = 
+"The base remote proxy object. Cannot be instantiated.\n\n"
+
+"See also RemoteProxy.";
+
+
+
 /*****************
  *
  *	NODE
@@ -53,6 +71,8 @@ static char Nodetype__doc__[] =
 "\tchildren :\tA set containing children of self.\n"
 "\t\t\tChildren must be PyMC objects.\n\n"
 
+"\ttrace:\t\tSelf's trace object.\n\n"
+
 "To instantiate: see node()\n\n"
 
 "See also Parameter and PyMCBase,\n"
@@ -73,9 +93,11 @@ typedef struct {
 
 	int N_pymc_parents;
 	int N_constant_parents;
+	int N_proxy_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
+	int *proxy_parent_indices;
 	
 	PyObject **parent_pointers;
 	PyObject **parent_keys;
@@ -101,6 +123,9 @@ static void node_cache(Node *self);
 
 static PyObject *Node_getvalue(Node *self, void *closure);
 static int Node_setvalue(Node *self, PyObject *value, void *closure);
+
+static PyObject* Node_gettimestamp(Node *self, void *closure);
+static int Node_settimestamp(Node *self, PyObject *value, void *closure);
 
 static void Node_dealloc(Node* self);
 
@@ -155,6 +180,8 @@ static char Paramtype__doc__[] =
 "\tchildren:\tA set containing children of self.\n"
 "\t\t\tChildren must be PyMC objects.\n\n"
 
+"\ttrace:\t\tSelf's trace object.\n\n"
+
 "Externally-accessible methods:\n\n"
 
 "\trevert():\tReturn value to last value, decrement timestamp.\n\n"
@@ -177,6 +204,7 @@ typedef struct {
 	PyObject *logp;
 	PyObject *logp_fun;
 	int timestamp;
+	int max_timestamp;
 	int reverted;
 	PyObject *parents;
 	PyObject *children;
@@ -192,9 +220,11 @@ typedef struct {
 
 	int N_pymc_parents;
 	int N_constant_parents;
+	int N_proxy_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
+	int *proxy_parent_indices;
 	
 	PyObject **parent_pointers;
 	PyObject **parent_keys;
@@ -223,6 +253,12 @@ static int Parameter_setvalue(Parameter *self, PyObject *value, void *closure);
 static PyObject *Parameter_getlogp(Parameter *self, void *closure);
 static int Parameter_setlogp(Parameter *self, PyObject *value, void *closure);
 
+static PyObject* Parameter_gettimestamp(Parameter *self, void *closure);
+static int Parameter_settimestamp(Parameter *self, PyObject *value, void *closure);
+
+static PyObject * Parameter_getisdata(Parameter *self, void *closure);
+static int Parameter_setisdata(Parameter *self, PyObject *value, void *closure);
+
 static char Param_random__doc__[] = "Sample self conditional on parents.";
 static PyObject* Param_random(Parameter *self);
 
@@ -237,8 +273,8 @@ static void Param_dealloc(Parameter *self);
 static PyMemberDef Param_members[] = { 
 {"parents", T_OBJECT, offsetof(Parameter, parents), RO, 
 "parents"},
-{"last_value", T_OBJECT, offsetof(Parameter, last_value), RO, 
-"last_value"},
+// {"last_value", T_OBJECT, offsetof(Parameter, last_value), RO, 
+// "last_value"},
 {"children", T_OBJECT, offsetof(Parameter, children), 0, 
 "children"},
 {"__doc__", T_OBJECT, offsetof(Parameter, __doc__), 0, 
@@ -258,10 +294,8 @@ static PyMethodDef Param_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
-// Eventually, this can check whether self is an Avatar.
-// Avatars can be just C containers for a timestamp and a pure-Python
-// object, and their 'get' methods will call the pure-Python object's
-// 'get' methods, which will communicate over the network.
+
+
 static int downlow_gettimestamp(Parameter *self)
 {return self->timestamp;}
 

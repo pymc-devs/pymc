@@ -14,7 +14,7 @@ static struct PyMethodDef PYMC_methods[] = {
 
 /* Initialization function for the module (*must* be called initPyMCObjects) */
 static char PyMCObjects_module_documentation[] = 
-"Constructors:\n\tParameter(logp, name, value, parents, children=set() | doc, random, trace, rseed, isdata),\n\tNode(eval, name, parents, children=set() | doc, trace)\n\tOptional after |";
+"PyMC Objects: PyMCBase, Parameter, Node, RemoteProxy";
 
 void
 initPyMCObjects()
@@ -29,6 +29,9 @@ initPyMCObjects()
 	/* Add Parameter and Node */
 	if(PyType_Ready(&PyMCBasetype)<0) return;
 	PyModule_AddObject(m, "PyMCBase", (PyObject *)&PyMCBasetype); 	
+	
+	if(PyType_Ready(&RemoteProxyBasetype)<0) return;
+	PyModule_AddObject(m, "RemoteProxyBase", (PyObject *)&RemoteProxyBasetype);	
 	
 	if(PyType_Ready(&Paramtype)<0) return;
 	PyModule_AddObject(m, "Parameter", (PyObject *)&Paramtype); 
