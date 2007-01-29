@@ -25,7 +25,7 @@ constraining to python.
 
 # TODO: Improve the assertion of consistency.
 #       Maybe compare the relative error (hist-like)/like. Doesn't work so well.
-#       Tried (hist-like)/sqrt(like), seems to work better. 
+#       Tried (hist-like)/sqrt(like), seems to work better.
 
 
 from decorators import *
@@ -67,7 +67,7 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     """
     # Samples values and compute histogram.
     samples = random(size=nrandom, **params)
-        
+
     hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
@@ -78,10 +78,10 @@ def consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     for x in X:
         l.append(like(x, **params))
     L = np.exp(np.array(l))
-    
+
     figuredata = {'samples':samples, 'bins':output['edges'][:-1], \
         'like':L.copy(), 'x':X}
-    
+
     L = L.reshape(nbins, nintegration)
     like = L.mean(1)
     return hist, like, figuredata
@@ -96,33 +96,33 @@ def mv_consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15
     P = np.exp(np.array(z))
 
 def compare_hist(samples, bins, like, x, figname):
-    """Plot and save a figure comparing the histogram with the 
+    """Plot and save a figure comparing the histogram with the
     probability.
-    
+
     :Parameters:
       - `samples`: random variables.
       - `like`: probability values.
-      - `bins`: histogram bins. 
-      - `x`: values at which like is computed. 
+      - `bins`: histogram bins.
+      - `x`: values at which like is computed.
     """
     ax = P.subplot(111)
     ax.hist(samples, bins=bins,normed=True, alpha=.5)
     ax.plot(x, like)
     P.savefig('figs/' + figname)
-    P.close() 
-    
+    P.close()
+
 def normalization(like, params, domain, N=100):
     """Integrate the distribution over domain.
-    
+
     :Parameters:
       - `like`: log probability density.
       - `params`: {}: distribution parameters.
-      - `domain`: domain of integration. 
+      - `domain`: domain of integration.
       - `N`:  Number of samples for trapezoidal integration.
-      
+
     Note:
       The integration is performed using scipy.integrate.quadg if available.
-      Otherwise, a trapezoidal integration is done. 
+      Otherwise, a trapezoidal integration is done.
     """
     f = lambda x: exp(like(x, **params))
     if SP:
@@ -134,8 +134,8 @@ def normalization(like, params, domain, N=100):
         for i in x:
             y.append(f(i))
         return np.trapz(y,x)
-            
-    
+
+
 class test_bernoulli(NumpyTestCase):
     def check_consistency(self):
         N = 5000
@@ -149,7 +149,7 @@ class test_bernoulli(NumpyTestCase):
         assert_array_almost_equal(H, [l0,l1], 2)
         # Check normalization
         assert_almost_equal(l0+l1, 1, 4)
-        
+
     def test_calling(self):
         a = flib.bernoulli([0,1,1,0], .4)
         b = flib.bernoulli([0,1,1,0], [.4, .4, .4, .4])
@@ -172,7 +172,7 @@ class test_beta(NumpyTestCase):
         params ={'alpha':3, 'beta':5}
         integral = normalization(flib.beta_like, params, [0,1], 200)
         assert_almost_equal(integral, 1, 3)
-        
+
 class test_binomial(NumpyTestCase):
     def check_consistency(self):
         params={'n':7, 'p':.7}
@@ -196,7 +196,7 @@ class test_binomial(NumpyTestCase):
         assert_equal(a,b)
         assert_equal(a,c)
 
-            
+
 class test_cauchy(NumpyTestCase):
     def check_consistency(self):
         params={'alpha':0, 'beta':.5}
@@ -205,8 +205,8 @@ class test_cauchy(NumpyTestCase):
         if PLOT:
             compare_hist(figname='cauchy', **figdata)
         assert_array_almost_equal(hist, like,1)
-        
-            
+
+
     def test_calling(self):
         a = flib.cauchy([3,4], 2, 6)
         b = flib.cauchy([3,4], [2,2], [6,6])
@@ -218,7 +218,7 @@ class test_cauchy(NumpyTestCase):
         assert_almost_equal(integral, 1, 2)
 
 class test_chi2(NumpyTestCase):
-    """Based on flib.gamma, so no need to make the calling check and 
+    """Based on flib.gamma, so no need to make the calling check and
     normalization check."""
     def check_consistency(self):
         params = {'k':2}
@@ -226,7 +226,7 @@ class test_chi2(NumpyTestCase):
         if PLOT:
             compare_hist(figname='chi2', **figdata)
         assert_array_almost_equal(hist, like, 1)
-        
+
 class test_dirichlet(NumpyTestCase):
     """Multivariate Dirichlet distribution"""
     def check_random(self):
@@ -235,26 +235,27 @@ class test_dirichlet(NumpyTestCase):
         s = theta.sum()
         m = r.mean(0)
         cov_ex = np.cov(r.T)
-        
+
         # Theoretical mean
         M = theta/s
         # Theoretical covariance
         cov_th = -np.outer(theta, theta)/s**2/(s+1.)
-        
+
         assert_array_almost_equal(m,M, 2)
         assert_array_almost_equal(cov_ex, cov_th,1)
-        
+
     def check_like(self):
         theta = np.array([2.,3.])
         x = [4.,2]
         l = flib.dirichlet(x, theta)
         f = utils.dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
-    
+
     def normalization_2d(self):
         pass
 
 class test_exponential(NumpyTestCase):
+	"""Based on gamma."""
     def check_consistency(self):
         params={'beta':4}
         hist, like, figdata = consistency(rexponential, exponential_like, params,\
@@ -262,8 +263,8 @@ class test_exponential(NumpyTestCase):
         if PLOT:
             compare_hist(figname='exponential', **figdata)
         assert_array_almost_equal(hist, like,1)
-        
-       
+
+
 class test_gamma(NumpyTestCase):
     def check_consistency(self):
         params={'alpha':3, 'beta':2}
@@ -277,16 +278,36 @@ class test_gamma(NumpyTestCase):
         a = flib.gamma([4,5],3,2)
         b = flib.gamma([4,5], [3,3],[2,2])
         assert_equal(a,b)
-        
+
     def check_normalization(self):
         params={'alpha':3, 'beta':2}
         integral = normalization(flib.gamma, params, [.01,20], 200)
         assert_almost_equal(integral, 1, 2)
-        
-class test_geometric(NumpyTestCase):
-    pass
 
-        
+class test_geometric(NumpyTestCase):
+	"""Based on gamma."""
+    def check_consistency(self):
+        params={'p':.6}
+        hist, like, figdata = consistency(rgeometric, geometric_like, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='geometric', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+class test_hnormal(NumpyTestCase):
+	def check_consistency(self):
+		params={'tau':.5}
+        hist, like, figdata = consistency(rhnormal, flib.hnormal, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='hnormal', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+	    def normalization(self):
+        params = {'tau':2.}
+        integral = normalization(flib.hnormal, params, [0.1, 20], 200)
+        assert_almost_equal(integral, 1, 2)
+
 class test_poisson(NumpyTestCase):
     def check_consistency(self):
         params = {'mu':2.}
@@ -294,17 +315,17 @@ class test_poisson(NumpyTestCase):
         if PLOT:
             compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)
-    
+
     def normalization(self):
         params = {'mu':2.}
         integral = normalization(flib.poisson, params, [0.1, 20], 200)
         assert_almost_equal(integral, 1, 2)
-        
+
     def test_calling(self):
         a = flib.poisson([1,2,3], 2)
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
-        
+
 class test_weibull(NumpyTestCase):
     def check_consistency(self):
         params = {'alpha': 2., 'beta': 3.}
@@ -317,7 +338,7 @@ class test_weibull(NumpyTestCase):
         params = {'alpha': 2., 'beta': 3.}
         integral = normalization(flib.weibull, params, [0,10], N=200)
         assert_almost_equal(integral, 1, 2)
-        
+
     def test_calling(self):
         a = flib.weibull([1,2], 2,3)
         b = flib.weibull([1,2], [2,2], [3,3])

@@ -5,8 +5,8 @@
 # TODO: test and finalize vectorized multivariate normal like.
 # TODO: Add exponweib_expval (how?)
 # TODO: Complete docstrings with LaTeX formulas from the tutorial.
-# TODO: Do we add size arguments to random generators ? It shouldn't be a 
-#   problem, except that vector arguments + size arg. is a bit confusing.   
+# TODO: Do we add size arguments to random generators ? It shouldn't be a
+#   problem, except that vector arguments + size arg. is a bit confusing.
 
 __docformat__='reStructuredText'
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
@@ -39,17 +39,17 @@ def randomwrap(func):
     """
     Decorator for random value generators
 
-    Allows passing of sequence of parameters, as well as a size argument. 
-    
+    Allows passing of sequence of parameters, as well as a size argument.
+
     Convention:
-    
-      - If size=1 and the parameters are all scalars, return a scalar. 
+
+      - If size=1 and the parameters are all scalars, return a scalar.
       - If size=1, the random variates are 1D.
       - If the parameters are scalars and size > 1, the random variates are 1D.
       - If size > 1 and the parameters are sequences, the random variates are
-        aligned as (size, max(length)), where length is the parameters size. 
-    
-    
+        aligned as (size, max(length)), where length is the parameters size.
+
+
     :Example:
       >>> rbernoulli(.1)
       0
@@ -73,13 +73,13 @@ def randomwrap(func):
             args = list(args)
             for k in refargs:
                 if k in kwds.keys(): args.append(kwds[k])
-        
-        r = [];s=[];largs=[];length=[1]   
+
+        r = [];s=[];largs=[];length=[1]
         for arg in args:
             length.append(np.size(arg))
         N = max(length)
         # Make sure all elements are iterable and have consistent lengths, ie
-        # 1 or n, but not m and n. 
+        # 1 or n, but not m and n.
         for arg in args:
             arr = np.empty(N)
             s = np.size(arg)
@@ -90,11 +90,11 @@ def randomwrap(func):
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
-        
+
         for arg in zip(*largs):
             r.append(func(*arg))
-        
-        size = arg[-1] 
+
+        size = arg[-1]
         vec_params = len(r)>1
         if size > 1 and vec_params:
             return np.atleast_2d(r).T
@@ -102,7 +102,7 @@ def randomwrap(func):
             return np.concatenate(r)
         else: # Scalar case
             return r[0][0]
-            
+
     wrapper.__doc__ = func.__doc__
     return wrapper
 
@@ -161,7 +161,7 @@ def GOFpoints(x,y,expval,loss):
 @randomwrap
 def rbernoulli(p,size=1):
     """rbernoulli(p,size=1)
-    
+
     Random Bernoulli variates.
     """
     return random.binomial(1,p,size)
@@ -173,27 +173,27 @@ def bernoulli_expval(p):
 
 def bernoulli_like(x, p):
     r"""bernoulli_like(x, p)
-    
+
     Bernoulli log-likelihood
 
-    The Bernoulli distribution describes the probability of successes (x=1) and 
-    failures (x=0).   
+    The Bernoulli distribution describes the probability of successes (x=1) and
+    failures (x=0).
 
-    .. math:: 
+    .. math::
         f(x \mid p) = p^{x- 1} (1-p)^{1-x}
 
     :Parameters:
       - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
       - `p`: Probability of success. :math:`0 < p < 1`
-    
-    :Example: 
+
+    :Example:
       >>> bernoulli_like([0,1,0,1], .4)
       -2.8542325496673584
-    
+
     :Note:
       - :math:`E(x)= p`
       - :math:`Var(x)= p(1-p)`
-    
+
     """
     constrain(p, 0, 1,allow_equal=True)
     constrain(x, 0, 1,allow_equal=True)
@@ -204,7 +204,7 @@ def bernoulli_like(x, p):
 @randomwrap
 def rbeta(alpha, beta, size=1):
     """rbeta(alpha, beta, size=1)
-    
+
     Random beta variates.
     """
     return random.beta(alpha, beta,size)
@@ -216,12 +216,12 @@ def beta_expval(x,alpha, beta):
 
 def beta_like(x, alpha, beta):
     r"""beta_like(x, alpha, beta)
-    
+
     Beta log-likelihood.
 
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
-        
+
     :Parameters:
       - `x`: 0 < x < 1
       - `alpha`: > 0
@@ -234,7 +234,7 @@ def beta_like(x, alpha, beta):
     :Note:
       - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
       - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
-    
+
     """
     constrain(alpha, lower=0, allow_equal=True)
     constrain(beta, lower=0, allow_equal=True)
@@ -245,35 +245,35 @@ def beta_like(x, alpha, beta):
 @randomwrap
 def rbinomial(n,p,size=1):
     """rbinomial(n,p,size=1)
-    
+
     Random binomial variates.
     """
     return random.binomial(n,p,size)
-    
+
 def binomial_expval(x,n,p):
     return p*n
 
 def binomial_like(x, n, p):
     r"""binomial_like(x, n, p)
-    
-    Binomial log-likelihood.  The discrete probability distribution of the 
-    number of successes in a sequence of n independent yes/no experiments, 
+
+    Binomial log-likelihood.  The discrete probability distribution of the
+    number of successes in a sequence of n independent yes/no experiments,
     each of which yields success with probability p.
-    
+
     .. math::
         f(x \mid n, p) = \frac{n !}{x !(n-x) !} p^x (1-p)^{1-x}
-        
+
     :Parameters:
-      x : float 
+      x : float
         Number of successes, > 0.
       n : int
         Number of Bernoulli trials, > x.
       p : float
-        Probability of success in each trial, :math:`p \in [0,1]`.     
+        Probability of success in each trial, :math:`p \in [0,1]`.
 
     :Note:
       :math:`E(X)=np`
-      :math:`Var(X)=np(1-p)`   
+      :math:`Var(X)=np(1-p)`
     """
     constrain(p, 0, 1)
     constrain(n, lower=x)
@@ -304,7 +304,7 @@ def categorical_like( x, probs, minval=0, step=1):
 @randomwrap
 def rcauchy(alpha, beta, size=1):
     """rcauchy(alpha, beta, size=1)
-    
+
     Returns Cauchy random variates.
     """
     return alpha + beta*tan(pi*random_number(size) - pi/2.0)
@@ -312,20 +312,20 @@ def rcauchy(alpha, beta, size=1):
 def cauchy_expval(alpha, beta):
     return alpha
 
-# In wikipedia, the arguments name are k, x0. 
+# In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
     r"""cauchy_like(x, alpha, beta)
-    
+
     Cauchy log-likelihood. The Cauchy distribution is also known as the
-    Lorentz or the Breit-Wigner distribution. 
+    Lorentz or the Breit-Wigner distribution.
 
     .. math::
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
-    
+
     :Parameters:
       - `alpha` : Location parameter.
       - `beta`: Scale parameter > 0.
-    
+
     :Note:
       - Mode and median are at alpha.
     """
@@ -336,7 +336,7 @@ def cauchy_like(x, alpha, beta):
 @randomwrap
 def rchi2(k, size=1):
     """rchi2(k, size=1)
-    
+
     Random :math:`\chi^2` variates.
     """
     return random.chisquare(k, size)
@@ -346,22 +346,22 @@ def chi2_expval(k):
 
 def chi2_like(x, k):
     r"""chi2_like(x, k)
-    
+
     Chi-squared :math:`\chi^2` log-likelihood.
 
     .. math::
-        f(x \mid k) = \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}} 
+        f(x \mid k) = \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}}
 
     :Parameters:
       x : float
         :math:`\ge 0`
-      k : int 
+      k : int
         Degrees of freedom > 0
-    
+
     :Note:
       - :math:`E(X)=k`
       - :math:`Var(X)=2k`
-      
+
     """
     constrain(x, lower=0)
     constrain(k, lower=0)
@@ -370,7 +370,7 @@ def chi2_like(x, k):
 # Dirichlet----------------------------------------------
 def rdirichlet(theta, size=1):
     """rdirichlet(theta, size=1)
-    
+
     Dirichlet random variates.
     """
     gammas = rgamma(theta,1,size)
@@ -380,7 +380,7 @@ def rdirichlet(theta, size=1):
         return gammas/gammas.sum()
     else:
         return gammas
-        
+
 def dirichlet_expval(theta):
     sumt = sum(theta)
     expval = theta/sumt
@@ -388,22 +388,22 @@ def dirichlet_expval(theta):
 
 def dirichlet_like(x, theta):
     r"""dirichlet_like(x, theta)
-    
+
     Dirichlet log-likelihood.
-    
+
     This is a multivariate continuous distribution.
 
     .. math::
         f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
     :Parameters:
-      x : (n,k) array 
-        Where `n` is the number of samples and `k` the dimension. 
+      x : (n,k) array
+        Where `n` is the number of samples and `k` the dimension.
         :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^k x_i = 1`
       theta : (n,k) or (1,k) float
         :math:`\theta > 0`
     """
-    
+
     constrain(theta, lower=0)
     constrain(x, lower=0)
     constrain(sum(x), upper=1) #??
@@ -413,7 +413,7 @@ def dirichlet_like(x, theta):
 @randomwrap
 def rexponential(beta, size=1):
     """rexponential(beta)
-    
+
     Exponential random variates.
     """
     return random.exponential(beta,size)
@@ -424,21 +424,21 @@ def exponential_expval(beta):
 
 def exponential_like(x, beta):
     r"""exponential_like(x, beta)
-    
-    Exponential log-likelihood. 
-    
-    The exponential distribution is a special case of the gamma distribution 
-    with alpha=1. It often describes the duration of an event. 
-    
+
+    Exponential log-likelihood.
+
+    The exponential distribution is a special case of the gamma distribution
+    with alpha=1. It often describes the duration of an event.
+
     .. math::
         f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
       beta : float
         Survival parameter :math:`\beta > 0`
-    
+
     :Note:
       - :math:`E(X) = \beta`
       - :math:`Var(X) = \beta^2`
@@ -451,7 +451,7 @@ def exponential_like(x, beta):
 @randomwrap
 def rexponweib(alpha, k, loc, scale, size=1):
     """rexponweib(alpha, k, loc, scale, size=1)
-    
+
     Random exponentiated Weibull variates.
     """
     q = random.uniform(size)
@@ -460,13 +460,13 @@ def rexponweib(alpha, k, loc, scale, size=1):
 
 def exponweib_like(x, alpha, k, loc=0, scale=1):
     r"""exponweib_like(x,alpha,k,loc=0,scale=1)
-    
+
     Exponentiated Weibull log-likelihood.
 
     .. math::
         f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
         z & = \frac{x-loc}{scale}
-    
+
     :Parameters:
       - `x` : > 0
       - `alpha` : Shape parameter
@@ -481,7 +481,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 @randomwrap
 def rgamma(alpha, beta,size=1):
     """rgamma(alpha, beta,size=1)
-    
+
     Random gamma variates.
     """
     return random.gamma(alpha,beta,size)
@@ -492,15 +492,15 @@ def gamma_expval(alpha, beta):
 
 def gamma_like(x, alpha, beta):
     r"""gamma_like(x, alpha, beta)
-    
+
     Gamma log-likelihood.
 
     Represents the sum of alpha exponentially distributed random variables, each
     of which has mean beta.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x/\beta}}{\Gamma(\alpha) \beta^{\alpha}}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
@@ -508,7 +508,7 @@ def gamma_like(x, alpha, beta):
         Shape parameter :math:`\alpha > 0`.
       beta : float
         Scale parameter :math:`\beta > 0`.
-    
+
     """
     constrain(x, lower=0)
     constrain(alpha, lower=0)
@@ -519,20 +519,20 @@ def gamma_like(x, alpha, beta):
 # GEV Generalized Extreme Value ------------------------
 def gev_like(x, xi, mu=0, sigma=0):
     r"""gev_like(x, xi, mu=0, sigma=0)
-    
+
     Generalized Extreme Value log-likelihood
 
     .. math::
         pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}
-    
+
     where :math:`z=\frac{x-\mu}{\sigma}`
-    
+
     .. math::
         \sigma & > 0,\\
         x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
         x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
         x & \in [-\infty,\infty] \text{ if } \xi = 0
-        
+
     """
     return flib.gev(x,xi,loc, scale)
 
@@ -540,7 +540,7 @@ def gev_like(x, xi, mu=0, sigma=0):
 @randomwrap
 def rgeometric(p, size=1):
     """rgeometric(p, size=1)
-    
+
     Random geometric variates.
     """
     return random.negative_binomial(1, p, size)
@@ -550,23 +550,23 @@ def geometric_expval(p):
 
 def geometric_like(x, p):
     r"""geometric_like(x, p)
-    
-    Geometric log-likelihood. The probability that the first success in a 
-    sequence of Bernoulli trials occurs after x trials. 
+
+    Geometric log-likelihood. The probability that the first success in a
+    sequence of Bernoulli trials occurs after x trials.
 
     .. math::
         f(x \mid p) = p(1-p)^{x-1}
-        
+
     :Parameters:
       x : int
         Number of trials before first success, > 0.
-      p : float 
+      p : float
         Probability of success on each trial, :math:`p \in [0,1]`
 
     :Note:
       - :math:`E(X)=1/p`
       - :math:`Var(X)=\frac{1-p}{p^2}`
-    
+
     """
     constrain(p, 0, 1)
     constrain(x, lower=0)
@@ -576,7 +576,7 @@ def geometric_like(x, p):
 @randomwrap
 def rhalf_normal(tau, size=1):
     """rhalf_normal(tau, size=1)
-    
+
     Random half-normal variates.
     """
     return random.normal(0, sqrt(1/tau), size)
@@ -632,7 +632,7 @@ def hypergeometric_like(x, n, m, N):
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
     """rinverse_gamma(alpha, beta,size=1)
-    
+
     Random inverse gamma variates.
     """
     pass
@@ -643,9 +643,9 @@ def inverse_gamma_expval(alpha, beta):
 
 def inverse_gamma_like(x, alpha, beta):
     """inverse_gamma_like(x, alpha, beta)
-    
+
     Inverse gamma log-likelihood
-   
+
     x > 0, alpha > 0, beta > 0
     """
     constrain(x, lower=0)
@@ -655,7 +655,7 @@ def inverse_gamma_like(x, alpha, beta):
 
 # Lognormal----------------------------------------------
 @randomwrap
-def rlognormal(mu, tau):
+def rlognormal(mu, tau,size=1):
     return random.normal(mu, sqrt(1./tau))
 
 def lognormal_expval(mu, tau):
@@ -675,8 +675,12 @@ def lognormal_like(x, mu, tau):
 
 # Multinomial----------------------------------------------
 @randomwrap
-def rmultinomial(n,p):
-    return random.multinomial
+def rmultinomial(n,p,size=1):
+    """rmultinomial(n,p,size=1)
+
+    Random multinomial variates.
+    """
+    return random.multinomial(n,p,size)
 
 def multinomial_expval(n,p):
     array([pr * n for pr in p])
@@ -727,8 +731,12 @@ def multivariate_hypergeometric_like(x, m):
     return flib.mvhyperg(x, m)
 
 # Multivariate normal--------------------------------------
-def rmultivariate_normal(mu, tau):
-    return random.multivariate_normal(mu, inverse(tau))
+def rmultivariate_normal(mu, tau, size=1):
+    """rmultivariate_normal(mu, tau, size=1)
+
+    Random multivariate normal variates.
+    """
+    return random.multivariate_normal(mu, inverse(tau), size)
 
 def multivariate_normal_expval(mu, tau):
     return mu
@@ -748,8 +756,12 @@ def multivariate_normal_like(x, mu, tau):
 
 # Negative binomial----------------------------------------
 @randomwrap
-def rnegative_binomial(mu, alpha):
-    return random.negative_binomial(alpha, alpha / (mu + alpha))
+def rnegative_binomial(mu, alpha, size=1):
+    """rnegative_binomial(mu, alpha, size=1)
+
+    Random negative binomial variates.
+    """
+    return random.negative_binomial(alpha, alpha / (mu + alpha),size)
 
 def negative_binomial_expval(mu, alpha):
     return mu
@@ -769,8 +781,12 @@ def negative_binomial_like(x, mu, alpha):
 
 # Normal---------------------------------------------------
 @randomwrap
-def rnormal(mu, tau):
-    return random.normal(mu, 1./sqrt(tau))
+def rnormal(mu, tau,size=1):
+    """rnormal(mu, tau, size=1)
+
+    Random normal variates.
+    """
+    return random.normal(mu, 1./sqrt(tau), size)
 
 def normal_expval(mu, tau):
     return mu
@@ -789,8 +805,13 @@ def normal_like(x, mu, tau):
 
 # Poisson--------------------------------------------------
 @randomwrap
-def rpoisson(mu,size=1):
+def rpoisson(mu, size=1):
+    """rpoisson(mu, size=1)
+
+    Random poisson variates.
+    """
     return random.poisson(mu,size)
+
 
 def poisson_expval(mu):
     return mu
@@ -810,9 +831,9 @@ def poisson_like(x,mu):
 # Uniform--------------------------------------------------
 @randomwrap
 def runiform(lower, upper, size=1):
-    """Uniform random generator
+    """runiform(lower, upper, size=1)
 
-    runiform(lower, upper, size=1)
+    Random uniform variates.
     """
     return random.uniform(lower, upper, size)
 
