@@ -925,7 +925,7 @@ uniform_like_python._PyMC = True
 
 
 def uniform_like(x,lower, upper):
-        """runiform(lower, upper, size=1)
+    """runiform(lower, upper, size=1)
 
     Random uniform variates.
     """
