@@ -1,3 +1,7 @@
+__docformat__='reStructuredText'
+
+""" Summary"""
+
 from numpy import zeros
 from PyMCObjects import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
@@ -7,45 +11,35 @@ class Model(object):
     """
     Model manages MCMC loops. It is initialized with:
 
-    A = Model(prob_def, dbase=None)
+      >>> A = Model(prob_def, dbase=None)
 
-    Arguments
-
-        prob_def: class, module or dictionary containing PyMC objects and
-        SamplingMethods)
-
-        dbase: Database backend used to tally the samples.
-        Implemented backends: None, hdf5.
+    :Arguments:
+        prob_def : class, module, dictionary 
+          Contains PyMC objects and SamplingMethods
+        dbase: module name
+          Database backend used to tally the samples. 
+          Implemented backends: None, hdf5, txt.
 
     Externally-accessible attributes:
-
-        nodes:          All extant Nodes.
-
-        parameters:         All extant Parameters with isdata = False.
-
-        data:               All extant Parameters with isdata = True.
-
-        pymc_objects:               All extant Parameters and Nodes.
-
-        sampling_methods:   All extant SamplingMethods.
+      - nodes: All extant Nodes.
+      - parameters: All extant Parameters with isdata = False.
+      - data: All extant Parameters with isdata = True.
+      - pymc_objects: All extant Parameters and Nodes.
+      - sampling_methods: All extant SamplingMethods.
 
     Externally-accessible methods:
-
-        sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
-                                Tallies Parameters and Nodes as appropriate.
-
-        trace(parameter, burn, thin, slice): Return the trace of parameter,
-        sliced according to slice or burn and thin arguments.
-
-
-        remember(trace_index): Return the entire model to the tallied state indexed by trace_index.
-
-        DAG: Draw the model as a directed acyclic graph.
-
+       - sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
+         Tallies Parameters and Nodes as appropriate.
+       - trace(parameter, burn, thin, slice): Return the trace of parameter,
+         sliced according to slice or burn and thin arguments.
+       - remember(trace_index): Return the entire model to the tallied state indexed by trace_index.
+       - DAG: Draw the model as a directed acyclic graph.
+    
+    :Note: 
         All the plotting functions can probably go on the base namespace and take Parameters as
         arguments.
 
-    See also SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
+    :SeeAlso: SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
     """
     def __init__(self, input, dbase=None):
 

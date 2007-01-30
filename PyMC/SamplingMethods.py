@@ -1,3 +1,4 @@
+__docformat__='reStructuredText'
 from PyMCObjects import PyMCBase, Parameter, Node
 import numpy as np
 from numpy import log, Inf
@@ -12,33 +13,27 @@ class SamplingMethod(object):
     It's sample() method will be called by Model at every MCMC iteration.
 
     Externally-accessible attributes:
-
-        nodes:  The Nodes over which self has jurisdiction.
-
-        parameters: The Parameters over which self has jurisdiction which have isdata = False.
-
-        data:       The Parameters over which self has jurisdiction which have isdata = True.
-
-        pymc_objects:       The Nodes and Parameters over which self has jurisdiction.
-
-        children:   The combined children of all PyMCBases over which self has jurisdiction.
-
-        loglike:    The summed log-probability of self's children conditional on all of
+      - nodes:  The Nodes over which self has jurisdiction.
+      - parameters: The Parameters over which self has jurisdiction which have isdata = False.
+      - data:       The Parameters over which self has jurisdiction which have isdata = True.
+      - pymc_objects:       The Nodes and Parameters over which self has jurisdiction.
+      - children:   The combined children of all PyMCBases over which self has jurisdiction.
+      - loglike:    The summed log-probability of self's children conditional on all of
                     self's PyMCBases' current values. These will be recomputed only as necessary.
                     This descriptor should eventually be written in C.
 
     Externally accesible methods:
+      - sample():   A single MCMC step for all the Parameters over which self has jurisdiction.
+        Must be overridden in subclasses.
+      - tune():     Tunes proposal distribution widths for all self's Parameters.
 
-        sample():   A single MCMC step for all the Parameters over which self has jurisdiction.
-                    Must be overridden in subclasses.
+    
+    To instantiate a SamplingMethod called S with jurisdiction over a 
+    sequence/set N of PyMCBases:
 
-        tune():     Tunes proposal distribution widths for all self's Parameters.
+      >>> S = SamplingMethod(N)
 
-    To instantiate a SamplingMethod called S with jurisdiction over a sequence/set N of PyMCBases:
-
-        S = SamplingMethod(N)
-
-    See also OneAtATimeMetropolis and Model.
+    :SeeAlso: OneAtATimeMetropolis, Model.
     """
 
     def __init__(self, pymc_objects):
@@ -122,12 +117,12 @@ class OneAtATimeMetropolis(SamplingMethod):
 
     To instantiate a OneAtATimeMetropolis called M with jurisdiction over a Parameter P:
 
-        M = OneAtATimeMetropolis(P)
+      >>> M = OneAtATimeMetropolis(P)
 
     But you never really need to instantiate OneAtATimeMetropolis, Model does it
     automatically.
 
-    See also SamplingMethod and Model.
+    :SeeAlso: SamplingMethod, Model.
     """
     def __init__(self, parameter, scale=1, dist='Normal'):
         SamplingMethod.__init__(self,[parameter])
@@ -194,38 +189,31 @@ class JointMetropolis(SamplingMethod):
 
     Externally-accessible attributes:
 
-        pymc_objects:   A sequence of pymc objects to handle using
-                        this SamplingMethod.
-
-        interval:       The interval at which S's parameters' values
-                        should be written to S's internal traces
-                        (NOTE: If the traces are moved back into the
-                        PyMC objects, it should be possible to avoid this
-                        double-tallying. As it stands, though, the traces
-                        are stored in Model, and SamplingMethods have no
-                        way to know which Model they're going to be a
-                        member of.)
-
-        epoch:          After epoch values are stored in the internal
-                        traces, the covariance is recomputed.
-
-        memory:         The maximum number of epochs to consider when
-                        computing the covariance.
-
-        delay:          Number of one-at-a-time iterations to do before
-                        starting to record values for computing the joint
-                        covariance.
-
-        _asf:           Adaptive scale factor.
+      - pymc_objects: A sequence of pymc objects to handle using
+        this SamplingMethod.
+      - interval: The interval at which S's parameters' values
+        should be written to S's internal traces
+        (NOTE: If the traces are moved back into the
+        PyMC objects, it should be possible to avoid this
+        double-tallying. As it stands, though, the traces
+        are stored in Model, and SamplingMethods have no
+        way to know which Model they're going to be a
+        member of.)
+      - epoch:  After epoch values are stored in the internal
+        traces, the covariance is recomputed.
+      - memory: The maximum number of epochs to consider when
+        computing the covariance.
+      - delay: Number of one-at-a-time iterations to do before
+        starting to record values for computing the joint
+        covariance.
+      - _asf: Adaptive scale factor.
 
     Externally-accessible methods:
-
-        step():         Make a Metropolis step. Applies the one-at-a-time
-                        Metropolis algorithm until the first time the
-                        covariance is computed, then applies the joint
-                        Metropolis algorithm.
-
-        tune():         sets _asf according to a heuristic.
+      - step(): Make a Metropolis step. Applies the one-at-a-time
+        Metropolis algorithm until the first time the
+        covariance is computed, then applies the joint
+        Metropolis algorithm.
+      - tune(): Sets _asf according to a heuristic.
 
     """
     def __init__(self, pymc_objects, epoch=1000, memory=10, interval = 1, delay = 0):

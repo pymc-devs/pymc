@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+epydoc --config epydoc.conf

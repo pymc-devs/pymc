@@ -16,7 +16,7 @@ availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'di
 'weibull']
 
 
-import flib
+from PyMC import flib
 import numpy as np
 from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi
@@ -621,19 +621,20 @@ def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
 
 def half_normal_like(x, tau):
-    """half_normal_like(x, tau)
-
+    r"""half_normal_like(x, tau)
+    
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
     to the domain :math:`x \in [0, \infty)`.
-
+    
     .. math::
-        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}} \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
     :Parameters:
       x : float
         :math:`x \ge 0`
       tau : float
         :math:`\tau > 0`
+    
     """
     constrain(tau, lower=0)
     constrain(x, lower=0, allow_equal=True)
@@ -862,7 +863,7 @@ def poisson_expval(mu):
 
 
 def poisson_like(x,mu):
-    """poisson_like(x,mu)
+    r"""poisson_like(x,mu)
 
     Poisson log-likelihood. The Poisson a discrete probability distribution.
     It expresses the probability of a number of events occurring in a fixed
@@ -875,10 +876,10 @@ def poisson_like(x,mu):
 
     :Parameters:
       x : int
-        :math:`x \in {0,1,2,\ldot}`
+        :math:`x \in {0,1,2,...}`
       mu : float
         Expected number of occurrences that occur during the given interval,
-        :math:`mu \geq 0`.
+        :math:`\mu \geq 0`.
 
     :Note:
       - :math:`E(x)=\mu`
@@ -901,11 +902,11 @@ def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like(x,lower, upper):
-    """uniform_like(x, lower, upper)
+    r"""uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
 
-    ..math::
+    .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     :Parameters:
@@ -928,7 +929,7 @@ def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    """weibull_like(x, alpha, beta)
+    r"""weibull_like(x, alpha, beta)
 
     Weibull log-likelihood
 

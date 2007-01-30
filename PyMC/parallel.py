@@ -1,5 +1,5 @@
 import subprocess
-import ipython1.kernel.api as kernel
+#import ipython1.kernel.api as kernel
 from Model import Model
 from PyMCObjects import Parameter, Node, PyMCBase
 from SamplingMethods import SamplingMethod
