@@ -5,9 +5,9 @@ The DisasterSampler example.
 
 """
 
-from proposition5 import Model
-import model_1
-M = Model(model_1)
+from PyMC import Model
+from PyMC.examples import DisasterSampler
+M = Model(DisasterSampler)
 
 # Sample
 M.sample(10000,100,10)

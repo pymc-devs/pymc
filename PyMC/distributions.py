@@ -900,8 +900,8 @@ def runiform(lower, upper, size=1):
 def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
-def uniform_like_python(x, lower, upper):
-    """uniform_like_python(x, lower, upper)
+def uniform_like(x,lower, upper):
+    """uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
 
@@ -916,41 +916,7 @@ def uniform_like_python(x, lower, upper):
       upper : float
         Upper limit.
     """
-    x = np.atleast_1d(x)
-    lower = np.atleast_1d(lower)
-    upper = np.atleast_1d(upper)
-    constrain(x, lower=lower, upper=upper, allow_equal=True)
-    return sum(np.log(1. / (np.array(upper) - np.array(lower))))
-uniform_like_python._PyMC = True
-
-
-def uniform_like(x,lower, upper):
-    """runiform(lower, upper, size=1)
-
-    Random uniform variates.
-    """
     return random.uniform(lower, upper, size)
-
-def uniform_expval(lower, upper):
-    return (upper - lower) / 2.
-
-def uniform_like_python(x, lower, upper):
-    """uniform_like_python(x, lower, upper)
-
-    Uniform log-likelihood.
-
-    ..math::
-        f(x \mid lower, upper) = \frac{1}{upper-lower}
-
-    :Parameters:
-      x : float
-       :math:`x \in [lower, upper]`
-      lower : float
-        Lower limit.
-      upper : float
-        Upper limit.
-    """
-    return flib.uniform_like(x,lower, upper)
 
 # Weibull--------------------------------------------------
 @randomwrap
