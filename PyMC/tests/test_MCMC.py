@@ -6,8 +6,8 @@ The DisasterSampler example.
 """
 
 from PyMC import Model
-from PyMC.examples import DisasterSampler
-M = Model(DisasterSampler)
+from PyMC.examples import DisasterModel
+M = Model(DisasterModel)
 
 # Sample
 M.sample(10000,100,10)

@@ -15,26 +15,28 @@ from numpy import zeros,shape
 class trace(object):
     """ Define the methods that will be assigned to each parameter in the
     Model instance."""
-    def __init__(self, obj):
+    def __init__(self, obj, db):
         """Initialize the instance.
         :Parameters:
-		  obj : PyMC object
-		    Node or Parameter instance.
-		"""
+          obj : PyMC object
+            Node or Parameter instance.
+          db : database instance
+        """
         self.obj = obj
+        self.db = db
         self._trace = []
 
     def _initialize(self, length):
         """Initialize the trace.
         """
-        self._trace.append( zeros ((length,) + shape(obj.value), type(obj.value)) )
+        self._trace.append( zeros ((length,) + shape(self.obj.value), type(self.obj.value)) )
 
     def tally(self, index):
         """Adds current value to trace"""
         try:
-            self._trace[-1][index] = obj.value.copy()
+            self._trace[-1][index] = self.obj.value.copy()
         except AttributeError:
-            self._trace[-1][index] = obj.value
+            self._trace[-1][index] = self.obj.value
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
@@ -57,8 +59,9 @@ class trace(object):
 
 class database(object):
     """Define the methods that will be assigned to the Model class"""
-    def __init__(self):
-        pass
+    def __init__(self, model):
+        self.model = model
+        
     def _initialize(self, *args, **kwds):
         """Initialize database."""
         pass

@@ -21,6 +21,7 @@ distrib = setup(
     description = "PyMC version 2.0",
     license="Academic Free License",
     url="trichech.us",
-    packages=["PyMC", "PyMC.database", "PyMC.tests", "PyMC.examples"],
+    packages=["PyMC", "PyMC.database", "PyMC.tests", "PyMC.examples", 
+    "PyMC.MultiModelInference"],
     ext_modules = [PyMCObjects,flib]    
 )

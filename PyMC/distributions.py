@@ -916,7 +916,7 @@ def uniform_like(x,lower, upper):
       upper : float
         Upper limit.
     """
-    return random.uniform(lower, upper, size)
+    return flib.uniform_like(x, lower, upper)
 
 # Weibull--------------------------------------------------
 @randomwrap

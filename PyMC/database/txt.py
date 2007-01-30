@@ -4,27 +4,29 @@
 # txt file at the end of sampling. Each object has its own file. 
 ###
 
-from memory_trace import parameter_methods
+import memory_trace 
 import os, io, datetime
 
-parameter_methods = parameter_methods()
-
-def _finalize_trace(self, burn, thin):
-    """Dump trace into txt file in the simulation folder _dbdir."""
-    path = os.path.join(self._model._dbdir, self.name)
-    arr = self.trace(burn, thin)
-    f = open(path, 'w')
-    print >> f, '# Parameter %s' % self.name
-    print >> f, '# Burned: %d, thinned= %d' % (burn, thin)
-    print >> f, '# Sample shape: %s' % str(arr.shape)
-    print >> f, '# Date: %s' % datetime.datetime.now()
-    f.close()
-    io.aput(arr, path, 'a')
+class trace(memory_trace.trace):
+    def _finalize(self, burn, thin):
+        """Dump trace into txt file in the simulation folder _dbdir."""
+        path = os.path.join(self.db.dir, self.name)
+        arr = self.gettrace(burn, thin)
+        f = open(path, 'w')
+        print >> f, '# Parameter %s' % self.name
+        print >> f, '# Burned: %d, thinned= %d' % (burn, thin)
+        print >> f, '# Sample shape: %s' % str(arr.shape)
+        print >> f, '# Date: %s' % datetime.datetime.now()
+        f.close()
+        io.aput(arr, path, 'a')
     
 
-def model_methods():
+class database(object):
     """Define the methods that will be assigned to the Model class"""
-    def _init_dbase(self, *args, **kwds):
+    def __init__(self, model):
+        self.model = model
+    
+    def _initialize(self, *args, **kwds):
         """Create folder to store simulation results."""
         name = self.__name__
         i=0;again=True
@@ -35,11 +37,10 @@ def model_methods():
             except OSError:
                 name = self.__name__+'_%d'%i
                 i += 1
-        self._dbdir = name
+        self.dir = name
         
-    def _finalize_dbase(self, burn, thin):
+    def _finalize(self, burn, thin):
         """Dump samples to file."""
-        for object in self._pymc_objects_to_tally:
+        for object in self.model._pymc_objects_to_tally:
             object._finalize_trace(burn,thin)
-        
-    return locals()
+    

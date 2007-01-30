@@ -1,6 +1,7 @@
 from numpy import zeros
 from PyMCObjects import PyMCBase, Parameter, Node
-from SamplingMethods import SamplingMethod
+from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
+from PyMC import database
 
 class Model(object):
     """
@@ -74,7 +75,7 @@ class Model(object):
         for item in input_dict.iteritems():
             self._fileitem(item)
 
-        self._assign_trace_methods(dbase)
+        self._assign_database(dbase)
 
     def _fileitem(self, item):
 
@@ -101,13 +102,13 @@ class Model(object):
             #File it away
             self.__dict__[item[0]] = item[1]
             self.sampling_methods.add(item[1])
-            setattr(self.__dict__[item[0]], '_model', self)
+            #setattr(self.__dict__[item[0]], '_model', self)
 
         # File away the PyMC objects
         elif isinstance(item[1],PyMCBase):
             self.__dict__[item[0]] = item[1]
             # Add an attribute to the object referencing the model instance.
-            setattr(self.__dict__[item[0]], '_model', self)
+            #setattr(self.__dict__[item[0]], '_model', self)
 
             if isinstance(item[1],Node):
                 self.nodes.add(item[1])
@@ -135,7 +136,7 @@ class Model(object):
         else:
             self.__dict__[name] = value
 
-    def _assign_trace_methods(self, dbase):
+    def _assign_database(self, dbase):
         """Assign trace instance to parameters and nodes.
         Assign database initialization methods to the Model class.
 
@@ -148,16 +149,18 @@ class Model(object):
         """
         # Load the trace backend.
         if dbase is None:
-            dbase = 'memory_trace'
+            dbase = 'no_trace'
         db = getattr(database, dbase)
         reload(db)
 
+        # Assign database instance to Model.
+        self.db = db.database(self)
+        
         # Assign trace instance to parameters and nodes.
         for object in self.parameters | self.nodes :
-            object.trace = db.trace()
+            object.trace = db.trace(object, self)
 
-        # Assign database instance to Model.
-        self.db = db.database()
+        
     #
     # Prepare for sampling
     #
@@ -168,9 +171,11 @@ class Model(object):
 
         # Seed new initial values for the parameters.
         for parameters in self.parameters:
-            if parameters._rseed:
-                parameters.value = parameters.random(**parameters.parent_values)
-
+            try:
+                if parameters.rseed is not None:
+                    parameters.value = parameters.random(**parameters.parent_values)
+            except:
+                pass
         if self._prepared:
             return
 
@@ -222,7 +227,7 @@ class Model(object):
         Enumerates the pymc_objects that are to be tallied and initializes traces
         for them.
 
-        To be tracing, a pymc_object has to pass the following criteria:
+        To be tallied, a pymc_object has to pass the following criteria:
 
             -   It is not included in the argument pymc_objects_not_to_tally.
 
@@ -236,7 +241,7 @@ class Model(object):
         self.max_trace_length = length
 
         for pymc_object in self.pymc_objects:
-            if pymc_object._tracing:
+            if pymc_object.trace is not None:
                 pymc_object.trace._initialize(length)
                 self._pymc_objects_to_tally.add(pymc_object)
 

@@ -1,5 +1,6 @@
 from PyMCObjects import PyMCBase, Parameter, Node
 import numpy as np
+from numpy import log, Inf
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -131,7 +132,7 @@ class OneAtATimeMetropolis(SamplingMethod):
     def __init__(self, parameter, scale=1, dist='Normal'):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
-        self.proposal_sig = np.ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        self.proposal_sig = np.ones(np.shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self._dist = dist
 
     #

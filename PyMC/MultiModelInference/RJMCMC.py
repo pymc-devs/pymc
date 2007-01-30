@@ -1,5 +1,4 @@
 from PyMC import Parameter, Node, PyMCBase, SamplingMethod
-
 from numpy import ma, random, where
 from numpy.random import random
 from copy import deepcopy

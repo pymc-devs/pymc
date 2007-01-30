@@ -7,11 +7,9 @@ late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
-from PyMC import *
+from PyMC import parameter, data
 from numpy import array
-from PyMC.flib import poisson
-from numpy.random import exponential as rexpo
-from distributions import uniform_like, exponential_like, poisson_like
+from PyMC import uniform_like, exponential_like, poisson_like
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -32,7 +30,6 @@ def switchpoint(value=50, length=110):
 def early_mean(value=1., rate=1.):
     """Rate parameter of poisson distribution."""
     return exponential_like(value, rate)
-
 
 @parameter
 def late_mean(value=.1, rate = 1.):

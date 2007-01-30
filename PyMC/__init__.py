@@ -14,10 +14,10 @@ __modules__ = [ 'distributions',
                 'PyMCObjectDecorators',
                 'SamplingMethods',
                 'Model',
-                ]
+                'MultiModelInference']
                 
-__optmodules__ = [  'MultiModelInference',
-                    'DisasterModel']
+__optmodules__ = []#['MultiModelInference',]
+                    
 #ClosedCapture, OpenCapture                 
           
 for mod in __modules__:

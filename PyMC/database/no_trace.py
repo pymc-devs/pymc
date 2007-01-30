@@ -15,10 +15,20 @@ from numpy import zeros,shape
 class trace(object):
     """ Define the methods that will be assigned to each parameter in the 
     Model instance."""
-    
-    def _init_trace(self, pymc_object, length):
+    def __init__(self, pymc_object, db):
+        """Initialize the instance.
+        :Parameters:
+          obj : PyMC object
+            Node or Parameter instance.
+          db : database instance
+        """
+        self.obj = pymc_object
+        self.db = db
+        self._trace = []
+        
+    def _initialize(self, length):
         """Initialize the trace."""
-        self.pymc_object = pymc_object
+        pass
             
     def tally(self, index):
         """Adds current value to trace"""
@@ -34,18 +44,19 @@ class trace(object):
           - chain (int): The index of the chain to fetch. If None, return all chains. 
           - slicing: A slice, overriding burn and thin assignement. 
         """
-        raise AttributeError, self.pymc_object.__name__ + " has no trace"
+        raise AttributeError, self.obj.__name__ + " has no trace"
 
-    def _finalize_trace(self):
+    def _finalize(self):
         pass
     
-def model_methods():
+class database(object):
     """Define the methods that will be assigned to the Model class"""
-    def _init_dbase(self, *args, **kwds):
+    def __init__(self, model):
+        self.model = model
+        
+    def _initialize(self, *args, **kwds):
         """Initialize database."""
         pass
-    def _finalize_dbase(self, *args, **kwds):
+    def _finalize(self, *args, **kwds):
         """Close database."""
         pass
-        
-    return locals()
