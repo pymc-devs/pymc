@@ -68,10 +68,10 @@ def randomwrap(func):
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     vfunc = np.vectorize(func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
-    nkwds = len(defaults) # Number of kwds args. 
-    
+    nkwds = len(defaults) # Number of kwds args.
+
     def wrapper2(*args, **kwds):
-        # First transform positional arguments into keywds args. 
+        # First transform positional arguments into keywds args.
         if len(args)>0:
             for a,n in zip(args, refargs):
                 kwds[n]=a
@@ -86,18 +86,18 @@ def randomwrap(func):
             for i in range(N):
                 tmp_kwds=jk
                 result.append(func(**tmp_kwds))
-                
+
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
         n = len(args)
         if len(kwds) > 0:
             args = list(args)
             for i,k in enumerate(refargs[n:]):
-                if k in kwds.keys(): 
+                if k in kwds.keys():
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-        
+
         r = [];s=[];largs=[];length=[1]
         for arg in args:
             length.append(np.size(arg))
@@ -545,15 +545,13 @@ def gamma_like(x, alpha, beta):
 @randomwrap
 def rgev(xi, mu=0, sigma=1, size=1):
     """rgev(xi, mu=0, sigma=0, size=1)
-    
+
     Random generalized extreme value (GEV) variates.
     """
-    print size,mu,sigma
     q = random.uniform(size=size)
     z = flib.gev_ppf(q,xi)
-    print z
     return (z+mu)*sigma
-    
+
 def gev_like(x, xi, mu=0, sigma=0):
     r"""gev_like(x, xi, mu=0, sigma=0)
 
@@ -624,17 +622,17 @@ def half_normal_expval(tau):
 
 def half_normal_like(x, tau):
     """half_normal_like(x, tau)
-    
+
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
     to the domain :math:`x \in [0, \infty)`.
-    
+
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}} \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
-      tau : float 
+      tau : float
         :math:`\tau > 0`
     """
     constrain(tau, lower=0)
@@ -864,11 +862,27 @@ def poisson_expval(mu):
 
 
 def poisson_like(x,mu):
-    """Poisson log-likelihood
+    """poisson_like(x,mu)
 
-    poisson_like(x,mu)
+    Poisson log-likelihood. The Poisson a discrete probability distribution.
+    It expresses the probability of a number of events occurring in a fixed
+    period of time if these events occur with a known average rate, and are
+    independent of the time since the last event. The Poisson distribution can
+    be derived as a limiting case of the binomial distribution.
 
-    x \geq 0, mu \geq 0
+    .. math::
+        f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+
+    :Parameters:
+      x : int
+        :math:`x \in {0,1,2,\ldot}`
+      mu : float
+        Expected number of occurrences that occur during the given interval,
+        :math:`mu \geq 0`.
+
+    :Note:
+      - :math:`E(x)=\mu`
+      - :math:`Var(x)=\mu`
     """
     constrain(x, lower=0,allow_equal=True)
     constrain(mu, lower=0,allow_equal=True)
@@ -887,7 +901,21 @@ def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like_python(x, lower, upper):
-    """Uniform log-likelihood"""
+    """uniform_like_python(x, lower, upper)
+
+    Uniform log-likelihood.
+
+    ..math::
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    :Parameters:
+      x : float
+       :math:`lower \geq x \geq upper`
+      lower : float
+        Lower limit.
+      upper : float
+        Upper limit.
+    """
     x = np.atleast_1d(x)
     lower = np.atleast_1d(lower)
     upper = np.atleast_1d(upper)
@@ -897,11 +925,30 @@ uniform_like_python._PyMC = True
 
 
 def uniform_like(x,lower, upper):
-    """Uniform log-likelihood
+        """runiform(lower, upper, size=1)
 
-    uniform_like(x,lower, upper)
+    Random uniform variates.
+    """
+    return random.uniform(lower, upper, size)
 
-    x \in [lower, upper]
+def uniform_expval(lower, upper):
+    return (upper - lower) / 2.
+
+def uniform_like_python(x, lower, upper):
+    """uniform_like_python(x, lower, upper)
+
+    Uniform log-likelihood.
+
+    ..math::
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    :Parameters:
+      x : float
+       :math:`x \in [lower, upper]`
+      lower : float
+        Lower limit.
+      upper : float
+        Upper limit.
     """
     return flib.uniform_like(x,lower, upper)
 
@@ -915,11 +962,25 @@ def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    """Weibull log-likelihood
+    """weibull_like(x, alpha, beta)
 
-    weibull_like(x, alpha, beta)
+    Weibull log-likelihood
 
-    x > 0, alpha > 0, beta > 0
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
+        \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+
+    :Parameters:
+      x : float
+        :math:`x \ge 0`
+      alpha : float
+        > 0
+      beta : float
+        > 0
+
+    :Note:
+      -:math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha}`
+      -:math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2`
     """
     constrain(alpha, lower=0)
     constrain(beta, lower=0)

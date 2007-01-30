@@ -1,4 +1,4 @@
-#/usr/bin/env python  
+#/usr/bin/env python
 try:
     import setuptools
 except ImportError:
@@ -11,7 +11,7 @@ flib = Extension(name='PyMC.flib',sources=['PyMC/flib.f'])
 # Compile base objects in C
 PyMCObjects = Extension(name='PyMC.PyMCObjects', sources = [	'PyMC/PyMCObjects/PyMCBase.c',
 																'PyMC/PyMCObjects/Parameter.c',
-																'PyMC/PyMCObjects/Node.c',
+                                                                'PyMC/PyMCObjects/Node.c',
 																'PyMC/PyMCObjects/RemoteProxy.c',
 																'PyMC/PyMCObjects/PyMCObjects.c'])
 
@@ -21,6 +21,6 @@ distrib = setup(
     description = "PyMC version 2.0",
     license="Academic Free License",
     url="trichech.us",
-    packages=["PyMC", "PyMC.database", "PyMC.tests"],
-    ext_modules = [PyMCObjects,flib]    
+    packages=["PyMC", "PyMC.database",],# "PyMC.tests"],
+    ext_modules = [flib,PyMCObjects]
 )

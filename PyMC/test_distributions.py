@@ -88,6 +88,21 @@ def consistency(randomf, likef, params, nbins=10, nrandom=1000, nintegration=15,
 
 def discrete_consistency(randomf, likef, params,nrandom=1000, \
     range=None,plot=None):
+    """Check the random generator is consistent with the likelihood for
+    discrete distributions.
+
+    :Parameters:
+      - `randomf`: function: Random generator.
+      - `likef`: function: Log probability.
+      - `params`: dict:  Parameters for the distribution.
+      - `nbins`: int: Number of bins in histogram.
+      - `nrandom`: int: Number of random samples.
+      - `range`: (float,float): Range of histogram.
+
+    :Return (hist, like):
+      - `hist`: Histogram of random samples.
+      - `like`: likelihood of histogram bins.
+    """
     samples = randomf(size=nrandom, **params)
     hist = np.bincount(samples)*1./nrandom
     x = np.arange(len(hist))
@@ -98,10 +113,11 @@ def discrete_consistency(randomf, likef, params,nrandom=1000, \
     figuredata = {'hist':hist, 'bins':x, \
         'like':like.copy(), 'x':x, 'discrete':True}
     return hist, like, figuredata
-    
-    
+
+
 def mv_consistency(random, like, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
+    """Check consistency for multivariate distributions."""
     samples = random(n=nrandom, **params)
     hist, edges = np.histogramdd(samples.T, nbins, range, True)
     z = []
@@ -118,6 +134,7 @@ def compare_hist(hist, bins, like, x, figname, discrete=False):
       - `like`: probability values.
       - `bins`: histogram bins.
       - `x`: values at which like is computed.
+      - `figname`: Name of figure to save.
     """
     ax = P.subplot(111)
     width = 0.9*(bins[1]-bins[0])
@@ -321,6 +338,22 @@ class test_half_normal(NumpyTestCase):
         params = {'tau':2.}
         integral = normalization(flib.hnormal, params, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
+
+class test_hypergeometric(NumpyTestCase):
+    def check_consistency(self):
+        pass
+
+class test_inverse_gamma(NumpyTestCase):
+    def check_consistency(self):
+        pass
+
+class test_lognormal(NumpyTestCase):
+    def check_consistency(self):
+        pass
+
+class test_multinomial(NumpyTestCase):
+    def check_consistency(self):
+        pass
 
 class test_poisson(NumpyTestCase):
     def check_consistency(self):

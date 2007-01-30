@@ -9,11 +9,11 @@ class Model(object):
 	A = Model(prob_def, dbase=None)
 
 	Arguments
-	
-		prob_def: class, module or dictionary containing PyMC objects and 
+
+		prob_def: class, module or dictionary containing PyMC objects and
 		SamplingMethods)
-		
-		dbase: Database backend used to tally the samples. 
+
+		dbase: Database backend used to tally the samples.
 		Implemented backends: None, hdf5.
 
 	Externally-accessible attributes:
@@ -33,7 +33,7 @@ class Model(object):
 		sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
 								Tallies Parameters and Nodes as appropriate.
 
-		trace(parameter, burn, thin, slice): Return the trace of parameter, 
+		trace(parameter, burn, thin, slice): Return the trace of parameter,
 		sliced according to slice or burn and thin arguments.
 
 
@@ -73,7 +73,7 @@ class Model(object):
 
 		for item in input_dict.iteritems():
 			self._fileitem(item)
-		
+
 		self._assign_trace_methods(dbase)
 
 	def _fileitem(self, item):
@@ -108,7 +108,7 @@ class Model(object):
 			self.__dict__[item[0]] = item[1]
 			# Add an attribute to the object referencing the model instance.
 			setattr(self.__dict__[item[0]], '_model', self)
-			
+
 			if isinstance(item[1],Node):
 				self.nodes.add(item[1])
 
@@ -136,14 +136,14 @@ class Model(object):
 			self.__dict__[name] = value
 
 	def _assign_trace_methods(self, dbase):
-		"""Assign trace method to parameters and nodes. 
+		"""Assign trace instance to parameters and nodes.
 		Assign database initialization methods to the Model class.
-		
-		Defined databases: 
+
+		Defined databases:
 		  - None: Traces stored in memory.
-		  - Txt: Traces stored in memory and saved in txt files at end of 
+		  - Txt: Traces stored in memory and saved in txt files at end of
 				sampling. Not implemented.
-		  - SQLlite: Traces stored in sqllite database. Not implemented. 
+		  - SQLlite: Traces stored in sqllite database. Not implemented.
 		  - HDF5: Traces stored in HDF5 database. Partially implemented.
 		"""
 		# Load the trace backend.
@@ -151,31 +151,21 @@ class Model(object):
 			dbase = 'memory_trace'
 		db = getattr(database, dbase)
 		reload(db)
-		
-		# Assign trace methods to parameters and nodes. 
+
+		# Assign trace instance to parameters and nodes.
 		for object in self.parameters | self.nodes :
-			try:
-				for name, method in db.parameter_methods().iteritems():
-					magic_set(object, method)
-			except TypeError:
-				for name, method in db.parameter_methods.iteritems():
-					magic_set(object, method)
-		
-		# Assign database methods to Model.
-		try:
-			for name, method in db.model_methods().iteritems():
-				magic_set(self, method)
-		except TypeError:
-			for name, method in db.model_methods.iteritems():
-				magic_set(self, method)
+            object.trace = db.trace()
+
+		# Assign database instance to Model.
+        self.db = db.database()
 	#
 	# Prepare for sampling
 	#
 	def _prepare(self):
 
 		# Initialize database
-		self._init_dbase()
-		
+		self.db._initialize()
+
 		# Seed new initial values for the parameters.
 		for parameters in self.parameters:
 			if parameters._rseed:
@@ -204,7 +194,7 @@ class Model(object):
 			# If not, make it a new one-at-a-time Metropolis-Hastings SamplingMethod
 			if homeless:
 				self.sampling_methods.add(OneAtATimeMetropolis(parameter))
-				
+
 	#
 	# Find PyMC object's random children.
 	#
@@ -220,7 +210,7 @@ class Model(object):
 		if need_recursion:
 			self._extend_children(pymc_object)
 		return
-				
+
 
 	#
 	# Initialize traces
@@ -241,14 +231,13 @@ class Model(object):
 			-	Its value can be made into a numpy array with a numerical
 				dtype.
 		"""
-		self._traces = {}
 		self._pymc_objects_to_tally = set()
 		self._cur_trace_index = 0
 		self.max_trace_length = length
 
 		for pymc_object in self.pymc_objects:
 			if pymc_object._tracing:
-				pymc_object._init_trace(length)
+				pymc_object.trace._initialize(length)
 				self._pymc_objects_to_tally.add(pymc_object)
 
 	#
@@ -262,7 +251,7 @@ class Model(object):
 		"""
 		if self._cur_trace_index < self.max_trace_length:
 			for pymc_object in self._pymc_objects_to_tally:
-				pymc_object.tally(self._cur_trace_index)
+				pymc_object.trace.tally(self._cur_trace_index)
 
 		self._cur_trace_index += 1
 
@@ -309,7 +298,7 @@ class Model(object):
 			# # Tally as appropriate.
 			# if i > burn and (i - burn) % thin == 0:
 			#	self.tally()
-			
+
 			self.tally()
 
 			if i % 1000 == 0:
@@ -318,8 +307,8 @@ class Model(object):
 		# Tuning, etc.
 
 		# Finalize
-		self._finalize_dbase(burn, thin)
-		
+		self.db._finalize(burn, thin)
+
 	def tune(self):
 		"""
 		Tell all samplingmethods to tune themselves.
@@ -382,7 +371,7 @@ class Model(object):
 				loglikes[i] += datum.logp
 
 		return loglikes
-		
+
 
 
 	def DAG(self,format='raw',path=None):
@@ -400,7 +389,7 @@ class Model(object):
 		'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
 
 		format='raw' outputs a GraphViz dot file.
-		
+
 		Returns the pydot 'dot' object for further user manipulation.
 		"""
 
@@ -466,5 +455,5 @@ class Model(object):
 			if format=='raw':
 				ext='dot'
 			self.dot_object.write(path='./' + self.__name__ + '.' + ext,format=format)
-			
+
 		return self.dot_object

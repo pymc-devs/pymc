@@ -40,7 +40,7 @@
 \usepackage{ifpdf}
 
 % Enable hyeprlinks
-\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref} 
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
 %\newif\ifpdf
 %\ifx\pdfoutput\undefined
@@ -97,11 +97,11 @@ PyMC requires some prerequisite packages to be present on the system before the 
 \item \href{http://matplotlib.sourceforge.net/}{Matplotlib} version 0.86 or later. This package is used for plotting of MCMC output.
 \end{itemize}
 
- 
+
 \section{Platform-specific instructions}
 \subsection{Mac OS X}
 
-If you double-click the installer package, your archive utility will usually expand the installer from its archive. From here, the prerequisite packages can be installed (by double-clicking the installers and following the on-screen instructions), followed by the PyMC package itself. 
+If you double-click the installer package, your archive utility will usually expand the installer from its archive. From here, the prerequisite packages can be installed (by double-clicking the installers and following the on-screen instructions), followed by the PyMC package itself.
 
 If you wish to build and install PyMC from source, first ensure that you are using GCC 3.3 (on newer OS X systems GCC 4.0.1 is the default):
 \begin{verbatim}
@@ -109,7 +109,7 @@ sudo gcc_select 3.3
 \end{verbatim}
 Then, untar the source archive, then move into the resulting source directory in the command terminal and type:
 \begin{verbatim}
-python setup.py build 
+python setup.py build
 sudo python setup.py install
 \end{verbatim}
 The \verb=sudo= command is required to install PyMC into the Python site-packages directory, which should have restricted privileges. You will be prompted for a password, and provided you have superuser privileges, the installation will proceed.
@@ -118,7 +118,7 @@ The \verb=sudo= command is required to install PyMC into the Python site-package
 
 Unfortunately, binary installers are not currently available for Linux systems, but it is straightforward to build the package yourself. Simply untar the package archive, then move to the resulting archive directory and type:
 \begin{verbatim}
-python setup.py build 
+python setup.py build
 sudo python setup.py install
 \end{verbatim}
 
@@ -146,7 +146,7 @@ This test model estimates the switch point between two rate distributions within
 
 \chapter{Markov chain Monte Carlo}
 
-%MCMC methods are algorithms that sample from probability distributions (\emph{i.e.} Monte Carlo simulation) to yield Markov chains. 
+%MCMC methods are algorithms that sample from probability distributions (\emph{i.e.} Monte Carlo simulation) to yield Markov chains.
 
 \section{Monte Carlo Methods in Bayesian Analysis}
 
@@ -191,11 +191,11 @@ E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i
 Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
 \begin{figure}[ht]
-		\begin{center}
-		\includegraphics[scale=0.4]{reject.png}
-	\end{center}
-	\caption{Rejection sampling of a bounded form. Area is estimated by the ratio of accepted (open squares) to total points, multiplied by the rectangle area.}
-	\label{fig:bound}
+        \begin{center}
+        \includegraphics[scale=0.4]{reject.png}
+    \end{center}
+    \caption{Rejection sampling of a bounded form. Area is estimated by the ratio of accepted (open squares) to total points, multiplied by the rectangle area.}
+    \label{fig:bound}
 \end{figure}
 
 Posit a function, $f(x)$ which can be evaluated for any value on the support of $x:S_x = [A,B]$, but may not be integrable or easily sampled from. If we can calculate the maximum  value of $f(x)$, we can then define a rectangle that is guaranteed to contain all possible values $(x,f(x))$. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure \ref{fig:bound}).
@@ -205,11 +205,11 @@ Posit a function, $f(x)$ which can be evaluated for any value on the support of 
 \]
 
 \begin{figure}[h]
-		\begin{center}
-		\includegraphics[scale=0.4]{envelope.png}
-	\end{center}
-	\caption{Rejection sampling of an unbounded form using an enveloping distribution.}
-	\label{fig:unbound}
+        \begin{center}
+        \includegraphics[scale=0.4]{envelope.png}
+    \end{center}
+    \caption{Rejection sampling of an unbounded form using an enveloping distribution.}
+    \label{fig:unbound}
 \end{figure}
 
 \noindent This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
@@ -244,7 +244,7 @@ Before we move on, it is important to define some general properties of Markov c
 
 \begin{itemize}
 \item \emph{Homogeneity}: A Markov chain is homogeneous at step $t$ if the transition probabilities are independent of the state at $t$. The starting point of the chain is almost never homogeneous, as the initial values are either hand-picked or arbitrary.
-\item \emph{Irreducibility}: A Markov chain is irreducible if every state is accessible in one or more steps from any other state. That is, the chain contains no absorbing states. This implies that there is a non-zero probability of eventually reaching state $k$ from any other state in the chain. 
+\item \emph{Irreducibility}: A Markov chain is irreducible if every state is accessible in one or more steps from any other state. That is, the chain contains no absorbing states. This implies that there is a non-zero probability of eventually reaching state $k$ from any other state in the chain.
 \item \emph{Recurrence}: States which are visited repeatedly are \emph{recurrent}. If the expected time to return to a particular state is bounded, this is known as \emph{positive recurrence}, otherwise the recurrent state is \emph{null recurrent}. Further, a chain is \emph{Harris recurrent} when it visits all states $X \in S$ infinitely often in the limit as $t \to \infty$; this is an important characteristic when dealing with unbounded, continuous state spaces. Whenever a chain ends up in a closed, irreducible set of Harris recurrent states, it stays there forever and visits every state with probability one.
 \item \emph{Stationarity}: A stationary Markov chain produces the same marginal distribution when multiplied by the transition kernel.  Thus, if $P$ is some $n \times n$ transition matrix:
 
@@ -327,7 +327,7 @@ Here is a stereotypical Gibbs sampling algorithm:
 \item Increment $j$ and repeat until convergence occurs.
 \end{list}
 
-As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate. 
+As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
 Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
 \vspace{1cm}
@@ -355,20 +355,20 @@ ylist = []
 # Here's the sampler
 for i in range(k):
 
-	 # Sample from beta distribution
+     # Sample from beta distribution
     p = beta(a+sum(data), len(data)*n-sum(data)+b)
 
     # Sample from binomial distribution
     y = binomial(n,p)
 
-	 # Append samples to lists
+     # Append samples to lists
     plist.append(p)
-    ylist.append(y) 
-    
+    ylist.append(y)
+
 # Calculate medians
 plist.sort()
 ylist.sort()
-pmed = (plist[k/2]+plist[k/2+1])/2 
+pmed = (plist[k/2]+plist[k/2+1])/2
 ymed = (ylist[k/2]+ylist[k/2+1])/2
 
 # Print results
@@ -433,33 +433,33 @@ An important consideration is the specification of the scale parameter for the r
 
 \section{MCMC Simulation Output}
 
-Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each parameter in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the parameters of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals). 
+Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each parameter in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the parameters of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals).
 
 \begin{figure}[ht]
-		\begin{center}
-		\includegraphics[scale=0.4]{sample_output.png}
-	\end{center}
-	\caption{Sample trace (left) and histogram (right) from Metropolis-Hastings simulation using PyMC.}
-	\label{fig:sample_output}
+        \begin{center}
+        \includegraphics[scale=0.4]{sample_output.png}
+    \end{center}
+    \caption{Sample trace (left) and histogram (right) from Metropolis-Hastings simulation using PyMC.}
+    \label{fig:sample_output}
 \end{figure}
 
-Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown parameters are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm. 
+Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown parameters are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm.
 
 Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in parameter space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 \chapter{Building Models with PyMC}
 
-Programming an effective MCMC algorithm is a non-trivial, time-consuming task for all but the simplest problems. Indeed, building and customizing a sampler by hand for each analysis is inefficient and beyond the programming capabilities of many scientists. However, there are few software packages available that implement such techniques in a way that is accessible to the scientific community. Perhaps the only well-known offering is from the \href{http://www.mrc-bsu.cam.ac.uk/bugs/}{BUGS project}, which maintains and distributes WinBUGS. PyMC offers a very general implementation of a Metropolis-Hastings algorithm that can be used in for estimating a variety of Bayesian models. Since it is simply a Python module (essentially, a tool kit), it can be embedded in a larger analytic framework without moving inputs and results in and out of the programming environment. 
+Programming an effective MCMC algorithm is a non-trivial, time-consuming task for all but the simplest problems. Indeed, building and customizing a sampler by hand for each analysis is inefficient and beyond the programming capabilities of many scientists. However, there are few software packages available that implement such techniques in a way that is accessible to the scientific community. Perhaps the only well-known offering is from the \href{http://www.mrc-bsu.cam.ac.uk/bugs/}{BUGS project}, which maintains and distributes WinBUGS. PyMC offers a very general implementation of a Metropolis-Hastings algorithm that can be used in for estimating a variety of Bayesian models. Since it is simply a Python module (essentially, a tool kit), it can be embedded in a larger analytic framework without moving inputs and results in and out of the programming environment.
 
 PyMC attempts to automate as much of the MCMC analysis as possible. In fact, the end user is responsible for just three tasks when specifying a model:
 \begin{itemize}
 
-	\item Data access and manipulation 
+    \item Data access and manipulation
 
-	\item Parameter and node initialization
+    \item Parameter and node initialization
 
-	\item Likelihood specification
-	
+    \item Likelihood specification
+
 \end{itemize}
 
 \section{Data Access}\label{sec:data_access}
@@ -485,21 +485,21 @@ called, for example, mydata.csv, could be imported using the \href{http://docs.p
 >>> data = csv.reader(file("mydata.csv"))
 >>> for row in data:
 ...     print row
-... 
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2341', '4.1', 
-	'0.191', '2.33', '55', '1', '14', '5', '3', '0', '7']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2350', '4.1', 
-	'0.202', '2.52', '96.5', '1', '32', '7', '12', '5', '5']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2374', '4.1', 
-	'0.173', '2.5', '100', '1', '23', '8', '11', '9', '13']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2383', '4.1', 
-	'0.185', '3.27', '79', '1', '27', '4', '17', '7', '19']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2339', '3.8', 
-	'0.09', '2.53', '59', '1', '16', '7', '17', '2', '8']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2340', '3.8', 
-	'0.07', '3.55', '43.1', '1', '11', '3', '10', '2', '8']
-['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2343', '3.8', 
-	'0.11', '2.5', '82', '1', '49', '7', '6', '3', '3']
+...
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2341', '4.1',
+    '0.191', '2.33', '55', '1', '14', '5', '3', '0', '7']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2350', '4.1',
+    '0.202', '2.52', '96.5', '1', '32', '7', '12', '5', '5']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2374', '4.1',
+    '0.173', '2.5', '100', '1', '23', '8', '11', '9', '13']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2383', '4.1',
+    '0.185', '3.27', '79', '1', '27', '4', '17', '7', '19']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2339', '3.8',
+    '0.09', '2.53', '59', '1', '16', '7', '17', '2', '8']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2340', '3.8',
+    '0.07', '3.55', '43.1', '1', '11', '3', '10', '2', '8']
+['170102051503', '1.3', '1.933', '0', '99.15', 'L LOST R', 'MRP', '2343', '3.8',
+    '0.11', '2.5', '82', '1', '49', '7', '6', '3', '3']
 \end{verbatim}
 
 Data may also be imported directly from a relational database, such as MySQL, PostgreSQL or Oracle. A relational database is the best way to store and manage large quantities of data. Third-party developers offer Python modules to interface with most commercial databases. For example, to query a MySQL database:
@@ -525,26 +525,26 @@ class MySampler(MetropolisHastings):
     # Note the inheritance of the MetropolisHastings class
 
     def __init__(self):
-		  # This  is the initialization function
-   
+          # This  is the initialization function
+
         # Initialize superclass by calling its __init__ method
         MetropolisHastings.__init__(self)
-        
+
         # Next, you would specify parameters and nodes
-        
+
     def calculate_likelihood(self):
         # Specify the joint log-likelihood here
 
         # Nothing here yet
         pass
-		  
+
 \end{verbatim}
 
 The \verb=__init__= method is present in all Python classes, whether specified explicitly or not, and is merely a convention for initializing the class. In the case of \verb=MetropolisHastings=, it is used both to initialize parameters and sometimes to import data. Parameters are specified using the \verb=parameter= method.
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-sampler.parameter(name, init_val, discrete=False, dist='normal', 
+sampler.parameter(name, init_val, discrete=False, dist='normal',
 scale=None, random=False, plot=True)
 \end{verbatim}
 
@@ -570,7 +570,7 @@ self.node(name='log_capture')
 
 \section{Likelihood Specification}\label{sec:likelihood_specification}
 
-The \verb=calculate_likelihood= method uses the initialized variables and nodes to evaluate a conditional posterior likelihood used to evaluate the current model parameter values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time. 
+The \verb=calculate_likelihood= method uses the initialized variables and nodes to evaluate a conditional posterior likelihood used to evaluate the current model parameter values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time.
 
 These suite of available log-likelihood densities include:
 \begin{itemize}
@@ -614,24 +614,24 @@ self.gamma_prior($\theta$, 0.5, 50)
 As an example, lets construct a simple hierarchical regression model in PyMC. Consider a logistic regression, whereby the binomial probability of a particular event $y$ is thought to be a function of some covariate $x$. This model is expressed mathematically as:
 
 \begin{eqnarray*}
-	y_t &\sim& \mbox{Bin}(N_t, \pi_t) \\
-	\mbox{logit}(\pi_t) &=& \beta_0 + \beta_1 x_t 
+    y_t &\sim& \mbox{Bin}(N_t, \pi_t) \\
+    \mbox{logit}(\pi_t) &=& \beta_0 + \beta_1 x_t
 \end{eqnarray*}
 The first step in PyMC is to specify the parameters of the model in the \verb=__init__= method:
 \begin{verbatim}
-	
+
 class LogisticSampler(MetropolisHastings):
 
     def __init__(self):
         # Class initialization
-		
-        # Dont forget to initialize the superclass, to get all the 
+
+        # Dont forget to initialize the superclass, to get all the
         # MetropolisHastings goodness!
         MetropolisHastings.__init__(self)
-        		
+
         # Intercept
         self.parameter('beta0', init_val=0.0)
-        		
+
         # Slope
         self.parameter('beta1', init_val=0.0)
 \end{verbatim}
@@ -639,19 +639,19 @@ Next, code the likelihood in \verb=calculate_likelihood=
 \begin{verbatim}
     def calculate_likelihood(self):
         # Calculate likelihood, given current parameter values
-        
+
         # Initialize the likelihood
         like = 0.0
-        
+
         # Loop over the data
         for x,y,N in data:
-        
+
             # Calculate probability of event
             pie = self.beta0 + self.beta1 * x
-        
+
             # Binomial likelihood, given current value of p and data
-        	  like += self.binomial_like(pie, N, y, name="p(y)") 
-        
+              like += self.binomial_like(pie, N, y, name="p(y)")
+
         # Return value (important!)
         return like
 \end{verbatim}
@@ -659,14 +659,14 @@ Next, code the likelihood in \verb=calculate_likelihood=
 Notice that the \verb=binomial_like= method contains a name argument, which identifies that component of the likelihood when goodness-of-fit (GOF) analysis is carried out. This is an optional argument; leaving it blank defaults the name to that of the distribution (\emph{e.g.} \verb=binomial=). Notice that I have assumed that there is an object called \verb=data= that is available to the model, and which contains the input variables. This could be a simple Python \verb=list= object, or a somewhat fancier numpy \verb=array=:
 
 \begin{verbatim}
-	data = array([
-   	[ 11.48,  11.92,  12.29,  14.96, 15.01,  
-		  17.02,  15.90,  20.54, 12.36,  16.55],
-		
-		[41, 46, 45, 39, 46, 46, 34, 47, 35, 42],
-		
-		[104, 97, 119, 94, 112, 104, 101, 107, 94, 93]
-	])
+    data = array([
+    [ 11.48,  11.92,  12.29,  14.96, 15.01,
+          17.02,  15.90,  20.54, 12.36,  16.55],
+
+        [41, 46, 45, 39, 46, 46, 34, 47, 35, 42],
+
+        [104, 97, 119, 94, 112, 104, 101, 107, 94, 93]
+    ])
 \end{verbatim}
 This is a simple 3 $\times$ 10 array, containing the values for $x$, $y$ and $N$.
 
@@ -709,43 +709,43 @@ divergence_threshold=1e10, verbose=True, plot=True, debug=False):
 Here is an example using real data. The dataset is a time series of recorded coal mining disasters in the UK from 1851 and 1962. Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations. This can be implemented as follows:
 
 \begin{verbatim}
-	class DisasterSampler(MetropolisHastings):
+    class DisasterSampler(MetropolisHastings):
 
-	    def __init__(self):
-	        """Class initialization"""
+        def __init__(self):
+            """Class initialization"""
 
-	        MetropolisHastings.__init__(self)
+            MetropolisHastings.__init__(self)
 
-	        # Coal mining disasters per year
-	        self.data = (4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-	            3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-	            2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-	            1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-	            0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-	            3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-	            0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1)
+            # Coal mining disasters per year
+            self.data = (4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+                3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1)
 
-	        # Switchpoint is specified as a parameter to be estimated
-	        self.parameter(name='k', init_val=50, discrete=True)
+            # Switchpoint is specified as a parameter to be estimated
+            self.parameter(name='k', init_val=50, discrete=True)
 
-	        # Rate parameters of poisson distributions
-	        self.parameter(name='theta', init_val=array([1.0, 1.0]))
+            # Rate parameters of poisson distributions
+            self.parameter(name='theta', init_val=array([1.0, 1.0]))
 
-	    def calculate_likelihood(self):
-	        """Likelihood function"""
+        def calculate_likelihood(self):
+            """Likelihood function"""
 
-	        # Obtain current values of parameters as local variables
-	        theta0, theta1 = self.theta
-	        k = self.k
+            # Obtain current values of parameters as local variables
+            theta0, theta1 = self.theta
+            k = self.k
 
-	        # Constrain k
-	        self.constrain(k, 1, len(self.data)-2)
+            # Constrain k
+            self.constrain(k, 1, len(self.data)-2)
 
-	        # Joint likelihood of parameters based on 2 assumed Poisson densities
-	        like += self.poisson_like(self.data[:k], theta0, name='early_mean')
-	        like += self.poisson_like(self.data[k:], theta1, name='late_mean')
+            # Joint likelihood of parameters based on 2 assumed Poisson densities
+            like += self.poisson_like(self.data[:k], theta0, name='early_mean')
+            like += self.poisson_like(self.data[k:], theta1, name='late_mean')
 
-	        return like
+            return like
 \end{verbatim}
 Notice that in this example, unlike the parameters in the logistic regression example earlier, the $theta$ parameters are specified together as an array of length 2. This results in block updating for these parameters, whereby new values for both are proposed and evaluated together. Though either parameterization would be effective in this example, block updating can accelerate convergence for parameters that are thought to be highly correlated. Also notice the use of the $constrain$ method in the likelihood. This prevents parameters from assuming values outside of the specified range. In this case, $k$ is constrained to be within the 2nd (index 1) and penultimate elements in the list; this avoids evaluating either likelihood with no observations.
 
@@ -760,7 +760,7 @@ In this example, a 100-element random effect is specified. In turn, this random 
 
 \section{Exporting Output Statistics}
 
-Calling \verb=sample= form any instance of \verb=MetropolisHastings= returns a dictionary (a python look-up table) of summary statistics. This summary dictionary can be used subsequently within a python session, or simply exported using the export method from any \verb=MetropolisHastings= object. This produces a comma-separated values (CSV) text file that may readily be imported into most spreadsheet or database applications. 
+Calling \verb=sample= form any instance of \verb=MetropolisHastings= returns a dictionary (a python look-up table) of summary statistics. This summary dictionary can be used subsequently within a python session, or simply exported using the export method from any \verb=MetropolisHastings= object. This produces a comma-separated values (CSV) text file that may readily be imported into most spreadsheet or database applications.
 
 \subsubsection{Method Usage}
 \begin{verbatim}
@@ -811,7 +811,7 @@ A principle reason that evidence from informal techniques cannot guarantee conve
 
 Along with the \emph{ad hoc} techniques described above, a number of more formal methods exist which are prevalent in the literature. These are considered more formal because they are based on existing statistical methods, such as time series analysis.
 
-PyMC includes one formal convergence diagnostic method, first proposed by \citet{Geweke:1992gm}. This is a time-series approach, which compares the mean and variance of segments from the beginning and end of a single chain. 
+PyMC includes one formal convergence diagnostic method, first proposed by \citet{Geweke:1992gm}. This is a time-series approach, which compares the mean and variance of segments from the beginning and end of a single chain.
 \begin{equation}
 z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 \end{equation}
@@ -885,19 +885,19 @@ sampler.goodness(iterations, plot=True, loss='squared', burn=0, thin=1, chain=-1
 \subsubsection{Method Usage}
 \section{Autocorrelation Plots}
 
-Samples from MCMC algorithms are ususally autocorrelated, due partly to the inherent Markovian dependence structure. The degree of autocorrelation can be quantified using the autocorrelation function: 
+Samples from MCMC algorithms are ususally autocorrelated, due partly to the inherent Markovian dependence structure. The degree of autocorrelation can be quantified using the autocorrelation function:
 \begin{eqnarray*}
-	\rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
-			&=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
+    \rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
+            &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
 The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each parameter in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
 
 \begin{figure}[htbp]
-		\begin{center}
-		\includegraphics[scale=0.4]{autocorr.png}
-	\end{center}
-	\caption{Sample autocorrelation plots for two Poisson parameters from coal mining disasters example model.}
-	\label{fig:autocorr}
+        \begin{center}
+        \includegraphics[scale=0.4]{autocorr.png}
+    \end{center}
+    \caption{Sample autocorrelation plots for two Poisson parameters from coal mining disasters example model.}
+    \label{fig:autocorr}
 \end{figure}
 
 \begin{verbatim}
@@ -1094,12 +1094,12 @@ f(x \mid a, b) &=& \frac{1}{b-a}\\
 \verb=uniform_mixture_like(x, a, m, b)=
 \begin{eqnarray*}
 f(x \mid a, m, b) &=& \left\{\begin{array}{c}\frac{0.5}{m-a}, \hspace{0.1cm} a \le x < m \\
-\\  
-\frac{0.5}{b-m}, \hspace{0.1cm}m \le x \le b \end{array}\right. 
+\\
+\frac{0.5}{b-m}, \hspace{0.1cm}m \le x \le b \end{array}\right.
 \end{eqnarray*}
 
 \section*{Weibull}
-\verb=wiebull_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
+\verb=weibull_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
 \begin{eqnarray*}
 f(x \mid \alpha, \beta) &=& \frac{\alpha x^{\alpha - 1} \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha} \\
 \\
