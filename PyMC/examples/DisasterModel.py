@@ -7,9 +7,9 @@ late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
-from PyMC import parameter, data, OneAtATimeMetropolis
+from PyMC2 import parameter, data, OneAtATimeMetropolis
 from numpy import array, log, sum
-from PyMC import constrain, exponential_like, poisson_like
+from PyMC2 import constrain, exponential_like, poisson_like
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

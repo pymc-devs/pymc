@@ -49,7 +49,7 @@ class Node(Object):
         Since self will never want to refer to its children by name, there's
         no need for children to be keyed in a dictionary like parents are.
         """
-         self.children = set([])
+        self.children = set([])
     
         """
         Is the value of this node known with no uncertainty?

@@ -30,12 +30,14 @@ constraining to python.
 
 from decorators import *
 import unittest
-import flib
+from PyMC2 import flib
 from numpy.testing import *
 import numpy as np
 from numpy import exp
-import utils
+import utils, os
 PLOT=True
+if PLOT is True:
+    os.mkdir('figs')
 try:
     from scipy import integrate
     SP = True

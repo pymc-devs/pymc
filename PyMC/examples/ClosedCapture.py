@@ -2,7 +2,7 @@
 Closed-population capture-mark-recapture (CMR) estimation using MCMC with PyMC.
 """
 
-from PyMC import MetropolisHastings
+from PyMC2 import MetropolisHastings
 
 class M0 (MetropolisHastings):
     # Null capture model: no behavioural, temporal or individual heterogeneity effects

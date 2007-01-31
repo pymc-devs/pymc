@@ -6,22 +6,22 @@ except ImportError:
 from numpy.distutils.core import setup, Extension
 
 # Compile flib (fortran source for statistical distributions.)
-flib = Extension(name='PyMC.flib',sources=['PyMC/flib.f'])
+flib = Extension(name='PyMC2.flib',sources=['PyMC2/flib.f'])
 
 # Compile base objects in C
-PyMCObjects = Extension(name='PyMC.PyMCObjects', sources = [	'PyMC/PyMCObjects/PyMCBase.c',
-																'PyMC/PyMCObjects/Parameter.c',
-																'PyMC/PyMCObjects/Node.c',
-																'PyMC/PyMCObjects/RemoteProxy.c',
-																'PyMC/PyMCObjects/PyMCObjects.c'])
+PyMCObjects = Extension(name='PyMC2.PyMCObjects', sources = [    'PyMC2/PyMCObjects/PyMCBase.c',
+                                                                'PyMC2/PyMCObjects/Parameter.c',
+                                                                'PyMC2/PyMCObjects/Node.c',
+                                                                'PyMC2/PyMCObjects/RemoteProxy.c',
+                                                                'PyMC2/PyMCObjects/PyMCObjects.c'])
 
 distrib = setup(
-    name="PyMC",
+    name="PyMC2",
     version="2.0",
     description = "PyMC version 2.0",
     license="Academic Free License",
     url="trichech.us",
-    packages=["PyMC", "PyMC.database", "PyMC.tests", "PyMC.examples", 
-    "PyMC.MultiModelInference"],
+    packages=["PyMC2", "PyMC2.database", "PyMC2.tests", "PyMC2.examples", 
+    "PyMC2.MultiModelInference"],
     ext_modules = [PyMCObjects,flib]    
 )

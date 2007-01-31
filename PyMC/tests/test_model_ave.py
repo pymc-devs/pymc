@@ -9,9 +9,9 @@ model posterior probabilities. This'll probably be worse for more complicated
 models. Maybe there's a literature on this problem.
 """
 
-from PyMC import Model, weight
+from PyMC2 import Model, weight
 from numpy import log
-from PyMC.examples import model_1, model_2, model_3
+from PyMC2.examples import model_1, model_2, model_3
 
 print 'Docstring of model 1:'
 print model_1.__doc__

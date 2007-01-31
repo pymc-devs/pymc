@@ -1,7 +1,7 @@
 """Test of PyMC features, functions and calling conventions."""
  
-import sys, unittest, PyMC
-from PyMC import MetropolisHastings
+import sys, unittest, PyMC2
+from PyMC2 import MetropolisHastings
 from numpy import *
 
 class CorrelatedSampler(MetropolisHastings):

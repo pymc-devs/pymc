@@ -4,7 +4,7 @@ date: 2006-06-24
 encoding: utf-8
 """
 
-from PyMC import MetropolisHastings
+from PyMC2 import MetropolisHastings
 
 def standard(data):
     'Standardize a given dataset'

@@ -16,7 +16,7 @@ availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'di
 'weibull']
 
 
-from PyMC import flib
+from PyMC2 import flib
 import numpy as np
 from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi

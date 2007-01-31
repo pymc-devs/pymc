@@ -9,31 +9,31 @@
 # avoid any memory allocation, in fact).
 
 
-from PyMC import flib
-from PyMC import Sampler, LikelihoodError
+from PyMC2 import flib
+from PyMC2 import Sampler, LikelihoodError
 import numpy as np
 from numpy import inf, random
 import string
-from PyMC.flib import categor as _fcategorical
-from PyMC.flib import beta as _fbeta
-from PyMC.flib import bernoulli as _fbernoulli
-from PyMC.flib import binomial as _fbinomial
-from PyMC.flib import cauchy as _fcauchy
-from PyMC.flib import dirichlet as _fdirichlet
-from PyMC.flib import dirmultinom as _fdirmultinom
-from PyMC.flib import gamma as _fgamma
-from PyMC.flib import hnormal as _fhalfnormal
-from PyMC.flib import hyperg as _fhyperg
-from PyMC.flib import igamma as _figamma
-from PyMC.flib import lognormal as _flognormal
-from PyMC.flib import multinomial as _fmultinomial
-from PyMC.flib import mvhyperg as _fmvhyperg
-from PyMC.flib import negbin2 as _fnegbin
-from PyMC.flib import normal as _fnormal
-from PyMC.flib import mvnorm as _fmvnorm
-from PyMC.flib import poisson as _fpoisson
-from PyMC.flib import weibull as _fweibull
-from PyMC.flib import wishart as _fwishart
+from PyMC2.flib import categor as _fcategorical
+from PyMC2.flib import beta as _fbeta
+from PyMC2.flib import bernoulli as _fbernoulli
+from PyMC2.flib import binomial as _fbinomial
+from PyMC2.flib import cauchy as _fcauchy
+from PyMC2.flib import dirichlet as _fdirichlet
+from PyMC2.flib import dirmultinom as _fdirmultinom
+from PyMC2.flib import gamma as _fgamma
+from PyMC2.flib import hnormal as _fhalfnormal
+from PyMC2.flib import hyperg as _fhyperg
+from PyMC2.flib import igamma as _figamma
+from PyMC2.flib import lognormal as _flognormal
+from PyMC2.flib import multinomial as _fmultinomial
+from PyMC2.flib import mvhyperg as _fmvhyperg
+from PyMC2.flib import negbin2 as _fnegbin
+from PyMC2.flib import normal as _fnormal
+from PyMC2.flib import mvnorm as _fmvnorm
+from PyMC2.flib import poisson as _fpoisson
+from PyMC2.flib import weibull as _fweibull
+from PyMC2.flib import wishart as _fwishart
 
 
 """ Loss functions """
@@ -44,7 +44,7 @@ squared_loss = lambda o,e: (o - e)**2
 
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
     
-		
+        
 
 def fwrap(f, prior=False):
     """Decorator function.
@@ -62,7 +62,7 @@ def fwrap(f, prior=False):
         for key in kwargs.iterkeys():
             kwargs[key] = kwargs[key]
         return f(*newargs, **kwargs)
-		
+        
     wrapper.__doc__ = f.__doc__
     wrapper._prior = prior
     wrapper._PyMC = True
@@ -112,8 +112,8 @@ def likeandgofwrap(like, func_gof):
         
 
 def constrain(value, lower=-inf, upper=inf, allow_equal=False):
-	# To be fair:
-	pass
+    # To be fair:
+    pass
 
 
 # Bernoulli----------------------------------------------
@@ -341,9 +341,9 @@ def negative_binomial_like(x, mu, alpha):
     
 @fwrap
 def normal_like(x, mu, tau):
-	"""Normal log-likelihood"""
-	constrain(tau, lower=0)
-	return _fnormal(x, mu, tau)
+    """Normal log-likelihood"""
+    constrain(tau, lower=0)
+    return _fnormal(x, mu, tau)
     
 @fwrap
 def poisson_like(x,mu):
