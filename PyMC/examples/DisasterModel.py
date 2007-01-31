@@ -9,7 +9,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 from PyMC import parameter, data, OneAtATimeMetropolis
 from numpy import array, log, sum
-from PyMC import uniform_like, exponential_like, poisson_like
+from PyMC import constrain, exponential_like, poisson_like
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -25,7 +25,8 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 @parameter
 def switchpoint(value=50, length=110):
     """Change time for rate parameter."""
-    return uniform_like(value, 0, length)
+    constrain(value, 0, length)
+    return 0.
     # if value>0 and value<length:
     #     return 0.
     # else:

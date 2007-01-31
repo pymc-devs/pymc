@@ -1,10 +1,11 @@
 __docformat__='reStructuredText'
 from PyMCObjects import PyMCBase, Parameter, Node
-import numpy as np
-from numpy import log, Inf
+from utils import LikelihoodError
+from numpy import *
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
+
 
 
 class SamplingMethod(object):
@@ -127,7 +128,7 @@ class OneAtATimeMetropolis(SamplingMethod):
     def __init__(self, parameter, scale=1, dist='Normal'):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
-        self.proposal_sig = np.ones(np.shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self._dist = dist
 
     #
@@ -136,18 +137,19 @@ class OneAtATimeMetropolis(SamplingMethod):
     def step(self):
 
         # Probability and likelihood for parameter's current value:
+        
         logp = self.parameter.logp
         loglike = self.loglike
 
         # Sample a candidate value
         self.propose()
-
+        
         # Probability and likelihood for parameter's proposed value:
-        logp_p = self.parameter.logp
-
-        # Skip the rest if a bad value is proposed
-        if logp_p == -Inf:
+        try:
+            logp_p = self.parameter.logp
+        except LikelihoodError:
             self.parameter.revert()
+            self._rejected += 1
             return
 
         loglike_p = self.loglike
@@ -164,7 +166,7 @@ class OneAtATimeMetropolis(SamplingMethod):
 
     def propose(self):
         if self._dist == 'RoundedNormal':
-            self.parameter.value = np.round(rnormal(self.parameter.value, self.proposal_sig))
+            self.parameter.value = round(rnormal(self.parameter.value, self.proposal_sig))
         # Default to normal random-walk proposal
         else:
             self.parameter.value = rnormal(self.parameter.value, self.proposal_sig)
@@ -189,31 +191,38 @@ class JointMetropolis(SamplingMethod):
 
     Externally-accessible attributes:
 
-      - pymc_objects: A sequence of pymc objects to handle using
-        this SamplingMethod.
-      - interval: The interval at which S's parameters' values
-        should be written to S's internal traces
-        (NOTE: If the traces are moved back into the
-        PyMC objects, it should be possible to avoid this
-        double-tallying. As it stands, though, the traces
-        are stored in Model, and SamplingMethods have no
-        way to know which Model they're going to be a
-        member of.)
-      - epoch:  After epoch values are stored in the internal
-        traces, the covariance is recomputed.
-      - memory: The maximum number of epochs to consider when
-        computing the covariance.
-      - delay: Number of one-at-a-time iterations to do before
-        starting to record values for computing the joint
-        covariance.
-      - _asf: Adaptive scale factor.
+        pymc_objects:   A sequence of pymc objects to handle using
+                        this SamplingMethod.
+
+        interval:       The interval at which S's parameters' values
+                        should be written to S's internal traces
+                        (NOTE: If the traces are moved back into the
+                        PyMC objects, it should be possible to avoid this
+                        double-tallying. As it stands, though, the traces
+                        are stored in Model, and SamplingMethods have no
+                        way to know which Model they're going to be a
+                        member of.)
+
+        epoch:          After epoch values are stored in the internal
+                        traces, the covariance is recomputed.
+
+        memory:         The maximum number of epochs to consider when
+                        computing the covariance.
+
+        delay:          Number of one-at-a-time iterations to do before
+                        starting to record values for computing the joint
+                        covariance.
+
+        _asf:           Adaptive scale factor.
 
     Externally-accessible methods:
-      - step(): Make a Metropolis step. Applies the one-at-a-time
-        Metropolis algorithm until the first time the
-        covariance is computed, then applies the joint
-        Metropolis algorithm.
-      - tune(): Sets _asf according to a heuristic.
+
+        step():         Make a Metropolis step. Applies the one-at-a-time
+                        Metropolis algorithm until the first time the
+                        covariance is computed, then applies the joint
+                        Metropolis algorithm.
+
+        tune():         sets _asf according to a heuristic.
 
     """
     def __init__(self, pymc_objects, epoch=1000, memory=10, interval = 1, delay = 0):
@@ -245,7 +254,7 @@ class JointMetropolis(SamplingMethod):
             self._slices[parameter] = slice(self._len, self._len + param_len)
             self._len += param_len
             
-        self._trace = np.zeros((self._len, self.memory * self.epoch),dtype='float')            
+        self._trace = zeros((self._len, self.memory * self.epoch),dtype='float')               
 
         # __init__ should also check that each parameter's value is an ndarray or
         # a numerical type.
@@ -283,14 +292,14 @@ class JointMetropolis(SamplingMethod):
                 self._trace[self._slices[parameter], :trace_len] = param_trace
 
         # Compute matrix square root of covariance of self._trace
-        self._cov = np.cov(self._trace[: , :trace_len])
+        self._cov = cov(self._trace[: , :trace_len])
         
         # Try Cholesky factorization
         try:
             self._sig = cholesky(self._cov)
         
         # If there's a small eigenvalue, diagonalize
-        except np.linalg.linalg.LinAlgError:
+        except linalg.linalg.LinAlgError:
             val, vec = eigh(self._cov)
             self._sig = vec * sqrt(val)
 
@@ -310,9 +319,9 @@ class JointMetropolis(SamplingMethod):
 
     def propose(self):
         # Eventually, round the proposed values for discrete parameters.
-        proposed_vals = self._asf * np.inner(rnormal(size=self._len) , self._sig)
+        proposed_vals = self._asf * inner(rnormal(size=self._len) , self._sig)
         for parameter in self.parameters:
-            parameter.value = parameter.value + np.reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
+            parameter.value = parameter.value + reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
 
     #
     # Make a step
@@ -331,12 +340,12 @@ class JointMetropolis(SamplingMethod):
             self.propose()
 
             # Probability and likelihood for parameter's proposed value:
-            logp_p = sum([parameter.logp for parameter in self.parameters])
-
-            # Skip the rest if a bad value is proposed
-            if logp_p == -Inf:
+            try:
+                logp_p = sum([parameter.logp for parameter in self.parameters])
+            except LikelihoodError:
                 for parameter in self.parameters:
                     parameter.revert()
+                    self._rejected += 1
                 return
 
             loglike_p = self.loglike

@@ -9,8 +9,9 @@ from PyMC import Model
 from PyMC.examples import DisasterModel
 M = Model(DisasterModel)
 
+
 # Sample
-M.sample(10000,100,10)
+M.sample(50000,0,100)
 
 
 # Get and plot traces.
