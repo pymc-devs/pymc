@@ -595,7 +595,7 @@ cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(
 cf2py integer intent(hide),depend(a,x),check(na==1 || na==len(x)) :: na=len(a)
 cf2py real intent(out) :: like      
       
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER n,i,nmu,na
       REAL like
       REAL a(na),mu(nmu), a_tmp, mu_tmp
@@ -610,8 +610,8 @@ cf2py real intent(out) :: like
       a_tmp = a(1)
       like = 0.0
       do i=1,n
-		if (not_scalar_mu) mu_tmp=mu(i)
-		if (not_scalar_a) a_tmp=a(i)
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_a) a_tmp=a(i)
         like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
         like=like+x(i)*(log(mu_tmp/a_tmp)-log(1.0+mu_tmp/a_tmp))
         like=like-a_tmp * log(1.0 + mu_tmp/a_tmp)
@@ -620,7 +620,7 @@ cf2py real intent(out) :: like
       END
 
 
-	  SUBROUTINE geometric(x,p,n,np,like)
+      SUBROUTINE geometric(x,p,n,np,like)
 
 c Geometric log-likelihood
 
@@ -632,20 +632,20 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
 cf2py real intent(out) :: like      
 
-	  IMPLICIT NONE
-	  INTEGER n,np,i
-	  INTEGER x(n)
-	  REAL p(np), p_tmp
-	  REAL like
+      IMPLICIT NONE
+      INTEGER n,np,i
+      INTEGER x(n)
+      REAL p(np), p_tmp
+      REAL like
 
-	  p_tmp = p(1)
-	  like = 0.0
-	  do i=1, n
-	  	if (np .NE. 1) p_tmp = p(i)
-		like = like + log(p_tmp) + (x(i)-1)* log(1-p_tmp)
-	  enddo
-	  return
-	  END SUBROUTINE geometric
+      p_tmp = p(1)
+      like = 0.0
+      do i=1, n
+        if (np .NE. 1) p_tmp = p(i)
+        like = like + log(p_tmp) + (x(i)-1)* log(1-p_tmp)
+      enddo
+      return
+      END SUBROUTINE geometric
 
  
       SUBROUTINE binomial(x,n,p,nx,nn,np,like)
@@ -753,17 +753,18 @@ Cf2py real intent(out):: like
             RETURN
           ENDIF
           PEX(I) = EX(I)**(-1./xi_tmp)  
-          LIKE = LIKE - LOG(sigma_tmp) - PEX(I) + LOG(PEX(I)) - 	LOG(EX(I))
+          LIKE = LIKE - LOG(sigma_tmp) - PEX(I) 
+          LIKE = LIKE + LOG(PEX(I)) - LOG(EX(I))
         ENDIF
       ENDDO
 
       end subroutine gev    
     
 
-	  SUBROUTINE gev_ppf(q,xi,n,nxi,ppf)
+      SUBROUTINE gev_ppf(q,xi,n,nxi,ppf)
 C
 C     COMPUTE THE Percentile Point function (PPF) OF THE 
-C	  GENERALIZED EXTREME VALUE DISTRIBUTION.
+C     GENERALIZED EXTREME VALUE DISTRIBUTION.
 C
 C Created 29/01/2007 DH.
 C
@@ -773,18 +774,18 @@ Cf2py integer intent(hide), depend(q)::n=len(q)
 Cf2py integer intent(hide), depend(xi,n),check(nxi==1 || nxi==n) :: nxi=len(xi)
 Cf2py real dimension(n), intent(out):: ppf
 
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER n,nxi,i
       REAL q(n), xi(nxi), ppf(n)
       REAL xi_tmp
-	
-  	  xi_tmp = xi(1)
-	  do i=1,n
-		if (nxi .NE. 1) xi_tmp= xi(i)
-		ppf(i) = 1./xi_tmp * (1-(-log(q(i)))**(xi_tmp))
-	  enddo
-	  return 
-	  END SUBROUTINE gev_ppf
+    
+      xi_tmp = xi(1)
+      do i=1,n
+        if (nxi .NE. 1) xi_tmp= xi(i)
+        ppf(i) = 1./xi_tmp * (1-(-log(q(i)))**(xi_tmp))
+      enddo
+      return 
+      END SUBROUTINE gev_ppf
 
       SUBROUTINE multinomial(x,n,p,m,like)
 
@@ -830,24 +831,24 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER n,i,ntau,nmu
       REAL like
       REAL x(n),mu(nmu),tau(ntau)
-	  REAL mu_tmp, tau_tmp
-	  LOGICAL not_scalar_mu, not_scalar_tau
+      REAL mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
 
-	  not_scalar_mu = (nmu .NE. 1)
-	  not_scalar_tau = (ntau .NE. 1)
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
 
-	  mu_tmp = mu(1)
- 	  tau_tmp = tau(1)
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-		if (not_scalar_mu) mu_tmp=mu(i)
-	  	if (not_scalar_tau) tau_tmp=tau(i)
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
         like = like - 0.5 * tau_tmp * (x(i)-mu_tmp)**2
         like = like + 0.5*log(0.5*tau_tmp/PI)
       enddo
@@ -881,7 +882,7 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
       tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-		if (not_scalar_tau) tau_tmp = tau(i)
+        if (not_scalar_tau) tau_tmp = tau(i)
         like = like + 0.5 * (log(2. * tau_tmp / PI)) 
         like = like - (0.5 * x(i)**2 * tau_tmp)
       enddo
@@ -903,24 +904,24 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER n,i,ntau,nmu
       REAL like
       REAL x(n),mu(nmu),tau(ntau)
-	  REAL mu_tmp, tau_tmp
-	  LOGICAL not_scalar_mu, not_scalar_tau
+      REAL mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
 
-	  not_scalar_mu = (nmu .NE. 1)
-	  not_scalar_tau = (ntau .NE. 1)
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
 
-	  mu_tmp = mu(1)
- 	  tau_tmp = tau(1)
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
       like = 0.0
       do i=1,n
-	    if (not_scalar_mu) mu_tmp=mu(i)
-	  	if (not_scalar_tau) tau_tmp=tau(i)
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
         like = like + 0.5 * (log(tau_tmp) - log(2.0*PI)) 
         like = like - 0.5*tau_tmp*(log(x(i))-mu_tmp)**2 - log(x(i))
       enddo
@@ -946,8 +947,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       INTEGER i,n,na,nb
       REAL like
       REAL x(n),alpha(na),beta(nb)
-	  REAL beta_tmp, alpha_tmp
-	  LOGICAL not_scalar_a, not_scalar_b
+      REAL beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
 
       not_scalar_a = (na .NE. 1)
       not_scalar_b = (nb .NE. 1)
@@ -979,19 +980,19 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha,n),check(na==1||na==n) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
 
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER i,n,na,nb
       REAL like
       REAL x(n),alpha(na),beta(nb)
-	  REAL alpha_tmp, beta_tmp
-	  REAL gammln
+      REAL alpha_tmp, beta_tmp
+      REAL gammln
 
       alpha_tmp=alpha(1)
-	  beta_tmp=beta(1)
+      beta_tmp=beta(1)
       like = 0.0
       do i=1,n
-  		if (na .NE. 1) alpha_tmp=alpha(i)
-		if (nb .NE. 1) beta_tmp=beta(i)
+        if (na .NE. 1) alpha_tmp=alpha(i)
+        if (nb .NE. 1) beta_tmp=beta(i)
         like = like - (gammln(alpha(i)) + alpha(i)*log(beta(i)))
         like = like - (alpha(i)+1.0)*log(x(i)) - 1./(x(i)*beta(i)) 
       enddo
@@ -1014,7 +1015,7 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 cf2py real intent(out) :: like
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER i,nx,na,nb
       REAL like
       REAL x(nx),alpha(na),beta(nb), atmp, btmp
@@ -1047,20 +1048,20 @@ cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)) :: k=shape(
 cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
 cf2py integer intent(hide),depend(theta,x),check(nt==1 || nt==shape(x,0)) :: nt=shape(theta,0)
 
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER i,j,nx,nt,k
       REAL like,sumt
       REAL x(nx,k),theta(nt,k)
-	  REAL theta_tmp(k)
-	  LOGICAL not_scalar_theta
-	  REAL gammln
+      REAL theta_tmp(k)
+      LOGICAL not_scalar_theta
+      REAL gammln
 
-	  not_scalar_theta = (nt .NE. 1)
+      not_scalar_theta = (nt .NE. 1)
 
       like = 0.0
-	  do j=1,k
-   	    theta_tmp(j) = theta(j,1)
-	  enddo
+      do j=1,k
+        theta_tmp(j) = theta(j,1)
+      enddo
 
       do i=1,nx
         sumt = 0.0
@@ -1071,9 +1072,9 @@ c kernel of distribution
 c normalizing constant        
           like = like - gammln(theta_tmp(j))
           sumt = sumt + theta_tmp(j)
-	    enddo
-      	like = like + gammln(sumt)
-	  enddo
+        enddo
+        like = like + gammln(sumt)
+      enddo
       return
       END SUBROUTINE dirichlet
       

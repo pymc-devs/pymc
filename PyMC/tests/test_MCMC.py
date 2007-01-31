@@ -17,12 +17,12 @@ M.sample(10000,100,10)
 from pylab import *
 
 # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.
-plot(M.switchpoint.trace())
+plot(M.switchpoint.trace.gettrace(thin=100))
 title('switchpoint')
 figure()
-plot(M.early_mean.trace())
+plot(M.early_mean.trace.gettrace(thin=100))
 title('early mean')
 figure()
 title('late mean')
-plot(M.late_mean.trace())
+plot(M.late_mean.trace.gettrace(thin=100))
 show()

@@ -1,5 +1,5 @@
-from proposition5 import *
-import model_for_joint
+from PyMC import Model, JointMetropolis
+from PyMC.examples import model_for_joint
 
 M = Model(model_for_joint)
 

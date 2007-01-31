@@ -45,19 +45,15 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	
 	self->reverted = 1;
 	
-	// Initialize PyObjects that aren't passed in.
-	self->val_tuple = PyTuple_New(1);
-	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
-	
-	self->logp = Py_BuildValue("");
+	self->logp = Py_None;
 	Py_INCREF(self->logp);
 		
 	for(i=0;i<2;i++)
 	{
-		self->logp_caches[i] = Py_BuildValue("");
+		self->logp_caches[i] = Py_None;
 		Py_INCREF(self->logp_caches[i]);
 	} 
-	self->last_value = Py_BuildValue("");
+	self->last_value = Py_None;
 	Py_INCREF(self->last_value);		
 	
 	if(!PyDict_Check(self->parents)){
@@ -86,17 +82,21 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	Py_INCREF(self->__name__);
 	Py_INCREF(self->value);
 	Py_INCREF(self->parents);
-	Py_XINCREF(self->__doc__);
-	Py_XINCREF(self->random_fun);
-	Py_XINCREF(self->trace);
+	Py_INCREF(self->__doc__);
+	Py_INCREF(self->random_fun);
+	Py_INCREF(self->trace);
+	Py_INCREF(self->rseed);
 	Py_INCREF(self->children);
+	
+	// Initialize PyObjects that aren't passed in.
+	self->val_tuple = PyTuple_New(1);
+	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
 
 	parse_parents_of_param(self);
 	
+	for(i=0;i<2;i++) self->timestamp_caches[i] = -1;
 	self->timestamp = 0;
 	self->max_timestamp = self->timestamp;
-	compute_logp(self);
-	param_cache(self);
 
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);		
 	
@@ -233,13 +233,8 @@ static void param_parent_values(Parameter *self)
 }
 
 
-static void compute_logp(Parameter *self)
-{
-	Py_DECREF(self->logp);
-	param_parent_values(self);
-	PyTuple_SET_ITEM(self->val_tuple,0,self->value);
-	self->logp = PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
-}
+static PyObject* compute_logp(Parameter *self)
+{}
 
 static int param_check_for_recompute(Parameter *self)
 {
@@ -345,13 +340,21 @@ static PyObject *
 Parameter_getlogp(Parameter *self, void *closure) 
 {
 	int i;
+	PyObject *new_logp;
 	i=param_check_for_recompute(self);
 	//i=-1;
 	
 	if(i<0) 
 	{
-		compute_logp(self);
-		param_cache(self);
+		param_parent_values(self);
+		PyTuple_SET_ITEM(self->val_tuple,0,self->value);
+		new_logp =  PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
+		if(PyErr_Occurred()) return NULL;
+		else{
+			Py_DECREF(self->logp);		
+			self->logp = new_logp;
+			param_cache(self);			
+		}
 	}
 	
 	else
@@ -362,7 +365,7 @@ Parameter_getlogp(Parameter *self, void *closure)
 	}
 	
 	Py_INCREF(self->logp); 
-	//return Py_BuildValue("(O,[i,i])",self->logp, self->parent_timestamp_caches[0][1]); 
+	//return Py_BuildValue("(O,i)",self->logp, i); 
 	return self->logp;
 } 
 
@@ -449,6 +452,7 @@ Param_revert(Parameter *self)
 	self->value = self->last_value;
 	self->timestamp--;
 	
+	Py_INCREF(Py_None);
 	return Py_None;
 }
 
@@ -456,6 +460,8 @@ Param_revert(Parameter *self)
 static PyObject*
 Param_random(Parameter *self)
 {
+	PyObject *new_value;
+	
 	if(self->isdata == 1) 
 	{
 		PyErr_SetString(PyExc_AttributeError, "Data objects' values cannot be set.");
@@ -469,17 +475,20 @@ Param_random(Parameter *self)
 		}		
 	}
 	
-	self->reverted = 0;
-	
 	param_parent_values(self);
-	Py_DECREF(self->last_value);
-	self->last_value = self->value;
-	self->value = PyObject_Call(self->random_fun, PyTuple_New(0), self->parent_value_dict);
-	self->max_timestamp++;
-	self->timestamp = self->max_timestamp;
-	
-	Py_INCREF(self->value);
-	return self->value;
+	new_value = PyObject_Call(self->random_fun, PyTuple_New(0), self->parent_value_dict);
+	if(PyErr_Occurred()) return NULL;
+	else{
+		self->reverted = 0;		
+		Py_DECREF(self->last_value);
+		self->last_value = self->value;
+		self->value = new_value;
+		self->max_timestamp++;
+		self->timestamp = self->max_timestamp;
+		
+		Py_INCREF(self->value);
+		return self->value;
+	}
 }
 
 // Type declaration

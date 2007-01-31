@@ -38,9 +38,9 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	for(i=0;i<2;i++)
 	{
 		self->value_caches[i] = Py_BuildValue("");
-		Py_INCREF(self->value_caches[i]);
+		//Py_INCREF(self->value_caches[i]);
 	}
-	Py_INCREF(self->value);
+	//Py_INCREF(self->value);
 	
 	if(!PyDict_Check(self->parents)){
 		PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
@@ -72,12 +72,10 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	
 	parse_parents_of_node(self);
 	
-	self->timestamp = 0;
-	compute_value(self);
-	node_cache(self);	
+	self->timestamp = -1;
 	
 	Py_INCREF(self->children);	
-	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);	
+	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL); 
 
 	return 0;
 }
@@ -125,11 +123,11 @@ static void parse_parents_of_node(Node *self)
 	int i, j;	
 	
 	self->N_parents = (int) PyDict_Size(self->parents);
-	parent_items =  PyDict_Items(self->parents);	
+	parent_items =	PyDict_Items(self->parents);	
 
 	self->pymc_parent_indices = malloc(sizeof(int) * self->N_parents);
 	self->constant_parent_indices = malloc(sizeof(int) * self->N_parents);
-	self->proxy_parent_indices = malloc(sizeof(int) * self->N_parents);	
+	self->proxy_parent_indices = malloc(sizeof(int) * self->N_parents); 
 	
 	self->parent_pointers = malloc(sizeof(int) * self->N_parents );
 	self->parent_keys = malloc(sizeof(PyObject*) * self->N_parents );
@@ -207,11 +205,9 @@ static void node_parent_values(Node *self)
 		PyDict_SetItem(self->parent_value_dict, self->parent_keys[index_now], self->parent_values[index_now]);				
 	}
 }
-static void compute_value(Node *self)
+static PyObject* compute_value(Node *self)
 {
-	node_parent_values(self);
-	Py_DECREF(self->value);
-	self->value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
+
 }
 
 static int node_check_for_recompute(Node *self)
@@ -287,13 +283,21 @@ static PyObject *
 Node_getvalue(Node *self, void *closure) 
 {
 	int i;
+	PyObject *new_value;
 	i=node_check_for_recompute(self);
 	//i=-1;
 	
 	if(i<0) 
 	{
-		compute_value(self);
-		node_cache(self);		
+		node_parent_values(self);
+		new_value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
+		if(PyErr_Occurred()) return NULL;				
+		else{
+			Py_DECREF(self->value);
+			self->value = new_value;
+			node_cache(self);					
+		}
+
 	}
 	
 	else

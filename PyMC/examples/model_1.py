@@ -16,9 +16,11 @@ With likelihoods,
 - No timestamp: 17.25 s
 """
 
-from proposition5 import *
-from numpy.random import exponential as rexpo
-from flib import poisson
+from PyMC import parameter, data, OneAtATimeMetropolis
+from numpy import array, log, sum, random
+from numpy.random import randint
+from PyMC import uniform_like, exponential_like, poisson_like
+from PyMC import rexponential
 
 disasters_array = 	array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 							3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -35,11 +37,12 @@ def switchpoint(value=50, length=110):
 	"""Change time for rate parameter."""
 
 	def logp(value, length):
-		if value >= 0 and value <= length: return 0.
-		else: return -Inf
+		return uniform_like(value, 0, length)
 		
 	def random(length):
 		return randint(length)
+		
+	rseed = 1.
 
 
 @parameter
@@ -47,11 +50,12 @@ def early_mean(value=1., rate=1.):
 	"""Rate parameter of poisson distribution."""
 
 	def logp(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf 
+		return exponential_like(value, rate)
 		
 	def random(rate):
-		return rexpo(rate)
+		return rexponential(rate)
+		
+	rseed = 1.
 
 
 @parameter
@@ -59,20 +63,21 @@ def late_mean(value=.1, rate = 1.):
 	"""Rate parameter of poisson distribution."""
 
 	def logp(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf 
+		return exponential_like(value, rate)
 		
 	def random(rate):
-		return rexpo(rate)
+		return rexponential(rate)
+		
+	rseed = 1.
 
 	
-@data(caching = True)
+@data
 def disasters(	value = disasters_array, 
 				early_mean = early_mean, 
 				late_mean = late_mean, 
 				switchpoint = switchpoint):
 	"""Annual occurences of coal mining disasters."""
-	return poisson(value[:switchpoint],early_mean) + poisson(value[switchpoint+1:],late_mean)
+	return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint+1:],late_mean)
 	
 
 

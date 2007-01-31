@@ -5,9 +5,10 @@ global_rate ~ Exp(3.)
 disasters[t] ~ Po(global_rate)
 """
 
-from proposition5 import *
-from numpy.random import exponential as rexpo
-from flib import poisson
+from PyMC import parameter, data, OneAtATimeMetropolis
+from numpy import array, log, sum
+from PyMC import exponential_like, poisson_like
+from PyMC import rexponential
 
 disasters_array = 	array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 							3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -24,16 +25,17 @@ def global_rate(value=1., rate=3.):
 	"""Rate parameter of poisson distribution."""
 	
 	def logp(value, rate):
-		if value>0: return -rate * value
-		else: return -Inf 
+		return exponential_like(value, rate)
 		
 	def random(rate):
-		return rexpo(rate)
+		return rexponential(rate)
+		
+	rseed = 3.
 	
 
-@data(caching = False)
+@data
 def disasters(value = disasters_array, rate = global_rate):
 	"""Annual occurences of coal mining disasters."""
-	return poisson(value, rate)
+	return poisson_like(value, rate)
 
 

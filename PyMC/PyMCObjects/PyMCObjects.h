@@ -82,7 +82,7 @@ typedef struct {
 	PyObject_HEAD
 	PyObject *value;
 	PyObject *eval_fun;
-	int *timestamp;
+	int timestamp;
 	PyObject *parents;
 	PyObject *children;
 	PyObject *__doc__;
@@ -117,7 +117,6 @@ static void parse_parents_of_node(Node *self);
 
 static void node_parent_values(Node *self);
 
-static void compute_value(Node *self);
 static int node_check_for_recompute(Node *self);
 static void node_cache(Node *self);
 
@@ -243,7 +242,6 @@ static void parse_parents_of_param(Parameter *self);
 
 static void param_parent_values(Parameter *self);
 
-static void compute_logp(Parameter *self);
 static int param_check_for_recompute(Parameter *self);
 static void param_cache(Parameter *self);
 
@@ -275,6 +273,8 @@ static PyMemberDef Param_members[] = {
 "parents"},
 // {"last_value", T_OBJECT, offsetof(Parameter, last_value), RO, 
 // "last_value"},
+{"rseed", T_OBJECT, offsetof(Parameter, rseed), 0, 
+"rseed"},
 {"children", T_OBJECT, offsetof(Parameter, children), 0, 
 "children"},
 {"__doc__", T_OBJECT, offsetof(Parameter, __doc__), 0, 
