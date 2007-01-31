@@ -1,7 +1,7 @@
-from PyMC import Model
+from PyMC2 import Model
 import fastDisasterModel
 M = Model(fastDisasterModel)
 
 
 # Sample
-M.sample(50000,0,100)
+M.sample(5000,0,100)
