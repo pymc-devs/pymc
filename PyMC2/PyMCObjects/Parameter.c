@@ -468,7 +468,7 @@ Param_random(Parameter *self)
 		return NULL;
 	}
 	else{
-		if (!self->random_fun | self->random_fun == Py_None) 
+		if (!self->random_fun | (self->random_fun == Py_None)) 
 		{
 			PyErr_SetString(PyExc_AttributeError, "No random() function specified.");
 			return NULL;
