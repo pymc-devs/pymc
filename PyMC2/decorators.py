@@ -11,6 +11,7 @@ import string
 import inspect
 import types
 from distributions import *
+import distributions
 from utils import LikelihoodError
 
 def node_to_NDarray(arg):
@@ -290,6 +291,53 @@ def local_decorated_likelihoods(obj):
     for name, like in likelihoods.iteritems():
         obj[name+'_like'] = fortranlike(like, snapshot)
 
+
+def create_distribution_instantiator(name, logp=None, random=None):
+    """Return a function to instantiate a parameter from a particular distribution.
+     
+      :Example:
+        >>> Exponential = create_distribution_instantiator('exponential')
+        >>> A = Exponential(beta=4)
+    """
+    
+
+    if logp is None:
+        try:
+           logp = getattr(distributions, name+"_like")
+        except:
+            raise "No likelihood found with this name ", name+"_like"
+    if random is None:
+        try: 
+            random = getattr(distributions, 'r'+name)
+        except:
+            raise "No random generator found with this name ", 'r'+name
+        
+    
+    # Build parents dictionary by parsing the __func__tion's arguments.
+    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
+    parent_names = args[1:]
+    try:
+        parents_default = dict(zip(args[-len(defaults):], defaults))
+    except TypeError: # No parents at all.   
+        parents_default = {}
+        
+        
+    def instantiator(**kwds):
+        # Deal with keywords
+        # Find which are parents
+        value = kwds.pop('value')
+        parents=parents_default
+        for k in kwds.keys():
+            if k in parents:
+                parents[k] = kwds.pop(k)
+        return Parameter(value=value, parents=parent, **kwds)
+
+    instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
+    return instantiator
+    
+    
+    # Find the names of the parents.
+    inspect.getlogp
 if __name__=='__main__':
     import __main__
     local_decorated_likelihoods(__main__.__dict__)
