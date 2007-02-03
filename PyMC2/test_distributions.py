@@ -343,15 +343,40 @@ class test_half_normal(NumpyTestCase):
 
 class test_hypergeometric(NumpyTestCase):
     def check_consistency(self):
-        pass
+        params=dict(draws=10, success=20, failure=12)
+        hist, like, figdata = discrete_consistency(rhypergeometric, \
+        flib.hyperg, params, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='hypergeomtric', **figdata)
+        assert_array_almost_equal(hist, like,1)
 
 class test_inverse_gamma(NumpyTestCase):
     def check_consistency(self):
-        pass
+        params=dict(alpha=2, beta=3)
+        hist, like, figdata = consistency(rinverse_gamma, flib.igamma, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='inverse_gamma', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+    def normalization(self):
+        params=dict(alpha=2, beta=3)
+        integral = normalization(flib.igamma, params, [0, 10], 200)
+        assert_almost_equal(integral, 1, 3)
 
 class test_lognormal(NumpyTestCase):
     def check_consistency(self):
-        pass
+        params=dict(mu=3, tau = .5)
+        hist, like, figdata = consistency(rlognormal, flib.lognormal, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='lognormal', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+    def normalization(self):
+        params=dict(mu=3, tau = .5)
+        integral = normalization(flib.lognormal, params, [0, 20], 200)
+        assert_almost_equal(integral, 1, 3)
 
 class test_multinomial(NumpyTestCase):
     def check_consistency(self):

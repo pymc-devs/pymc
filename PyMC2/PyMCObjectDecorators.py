@@ -180,7 +180,7 @@ def create_distribution_instantiator(name, logp=None, random=None):
      
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')
-        >>> A = Exponential(beta=4)
+        >>> A = Exponential(name ='A', beta=4)
     """
     
 

@@ -641,36 +641,42 @@ def half_normal_like(x, tau):
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
-# TODO: replace with random.hypergeometric
-# TODO: Select a uniform convention across functions.
-def rhypergeometric(draws, red, total, n=None):
-    """Returns n hypergeometric random variates of size 'draws'"""
+def rhypergeometric(draws, success, failure, size=1):
+    """rhypergeometric(draws, success, failure, size=1)
 
-    urn = [1]*red + [0]*(total-red)
-
-    if n:
-        return [sum(urn[i] for i in permutation(total)[:draws]) for j in range(n)]
-    else:
-        return sum(urn[i] for i in permutation(total)[:draws])
-
-def hypergeometric_expval(n,m,N):
-    return n * (m / N)
-
-def hypergeometric_like(x, n, m, N):
-    r"""
-    Hypergeometric log-likelihood
-
-    hypergeometric_like(x, n, m, N)
-
-    x \in [\max(0, n-N+m), \min(m,n)], m < N, n < N
-
-    Models the probability of drawing x successful draws in n
-    draws from N total balls of which m are successes.
+    Returns hypergeometric random variates.
     """
-    constrain(m, upper=N)
-    constrain(n, upper=N)
-    constrain(x, max(0, n - N + m), min(m, n))
-    return flib.hyperg(x, n, m, N)
+    return random.hypergeometric(success, failure, draws, size)
+
+def hypergeometric_expval(draws, success, failure):
+    return draws * success / (success+failure)
+
+def hypergeometric_like(x, draws, success, failure):
+    r"""hypergeometric_like(x, draws, success, failure)
+
+    Hypergeometric log-likelihood. Discrete probability distribution that
+    describes the number of successes in a sequence of draws from a finite
+    population without replacement.
+
+    .. math::
+        f(x \mid draws, successes, failures)
+
+    :Parameter:
+      x : int
+        Number of successes in a sample drawn from a population.
+        :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
+      draws : int
+        Size of sample.
+      success : int
+        Number of successes in the population.
+      failure : int
+        Number of failures in the population.
+
+    :Note:
+      :math:`E(X) = \frac{draws failures}{success+failures}`
+    """
+    constrain(x, max(0, draws - failure), min(success, draws))
+    return flib.hyperg(x, draws, success, success+failure)
 
 # Inverse gamma----------------------------------------------
 # Looks this one is identical to rgamma, this is strange.
@@ -685,13 +691,25 @@ def rinverse_gamma(alpha, beta,size=1):
 def inverse_gamma_expval(alpha, beta):
     return array(alpha) / beta
 
-
 def inverse_gamma_like(x, alpha, beta):
-    """inverse_gamma_like(x, alpha, beta)
+    r"""inverse_gamma_like(x, alpha, beta)
 
-    Inverse gamma log-likelihood
+    Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
-    x > 0, alpha > 0, beta > 0
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} e^{-\frac{\beta}{x}}}
+        {\Gamma(\alpha)\beta^\alpha}
+
+    :Parameter:
+      x : float
+        x > 0
+      alpha : float
+        Shape parameter, :math:`\alpha > 0`.
+      beta : float
+        Scale parameter, :math:`\beta > 0`.
+
+    :Note:
+      :math:`E(X)=\frac{\beta}{\alpha-1}` for :math:`\alpha > 1`.
     """
     constrain(x, lower=0)
     constrain(alpha, lower=0)
@@ -701,23 +719,42 @@ def inverse_gamma_like(x, alpha, beta):
 # Lognormal----------------------------------------------
 @randomwrap
 def rlognormal(mu, tau,size=1):
-    return random.normal(mu, sqrt(1./tau))
+    """rlognormal(mu, tau,size=1)
+
+    Return random lognormal variates.
+    """
+    return random.lognormal(mu, sqrt(1./tau),size)
 
 def lognormal_expval(mu, tau):
-    return mu
-
+    return np.exp(mu + 1./2/tau)
 
 def lognormal_like(x, mu, tau):
-    """Log-normal log-likelihood
+    r"""lognormal_like(x, mu, tau)
 
-    lognormal_like(x, mu, tau)
+    Log-normal log-likelihood. Distribution of any random variable whose
+    logarithm is normally distributed. A variable might be modeled as
+    log-normal if it can be thought of as the multiplicative product of many
+    small independent factors.
 
-    x > 0, tau > 0
+    .. math::
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi x}}
+        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
+
+    :Parameters:
+      x : float
+        x > 0
+      mu : float
+        Location parameter.
+      tau : float
+        Scale parameter, > 0.
+
+    :Note:
+      :math:`E(X)=e^{\mu+\frac{1}{2\tau}`
     """
     constrain(tau, lower=0)
     constrain(x, lower=0)
     return flib.lognormal(x,mu,tau)
-
+    
 # Multinomial----------------------------------------------
 @randomwrap
 def rmultinomial(n,p,size=1):
