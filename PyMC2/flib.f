@@ -828,7 +828,7 @@ cf2py real dimension(nmu),intent(in) :: mu
 cf2py real dimension(ntau),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
       IMPLICIT NONE
@@ -901,7 +901,7 @@ cf2py real dimension(nmu),intent(in) :: mu
 cf2py real dimension(ntau),intent(in) :: tau
 cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py integer intent(hide),depend(mu,n),check(ntau==1||ntau==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
       IMPLICIT NONE

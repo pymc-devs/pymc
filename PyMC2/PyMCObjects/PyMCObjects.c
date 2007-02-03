@@ -39,6 +39,10 @@ initPyMCObjects()
 	if(PyType_Ready(&Nodetype)<0) return;
 	PyModule_AddObject(m, "Node", (PyObject *)&Nodetype);	 		
 
+/*	Not going to try this until the exit bug is resolved.	
+	if(PyType_Ready(&LogLikeDescriptor)<0) return;
+	PyModule_AddObject(m, "LogLikeDescriptor", (PyObject *)&LogLikeDescriptor);	
+*/
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
 	ErrorObject = PyString_FromString("PyMCObjects.error");
