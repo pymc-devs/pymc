@@ -2,6 +2,25 @@ import sys, inspect
 from imp import load_dynamic
 import distributions
 from PyMC2.PyMCObjects import Parameter, Node, PyMCBase
+from copy import copy
+
+#
+# Find PyMC object's random children.
+#
+def extend_children(pymc_object):
+    new_children = copy(pymc_object.children)
+    need_recursion = False
+    node_children = set()
+    for child in pymc_object.children:
+        if isinstance(child,Node):
+            new_children |= child.children
+            node_children.add(child)
+            need_recursion = True
+    pymc_object.children = new_children - node_children
+    if need_recursion:
+        extend_children(pymc_object)
+    return
+
 
 def _extract(__func__, kwds, keys): 
     """
@@ -101,6 +120,8 @@ def parameter(__func__=None, **kwds):
             kwds['isdata'] = False
         if kwds['trace'] == None:
             kwds['trace'] = True
+        if kwds['isdata'] == True:
+            kwds['trace'] = False
         kwds['children'] = set()
         return Parameter(value=value, parents=parents, **kwds)      
     keys = ['logp','random','trace','rseed']
@@ -152,7 +173,7 @@ def data(__func__=None, **kwds):
     Decorator instantiating data objects. Usage is just like
     parameter.
     """
-    return parameter(__func__, isdata=True, trace = None, **kwds)
+    return parameter(__func__, isdata=True, trace = False, **kwds)
     
 def create_distribution_instantiator(name, logp=None, random=None):
     """Return a function to instantiate a parameter from a particular distribution.

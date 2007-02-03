@@ -5,7 +5,11 @@
 # Author: David Huard, 2006
 # A bit slow. try to optimize
 import numpy as np
-from scipy import special
+try:
+	from scipy import special
+except ImportError:
+	print 'Warning, SciPy special functions not available'
+from copy import copy
 
 """Exceptions"""
 

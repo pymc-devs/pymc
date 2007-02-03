@@ -5,6 +5,7 @@ from numpy import *
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
+from PyMCObjectDecorators import extend_children
 
 
 
@@ -64,7 +65,7 @@ class SamplingMethod(object):
         for pymc_object in self.pymc_objects:
             self.children |= pymc_object.children
 
-        self._extend_children()
+        extend_children(self)
 
         self.children -= self.nodes
         self.children -= self.parameters
@@ -81,22 +82,6 @@ class SamplingMethod(object):
     #
     def tune(self):
         pass
-
-    #
-    # Find nearest random descendants
-    #
-    def _extend_children(self):
-        need_recursion = False
-        node_children = set()
-        for child in self.children:
-            if isinstance(child,Node):
-                self.children |= child.children
-                node_children.add(child)
-                need_recursion = True
-        self.children -= node_children
-        if need_recursion:
-            self._extend_children()
-        return
 
     #
     # Define attribute loglike.
@@ -159,7 +144,7 @@ class OneAtATimeMetropolis(SamplingMethod):
             # Revert parameter if fail
             self.parameter.revert()
             
-            self._rejected+=1
+            self._rejected += 1
         else:
             self._accepted += 1
 

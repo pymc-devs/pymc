@@ -2,10 +2,11 @@ __docformat__='reStructuredText'
 
 """ Summary"""
 
-from numpy import zeros
+from numpy import zeros, floor
 from PyMCObjects import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
+from PyMCObjectDecorators import extend_children
 
 class Model(object):
     """
@@ -178,7 +179,7 @@ class Model(object):
         # Tell all pymc_objects to get ready for sampling
         self.pymc_objects = self.nodes | self.parameters | self.data
         for pymc_object in self.pymc_objects:
-            self._extend_children(pymc_object)
+            extend_children(pymc_object)
 
         # Take care of singleton parameters
         for parameter in self.parameters:
@@ -193,22 +194,6 @@ class Model(object):
             # If not, make it a new one-at-a-time Metropolis-Hastings SamplingMethod
             if homeless:
                 self.sampling_methods.add(OneAtATimeMetropolis(parameter))
-
-    #
-    # Find PyMC object's random children.
-    #
-    def _extend_children(self,pymc_object):
-        need_recursion = False
-        node_children = set()
-        for child in pymc_object.children:
-            if isinstance(child,Node):
-                pymc_object.children |= child.children
-                node_children.add(child)
-                need_recursion = True
-        pymc_object.children -= node_children
-        if need_recursion:
-            self._extend_children(pymc_object)
-        return
 
 
     #
@@ -284,7 +269,7 @@ class Model(object):
         self._prepare()
 
         # Initialize traces
-        self._init_traces(iter)
+        self._init_traces(iter/thin)
         
         try:
             for i in xrange(iter):
@@ -293,7 +278,8 @@ class Model(object):
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
 
-                self.tally()
+                if i % thin == 0:
+                    self.tally()
 
                 if i % 10000 == 0:
                     print 'Iteration ', i, ' of ', iter
