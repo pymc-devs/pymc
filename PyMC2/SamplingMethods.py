@@ -167,7 +167,7 @@ class OneAtATimeMetropolis(SamplingMethod):
 
 class JointMetropolis(SamplingMethod):
     """
-    S = Joint(pymc_objects, epoch=1000, memory=10, interval=1, delay=1000)
+    S = Joint(pymc_objects, epoch=1000, memory=10, delay=1000)
 
     Applies the Metropolis-Hastings algorithm to several parameters
     together. Jumping density is a multivariate normal distribution
@@ -178,15 +178,6 @@ class JointMetropolis(SamplingMethod):
 
         pymc_objects:   A sequence of pymc objects to handle using
                         this SamplingMethod.
-
-        interval:       The interval at which S's parameters' values
-                        should be written to S's internal traces
-                        (NOTE: If the traces are moved back into the
-                        PyMC objects, it should be possible to avoid this
-                        double-tallying. As it stands, though, the traces
-                        are stored in Model, and SamplingMethods have no
-                        way to know which Model they're going to be a
-                        member of.)
 
         epoch:          After epoch values are stored in the internal
                         traces, the covariance is recomputed.
@@ -210,17 +201,20 @@ class JointMetropolis(SamplingMethod):
         tune():         sets _asf according to a heuristic.
 
     """
-    def __init__(self, pymc_objects, epoch=1000, memory=10, interval = 1, delay = 0):
+    def __init__(self, pymc_objects, epoch=1000, memory=10, delay = 0):
 
         SamplingMethod.__init__(self,pymc_objects)
 
         self.epoch = epoch
         self.memory = memory
-        self.interval = interval
         self.delay = delay
 
         # Flag indicating whether covariance has been computed
         self._ready = False
+
+        # For making sure the covariance isn't recomputed multiple times
+        # on the same trace index
+        self.last_trace_index = 0
 
         # Use OneAtATimeMetropolis instances to handle independent jumps
         # before first epoch is complete
@@ -252,15 +246,13 @@ class JointMetropolis(SamplingMethod):
         print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
         
         # Figure out which slice of the traces to use
-        if (self._model._cur_trace_index - self.delay) / self.epoch / self.interval > self.memory:
+        if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
             trace_slice = slice(self._model._cur_trace_index-self.epoch * self.memory,\
-                                self._model._cur_trace_index, \
-                                self.interval)
+                                self._model._cur_trace_index)
             trace_len = self.memory * self.epoch
         else:
-            trace_slice = slice(self.delay, self._model._cur_trace_index, \
-                                self.interval)
-            trace_len = (self._model._cur_trace_index - self.delay) / self.interval
+            trace_slice = slice(self.delay, self._model._cur_trace_index)
+            trace_len = (self._model._cur_trace_index - self.delay)
             
         
         # Store all the parameters' traces in self._trace
@@ -345,6 +337,9 @@ class JointMetropolis(SamplingMethod):
                 self._accepted += 1
 
         # If an epoch has passed, recompute covariance.
-        if  (float(self._model._cur_trace_index - self.delay) / float(self.interval)) % self.epoch == 0 \
-            and self._model._cur_trace_index > self.delay:
+        if  (float(self._model._cur_trace_index - self.delay)) % self.epoch == 0 \
+            and self._model._cur_trace_index > self.delay \
+            and not self._model._cur_trace_index == self.last_trace_index:
+
             self.compute_sig()
+            self.last_trace_index = self._model._cur_trace_index

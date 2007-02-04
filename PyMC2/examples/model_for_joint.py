@@ -15,4 +15,4 @@ tau_B = eye(2) * 100.
 def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
     return mvnorm(value,mu,tau) 
 
-S = JointMetropolis([A,B],epoch=1000, memory=10, interval = 10, delay = 0)
+S = JointMetropolis([A,B],epoch=100, memory=10, delay = 0)

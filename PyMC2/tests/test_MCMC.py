@@ -16,14 +16,14 @@ def test():
     M.sample(50000,0,100)
     
     # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.
-    plot(M.switchpoint.trace.gettrace(thin=100))
+    plot(M.switchpoint.trace.gettrace())
     title('switchpoint')
     figure()
-    plot(M.early_mean.trace.gettrace(thin=100))
+    plot(M.early_mean.trace.gettrace())
     title('early mean')
     figure()
     title('late mean')
-    plot(M.late_mean.trace.gettrace(thin=100))
+    plot(M.late_mean.trace.gettrace())
     show()
 
 if __name__=='__main__':

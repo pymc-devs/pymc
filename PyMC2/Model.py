@@ -268,6 +268,10 @@ class Model(object):
         # Do various preparations for sampling
         self._prepare()
 
+        self._iter = iter
+        self._burn = burn
+        self._thin = thin
+
         # Initialize traces
         self._init_traces(iter/thin)
         
