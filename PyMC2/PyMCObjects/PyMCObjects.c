@@ -27,17 +27,26 @@ initPyMCObjects()
 		(PyObject*)NULL,PYTHON_API_VERSION);
 		
 	/* Add Parameter and Node */
+	PyMCBasetype.tp_new = PyType_GenericNew; 
 	if(PyType_Ready(&PyMCBasetype)<0) return;
 	PyModule_AddObject(m, "PyMCBase", (PyObject *)&PyMCBasetype); 	
-	
+
+	RemoteProxyBasetype.tp_new = PyType_GenericNew; 	
 	if(PyType_Ready(&RemoteProxyBasetype)<0) return;
 	PyModule_AddObject(m, "RemoteProxyBase", (PyObject *)&RemoteProxyBasetype);	
 	
+	Paramtype.tp_new = PyType_GenericNew; 
 	if(PyType_Ready(&Paramtype)<0) return;
 	PyModule_AddObject(m, "Parameter", (PyObject *)&Paramtype); 
 	
+	Nodetype.tp_new = PyType_GenericNew; 
 	if(PyType_Ready(&Nodetype)<0) return;
-	PyModule_AddObject(m, "Node", (PyObject *)&Nodetype);	 		
+	PyModule_AddObject(m, "Node", (PyObject *)&Nodetype);	
+	
+	Py_INCREF(&PyMCBasetype);
+	Py_INCREF(&RemoteProxyBasetype);
+	Py_INCREF(&Paramtype);
+	Py_INCREF(&Nodetype);
 
 /*	Not going to try this until the exit bug is resolved.	
 	if(PyType_Ready(&LogLikeDescriptor)<0) return;

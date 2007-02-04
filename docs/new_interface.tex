@@ -100,6 +100,7 @@ Python is a wonderful language, but it has an importrant drawback for statistica
 Here are some speed results.
 
 %(end)
+%(end)
 
 \chapter{Installation} %(fold)
 
@@ -176,7 +177,7 @@ This test model estimates the switch point between two rate distributions within
 \end{description}
 
 Statistical model as factorization of joint distribution, parents and children, Markov blanket.
-
+%(end)
 \chapter{Markov chain Monte Carlo} %(fold)
 \label{chap:MCMC} 
 
@@ -483,11 +484,16 @@ Since the sample is derived from a Markov chain, it is necessarily autocorrelate
 
 % chapter chap:MCMC (end)
 
+
 \chapter{Model building in PyMC} 
+
+Difference between deterministic sensu Node and data: Node is determined by its parents, regardless of observations. Data isn't determined by its parents; if you knew its parents' values, you still wouldn't know its value \emph{until} you make the observations. You have to think of the whole model as a prior: it preexists the observations, which come in and `clamp' the value of certain parameters.
+
+Why Node can't have an isdata flag: it's mathematically OK as long as its specified value is in its range, but then its parents would be confined to its inverse image. Also with probability densities, when you condition on a particular value the pdf kind of specifies what limit you're taking (because it's not actually legal to condition on events of probability 0), but if a Node's value were conditioned the limit would be more ambiguous. Though you could take it as convention that the parents are confined to an their natural limit around the inverse image, but who knows if that's actually the right way to do things. There's no way PyMC can support this generally, but you're welcome to write a special SamplingMethod that does it. If you think your SamplingMethod could be useful to other users, please submit it.
 
 \section{\texttt{Parameter}s and \texttt{Node}s (needs to be updated...)}\label{sec:PyMCObjects} % (fold)
 
-% subsection declaration (end)
+
 
 \begin{description}
 \item[\texttt{Parameter}s] Objects whose value can be set, and that return a prior log-probability.
@@ -564,6 +570,8 @@ You will break them.
 %(end)
 \subsection{\emph{Do} subclass SamplingMethod}\label{sub:do_subclass} % (fold)
 This is PyMC's room to grow, it's the reason why any MCMC algorithm can be implemented in PyMC.
+%(end)
+
 %(end)
 
 
