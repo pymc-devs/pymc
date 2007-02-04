@@ -3,7 +3,7 @@ from PyMC2.examples import model_for_joint
 
 M = Model(model_for_joint)
 
-M.sample(iter=50000,burn=0,thin=100)
+M.sample(iter=20000,burn=0,thin=100)
 
 from pylab import *
 plot(M.A.trace.gettrace()[:,0],M.B.trace.gettrace()[:,0],'b.')

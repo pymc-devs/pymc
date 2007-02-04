@@ -5,6 +5,7 @@ from numpy import *
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
+from PyMC2.flib import fill_stdnormal
 from PyMCObjectDecorators import extend_children
 
 
@@ -114,6 +115,7 @@ class OneAtATimeMetropolis(SamplingMethod):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
         self._dist = dist
 
     #
@@ -150,12 +152,12 @@ class OneAtATimeMetropolis(SamplingMethod):
 
 
     def propose(self):
+
         if self._dist == 'RoundedNormal':
-            self.parameter.value = round(rnormal(self.parameter.value, self.proposal_sig))
+            self.parameter.value = round(rnormal(self.parameter.value,self.proposal_sig))
         # Default to normal random-walk proposal
         else:
-            self.parameter.value = rnormal(self.parameter.value, self.proposal_sig)
-
+            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
     #
     # Tune the proposal width.
     #
@@ -232,8 +234,10 @@ class JointMetropolis(SamplingMethod):
                 param_len = 1
             self._slices[parameter] = slice(self._len, self._len + param_len)
             self._len += param_len
+
+        self._proposal_deviate = zeros(self._len,dtype=float)
             
-        self._trace = zeros((self._len, self.memory * self.epoch),dtype='float')               
+        self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)               
 
         # __init__ should also check that each parameter's value is an ndarray or
         # a numerical type.
@@ -296,7 +300,8 @@ class JointMetropolis(SamplingMethod):
 
     def propose(self):
         # Eventually, round the proposed values for discrete parameters.
-        proposed_vals = self._asf * inner(rnormal(size=self._len) , self._sig)
+        fill_stdnormal(self._proposal_deviate)
+        proposed_vals = self._asf * inner(self._proposal_deviate, self._sig)
         for parameter in self.parameters:
             parameter.value = parameter.value + reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
 

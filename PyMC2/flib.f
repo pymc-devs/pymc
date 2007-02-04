@@ -1648,7 +1648,113 @@ C     Remember to undo the symmetry transformation.
       if (p.ne.pp) x=n-x 
       return 
       END 
-      
+
+
+
+      SUBROUTINE fill_stdnormal(array_in,n)
+
+c Fills an input array with standard normals in-place.
+c Created 2/4/07, AP
+
+cf2py real dimension(n),intent(inplace) :: array_in
+cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
+
+      INTEGER i, n, n_blocks, index
+      REAL U1, U2, array_in(n)
+      LOGICAL iseven
+
+      iseven = (MODULO(n,2) .EQ. 0)
+
+      if(iseven) then
+        n_blocks = n/2
+      else 
+        n_blocks = (n-1)/2
+      endif
+
+      do i=1,n_blocks
+        call RNORM(U1,U2)
+        index = 2*(i-1) + 1
+        array_in(index) = U1
+        array_in(index+1) = U2
+      enddo
+
+      if(.NOT.iseven) then
+        call RNORM(U1,U2)
+        array_in(n) = U1
+      endif
+
+
+      return
+      END
+
+      SUBROUTINE rnormal_unrecommended(array_out,mu,sig,n,nmu,nsig)
+
+c Normal RNG
+c Created 2/4/07 AP.
+c Clumsy to use, and just a whisker faster than numpy's normal. Not recommended.
+
+cf2py real dimension(n),intent(out) :: array_out
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(nsig),intent(in) :: sig
+cf2py integer intent(in):: n
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(sig,n),check(nsig==1||nsig==n) :: nsig=len(sig)
+
+      IMPLICIT NONE
+      INTEGER n,i,nsig,nmu
+      REAL like
+      REAL array_out(n),mu(nmu),sig(nsig)
+      REAL mut1, mut2, sigt1, sigt2
+      LOGICAL not_scalar_mu, not_scalar_sig
+      INTEGER n_blocks, index
+      REAL U1, U2
+      LOGICAL iseven
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_sig = (nsig .NE. 1)
+      mut1 = mu(1)
+      sigt1 = sig(1)
+      mut2 = mu(1)
+      sigt2 = sig(1)
+
+      iseven = (MODULO(n,2) .EQ. 0)
+
+      if (iseven) then
+        n_blocks = n/2
+      else 
+        n_blocks = (n-1)/2
+      endif
+
+      do i=1,n_blocks
+        call RNORM(U1,U2)
+        index = 2*(i-1) + 1
+        if (not_scalar_mu) then
+          mut1=mu(index)
+          mut2=mu(index+1)
+        endif
+        if (not_scalar_sig) then
+          sigt1=sig(index)
+          sigt2=sig(index+1)
+        endif
+        array_out(index) = U1 * mut1 + sigt1
+        array_out(index+1) = U2 * mut2 + sigt2
+      enddo
+
+      if(.NOT.iseven) then
+        if (not_scalar_mu) then
+          mut1=mu(n)
+        endif
+        if (not_scalar_sig) then
+          sigt1=sig(n)
+        endif
+        call RNORM(U1,U2)
+        array_out(n) = U1 * mut1 + sigt1
+      endif
+
+      return
+      END
+
+
       
       SUBROUTINE RNORM(U1, U2)
 C
@@ -1660,6 +1766,8 @@ C     Knuth(1969).
 C
 C     Function RAND must give a result randomly and rectangularly
 C     distributed between the limits 0 and 1 exclusive.
+C     Note- this seems to be faster than Leva's algorithm from
+C     ACM Trans Math Soft, Dec. 1992 - AP
 C
       REAL U1, U2
       REAL RAND
