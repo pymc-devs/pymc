@@ -222,7 +222,7 @@ def multinomial_beta(alpha):
     return nom/den
         
 def dirichlet(x, theta):
-    r"""Dirichlet multivariate probability density.
+    """Dirichlet multivariate probability density.
     
     :Parameters:
       x : (n,k) array
