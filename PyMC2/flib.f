@@ -1717,7 +1717,7 @@ cf2py integer intent(hide),depend(sig,n),check(nsig==1||nsig==n) :: nsig=len(sig
       mut2 = mu(1)
       sigt2 = sig(1)
 
-      iseven = (MODULO(n,2) .EQ. 0)
+      iseven = (MOD(n,2) .EQ. 0)
 
       if (iseven) then
         n_blocks = n/2
