@@ -1663,7 +1663,7 @@ cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
       REAL U1, U2, array_in(n)
       LOGICAL iseven
 
-      iseven = (MODULO(n,2) .EQ. 0)
+      iseven = (MOD(n,2) .EQ. 0)
 
       if(iseven) then
         n_blocks = n/2
