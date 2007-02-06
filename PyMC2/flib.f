@@ -352,55 +352,61 @@ c     Check length of input arrays.
       END SUBROUTINE exponweib_ppf
 
 
-      SUBROUTINE hyperg(x,d,red,total,n,nd,nred,ntotal,like)
+	  REAL FUNCTION combinationln(n,k)
+
+c Ln of the number of different combinations of n different things, taken k at a time. 
+c DH, 5.02.2007
+
+	  IMPLICIT NONE
+	  INTEGER n, k
+	  REAL factln
+
+	  combinationln= factln(n) - factln(k) - factln(n-k)
+
+	  END FUNCTION combinationln
+
+      SUBROUTINE hyperg(x,draws,success,total,n,nd,ns,nt,like)
 
 c Hypergeometric log-likelihood function
+c Updated 5/02/07, DH. Changed variable names. 
 
-c Distribution models the probability of drawing x red balls in d
-c draws from an urn of 'red' red balls and 'total' total balls.
+c Distribution models the probability of drawing x successes in a 
+c given number of draws, knowing the population composition (success, failures).
+c where failures = total - success
 
 cf2py integer dimension(n),intent(in) :: x
-cf2py integer dimension(nd),intent(in) :: d
-cf2py integer dimension(nred),intent(in) :: red
-cf2py integer dimension(ntotal),intent(in) :: total
+cf2py integer dimension(nd),intent(in) :: draws
+cf2py integer dimension(ns),intent(in) :: success
+cf2py integer dimension(nt),intent(in) :: total
 cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py integer intent(hide),depend(d) :: nd=len(d)
-cf2py integer intent(hide),depend(red) :: nred=len(red)
-cf2py integer intent(hide),depend(total) :: ntotal=len(total)
+cf2py integer intent(hide),depend(draws,n),check(nd==1||nd==n) :: nd=len(draws)
+cf2py integer intent(hide),depend(success,n),check(ns==1||ns==n) :: ns=len(success)
+cf2py integer intent(hide),depend(total,n),check(nt==1||nt==n) :: nt=len(total)
 cf2py real intent(out) :: like
 
-C      IMPLICIT NONE
-      INTEGER i,n,nd,nred,ntotal
-      INTEGER x(n),d(nd), red(nred),total(ntotal)
-      INTEGER dt, redt, totalt
-      REAL like
-      LOGICAL not_scalar_d, not_scalar_red, not_scalar_total
+      IMPLICIT NONE
+      INTEGER i,n,nd,ns,nt
+      INTEGER x(n),draws(nd), success(ns),total(nt)
+      INTEGER draws_tmp, s_tmp, t_tmp
+      REAL like, combinationln
 
 c      CALL constrain(d,x,total,allow_equal=1)
 c      CALL constrain(red,x,total,allow_equal=1)
 c      CALL constrain(x, 0, d, allow_equal=1)
 
-      not_scalar_d = (nd .NE. 1)
-      not_scalar_red = (nred .NE. 1)
-      not_scalar_total = (ntotal .NE. 1)
-
-      dt = d(1)
-      redt = red(1)
-      totalt = total(1)
+      draws_tmp = draws(1)
+      s_tmp = success(1)
+      t_tmp = total(1)
       
       like = 0.0
       do i=1,n
 c Combinations of x red balls
-        if (not_scalar_d) dt = d(i)
-        if (not_scalar_red) redt = red(i)
-        if (not_scalar_total) totalt = total(i)
-        like = like + factln(redt)-factln(x(i))-factln(redt-x(i))
-c Combinations of d-x other balls        
-        like = like + factln(totalt-redt)-factln(dt-x(i))
-     +-factln(totalt-redt-dt+x(i))
-c Combinations of d draws from total
-       like = like - (factln(totalt)-factln(dt)- 
-     +-factln(totalt-dt))
+        if (nd .NE. 1) draws_tmp = draws(i)
+        if (ns .NE. 1) s_tmp = success(i)
+        if (nt .NE. 1) t_tmp = total(i)	
+		like = like + combinationln(t_tmp-s_tmp, x(i))
+		like = like + combinationln(s_tmp,draws_tmp-x(i))
+ 		like = like - combinationln(t_tmp, draws_tmp)
       enddo
       return
       END

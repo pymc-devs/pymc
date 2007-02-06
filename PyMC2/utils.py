@@ -6,9 +6,10 @@
 # A bit slow. try to optimize
 import numpy as np
 try:
-	from scipy import special
+    from scipy import special
+    from scipy import comb
 except ImportError:
-	print 'Warning, SciPy special functions not available'
+    print 'Warning, SciPy special functions not available'
 from copy import copy
 
 """Exceptions"""
@@ -237,6 +238,9 @@ def dirichlet(x, theta):
 
 def geometric(x, p):
     return p*(1.-p)**(x-1)
+
+def hypergeometric(x, d, S, N):
+    return comb(N-S, x) * comb(S, d-x) / comb(N,d)
 
 if __name__ == "__main__":
     NumpyTest().run()

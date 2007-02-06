@@ -37,7 +37,10 @@ from numpy import exp
 import utils, os
 PLOT=True
 if PLOT is True:
-    os.mkdir('figs')
+    try:
+        os.mkdir('figs')
+    except:
+        pass
 try:
     from scipy import integrate
     SP = True
@@ -345,14 +348,14 @@ class test_hypergeometric(NumpyTestCase):
     def check_consistency(self):
         params=dict(draws=10, success=20, failure=12)
         hist, like, figdata = discrete_consistency(rhypergeometric, \
-        flib.hyperg, params, nrandom=5000)
+        hypergeometric_like, params, nrandom=5000)
         if PLOT:
-            compare_hist(figname='hypergeomtric', **figdata)
+            compare_hist(figname='hypergeometric', **figdata)
         assert_array_almost_equal(hist, like,1)
-
+        
 class test_inverse_gamma(NumpyTestCase):
     def check_consistency(self):
-        params=dict(alpha=2, beta=3)
+        params=dict(alpha=1.5, beta=.5)
         hist, like, figdata = consistency(rinverse_gamma, flib.igamma, params,\
             nrandom=5000)
         if PLOT:
@@ -360,7 +363,7 @@ class test_inverse_gamma(NumpyTestCase):
         assert_array_almost_equal(hist, like,1)
 
     def normalization(self):
-        params=dict(alpha=2, beta=3)
+        params=dict(alpha=1.5, beta=.5)
         integral = normalization(flib.igamma, params, [0, 10], 200)
         assert_almost_equal(integral, 1, 3)
 

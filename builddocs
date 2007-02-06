@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-epydoc --config epydoc.conf
+epydoc --verbose --debug --config epydoc.conf

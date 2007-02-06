@@ -10,10 +10,10 @@
 
 __docformat__='reStructuredText'
 availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
-'exponential', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
+'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric',
 'multivariate_normal', 'negative_binomial', 'normal', 'poisson', 'uniform',
-'weibull']
+'weibull', 'wishart']
 
 
 from PyMC2 import flib
@@ -297,8 +297,8 @@ def binomial_like(x, n, p):
         Probability of success in each trial, :math:`p \in [0,1]`.
 
     :Note:
-      :math:`E(X)=np`
-      :math:`Var(X)=np(1-p)`
+     - :math:`E(X)=np`
+     - :math:`Var(X)=np(1-p)`
     """
     constrain(p, 0, 1)
     constrain(n, lower=x)
@@ -483,6 +483,9 @@ def rexponweib(alpha, k, loc, scale, size=1):
     r = flib.exponweib_ppf(q,alpha,k)
     return loc + r*scale
 
+def exponweib_expval(alpha, k, loc, scale):
+    return 'Not implemented yet.'
+
 def exponweib_like(x, alpha, k, loc=0, scale=1):
     r"""exponweib_like(x,alpha,k,loc=0,scale=1)
 
@@ -661,9 +664,9 @@ def hypergeometric_like(x, draws, success, failure):
     .. math::
         f(x \mid draws, successes, failures)
 
-    :Parameter:
+    :Parameters:
       x : int
-        Number of successes in a sample drawn from a population.
+        Number of successes in a sample drawn from a population. 
         :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
       draws : int
         Size of sample.
@@ -679,14 +682,14 @@ def hypergeometric_like(x, draws, success, failure):
     return flib.hyperg(x, draws, success, success+failure)
 
 # Inverse gamma----------------------------------------------
-# Looks this one is identical to rgamma, this is strange.
+# This one doesn't look kasher. Check it up. 
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
     """rinverse_gamma(alpha, beta,size=1)
 
     Random inverse gamma variates.
     """
-    pass
+    return random.gamma(1./beta,alpha, size)
 
 def inverse_gamma_expval(alpha, beta):
     return array(alpha) / beta
@@ -697,10 +700,10 @@ def inverse_gamma_like(x, alpha, beta):
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} e^{-\frac{\beta}{x}}}
+        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} \exp\{-\frac{1}{\beta x}}}
         {\Gamma(\alpha)\beta^\alpha}
 
-    :Parameter:
+    :Parameters:
       x : float
         x > 0
       alpha : float
@@ -709,7 +712,7 @@ def inverse_gamma_like(x, alpha, beta):
         Scale parameter, :math:`\beta > 0`.
 
     :Note:
-      :math:`E(X)=\frac{\beta}{\alpha-1}` for :math:`\alpha > 1`.
+      :math:`E(X)=\frac{1}{\beta(\alpha-1)}` for :math:`\alpha > 1`.
     """
     constrain(x, lower=0)
     constrain(alpha, lower=0)
@@ -749,7 +752,7 @@ def lognormal_like(x, mu, tau):
         Scale parameter, > 0.
 
     :Note:
-      :math:`E(X)=e^{\mu+\frac{1}{2\tau}`
+      :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
     """
     constrain(tau, lower=0)
     constrain(x, lower=0)
@@ -803,10 +806,13 @@ def multivariate_hypergeometric_expval(m):
 
 
 def multivariate_hypergeometric_like(x, m):
-    """Multivariate hypergeometric log-likelihood
+    r"""multivariate_hypergeometric_like(x, m)
+    
+    Multivariate hypergeometric log-likelihood
 
-    multivariate_hypergeometric_like(x, m)
-
+    .. math::
+        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+    
     x < m
     """
     constrain(x, upper=m)
@@ -824,10 +830,13 @@ def multivariate_normal_expval(mu, tau):
     return mu
 
 def multivariate_normal_like(x, mu, tau):
-    r"""Multivariate normal log-likelihood
+    r"""multivariate_normal_like(x, mu, tau)
+    
+    Multivariate normal log-likelihood
 
-    multivariate_normal_like(x, mu, tau)
-
+    .. math::
+        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+    
     x: (k,n)
     mu: (k,n) or (k,1)
     tau: (k,k)
@@ -850,10 +859,13 @@ def negative_binomial_expval(mu, alpha):
 
 
 def negative_binomial_like(x, mu, alpha):
-    """Negative binomial log-likelihood
+    r"""negative_binomial_like(x, mu, alpha)
+    
+    Negative binomial log-likelihood
 
-    negative_binomial_like(x, mu, alpha)
-
+    .. math::
+        f(x \mid r, p) = \frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
+    
     x > 0, mu > 0, alpha > 0
     """
     constrain(mu, lower=0)
@@ -873,13 +885,27 @@ def rnormal(mu, tau,size=1):
 def normal_expval(mu, tau):
     return mu
 
-
 def normal_like(x, mu, tau):
-    """Normal log-likelihood
+    r"""normal_like(x, mu, tau)
+    
+    Normal log-likelihood.
 
-    normal_like(x, mu, tau)
+    .. math::
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
-    tau > 0
+
+    :Parameters:
+      x : float
+        Input data.
+      mu : float
+        Mean of the distribution.
+      tau : float
+        Precision of the distribution, > 0.
+    
+    :Note:
+      - :math:`E(X) = \mu`
+      - :math:`Var(X) = 1/\tau`
+    
     """
     constrain(tau, lower=0)
     return flib.normal(x, mu, tau)
@@ -983,8 +1009,8 @@ def weibull_like(x, alpha, beta):
         > 0
 
     :Note:
-      -:math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha}`
-      -:math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2`
+      - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha}`
+      - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2`
     """
     constrain(alpha, lower=0)
     constrain(beta, lower=0)
@@ -1007,9 +1033,12 @@ def wishart_expval(n, Tau):
     return n * array(Tau)
 
 def wishart_like(X, n, Tau):
-    """Wishart log-likelihood
+    r"""wishart_like(X, n, Tau)
+    
+    Wishart log-likelihood
 
-    wishart_like(X, n, Tau)
+    .. math::
+        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
     X, T symmetric and positive definite
     n > 0
