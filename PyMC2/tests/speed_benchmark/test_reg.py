@@ -4,4 +4,4 @@ M = Model(DisasterModel)
 
 
 # Sample
-M.sample(5000,0,100)
+M.sample(50000,0,100)
