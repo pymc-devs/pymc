@@ -11,8 +11,8 @@
 
 % Setup for fullpage use
 \usepackage{fullpage}
-\usepackage{amsmath} 
-\usepackage{epsfig} 
+\usepackage{amsmath}
+\usepackage{epsfig}
 
 % Flexible citation syntax
 \usepackage{natbib}
@@ -81,22 +81,22 @@ Installation and tutorial}
 
 Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. PyMC is a python module that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. PyMC includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics.
 
-It is straightforward to code a simple MCMC sampler, using either the Gibbs or Metropolis-Hastings algorithm, in Python (or using a variety of other languages, for that matter). However, more complex models can be tricky to implement, each requiring its own unique sampler. A general, reusable sampler is desirable for use in applications, so that a new sampler need not be coded from scratch for every analysis. PyMC is a \href{http://python.org}{Python} module that provides a MCMC toolkit, making Bayesian simulation models relatively easy to implement. 
+It is straightforward to code a simple MCMC sampler, using either the Gibbs or Metropolis-Hastings algorithm, in Python (or using a variety of other languages, for that matter). However, more complex models can be tricky to implement, each requiring its own unique sampler. A general, reusable sampler is desirable for use in applications, so that a new sampler need not be coded from scratch for every analysis. PyMC is a \href{http://python.org}{Python} module that provides a MCMC toolkit, making Bayesian simulation models relatively easy to implement.
 
 \bigskip
-PyMC is not an application per se. It consists of: 
+PyMC is not an application per se. It consists of:
 \begin{itemize}
-	\item Two Python types, \texttt{Parameter} and \texttt{Node}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
-	\item The \texttt{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
-	\item Fast, user-friendly and well-documented implementations of 24 common probability distributions.
-	\item \textbf{XXX} Whatever we end up with with parallelization.
-	\item The \texttt{SamplingMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
+    \item Two Python types, \texttt{Parameter} and \texttt{Node}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
+    \item The \texttt{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
+    \item Fast, user-friendly and well-documented implementations of 24 common probability distributions.
+    \item \textbf{XXX} Whatever we end up with with parallelization.
+    \item The \texttt{SamplingMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
 \end{itemize}
 
 PyMC aims to fully support newcomers to MCMC while providing the performance and flexibility statistical researchers need to develop new methods. As a Python package, it allows users to interface their MCMC algorithms with a wide range of other applications and analysis tools.
 
 \subsection{How fast is PyMC?}\label{speed} % (fold)
-Python is a wonderful language, but it has an importrant drawback for statistical computing: like all interpreted languages, it's slow. PyMC aims to remedy this by implementing performance-critical portions in C, Fortran or NumPy. In basic usage, PyMC's speed is comparable to (whatever it's comparable to). Since there are several easy ways to write Python-callable C and Fortran modules, PyMC's speed can be greatly increased by writing application-optimized log-probability functions, which really isn't that hard.
+Python is a wonderful language, but it has an important drawback for statistical computing: like all interpreted languages, it's slow. PyMC aims to remedy this by implementing performance-critical portions in C, Fortran or NumPy. In basic usage, PyMC's speed is comparable to (whatever it's comparable to). Since there are several easy ways to write Python-callable C and Fortran modules, PyMC's speed can be greatly increased by writing application-optimized log-probability functions, which really isn't that hard.
 
 Here are some speed results.
 
@@ -174,31 +174,31 @@ This test model estimates the switch point between two rate distributions within
 \section{Bayesian statistical models}
 We assume that the reader has at least some familiarity with probability and Bayesian statistics. If you don't understand the notation in this section, please consult \citet{Gelman:1996gp}.
 
-Bayesian statistical inference begins with specification of a probability model relating inferential targets to data. For example, consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962. 
+Bayesian statistical inference begins with specification of a probability model relating inferential targets to data. For example, consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962.
 \begin{center}
-\epsfig{file=disaster_ts.pdf, width=15cm} 
+\epsfig{file=disaster_ts.pdf, width=15cm}
 \end{center}
 Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 \begin{eqnarray*}
 (D_t | s, e, l) \sim \textup{Po}\left(r_t\right), & r_t=\left\{\begin{array}{ll}
-	e & t\le s\\ l & t>s
-	\end{array}\right.,&t\in[1851,1962]\\
+    e & t\le s\\ l & t>s
+    \end{array}\right.,&t\in[1851,1962]\\
 s\sim \textup{U}(1851, 1962)\\
 e\sim \textup{Exp}(1)\\
 l\sim \textup{Exp}(1)
 \end{eqnarray*}
 The symbols have the following meanings:
 \begin{description}
-	\item[$D_t$:] The number of disasters in year $t$.
-	\item[$r_t$:] The rate parameter of the Poisson distribution of disasters in year $t$.
-	\item[$s$:] The year in which the rate parameter changes.	
-	\item[$e$:] The rate parameter before the switchpoint $s$.
-	\item[$l$:] The rate parameter after the switchpoint. 
+    \item[$D_t$:] The number of disasters in year $t$.
+    \item[$r_t$:] The rate parameter of the Poisson distribution of disasters in year $t$.
+    \item[$s$:] The year in which the rate parameter changes.
+    \item[$e$:] The rate parameter before the switchpoint $s$.
+    \item[$l$:] The rate parameter after the switchpoint.
 \end{description}
 
-The product 
+The product
 \begin{eqnarray*}
 \prod_t p(D_t|s,e,l) p(s)p(e)p(l)
 \end{eqnarray*}
@@ -210,15 +210,15 @@ The dependence structure of a statistical model can be represented by a \emph{di
 
 \begin{figure}[hhhhhhhhhhh]
 \begin{center}
-\epsfig{file=DisasterModel.pdf,width=7cm}	
+\epsfig{file=DisasterModel.pdf,width=7cm}
 \epsfig{file=DisasterModel2.pdf,width=7cm}
 \caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the parameters of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the parameter names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' parameter.
 }
-\label{fig:disaster_dag} 
+\label{fig:disaster_dag}
 \end{center}
 \end{figure}
 
-In principle, we could have written down other statistical models that gave the same joint distribution (and hence the same posterior distribution). For example, we could have specified the model as 
+In principle, we could have written down other statistical models that gave the same joint distribution (and hence the same posterior distribution). For example, we could have specified the model as
 \begin{eqnarray*}
 p(s|D,l,e)\prod_tp(D_t|l,e,D_{1851\ldots t-1})p(l)p(e),
 \end{eqnarray*}
@@ -235,109 +235,109 @@ Bayesian methods, and statistics in general, are usually needed \emph{because} i
 
 
 
-\section{\texttt{Parameter} and \texttt{Node}}\label{sec:PyMCObjects} 
+\section{\texttt{Parameter} and \texttt{Node}}\label{sec:PyMCObjects}
 PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A parameter object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all parameters, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A node object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a node.
 
-These objects are meant to do only what a mathematical variable `does,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves parameter updating functionality to the \texttt{SamplingMethod} class (sec \ref{sec:SamplingMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model}) 
+These objects are meant to do only what a mathematical variable `does,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves parameter updating functionality to the \texttt{SamplingMethod} class (sec \ref{sec:SamplingMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
 
-\subsection{\texttt{Parameter}}\label{sub:parameter} 
+\subsection{\texttt{Parameter}}\label{sub:parameter}
 
 Parameters expose the following attributes:
 \begin{description}
-	\item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed parameter's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-	\item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
-	\item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
-	\item[\texttt{timestamp}:] The number of times self's value has been updated since instantiation.
-	\item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
-	\item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.				 
-	\item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Parameter} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
-	\item[\texttt{\_\_name\_\_}:] The name of the parameter, should be unique.
-	\item[\texttt{\_\_doc\_\_}:] The docstring of the parameter.	
+    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed parameter's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
+    \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
+    \item[\texttt{timestamp}:] The number of times self's value has been updated since instantiation.
+    \item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
+    \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
+    \item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Parameter} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
+    \item[\texttt{\_\_name\_\_}:] The name of the parameter, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the parameter.
 \end{description}
 
 Parameters have the following methods:
 \begin{description}
-	\item[\texttt{revert()}] This sets self's current value to its previous value, and decrements the timestamp. This function should be used for rejecting Metropolis jumps, see section \ref{sec:SamplingMethod}.
-	\item[\texttt{random()}] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below). 
+    \item[\texttt{revert()}] This sets self's current value to its previous value, and decrements the timestamp. This function should be used for rejecting Metropolis jumps, see section \ref{sec:SamplingMethod}.
+    \item[\texttt{random()}] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
 \end{description}
 
 \subsubsection{Instantiation}
 In order to make specification of standard probability models easy while making room for specification of even the most exotic probability model, PyMC provides four ways to instantiate parameters.
 \begin{description}
-	\item[Short] \textbf{XXX}
-	\item[Medium] A normally-distributed parameter called \texttt{A} could be instantiated using the medium interface as follows:
-	\begin{verbatim} 
+    \item[Short] \textbf{XXX}
+    \item[Medium] A normally-distributed parameter called \texttt{A} could be instantiated using the medium interface as follows:
+    \begin{verbatim}
 @parameter
 def A(value=3., mu=B, tau=C):
     """Parameter A is normally distributed."""
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
-	\end{verbatim}
-	The decorator \texttt{parameter} turns the function \texttt{A} into a parameter which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the parameter. The names of the function's other arguments become the keys of the parameter's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the parameter, and the docstring of the function is passed on to the parameter as well.
-	
-	The parameter may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
-	
-	The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this parameter: \texttt{@parameter(trace = False)}.  
-	\item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the parameter's value conditional only on its parents. 
-	\begin{verbatim} 
+    \end{verbatim}
+    The decorator \texttt{parameter} turns the function \texttt{A} into a parameter which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the parameter. The names of the function's other arguments become the keys of the parameter's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the parameter, and the docstring of the function is passed on to the parameter as well.
+
+    The parameter may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
+
+    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this parameter: \texttt{@parameter(trace = False)}.
+    \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the parameter's value conditional only on its parents.
+    \begin{verbatim}
 @parameter
 def A(value=3., mu=B, tau=C):
     """Parameter A is normally distributed."""
 
     def logp(value, mu, tau):
         return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
-	
+
     def random(mu, tau):
         return rnormal(mu, tau)
-	
+
     rseed = 1.
-	\end{verbatim}
+    \end{verbatim}
 The parameter again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Parameter.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
 
-	\item[Direct] Some users may prefer not to use the \texttt{parameter} decorator, but to instantiate \texttt{Parameter} directly:
+    \item[Direct] Some users may prefer not to use the \texttt{parameter} decorator, but to instantiate \texttt{Parameter} directly:
 \begin{verbatim}
 def A_logp(value, mu, tau):
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
 
-A = Parameter(logp = A_logp, name = 'A', value = 3., 
-parents = {'mu': B, 'tau': C}, children = set()[, 
-doc = 'Parameter A is normally distributed', 
+A = Parameter(logp = A_logp, name = 'A', value = 3.,
+parents = {'mu': B, 'tau': C}, children = set()[,
+doc = 'Parameter A is normally distributed',
 random = rnormal, trace = True, rseed = 1., isdata = False])
 \end{verbatim}
-The \texttt{children} argument must be an empty set; I couldn't figure out how to initialize sets in C. 
+The \texttt{children} argument must be an empty set; I couldn't figure out how to initialize sets in C.
 \end{description}
-   
 
 
-\subsection{The \texttt{data} decorator}\label{sub:@data} 
-In the medium and long interfaces, the parameter's \texttt{isdata} flag can be set to true by replacing \texttt{@parameter} with \texttt{@data}. 
+
+\subsection{The \texttt{data} decorator}\label{sub:@data}
+In the medium and long interfaces, the parameter's \texttt{isdata} flag can be set to true by replacing \texttt{@parameter} with \texttt{@data}.
 
 
-\subsection{\texttt{Node}}\label{sub:node} 
+\subsection{\texttt{Node}}\label{sub:node}
 
 Nodes expose the following attributes:
-\begin{description} 
- 	\item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-	\item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
-	\item[\texttt{value}:] Self's current value. Unlike parameter, self's value depends on its parents. As with parameter's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Nodes cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error. 
-	\item[\texttt{timestamp}:] The number of times self's value has changed since instantiation.
-	\item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.	
-	\item[\texttt{\_\_name\_\_}:] The name of the node, should be unique.
-	\item[\texttt{\_\_doc\_\_}:] The docstring of the node.				 
+\begin{description}
+    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
+    \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{value}:] Self's current value. Unlike parameter, self's value depends on its parents. As with parameter's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Nodes cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
+    \item[\texttt{timestamp}:] The number of times self's value has changed since instantiation.
+    \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
+    \item[\texttt{\_\_name\_\_}:] The name of the node, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the node.
 \end{description}
 Nodes have no methods.
 
-\subsubsection{Instantiation} 
+\subsubsection{Instantiation}
 Nodes are less complicated than parameters, and PyMC provides only two ways to instantiate them:
 \begin{description}
-	\item[Decorator] A node can be instantiated via a decorator in a way very similar to parameter's medium interface:
+    \item[Decorator] A node can be instantiated via a decorator in a way very similar to parameter's medium interface:
 \begin{verbatim}
 @node
 def D(arg_1 = E, arg_2 = F)
     """The D node"""
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 \end{verbatim}
-The function supplied should return a new value for the node (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with parameter's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the node. 
-	\item[Direct] The same node could be instantiated directly as follows:
+The function supplied should return a new value for the node (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with parameter's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the node.
+    \item[Direct] The same node could be instantiated directly as follows:
 \begin{verbatim}
 def D_eval(arg_1, arg_2):
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
@@ -347,12 +347,12 @@ parents = \{'arg_1': E, 'arg_2': F\}),
 children = set(), doc = 'The D node',
 trace = True)
 \end{verbatim}
-The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.  
+The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.
 \end{description}
-Note that nodes have no \texttt{isdata} flag. If a node's value were known, its parents would be restricted to the inverse image of that value under the node's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{SamplingMethod} level. 
+Note that nodes have no \texttt{isdata} flag. If a node's value were known, its parents would be restricted to the inverse image of that value under the node's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{SamplingMethod} level.
 
 
-\subsection{Examples}\label{sub:example} 
+\subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disaster_dag}:
 \begin{verbatim}
 @parameter
@@ -422,7 +422,7 @@ If you do feel you need to subclass parameter and node, we'd like to know about 
 %(end)
 
 \chapter{Model fitting with PyMC} %(fold)
-\label{chap:MCMC} 
+\label{chap:MCMC}
 
 %MCMC methods are algorithms that sample from probability distributions (\emph{i.e.} Monte Carlo simulation) to yield Markov chains.
 
@@ -726,38 +726,38 @@ Valid inference relies on the assumption that sample values are random (but not 
 Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in parameter space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 
-\section{The \texttt{Model} class}\label{sec:Model} 
+\section{The \texttt{Model} class}\label{sec:Model}
 
 
-\section{The \texttt{SamplingMethod} class}\label{sec:SamplingMethod} 
+\section{The \texttt{SamplingMethod} class}\label{sec:SamplingMethod}
 Sampling methods are responsible for making parameters or groups of parameters take single MCMC steps. PyMC provides several standard sampling methods, including \texttt{OneAtATimeMetropolis}, but \texttt{SamplingMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own sampling methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of sampling methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
 
 \begin{figure}[hhhhhhhhh]
-	\centering
-	\epsfig{file=sampmethod_children.pdf,width=6cm}
-	\caption{The children of a sampling method. The parameters under the sampling method's jurisdiction are shown on a plate. The children of the sampling method are the parameters (regardless of \texttt{isdata}) which depend on the sampling method's parameters either directly or via an unbroken sequence of nodes, and which aren't in the sampling method's parameters.}
-	\label{fig:sampmethod_children}
+    \centering
+    \epsfig{file=sampmethod_children.pdf,width=6cm}
+    \caption{The children of a sampling method. The parameters under the sampling method's jurisdiction are shown on a plate. The children of the sampling method are the parameters (regardless of \texttt{isdata}) which depend on the sampling method's parameters either directly or via an unbroken sequence of nodes, and which aren't in the sampling method's parameters.}
+    \label{fig:sampmethod_children}
 \end{figure}
 
 All sampling methods must be subclasses of \texttt{SamplingMethod}, which exposes the following attributes:
 \begin{description}
-	\item[\texttt{nodes}:] A set containing the nodes over which self has jurisdiction. Although sampling methods are primarily responsible for making parameters take Metropolis steps, it can be nice to assign nodes to them for organizational reasons.
-	\item[\texttt{parameters}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these parameters take single MCMC steps.
-	\item[\texttt{data}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
-	\item[\texttt{pymc\_objects}:] The union of \texttt{nodes}, \texttt{parameters}, and \texttt{data}.
-	\item[\texttt{children}:] The union of all the nearest descendants of self's parameters that are themselves parameters, differenced with the set of self's parameters. See figure \ref{fig:sampmethod_children}.
-	\item[\texttt{loglike}:] The log-probability of self's children given self's parameters' current values. The sum of self's parameters' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's parameters, up to superfluous constants. This attribute will be needed by most embeddable sampling methods. Loglike is recomputed every time it's accessed.  
-	\item[\texttt{\_asf}]: A catchall name for tunable sampling parameters.
+    \item[\texttt{nodes}:] A set containing the nodes over which self has jurisdiction. Although sampling methods are primarily responsible for making parameters take Metropolis steps, it can be nice to assign nodes to them for organizational reasons.
+    \item[\texttt{parameters}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these parameters take single MCMC steps.
+    \item[\texttt{data}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
+    \item[\texttt{pymc\_objects}:] The union of \texttt{nodes}, \texttt{parameters}, and \texttt{data}.
+    \item[\texttt{children}:] The union of all the nearest descendants of self's parameters that are themselves parameters, differenced with the set of self's parameters. See figure \ref{fig:sampmethod_children}.
+    \item[\texttt{loglike}:] The log-probability of self's children given self's parameters' current values. The sum of self's parameters' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's parameters, up to superfluous constants. This attribute will be needed by most embeddable sampling methods. Loglike is recomputed every time it's accessed.
+    \item[\texttt{\_asf}]: A catchall name for tunable sampling parameters.
 \end{description}
 
 \texttt{SamplingMethod} has the following methods, which aren't implemented in the base class:
 \begin{description}
-	\item[\texttt{sample()}:] \texttt{Model} will call this method for each sampling method. When it is called, self must cause each of its parameters to take an MCMC step. All subclasses must implement this method.
-	\item[\texttt{tune()}:] \texttt{Model} will also call this method for each sampling method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \texttt{\_asf}.
+    \item[\texttt{sample()}:] \texttt{Model} will call this method for each sampling method. When it is called, self must cause each of its parameters to take an MCMC step. All subclasses must implement this method.
+    \item[\texttt{tune()}:] \texttt{Model} will also call this method for each sampling method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \texttt{\_asf}.
 \end{description}
 
 
-\subsection{\texttt{OneAtATimeMetropolis}}\label{sub:OAATM} 
+\subsection{\texttt{OneAtATimeMetropolis}}\label{sub:OAATM}
 This is PyMC's basic sampling method. If \texttt{Model}, on instantiation, finds that a parameter is not handled by any sampling method, it will create an instance of \texttt{OneAtATimeMetropolis} to handle that parameter. The easiest way to explain this simple object is just to display its source code: \textbf{XXX replace when tune() and more \_dist's are implemented}
 \begin{verbatim}
 class OneAtATimeMetropolis(SamplingMethod):
@@ -815,12 +815,12 @@ class OneAtATimeMetropolis(SamplingMethod):
         # Adjust _asf according to some heuristic
         #
         pass
-\end{verbatim}  
+\end{verbatim}
 
 Note that a proposal is made by actually updating the parameter's value, and jumps are rejected by calling the parameter's \texttt{revert()} method. This procedure lets parameters and nodes make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
 
 
-\subsection{Other sampling methods provided with the distribution}\label{sub:other_sm} 
+\subsection{Other sampling methods provided with the distribution}\label{sub:other_sm}
 \textbf{XXX} JointMetropolis, OpenCapture, ClosedCapture, whatever else.
 
 
@@ -832,7 +832,7 @@ Note that a proposal is made by actually updating the parameter's value, and jum
 
 \chapter{Diagnostics} %(fold)
 
-\section{Convergence Diagnostics} 
+\section{Convergence Diagnostics}
 
 Valid inferences from sequences of MCMC samples are based on the assumption that the samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
 
@@ -974,7 +974,7 @@ sampler.autocorrelation(max_lag=100, burn=0, thin=1, chain=-1)
 
 %(end)
 
-\chapter{Advanced topics} 
+\chapter{Advanced topics}
 
 \section{How to make PyMC run as fast as possible}\label{sec:fast} % (fold)
 \subsection{Profile your code}\label{sub:profile_your_code} % (fold)
@@ -990,7 +990,7 @@ The second-most-likely place for a bottleneck is in a custom SubSampler. Model i
 
 \subsection{Caching}\label{sub:caching}
 
-Suppose A  is a data node which depends on parameters  B  and  C. The DAG shown in the cartoon below expresses this dependency structure. The cartoon shows how A uses its cache over the course of a complete Metropolis-Hastings step by B and the first half of a metropolis-hastings step by C. 
+Suppose A  is a data node which depends on parameters  B  and  C. The DAG shown in the cartoon below expresses this dependency structure. The cartoon shows how A uses its cache over the course of a complete Metropolis-Hastings step by B and the first half of a metropolis-hastings step by C.
 
 \begin{description}
 \item[Frame 1] B queries A's prior conditional on its current state. A computes and caches its prior.
@@ -1028,8 +1028,12 @@ Since A caches the last two prior evaluations, it's guaranteed not to have to re
 \appendix
 
 \chapter{Probability distributions}
-\chapter{Database backends} 
+David
+Link to the epydoc generated API ?
 
+\chapter{Database backends}
+David
+Link to the epydoc generated API ?
 
 \end{document}
  

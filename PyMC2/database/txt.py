@@ -10,7 +10,7 @@ import os, io, datetime
 class trace(memory_trace.trace):
     def _finalize(self, burn, thin):
         """Dump trace into txt file in the simulation folder _dbdir."""
-        path = os.path.join(self.db.dir, self.name)
+        path = os.path.join(self.db.dir, self.name+'.txt')
         arr = self.gettrace(burn, thin)
         f = open(path, 'w')
         print >> f, '# Parameter %s' % self.name
