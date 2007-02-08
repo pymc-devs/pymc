@@ -33,6 +33,7 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	}
 	
 	if(!self->__doc__) self->__doc__ = self->__name__;
+	if(!self->trace) self->trace = Py_BuildValue("i",1);
 	
 	self->value = Py_BuildValue("");
 	for(i=0;i<2;i++)

@@ -15,7 +15,7 @@ from numpy import zeros,shape
 class trace(object):
     """ Define the methods that will be assigned to each parameter in the 
     Model instance."""
-    def __init__(self, pymc_object, db):
+    def __init__(self, pymc_object):
         """Initialize the instance.
         :Parameters:
           obj : PyMC object
@@ -23,7 +23,6 @@ class trace(object):
           db : database instance
         """
         self.obj = pymc_object
-        self.db = db
         self._trace = []
         
     def _initialize(self, length):

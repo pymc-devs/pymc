@@ -95,12 +95,26 @@ PyMC is not an application per se. It consists of:
 
 PyMC aims to fully support newcomers to MCMC while providing the performance and flexibility statistical researchers need to develop new methods. As a Python package, it allows users to interface their MCMC algorithms with a wide range of other applications and analysis tools.
 
-\subsection{How fast is PyMC?}\label{speed} % (fold)
+\section{How fast is PyMC?}\label{speed}
 Python is a wonderful language, but it has an important drawback for statistical computing: like all interpreted languages, it's slow. PyMC aims to remedy this by implementing performance-critical portions in C, Fortran or NumPy. In basic usage, PyMC's speed is comparable to (whatever it's comparable to). Since there are several easy ways to write Python-callable C and Fortran modules, PyMC's speed can be greatly increased by writing application-optimized log-probability functions, which really isn't that hard.
 
 Here are some speed results.
 
-%(end)
+\section{Acknowledgments}\label{sec:acknowledgments}
+The authors would like to thank the authors of PyMC's dependencies:
+\begin{description}
+	\item[numpy] \href{www.numpy.org/}{www.numpy.org/}
+	\item[f2py] \href{cens.ioc.ee/projects/f2py2e/}{cens.ioc.ee/projects/f2py2e/}
+	\item[matplotlib] \href{matplotlib.sourceforge.net/}{matplotlib.sourceforge.net/}
+	\item[ipython1] \href{ipython.scipy.org/moin/IPython1}{ipython.scipy.org/moin/IPython1}
+	\item[pydot] \href{dkbza.org/pydot.html}{dkbza.org/pydot.html}
+	\item[epydoc] \href{epydoc.sourceforge.net/}{epydoc.sourceforge.net/}
+	\item[pytables] \href{www.pytables.org/}{www.pytables.org/}					
+	\item[pysqlite] \href{?}{?}					
+\end{description}
+
+And of course Python, \href{www.python.org/}{www.python.org/}.
+
 %(end)
 
 \chapter{Installation} %(fold)
@@ -1030,6 +1044,7 @@ Since A caches the last two prior evaluations, it's guaranteed not to have to re
 \chapter{Probability distributions}
 David
 Link to the epydoc generated API ?
+\chapter{epydoc class reference?}
 
 \chapter{Database backends}
 David
