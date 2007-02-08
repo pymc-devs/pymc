@@ -42,7 +42,7 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	// Initialize optional arguments.
 	if(!self->__doc__) self->__doc__ = self->__name__;
 	if(!self->isdata) self->isdata = 0;
-	if(!self->trace) self->trace = Py_BuildValue("i",1);
+	if(!self->trace) self->trace = Py_True;
 	
 	self->reverted = 1;
 	

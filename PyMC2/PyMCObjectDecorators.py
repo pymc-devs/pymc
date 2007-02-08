@@ -114,19 +114,12 @@ def parameter(__func__=None, **kwds):
 
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
-        if not kwds.has_key('isdata'):
-            kwds['isdata'] = False
-        if kwds['isdata'] == None:
-            kwds['isdata'] = False
-        if kwds['trace'] == None:
-            kwds['trace'] = True
-        if kwds['isdata'] == True:
-            kwds['trace'] = False
         kwds['children'] = set()
         return Parameter(value=value, parents=parents, **kwds)      
-    keys = ['logp','random','trace','rseed']
+    keys = ['logp','random','rseed']
 
     if __func__ is None:
+        instantiate_p.kwds = kwds	
         return instantiate_p
     else:
         instantiate_p.kwds = kwds
@@ -154,12 +147,11 @@ def node(__func__ = None, **kwds):
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys)
         kwds['children'] = set()
-        if kwds['trace'] == None:
-            kwds['trace'] = True        
         return Node(parents=parents, **kwds)        
-    keys = ['eval','trace']
+    keys = ['eval']
     
     if __func__ is None:
+        instantiate_n.kwds = kwds	
         return instantiate_n
     else:
         instantiate_n.kwds = kwds

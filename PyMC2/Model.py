@@ -7,6 +7,7 @@ from PyMCObjects import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
 from PyMCObjectDecorators import extend_children
+import gc
 
 class Model(object):
     """
@@ -147,13 +148,18 @@ class Model(object):
             dbase = 'no_trace'
         db = getattr(database, dbase)
         reload(db)
+        no_trace = getattr(database,'no_trace')
+        reload(no_trace)
 
         # Assign database instance to Model.
         self.db = db.database(self)
         
         # Assign trace instance to parameters and nodes.
         for object in self.parameters | self.nodes :
-            object.trace = db.trace(object, self)
+            if object.trace:
+	            object.trace = db.trace(object, self)
+            else:
+                object.trace = no_trace.trace(object,self)
 
         
     #
@@ -287,6 +293,8 @@ class Model(object):
 
                 if i % 10000 == 0:
                     print 'Iteration ', i, ' of ', iter
+                    # Uncommenting this causes errors in some models.
+                    # gc.collect()
                     
         except KeyboardInterrupt:
             print '\n Iteration ', i, ' of ', iter
