@@ -41,12 +41,19 @@ def _extract(__func__, kwds, keys):
     try:
         __func__()
     except:
-        pass
-	
-    if 'logp' in keys:  
-        kwds['logp']=__func__
-    elif 'eval' in keys:
-        kwds['eval'] =__func__
+        if 'logp' in keys:  
+            kwds['logp']=__func__
+        else:
+            kwds['eval'] =__func__
+
+    for key in keys:
+        if not kwds.has_key(key):
+            kwds[key] = None            
+            
+    for key in ['logp', 'eval']:
+        if key in keys:
+            if kwds[key] is None:
+                kwds[key] = __func__
 
     # Build parents dictionary by parsing the __func__tion's arguments.
     (args, varargs, varkw, defaults) = inspect.getargspec(__func__)
@@ -56,7 +63,7 @@ def _extract(__func__, kwds, keys):
     # No parents at all     
     except TypeError: 
         pass
-
+        
     if parents.has_key('value'):
         value = parents.pop('value')
     else:
@@ -107,12 +114,19 @@ def parameter(__func__=None, **kwds):
 
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
+        if not kwds.has_key('isdata'):
+            kwds['isdata'] = False
+        if kwds['isdata'] == None:
+            kwds['isdata'] = False
+        if kwds['trace'] == None:
+            kwds['trace'] = True
+        if kwds['isdata'] == True:
+            kwds['trace'] = False
         kwds['children'] = set()
         return Parameter(value=value, parents=parents, **kwds)      
-    keys = ['logp','random','rseed']
+    keys = ['logp','random','trace','rseed']
 
     if __func__ is None:
-        instantiate_p.kwds = kwds
         return instantiate_p
     else:
         instantiate_p.kwds = kwds
@@ -137,14 +151,15 @@ def node(__func__ = None, **kwds):
     on its parents.
     """
 
-    def instantiate_n(__func__):	
+    def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys)
         kwds['children'] = set()
+        if kwds['trace'] == None:
+            kwds['trace'] = True        
         return Node(parents=parents, **kwds)        
-    keys = ['eval']
+    keys = ['eval','trace']
     
     if __func__ is None:
-        instantiate_n.kwds = kwds
         return instantiate_n
     else:
         instantiate_n.kwds = kwds

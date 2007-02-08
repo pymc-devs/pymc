@@ -7,7 +7,6 @@ from PyMCObjects import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
 from PyMCObjectDecorators import extend_children
-import gc
 
 class Model(object):
     """
@@ -144,10 +143,9 @@ class Model(object):
           - HDF5: Traces stored in HDF5 database. Partially implemented.
         """
         # Load the trace backend.
-        if not dbase:
+        if dbase is None:
             dbase = 'no_trace'
         db = getattr(database, dbase)
-        no_trace = getattr(database, 'no_trace')
         reload(db)
 
         # Assign database instance to Model.
@@ -155,10 +153,7 @@ class Model(object):
         
         # Assign trace instance to parameters and nodes.
         for object in self.parameters | self.nodes :
-            if object.trace:
-                object.trace = db.trace(object, self)
-            else:
-                object.trace = no_trace.trace(object)
+            object.trace = db.trace(object, self)
 
         
     #
@@ -291,7 +286,6 @@ class Model(object):
                     self.tally()
 
                 if i % 10000 == 0:
-                    gc.collect()
                     print 'Iteration ', i, ' of ', iter
                     
         except KeyboardInterrupt:
