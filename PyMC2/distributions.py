@@ -553,7 +553,7 @@ def rgev(xi, mu=0, sigma=1, size=1):
     """
     q = random.uniform(size=size)
     z = flib.gev_ppf(q,xi)
-    return (z+mu)*sigma
+    return z*sigma + mu
 
 def gev_like(x, xi, mu=0, sigma=0):
     r"""gev_like(x, xi, mu=0, sigma=0)

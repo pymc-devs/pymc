@@ -43,6 +43,7 @@ if PLOT is True:
         pass
 try:
     from scipy import integrate
+    from scipy.stats import genextreme
     SP = True
 except:
     print 'You really should install SciPy. Some of the tests might not pass.'
@@ -329,6 +330,23 @@ class test_geometric(NumpyTestCase):
         if PLOT:
             compare_hist(figname='geometric', **figdata)
         assert_array_almost_equal(hist, like,1)
+
+class test_gev(NumpyTestCase):
+    def check_consistency(self):
+        params = dict(xi=.1, mu=4, sigma=3)
+        hist, like, figdata = consistency(rgev, flib.gev, params,\
+            nbins=20, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='gev', **figdata)
+        assert_array_almost_equal(hist, like,1)        
+
+    def check_scipy(self):
+        x = [-2,1,2,3,4]
+        scipy_y = log(genextreme.pdf(x, -.3, 4, 3))
+        flib_y = []
+        for i in x:
+            flib_y.append(flib.gev(i, .3, 4, 3))
+        assert_array_almost_equal(scipy_y,flib_y,5)
 
 class test_half_normal(NumpyTestCase):
     def check_consistency(self):

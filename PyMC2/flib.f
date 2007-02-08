@@ -732,17 +732,17 @@ Cf2py real dimension(nxi), intent(in):: xi
 Cf2py real dimension(nmu), intent(in):: mu
 Cf2py real dimension(nsigma), intent(in):: sigma
 Cf2py integer intent(hide), depend(x) :: n=len(x)
-Cf2py integer intent(hide), depend(x),check(nxi==1 || nxi==len(x)) :: nxi=len(xi)
-Cf2py integer intent(hide), depend(x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
-Cf2py integer intent(hide), depend(x),check(nsigma==1 || nsigma==len(x)) :: nsigma=len(sigma)
+Cf2py integer intent(hide), depend(xi,n),check(nxi==1||nxi==n) :: nxi=len(xi)
+Cf2py integer intent(hide), depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+Cf2py integer intent(hide), depend(sigma,n),check(nsigma==1||nsigma==n) :: nsigma=len(sigma)
 Cf2py real intent(out):: like
 
       INTEGER n, nmu, nxi, nsigma, i
-      REAL X(N), xi(nxi), mu(nmu), sigma(nsigma), LIKE
+      REAL x(n), xi(nxi), mu(nmu), sigma(nsigma), like
       REAL Z(N), EX(N), PEX(N)
       REAL XI_tmp, SIGMA_tmp
         
-      CALL standardize(x,mu,sigma,n,nu,nsigma,z)
+      CALL standardize(x,mu,sigma,n,nmu,nsigma,z)
 
       xi_tmp = xi(1)
       sigma_tmp = sigma(1)
@@ -753,14 +753,14 @@ Cf2py real intent(out):: like
         IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
           LIKE = LIKE - Z(I) - EXP(-Z(I))/SIGMA_TMP
         ELSE 
-          EX(I) = 1. + xi_tmp*z(I)
+          EX(I) = 1. + xi_tmp*z(i)
           IF (EX(I) .LT. 0.) THEN
             LIKE = -3.4028235E+38
             RETURN
           ENDIF
           PEX(I) = EX(I)**(-1./xi_tmp)  
           LIKE = LIKE - LOG(sigma_tmp) - PEX(I) 
-          LIKE = LIKE + LOG(PEX(I)) - LOG(EX(I))
+          LIKE = LIKE - (1./xi_tmp +1.)* LOG(EX(I))
         ENDIF
       ENDDO
 
@@ -788,7 +788,11 @@ Cf2py real dimension(n), intent(out):: ppf
       xi_tmp = xi(1)
       do i=1,n
         if (nxi .NE. 1) xi_tmp= xi(i)
-        ppf(i) = 1./xi_tmp * (1-(-log(q(i)))**(xi_tmp))
+		IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
+		  ppf(i) = -LOG(-LOG(q(i)))
+		ELSE
+          ppf(i) = 1./xi_tmp * ( (-log(q(i)))**(-xi_tmp) -1. )
+		ENDIF
       enddo
       return 
       END SUBROUTINE gev_ppf
