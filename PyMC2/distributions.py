@@ -700,8 +700,8 @@ def inverse_gamma_like(x, alpha, beta):
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} \exp\{-\frac{1}{\beta x}}}
-        {\Gamma(\alpha)\beta^\alpha}
+        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} \exp\{-\frac{1}{\beta x}\}}
+        {\Gamma(\alpha)\beta^{\alpha}}
 
     :Parameters:
       x : float

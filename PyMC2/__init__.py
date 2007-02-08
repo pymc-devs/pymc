@@ -19,21 +19,21 @@ __optmodules__ = []#['MultiModelInference',]
 #ClosedCapture, OpenCapture   
 
 #Uncomment one or the other.
-
-C_modules = ['PyMCObjects', 'PyMCObjectDecorators']
-for mod in C_modules:
-	exec "from %s import *" % mod
-
-#from pure_PyMCObjects import *
+try:
+    C_modules = ['PyMCObjects', 'PyMCObjectDecorators']
+    for mod in C_modules:
+        exec "from %s import *" % mod
+except:
+    from pure_PyMCObjects import *
           
 for mod in __modules__:
     exec "from %s import *" % mod
 
 for mod in __optmodules__:
-	try:
-	  exec "import %s" % mod
-	except ImportError:
-	    print 'Error importing module ', mod
+    try:
+      exec "import %s" % mod
+    except ImportError:
+        print 'Error importing module ', mod
 
 try:
     import parallel
