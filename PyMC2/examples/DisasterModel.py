@@ -40,9 +40,9 @@ def l(value=.1, rate = 1.):
         
 @data
 def D(  value = D_array,
-        switchpoint = s,
-        early_mean = e,
-        late_mean = l):
+        s = s,
+        e = e,
+        l = l):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
 
