@@ -98,4 +98,5 @@ class Database(object):
             
     def _finalize(self, *args, **kwds):
         """Close database."""
+        self.cur.close()
         self.db.close()
