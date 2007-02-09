@@ -1,5 +1,5 @@
-from copy import deepcopy
-from numpy import *
+from copy import deepcopy,copy
+from numpy import array,zeros,ones
 from numpy.linalg import cholesky, eigh
 import sys, inspect
 from numpy.random import randint, random
@@ -7,6 +7,20 @@ from numpy.random import normal as rnormal
 import database
 from decorators import magic_set
 
+def extend_children(pymc_object):
+    new_children = copy(pymc_object.children)
+    need_recursion = False
+    node_children = set()
+    for child in pymc_object.children:
+        if isinstance(child,Node):
+            new_children |= child.children
+            node_children.add(child)
+            need_recursion = True
+    pymc_object.children = new_children - node_children
+    if need_recursion:
+        extend_children(pymc_object)
+    return
+    
 def _push(seq,new_value):
     """
     Usage:
@@ -144,7 +158,7 @@ def data(__func__=None, **kwds):
     Decorator instantiating data objects. Usage is just like
     parameter, but once instantiated value cannot be changed.
     """
-    return parameter(__func__, isdata=True, tracing=False, **kwds)
+    return parameter(__func__, isdata=True, trace=False, **kwds)
 
 class PyMCBase(object):
     """
@@ -202,7 +216,7 @@ class PyMCBase(object):
                 self._pymc_object_parents[key] = self.parents[key]
 
                 # Initialize a timestamp cache for this parent
-                self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype='int')
+                self._parent_timestamp_caches[key] = -1 * ones(self._cache_depth,dtype=int)
 
                 # Record a reference to this parent's value
                 self._parent_values[key] = self.parents[key].value
@@ -214,7 +228,7 @@ class PyMCBase(object):
 
         self._recompute = True
         self._value = None
-        self._match_indices = zeros(self._cache_depth,dtype='int')
+        self._match_indices = zeros(self._cache_depth,dtype=int)
         self._cache_index = 1
 
     #
@@ -252,13 +266,13 @@ class Node(PyMCBase):
     as well as parameter(), and data().
     """
 
-    def __init__(self, eval_fun,  doc, name, tracing=True, caching=False, **parents):
+    def __init__(self, eval_fun,  doc, name, trace=True, caching=False, **parents):
 
         PyMCBase.__init__(self, doc=doc, name=name, **parents)
 
         self._eval_fun = eval_fun
         self._value = None
-        self._tracing = tracing
+        self.trace = trace
         self._caching = caching
 
 
@@ -356,7 +370,7 @@ class Parameter(PyMCBase):
     as well as node().
     """
 
-    def __init__(self, logp, doc, name, random = None, tracing=True, caching=False, value=None, rseed=False, isdata=False, **parents):
+    def __init__(self, logp, doc, name, random = None, trace=True, caching=False, value=None, rseed=False, isdata=False, **parents):
 
         PyMCBase.__init__(self, doc=doc, name=name, **parents)
 
@@ -364,17 +378,17 @@ class Parameter(PyMCBase):
         self._logp_fun = logp
         self._logp = None
         self.last_value = None
-        self._tracing = tracing
+        self.trace = trace
         self._caching = caching
-        self._random = random
-        self._rseed = rseed
+        self.random = random
+        self.rseed = rseed
         if value is None:
-            self._rseed = True
+            self.rseed = True
 
         # Caches, if necessary
         if self._caching:
-            self._cached_logp = zeros(self._cache_depth,dtype='float')
-            self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype='int')
+            self._cached_logp = zeros(self._cache_depth,dtype=float)
+            self._self_timestamp_caches = -1 * ones(self._cache_depth,dtype=int)
 
         if rseed is True:
             self._value = self.random()

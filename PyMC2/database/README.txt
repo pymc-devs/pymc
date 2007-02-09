@@ -15,11 +15,11 @@ Although what happens under the hood is very different from one backend to anoth
 
 RAM backend
 -----------
-Describe the RAM backend. 
+  Describe the RAM backend. 
 
 txt backend
 -----------
-This backend is identical to the RAM backend, the only difference is that a directory named after the model's name is created, and at the end of the sampling, when `Trace._finalize()` is called, the parameters and nodes dump their trace to a txt file named `<name>.txt`.
+  This backend is identical to the RAM backend, the only difference is that a directory named after the model's name is created, and at the end of the sampling, when `Trace._finalize()` is called, the parameters and nodes dump their   trace to a txt file named `<name>.txt`.
 
 sqlite backend
 --------------
@@ -28,4 +28,4 @@ blablabla
 Writing a new backend
 ---------------------
 
-Each backend is implemented in a file in the database directory. Each one of these files define two classes: Trace and Database. Hence, a new backend can easily be implemented by defining new classes and saving them in a file. The Trace class needs to define four basic methods: _initialize, tally, gettrace and _finalize, plus its own __init__ method.  The Database class defines an __init__ method, plus _initialize and _finalize. 
+  Each backend is implemented in a file in the database directory. Each one of these files define two classes: Trace and Database. Hence, a new backend can easily be implemented by defining new classes and saving them in a file. The Trace class needs to define four basic methods: _initialize, tally, gettrace and _finalize, plus its own __init__ method.  The Database class defines an __init__ method, plus _initialize and _finalize. 

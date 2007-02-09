@@ -1,12 +1,12 @@
 __docformat__='reStructuredText'
-from PyMCObjects import PyMCBase, Parameter, Node
+from PyMC2 import PyMCBase, Parameter, Node
 from utils import LikelihoodError
 from numpy import *
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from PyMC2.flib import fill_stdnormal
-from PyMCObjectDecorators import extend_children
+from PyMC2 import extend_children
 
 
 

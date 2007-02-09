@@ -9,7 +9,7 @@ Created by Chris Fonnesbeck on 2007-02-01.
 from numpy import zeros, shape, squeeze, transpose
 from pysqlite2 import dbapi2 as sqlite
 
-class trace(object):
+class Trace(object):
     """ Define the methods that will be assigned to each parameter in the
     Model instance."""
     def __init__(self, obj, db):
@@ -81,7 +81,7 @@ class trace(object):
 
     __call__ = gettrace
 
-class database(object):
+class Database(object):
     """Define the methods that will be assigned to the Model class"""
     def __init__(self, model):
         self.model = model

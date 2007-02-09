@@ -1,20 +1,16 @@
 ###
-# Basic trace module
-# Simply store the trace in memory
-###
-
-###
-# To use another database backend, make a copy of this file in the database 
-# folder, modify the functions as desired, and rename it, eg. sqllite.py. 
-# When instantiating a Model, pass the dbase = dbase_filename argument,
-# eg. dbase = 'sqllite'.
+# no_trace database backend
+# No memory whatsoever of the samples.
 ###
 
 from numpy import zeros,shape
 
-class trace(object):
-    """ Define the methods that will be assigned to each parameter in the 
-    Model instance."""
+class Trace(object):
+    """The no-trace backend provides a minimalistic backend where absolutely no
+    trace of the values sampled is kept. This may be useful for testing 
+    purposes.
+    """ 
+    
     def __init__(self, pymc_object, db):
         """Initialize the instance.
         :Parameters:
@@ -31,12 +27,12 @@ class trace(object):
         pass
             
     def tally(self, index):
-        """Adds current value to trace"""
+        """Dummy method. This does abolutely nothing."""
         pass
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """
-        Return the trace (last by default).
+        This doesn't return anything.
         
         Input:
           - burn (int): The number of transient steps to skip.
@@ -46,11 +42,11 @@ class trace(object):
         """
         raise AttributeError, self.obj.__name__ + " has no trace"
 
-    def _finalize(self):
+    def _finalize(self, *args, **kwds):
         pass
     
-class database(object):
-    """Define the methods that will be assigned to the Model class"""
+class Database(object):
+    """The no-trace database is empty."""
     def __init__(self, model):
         self.model = model
         

@@ -7,31 +7,37 @@
 # Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
 
-###
-# To use another database backend, make a copy of this file in the database 
-# folder, modify the functions as desired, and rename it, eg. sqllite.py. 
-# When instantiating a Model, pass the dbase = dbase_filename argument,
-# eg. dbase = 'sqllite'.
-###
-
 from numpy import zeros,shape
 import tables
 
-def parameter_methods():
-    """ Define the methods that will be assigned to each parameter in the 
-    Model instance."""
+class Trace(object):
+    """HDF5 trace 
     
-    def _init_trace(self, length):
+    Database backend based on the HDF5 format.
+    """
+    def __init__(self, obj, db):
+        """Initialize the instance.
+        :Parameters:
+          obj : PyMC object
+            Node or Parameter instance.
+          db : {'h5':<hdf5 file object>, 'group':<current group>}
+          update_interval: how often database is updated from trace
+        """
+        self.obj = obj
+        self.h5 = db['h5']
+        self.group = db['group']
+        
+    def _initialize(self, length):
         """Initialize the trace."""
-        self._model._dbfile.createArray(self._model._h5_group, 
+        self.h5.createArray(self.group, 
         self.__name__, zeros((length,)+shape(self.value), type(self.value)))
             
     def tally(self, index):
         """Adds current value to trace"""
-        ar = getattr(self._model._h5_group, self.__name__)
+        ar = getattr(self.group, self.__name__)
         ar.__setitem__(index, self.value)
         
-    def trace(self, burn=0, thin=1, chain=-1, slicing=None):
+    def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
         
         Input:
@@ -40,7 +46,7 @@ def parameter_methods():
           - chain (int): The index of the chain to fetch. If None, return all chains. 
           - slicing: A slice, overriding burn and thin assignement. 
         """
-        gr = self._model._dbfile.listNodes("/")[chain]
+        gr = self.h5.listNodes("/")[chain]
         ar = getattr(gr, self.__name__)
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
@@ -49,30 +55,42 @@ def parameter_methods():
             
         return ar.read(burn, stop, step=thin)
         
-    def _finalize_trace(self):
+    def _finalize(self):
         """Nothing done here."""
         pass
         
-    return locals()
+    __call__ = gettrace
     
-def model_methods():
-    """Define the methods that will be assigned to the Model class"""
-    def _init_dbase(self):
-        """Initialize database."""
+def Database(object):
+    """HDF5 database
+    
+    Create an HDF5 file <model>.h5. Each chain is stored in a group, and the 
+    parameters and nodes are stored as arrays in each group.
+    
+    self.db is a dictionnary containing the (key,value) pairs
+    'h5': the HDF5 file object,
+    'group': the current group in the file.
+    """
+    
+    def __init__(self, model):
+        """Open file.""" 
+        self.model = model
+        
         name = self.__name__
+        self.db = {}
         try:
-            h5 = tables.openFile(name+'.h5', 'a')
+            self.db['h5'] = tables.openFile(name+'.h5', 'a')
         except tables.exceptions.IOError:
-            print "Database file seems already open. Skipping."
-        self._dbfile = h5
-        # For each chain create a new group
-        i = len(h5.listNodes('/'))
-        self._h5_group = h5.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
+            print "Database file seems already open. Skipping."    
+            
+    def _initialize(self):
+        """Create group for the current chain."""
+        i = len(self.db.listNodes('/'))
+        self.db['group'] = self.db['h5'].createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         # Add attributes. Date. 
       
-    def _finalize_dbase(self):
-        """Close database."""
+    def _finalize(self):
+        """Close file."""
         # add attributes. Computation time. 
-        self._dbfile.close()
+        self.db['h5'].close()
         
-    return locals()

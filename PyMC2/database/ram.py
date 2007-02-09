@@ -3,36 +3,34 @@
 # Simply store the trace in memory
 ###
 
-###
-# To use another database backend, make a copy of this file in the database
-# folder, modify the functions as desired, and rename it, eg. sqllite.py.
-# When instantiating a Model, pass the dbase = dbase_filename argument,
-# eg. dbase = 'sqllite'.
-###
 
 from numpy import zeros,shape
 
-class trace(object):
-    """ Define the methods that will be assigned to each parameter in the
-    Model instance."""
+class Trace(object):
+    """RAM trace 
+    
+    Store the samples in memory. 
+    """
     def __init__(self, obj, db):
-        """Initialize the instance.
+        """Initialize the trace attributes.
+        
         :Parameters:
           obj : PyMC object
             Node or Parameter instance.
           db : database instance
+            Reference to the database object.
         """
         self.obj = obj
         self.db = db
         self._trace = []
 
     def _initialize(self, length):
-        """Initialize the trace.
+        """Create an array of zeros with shape (length, shape(obj)).
         """
         self._trace.append( zeros ((length,) + shape(self.obj.value), type(self.obj.value)) )
 
     def tally(self, index):
-        """Adds current value to trace"""
+        """Put current value in trace."""
         try:
             self._trace[-1][index] = self.obj.value.copy()
         except AttributeError:
@@ -41,7 +39,7 @@ class trace(object):
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
-        Input:
+        :Parameters:
           - burn (int): The number of transient steps to skip.
           - thin (int): Keep one in thin.
           - chain (int): The index of the chain to fetch. If None, return all chains.
@@ -51,20 +49,20 @@ class trace(object):
             slicing = slice(burn, None, thin)
         return self._trace[chain][slicing]
 
-    def _finalize(self):
+    def _finalize(self, *args, **kwds):
         """Nothing done here."""
         pass
 
     __call__ = gettrace
 
-class database(object):
-    """Define the methods that will be assigned to the Model class"""
+class Database(object):
+    """Memory database. Nothing done here."""
     def __init__(self, model):
         self.model = model
         
     def _initialize(self, *args, **kwds):
-        """Initialize database."""
+        """Initialize database. Nothing to do."""
         pass
     def _finalize(self, *args, **kwds):
-        """Close database."""
+        """Close database. Nothing to do."""
         pass

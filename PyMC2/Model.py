@@ -3,10 +3,10 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from PyMCObjects import PyMCBase, Parameter, Node
+from PyMC2 import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
-from PyMCObjectDecorators import extend_children
+from PyMC2 import extend_children
 import gc
 
 class Model(object):
@@ -43,7 +43,19 @@ class Model(object):
 
     :SeeAlso: SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, dbase='memory_trace'):
+    def __init__(self, input, dbase='ram', **kwds):
+        """Initialize a Model instance.
+        
+        :Parameters:
+          - input : module
+              A module containing the model definition, in terms of Parameters, 
+              and Nodes.
+          - dbase : string
+              The name of the database backend that will store the values 
+              of the parameters and nodes sampled during the MCMC loop.
+          - kwds : dict
+              Arguments to pass to instantiate the Database object. 
+        """
 
         self.nodes = set()
         self.parameters = set()
@@ -55,6 +67,8 @@ class Model(object):
 
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
+        else:
+            self.__name__ = 'PyMC_Model'
 
         #Change input into a dictionary
         if isinstance(input, dict):
@@ -71,7 +85,7 @@ class Model(object):
         for item in input_dict.iteritems():
             self._fileitem(item)
 
-        self._assign_database(dbase)
+        self._assign_database(dbase, kwds)
 
     def _fileitem(self, item):
 
@@ -132,34 +146,34 @@ class Model(object):
         else:
             self.__dict__[name] = value
 
-    def _assign_database(self, dbase):
-        """Assign trace instance to parameters and nodes.
-        Assign database initialization methods to the Model class.
+    def _assign_database(self, dbase, kwds):
+        """Assign Trace instance to parameters and nodes.
+        Assign Database instance to self.
 
-        Defined databases:
-          - None: Traces stored in memory.
-          - Txt: Traces stored in memory and saved in txt files at end of
-                sampling. Not implemented.
-          - SQLlite: Traces stored in sqllite database. Not implemented.
-          - HDF5: Traces stored in HDF5 database. Partially implemented.
+        Available databases:
+          - No_trace: Traces are not stored at all.
+          - RAM: Traces stored in memory.
+          - txt: Traces stored in memory and saved in txt files at end of
+                sampling. 
+          - sqllite: Traces stored in sqllite database.
+          - mysql: Traces stored in a mysql database. 
+          - hdf5: Traces stored in an HDF5 file. 
         """
-        # Load the trace backend.
-        if dbase is None:
-            dbase = 'no_trace'
+        # Load the trace backend from the database module.
         db = getattr(database, dbase)
-        reload(db)
         no_trace = getattr(database,'no_trace')
         reload(no_trace)
 
         # Assign database instance to Model.
-        self.db = db.database(self)
+        self.db = db.Database(self)#, **kwds)
         
         # Assign trace instance to parameters and nodes.
         for object in self.parameters | self.nodes :
             if object.trace:
-	            object.trace = db.trace(object, self)
+	            object.trace = db.Trace(object, self.db)
             else:
-                object.trace = no_trace.trace(object,self)
+                object.trace = no_trace.Trace(object,self.db)
+
 
         
     #
@@ -270,6 +284,9 @@ class Model(object):
 
         Prepare pymc_objects, initialize traces, run MCMC loop.
         """
+        if iter <= burn:
+            raise 'Iteration (%i) must be greater than burn period (%i).'\
+                %(iter,burn)
 
         # Do various preparations for sampling
         self._prepare()
@@ -302,7 +319,10 @@ class Model(object):
         # Tuning, etc.
 
         # Finalize
-        self.db._finalize(burn, thin)
+        # We have to be careful with this. If we thin during sampling, it changes the burning 
+        # time, and it screws up the following trace output. 
+        #self.db._finalize(burn, thin)
+        self.db._finalize(int(burn/thin), 1)
 
     def tune(self):
         """
@@ -383,8 +403,7 @@ class Model(object):
 
         Draw the directed acyclic graph for this model and writes it to path.
         If self.__name__ is defined and path is None, the output file is
-        ./'name'.'format'. If self.__name__ is undefined and path is None,
-        the output file is ./model.'format'.
+        ./'name'.'format'. 
 
         Format is a string. Options are:
         'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg',
@@ -398,9 +417,6 @@ class Model(object):
 
         if not self._prepared:
             self._prepare()
-
-        if self.__name__ == None:
-            self.__name__ = model
 
         import pydot
 

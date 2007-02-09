@@ -1,5 +1,5 @@
 from PyMC2 import Model
-from numpy import mean, exp, max
+from numpy import mean, exp
 
 #
 # Get posterior probabilities for a list of models
