@@ -13,6 +13,7 @@ static int
 Node_init(Node *self, PyObject *args, PyObject *kwds) 
 {	
 	int i;
+		
 	static char *kwlist[] = {	"eval",
 								"name",
 								"parents",
@@ -35,13 +36,10 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	if(!self->__doc__) self->__doc__ = self->__name__;
 	if(!self->trace) self->trace = Py_BuildValue("i",1);
 	
-	self->value = Py_BuildValue("");
 	for(i=0;i<2;i++)
 	{
 		self->value_caches[i] = Py_BuildValue("");
-		//Py_INCREF(self->value_caches[i]);
 	}
-	//Py_INCREF(self->value);
 	
 	if(!PyDict_Check(self->parents)){
 		PyErr_SetString(PyExc_TypeError, "Argument parents must be a dictionary.");
@@ -73,7 +71,12 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	
 	parse_parents_of_node(self);
 	
-	self->timestamp = -1;
+	self->timestamp = 0;
+	node_parent_values(self);
+	self->value = PyObject_Call(self->eval_fun, PyTuple_New(0), self->parent_value_dict);
+	if(PyErr_Occurred()) return -1;				
+	node_cache(self);					
+	
 	
 	Py_INCREF(self->children);	
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL); 

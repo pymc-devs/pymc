@@ -45,9 +45,6 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	if(!self->trace) self->trace = Py_True;
 	
 	self->reverted = 1;
-	
-	self->logp = Py_None;
-	Py_INCREF(self->logp);
 		
 	for(i=0;i<2;i++)
 	{
@@ -98,6 +95,12 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	for(i=0;i<2;i++) self->timestamp_caches[i] = -1;
 	self->timestamp = 0;
 	self->max_timestamp = self->timestamp;
+	
+	param_parent_values(self);
+	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
+	self->logp =  PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
+	if(PyErr_Occurred()) return -1;
+	param_cache(self);			
 
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);		
 	
