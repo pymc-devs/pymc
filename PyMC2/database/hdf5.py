@@ -24,18 +24,18 @@ class Trace(object):
           update_interval: how often database is updated from trace
         """
         self.obj = obj
-        self.h5 = db['h5']
-        self.group = db['group']
+        self.db = db
         
     def _initialize(self, length):
         """Initialize the trace."""
-        self.h5.createArray(self.group, 
-        self.__name__, zeros((length,)+shape(self.value), type(self.value)))
+        self.db.h5file.createArray(self.db.group, 
+        self.obj.__name__, zeros((length,)+shape(self.obj.value), 
+        type(self.obj.value)))
             
     def tally(self, index):
         """Adds current value to trace"""
-        ar = getattr(self.group, self.__name__)
-        ar.__setitem__(index, self.value)
+        ar = getattr(self.db.group, self.obj.__name__)
+        ar.__setitem__(index, self.obj.value)
         
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
@@ -46,8 +46,8 @@ class Trace(object):
           - chain (int): The index of the chain to fetch. If None, return all chains. 
           - slicing: A slice, overriding burn and thin assignement. 
         """
-        gr = self.h5.listNodes("/")[chain]
-        ar = getattr(gr, self.__name__)
+        gr = self.db.h5file.listNodes("/")[chain]
+        ar = getattr(gr, self.obj.__name__)
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
         else:
@@ -61,7 +61,7 @@ class Trace(object):
         
     __call__ = gettrace
     
-def Database(object):
+class Database(object):
     """HDF5 database
     
     Create an HDF5 file <model>.h5. Each chain is stored in a group, and the 
@@ -72,25 +72,29 @@ def Database(object):
     'group': the current group in the file.
     """
     
-    def __init__(self, model):
+    def __init__(self, name=None):
         """Open file.""" 
-        self.model = model
-        
-        name = self.__name__
-        self.db = {}
-        try:
-            self.db['h5'] = tables.openFile(name+'.h5', 'a')
-        except tables.exceptions.IOError:
-            print "Database file seems already open. Skipping."    
+        self.name = name
             
-    def _initialize(self):
+    def _initialize(self, length, model):
+        self.model = model
+        if self.name is None:
+            self.name = self.model.__name__.split('.')[-1]
+        
+        try:
+            self.h5file = tables.openFile(self.name+'.h5', 'a')
+        except tables.exceptions.IOError:
+            print "Database file seems already open. Skipping."  
+        
         """Create group for the current chain."""
-        i = len(self.db.listNodes('/'))
-        self.db['group'] = self.db['h5'].createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
+        i = len(self.h5file.listNodes('/'))
+        self.group = self.h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         # Add attributes. Date. 
+        for object in self.model._pymc_objects_to_tally:
+            object.trace._initialize(length)
       
     def _finalize(self):
         """Close file."""
         # add attributes. Computation time. 
-        self.db['h5'].close()
+        self.h5file.close()
         

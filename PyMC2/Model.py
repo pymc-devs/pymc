@@ -43,7 +43,7 @@ class Model(object):
 
     :SeeAlso: SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, dbase='ram', **kwds):
+    def __init__(self, input, db='ram'):
         """Initialize a Model instance.
         
         :Parameters:
@@ -85,7 +85,7 @@ class Model(object):
         for item in input_dict.iteritems():
             self._fileitem(item)
 
-        self._assign_database(dbase, kwds)
+        self._assign_database_backend(db)
 
     def _fileitem(self, item):
 
@@ -146,31 +146,41 @@ class Model(object):
         else:
             self.__dict__[name] = value
 
-    def _assign_database(self, dbase, kwds):
-        """Assign Trace instance to parameters and nodes.
-        Assign Database instance to self.
+    def _assign_database_backend(self, db):
+        """Assign Trace instance to parameters and nodes and Database instance 
+        to self.
 
-        Available databases:
-          - No_trace: Traces are not stored at all.
-          - RAM: Traces stored in memory.
-          - txt: Traces stored in memory and saved in txt files at end of
-                sampling. 
-          - sqllite: Traces stored in sqllite database.
-          - mysql: Traces stored in a mysql database. 
-          - hdf5: Traces stored in an HDF5 file. 
-        """
-        # Load the trace backend from the database module.
-        db = getattr(database, dbase)
-        no_trace = getattr(database,'no_trace')
-        reload(no_trace)
-
-        # Assign database instance to Model.
-        self.db = db.Database(self)#, **kwds)
+        :Parameters:
+          - `db` : string, Database instance
+            The name of the database module (see below), or a Database instance.
         
+        Available databases:
+          - `no_trace` : Traces are not stored at all.
+          - `ram` : Traces stored in memory.
+          - `txt` : Traces stored in memory and saved in txt files at end of
+                sampling. 
+          - `sqlite` : Traces stored in sqlite database.
+          - `mysql` : Traces stored in a mysql database. 
+          - `hdf5` : Traces stored in an HDF5 file. 
+        """
+        # If not already done, load the trace backend from the database module,
+        # and assign database instance to Model.
+        if type(db) is str:
+            module = getattr(database, db)
+            self.db = module.Database()
+        else:
+            module = db.__module__
+            self.db = db
+            
+        no_trace = getattr(database,'no_trace')
+        #reload(no_trace) is that necessary ?
+        
+        self._pymc_objects_to_tally = set()
         # Assign trace instance to parameters and nodes.
         for object in self.parameters | self.nodes :
             if object.trace:
-	            object.trace = db.Trace(object, self.db)
+                object.trace = module.Trace(object, self.db)
+                self._pymc_objects_to_tally.add(object)
             else:
                 object.trace = no_trace.Trace(object,self.db)
 
@@ -180,9 +190,6 @@ class Model(object):
     # Prepare for sampling
     #
     def _prepare(self):
-
-        # Initialize database
-        self.db._initialize()
 
         # Seed new initial values for the parameters.
         for parameters in self.parameters:
@@ -235,14 +242,15 @@ class Model(object):
             -   Its value can be made into a numpy array with a numerical
                 dtype.
         """
-        self._pymc_objects_to_tally = set()
-        self._cur_trace_index = 0
-        self.max_trace_length = length
+        pass
+        #self._pymc_objects_to_tally = set()
+        #self._cur_trace_index = 0
+        #self.max_trace_length = length
 
-        for pymc_object in self.parameters | self.nodes:
-            if hasattr(pymc_object.trace,'_initialize'):
-                pymc_object.trace._initialize(length)
-                self._pymc_objects_to_tally.add(pymc_object)
+        #for pymc_object in self.parameters | self.nodes:
+            #if hasattr(pymc_object.trace,'_initialize'):
+                #pymc_object.trace._initialize(length)
+                #self._pymc_objects_to_tally.add(pymc_object)
 
     #
     # Tally
@@ -278,7 +286,7 @@ class Model(object):
     #
     # Run the MCMC loop!
     #
-    def sample(self,iter,burn,thin):
+    def sample(self,iter,burn,thin, verbose=True):
         """
         sample(iter,burn,thin)
 
@@ -294,9 +302,15 @@ class Model(object):
         self._iter = iter
         self._burn = burn
         self._thin = thin
-
-        # Initialize traces
-        self._init_traces(iter/thin)
+        
+        length = (iter-burn)/thin
+        
+        self._cur_trace_index = 0
+        self.max_trace_length = length
+        
+        # Initialize database -> initialize traces. 
+        self.db._initialize(length, self)
+        #self._init_traces(iter/thin)
         
         try:
             for i in xrange(iter):
@@ -305,10 +319,10 @@ class Model(object):
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
 
-                if i % thin == 0:
+                if ((i>=burn) and (i % thin)) == 0:
                     self.tally()
 
-                if i % 10000 == 0:
+                if i % 10000 == 0 and verbose:
                     print 'Iteration ', i, ' of ', iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
@@ -322,7 +336,7 @@ class Model(object):
         # We have to be careful with this. If we thin during sampling, it changes the burning 
         # time, and it screws up the following trace output. 
         #self.db._finalize(burn, thin)
-        self.db._finalize(int(burn/thin), 1)
+        self.db._finalize()
 
     def tune(self):
         """

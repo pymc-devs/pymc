@@ -42,17 +42,23 @@ class Trace(object):
         """
         raise AttributeError, self.obj.__name__ + " has no trace"
 
-    def _finalize(self, *args, **kwds):
+    __call__ = gettrace
+    
+    def _finalize(self):
         pass
     
 class Database(object):
     """The no-trace database is empty."""
-    def __init__(self, model):
-        self.model = model
+    def __init__(self):
+        pass
         
-    def _initialize(self, *args, **kwds):
+    def _initialize(self, length, model):
         """Initialize database."""
-        pass
-    def _finalize(self, *args, **kwds):
+        self.model = model
+        for object in self.model._pymc_objects_to_tally:
+            object.trace._initialize(length)
+        
+    def _finalize(self):
         """Close database."""
-        pass
+        for object in self.model._pymc_objects_to_tally:
+            object.trace._finalize()

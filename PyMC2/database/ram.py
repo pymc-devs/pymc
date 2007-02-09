@@ -5,6 +5,7 @@
 
 
 from numpy import zeros,shape
+import no_trace
 
 class Trace(object):
     """RAM trace 
@@ -49,20 +50,13 @@ class Trace(object):
             slicing = slice(burn, None, thin)
         return self._trace[chain][slicing]
 
-    def _finalize(self, *args, **kwds):
+    def _finalize(self):
         """Nothing done here."""
         pass
 
     __call__ = gettrace
 
-class Database(object):
-    """Memory database. Nothing done here."""
-    def __init__(self, model):
-        self.model = model
-        
-    def _initialize(self, *args, **kwds):
-        """Initialize database. Nothing to do."""
-        pass
-    def _finalize(self, *args, **kwds):
-        """Close database. Nothing to do."""
-        pass
+class Database(no_trace.Database):
+    """RAM database."""
+    pass
+    

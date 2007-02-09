@@ -12,7 +12,7 @@ import MySQLdb
 class Trace(object):
     """ Define the methods that will be assigned to each parameter in the
     Model instance."""
-    def __init__(self, obj, db, update_interval):
+    def __init__(self, obj, db):
         """Initialize the instance.
         :Parameters:
           obj : PyMC object
@@ -22,12 +22,11 @@ class Trace(object):
         """
         self.obj = obj
         self.db = db
-        self.update_interval = update_interval
 
-    def _initialize(self):
+    def _initialize(self, update_interval):
         """Initialize the trace.
         """
-        
+        self.update_interval = update_interval
         size = 1
         try:
             size = len(self.obj.value)
@@ -94,14 +93,13 @@ class Trace(object):
 
 class Database(object):
     """Define the methods that will be assigned to the Model class"""
-    def __init__(self, model, dbuser='', dbpass=''):
-        self.model = model
+    def __init__(self, dbuser='', dbpass=''):
         self._user = dbuser
         self._passwd = dbpass
         
-    def _initialize(self, *args, **kwds):
+    def _initialize(self, length, model):
         """Initialize database."""
-        
+        self.model = model
         # Connect to database
         self.db = MySQLdb.connect(user=self._user, passwd=self._passwd)
         self.cur = self.db.cursor()
@@ -112,7 +110,10 @@ class Database(object):
         except Exception:
             # If already exists, switch to database
             self.cur.execute('USE %s' % self.model.__name__)
-        
+    
+        for object in self.model._pymc_objects_to_tally:
+            object.trace._initialize()
+            
     def _finalize(self, *args, **kwds):
         """Close database."""
         self.db.close()

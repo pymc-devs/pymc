@@ -7,7 +7,7 @@ Created by Chris Fonnesbeck on 2007-02-01.
 """
 
 from numpy import zeros, shape, squeeze, transpose
-from pysqlite2 import dbapi2 as sqlite
+from pysqlite2 import dbapi2 as sql
 
 class Trace(object):
     """ Define the methods that will be assigned to each parameter in the
@@ -42,7 +42,7 @@ class Trace(object):
             last_trace = self.db.cur.fetchall()[0][0]
             if last_trace: self.current_trace =  last_trace + 1
 
-    def tally(self):
+    def tally(self,index):
         """Adds current value to trace"""
         try:
             value = self.obj.value.copy()
@@ -83,16 +83,19 @@ class Trace(object):
 
 class Database(object):
     """Define the methods that will be assigned to the Model class"""
-    def __init__(self, model):
-        self.model = model
+    def __init__(self):
+        pass
         
-    def _initialize(self, *args, **kwds):
+    def _initialize(self, length, model):
         """Initialize database."""
-        
+        self.model = model
         # Connect to database
-        self.db = sqlite.connect(self.model.__name__)
+        self.db = sql.connect(self.model.__name__)
         self.cur = self.db.cursor()
         
+        for object in self.model._pymc_objects_to_tally:
+            object.trace._initialize()
+            
     def _finalize(self, *args, **kwds):
         """Close database."""
         self.db.close()
