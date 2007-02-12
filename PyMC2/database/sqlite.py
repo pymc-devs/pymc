@@ -75,6 +75,13 @@ class Trace(object):
             
         return squeeze(trace[slicing])
 
+    def truncate(self, index):
+        """
+        When model receives a keyboard interrupt, it tells the traces
+        to truncate their values.
+        """
+        pass
+
     def _finalize(self):
         """Nothing done here."""
         pass

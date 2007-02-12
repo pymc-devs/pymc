@@ -28,7 +28,10 @@ class Trace(object):
     def _initialize(self, length):
         """Create an array of zeros with shape (length, shape(obj)).
         """
-        self._trace.append( zeros ((length,) + shape(self.obj.value), type(self.obj.value)) )
+        try:
+            self._trace.append( zeros ((length,) + shape(self.obj.value), self.obj.value.dtype) )
+        except AttributeError:
+            self._trace.append( zeros ((length,) + shape(self.obj.value), dtype=object) )           
 
     def tally(self, index):
         """Put current value in trace."""
@@ -36,6 +39,13 @@ class Trace(object):
             self._trace[-1][index] = self.obj.value.copy()
         except AttributeError:
             self._trace[-1][index] = self.obj.value
+
+    def truncate(self, index):
+        """
+        When model receives a keyboard interrupt, it tells the traces
+        to truncate their values.
+        """
+        self._trace[-1] = self._trace[-1][:index]
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).

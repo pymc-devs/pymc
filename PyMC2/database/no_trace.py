@@ -30,6 +30,13 @@ class Trace(object):
         """Dummy method. This does abolutely nothing."""
         pass
 
+    def truncate(self, index):
+        """
+        When model receives a keyboard interrupt, it tells the traces
+        to truncate their values.
+        """
+        pass
+
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """
         This doesn't return anything.

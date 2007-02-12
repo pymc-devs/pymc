@@ -36,6 +36,13 @@ class Trace(object):
         """Adds current value to trace"""
         ar = getattr(self.db.group, self.obj.__name__)
         ar.__setitem__(index, self.obj.value)
+
+    def truncate(self, index):
+        """
+        When model receives a keyboard interrupt, it tells the traces
+        to truncate their values.
+        """
+        pass
         
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).

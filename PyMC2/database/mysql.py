@@ -64,6 +64,13 @@ class Trace(object):
             # Re-initialize trace
             self._trace = zeros(shape(self._trace), self._trace.dtype)
 
+    def truncate(self, index):
+        """
+        When model receives a keyboard interrupt, it tells the traces
+        to truncate their values.
+        """
+        pass
+
     def gettrace(self, burn=0, thin=1, chain=None, slicing=None):
         """Return the trace (last by default).
 

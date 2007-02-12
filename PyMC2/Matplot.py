@@ -1,13 +1,173 @@
+# FIXME: PlotFactory methods plot, geweke_plot, bar_series_plot, gof_plot not working.
+# FIXME: 
+
 """
 Plotting module using matplotlib.
 """
 
 # Import matplotlib functions
 import matplotlib
-from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter, setp
+from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
+from pylab import setp, axis, contourf, cm, title, colorbar, clf
 
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes
+from numpy import histogram2d, mean, std, sort, prod, floor, shape
+
+def get_index_list(shape, j):
+    """
+    index_list = get_index_list(shape, j)
+
+    :Arguments:
+    shape: a tuple
+    j: an integer
+
+    Assumes index j is from a ravelled version of an array
+    with specified shape, returns the corresponding
+    non-ravelled index tuple as a list.
+    """
+
+    r = range(len(shape))
+    index_list = (r)
+
+    for i in r:
+        if i < len(shape):
+            prodshape = prod(shape[i+1:])
+        else:
+            prodshape=0
+        index_list[i] = int(floor(j/prodshape))
+        if index_list[i]>shape[i]:
+            raise IndexError, 'Requested index too large'
+        j %= prodshape
+
+    return index_list
+
+
+# FIXME: Not sure of the best way to bring these two into PlotFactory...
+class func_sd_envelope(object):
+    """
+    F = func_sd_envelope(func_stacks)
+    F.display(axes,xlab=None,ylab=None,name=None)
+
+    This object plots the mean and +/- 1 sd error bars for 
+    the one or two-dimensional function whose trace
+    """
+
+    def __init__(self,func_stacks):
+
+        self.mean = mean(func_stacks,axis=0)
+        self.std = std(func_stacks, axis=0)
+
+        self.lo = self.mean - self.std
+        self.hi = self.mean + self.std
+
+        self.ndim = len(shape(func_stacks))-1
+
+
+    def display(self,axes,xlab=None,ylab=None,name=None):
+        if name:
+            name_str = name
+        else:
+            name_str = ''
+
+        if self.ndim==1:
+            print 'plotting 1'
+            plot(axes,self.lo,'k-.',label=name_str+' mean-sd')
+            plot(axes,self.hi,'k-.',label=name_str+'mean+sd')
+            plot(axes,self.med,'k-',label=name_str+'mean')
+            if name:
+                title(name)
+
+        elif self.ndim==2:
+            subplot(1,3,1)
+            contourf(axes[0],axes[1],self.lo,cmap=cm.bone)
+            title(name_str+' mean-sd')
+            if xlab:
+                xlabel(xlab)
+            if ylab:
+                ylabel(ylab)        
+            colorbar()
+
+            subplot(1,3,2)
+            contourf(axes[0],axes[1],self.mean,cmap=cm.bone)
+            title(name_str+' mean')
+            if xlab:
+                xlabel(xlab)
+            if ylab:
+                ylabel(ylab)
+            colorbar()      
+
+            subplot(1,3,3)
+            contourf(axes[0],axes[1],self.hi,cmap=cm.bone)
+            title(name_str+' mean+sd')
+            if xlab:
+                xlabel(xlab)
+            if ylab:
+                ylabel(ylab)
+            colorbar()
+        else:
+            raise ValueError, 'Only 1- and 2- dimensional functions can be displayed'
+
+class centered_envelope(object):
+    """
+    E = centered_envelope(sorted_func_stack, mass)
+
+    An object corresponding to the centered HPD envelope 
+    of a function enclosing a particular probability mass.
+
+    :Arguments:
+        sorted_func_stack: The samples of the function, sorted. 
+            if func_stacks[i,:] gives sample i, then 
+            sorted_func_stack is sort(func_stacks,0).
+
+        mass: The probability mass enclosed by the HPD envelope.
+
+    :SeeAlso: func_envelopes
+    """
+    def __init__(self, sorted_func_stack, mass):
+        if mass<0 or mass>1:
+            raise ValueError, 'mass must be between 0 and 1'
+        N_samp = shape(sorted_func_stack)[0]
+        self.mass = mass
+        self.ndim = len(sorted_func_stack.shape)-1
+
+        if self.mass == 0:
+            self.value = sorted_func_stack[int(N_samp*.5),]
+        else:
+            quandiff = .5*(1.-self.mass)
+            self.lo = sorted_func_stack[int(N_samp*quandiff),]
+            self.hi = sorted_func_stack[int(N_samp*(1.-quandiff)),]
+
+    def display(self, xaxis, alpha):
+        """
+        E.display(xaxis, alpha = .8)
+
+        :Arguments: xaxis, alpha
+
+        Plots the HPD region on the current figure, with respect to
+        xaxis, at opacity alpha.
+
+        :Note: The fill color of the envelope will be self.mass
+            on the grayscale.
+        """
+        if self.ndim == 1:
+            if self.mass>0.:
+                x = concatenate((xaxis,xaxis[::-1]))
+                y = concatenate((self.lo, self.hi[::-1]))
+                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered HPD ' + pformat(self.mass)))
+            else:
+                plot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
+        else:
+            if self.mass>0.:
+                subplot(1,2,1)
+                contourf(xaxis[0],xaxis[1],self.lo,cmap=cm.bone)
+                colorbar()
+                subplot(1,2,2)
+                contourf(xaxis[0],xaxis[1],self.hi,cmap=cm.bone)
+                colorbar()
+            else:
+                contourf(xaxis[0],xaxis[1],self.value,cmap=cm.bone)
+                colorbar()
 
 
 class PlotFactory:
@@ -24,8 +184,11 @@ class PlotFactory:
         # Store fontmap
         self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     
-    def plot(self, data, name, suffix='', new=True, last=True, rows=1, num=1):
+    def plot(self, pymc_object, suffix='', new=True, last=True, rows=1, num=1):
         # Plots summary of parameter/node trace
+
+        data = pymc_object.trace()
+        name = pymc_object.__name__
         
         # If there is only one data array, go ahead and plot it ...
         if rank(data)==1:
@@ -66,7 +229,11 @@ class PlotFactory:
 
 
     
-    def histogram(self, data, name, nbins=None, suffix='', rows=1, columns=1, num=1, last=True):
+    def histogram(self, pymc_object, nbins=None, suffix='', rows=1, columns=1, num=1, last=True):
+
+        data = pymc_object.trace()
+        name = pymc_object.__name__
+        
         # Internal histogram specification for handling nested arrays
         try:
             
@@ -105,7 +272,11 @@ class PlotFactory:
             print '... cannot generate histogram'
 
     
-    def trace(self, data, name, suffix='', rows=1, columns=1, num=1, last=True):
+    def trace(self, pymc_object, suffix='', rows=1, columns=1, num=1, last=True):
+
+        data = pymc_object.trace()
+        name = pymc_object.__name__
+        
         # Internal plotting specification for handling nested arrays
         
         # Stand-alone plot or subplot?
@@ -135,7 +306,11 @@ class PlotFactory:
             savefig("%s%s.%s" % (name, suffix, self.format))
             #close()
     
-    def geweke_plot(self, data, name, suffix='-diagnostic'):
+    def geweke_plot(self, pymc_object, suffix='-diagnostic'):
+
+        data = pymc_object.trace()
+        name = pymc_object.__name__
+        
         # Generate Geweke (1992) diagnostic plots
         
         print 'Plotting', name+suffix
@@ -161,9 +336,11 @@ class PlotFactory:
         savefig("%s%s.%s" % (name, suffix, self.format))
         #close()
     
-    def gof_plot(self, data, name, suffix='-gof'):
+    def gof_plot(self, pymc_object, suffix='-gof'):
         # Generate goodness-of-fit scatter plot
-        
+        data = pymc_object.trace()
+        name = pymc_object.__name__
+
         print 'Plotting', name+suffix
         
         # Generate new scatter plot
@@ -188,6 +365,7 @@ class PlotFactory:
         #close()
     
     def bar_series_plot(self, values, ylab='Y', suffix=''):
+        
         """Generate bar plot of a series, usually autocorrelation
         or autocovariance."""
         
@@ -230,3 +408,192 @@ class PlotFactory:
                 
                 savefig("%s%s.%s" % (name, suffix, self.format))
                 #close()
+    
+
+    def pair_posterior(self, pymc_objects, mask=None, trueval=None, fontsize=8, suffix=''):
+        """
+        pair_posterior(pymc_objects, clear=True, mask=None, trueval=None)
+
+        :Arguments:
+        pymc_objects:       An iterable containing parameter objects with traces.
+        mask:       A dictionary, indexed by parameter, of boolean-valued
+                    arrays. If mask[p][index]=False, parameter p's value
+                    at that index will be included in the plot.
+        trueval:    The true values of parameters (useful for summarizing
+                    performance with simulated data).
+
+        Produces a matrix of plots. On the diagonals are the marginal
+        posteriors of the parameters, subject to the masks. On the
+        off-diagonals are the marginal pairwise posteriors of the
+        parameters, subject to the masks.
+        """
+
+        pymc_objects = list(pymc_objects)
+
+        if not mask:
+            mask={}
+            for p in pymc_objects:
+                mask[p] = None
+
+        if not trueval:
+            trueval={}
+            for p in pymc_objects:
+                trueval[p] = None
+
+        np=len(pymc_objects)
+        ns = {}
+        for p in pymc_objects:
+            if not p.value.shape:
+                ns[p] = 1
+            else:
+                ns[p] = len(p.value.ravel())
+
+        index_now = -1
+        tracelen = {}
+        ravelledtrace={}
+        titles={}
+        indices={}
+        cum_indices={}
+
+
+        for p in pymc_objects:
+
+            tracelen[p] = p.trace().shape[0]
+            ravelledtrace[p] = p.trace().reshape((tracelen[p],-1))
+            titles[p]=[]
+            indices[p] = []
+            cum_indices[p]=[]
+
+            for j in range(ns[p]):
+                # Should this index be included?
+                if mask[p]:
+                    if not mask[p].ravel()[j]:
+                        indices[p].append(j)
+                        this_index=True
+                    else:
+                        this_index=False
+                else:
+                    indices[p].append(j)
+                    this_index=True
+                # If so:
+                if this_index:
+                    index_now+=1
+                    cum_indices[p].append(index_now)
+                    # Figure out title string
+                    if ns[p]==1:
+                        titles[p].append(p.__name__)
+                    else:
+                        titles[p].append(p.__name__ + get_index_list(p.value.shape,j).__repr__())
+
+        n = index_now+1
+        for p in pymc_objects:
+            for j in range(len(indices[p])):
+                # Marginals
+                ax=subplot(n,n,(cum_indices[p][j])*(n+1)+1)
+                hist(ravelledtrace[p][:,j],normed=True,fill=False)
+                xlabel(titles[p][j],size=fontsize)
+                setp(ax.get_xticklabels(),fontsize=fontsize)
+                setp(ax.get_yticklabels(),fontsize=fontsize)
+
+        # Bivariates
+        for i in range(len(pymc_objects)-1):
+            p0 = pymc_objects[i]
+            for j in range(len(indices[p0])):
+                p0_i = indices[p0][j]
+                p0_ci = cum_indices[p0][j]
+                for k in range(i,len(pymc_objects)):
+                    p1=pymc_objects[k]
+                    if i==k:
+                        l_range = range(j+1,len(indices[p0]))
+                    else:
+                        l_range = range(len(indices[p1]))
+                    for l  in l_range:
+                        p1_i = indices[p1][l]
+                        p1_ci = cum_indices[p1][l]
+                        subplot_index = p0_ci*(n) + p1_ci+1
+                        print subplot_index
+                        ax=subplot(n, n, subplot_index)
+
+                        try:
+                            H, x, y = histogram2d(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i])
+                            contourf(x,y,H,cmap=cm.bone)
+                        except:
+                            print 'Unable to plot histogram for ('+titles[p1][l]+','+titles[p0][j]+'):'
+                            plot(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i],'k.',markersize=1.)
+                            axis('tight')
+
+                        xlabel(titles[p1][l],size=fontsize)
+                        ylabel(titles[p0][j],size=fontsize)
+                        setp(ax.get_xticklabels(),fontsize=fontsize)
+                        setp(ax.get_yticklabels(),fontsize=fontsize)
+
+		plotname = sum([obj.__name__ for obj in pymc_objects])
+		savefig("%s%s.%s" % (plotname, suffix, self.format))
+
+    def func_quantiles(self, pymc_object, qlist=[.025, .25, .5, .75, .975]):
+        """
+        Returns an array whose ith row is the q[i]th quantile of the 
+        function.
+
+        :Arguments:
+            func_stacks: The samples of the function. func_stacks[i,:] 
+                gives sample i.
+            qlist: A list or array of the quantiles you would like.
+
+        :SeeAlso: func_envelopes, func_hist, weightplot
+        """
+
+        func_stacks = pymc_object.trace()
+
+        if any(qlist<0.) or any(qlist>1.):
+            raise TypeError, 'The elements of qlist must be between 0 and 1'
+
+        func_stacks = func_stacks.copy()
+
+        N_samp = shape(func_stacks)[0]
+        func_len = tuple(shape(func_stacks)[1:])
+
+        func_stacks.sort(axis=0)
+
+        quants = zeros((len(qlist),func_len),dtype=float)
+        alphas = 1.-abs(array(qlist)-.5)/.5
+
+        for i in range(len(qlist)):
+            quants[i,] = func_stacks[int(qlist[i]*N_samp),]
+
+        return quants, alphas
+
+    def func_envelopes(self, pymc_object, HPD):
+        """
+        func_envelopes(pymc_object, HPD = [.25, .5, .95])
+
+        Returns a list of centered_envelope objects for func_stacks,
+        each one corresponding to an element of HPD, and one 
+        corresponding to mass 0 (the median).
+
+        :Arguments:
+            func_stacks: The samples of the function. func_stacks[i,:] 
+                gives sample i.
+            HPD: A list or array containing the probability masses
+                the envelopes should enclose.
+
+        :Note: The return list of envelopes is sorted from high to low
+            enclosing probability masses, so they should be plotted in
+            order.
+
+        :SeeAlso: centered_envelope, func_quantiles, func_hist, weightplot
+        """
+
+        func_stacks = pymc_object.trace()
+
+        func_stacks = func_stacks.copy()
+        func_stacks.sort(axis=0)
+
+        envelopes = []
+        qsort = sort(HPD)
+
+        for i in range(len(qsort)):
+            envelopes.append(centered_envelope(func_stacks, qsort[len(qsort)-i-1]))
+        envelopes.append(centered_envelope(func_stacks, 0.))
+
+        return envelopes

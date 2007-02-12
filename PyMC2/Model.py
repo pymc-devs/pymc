@@ -5,6 +5,7 @@ __docformat__='reStructuredText'
 from numpy import zeros, floor
 from PyMC2 import PyMCBase, Parameter, Node
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
+from PyMCObjectContainer import PyMCObjectContainer
 from PyMC2 import database
 from PyMC2 import extend_children
 import gc
@@ -61,6 +62,7 @@ class Model(object):
         self.parameters = set()
         self.data = set()
         self.sampling_methods = set()
+        self.containers = set()
         self._generations = []
         self._prepared = False
         self.__name__ = None
@@ -90,12 +92,14 @@ class Model(object):
     def _fileitem(self, item):
 
         # If a dictionary is passed in, open it up.
-        if isinstance(item[1],dict):
-            for subitem in item[1].iteritems():
-                self._fileitem(subitem)
+        if isinstance(item[1],PyMCObjectContainer):
+            self.containers.add(item[1])
+            self.parameters.update(item[1].parameters)
+            self.data.update(item[1].data)
+            self.nodes.update(item[1].nodes)
+            self.pymc_objects.update(item[1].pymc_objects)
+            self.sampling_methods.update(item[1].sampling_methods)
 
-        # If another iterable object is passed in, open it up.
-        # Broadcast the same name over all the elements.
         """
         This doesn't work so hot, anyone have a better idea?
         I was trying to allow sets/tuples/lists
@@ -329,6 +333,8 @@ class Model(object):
                     
         except KeyboardInterrupt:
             print '\n Iteration ', i, ' of ', iter
+            for pymc_object in self._pymc_objects_to_tally:
+                pymc_object.trace.truncate(self._cur_trace_index)
 
         # Tuning, etc.
 
@@ -411,7 +417,7 @@ class Model(object):
 
 
 
-    def DAG(self,format='raw',path=None):
+    def DAG(self,format='raw',path=None,consts=True):
         """
         DAG(format='raw', path=None)
 
@@ -452,10 +458,13 @@ class Model(object):
             pydot_nodes[node] = pydot.Node(name=node.__name__,shape='invtriangle')
             self.dot_object.add_node(pydot_nodes[node])
 
+        for container in self.containers:
+            pydot_nodes[container] = pydot.Node(name=container.__name__,shape='house')
+
         # Create subgraphs from pymc sampling methods
         for sampling_method in self.sampling_methods:
             if not isinstance(sampling_method,OneAtATimeMetropolis):
-                pydot_subgraphs[sampling_method] = subgraph(graph_name = sampling_method.__class__.__name__)
+                pydot_subgraphs[sampling_method] = pydot.Subgraph(graph_name = sampling_method.__class__.__name__)
                 for pymc_object in sampling_method.pymc_objects:
                     pydot_subgraphs[sampling_method].add_node(pydot_nodes[pymc_object])
                 self.dot_object.add_subgraph(pydot_subgraphs[sampling_method])
@@ -465,20 +474,24 @@ class Model(object):
         counter = 0
         for pymc_object in self.pymc_objects:
             for key in pymc_object.parents.iterkeys():
-                if not isinstance(pymc_object.parents[key],PyMCBase):
-
-                    parent_name = pymc_object.parents[key].__class__.__name__ + ' const ' + str(counter)
-                    self.dot_object.add_node(pydot.Node(name = parent_name, shape = 'trapezium'))
-                    counter += 1
+                plot_edge=True
+                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],PyMCObjectContainer):
+                    if consts:
+                        parent_name = pymc_object.parents[key].__class__.__name__ + ' const ' + str(counter)
+                        self.dot_object.add_node(pydot.Node(name = parent_name, shape = 'trapezium'))
+                        counter += 1
+                    else:
+                        plot_edge=False
                 else:
                     parent_name = pymc_object.parents[key].__name__
+                
+                if plot_edge:
+                    new_edge = pydot.Edge(  src = parent_name,
+                                            dst = pymc_object.__name__,
+                                            label = key)
 
-                new_edge = pydot.Edge(  src = parent_name,
-                                        dst = pymc_object.__name__,
-                                        label = key)
 
-
-                self.dot_object.add_edge(new_edge)
+                    self.dot_object.add_edge(new_edge)
 
         # Draw the graph
         if not path == None:
