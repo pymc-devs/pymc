@@ -338,7 +338,7 @@ class test_gev(NumpyTestCase):
             nbins=20, nrandom=5000)
         if PLOT:
             compare_hist(figname='gev', **figdata)
-        assert_array_almost_equal(hist, like,1)        
+        assert_array_almost_equal(hist, like,1)
 
     def check_scipy(self):
         x = [-2,1,2,3,4]
@@ -370,7 +370,7 @@ class test_hypergeometric(NumpyTestCase):
         if PLOT:
             compare_hist(figname='hypergeometric', **figdata)
         assert_array_almost_equal(hist, like,1)
-        
+
 class test_inverse_gamma(NumpyTestCase):
     def check_consistency(self):
         params=dict(alpha=1.5, beta=.5)
@@ -400,6 +400,15 @@ class test_lognormal(NumpyTestCase):
         assert_almost_equal(integral, 1, 3)
 
 class test_multinomial(NumpyTestCase):
+    def check_random(self):
+        p = array([.2,.3,.5])
+        n = 10
+        r = rmultinomial(n, p, size=3000)
+        rmean = r.mean(0)
+        assert_array_almost_equal(rmean, n*p, 2)
+        rvar = r.var(0)
+        assert_array_almost_equal(rvar, n*p(1-p))
+
     def check_consistency(self):
         pass
 

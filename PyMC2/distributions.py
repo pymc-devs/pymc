@@ -625,10 +625,10 @@ def half_normal_expval(tau):
 
 def half_normal_like(x, tau):
     r"""half_normal_like(x, tau)
-    
+
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
     to the domain :math:`x \in [0, \infty)`.
-    
+
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
@@ -637,7 +637,7 @@ def half_normal_like(x, tau):
         :math:`x \ge 0`
       tau : float
         :math:`\tau > 0`
-    
+
     """
     constrain(tau, lower=0)
     constrain(x, lower=0, allow_equal=True)
@@ -666,7 +666,7 @@ def hypergeometric_like(x, draws, success, failure):
 
     :Parameters:
       x : int
-        Number of successes in a sample drawn from a population. 
+        Number of successes in a sample drawn from a population.
         :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
       draws : int
         Size of sample.
@@ -682,7 +682,7 @@ def hypergeometric_like(x, draws, success, failure):
     return flib.hyperg(x, draws, success, success+failure)
 
 # Inverse gamma----------------------------------------------
-# This one doesn't look kasher. Check it up. 
+# This one doesn't look kasher. Check it up.
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
     """rinverse_gamma(alpha, beta,size=1)
@@ -757,7 +757,7 @@ def lognormal_like(x, mu, tau):
     constrain(tau, lower=0)
     constrain(x, lower=0)
     return flib.lognormal(x,mu,tau)
-    
+
 # Multinomial----------------------------------------------
 @randomwrap
 def rmultinomial(n,p,size=1):
@@ -772,11 +772,32 @@ def multinomial_expval(n,p):
 
 
 def multinomial_like(x, n, p):
-    """Multinomial log-likelihood with k-1 bins
+    """multinomial_like(x, n, p)
 
-    multinomial_like(x, n, p)
+    Multinomial log-likelihood with k-1 bins. Generalization of the binomial
+    distribution, but instead of each trial resulting in "success" or
+    "failure", each one results in exactly one of some fixed finite number k
+    of possible outcomes over n independent trials. Xi indicates the number of
+    times outcome number i was observed over the n trials.
 
-    x > 0, p > 0, \sum p < 1, \sum x < n
+    .. math::
+        f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
+
+    :Parameters:
+      x : (ns, k) int
+        Random variable indicating the number of time outcome i is observed,
+        :math:`\sum_{i=1}^k x_i=n`, :math:`x_i > 0`.
+      n : int
+        Number of trials.
+      p : (k,1) float
+        Probability of each one of the different outcomes,
+        :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+
+    :Note:
+      - :math:`E(X_i)=n p_i`
+      - :math:`var(X_i)=n p_i(1-p_i)`
+      - :math:`cov(X_i,X_j) = -n p_i p_j`
+
     """
     constrain(p, lower=0)
     constrain(x, lower=0)
@@ -807,12 +828,12 @@ def multivariate_hypergeometric_expval(m):
 
 def multivariate_hypergeometric_like(x, m):
     r"""multivariate_hypergeometric_like(x, m)
-    
+
     Multivariate hypergeometric log-likelihood
 
     .. math::
         f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
-    
+
     x < m
     """
     constrain(x, upper=m)
@@ -831,12 +852,12 @@ def multivariate_normal_expval(mu, tau):
 
 def multivariate_normal_like(x, mu, tau):
     r"""multivariate_normal_like(x, mu, tau)
-    
+
     Multivariate normal log-likelihood
 
     .. math::
         f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
-    
+
     x: (k,n)
     mu: (k,n) or (k,1)
     tau: (k,k)
@@ -860,12 +881,12 @@ def negative_binomial_expval(mu, alpha):
 
 def negative_binomial_like(x, mu, alpha):
     r"""negative_binomial_like(x, mu, alpha)
-    
+
     Negative binomial log-likelihood
 
     .. math::
         f(x \mid r, p) = \frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
-    
+
     x > 0, mu > 0, alpha > 0
     """
     constrain(mu, lower=0)
@@ -887,7 +908,7 @@ def normal_expval(mu, tau):
 
 def normal_like(x, mu, tau):
     r"""normal_like(x, mu, tau)
-    
+
     Normal log-likelihood.
 
     .. math::
@@ -901,11 +922,11 @@ def normal_like(x, mu, tau):
         Mean of the distribution.
       tau : float
         Precision of the distribution, > 0.
-    
+
     :Note:
       - :math:`E(X) = \mu`
       - :math:`Var(X) = 1/\tau`
-    
+
     """
     constrain(tau, lower=0)
     return flib.normal(x, mu, tau)
@@ -1034,7 +1055,7 @@ def wishart_expval(n, Tau):
 
 def wishart_like(X, n, Tau):
     r"""wishart_like(X, n, Tau)
-    
+
     Wishart log-likelihood
 
     .. math::
