@@ -15,14 +15,13 @@ __modules__ = [ 'distributions',
                 'AbstractBase',
                 'PurePyMCObjects',
                 'MultiModelInference',
-                'utils',
-                'PyMCObjectDecorators']
+                'PyMCObjectDecorators',
+                'testsuite',
+                'utils',]
                 
 __optmodules__ = []#['MultiModelInference',]
-                    
 #ClosedCapture, OpenCapture   
 
-#Uncomment one or the other.
 try:
     C_modules = ['PyMCObjects']
     for mod in C_modules:
@@ -47,9 +46,13 @@ for mod in __optmodules__:
     except ImportError:
         print 'Error importing module ', mod
 
-try:
-    import parallel
-except ImportError:
-    print 'For parallel-processing functionality install IPython1.'
+##try:
+##    import parallel
+##except ImportError:
+##    print 'For parallel-processing functionality install IPython1.'
 
 del mod
+
+
+
+    

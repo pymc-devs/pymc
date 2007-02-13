@@ -4,7 +4,8 @@ import distributions
 from PyMC2 import Parameter, Node
 from copy import copy
 from AbstractBase import *
-from utils import extend_children, _push, _extract
+from utils import extend_children, _push, _extract, LikelihoodError
+import numpy as np
 
 def parameter(__func__=None, **kwds):
     """
@@ -53,7 +54,7 @@ def parameter(__func__=None, **kwds):
     keys = ['logp','random','rseed']
 
     if __func__ is None:
-        instantiate_p.kwds = kwds	
+        instantiate_p.kwds = kwds   
         return instantiate_p
     else:
         instantiate_p.kwds = kwds
@@ -84,7 +85,7 @@ def node(__func__ = None, **kwds):
     keys = ['eval']
     
     if __func__ is None:
-        instantiate_n.kwds = kwds	
+        instantiate_n.kwds = kwds   
         return instantiate_n
     else:
         instantiate_n.kwds = kwds
@@ -143,3 +144,81 @@ def create_distribution_instantiator(name, logp=None, random=None):
 
     instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
     return instantiator
+
+def fortranlike(f, snapshot, mv=False):
+    """
+    Decorator function for fortran likelihoods
+    ==========================================
+    
+    Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
+    
+    Assume args = (x, param1, param2, ...)
+    Before passing the arguments to the function, the wrapper makes sure that 
+    the parameters have the same shape as x.
+
+    mv: multivariate (True/False)
+    
+    Add compatibility with GoF (Goodness of Fit) tests 
+    --------------------------------------------------
+    * Add a 'prior' keyword (True/False)
+    * If the keyword gof is given and is True, return the GoF (Goodness of Fit)
+    points instead of the likelihood. 
+    * A 'loss' keyword can be given, to specify the loss function used in the 
+    computation of the GoF points. 
+    * If the keyword random is given and True, return a random variate instead
+    of the likelihood.
+    """
+    name = f.__name__[:-5]
+    # Take a snapshot of the main namespace.
+    
+    
+    # Find the functions needed to compute the gof points.
+    expval_func = snapshot[name+'_expval']
+    random_func = snapshot['r'+name]
+    
+    def wrapper(*args, **kwds):
+        """This wraps a likelihood."""
+        
+        # Shape manipulations
+        if not mv:
+            xshape = np.shape(args[0])
+            newargs = [np.asarray(args[0])]
+            for arg in args[1:]:
+                newargs.append(np.resize(arg, xshape))
+            for key in kwds.iterkeys():
+                kwds[key] = kwds[key]
+        else:
+            """x, mu, Tau
+            x: (kxN)
+            mu: (kxN) or (kx1)
+            Tau: (k,k)
+            """
+            xshape=np.shape(args[0])
+            newargs = [np.asarray(args[0])] 
+            newargs.append(np.resize(args[1], xshape))
+            newargs.append(np.asarray(args[2]))
+            
+        if kwds.pop('gof', False) and not kwds.pop('prior', False):
+            """Return gof points."""            
+            loss = kwds.pop('gof', squared_loss)
+            #name = kwds.pop('name', name)
+            expval = expval_func(*newargs[1:], **kwds)
+            y = random_func(*newargs[1:], **kwds)
+            gof_points = GOFpoints(newargs[0],y,expval,loss)
+            return gof_points
+        elif kwds.pop('random', False):
+            return random_func(*newargs[1:], **kwds)
+        else:
+            """Return likelihood."""
+            try:
+                return f(*newargs, **kwds)
+            except LikelihoodError:
+                return -np.Inf
+        
+
+    # Assign function attributes to wrapper.
+    wrapper.__doc__ = f.__doc__
+    wrapper._PyMC = True
+    wrapper.__name__ = f.__name__
+    wrapper.name = name
+    return wrapper

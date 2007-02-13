@@ -235,66 +235,6 @@ def hist1d(aw, edges, decimal, weighted, normed):
     return count
 
 
-from numpy.testing import *
-class test_histogram(NumpyTestCase):
-    def check_simple(self):
-        n=100
-        v=rand(n)
-        (a,b)=histogram(v)
-        #check if the sum of the bins equals the number of samples
-        assert(np.sum(a,axis=0)==n)
-        #check that the bin counts are evenly spaced when the data is from a linear function
-        (a,b)=histogram(np.linspace(0,10,100))
-        assert(np.all(a==10))
-        #Check the construction of the bin array
-        a, b = histogram(v, bins=4, range=[.2,.8])
-        assert(np.all(b['edges']==np.linspace(.2, .8, 5)))
-        #Check the number of outliers
-        assert((v<.2).sum() == b['lower'])
-        assert((v>.8).sum() == b['upper'])
-        #Check the normalization
-        bins = [0,.5,.75,1]
-        a,b = histogram(v, bins, normed=True)
-        assert_almost_equal((a*np.diff(bins)).sum(), 1)
-
-    def check_axis(self):
-        n,m = 100,20
-        v = rand(n,m)
-        a,b = histogram(v, bins=5)
-        # Check dimension is reduced (axis=None).
-        assert(a.ndim == 1)
-        #Check total number of count is equal to the number of samples.
-        assert(a.sum() == n*m)
-        a,b = histogram(v, bins = 7, axis=0)
-        # Check shape of new array is ok.
-        assert(a.ndim == 2)
-        assert_array_equal(a.shape,[7, m])
-        # Check normalization is consistent
-        a,b = histogram(v, bins = 7, axis=0, normed=True)
-        assert_array_almost_equal((a.T*np.diff(b['edges'])).sum(1), np.ones((m)))
-        a,b = histogram(v, bins = 7, axis=1, normed=True)
-        assert_array_equal(a.shape, [n,7])
-        assert_array_almost_equal((a*np.diff(b['edges'])).sum(1), np.ones((n)))
-        # Check results are consistent with 1d estimate
-        a1, b1 = histogram(v[0,:], bins=b['edges'], normed=True)
-        assert_array_equal(a1, a[0,:])
-
-    def check_weights(self):
-        # Check weights = constant gives the same answer as no weights.
-        v = rand(100)
-        w = np.ones(100)*5
-        a,b = histogram(v)
-        na,nb = histogram(v, normed=True)
-        wa,wb = histogram(v, weights=w)
-        nwa,nwb = histogram(v, weights=w, normed=True)
-        assert_array_equal(a*5, wa)
-        assert_array_equal(na, nwa)
-        # Check weights are properly applied.
-        v = np.linspace(0,10,10)
-        w = np.concatenate((np.zeros(5), np.ones(5)))
-        wa,wb = histogram(v, bins=np.arange(11),weights=w)
-        assert_array_almost_equal(wa, w)
-
 
 
 # Some python densities for comparison
@@ -332,5 +272,4 @@ def hypergeometric(x, d, S, N):
 def multinomial(x,n,p):
     return factorial(n)/factorial(x).prod()*p**x
 
-if __name__ == "__main__":
-    NumpyTest().run()
+

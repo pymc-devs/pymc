@@ -1,6 +1,12 @@
 from RJMCMC import *
 import transd_model
-RM = Model(transd_model)
 
+from numpy.testing import *
 
-RM.sample(100,10,1)
+def test_RJMCMC(NumpyTestCase):
+    def check(self):
+        RM = Model(transd_model)
+        RM.sample(100,10,1)
+    
+if __name__=='__main__':
+    NumpyTest().run()

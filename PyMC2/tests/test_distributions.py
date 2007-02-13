@@ -28,13 +28,14 @@ constraining to python.
 #       Tried (hist-like)/sqrt(like), seems to work better.
 
 
-from decorators import *
+#from decorators import *
+from PyMC2.distributions import *
 import unittest
-from PyMC2 import flib
 from numpy.testing import *
+from PyMC2 import flib, utils
 import numpy as np
 from numpy import exp, array
-import utils, os
+import os
 PLOT=True
 if PLOT is True:
     try:
@@ -423,9 +424,9 @@ class test_multinomial(NumpyTestCase):
         n = 10
         r = rmultinomial(n, p, size=5000)
         rmean = r.mean(0)
-        assert_array_almost_equal(rmean, n*p, 2)
+        assert_array_almost_equal(rmean, n*p, 1)
         rvar = r.var(0)
-        assert_array_almost_equal(rvar, n*p(1-p),2)
+        assert_array_almost_equal(rvar, n*p*(1-p),1)
 
     def check_consistency(self):
         p = array([.2,.3,.5])
@@ -505,8 +506,6 @@ class test_hyperg(NumpyTestCase):
         params = {'ngood':2, 'nbad':5, 'nsample':3}
         hist,like, figdata = consistency(poisson, flib.poisson, params, nrandom=5000, range=[0,10])
 """
-
-
 
 if __name__ == '__main__':
     NumpyTest().run()

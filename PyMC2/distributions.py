@@ -23,6 +23,7 @@ from numpy import inf, random, sqrt, log, size, tan, pi
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
 import inspect
+from PyMCObjectDecorators import fortranlike
 random_number = random.random
 inverse = np.linalg.pinv
 
@@ -949,7 +950,7 @@ def poisson_expval(mu):
 def poisson_like(x,mu):
     r"""poisson_like(x,mu)
 
-    Poisson log-likelihood. The Poisson a discrete probability distribution.
+    Poisson log-likelihood. The Poisson is a discrete probability distribution.
     It expresses the probability of a number of events occurring in a fixed
     period of time if these events occur with a known average rate, and are
     independent of the time since the last event. The Poisson distribution can
@@ -1069,6 +1070,20 @@ def wishart_like(X, n, Tau):
     return flib.wishart(X, n, Tau)
 
 # -----------------------------------------------------------
+"""Decorate the likelihoods"""
+snapshot = locals().copy()
+likelihoods = {}
+for name, obj in snapshot.iteritems():
+    if name[-5:] == '_like' and name[:-5] in availabledistributions:
+        likelihoods[name[:-5]] = snapshot[name]
+            
+def local_decorated_likelihoods(obj):
+    """New interface likelihoods""" 
+    for name, like in likelihoods.iteritems():
+        obj[name+'_like'] = fortranlike(like, snapshot)
+
+local_decorated_likelihoods(locals())
+
 
 def _test():
     import doctest

@@ -6,7 +6,7 @@ e ~ Exp(1.)
 l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
-
+__all__ = ['s','e','l','D','S']
 from PyMC2 import parameter, data, OneAtATimeMetropolis, node
 from numpy import array, log, sum, ones, concatenate
 from PyMC2 import constrain, exponential_like, poisson_like
