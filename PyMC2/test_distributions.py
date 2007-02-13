@@ -33,7 +33,7 @@ import unittest
 from PyMC2 import flib
 from numpy.testing import *
 import numpy as np
-from numpy import exp
+from numpy import exp, array
 import utils, os
 PLOT=True
 if PLOT is True:
@@ -264,6 +264,7 @@ class test_chi2(NumpyTestCase):
             compare_hist(figname='chi2', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
+
 class test_dirichlet(NumpyTestCase):
     """Multivariate Dirichlet distribution"""
     def check_random(self):
@@ -271,7 +272,7 @@ class test_dirichlet(NumpyTestCase):
         r = rdirichlet(theta, 2000)
         s = theta.sum()
         m = r.mean(0)
-        cov_ex = np.cov(r.T)
+        cov_ex = np.cov(r.transpose())
 
         # Theoretical mean
         M = theta/s
@@ -287,6 +288,9 @@ class test_dirichlet(NumpyTestCase):
         l = flib.dirichlet(x, theta)
         f = utils.dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
+
+    def check_vectorization(self):
+        assert_equal(0,1)
 
     def normalization_2d(self):
         pass
@@ -348,6 +352,15 @@ class test_gev(NumpyTestCase):
             flib_y.append(flib.gev(i, .3, 4, 3))
         assert_array_almost_equal(scipy_y,flib_y,5)
 
+    def check_vectorization(self):
+        a = flib.gev([4,5,6], xi=.2,mu=4,sigma=1)
+        b = flib.gev([4,5,6], xi=[.2,.2,.2],mu=4,sigma=1)
+        c = flib.gev([4,5,6], xi=.2,mu=[4,4,4],sigma=1)
+        d = flib.gev([4,5,6], xi=.2,mu=4,sigma=[1,1,1])
+        assert_equal(a,b)
+        assert_equal(b,c)
+        assert_equal(c,d)
+
 class test_half_normal(NumpyTestCase):
     def check_consistency(self):
         params={'tau':.5}
@@ -361,6 +374,11 @@ class test_half_normal(NumpyTestCase):
         params = {'tau':2.}
         integral = normalization(flib.hnormal, params, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
+
+    def check_vectorization(self):
+        a = flib.hnormal([2,3], .5)
+        b = flib.hnormal([2,3], tau=[.5,.5])
+        assert_equal(a,b)
 
 class test_hypergeometric(NumpyTestCase):
     def check_consistency(self):
@@ -403,14 +421,35 @@ class test_multinomial(NumpyTestCase):
     def check_random(self):
         p = array([.2,.3,.5])
         n = 10
-        r = rmultinomial(n, p, size=3000)
+        r = rmultinomial(n, p, size=5000)
         rmean = r.mean(0)
         assert_array_almost_equal(rmean, n*p, 2)
         rvar = r.var(0)
-        assert_array_almost_equal(rvar, n*p(1-p))
+        assert_array_almost_equal(rvar, n*p(1-p),2)
 
     def check_consistency(self):
-        pass
+        p = array([.2,.3,.5])
+        n = 10
+        x = rmultinomial(n, p, size=5)
+        a = log(utils.multinomial(x,n,p).prod())
+        b = flib.multinomial(x,n,p)
+        assert_almost_equal(a,b,5)
+
+class test_normal(NumpyTestCase):
+    def check_consistency(self):
+        params=dict(mu=3, tau = .5)
+        hist, like, figdata = consistency(rnormal, flib.normal, params,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='normal', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+    def check_vectorization(self):
+        a = flib.normal([3,4,5], mu=3, tau=.5)
+        b = flib.normal([3,4,5], mu=[3,3,3], tau=.5)
+        c = flib.normal([3,4,5], mu=[3,3,3], tau=[.5,.5,.5])
+        assert_equal(a,b)
+        assert_equal(b,c)
 
 class test_poisson(NumpyTestCase):
     def check_consistency(self):

@@ -122,7 +122,7 @@ def randomwrap(func):
         size = arg[-1]
         vec_params = len(r)>1
         if size > 1 and vec_params:
-            return np.atleast_2d(r).T
+            return np.atleast_2d(r).transpose()
         elif vec_params or size > 1:
             return np.concatenate(r)
         else: # Scalar case
@@ -618,7 +618,7 @@ def rhalf_normal(tau, size=1):
 
     Random half-normal variates.
     """
-    return np.abs(random.normal(0, sqrt(1/tau), size))
+    return abs(random.normal(0, sqrt(1/tau), size))
 
 def half_normal_expval(tau):
     return sqrt(0.5 * pi / array(tau))
@@ -759,7 +759,7 @@ def lognormal_like(x, mu, tau):
     return flib.lognormal(x,mu,tau)
 
 # Multinomial----------------------------------------------
-@randomwrap
+#@randomwrap
 def rmultinomial(n,p,size=1):
     """rmultinomial(n,p,size=1)
 

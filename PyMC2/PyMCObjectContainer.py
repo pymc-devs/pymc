@@ -1,4 +1,5 @@
-from PyMCObjects import *
+#from PyMCObjects import * These imports assume the C objects are compiled.
+from PyMC2 import SamplingMethod, Parameter, PyMCBase, Node
 
 class PyMCObjectContainer(object):
     def __init__(self, iterable, name = 'container'):
