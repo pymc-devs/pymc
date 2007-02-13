@@ -7,8 +7,12 @@ TODO: parent_pointers array should contain the PyMC objects in the
 TODO: container. This shouldn't be a deep change, since Parameter
 TODO: and Node already pass arguments to logp using their dictionaries
 TODO: and only use their pointers for timestamp access.
-TODO: Note that there are PyIter_Check and PyIter_Next, but maybe they
-TODO: won't help.
+
+TODO: Instead of passing a new 'children' set in to the PyMC objects,
+TODO: make a function in Abstract Base: def newset(): return set()
+TODO: and import and call the function from Parameter and Node's
+TODO: constructors. Then get rid of the 'children' argument
+TODO: in the decorators.
 */
 
 #ifndef _PYMCOBJECTS_C_

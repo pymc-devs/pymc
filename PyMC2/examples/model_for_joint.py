@@ -1,6 +1,6 @@
 from PyMC2 import parameter, data, JointMetropolis
 from numpy import array, eye, ones
-from PyMC2.flib import mvnorm
+from flib import mvnorm, constrain
 
 # For some reason the decorator isn't working with no parents...
 

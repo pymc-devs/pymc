@@ -49,7 +49,6 @@ def parameter(__func__=None, **kwds):
 
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
-        kwds['children'] = set()
         return Parameter(value=value, parents=parents, **kwds)      
     keys = ['logp','random','rseed']
 
@@ -81,7 +80,6 @@ def node(__func__ = None, **kwds):
 
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys)
-        kwds['children'] = set()
         return Node(parents=parents, **kwds)        
     keys = ['eval']
     

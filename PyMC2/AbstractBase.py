@@ -38,3 +38,9 @@ class ContainerBase(object):
 	PyMCObjectContainer inherits from this class.
 	"""
 	pass
+	
+def new_set():
+	"""
+	This is really annoying, but I couldn't figure out how to make a new set in C.
+	"""
+	return set()

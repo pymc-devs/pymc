@@ -9,13 +9,12 @@
 static int 
 Param_init(Parameter *self, PyObject *args, PyObject *kwds) 
 {
-	PyObject *AbstractBase;
+	PyObject *AbstractBase, *dummy_arg, *newset_fun;
 	int i;
 	static char *kwlist[] = {	"logp",  
 								"name", 
 								"value", 
 								"parents", 
-								"children",
 								"doc",								
 								"random", 
 								"trace",  
@@ -23,12 +22,11 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 								"isdata", 								
 								NULL};
 								
-	if (! PyArg_ParseTupleAndKeywords(	args, kwds, "OOOOO|OOOOi", kwlist, 
+	if (! PyArg_ParseTupleAndKeywords(	args, kwds, "OOOO|OOOOi", kwlist, 
 										&self->logp_fun,
 										&self->__name__, 
 										&self->value, 										
 										&self->parents,
-										&self->children,
 										&self->__doc__,																				
 										&self->random_fun, 
 										&self->trace, 
@@ -42,9 +40,13 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	AbstractBase = (PyObject*) PyImport_ImportModule("AbstractBase");
 	self->PyMCBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "PyMCBase");
 	self->PurePyMCBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "PurePyMCBase");
-	self->ContainerBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "ContainerBase");	
-	Py_DECREF(AbstractBase);
-	if (PyErr_Occurred()) return -1;	
+	self->ContainerBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "ContainerBase");
+
+	newset_fun = (PyObject*) PyObject_GetAttrString(AbstractBase, "new_set");
+	dummy_arg = PyTuple_New(0);
+	self->children =  PyObject_Call(newset_fun, dummy_arg, NULL);
+	Py_DECREF(newset_fun);
+	Py_DECREF(AbstractBase);	
 	
 	// Initialize optional arguments.
 	if(!self->__doc__) self->__doc__ = self->__name__;
@@ -68,11 +70,6 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	
 	if(!PyFunction_Check(self->logp_fun)){
 		PyErr_SetString(PyExc_TypeError, "Argument logp must be a function.");
-		return -1;
-	}
-	
-	if(!PyAnySet_Check(self->children)){
-		PyErr_SetString(PyExc_TypeError, "Argument children must be an empty set");
 		return -1;
 	}
 	
@@ -106,11 +103,11 @@ Param_init(Parameter *self, PyObject *args, PyObject *kwds)
 	param_parent_values(self);
 	PyTuple_SET_ITEM(self->val_tuple,0,self->value);	
 	self->logp =  PyObject_Call(self->logp_fun, self->val_tuple, self->parent_value_dict);
-	if(PyErr_Occurred()) return -1;
 	param_cache(self);			
 
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL);		
-	
+
+	if(PyErr_Occurred()) return -1;	
 	return 0; 
 } 
 

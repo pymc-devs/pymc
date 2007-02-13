@@ -9,8 +9,8 @@ disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 from PyMC2 import parameter, data, OneAtATimeMetropolis
 from numpy import array, log, sum, zeros, arange
 from PyMC2 import poisson_like, normal_like, exponential_like
-from PyMC2 import rnormal, rexponential
-from PyMC2.utils import LikelihoodError
+from PyMC2 import rnormal, rexponential, constrain
+from PyMC2 import LikelihoodError
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

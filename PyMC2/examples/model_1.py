@@ -20,7 +20,7 @@ from PyMC2 import parameter, data, OneAtATimeMetropolis
 from numpy import array, log, sum, random
 from numpy.random import randint
 from PyMC2 import uniform_like, exponential_like, poisson_like
-from PyMC2 import rexponential
+from PyMC2 import rexponential, constrain
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,

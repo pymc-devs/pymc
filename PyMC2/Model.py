@@ -1,3 +1,11 @@
+#TODO: Don't actually extend PyMC objects' children, that's
+#TODO: confusing and unnecessary. Change approach in
+#TODO: _parse_generations.
+
+#TODO: Make Model[i] cause all self's parameters to revert
+#TODO: to their state at trace index i. This'll be handy for
+#TODO: post-hoc posterior predictive samples.
+
 __docformat__='reStructuredText'
 
 """ Summary"""

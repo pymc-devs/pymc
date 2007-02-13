@@ -11,7 +11,7 @@
 static int 
 Node_init(Node *self, PyObject *args, PyObject *kwds) 
 {	
-	PyObject* AbstractBase;
+	PyObject *AbstractBase, *newset_fun, *dummy_arg;
 	int i;
 		
 	static char *kwlist[] = {	"eval",
@@ -38,8 +38,11 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	self->PurePyMCBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "PurePyMCBase");
 	self->ContainerBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "ContainerBase");	
 	Py_DECREF(AbstractBase);
-
-	if (PyErr_Occurred()) return -1;
+	
+	newset_fun = (PyObject*) PyObject_GetAttrString(AbstractBase, "new_set");
+	dummy_arg = PyTuple_New(0);
+	self->children =  PyObject_Call(newset_fun, dummy_arg, NULL);
+	Py_DECREF(newset_fun);	
 	
 	if(!self->__doc__) self->__doc__ = self->__name__;
 	if(!self->trace) self->trace = Py_BuildValue("i",1);
@@ -56,11 +59,6 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	
 	if(!PyFunction_Check(self->eval_fun)){
 		PyErr_SetString(PyExc_TypeError, "Argument eval must be a function.");
-		return -1;
-	}
-	
-	if(!PyAnySet_Check(self->children)){
-		PyErr_SetString(PyExc_TypeError, "Argument children must be an empty set");
 		return -1;
 	}
 	
@@ -88,6 +86,8 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	
 	Py_INCREF(self->children);	
 	PyObject_CallMethodObjArgs(self->children, Py_BuildValue("s","clear"), NULL, NULL); 
+
+	if (PyErr_Occurred()) return -1;
 
 	return 0;
 }

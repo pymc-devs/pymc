@@ -1,6 +1,7 @@
 
 from AbstractBase import *
 from SamplingMethods import SamplingMethod
+from copy import copy
 
 
 class PyMCObjectContainer(ContainerBase):
@@ -34,6 +35,37 @@ class PyMCObjectContainer(ContainerBase):
         
         M[3]
         
+        would serve the same function.
+        
+        To do this: The constructor doesn't unpack the entire iterator, it
+        just explores the top layer. When it finds an iterable, it creates
+        a _new_ container object around the iterable and stores the
+        container object.
+        
+        That way, the value query can automatically recur and explore the
+        nested iterable. The problem reduces to figuring out how to go
+        through an iterable and replace references to PyMCObjects and
+        containers with their 'value' attributes.
+        
+        This might be easiest in C. I don't know if writing
+        O=&PyIter_Next
+        *O=Py_GetAttr(*O,"value")
+        would do it. Probably not, PyIter_Next would probably return a copy 
+        of the pointer from the underlying iterator.
+
+        Ultimately, the 'value' attribute should return a copy of the input
+        iterable, but with references to all PyMC objects replaced with
+        references to their values, for ease of programming log-probability
+        functions. That is, if A is a list of parameters,
+        
+        M=PyMCObjectContainer(A)
+        M.value[3]
+        
+        should return the _value_ of the fourth parameter, not the Parameter
+        object itself. That means that in a log-probability or eval function
+        
+        M[3]
+        
         would serve the same function. Who knows how to actually do this...
         """
         if not hasattr(iterable,'__iter__'):
@@ -43,13 +75,11 @@ class PyMCObjectContainer(ContainerBase):
         self.nodes = set()
         self.parameters = set()
         self.data = set()
-        self.sampling_methods = set()
-        self.unpack(iterable)
         self.__name__ = name
-    
-    def unpack(self, iterable):
-        # Recursively unpacks nested iterables.
-        for item in iterable:
+
+        for i in xrange(len(iterable)):
+            item = iterable[i]
+            # Recursively unpacks nested iterables.
             if isinstance(item, PyMCBase):
                 self.pymc_objects.add(item)
                 if isinstance(item, ParameterBase):
@@ -61,27 +91,54 @@ class PyMCObjectContainer(ContainerBase):
                     self.nodes.add(item)
             elif isinstance(item, SamplingMethod):
                 self.sampling_methods.add(item)
-            elif hasattr(item,'__iter__'):
-                self.unpack(item)
+
+            elif hasattr(item,'__getitem__'):
+
+                new_container = PyMCObjectContainer(item)
+                self.value[i] = new_container
+
+                self.pymc_objects.update(new_container.pymc_objects)
+                self.parameters.update(new_container.parameters)
+                self.nodes.update(new_container.nodes)
+                self.data.update(new_container.data)
 
 
 """
 Anand, here is something that works for Parameters and Nodes, 
 but not for SamplingMethods since they don't have a value attribute.
 """
+
 class ValueContainer(object):
+	
     def __init__(self, value):
-        self._value = value
+        self._value = copy(value)
+
     def __getitem__(self,index):
-        return self._value[index].value
+        item = self._value[index]
+        if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
+	        return item.value
+        else:
+            return item
+
+    def __setitem__(self, index, value):
+        self._value.__setitem__(index, value)
+
+    # These aren't working yet.
+    def __getslice__(self, slice):
+        val = []
+        j=0
+        for i in xrange(i.start, i.stop, i.step):
+            val[j] = self.__getitem__(i)
+            j += 1 
+
+        return val
+
+    def __setslice__(self, slice, value):
+        return self._value.__setslice__(slice, value)
 
 
 def test():
-    from examples import DisasterModel as DM
-    A = [DM.e, DM.s, DM.l, DM.S, DM.D]
+    from PyMC2.examples import DisasterModel as DM
+    A = [[DM.e, DM.s], [DM.l, DM.D, 3.], 54.323]
     C = PyMCObjectContainer(A)
-    print C.value[0]
-    print C.value[1]
-    print C.value[2]
-    print C.value[3]
     return C
