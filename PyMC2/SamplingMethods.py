@@ -1,12 +1,12 @@
 __docformat__='reStructuredText'
-from PyMC2 import PyMCBase, Parameter, Node
+from AbstractBase import *
 from utils import LikelihoodError
 from numpy import *
 from numpy.linalg import cholesky, eigh
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
-from PyMC2.flib import fill_stdnormal
-from PyMC2 import extend_children
+from flib import fill_stdnormal
+from utils import extend_children
 
 
 
@@ -54,9 +54,9 @@ class SamplingMethod(object):
         for pymc_object in self.pymc_objects:
 
             # Sort.
-            if isinstance(pymc_object,Node):
+            if isinstance(pymc_object,NodeBase):
                 self.nodes.add(pymc_object)
-            elif isinstance(pymc_object,Parameter):
+            elif isinstance(pymc_object,ParameterBase):
                 if pymc_object.isdata:
                     self.data.add(pymc_object)
                 else:

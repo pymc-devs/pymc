@@ -12,7 +12,11 @@ Required external components: TclTk
 __modules__ = [ 'distributions',
                 'SamplingMethods',
                 'Model',
-                'MultiModelInference']
+                'AbstractBase',
+                'PurePyMCObjects',
+                'MultiModelInference',
+                'utils',
+                'PyMCObjectDecorators']
                 
 __optmodules__ = []#['MultiModelInference',]
                     
@@ -20,11 +24,19 @@ __optmodules__ = []#['MultiModelInference',]
 
 #Uncomment one or the other.
 try:
-    C_modules = ['PyMCObjects', 'PyMCObjectDecorators']
+    C_modules = ['PyMCObjects']
     for mod in C_modules:
         exec "from %s import *" % mod
 except:
-    from pure_PyMCObjects import *
+    print '\n'+60*'*'
+    print 'C objects were not compiled, using pure Python objects as defaults.'
+    print 60*'*'+'\n'
+    from PurePyMCObjects import PureParameter as Parameter
+    from PurePyMCObjects import PureNode as Node
+    # It would be nice to just have one set of decorators.
+    from PurePyMCObjects import pure_parameter as parameter
+    from PurePyMCObjects import pure_data as data
+    from PurePyMCObjects import pure_node as node
           
 for mod in __modules__:
     exec "from %s import *" % mod

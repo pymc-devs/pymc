@@ -3,11 +3,10 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from PyMC2 import PyMCBase, Parameter, Node
+from AbstractBase import *
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
-from PyMCObjectContainer import PyMCObjectContainer
 from PyMC2 import database
-from PyMC2 import extend_children
+from utils import extend_children
 import gc
 
 class Model(object):
@@ -92,7 +91,7 @@ class Model(object):
     def _fileitem(self, item):
 
         # If a dictionary is passed in, open it up.
-        if isinstance(item[1],PyMCObjectContainer):
+        if isinstance(item[1],ContainerBase):
             self.containers.add(item[1])
             self.parameters.update(item[1].parameters)
             self.data.update(item[1].data)
@@ -124,10 +123,10 @@ class Model(object):
             # Add an attribute to the object referencing the model instance.
             #setattr(self.__dict__[item[0]], '_model', self)
 
-            if isinstance(item[1],Node):
+            if isinstance(item[1],NodeBase):
                 self.nodes.add(item[1])
 
-            elif isinstance(item[1],Parameter):
+            elif isinstance(item[1],ParameterBase):
                 if item[1].isdata:
                     self.data.add(item[1])
                 else:  self.parameters.add(item[1])
@@ -475,7 +474,7 @@ class Model(object):
         for pymc_object in self.pymc_objects:
             for key in pymc_object.parents.iterkeys():
                 plot_edge=True
-                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],PyMCObjectContainer):
+                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],ContainerBase):
                     if consts:
                         parent_name = pymc_object.parents[key].__class__.__name__ + ' const ' + str(counter)
                         self.dot_object.add_node(pydot.Node(name = parent_name, shape = 'trapezium'))

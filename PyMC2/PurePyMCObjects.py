@@ -6,71 +6,11 @@ from numpy.random import randint, random
 from numpy.random import normal as rnormal
 import database
 from decorators import magic_set
-
-def extend_children(pymc_object):
-    new_children = copy(pymc_object.children)
-    need_recursion = False
-    node_children = set()
-    for child in pymc_object.children:
-        if isinstance(child,Node):
-            new_children |= child.children
-            node_children.add(child)
-            need_recursion = True
-    pymc_object.children = new_children - node_children
-    if need_recursion:
-        extend_children(pymc_object)
-    return
-    
-def _push(seq,new_value):
-    """
-    Usage:
-    _push(seq,new_value)
-
-    Put a deep copy of new_value at the beginning of seq, and kick out the last value.
-    """
-    length = len(seq)
-    for i in range(length-1):
-        seq[i+1] = seq[i]
-    if isinstance(seq,ndarray):
-        # ndarrays will automatically make a copy
-        seq[0] = new_value
-    else:
-        seq[0] = deepcopy(new_value)
-
-def _extract(__func__, kwds, keys): 
-    """
-    Used by decorators parameter and node to inspect declarations
-    """
-    kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
-
-    def probeFunc(frame, event, arg):
-        if event == 'return':
-            locals = frame.f_locals
-            kwds.update(dict((k,locals.get(k)) for k in keys))
-            sys.settrace(None)
-        return probeFunc
-
-    # Get the __func__tions logp and random (complete interface).
-    sys.settrace(probeFunc)
-    try:
-        __func__()
-    except:
-        if 'logp' in keys:  
-            kwds['logp']=__func__
-    if 'logp' in keys:
-        if kwds['logp'] is None:
-            kwds['logp'] = __func__
-
-    # Build parents dictionary by parsing the __func__tion's arguments.
-    (args, varargs, varkw, defaults) = inspect.getargspec(__func__)
-    try:
-        kwds.update(dict(zip(args[-len(defaults):], defaults)))
-    # No parents at all     
-    except TypeError: 
-        pass    
+from AbstractBase import *
+from utils import extend_children, _push, _extract
 
 
-def parameter(__func__=None, **kwds):
+def pure_parameter(__func__=None, **kwds):
     """
     Decorator function for instantiating parameters. Usages:
     
@@ -113,7 +53,7 @@ def parameter(__func__=None, **kwds):
 
     def instantiate_p(__func__):
         _extract(__func__, kwds, keys)
-        return Parameter(**kwds)        
+        return PureParameter(**kwds)        
     keys = ['logp','random']
 
     if __func__ is None:
@@ -125,7 +65,7 @@ def parameter(__func__=None, **kwds):
     return instantiate_p
 
 
-def node(__func__ = None, **kwds):
+def pure_node(__func__ = None, **kwds):
     """
     Decorator function instantiating nodes. Usages:
     
@@ -142,7 +82,7 @@ def node(__func__ = None, **kwds):
     """
     def instantiate_n(__func__):
         _extract(__func__, kwds, keys=[])
-        return Node(eval_fun = __func__, **kwds)        
+        return PureNode(eval_fun = __func__, **kwds)        
 
     if __func__ is None:
         return instantiate_n
@@ -153,14 +93,14 @@ def node(__func__ = None, **kwds):
     return instantiate_n
 
 
-def data(__func__=None, **kwds):
+def pure_data(__func__=None, **kwds):
     """
     Decorator instantiating data objects. Usage is just like
     parameter, but once instantiated value cannot be changed.
     """
     return parameter(__func__, isdata=True, trace=False, **kwds)
 
-class PyMCBase(object):
+class PurePyMCObject(PurePyMCBase):
     """
     The base PyMC object. Parameter and Node inherit from this class.
 
@@ -243,7 +183,7 @@ class PyMCBase(object):
     parent_values = property(fget=_get_parent_values)
 
 
-class Node(PyMCBase):
+class PureNode(PurePyMCObject,NodeBase):
     """
     A PyMCBase that is deterministic conditional on its parents.
 
@@ -332,7 +272,7 @@ class Node(PyMCBase):
 
     value = property(fget = _get_value)
 
-class Parameter(PyMCBase):
+class PureParameter(PurePyMCObject, ParameterBase):
     """
     A PyMCBase that is random conditional on its parents.
 

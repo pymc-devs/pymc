@@ -1,8 +1,20 @@
+/*
+
+TODO: Figure out the container class and teach Parameter and Node
+TODO: to deal with container parents. They should keep the actual 
+TODO: container in their 'parents' dictionary, but their 
+TODO: parent_pointers array should contain the PyMC objects in the
+TODO: container. This shouldn't be a deep change, since Parameter
+TODO: and Node already pass arguments to logp using their dictionaries
+TODO: and only use their pointers for timestamp access.
+TODO: Note that there are PyIter_Check and PyIter_Next, but maybe they
+TODO: won't help.
+*/
+
 #ifndef _PYMCOBJECTS_C_
 #define _PYMCOBJECTS_C_
 
 #include "Python.h"
-#include "PyMCBase.c"
 #include "Parameter.c"
 #include "Node.c"
 
@@ -21,41 +33,41 @@ initPyMCObjects()
 {
 	PyObject *m, *d;
 
+	PyObject* AbstractBase;
+	PyTypeObject* PyMCBase;
+	PyTypeObject* PurePyMCBase;	
+	PyTypeObject* ParameterBase;
+	PyTypeObject* NodeBase;
+	PyTypeObject* ContainerBase;
+
+	AbstractBase = (PyObject*) PyImport_ImportModule("AbstractBase");
+	PyMCBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "PyMCBase");
+	PurePyMCBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "PurePyMCBase");
+	ParameterBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "ParameterBase");
+	NodeBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "NodeBase");
+	ContainerBase = (PyTypeObject*) PyObject_GetAttrString(AbstractBase, "ContainerBase");
+	Py_DECREF(AbstractBase);
+
 	/* Create the module and add the functions */
 	m = Py_InitModule4("PyMCObjects", PYMC_methods,
 		PyMCObjects_module_documentation,
 		(PyObject*)NULL,PYTHON_API_VERSION);
-		
-	/* Add Parameter and Node */
-	PyMCBasetype.tp_new = PyType_GenericNew; 
-	if(PyType_Ready(&PyMCBasetype)<0) return;
-	PyModule_AddObject(m, "PyMCBase", (PyObject *)&PyMCBasetype); 	
-
-	RemoteProxyBasetype.tp_new = PyType_GenericNew; 	
-	if(PyType_Ready(&RemoteProxyBasetype)<0) return;
-	PyModule_AddObject(m, "RemoteProxyBase", (PyObject *)&RemoteProxyBasetype);	
 	
 	Paramtype.tp_new = PyType_GenericNew; 
+	Paramtype.tp_base = ParameterBase;
 	if(PyType_Ready(&Paramtype)<0) return;
 	PyModule_AddObject(m, "Parameter", (PyObject *)&Paramtype); 
 	
 	Nodetype.tp_new = PyType_GenericNew; 
+	Nodetype.tp_base = NodeBase;
 	if(PyType_Ready(&Nodetype)<0) return;
 	PyModule_AddObject(m, "Node", (PyObject *)&Nodetype);	
 	
-	Py_INCREF(&PyMCBasetype);
-	Py_INCREF(&RemoteProxyBasetype);
 	Py_INCREF(&Paramtype);
 	Py_INCREF(&Nodetype);
 
-/*	Not going to try this until the exit bug is resolved.	
-	if(PyType_Ready(&LogLikeDescriptor)<0) return;
-	PyModule_AddObject(m, "LogLikeDescriptor", (PyObject *)&LogLikeDescriptor);	
-*/
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	ErrorObject = PyString_FromString("PyMCObjects.error");
-	PyDict_SetItemString(d, "error", ErrorObject);
 	
 	/* Check for errors */
 	if (PyErr_Occurred())

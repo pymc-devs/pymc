@@ -4,52 +4,6 @@
 
 /*****************
  *
- *	PYMCBASE
- *
- *****************/
-
-// Declarations for dummy object PyMCBase
-typedef struct {
-	PyObject_HEAD
-	PyObject *value;
-} PyMCBase;
-
-static PyTypeObject PyMCBasetype;
-
-static char PyMCBasetype__doc__[] = 
-"The base PyMC object. Parameter and Node inherit from this class.\n\n"
-
-"PyMCBase cannot be instantiated.\n\n"
-
-"See also Parameter and Node,"
-"as well as parameter(), node(), and data().";
-
-
-
-
-/*******************
- *
- *	REMOTEPROXYBASE
- *
- *******************/
-
-// Declarations for dummy object RemoteProxyBase.
-typedef struct {
-	PyObject_HEAD
-	PyObject *value;
-} RemoteProxyBase;
-
-static PyTypeObject RemoteProxyBasetype;
-
-static char RemoteProxyBasetype__doc__[] = 
-"The base remote proxy object. Cannot be instantiated.\n\n"
-
-"See also RemoteProxy.";
-
-
-
-/*****************
- *
  *	NODE
  *
  *****************/
@@ -93,17 +47,20 @@ typedef struct {
 
 	int N_pymc_parents;
 	int N_constant_parents;
-	int N_proxy_parents;
+	int N_pure_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
-	int *proxy_parent_indices;
+	int *pure_parent_indices;
 	
 	PyObject **parent_pointers;
 	PyObject **parent_keys;
 	PyObject **parent_values;
 	PyObject *parent_value_dict;
 
+	PyTypeObject *PyMCBase;
+	PyTypeObject *PurePyMCBase;
+	PyTypeObject *ContainerBase;
 	
 	PyObject *value_caches[2];
 	int timestamp_caches[2];
@@ -219,16 +176,20 @@ typedef struct {
 
 	int N_pymc_parents;
 	int N_constant_parents;
-	int N_proxy_parents;
+	int N_pure_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
-	int *proxy_parent_indices;
+	int *pure_parent_indices;
 	
 	PyObject **parent_pointers;
 	PyObject **parent_keys;
 	PyObject **parent_values;
 	PyObject *parent_value_dict;
+	
+	PyTypeObject *PyMCBase;
+	PyTypeObject *PurePyMCBase;
+	PyTypeObject *ContainerBase;	
 
 	PyObject *logp_caches[2];	
 	int timestamp_caches[2];
@@ -293,8 +254,6 @@ static PyMethodDef Param_methods[] = {
  {"random",	(PyCFunction)Param_random,	METH_VARARGS,	Param_random__doc__},
 	{NULL,		NULL}		/* sentinel */
 };
-
-
 
 static int downlow_gettimestamp(Parameter *self)
 {return self->timestamp;}
