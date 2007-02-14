@@ -1,11 +1,3 @@
-#TODO: Don't actually extend PyMC objects' children, that's
-#TODO: confusing and unnecessary. Change approach in
-#TODO: _parse_generations.
-
-#TODO: Make Model[i] cause all self's parameters to revert
-#TODO: to their state at trace index i. This'll be handy for
-#TODO: post-hoc posterior predictive samples.
-
 __docformat__='reStructuredText'
 
 """ Summary"""
@@ -16,6 +8,7 @@ from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
 from utils import extend_children
 import gc
+from copy import copy
 
 class Model(object):
     """
@@ -69,6 +62,7 @@ class Model(object):
         self.parameters = set()
         self.data = set()
         self.sampling_methods = set()
+        self.extended_children = None
         self.containers = set()
         self._generations = []
         self._prepared = False
@@ -216,8 +210,6 @@ class Model(object):
 
         # Tell all pymc_objects to get ready for sampling
         self.pymc_objects = self.nodes | self.parameters | self.data
-        for pymc_object in self.pymc_objects:
-            extend_children(pymc_object)
 
         # Take care of singleton parameters
         for parameter in self.parameters:
@@ -358,17 +350,32 @@ class Model(object):
         for sampling_method in self.sampling_methods:
             sampling_method.tune()
 
+    def _extend_children(self):
+        """
+        Makes a dictionary of self's PyMC objects' 'extended children.'
+        """
+        self.extended_children = {}
+        dummy = PyMCBase()
+        for pymc_object in self.pymc_objects:
+            dummy.children = copy(pymc_object.children)
+            extend_children(dummy)
+            self.extended_children[pymc_object] = dummy.children
+        
+
     def _parse_generations(self):
         """
         Parse up the _generations for model averaging.
         """
-        self._prepare()
+        if not self._prepared:
+            self._prepare()
+        if not self.extended_children:
+            self._extend_children()
         
         # Find root generation
         self._generations.append(set())
         all_children = set()
         for parameter in self.parameters:
-            all_children.update(parameter.children & self.parameters)
+            all_children.update(self.extended_children[parameter] & self.parameters)
         self._generations[0] = self.parameters - all_children
 
         # Find subsequent _generations
@@ -381,13 +388,13 @@ class Model(object):
             # Find children of last generation
             self._generations.append(set())
             for parameter in self._generations[gen_num-1]:
-                self._generations[gen_num].update(parameter.children & self.parameters)
+                self._generations[gen_num].update(self.extended_children[parameter] & self.parameters)
 
             
             # Take away parameters that have parents in the current generation.
             thisgen_children = set()
             for parameter in self._generations[gen_num]:
-                thisgen_children.update(parameter.children & self.parameters)
+                thisgen_children.update(self.extended_children[parameter] & self.parameters)
             self._generations[gen_num] -= thisgen_children
 
 

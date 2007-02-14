@@ -16,7 +16,6 @@ __modules__ = [ 'distributions',
                 'PurePyMCObjects',
                 'MultiModelInference',
                 'PyMCObjectDecorators',
-                'testsuite',
                 'utils',]
                 
 __optmodules__ = []#['MultiModelInference',]

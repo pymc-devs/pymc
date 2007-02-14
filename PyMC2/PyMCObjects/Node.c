@@ -17,16 +17,14 @@ Node_init(Node *self, PyObject *args, PyObject *kwds)
 	static char *kwlist[] = {	"eval",
 								"name",
 								"parents",
-								"children",
 								"doc",
 								"trace",
 								NULL};
 								
-	if (!PyArg_ParseTupleAndKeywords(	args, kwds, "OOOO|OO", kwlist, 
+	if (!PyArg_ParseTupleAndKeywords(	args, kwds, "OOO|OO", kwlist, 
 										&self->eval_fun,
 										&self->__name__,
 										&self->parents,
-										&self->children,
 										&self->__doc__,
 										&self->trace)) 
 	{
