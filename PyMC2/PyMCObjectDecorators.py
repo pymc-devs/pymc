@@ -6,6 +6,7 @@ from copy import copy
 from AbstractBase import *
 from utils import extend_children, _push, _extract, LikelihoodError
 import numpy as np
+import types
 
 def parameter(__func__=None, **kwds):
     """
@@ -101,26 +102,32 @@ def data(__func__=None, **kwds):
     """
     return parameter(__func__, isdata=True, trace = False, **kwds)
     
-def create_distribution_instantiator(name, logp=None, random=None):
+
+def create_distribution_instantiator(name, logp=None, random=None, module=distributions):
     """Return a function to instantiate a parameter from a particular distribution.
      
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')
-        >>> A = Exponential(name ='A', beta=4)
+        >>> A = Exponential('A', value=2.3, beta=4)
     """
     
-
+    if type(module) is types.ModuleType:
+        module = copy(module.__dict__)
+    elif type(module) is dict:
+        module = copy(module)
+    else:
+        raise AttributeError
+        
     if logp is None:
         try:
-           logp = getattr(distributions, name+"_like")
+           logp = module[name+"_like"]
         except:
             raise "No likelihood found with this name ", name+"_like"
     if random is None:
         try: 
-            random = getattr(distributions, 'r'+name)
+            random = module['r'+name]
         except:
-            raise "No random generator found with this name ", 'r'+name
-        
+            raise "No random generator found with this name ", 'r'+name        
     
     # Build parents dictionary by parsing the __func__tion's arguments.
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
@@ -131,18 +138,28 @@ def create_distribution_instantiator(name, logp=None, random=None):
         parents_default = {}
         
         
-    def instantiator(name, trace=True, rseed=False, **kwds):
+    def instantiator(name, value=None, trace=True, rseed=False, **kwds):
+        """%s(name, value, trace=True, rseed=False, **kwds):
+        
+        Instantiate a Parameter instance with a %s prior.
+        """%(name.capitalize(), name)
         # Deal with keywords
         # Find which are parents
-        value = kwds.pop('value')
         parents=parents_default
+            
         for k in kwds.keys():
             if k in parent_names:
                 parents[k] = kwds.pop(k)
+        
+        if value is None:
+            print 'No initial value specified. rseed set to True. Is this allowed ?'
+            rseed = True
+            value = random(**parents)
+
         return Parameter(value=value, name=name, parents=parents, logp=logp, random=random, \
         trace=trace, rseed=rseed, isdata=False, children=set())
 
-    instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
+    #instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
     return instantiator
 
 def fortranlike(f, snapshot, mv=False):

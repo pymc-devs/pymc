@@ -23,7 +23,7 @@ from numpy import inf, random, sqrt, log, size, tan, pi
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
 import inspect
-from PyMCObjectDecorators import fortranlike
+from PyMCObjectDecorators import fortranlike,create_distribution_instantiator
 random_number = random.random
 inverse = np.linalg.pinv
 
@@ -1083,6 +1083,10 @@ def local_decorated_likelihoods(obj):
         obj[name+'_like'] = fortranlike(like, snapshot)
 
 local_decorated_likelihoods(locals())
+
+"""Create parameter instantiators"""
+for dist in availabledistributions:
+    locals()[dist.capitalize()]= create_distribution_instantiator(dist, module=locals())
 
 
 def _test():

@@ -9,8 +9,7 @@ import numpy as np
 from numpy import inf, random, sqrt
 import string
 import inspect
-import types
-from distributions import *
+import types, copy
 import distributions
 from utils import LikelihoodError
 
@@ -215,7 +214,7 @@ def local_decorated_likelihoods(obj):
         obj[name+'_like'] = fortranlike(like, snapshot)
 
 
-def create_distribution_instantiator(name, logp=None, random=None):
+def create_distribution_instantiator(name, logp=None, random=None, module=distributions):
     """Return a function to instantiate a parameter from a particular distribution.
      
       :Example:
@@ -223,15 +222,21 @@ def create_distribution_instantiator(name, logp=None, random=None):
         >>> A = Exponential(beta=4)
     """
     
-
+    if type(module) is types.ModuleType:
+        module = copy.copy(module.__dict__)
+    elif type(module) is dict:
+        module = copy.copy(module)
+    else:
+        raise AttributeError
+        
     if logp is None:
         try:
-           logp = getattr(distributions, name+"_like")
+           logp = module[name+"_like"]
         except:
             raise "No likelihood found with this name ", name+"_like"
     if random is None:
         try: 
-            random = getattr(distributions, 'r'+name)
+            random = module['r'+name]
         except:
             raise "No random generator found with this name ", 'r'+name
         
