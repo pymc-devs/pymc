@@ -252,7 +252,9 @@ Bayesian methods, and statistics in general, are usually needed \emph{because} i
 \section{\texttt{Parameter} and \texttt{Node}}\label{sec:PyMCObjects}
 PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A parameter object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all parameters, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A node object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a node.
 
-These objects are meant to do only what a mathematical variable `does,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves parameter updating functionality to the \texttt{SamplingMethod} class (sec \ref{sec:SamplingMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
+These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves parameter updating functionality to the \texttt{SamplingMethod} class (sec \ref{sec:SamplingMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
+
+PyMC also provides a special container class for parameters and nodes to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
 \subsection{\texttt{Parameter}}\label{sub:parameter}
 
@@ -313,11 +315,10 @@ def A_logp(value, mu, tau):
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
 
 A = Parameter(logp = A_logp, name = 'A', value = 3.,
-parents = {'mu': B, 'tau': C}, children = set()[,
+parents = {'mu': B, 'tau': C}[,
 doc = 'Parameter A is normally distributed',
 random = rnormal, trace = True, rseed = 1., isdata = False])
 \end{verbatim}
-The \texttt{children} argument must be an empty set; I couldn't figure out how to initialize sets in C.
 \end{description}
 
 
@@ -357,14 +358,52 @@ def D_eval(arg_1, arg_2):
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 
 D = Node(eval = D_eval, name = 'D',
-parents = \{'arg_1': E, 'arg_2': F\}),
-children = set(), doc = 'The D node',
-trace = True)
+parents = \{'arg_1': E, 'arg_2': F\})[],
+doc = 'The D node',
+trace = True)]
 \end{verbatim}
 The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.
 \end{description}
 Note that nodes have no \texttt{isdata} flag. If a node's value were known, its parents would be restricted to the inverse image of that value under the node's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{SamplingMethod} level.
 
+\subsection{The \texttt{PyMCObjectContainer} class for arrays of parameters and nodes}\label{sub:container}
+In the following hypothetical situation, it would be inconvenient to assign a unique label to each parent of $B$:
+\begin{eqnarray*}
+	A_0 \sim \textup N(0,V)\\
+	A_{i+1}|A_i\sim\textup{N(0,V)},&i=1\ldots N\\
+	B \sim \textup N\left(\sum_{i=0}^N A_i,W\right).
+\end{eqnarray*}
+
+This situation can be handled using the \texttt{PyMCObjectContainer} class as follows:
+\begin{verbatim}
+@parameter
+def A(value=0., mu=0., V=V):
+    """The initial value"""
+    return normal_like(value, mu, V)
+Alist = [A]
+
+for i in range(1,N):
+    @parameter
+    def A(value=0., mu=Alist[i-1], V=V):
+        """value %i""" % i
+        return normal_like(value, mu, V)
+    Alist.append(A)
+    
+A = PyMCObjectContainer(A)
+
+@data
+def B(value=0., mu=A, V=W):
+    """The sum of the Markov chain"""
+    return normal_like(value, sum(mu), V)   
+\end{verbatim}
+This works because PyMC object containers, like parameters and nodes, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a parameter or node replaced with \emph{its} value. Note that simply writing
+\begin{verbatim}
+@data
+def B(value=0., mu=Alist, V=W):
+	"""The sum of the Markov chain"""
+	return normal_like(value, sum(mu), V)	
+\end{verbatim}
+would not have worked, because \texttt{list} does not expose an attribute called \texttt{value}. PyMC object containers can currently be constructed from any object that has a \texttt{\_\_getitem\_\_} method (such as lists, tuples, and numpy arrays), but not from sets.
 
 \subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disaster_dag}:
@@ -425,15 +464,6 @@ def D(  value = D_array, rate=r):
     return poisson_like(value,rate)
 \end{verbatim}
 In general, it's better to make heavyweight functions into their own nodes, because nodes' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
-
-
-\subsection{Do not subclass \texttt{Parameter} or \texttt{Node}}\label{notsubclass}
-Parameters and nodes query one another's timestamps by simple C pointer member access rather than Python attribute access. This is much faster, but it means these objects can't be subclassed. This isn't much of a problem; these objects are meant to perform only the most basic tasks, so they \emph{shouldn't} be subclassed except possibly in unusual cases.
-
-If you're sure you must subclass these objects, you have an option: PyMC provides a built-in type called \texttt{RemoteProxyBase}, with which parameter and node communicate solely by Python attribute access. If you subclass this type and make sure to include the attributes \texttt{value} and \texttt{timestamp}, it will work with PyMC parameters and nodes. Of course you'll probably have to write a custom sampling method to handle your new class.
-
-If you do feel you need to subclass parameter and node, we'd like to know about your usage case, so please contact us.
-%(end)
 
 \chapter{Model fitting with PyMC} %(fold)
 \label{chap:MCMC}
@@ -999,6 +1029,48 @@ So you can see where the bottlenecks are. It's easy in IPython. Timing your code
 PyMC aims to provide a fast and user-friendly interface to several standard probability distributions. However, we're not able to anticipate every usage case. We're not even going to try, but you can provide any Python-callable function you want. This is often fruitful, because in most cases the easiest way to buy efficiency is to optimize log-probability functions. Try Weave or f2py. Consider the DisasterSampler example with custom log-probability functions- speeds up by a factor of three! We've tried to keep the overhead low so optimization is worth your while. Quick runthrough of f2py.
 \subsection{Optimize custom subsamplers}\label{sub:optimize_custom_subsamplers}
 The second-most-likely place for a bottleneck is in a custom SubSampler. Model itself is probably not the bottleneck. Weave and f2py might be helpful here, too.
+
+\section{Subclassing \texttt{Parameter}, \texttt{Node}, and \texttt{PyMCObjectContainer} }
+\begin{center}
+	\begin{figure}[hhhh]
+		\centering
+			\epsfig{file=inheritance.pdf,width=10cm}
+		\caption{PyMC's inheritance tree. \texttt{PureParameter} and \texttt{PureNode} are pure Python versions of \texttt{Parameter} and \texttt{Node}. They're provided in case of compiler problems, and because they're easier to subclass.}
+		\label{fig:inheritance}
+	\end{figure}
+\end{center}
+
+Because of Python's weak typing, it shouldn't be necessary to subclass these objects very often. Exotic random variables can be implemented by simply assigning the base classes exotic values. Special MCMC algorithms can be implemented by writing specialized sampling methods, and possibly by subclassing \texttt{Model}. However, if you're sure you want to subclass the base objects, this section will help you do so safely.
+
+The inheritance tree for these classes is shown in figure \ref{fig:inheritance}. Standard parameters and nodes query one another's timestamps by simple C pointer member access rather than Python attribute access. This is much faster, but it makes these objects difficult to subclass. For this reason, and in case someone has compiler problems, PyMC also provides pure-Python versions called \texttt{PureParameter} and \texttt{PureNode}. The standard versions will query the pure versions' timestams via ordinary Python attribute access.
+
+Subclassing guidelines follow:
+\begin{itemize}
+	\item Any subclass of \texttt{PyMCBase} must have the following Python attributes:
+	\begin{itemize}
+		\item \texttt{value}, which can be just about anything.
+		\item \texttt{\_\_name\_\_}, which should be a string.
+		\item \texttt{trace}, which should be a boolean (Model will assign an actual trace object at instantiation).
+		\item \texttt{timestamp}, which should be an integer that increments every time the \texttt{value} attribute changes. See below.
+		\item \texttt{parents}, which should be a dictionary.
+		\item \texttt{children}, which should be some kind of iterable.
+	\end{itemize}
+	\item Any subclass of \texttt{ParameterBase}  must have the following Python attributes:
+	\begin{itemize}
+		\item \texttt{logp}, which must be a float
+		\item \texttt{isdata}, which must be a boolean  
+	\end{itemize} A \texttt{revert()} method is also required. Method \texttt{random()}, which should return a new value, is optional.
+	\item Any subclass of \texttt{ParameterBase} and \texttt{NodeBase} that \textbf{doesn't} also inherit from \texttt{PurePyMCBase} must be implemented as a C extension, and must have an \texttt{int*} struct member called \texttt{timestamp}. The value pointed to should correspond to its Python counterpart. 
+	\item Any subclass of \texttt{PyMCObjectContainerBase} must have the following attributes:
+	\begin{itemize}
+		\item \texttt{pymc\_objects}, an iterable containing all the objects in the container that inherit from \texttt{PyMCBase}.
+		\item \texttt{parameters}, an iterable containing all the objects that inherit from \texttt{ParameterBase} that have \texttt{isdata=False}.
+		\item \texttt{node}, an iterable containing all the objects that inherit from \texttt{NodeBase}.
+		\item \texttt{data}, an iterable containing all the objects that inherit from \texttt{ParameterBase} that have \texttt{isdata=False}.
+		\item \texttt{value}, which should contain a (possibly nested iterable) in which each reference to a subclass of \texttt{PyMCBase} is replaced by its value. 
+	\end{itemize}
+\end{itemize}
+
 
 \section{Under the hood of \texttt{Parameter} and \texttt{Node}}\label{sec:underhood} % (fold)
 
