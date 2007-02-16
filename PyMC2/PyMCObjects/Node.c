@@ -377,7 +377,7 @@ static void node_parent_values(Node *self)
 	for(i=0;i<self->N_pymc_parents;i++)
 	{
 		index_now = self->pymc_parent_indices[i];
-		Py_XDECREF(self->parent_values[index_now]);
+		Py_DECREF(self->parent_values[index_now]);
 		self->parent_values[index_now] = PyObject_GetAttrString(self->dict_parents[index_now],"value");
 		PyDict_SetItem(	self->parent_value_dict, self->parent_keys[index_now], 
 						self->parent_values[index_now]);
