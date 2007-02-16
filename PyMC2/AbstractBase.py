@@ -44,3 +44,9 @@ def new_set():
 	This is really annoying, but I couldn't figure out how to make a new set in C.
 	"""
 	return set()
+	
+def set_iter(A):
+	return A.__iter__()
+	
+def set_length(A):
+	return len(A)

@@ -328,7 +328,7 @@ class Model(object):
                 if i % 10000 == 0 and verbose:
                     print 'Iteration ', i, ' of ', iter
                     # Uncommenting this causes errors in some models.
-                    # gc.collect()
+                    gc.collect()
                     
         except KeyboardInterrupt:
             print '\n Iteration ', i, ' of ', iter

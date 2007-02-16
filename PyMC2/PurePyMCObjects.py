@@ -1,3 +1,6 @@
+#TODO: Run parent_values before checking timestamps, so node parents know
+#TODO: that they have to update. Also make these work with containers.
+
 from copy import deepcopy,copy
 from numpy import array,zeros,ones
 from numpy.linalg import cholesky, eigh

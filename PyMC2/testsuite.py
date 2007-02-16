@@ -1,11 +1,11 @@
 from numpy.testing import NumpyTest
 
-from PyMC2 import tests
-#import tests
+import PyMC2
+# import tests
 
 __all__=['test']
 def test():
-    for m in tests.__modules__:
+    for m in PyMC2.tests.__modules__:
         print 'Testing ' + m
         mod = 'tests.%s'%m
         print mod

@@ -511,12 +511,12 @@ class PlotFactory:
 
         pymc_objects = list(pymc_objects)
 
-        if not mask:
+        if mask is not None:
             mask={}
             for p in pymc_objects:
                 mask[p] = None
 
-        if not trueval:
+        if trueval is not None:
             trueval={}
             for p in pymc_objects:
                 trueval[p] = None

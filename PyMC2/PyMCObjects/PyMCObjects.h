@@ -42,25 +42,38 @@ typedef struct {
 	PyObject *__doc__;
 	PyObject *__name__;
 	PyObject *trace;
+	PyObject *set_iter_getter;
+	PyObject *set_length_getter;
+	PyObject *val_tuple;	
 
 	int N_parents;
+	int N_dict_parents;
 
 	int N_pymc_parents;
 	int N_constant_parents;
+
 	int N_pure_parents;
+	int N_param_parents;
+	int N_node_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
 	int *pure_parent_indices;
-	
-	PyObject **parent_pointers;
+	int *param_parent_indices;
+	int *node_parent_indices;
+	int ultimate_index;	
+			
+	PyObject **ultimate_parents;
+	PyObject **dict_parents;	
 	PyObject **parent_keys;
 	PyObject **parent_values;
 	PyObject *parent_value_dict;
-
+	
 	PyTypeObject *PyMCBase;
 	PyTypeObject *PurePyMCBase;
-	PyTypeObject *ContainerBase;
+	PyTypeObject *ParameterBase;
+	PyTypeObject *NodeBase;
+	PyTypeObject *ContainerBase;	
 	
 	PyObject *value_caches[2];
 	int timestamp_caches[2];
@@ -71,6 +84,8 @@ static PyTypeObject Nodetype;
 static int Node_init(Node *self, PyObject *args, PyObject *kwds);
 
 static void parse_parents_of_node(Node *self);
+
+static int node_fileitem(Node *self, PyObject *parent_now, PyObject *key_now, int i);
 
 static void node_parent_values(Node *self);
 
@@ -169,26 +184,38 @@ typedef struct {
 	PyObject *random_fun;
 	PyObject *trace;
 	PyObject *rseed;
-	PyObject *val_tuple;	
+	PyObject *val_tuple;
+	PyObject *set_iter_getter;
+	PyObject *set_length_getter;
 	int isdata;
 	
 	int N_parents;
+	int N_dict_parents;
 
 	int N_pymc_parents;
 	int N_constant_parents;
+
 	int N_pure_parents;
+	int N_param_parents;
+	int N_node_parents;
 
 	int *pymc_parent_indices;
 	int *constant_parent_indices;
 	int *pure_parent_indices;
-	
-	PyObject **parent_pointers;
+	int *param_parent_indices;
+	int *node_parent_indices;
+	int ultimate_index;	
+			
+	PyObject **ultimate_parents;
+	PyObject **dict_parents;	
 	PyObject **parent_keys;
 	PyObject **parent_values;
 	PyObject *parent_value_dict;
 	
 	PyTypeObject *PyMCBase;
 	PyTypeObject *PurePyMCBase;
+	PyTypeObject *ParameterBase;
+	PyTypeObject *NodeBase;
 	PyTypeObject *ContainerBase;	
 
 	PyObject *logp_caches[2];	
@@ -200,6 +227,8 @@ static PyTypeObject Paramtype;
 static int Param_init(Parameter *self, PyObject *args, PyObject *kwds);
 
 static void parse_parents_of_param(Parameter *self);
+
+static int param_fileitem(Parameter *self, PyObject *parent_now, PyObject *key_now, int i);
 
 static void param_parent_values(Parameter *self);
 
