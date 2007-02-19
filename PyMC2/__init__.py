@@ -17,8 +17,7 @@ __modules__ = [ 'distributions',
                 'MultiModelInference',
                 'PyMCObjectDecorators',
 				'PyMCObjectContainer',
-                'utils',
-				'tests']
+                'utils']
                 
 __optmodules__ = []#['MultiModelInference',]
 #ClosedCapture, OpenCapture   
