@@ -56,7 +56,7 @@ def disasters(  value = disasters_array,
                 late_mean = late_mean, 
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
-    return fpoisson(value,switchpoint,early_mean,late_mean)
+    return fpoisson(value,early_mean,late_mean,switchpoint)
 
 
 """

@@ -1,12 +1,12 @@
 __docformat__='reStructuredText'
 from AbstractBase import *
-from utils import LikelihoodError
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape
+from utils import LikelihoodError, msqrt, extend_children
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, abs
 from numpy.linalg import cholesky, eigh
+from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from utils import extend_children
 
 
 
@@ -154,7 +154,7 @@ class OneAtATimeMetropolis(SamplingMethod):
     def propose(self):
 
         if self._dist == 'RoundedNormal':
-            self.parameter.value = round(rnormal(self.parameter.value,self.proposal_sig))
+            self.parameter.value = int(round(rnormal(self.parameter.value,self.proposal_sig)))
         # Default to normal random-walk proposal
         else:
             self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
@@ -203,7 +203,7 @@ class JointMetropolis(SamplingMethod):
         tune():         sets _asf according to a heuristic.
 
     """
-    def __init__(self, pymc_objects, epoch=1000, memory=10, delay = 0):
+    def __init__(self, pymc_objects, epoch=1000, memory=10, delay = 0, oneatatime_scales=None):
 
         SamplingMethod.__init__(self,pymc_objects)
 
@@ -222,7 +222,11 @@ class JointMetropolis(SamplingMethod):
         # before first epoch is complete
         self._single_param_handlers = set()
         for parameter in self.parameters:
-            self._single_param_handlers.add(OneAtATimeMetropolis(parameter))
+            if oneatatime_scales is not None:
+                self._single_param_handlers.add(OneAtATimeMetropolis(parameter,
+                                                scale=oneatatime_scales[parameter]))
+            else:
+                self._single_param_handlers.add(OneAtATimeMetropolis(parameter))
 
         # Allocate memory for internal traces and get parameter slices
         self._slices = {}
@@ -247,7 +251,11 @@ class JointMetropolis(SamplingMethod):
     #
     def compute_sig(self):
         
-        print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
+        try:
+            print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
+        except AttributeError:
+            print 'Joint SamplingMethod ' + ' computing covariance.'
+        print 'Trace index ', self._model._cur_trace_index
         
         # Figure out which slice of the traces to use
         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
@@ -275,14 +283,7 @@ class JointMetropolis(SamplingMethod):
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
         
-        # Try Cholesky factorization
-        try:
-            self._sig = cholesky(self._cov)
-        
-        # If there's a small eigenvalue, diagonalize
-        except linalg.linalg.LinAlgError:
-            val, vec = eigh(self._cov)
-            self._sig = vec * sqrt(val)
+        self._sig = msqrt(self._cov)
 
         self._ready = True
 

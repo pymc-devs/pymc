@@ -1,9 +1,9 @@
 from PyMC2 import Model, JointMetropolis
 from PyMC2.examples import model_for_joint
-from pylab import plot, show,title
+from pylab import plot, show,title, xlabel, ylabel, figure
 
 from numpy.testing import *
-PLOT=False
+PLOT=True
 
 class test_Joint(NumpyTestCase):
     def check(self):

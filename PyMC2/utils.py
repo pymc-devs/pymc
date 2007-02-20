@@ -13,6 +13,7 @@ except ImportError:
     print 'Warning, SciPy special functions not available'
 from copy import copy
 from AbstractBase import *
+from numpy.linalg.linalg import LinAlgError
 
 #
 # Find PyMC object's random children.
@@ -30,6 +31,23 @@ def extend_children(pymc_object):
     if need_recursion:
         extend_children(pymc_object)
     return
+
+#
+# Returns a matrix square root of a covariance matrix.
+#
+def msqrt(cov):
+    # Try Cholesky factorization
+    try:
+        sig = cholesky(cov)
+    
+    # If there's a small eigenvalue, diagonalize
+    except LinAlgError:
+        val, vec = eigh(cov)
+        for item in val:
+            if item<0.:
+                item=0.
+        sig = vec * sqrt(val)
+    return sig
 
 def _push(seq,new_value):
     """

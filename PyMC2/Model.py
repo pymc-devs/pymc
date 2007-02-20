@@ -29,7 +29,7 @@ class Model(object):
       - data: All extant Parameters with isdata = True.
       - pymc_objects: All extant Parameters and Nodes.
       - sampling_methods: All extant SamplingMethods.
-
+    
     Externally-accessible methods:
        - sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
          Tallies Parameters and Nodes as appropriate.
@@ -86,6 +86,11 @@ class Model(object):
             input_dict = input.__dict__
 
         for item in input_dict.iteritems():
+            if  isinstance(item[1],PyMCBase) \
+                or isinstance(item[1],SamplingMethod) \
+                or isinstance(item[1],ContainerBase):
+                self.__dict__[item[0]] = item[1]
+ 
             self._fileitem(item)
 
         self._assign_database_backend(db)
@@ -101,29 +106,16 @@ class Model(object):
             self.pymc_objects.update(item[1].pymc_objects)
             self.sampling_methods.update(item[1].sampling_methods)
 
-        """
-        This doesn't work so hot, anyone have a better idea?
-        I was trying to allow sets/tuples/lists
-        of PyMC objects and SamplingMethods to be passed in.
-
-        elif iterable(item[1]) == 1:
-            for subitem in item[1]:
-                self._fileitem((item[0],subitem))
-        """
         # File away the SamplingMethods
         if isinstance(item[1],SamplingMethod):
             # Teach the SamplingMethod its name
-            item[1].__name__ = item[0]
             #File it away
-            self.__dict__[item[0]] = item[1]
             self.sampling_methods.add(item[1])
-            setattr(self.__dict__[item[0]], '_model', self)
+            setattr(item[1], '_model', self)
 
         # File away the PyMC objects
         elif isinstance(item[1],PyMCBase):
-            self.__dict__[item[0]] = item[1]
             # Add an attribute to the object referencing the model instance.
-            #setattr(self.__dict__[item[0]], '_model', self)
 
             if isinstance(item[1],NodeBase):
                 self.nodes.add(item[1])
@@ -306,7 +298,7 @@ class Model(object):
         self._burn = burn
         self._thin = thin
         
-        length = (iter-burn)/thin
+        length = iter/thin
         
         self._cur_trace_index = 0
         self.max_trace_length = length
@@ -322,7 +314,7 @@ class Model(object):
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
 
-                if ((i>=burn) and (i % thin)) == 0:
+                if (i % thin) == 0:
                     self.tally()
 
                 if i % 10000 == 0 and verbose:
