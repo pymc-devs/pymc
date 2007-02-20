@@ -1,6 +1,6 @@
 from numpy.testing import NumpyTest
 
-import PyMC2
+import PyMC2.tests
 # import tests
 
 __all__=['test']
