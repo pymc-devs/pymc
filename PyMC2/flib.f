@@ -800,6 +800,7 @@ Cf2py real dimension(n), intent(out):: ppf
       SUBROUTINE multinomial(x,n,p,nx,nn,np,k,like)
 
 c Multinomial log-likelihood function     
+c Updated 12/02/2007 DH. N-D still buggy.
 
 cf2py integer dimension(nx,k),intent(in) :: x
 cf2py integer dimension(nn), intent(in) :: n
