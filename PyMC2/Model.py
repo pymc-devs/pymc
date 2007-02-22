@@ -321,11 +321,15 @@ class Model(object):
                     print 'Iteration ', i, ' of ', iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
-                    
+            
+            self.save_traces()
         except KeyboardInterrupt:
             print '\n Iteration ', i, ' of ', iter
             for pymc_object in self._pymc_objects_to_tally:
                 pymc_object.trace.truncate(self._cur_trace_index)
+            self.save_traces()
+            
+            
 
         # Tuning, etc.
 
@@ -341,6 +345,27 @@ class Model(object):
         """
         for sampling_method in self.sampling_methods:
             sampling_method.tune()
+    
+    def save_traces(self,path='',fname=None):
+        import cPickle
+        
+        if fname is None:
+            try:
+                fname = self.__name__ + '.pymc'
+            except:
+                fname = 'Model.pymc'
+                
+        trace_dict = {}
+        for obj in self._pymc_objects_to_tally:
+            trace_new = copy(obj.trace)
+            trace_new.__delattr__('db')
+            trace_new.__delattr__('obj')
+            trace_dict[obj.__name__] = trace_new
+        
+        F = file(fname,'w')
+        print trace_dict
+        cPickle.dump(trace_dict,F)
+        F.close()
 
     def _extend_children(self):
         """

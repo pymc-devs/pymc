@@ -1,7 +1,7 @@
 #from GibbsSampler import Gibbs
 from PyMC2.SamplingMethods import SamplingMethod
 
-class MVNormalWithMVNormalChildren(SamplingMethod):
+class MVNormalChildren(SamplingMethod):
     """
     If a parameter p's children are all normally distributed:
     
@@ -92,7 +92,7 @@ class MVNormalWithMVNormalChildren(SamplingMethod):
 
         self._accepted += 1
 
-class cMVNormalWithMVNormalChildren(MVNormalWithNormalChildren):
+class cMVNormalChildren(MVNormalChildren):
     """
     If a parameter p's children are all normally distributed:
     
