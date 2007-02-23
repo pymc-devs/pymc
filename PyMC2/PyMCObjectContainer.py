@@ -1,6 +1,7 @@
 from AbstractBase import *
 from SamplingMethods import SamplingMethod
 from copy import copy
+from numpy import ndarray
 
 
 class PyMCObjectContainer(ContainerBase):
@@ -101,8 +102,8 @@ class PyMCObjectContainer(ContainerBase):
                 self.nodes.update(new_container.nodes)
                 self.data.update(new_container.data)
 
-		def get_value(self):
-			return self.value
+        def get_value(self):
+            return self.value
 
 
 """
@@ -111,14 +112,14 @@ but not for SamplingMethods since they don't have a value attribute.
 """
 
 class ValueContainer(object):
-	
+    
     def __init__(self, value):
         self._value = copy(value)
 
     def __getitem__(self,index):
         item = self._value[index]
         if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
-	        return item.value
+            return item.value
         else:
             return item
 
@@ -144,3 +145,59 @@ def test():
     A = [[DM.e, DM.s], [DM.l, DM.D, 3.], 54.323]
     C = PyMCObjectContainer(A)
     return C
+
+class ArraySubclassContainer(ContainerBase, ndarray):
+    
+    """
+    Would we prefer to go with this? Kind of square, but
+    simple.
+    """
+    
+    def __new__(subtype, array_in):
+
+        subtype.data = array_in.copy()
+        subtype._value = array_in.copy()
+        
+        subtype._pymc_finder = zeros(shape(subtype.data),dtype=bool)
+        
+        subtype._ravelleddata = subtype.data.ravel()
+        subtype._ravelledvalue = subtype._value.ravel()
+        subtype._ravelledfinder = subtype._pymc_finder.ravel()
+        
+        subtype.pymc_objects = set()
+        subtype.parameters = set()
+        subtype.nodes = set()
+        subtype.data = set()
+        subtype.sampling_methods = set()
+        
+        subtype.iterrange = arange(len(subtype.data.ravel()))
+
+        for i in subtype.iterrange:
+            item = subtype._ravelleddata[i]
+            if isinstance(item, PyMCBase):
+    
+                subtype._ravelledfinder[i] = True   
+                subtype.pymc_objects.add(item)
+
+                if isinstance(item, ParameterBase):
+                    if item.isdata:
+                        subtype.data.add(item)
+                    else:
+                        subtype.parameters.add(item)
+                elif isinstance(item, NodeBase):
+                    subtype.nodes.add(item)
+
+            elif isinstance(item, SamplingMethod):
+                subtype.sampling_methods.add(item)
+            
+        return subtype.data.view(subtype)
+        
+    def __array__(self):
+        return self.data
+
+    def get_value(self):
+        for i in self.iterrange:
+            if self._ravelledfinder[i]:
+                self._value[i] = self.data[i].value
+                
+    value = property(fget = get_value)
