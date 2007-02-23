@@ -16,26 +16,22 @@ __modules__ = [ 'distributions',
                 'PurePyMCObjects',
                 'MultiModelInference',
                 'PyMCObjectDecorators',
-				'PyMCObjectContainer',
+                'PyMCObjectContainer',
                 'utils']
                 
 __optmodules__ = []#['MultiModelInference',]
 #ClosedCapture, OpenCapture   
 
-# try:
-C_modules = ['PyMCObjects']
-for mod in C_modules:
-    exec "from %s import *" % mod
-# except:
-#     print '\n'+60*'*'
-#     print 'C objects were not compiled, using pure Python objects as defaults.'
-#     print 60*'*'+'\n'
-#     from PurePyMCObjects import PureParameter as Parameter
-#     from PurePyMCObjects import PureNode as Node
-#     # It would be nice to just have one set of decorators.
-#     from PurePyMCObjects import pure_parameter as parameter
-#     from PurePyMCObjects import pure_data as data
-#     from PurePyMCObjects import pure_node as node
+try:
+    C_modules = ['PyMCObjects']
+    for mod in C_modules:
+        exec "from %s import *" % mod
+except:
+    print '\n'+60*'*'
+    print 'C objects were not compiled, using pure Python objects as defaults.'
+    print 60*'*'+'\n'
+    from PurePyMCObjects import PureParameter as Parameter
+    from PurePyMCObjects import PureNode as Node
           
 for mod in __modules__:
     exec "from %s import *" % mod

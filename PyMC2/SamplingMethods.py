@@ -2,7 +2,6 @@ __docformat__='reStructuredText'
 from AbstractBase import *
 from utils import LikelihoodError, msqrt, extend_children
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, abs
-from numpy.linalg import cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -255,7 +254,6 @@ class JointMetropolis(SamplingMethod):
             print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
         except AttributeError:
             print 'Joint SamplingMethod ' + ' computing covariance.'
-        print 'Trace index ', self._model._cur_trace_index
         
         # Figure out which slice of the traces to use
         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:

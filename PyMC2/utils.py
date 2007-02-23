@@ -14,6 +14,7 @@ except ImportError:
 from copy import copy
 from AbstractBase import *
 from numpy.linalg.linalg import LinAlgError
+from numpy.linalg import cholesky, eigh
 
 #
 # Find PyMC object's random children.

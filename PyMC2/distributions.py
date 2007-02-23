@@ -55,11 +55,11 @@ def randomwrap(func):
       >>> rbernoulli(.1)
       0
       >>> rbernoulli([.1,.9])
-      array([0, 1])
+      asarray([0, 1])
       >>> rbernoulli(.9, size=2)
-      array([1, 1])
+      asarray([1, 1])
       >>> rbernoulli([.1,.9], 2)
-      array([[0, 1],
+      asarray([[0, 1],
              [0, 1]])
     """
     # Vectorized functions do not accept keyword arguments, so they
@@ -113,7 +113,7 @@ def randomwrap(func):
             if s == 1:
                 arr.fill(arg)
             elif s == N:
-                arr = np.array(arg)
+                arr = np.asarray(arg)
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
@@ -158,7 +158,7 @@ def expand_triangular(X,k):
     """Expand flattened triangular matrix."""
     X = X.tolist()
     # Unflatten matrix
-    Y = array([[0] * i + X[i * k - (i * (i - 1)) / 2 : i * k + (k - i)] for i in range(k)])
+    Y = asarray([[0] * i + X[i * k - (i * (i - 1)) / 2 : i * k + (k - i)] for i in range(k)])
     # Loop over rows
     for i in range(k):
         # Loop over columns
@@ -507,16 +507,19 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     return flib.exponweib(x,a,c,loc,scale)
 
 # Gamma----------------------------------------------
+# Numpy.random.gamma's 'scale' parameter is 1/beta sensu Gelman,
+# we might want to rename the parameters to `shape' and `scale' to match
+# numpy.
 @randomwrap
-def rgamma(alpha, beta,size=1):
+def rgamma(alpha, beta, size=1):
     """rgamma(alpha, beta,size=1)
 
     Random gamma variates.
     """
-    return random.gamma(alpha,beta,size)
+    return random.gamma(shape=alpha,scale=beta,size=size)
 
 def gamma_expval(alpha, beta):
-    expval = array(alpha) / beta
+    expval = asarray(alpha) * beta
     return expval
 
 def gamma_like(x, alpha, beta):
@@ -528,7 +531,7 @@ def gamma_like(x, alpha, beta):
     of which has mean beta.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x/\beta}}{\Gamma(\alpha) \beta^{\alpha}}
+        f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x\beta}}{\Gamma(\alpha) \beta^{\alpha}}
 
     :Parameters:
       x : float
@@ -622,7 +625,7 @@ def rhalf_normal(tau, size=1):
     return abs(random.normal(0, sqrt(1/tau), size))
 
 def half_normal_expval(tau):
-    return sqrt(0.5 * pi / array(tau))
+    return sqrt(0.5 * pi / asarray(tau))
 
 def half_normal_like(x, tau):
     r"""half_normal_like(x, tau)
@@ -683,17 +686,19 @@ def hypergeometric_like(x, draws, success, failure):
     return flib.hyperg(x, draws, success, success+failure)
 
 # Inverse gamma----------------------------------------------
-# This one doesn't look kasher. Check it up.
+# This one doesn't look kosher. Check it up.
+# Again, Gelman's parametrization isn't the same
+# as numpy's. Matlab agrees with numpy, R agrees with Gelman.
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
     """rinverse_gamma(alpha, beta,size=1)
 
     Random inverse gamma variates.
     """
-    return random.gamma(1./beta,alpha, size)
+    return 1. / random.gamma(shape=alpha, scale=beta, size=size)
 
 def inverse_gamma_expval(alpha, beta):
-    return array(alpha) / beta
+    return 1. / (asarray(beta) * (alpha-1.))
 
 def inverse_gamma_like(x, alpha, beta):
     r"""inverse_gamma_like(x, alpha, beta)
@@ -769,7 +774,7 @@ def rmultinomial(n,p,size=1):
     return random.multinomial(n,p,size)
 
 def multinomial_expval(n,p):
-    array([pr * n for pr in p])
+    return asarray([pr * n for pr in p])
 
 
 def multinomial_like(x, n, p):
@@ -824,7 +829,7 @@ def rmultivariate_hypergeometric(draws, colors, n=None):
         return [sum(draw==i) for i in range(len(colors))]
 
 def multivariate_hypergeometric_expval(m):
-    return n * (array(m) / sum(m))
+    return n * (asarray(m) / sum(m))
 
 
 def multivariate_hypergeometric_like(x, m):
@@ -1052,7 +1057,7 @@ def rwishart(n, Tau, m=None):
         return expand_triangular(flib.wshrt(D, n, np), np)
 
 def wishart_expval(n, Tau):
-    return n * array(Tau)
+    return n * asarray(Tau)
 
 def wishart_like(X, n, Tau):
     r"""wishart_like(X, n, Tau)

@@ -1,4 +1,3 @@
-
 from AbstractBase import *
 from SamplingMethods import SamplingMethod
 from copy import copy
@@ -101,6 +100,9 @@ class PyMCObjectContainer(ContainerBase):
                 self.parameters.update(new_container.parameters)
                 self.nodes.update(new_container.nodes)
                 self.data.update(new_container.data)
+
+		def get_value(self):
+			return self.value
 
 
 """
