@@ -189,6 +189,10 @@ class ArraySubclassContainer(ContainerBase, ndarray):
 
             elif isinstance(item, SamplingMethod):
                 subtype.sampling_methods.add(item)
+
+            elif isinstance(item, ndarray):
+                self._ravelledvalue[i] = ArraySubclassContainer(item)  
+                subtype._ravelledfinder[i] = True
             
         return subtype.data.view(subtype)
         
