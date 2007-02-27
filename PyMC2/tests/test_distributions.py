@@ -291,8 +291,12 @@ class test_dirichlet(NumpyTestCase):
         assert_almost_equal(l, sum(np.log(f)), 5)
 
     def check_vectorization(self):
-        assert_equal(0,1)
-
+        theta = np.array([[2.,3.], [2,3]])
+        r = rdirichlet(theta)
+        a = dirichlet_like(r, theta)
+        b = dirichlet_like(r, theta[0])
+        assert_equal(a,b)
+        
     def normalization_2d(self):
         pass
 
@@ -403,6 +407,12 @@ class test_inverse_gamma(NumpyTestCase):
         params=dict(alpha=1.5, beta=.5)
         integral = normalization(flib.igamma, params, [0, 10], 200)
         assert_almost_equal(integral, 1, 3)
+
+    def vectorization(self):
+        x = [2,3]
+        a = flib.igamma(x, alpha=[1.5, 1.5], beta=.5)
+        b = flib.igamma(x, alpha=[1.5, 1.5], beta=[.5, .5])
+        assert_almost_equal(a,b,6)
 
 class test_lognormal(NumpyTestCase):
     def check_consistency(self):

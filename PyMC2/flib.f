@@ -1065,29 +1065,26 @@ c Updated 22/01/2007 DH.
 cf2py real dimension(nx,k),intent(in) :: x
 cf2py real dimension(nt,k),intent(in) :: theta
 cf2py real intent(out) :: like
-cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)) :: k=shape(x,1)
+cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)||(k==shape(theta,0) && shape(theta,1)==1)) :: k=shape(x,1)
 cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
-cf2py integer intent(hide),depend(theta,x),check(nt==1 || nt==shape(x,0)) :: nt=shape(theta,0)
+cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(theta,0)
 
       IMPLICIT NONE
       INTEGER i,j,nx,nt,k
       REAL like,sumt
       REAL x(nx,k),theta(nt,k)
       REAL theta_tmp(k)
-      LOGICAL not_scalar_theta
       REAL gammln
-
-      not_scalar_theta = (nt .NE. 1)
 
       like = 0.0
       do j=1,k
-        theta_tmp(j) = theta(j,1)
+        theta_tmp(j) = theta(1,j)
       enddo
 
       do i=1,nx
         sumt = 0.0
         do j=1,k
-          if (not_scalar_theta) theta_tmp(j) = theta(i,j)      
+          if (nt .NE. 1) theta_tmp(j) = theta(i,j)      
 c kernel of distribution      
           like = like + (theta_tmp(j)-1.0)*log(x(i,j))  
 c normalizing constant        

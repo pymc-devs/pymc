@@ -429,11 +429,14 @@ def dirichlet_like(x, theta):
       theta : (n,k) or (1,k) float
         :math:`\theta > 0`
     """
-
+    x = np.atleast_2d(x)
     constrain(theta, lower=0)
     constrain(x, lower=0)
-    constrain(sum(x), upper=1) #??
-    return flib.dirichlet(x,theta)
+    #constrain(sum(x,1), upper=1, allow_equal=True) #??
+    #constrain(sum(x,1), lower=1, allow_equal=True)
+    if np.any(np.around(x.sum(1), 6)!=1):
+        return -np.Inf 
+    return flib.dirichlet(x,np.atleast_2d(theta))
 
 # Exponential----------------------------------------------
 @randomwrap

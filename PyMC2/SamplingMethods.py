@@ -1,7 +1,7 @@
 __docformat__='reStructuredText'
 from AbstractBase import *
 from utils import LikelihoodError, msqrt, extend_children
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, abs
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
