@@ -432,7 +432,7 @@ class test_multinomial(NumpyTestCase):
     def check_random(self):
         p = array([.2,.3,.5])
         n = 10
-        r = rmultinomial(n, p, size=5000)
+        r = rmultinomial(n=10, p=p, size=5000)
         rmean = r.mean(0)
         assert_array_almost_equal(rmean, n*p, 1)
         rvar = r.var(0)
@@ -442,10 +442,13 @@ class test_multinomial(NumpyTestCase):
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
-        a = log(utils.multinomial(x,n,p).prod())
-        b = flib.multinomial(x,n,p)
-        assert_almost_equal(a,b,5)
+        a = multinomial_like(x,n,p)
+        b = log(utils.multinomial(x,n,p).prod())
+        assert_almost_equal(a,b,4)
 
+    def check_vectorization(self):
+        assert_equal(0,1)
+        
 class test_normal(NumpyTestCase):
     def check_consistency(self):
         params=dict(mu=3, tau = .5)

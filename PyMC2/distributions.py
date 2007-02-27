@@ -9,21 +9,23 @@
 #   problem, except that vector arguments + size arg. is a bit confusing.
 
 __docformat__='reStructuredText'
-availabledistributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 'dirichlet',
+distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'multinomial', 'multivariate_hypergeometric',
-'multivariate_normal', 'negative_binomial', 'normal', 'poisson', 'uniform',
+'inverse_gamma', 'lognormal', 'multinomial', 
+ 'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull', 'wishart']
 
-
+mvdistributions = ['dirichlet','multivariate_hypergeometric','multivariate_normal']
+    
+availabledistributions = distributions+mvdistributions
 import flib
 import numpy as np
 from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi
 #from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
 # Import utility functions
-import inspect
-from PyMCObjectDecorators import fortranlike,create_distribution_instantiator
+import inspect, types
+from copy import copy
 random_number = random.random
 inverse = np.linalg.pinv
 
@@ -62,52 +64,41 @@ def randomwrap(func):
       asarray([[0, 1],
              [0, 1]])
     """
-    # Vectorized functions do not accept keyword arguments, so they
-    # must be translated into positional arguments.
-
+    
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
-    vfunc = np.vectorize(func)
+    #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
-
-    def wrapper2(*args, **kwds):
-        # First transform positional arguments into keywds args.
-        if len(args)>0:
-            for a,n in zip(args, refargs):
-                kwds[n]=a
-        l = {}
-        for k, v in kwds.iteritems():
-            l[k] = len(v)
-        N = max(l.values())
-        if N ==1 :
-            return func(**kwds)
-        else:
-            result = []
-            for i in range(N):
-                tmp_kwds=jk
-                result.append(func(**tmp_kwds))
-
+    mv = func.__name__[1:] in mvdistributions
+        
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
         n = len(args)
-        if len(kwds) > 0:
+        if nkwds > 0:
             args = list(args)
             for i,k in enumerate(refargs[n:]):
                 if k in kwds.keys():
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-
-        r = [];s=[];largs=[];length=[1]
+        
+        r = [];s=[];largs=[];length=[];dimension=[];nr = args[-1]
         for arg in args:
-            length.append(np.size(arg))
+            try:
+                length.append(np.shape(arg)[0])
+                dimension.append(np.shape(arg)[1])
+            except:
+                length.append(1)
+                dimension.append(1)
+                pass
         N = max(length)
+        if len(set(dimension))>2:
+            raise 'Dimensions do not agree.'
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
 
-        for arg in args:
-            s = np.size(arg)
+        for arg, s in zip(args, length):
             t = type(arg)
             arr = np.empty(N, type)
             if s == 1:
@@ -117,21 +108,36 @@ def randomwrap(func):
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
+        
+        if mv and N >1 and max(dimension)>1 and nr>1:
+            raise 'Multivariate distributions cannot take s>1 and multiple values.'
+        
+        if mv:
+            for i, arg in enumerate(largs[:-1]):            
+                largs[0] = np.atleast_2d(arg)
+            
         for arg in zip(*largs):
             r.append(func(*arg))
 
         size = arg[-1]
         vec_params = len(r)>1
-        if size > 1 and vec_params:
-            return np.atleast_2d(r).transpose()
-        elif vec_params or size > 1:
-            return np.concatenate(r)
-        else: # Scalar case
-            return r[0][0]
-
+        if mv:
+            if nr == 1 and N==1:
+                return r[0]
+            else:
+                return np.vstack(r)
+        else:
+            if size > 1 and vec_params:
+                return np.atleast_2d(r).transpose()
+            elif vec_params or size > 1:
+                return np.concatenate(r)
+            else: # Scalar case
+                return r[0][0]
+    
     wrapper.__doc__ = func.__doc__
     return wrapper
-
+        
+    
 #-------------------------------------------------------------
 # Utility functions
 #-------------------------------------------------------------
@@ -394,6 +400,7 @@ def chi2_like(x, k):
     return flib.gamma(x, 0.5*k, 2)
 
 # Dirichlet----------------------------------------------
+@randomwrap
 def rdirichlet(theta, size=1):
     """rdirichlet(theta, size=1)
 
@@ -779,7 +786,6 @@ def rmultinomial(n,p,size=1):
 def multinomial_expval(n,p):
     return asarray([pr * n for pr in p])
 
-
 def multinomial_like(x, n, p):
     """multinomial_like(x, n, p)
 
@@ -795,7 +801,7 @@ def multinomial_like(x, n, p):
     :Parameters:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
-        :math:`\sum_{i=1}^k x_i=n`, :math:`x_i > 0`.
+        :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
       n : int
         Number of trials.
       p : (k,1) float
@@ -808,10 +814,12 @@ def multinomial_like(x, n, p):
       - :math:`cov(X_i,X_j) = -n p_i p_j`
 
     """
-    constrain(p, lower=0)
-    constrain(x, lower=0)
-    constrain(sum(p), upper=1)
-    constrain(sum(x), upper=n)
+    x = np.atleast_2d(x)
+    p = np.atleast_2d(p)
+    constrain(p, lower=0, allow_equal=True)
+    constrain(x, lower=0, allow_equal=True)
+    constrain(p.sum(1), upper=1, allow_equal=True)
+    constrain(x.sum(1), upper=n, allow_equal=True)
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
@@ -1078,7 +1086,150 @@ def wishart_like(X, n, Tau):
     return flib.wishart(X, n, Tau)
 
 # -----------------------------------------------------------
-"""Decorate the likelihoods"""
+# DECORATORS
+# -----------------------------------------------------------
+def create_distribution_instantiator(name, logp=None, random=None, module=locals()):
+    """Return a function to instantiate a parameter from a particular distribution.
+     
+      :Example:
+        >>> Exponential = create_distribution_instantiator('exponential')
+        >>> A = Exponential('A', value=2.3, beta=4)
+    """
+    
+    if type(module) is types.ModuleType:
+        module = copy(module.__dict__)
+    elif type(module) is dict:
+        module = copy(module)
+    else:
+        raise AttributeError
+        
+    if logp is None:
+        try:
+           logp = module[name+"_like"]
+        except:
+            raise "No likelihood found with this name ", name+"_like"
+    if random is None:
+        try: 
+            random = module['r'+name]
+        except:
+            raise "No random generator found with this name ", 'r'+name        
+    
+    # Build parents dictionary by parsing the __func__tion's arguments.
+    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
+    parent_names = args[1:]
+    try:
+        parents_default = dict(zip(args[-len(defaults):], defaults))
+    except TypeError: # No parents at all.   
+        parents_default = {}
+        
+        
+    def instantiator(name, value=None, trace=True, rseed=False, **kwds):
+        """%s(name, value, trace=True, rseed=False, **kwds):
+        
+        Instantiate a Parameter instance with a %s prior.
+        """%(name.capitalize(), name)
+        # Deal with keywords
+        # Find which are parents
+        parents=parents_default
+            
+        for k in kwds.keys():
+            if k in parent_names:
+                parents[k] = kwds.pop(k)
+        
+        if value is None:
+            print 'No initial value specified. rseed set to True. Is this allowed ?'
+            rseed = True
+            value = random(**parents)
+
+        return Parameter(value=value, name=name, parents=parents, logp=logp, random=random, \
+        trace=trace, rseed=rseed, isdata=False, children=set())
+
+    #instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
+    return instantiator
+
+
+def fortranlike(f, snapshot, mv=False):
+    """
+    Decorator function for fortran likelihoods
+    ==========================================
+    
+    Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
+    
+    Assume args = (x, param1, param2, ...)
+    Before passing the arguments to the function, the wrapper makes sure that 
+    the parameters have the same shape as x.
+
+    mv: multivariate (True/False)
+    
+    Add compatibility with GoF (Goodness of Fit) tests 
+    --------------------------------------------------
+    * Add a 'prior' keyword (True/False)
+    * If the keyword gof is given and is True, return the GoF (Goodness of Fit)
+    points instead of the likelihood. 
+    * A 'loss' keyword can be given, to specify the loss function used in the 
+    computation of the GoF points. 
+    * If the keyword random is given and True, return a random variate instead
+    of the likelihood.
+    """
+    name = f.__name__[:-5]
+    # Take a snapshot of the main namespace.
+    
+    
+    # Find the functions needed to compute the gof points.
+    expval_func = snapshot[name+'_expval']
+    random_func = snapshot['r'+name]
+    
+    def wrapper(*args, **kwds):
+        """This wraps a likelihood."""
+        
+        # Shape manipulations
+        if not mv:
+            xshape = np.shape(args[0])
+            newargs = [np.asarray(args[0])]
+            for arg in args[1:]:
+                newargs.append(np.resize(arg, xshape))
+            for key in kwds.iterkeys():
+                kwds[key] = kwds[key]
+        else:
+            """x, mu, Tau
+            x: (kxN)
+            mu: (kxN) or (kx1)
+            Tau: (k,k)
+            """
+            xshape=np.shape(args[0])
+            newargs = [np.asarray(args[0])] 
+            newargs.append(np.resize(args[1], xshape))
+            newargs.append(np.asarray(args[2]))
+            
+        if kwds.pop('gof', False) and not kwds.pop('prior', False):
+            """Return gof points."""            
+            loss = kwds.pop('gof', squared_loss)
+            #name = kwds.pop('name', name)
+            expval = expval_func(*newargs[1:], **kwds)
+            y = random_func(*newargs[1:], **kwds)
+            gof_points = GOFpoints(newargs[0],y,expval,loss)
+            return gof_points
+        elif kwds.pop('random', False):
+            return random_func(*newargs[1:], **kwds)
+        else:
+            """Return likelihood."""
+            try:
+                return f(*newargs, **kwds)
+            except LikelihoodError:
+                return -np.Inf
+        
+
+    # Assign function attributes to wrapper.
+    wrapper.__doc__ = f.__doc__
+    wrapper._PyMC = True
+    wrapper.__name__ = f.__name__
+    wrapper.name = name
+    return wrapper
+    
+
+"""
+Decorate the likelihoods
+"""
 snapshot = locals().copy()
 likelihoods = {}
 for name, obj in snapshot.iteritems():
@@ -1092,16 +1243,16 @@ def local_decorated_likelihoods(obj):
 
 local_decorated_likelihoods(locals())
 
-"""Create parameter instantiators"""
+"""
+Create parameter instantiators
+"""
 for dist in availabledistributions:
     locals()[dist.capitalize()]= create_distribution_instantiator(dist, module=locals())
 
 
-def _test():
+if __name__ == "__main__":
     import doctest
     doctest.testmod()
 
-if __name__ == "__main__":
-    _test()
 
 

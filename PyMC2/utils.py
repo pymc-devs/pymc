@@ -289,6 +289,7 @@ def hypergeometric(x, d, S, N):
     return comb(N-S, x) * comb(S, d-x) / comb(N,d)
 
 def multinomial(x,n,p):
-    return factorial(n)/factorial(x).prod()*p**x
+    x = np.atleast_2d(x)
+    return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
 
 
