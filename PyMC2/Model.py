@@ -13,6 +13,7 @@ from PyMC2 import database
 from utils import extend_children
 import gc
 from copy import copy
+GuiInterrupt = 'Computation halted'
 
 class Model(object):
     """
@@ -71,7 +72,9 @@ class Model(object):
         self._generations = []
         self._prepared = False
         self.__name__ = None
-
+        self.sampling = False
+        self._current_iter = -1  # Indicate that sampling is not started yet.
+        
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
         else:
@@ -223,35 +226,6 @@ class Model(object):
 
 
     #
-    # Initialize traces
-    #
-    def _init_traces(self, length):
-        """
-        init_traces(length)
-
-        Enumerates the pymc_objects that are to be tallied and initializes traces
-        for them.
-
-        To be tallied, a pymc_object has to pass the following criteria:
-
-            -   It is not included in the argument pymc_objects_not_to_tally.
-
-            -   Its value has a shape.
-
-            -   Its value can be made into a numpy array with a numerical
-                dtype.
-        """
-        pass
-        #self._pymc_objects_to_tally = set()
-        #self._cur_trace_index = 0
-        #self.max_trace_length = length
-
-        #for pymc_object in self.parameters | self.nodes:
-            #if hasattr(pymc_object.trace,'_initialize'):
-                #pymc_object.trace._initialize(length)
-                #self._pymc_objects_to_tally.add(pymc_object)
-
-    #
     # Tally
     #
     def tally(self):
@@ -276,7 +250,7 @@ class Model(object):
         Sets the value of all tracing pymc_objects to a value recorded in
         their traces.
         """
-        if trace_index:
+        if trace_index is None:
             trace_index = randint(self.cur_trace_index)
 
         for pymc_object in self._pymc_objects_to_tally:
@@ -285,35 +259,40 @@ class Model(object):
     #
     # Run the MCMC loop!
     #
-    def sample(self,iter,burn,thin, verbose=True):
+    def sample(self,iter=1000,burn=0,thin=1, verbose=True):
         """
         sample(iter,burn,thin)
 
         Prepare pymc_objects, initialize traces, run MCMC loop.
         """
+        self.sampling = True
+        
         if iter <= burn:
             raise 'Iteration (%i) must be greater than burn period (%i).'\
                 %(iter,burn)
 
-        # Do various preparations for sampling
-        self._prepare()
-
-        self._iter = iter
-        self._burn = burn
-        self._thin = thin
+        if self._current_iter < 0:
+            self._current_iter = 0
+            # Do various preparations for sampling
+            self._prepare()
+    
+            self._iter = iter
+            self._burn = burn
+            self._thin = thin
+            self._cur_trace_index = 0
+            length = iter/thin    
+            self.max_trace_length = length
+            
+            # Initialize database -> initialize traces. 
+            self.db._initialize(length, self)
         
-        length = iter/thin
-        
-        self._cur_trace_index = 0
-        self.max_trace_length = length
-        
-        # Initialize database -> initialize traces. 
-        self.db._initialize(length, self)
-        #self._init_traces(iter/thin)
         
         try:
-            for i in xrange(iter):
-                self._current_iter = i
+            while self._current_iter < self._iter:
+                if not self.sampling:
+                    raise GuiInterrupt
+                
+                i = self._current_iter 
 
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
@@ -326,13 +305,16 @@ class Model(object):
                     print 'Iteration ', i, ' of ', iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
-            
+                
+                self._current_iter += 1
+                
             self.save_traces()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, GuiInterrupt):
             print '\n Iteration ', i, ' of ', iter
             for pymc_object in self._pymc_objects_to_tally:
                 pymc_object.trace.truncate(self._cur_trace_index)
             self.save_traces()
+            self.sampling = False
             
             
 
@@ -343,7 +325,9 @@ class Model(object):
         # time, and it screws up the following trace output. 
         #self.db._finalize(burn, thin)
         self.db._finalize()
-
+        self.sampling = False
+        self._current_iter = -1
+        
     def tune(self):
         """
         Tell all samplingmethods to tune themselves.

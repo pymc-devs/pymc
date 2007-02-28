@@ -18,13 +18,13 @@ class test_ram(NumpyTestCase):
     def check(self):
         M = Model(DisasterModel, db='ram')
         M.sample(300,100,2, verbose=False)
-        assert_equal(M.e.trace().shape, (100,))
+        assert_equal(M.e.trace().shape, (150,))
     
 class test_txt(NumpyTestCase):
     def check(self):
         M = Model(DisasterModel, db='txt')
         M.sample(300,100,2, verbose=False)
-        assert_equal(M.e.trace().shape, (100,))
+        assert_equal(M.e.trace().shape, (150,))
 
 class test_mysql(NumpyTestCase):
     def check(self):
