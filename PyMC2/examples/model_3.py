@@ -42,10 +42,10 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     def random(tau, rate):
         val = zeros(2)
         val[0] = rnormal(0., tau)
-        val[1] = rexponential(rate)[0]
+        val[1] = rexponential(rate)
         while val[1]<0 or val[1] + val[0] * 110 <= 0:
             val[0] = rnormal(0., tau)
-            val[1] = rexponential(rate)[0]
+            val[1] = rexponential(rate)
         return val
         
     rseed = .1

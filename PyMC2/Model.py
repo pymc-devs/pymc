@@ -313,6 +313,7 @@ class Model(object):
         
         try:
             for i in xrange(iter):
+                self._current_iter = i
 
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
