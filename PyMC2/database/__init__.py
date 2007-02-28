@@ -38,7 +38,7 @@ __author__ = ["David Huard <david.huard@gmail.com>",
                 "Chris Fonnesbeck"]
 __version__ = "2.0.beta"
 
-__modules__ = ["ram", "hdf5", "no_trace", "txt", "sqlite", "mysql"]
+__modules__ = ["ram", "no_trace", "txt", "sqlite", "mysql", "hdf5"]
 
 # David- I haven't been able to get pytables working on my machine,
 # unfortunately, that's why I've made the database imports optional.
@@ -47,11 +47,13 @@ __modules__ = ["ram", "hdf5", "no_trace", "txt", "sqlite", "mysql"]
 # Alright. Since this will be a fairly common situation, I think it would be 
 # alright to let the import fail silently. We could maybe offer a status 
 # fonction that would tell the user what exactly has been loaded succesfully. 
-
+available_modules = []
 for mod in __modules__:
     try:
         exec "from %s import *" % mod
+        available_modules.append(mod)
     except ImportError, msg:
         print "Database module " + mod + " could not be loaded: "
         print msg
 del mod
+

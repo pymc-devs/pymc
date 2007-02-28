@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division 
 import sys,os, os.path, PyMC2
+import PyMC2.database
 try:
     import pygtk
     pygtk.require("2.0")
@@ -33,6 +34,8 @@ def progress_timeout(self):
     # continues to get called
     return True
 
+
+
 class GladeWidget:
     def __init__(self, glade_file, widget_name):
         """Connects signal handling methods to Glade widgets.
@@ -61,6 +64,10 @@ class GladeWidget:
         self.__dict__.update(W)
         self.get_widget = get_widget
 
+        for db in PyMC2.database.available_modules:
+            self.combobox1.append_text(db)
+            self.combobox1.set_active(0)
+
     def on_window1_destroy(self, widget):
         gtk.main_quit()
 
@@ -83,7 +90,9 @@ class GladeWidget:
             self.modulename = os.path.splitext(os.path.basename(self.filename))[0]
             sys.path.append(os.path.dirname(self.filename))
             mod = __import__(self.modulename)
-            self.model = PyMC2.Model(mod)
+            db = self.combobox1.get_active_text()
+            print db
+            self.model = PyMC2.Model(mod, db=db)
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no files selected'
@@ -98,7 +107,13 @@ class GladeWidget:
 
     def on_spinbuttonthin_changed(self, widget):
         pass
-
+    
+    def on_combobox1_changed(self, widget):
+        """Close last database and assign new one."""
+        db = widget.get_active_text()
+        self.model.db._finalize()
+        self.model._assign_database_backend(db)
+        
     def on_button2_clicked(self, widget):
         self.pbar = self.get_widget('progressbar1')
         # Not started, not sampling
