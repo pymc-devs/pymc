@@ -44,11 +44,12 @@ def msqrt(cov):
     # If there's a small eigenvalue, diagonalize
     except LinAlgError:
         val, vec = eigh(cov)
-        for item in val:
-            if item<0.:
-                item=0.
-        sig = vec * sqrt(val)
-    return sig
+        sig = asmatrix(zeros(vec.shape))
+        for i in range(len(val)):
+            if val[i]<0.:
+                val[i]=0.
+            sig[:,i] = vec[:,i]*sqrt(val[i])
+    return sig.T
 
 def _push(seq,new_value):
     """

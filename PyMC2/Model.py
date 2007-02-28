@@ -1,3 +1,7 @@
+# TODO: Make DAG depend on py2app, not pydot. Less dependencies.
+# See modulegraph.modulegraph.Dot,
+# in the Py2App part of site-packages.
+
 __docformat__='reStructuredText'
 
 """ Summary"""
