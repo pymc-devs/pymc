@@ -354,7 +354,7 @@ Parameters and Nodes</property>
 	      <property name="visible">True</property>
 	      <property name="orientation">GTK_PROGRESS_LEFT_TO_RIGHT</property>
 	      <property name="fraction">0</property>
-	      <property name="pulse_step">0.10000000149</property>
+	      <property name="pulse_step">0.00999999977648</property>
 	      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
 	    </widget>
 	    <packing>

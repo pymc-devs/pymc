@@ -7,13 +7,25 @@ try:
 except:
 	pass
 try:
-	import gtk
+	import gtk, gobject
 	import gtk.glade
 except:
 	sys.exit(1)
 import re
 handler_re = re.compile(r'(on|after)_(.*)_(.*)')
+from threading import Thread
 
+def progress_timeout(self):
+    # Calculate the value of the progress bar 
+    new_val = (self.model._current_iter+1.)/self.model._iter
+    print self.model._current_iter, self.model._iter
+    if new_val >= 1.0:
+        return False
+    # Set the new value
+    self.pbar.set_fraction(new_val)
+    # As this is a timeout function, return TRUE so that it
+    # continues to get called
+    return True
 
 class GladeWidget:
 	def __init__(self, glade_file, widget_name):
@@ -41,6 +53,7 @@ class GladeWidget:
 				print ('Warning: attribute %r not connected'
 					   ' as a signal handler' % (attr,))
 		self.__dict__.update(W)
+		self.get_widget = get_widget
 
 	def on_window1_destroy(self, widget):
 		gtk.main_quit()
@@ -81,12 +94,19 @@ class GladeWidget:
 		pass
 
 	def on_button2_clicked(self, widget):
+		self.pbar = self.get_widget('progressbar1')
 		self.iter = self.spinbuttonit.get_value()
 		self.burn = self.spinbuttonburn.get_value()
 		self.thin = self.spinbuttonthin.get_value()
+		self.pbar.set_fraction(0.0)
+		
 		print "Before sampling"
-		self.model.sample(self.iter, self.burn, self.thin)
-		print 'Sampling finished.'
+		T = Thread(target=self.model.sample, args=(self.iter, self.burn, self.thin))
+		#self.model.sample(self.iter, self.burn, self.thin)
+		T.start()
+		self.timer = gobject.timeout_add (1000, progress_timeout, self)
+		
+		#print 'Sampling finished.'
 
     
 if __name__ == "__main__":
