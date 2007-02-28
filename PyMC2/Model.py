@@ -259,7 +259,7 @@ class Model(object):
     #
     # Run the MCMC loop!
     #
-    def sample(self,iter=1000,burn=0,thin=1, verbose=True):
+    def sample(self,iter=1000,burn=0,thin=1, verbose=True, tune_interval=1000):
         """
         sample(iter,burn,thin)
 
@@ -300,6 +300,9 @@ class Model(object):
 
                 if (i % thin) == 0:
                     self.tally()
+
+                if (i % tune_interval) == 0:
+                    self.tune()
 
                 if i % 10000 == 0 and verbose:
                     print 'Iteration ', i, ' of ', iter

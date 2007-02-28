@@ -46,8 +46,8 @@ class SamplingMethod(object):
         self.data = set()
         self.children = set()
         self._asf = .1
-        self._accepted = 0
-        self._rejected = 0
+        self._accepted = 0.
+        self._rejected = 0.
 
         # File away the pymc_objects
         for pymc_object in self.pymc_objects:
@@ -78,10 +78,76 @@ class SamplingMethod(object):
         pass
 
     #
-    # Must be overridden in subclasses
+    # May be overridden in subclasses
     #
-    def tune(self):
-        pass
+    def tune(self, divergence_threshold=1e10, verbose=False):
+        """
+        Tunes the scaling hyperparameter for the proposal distribution
+        according to the acceptance rate of the last k proposals:
+        
+        Rate    Variance adaptation
+        ----    -------------------
+        <0.001        x 0.1
+        <0.05         x 0.5
+        <0.2          x 0.9
+        >0.5          x 1.1
+        >0.75         x 2
+        >0.95         x 10
+        
+        This method is called exclusively during the burn-in period of the
+        sampling algorithm.
+        """
+        
+        if verbose:
+            print
+            print 'Tuning', self.name
+            print '\tcurrent value:', self.get_value()
+            print '\tcurrent proposal hyperparameter:', self._hyp*self._asf
+        
+        # Calculate recent acceptance rate
+        if not self._accepted > 0 or self._rejected > 0: return
+        acc_rate = self._accepted / (self._accepted + self._rejected)
+        
+        tuning = True
+        
+        # Switch statement
+        if acc_rate<0.001:
+            # reduce by 90 percent
+            self._asf *= 0.1
+        elif acc_rate<0.05:
+            # reduce by 50 percent
+            self._asf *= 0.5
+        elif acc_rate<0.2:
+            # reduce by ten percent
+            self._asf *= 0.9
+        elif acc_rate>0.95:
+            # increase by factor of ten
+            self._asf *= 10.0
+        elif acc_rate>0.75:
+            # increase by double
+            self._asf *= 2.0
+        elif acc_rate>0.5:
+            # increase by ten percent
+            self._asf *= 1.1
+        else:
+            tuning = False
+        
+        # Re-initialize rejection count
+        self._rejected = 0.
+        self._accepted = 0.
+        
+        # If the scaling factor is diverging, abort
+        if self._asf > divergence_threshold:
+            raise DivergenceError, 'Proposal distribution variance diverged'
+        
+        # Compute covariance matrix in the multivariate case and the standard
+        # variation in all other cases.
+        #self.compute_scale(acc_rate,  int_length)
+        
+        if verbose:
+            print '\tacceptance rate:', acc_rate
+            print '\tadaptive scaling factor:', self._asf
+            print '\tnew proposal hyperparameter:', self._hyp*self._asf
 
     #
     # Define attribute loglike.
@@ -157,14 +223,7 @@ class OneAtATimeMetropolis(SamplingMethod):
         # Default to normal random-walk proposal
         else:
             self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
-    #
-    # Tune the proposal width.
-    #
-    def tune(self):
-        #
-        # Adjust _asf according to some heuristic
-        #
-        pass
+
 
 class JointMetropolis(SamplingMethod):
     """
@@ -281,21 +340,15 @@ class JointMetropolis(SamplingMethod):
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
         
-        self._sig = msqrt(self._cov)
+        self._sig = msqrt(self._cov).T
 
         self._ready = True
 
-
-
-    def tune(self):
-        if self._ready:
+    def tune(self, divergence_threshold = 1e10, verbose=False):
+        if not self._accepted > 0 or self._rejected > 0:
             for handler in self._single_param_handlers:
-                handler.tune()
-        else:
-            #
-            # Adjust _asf according to some heuristic
-            #
-            pass
+                handler.tune(divergence_threshold, verbose)
+
 
     def propose(self):
         # Eventually, round the proposed values for discrete parameters.
