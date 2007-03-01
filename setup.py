@@ -14,7 +14,7 @@ try:
         sources = ['PyMC2/PyMCObjects/Parameter.c',
         'PyMC2/PyMCObjects/Node.c',
         'PyMC2/PyMCObjects/PyMCObjects.c'])
-    ext_modules = [PyMCObjects, flib]
+    ext_modules = [flib]
 
 except:
     print '\n'+60*'*'

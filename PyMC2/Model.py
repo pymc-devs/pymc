@@ -73,6 +73,7 @@ class Model(object):
         self._prepared = False
         self.__name__ = None
         self.sampling = False
+        self.ready = False
         self._current_iter = -1  # Indicate that sampling is not started yet.
         
         if hasattr(input,'__name__'):
@@ -283,14 +284,15 @@ class Model(object):
             length = iter/thin    
             self.max_trace_length = length
             
-            # Initialize database -> initialize traces. 
+        # Initialize database -> initialize traces. 
+        if not self.ready:
             self.db._initialize(length, self)
-        
+            self.ready = True
         
         try:
             while self._current_iter < self._iter:
                 if not self.sampling:
-                    raise GuiInterrupt
+                    return None
                 
                 i = self._current_iter 
 
@@ -324,11 +326,9 @@ class Model(object):
         # Tuning, etc.
 
         # Finalize
-        # We have to be careful with this. If we thin during sampling, it changes the burning 
-        # time, and it screws up the following trace output. 
-        #self.db._finalize(burn, thin)
         self.db._finalize()
         self.sampling = False
+        self.ready = False
         self._current_iter = -1
         
     def tune(self):
