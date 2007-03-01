@@ -20,7 +20,7 @@ import os, datetime, numpy
 import string 
 
 class Trace(ram.Trace):
-	pass
+    pass
 
 class Database(object):
     """Pickle database backend. 
@@ -44,7 +44,7 @@ class Database(object):
         self.model = model
         
         if self.filename is None:
-            modname = self.model.__name__.split('.')[-1]+'.pymc''
+            modname = self.model.__name__.split('.')[-1]+'.pymc'
             name = modname
             i=0
             existing_names = os.listdir(".")

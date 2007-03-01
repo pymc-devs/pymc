@@ -74,7 +74,7 @@ class Model(object):
         self.__name__ = None
         self.sampling = False
         self.ready = False
-        self._current_iter = -1  # Indicate that sampling is not started yet.
+        self._current_iter = 0  # Indicate that sampling is not started yet.
         
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
@@ -272,8 +272,7 @@ class Model(object):
             raise 'Iteration (%i) must be greater than burn period (%i).'\
                 %(iter,burn)
 
-        if self._current_iter < 0:
-            self._current_iter = 0
+        if self._current_iter == 0:
             # Do various preparations for sampling
             self._prepare()
     
@@ -329,7 +328,7 @@ class Model(object):
         self.db._finalize()
         self.sampling = False
         self.ready = False
-        self._current_iter = -1
+        self._current_iter = 0
         
     def tune(self):
         """

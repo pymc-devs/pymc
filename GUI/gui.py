@@ -19,10 +19,10 @@ from threading import Thread
 def progress_timeout(self):
     # Calculate the value of the progress bar 
     if self.model.sampling:
-        i = min(max(self.model._current_iter,0), self.model._iter)
+        i = self.model._current_iter
         self.pbar.set_fraction(i/(self.model._iter))    
     else:
-        if self.model._current_iter < 0 : # Sampling is over 
+        if self.model._current_iter == 0 : # Sampling is over 
             self.pbar.set_fraction(0.)
             self.button2.set_label('Start')
             self.button2.set_image(gtk.image_new_from_stock('gtk-yes', gtk.ICON_SIZE_BUTTON))
