@@ -12,7 +12,7 @@ try:
 except ImportError:
     print 'Warning, SciPy special functions not available'
 from copy import copy
-from AbstractBase import *
+from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
 
@@ -24,7 +24,7 @@ def extend_children(pymc_object):
     need_recursion = False
     node_children = set()
     for child in pymc_object.children:
-        if isinstance(child,NodeBase):
+        if isinstance(child,Node):
             new_children |= child.children
             node_children.add(child)
             need_recursion = True
@@ -44,12 +44,12 @@ def msqrt(cov):
     # If there's a small eigenvalue, diagonalize
     except LinAlgError:
         val, vec = eigh(cov)
-        sig = zeros(vec.shape)
+        sig = np.zeros(vec.shape)
         for i in range(len(val)):
             if val[i]<0.:
                 val[i]=0.
             sig[:,i] = vec[:,i]*sqrt(val[i])
-    return asmatrix(sig).T
+    return np.asmatrix(sig).T
 
 def _push(seq,new_value):
     """

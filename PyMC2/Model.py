@@ -7,9 +7,10 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from AbstractBase import *
 from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
 from PyMC2 import database
+from PyMCObjects import Parameter, Node, PyMCBase
+from Container import Container
 from utils import extend_children
 import gc
 from copy import copy
@@ -96,7 +97,7 @@ class Model(object):
         for item in input_dict.iteritems():
             if  isinstance(item[1],PyMCBase) \
                 or isinstance(item[1],SamplingMethod) \
-                or isinstance(item[1],ContainerBase):
+                or isinstance(item[1],Container):
                 self.__dict__[item[0]] = item[1]
  
             self._fileitem(item)
@@ -106,7 +107,7 @@ class Model(object):
     def _fileitem(self, item):
 
         # If a dictionary is passed in, open it up.
-        if isinstance(item[1],ContainerBase):
+        if isinstance(item[1],Container):
             self.containers.add(item[1])
             self.parameters.update(item[1].parameters)
             self.data.update(item[1].data)
@@ -125,10 +126,10 @@ class Model(object):
         elif isinstance(item[1],PyMCBase):
             # Add an attribute to the object referencing the model instance.
 
-            if isinstance(item[1],NodeBase):
+            if isinstance(item[1],Node):
                 self.nodes.add(item[1])
 
-            elif isinstance(item[1],ParameterBase):
+            elif isinstance(item[1],Parameter):
                 if item[1].isdata:
                     self.data.add(item[1])
                 else:  self.parameters.add(item[1])
@@ -363,7 +364,7 @@ class Model(object):
         Makes a dictionary of self's PyMC objects' 'extended children.'
         """
         self.extended_children = {}
-        dummy = PyMCBase()
+        dummy = PyMCBase('','',{},0,None)
         for pymc_object in self.pymc_objects:
             dummy.children = copy(pymc_object.children)
             extend_children(dummy)
@@ -497,7 +498,7 @@ class Model(object):
         for pymc_object in self.pymc_objects:
             for key in pymc_object.parents.iterkeys():
                 plot_edge=True
-                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],ContainerBase):
+                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],Container):
                     if consts:
                         parent_name = pymc_object.parents[key].__class__.__name__ + ' const ' + str(counter)
                         self.dot_object.add_node(pydot.Node(name = parent_name, shape = 'trapezium'))

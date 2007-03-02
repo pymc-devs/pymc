@@ -491,8 +491,8 @@ Node_getvalue(Node *self, void *closure)
 	int i;
 	PyObject *new_value;
 	node_parent_values(self);	
+	if(PyErr_Occurred()) return NULL;	
 	i=node_check_for_recompute(self);
-	if(PyErr_Occurred()) return NULL;					
 	//i=-1;
 	
 	if(i<0) 
@@ -514,6 +514,7 @@ Node_getvalue(Node *self, void *closure)
 		Py_DECREF(self->value);
 		self->value = self->value_caches[i];
 	}
+	if(PyErr_Occurred()) return NULL;
 	
 	Py_INCREF(self->value); 
 	//return Py_BuildValue("(O,[O,O])",self->value, self->value_caches[0], self->value_caches[1]); 

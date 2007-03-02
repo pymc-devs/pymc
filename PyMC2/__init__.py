@@ -12,26 +12,15 @@ Required external components: TclTk
 __modules__ = [ 'distributions',
                 'SamplingMethods',
                 'Model',
-                'AbstractBase',
-                'PurePyMCObjects',
+                'PyMCObjects',
+                'LazyFunction',
                 'MultiModelInference',
-                'PyMCObjectDecorators',
-                'PyMCObjectContainer',
+                'InstantiationDecorators',
+                'Container',
                 'utils']
                 
 __optmodules__ = []#['MultiModelInference',]
 #ClosedCapture, OpenCapture   
-
-try:
-    C_modules = ['PyMCObjects']
-    for mod in C_modules:
-        exec "from %s import *" % mod
-except:
-    print '\n'+60*'*'
-    print 'C objects were not compiled, using pure Python objects as defaults.'
-    print 60*'*'+'\n'
-    from PurePyMCObjects import PureParameter as Parameter
-    from PurePyMCObjects import PureNode as Node
           
 for mod in __modules__:
     exec "from %s import *" % mod

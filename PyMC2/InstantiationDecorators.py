@@ -1,7 +1,6 @@
 import sys, inspect
 from imp import load_dynamic
-from PyMC2 import Parameter, Node
-from AbstractBase import *
+from PyMCObjects import Parameter, Node
 from utils import extend_children, _push, _extract, LikelihoodError
 import numpy as np
 

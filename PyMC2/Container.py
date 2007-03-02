@@ -1,10 +1,10 @@
-from AbstractBase import *
+from PyMCObjects import Parameter, Node, PyMCBase
 from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray
 
 
-class PyMCObjectContainer(ContainerBase):
+class Container(object):
     def __init__(self, iterable, name = 'container'):
         """
         Takes any iterable in its constructor. On instantiation, it
@@ -12,11 +12,11 @@ class PyMCObjectContainer(ContainerBase):
         it finds to its set 'pymc_objects.' It also adds sampling
         methods to its set 'sampling_methods'.
 
-        When Model's constructor finds a PyMCObjectContainer, it should
+        When Model's constructor finds a Container, it should
         add all the objects in the sets to its own sets of the same names.
 
         When Parameter/ Node's constructor's 'parents' dictionary contains 
-        a PyMCObjectContainer, it's retained as a parent.
+        a Container, it's retained as a parent.
 
         However, the parent_pointers array will contain the members of the
         set pymc_objects, and all the members of that set will have the
@@ -27,7 +27,7 @@ class PyMCObjectContainer(ContainerBase):
         references to their values, for ease of programming log-probability
         functions. That is, if A is a list of parameters,
         
-        M=PyMCObjectContainer(A)
+        M=Container(A)
         M.value[3]
         
         should return the _value_ of the fourth parameter, not the Parameter
@@ -58,7 +58,7 @@ class PyMCObjectContainer(ContainerBase):
         references to their values, for ease of programming log-probability
         functions. That is, if A is a list of parameters,
         
-        M=PyMCObjectContainer(A)
+        M=Container(A)
         M.value[3]
         
         should return the _value_ of the fourth parameter, not the Parameter
@@ -82,19 +82,19 @@ class PyMCObjectContainer(ContainerBase):
             # Recursively unpacks nested iterables.
             if isinstance(item, PyMCBase):
                 self.pymc_objects.add(item)
-                if isinstance(item, ParameterBase):
+                if isinstance(item, Parameter):
                     if item.isdata:
                         self.data.add(item)
                     else:
                         self.parameters.add(item)
-                elif isinstance(item, NodeBase):
+                elif isinstance(item, Node):
                     self.nodes.add(item)
             elif isinstance(item, SamplingMethod):
                 self.sampling_methods.add(item)
 
             elif hasattr(item,'__getitem__'):
 
-                new_container = PyMCObjectContainer(item)
+                new_container = Container(item)
                 self.value[i] = new_container
 
                 self.pymc_objects.update(new_container.pymc_objects)
@@ -118,7 +118,7 @@ class ValueContainer(object):
 
     def __getitem__(self,index):
         item = self._value[index]
-        if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
+        if isinstance(item, PyMCBase) or isinstance(item, Container):
             return item.value
         else:
             return item
@@ -143,10 +143,10 @@ class ValueContainer(object):
 def test():
     from PyMC2.examples import DisasterModel as DM
     A = [[DM.e, DM.s], [DM.l, DM.D, 3.], 54.323]
-    C = PyMCObjectContainer(A)
+    C = Container(A)
     return C
 
-class ArraySubclassContainer(ContainerBase, ndarray):
+class ArraySubclassContainer(Container, ndarray):
     
     """
     Would we prefer to go with this? Kind of square, but
@@ -179,12 +179,12 @@ class ArraySubclassContainer(ContainerBase, ndarray):
                 subtype._ravelledfinder[i] = True   
                 subtype.pymc_objects.add(item)
 
-                if isinstance(item, ParameterBase):
+                if isinstance(item, Parameter):
                     if item.isdata:
                         subtype.data.add(item)
                     else:
                         subtype.parameters.add(item)
-                elif isinstance(item, NodeBase):
+                elif isinstance(item, Node):
                     subtype.nodes.add(item)
 
             elif isinstance(item, SamplingMethod):

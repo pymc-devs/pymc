@@ -8,20 +8,7 @@ from numpy.distutils.core import setup, Extension
 # Compile flib (fortran source for statistical distributions.)
 flib = Extension(name='flib',sources=['PyMC2/flib.f'])
 
-try:    
-    # Compile base objects in C
-    PyMCObjects = Extension(name='PyMCObjects', 
-        sources = ['PyMC2/PyMCObjects/Parameter.c',
-        'PyMC2/PyMCObjects/Node.c',
-        'PyMC2/PyMCObjects/PyMCObjects.c'])
-    ext_modules = [flib]
-
-except:
-    print '\n'+60*'*'
-    print 'Not able to compile C objects, falling back to pure python.'
-    print 60*'*'+'\n'
-    
-    ext_modules = [flib]
+ext_modules = [flib]
 
 distrib = setup(
 name="PyMC2",

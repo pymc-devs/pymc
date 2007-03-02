@@ -547,8 +547,8 @@ Parameter_getlogp(Parameter *self, void *closure)
 	int i;
 	PyObject *new_logp;
 	param_parent_values(self);	
-	i=param_check_for_recompute(self);
 	if(PyErr_Occurred()) return NULL;	
+	i=param_check_for_recompute(self);
 	//i=-1;
 	
 	if(i<0) 
@@ -569,6 +569,8 @@ Parameter_getlogp(Parameter *self, void *closure)
 		Py_DECREF(self->logp);
 		self->logp = self->logp_caches[i];
 	}
+
+	if(PyErr_Occurred()) return NULL;
 	
 	Py_INCREF(self->logp); 
 	//return Py_BuildValue("(O,i)",self->logp, i); 
