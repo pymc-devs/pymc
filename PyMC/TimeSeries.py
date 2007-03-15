@@ -4,26 +4,41 @@
 # Copyright (c) 2006 Chris Fonnesbeck
 
 from numpy import random
-from numpy import arange, array, atleast_1d, concatenate, dot, resize
-from Matplot import PlotFactory
+from numpy import arange, array, asarray, atleast_1d, concatenate, dot, resize, squeeze
 import unittest, pdb
 
-_plotter = PlotFactory()
+_plotter = None
+try:
+    from Matplot import PlotFactory
+    _plotter = PlotFactory()
+except ImportError:
+    print 'Matplotlib module not detected ... plotting disabled.'
         
-def autocov(series, lag, n_minus_k=False):
+def autocov(x, lag, n_minus_k=False):
     # Sample autocovariance function at specified lag. Use n - k as
     # denominator if n_minus_k flag is true.
     
-    n = len(series)
-    zbar = series.mean()
+    x = squeeze(asarray(x))
+    mu = x.mean()
     
-    return sum([(series[i] - zbar) * (series[i + lag] - zbar) for i in range(n - lag)]) / ((n - lag) * n_minus_k or n)
+    if not lag:
+        return x.var()
     
-def autocorr(series, lag):
-    # Sample autocorrelation function at specified lag, calculated
-    # as autocov(lag)/autocov(0)
+    return ((x[:-lag] - mu) * (x[lag:] - mu)).sum() / (n_minus_k * (len(x) - lag) or len(x))
     
-    return autocov(series, lag) / autocov(series, 0)
+def autocorr(x, lag, n_minus_k=False):
+    # Sample autocorrelation at specified lag. Use n - k as
+    # denominator if n_minus_k flag is true.
+    # The autocorrelation is the correlation of x_i with x_{i+lag}.
+    
+    if not lag:
+        return 1
+    
+    x = squeeze(asarray(x))
+    mu = x.mean()
+    v = x.var()
+    
+    return ((x[:-lag] - mu) * (x[lag:] - mu)).sum() / v / (n_minus_k * (len(x) - lag) or len(x))
     
 def correlogram(series, maxlag, name='', plotter=None):
     # Plot correlogram up to specified maximum lag
@@ -179,9 +194,9 @@ class TimeSeriesTests(unittest.TestCase):
         # Autocovariance tests
         
         n = len(self.ts)
-        
+
         # Confirm that covariance at lag 0 equals variance
-        self.assertAlmostEqual(autocov(self.ts, 0), (n-1.)/n * self.ts.var(), 10, "Covariance at lag 0 not equal to variance")
+        self.assertAlmostEqual(autocov(self.ts, 0), self.ts.var(), 10, "Covariance at lag 0 not equal to variance")
         
         self.failIf(sum([self.ts.var() < autocov(self.ts, k) for k in range(1, n)]), "All covariances not less than or equal to variance")
         

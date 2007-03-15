@@ -276,24 +276,72 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
       return
       END
 
-      SUBROUTINE negbin(x,r,p,n,like)
+		SUBROUTINE geometric(x,mu,n,like)
 
-c Negative binomial log-likelihood function     
+c Geometric log-likelihood function     
       
-cf2py integer dimension(n),intent(in) :: x,r
-cf2py real dimension(n),intent(in) :: p
+cf2py integer dimension(n),intent(in) :: x
+cf2py real dimension(n),intent(in) :: mu
 cf2py integer intent(hide),depend(x) :: m=len(x)
 cf2py real intent(out) :: like      
       
       REAL like
-      REAL p(n)
+      REAL mu(n)
       INTEGER n,i
-      INTEGER x(n),r(n)
+      INTEGER x(n)
 
       like = 0.0
       do i=1,n
-        like = like + r(i)*log(p(i)) + x(i)*log(1.-p(i))
-        like = like + factln(x(i)+r(i)-1)-factln(x(i))-factln(r(i)-1) 
+        like = like + log(mu(i)) + (x(i)-1) * log(1. - mu(i))
+      enddo
+      return
+      END
+
+      SUBROUTINE negbin(x,mu,a,n,like)
+
+c Negative binomial log-likelihood function     
+      
+cf2py integer dimension(n),intent(in) :: x,mu
+cf2py real dimension(n),intent(in) :: a
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py real intent(out) :: like      
+      
+      REAL like
+      REAL a(n)
+      INTEGER n,i
+      INTEGER x(n),mu(n)
+
+      like = 0.0
+      do i=1,n
+        like = like - (1.0 / a(i)) * log(1.0 + (a(i) * mu(i))) 
+        like = like + x(i)*(log(a(i)*mu(i))-log(1.0+(a(i)*mu(i))))
+        like = like + gammln(x(i)+(1.0/a(i))) - factln(x(i)) 
+        like = like - gammln(1.0/a(i)) 
+      enddo
+      return
+      END
+      
+      
+      SUBROUTINE negbin2(x,mu,a,n,like)
+
+c Negative binomial log-likelihood function 
+c (alternative parameterization)    
+      
+cf2py integer dimension(n),intent(in) :: x
+cf2py real dimension(n),intent(in) :: a,mu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py real intent(out) :: like      
+      
+      REAL like
+      REAL a(n),mu(n)
+      INTEGER n,i
+      INTEGER x(n)
+
+      like = 0.0
+      do i=1,n
+        like = like + gammln(x(i)+a(i)) - factln(x(i)) - gammln(a(i))
+		    like = like + x(i)*(log(mu(i)/a(i)) - log(1.0 + mu(i)/a(i)))
+		    like = like - a(i)*log(1.0 + mu(i)/a(i))
       enddo
       return
       END
