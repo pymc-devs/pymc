@@ -14,6 +14,7 @@ from Container import Container
 from utils import extend_children
 import gc
 from copy import copy
+from threading import Thread
 GuiInterrupt = 'Computation halted'
 
 class Model(object):
@@ -526,3 +527,115 @@ class Model(object):
             self.dot_object.write(path='./' + self.__name__ + '.' + ext,format=format)
 
         return self.dot_object
+        
+    def _sample(self,iter=1000,burn=0,thin=1, verbose=True, tune_interval=1000):
+        """
+        sample(iter,burn,thin)
+
+        Prepare pymc_objects, initialize traces, run MCMC loop.
+        """
+        if iter <= burn:
+            raise 'Iteration (%i) must be greater than burn period (%i).'\
+                %(iter,burn)
+
+
+        # Do various preparations for sampling
+        self._prepare()
+
+        self._iter = iter
+        self._burn = burn
+        self._thin = thin
+        self._cur_trace_index = 0
+        length = iter/thin
+        self.max_trace_length = length
+
+        # Initialize database -> initialize traces.
+        self.db._initialize(length, self)
+
+        # Loop
+        self._loop()
+
+    def _loop(self):
+        self.status='running'
+        try:
+            while self._current_iter < self._iter:
+                if self.status.off:
+                    if self.status == 'paused':
+                        raise Paused
+
+                i = self._current_iter
+
+                # Tell all the sampling methods to take a step
+                for sampling_method in self.sampling_methods:
+                    sampling_method.step()
+
+                if (i % thin) == 0:
+                    self.tally()
+
+                if (i % tune_interval) == 0:
+                    self.tune()
+
+                if i % 10000 == 0 and verbose:
+                    print 'Iteration ', i, ' of ', iter
+                    # Uncommenting this causes errors in some models.
+                    # gc.collect()
+
+                self._current_iter += 1
+
+            #self.save_traces() Made obsolete by the pickle database.Right?
+        except Paused:
+            return None
+        except KeyboardInterrupt:
+            self.status='halted'
+            print '\n Iteration ', i, ' of ', iter
+            for pymc_object in self._pymc_objects_to_tally:
+                pymc_object.trace.truncate(self._cur_trace_index)
+            self.save_traces()
+            self.status.switch_off()
+
+        # Finalize
+        self.db._finalize()
+        self.status='ready'
+
+    def interactivesample(self, *args, **kwds):
+        self._thread = Thread(target=self.sample, args=args, kwargs=kwds)
+        self._thread.start()
+        self.listen()
+
+    def continue_sampling(self):
+        """Continue sampling after a pause."""
+        if self.status == 'paused':
+            self._loop()
+        else:
+            raise 'Sampler is not in a state where it can be restarted.'
+
+    def listen(self):
+        while True:
+            sys.stdout.write('\n$PyMC> ')
+            cmd = raw_input()
+            if cmd == 'i':
+                print self._current_iter
+            if cmd == 'p':
+                self.status = 'paused'
+            if cmd == 'r':
+                self.continuesampling()
+            if cmd == 'q':
+                break
+
+    def status():
+        doc = \
+        """Status of model. May be one of running, paused, halted or ready.
+          - `running` : The model is currently sampling.
+          - `paused` : The model has been interrupted during sampling. It is
+            ready to be restarted by `continuesample`.
+          - `halted` : The model has been interrupted. It cannot be restarted.
+            If sample is called again, a new chain will be initiated.
+          - `ready` : The model is ready to sample.
+        """
+        def fget(self):
+            return self._status
+        def fset(self, value):
+            if value in ['runnning', 'paused', 'halted', 'ready']:
+                self._status=value
+        return locals()
+    status = property(**status())

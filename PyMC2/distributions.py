@@ -3,26 +3,25 @@
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: test and finalize vectorized multivariate normal like.
-# TODO: Add exponweib_expval (how?)
+# TODO: Add exponweib_expval
 # TODO: Complete docstrings with LaTeX formulas from the tutorial.
-# TODO: Do we add size arguments to random generators ? It shouldn't be a
-#   problem, except that vector arguments + size arg. is a bit confusing.
+# TODO: categorical, mvhypergeometric
 
 __docformat__='reStructuredText'
-distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2', 
+distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'multinomial', 
+'inverse_gamma', 'lognormal', 'multinomial',
  'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull', 'wishart']
 
 mvdistributions = ['dirichlet','multivariate_hypergeometric','multivariate_normal']
-    
+
 availabledistributions = distributions+mvdistributions
 import flib
 import numpy as np
 from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi
-#from decorators import * #Vectorize, fortranlike_method, priorwrap, randomwrap
+
 # Import utility functions
 import inspect, types
 from copy import copy
@@ -68,14 +67,14 @@ def randomwrap(func):
              [0, 1]])
     """
 
-    
+
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
     mv = func.__name__[1:] in mvdistributions
-        
+
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
         n = len(args)
@@ -86,7 +85,7 @@ def randomwrap(func):
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-        
+
         r = [];s=[];largs=[];length=[];dimension=[];nr = args[-1]
         for arg in args:
             try:
@@ -112,14 +111,14 @@ def randomwrap(func):
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
-        
+
         if mv and N >1 and max(dimension)>1 and nr>1:
             raise 'Multivariate distributions cannot take s>1 and multiple values.'
-        
+
         if mv:
-            for i, arg in enumerate(largs[:-1]):            
+            for i, arg in enumerate(largs[:-1]):
                 largs[0] = np.atleast_2d(arg)
-            
+
         for arg in zip(*largs):
             r.append(func(*arg))
 
@@ -137,11 +136,11 @@ def randomwrap(func):
                 return np.concatenate(r)
             else: # Scalar case
                 return r[0][0]
-    
+
     wrapper.__doc__ = func.__doc__
     return wrapper
-        
-    
+
+
 #-------------------------------------------------------------
 # Utility functions
 #-------------------------------------------------------------
@@ -188,7 +187,7 @@ def expand_triangular(X,k):
     return Y
 
 
-# Loss functions 
+# Loss functions
 
 absolute_loss = lambda o,e: absolute(o - e)
 
@@ -218,7 +217,7 @@ def rbernoulli(p,size=1):
 def bernoulli_expval(p):
     """
     bernoulli_expval(p)
-    
+
     Expected value of bernoulli distribution.
     """
 
@@ -226,7 +225,7 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    """
+    r"""
     bernoulli_like(x, p)
 
     Bernoulli log-likelihood
@@ -270,15 +269,15 @@ def rbeta(alpha, beta, size=1):
 def beta_expval(alpha, beta):
     """
     beta_expval(alpha, beta)
-    
+
     Expected value of beta distribution.
     """
-    
+
     return 1.0 * alpha / (alpha + beta)
 
 
 def beta_like(x, alpha, beta):
-    """
+    r"""
     beta_like(x, alpha, beta)
 
     Beta log-likelihood.
@@ -320,14 +319,14 @@ def rbinomial(n, p, size=1):
 def binomial_expval(n, p):
     """
     binomial_expval(n, p)
-    
+
     Expected value of binomial distribution.
     """
-    
+
     return p*n
 
 def binomial_like(x, n, p):
-    """
+    r"""
     binomial_like(x, n, p)
 
     Binomial log-likelihood.  The discrete probability distribution of the
@@ -364,7 +363,7 @@ def rcategorical(probs, minval=0, step=1):
 def categorical_expval(probs, minval=0, step=1):
     """
     categorical_expval(probs, minval=0, step=1)
-    
+
     Expected value of categorical distribution.
     """
     return sum([p*(minval + i*step) for i, p in enumerate(probs)])
@@ -396,15 +395,15 @@ def rcauchy(alpha, beta, size=1):
 def cauchy_expval(alpha, beta):
     """
     cauchy_expval(alpha, beta)
-    
+
     Expected value of cauchy distribution.
     """
-    
+
     return alpha
 
 # In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
-    """
+    r"""
     cauchy_like(x, alpha, beta)
 
     Cauchy log-likelihood. The Cauchy distribution is also known as the
@@ -427,7 +426,7 @@ def cauchy_like(x, alpha, beta):
 # Chi square----------------------------------------------
 @randomwrap
 def rchi2(k, size=1):
-    """
+    r"""
     rchi2(k, size=1)
 
     Random :math:`\chi^2` variates.
@@ -438,14 +437,14 @@ def rchi2(k, size=1):
 def chi2_expval(k):
     """
     chi2_expval(k)
-    
+
     Expected value of Chi-squared distribution.
     """
-    
+
     return k
 
 def chi2_like(x, k):
-    """
+    r"""
     chi2_like(x, k)
 
     Chi-squared :math:`\chi^2` log-likelihood.
@@ -489,13 +488,13 @@ def rdirichlet(theta, size=1):
 def dirichlet_expval(theta):
     """
     dirichlet_expval(theta)
-    
+
     Expected value of Dirichlet distribution.
     """
     return theta/sum(theta)
 
 def dirichlet_like(x, theta):
-    """
+    r"""
     dirichlet_like(x, theta)
 
     Dirichlet log-likelihood.
@@ -519,7 +518,7 @@ def dirichlet_like(x, theta):
     #constrain(sum(x,1), upper=1, allow_equal=True) #??
     #constrain(sum(x,1), lower=1, allow_equal=True)
     if np.any(np.around(x.sum(1), 6)!=1):
-        return -np.Inf 
+        return -np.Inf
     return flib.dirichlet(x,np.atleast_2d(theta))
 
 # Exponential----------------------------------------------
@@ -536,14 +535,14 @@ def rexponential(beta, size=1):
 def exponential_expval(beta):
     """
     exponential_expval(beta)
-    
+
     Expected value of exponential distribution.
     """
     return beta
 
 
 def exponential_like(x, beta):
-    """
+    r"""
     exponential_like(x, beta)
 
     Exponential log-likelihood.
@@ -583,12 +582,12 @@ def rexponweib(alpha, k, loc, scale, size=1):
     return loc + r*scale
 
 def exponweib_expval(alpha, k, loc, scale):
-    # Not sure how we can do this, since the first moment is only 
+    # Not sure how we can do this, since the first moment is only
     # tractable at particular values of k
     return 'Not implemented yet.'
 
 def exponweib_like(x, alpha, k, loc=0, scale=1):
-    """
+    r"""
     exponweib_like(x,alpha,k,loc=0,scale=1)
 
     Exponentiated Weibull log-likelihood.
@@ -609,9 +608,6 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     return flib.exponweib(x,a,c,loc,scale)
 
 # Gamma----------------------------------------------
-# Numpy.random.gamma's 'scale' parameter is 1/beta sensu Gelman,
-# we might want to rename the parameters to `shape' and `scale' to match
-# numpy.
 @randomwrap
 def rgamma(alpha, beta, size=1):
     """
@@ -625,14 +621,13 @@ def rgamma(alpha, beta, size=1):
 def gamma_expval(alpha, beta):
     """
     gamma_expval(alpha, beta)
-    
+
     Expected value of gamma distribution.
     """
-    expval = asarray(alpha) * beta
-    return expval
+    return asarray(alpha) * beta
 
 def gamma_like(x, alpha, beta):
-    """
+    r"""
     gamma_like(x, alpha, beta)
 
     Gamma log-likelihood.
@@ -671,26 +666,26 @@ def rgev(xi, mu=0, sigma=1, size=1):
     q = random.uniform(size=size)
     z = flib.gev_ppf(q,xi)
     return z*sigma + mu
-    
+
 def gev_expval(xi, mu=0, sigma=1):
     """
     gev_expval(xi, mu=0, sigma=1)
-    
+
     Expected value of generalized extreme value distribution.
     """
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
-    
+
 def gev_like(x, xi, mu=0, sigma=0):
-    """
+    r"""
     gev_like(x, xi, mu=0, sigma=0)
-    
+
     Generalized Extreme Value log-likelihood
-    
+
     .. math::
         pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}
-        
+
     where :math:`z=\frac{x-\mu}{\sigma}`
-    
+
     .. math::
         \sigma & > 0,\\
         x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
@@ -716,13 +711,13 @@ def rgeometric(p, size=1):
 def geometric_expval(p):
     """
     geometric_expval(p)
-    
+
     Expected value of geometric distribution.
     """
     return (1. - p) / p
 
 def geometric_like(x, p):
-    """
+    r"""
     geometric_like(x, p)
 
     Geometric log-likelihood. The probability that the first success in a
@@ -761,14 +756,14 @@ def rhalf_normal(tau, size=1):
 def half_normal_expval(tau):
     """
     half_normal_expval(tau)
-    
+
     Expected value of half normal distribution.
     """
-    
+
     return sqrt(0.5 * pi / asarray(tau))
 
 def half_normal_like(x, tau):
-    """
+    r"""
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
@@ -802,13 +797,13 @@ def rhypergeometric(draws, success, failure, size=1):
 def hypergeometric_expval(draws, success, failure):
     """
     hypergeometric_expval(draws, success, failure)
-    
+
     Expected value of hypergeometric distribution.
     """
     return draws * success / (success+failure)
 
 def hypergeometric_like(x, draws, success, failure):
-    """
+    r"""
     hypergeometric_like(x, draws, success, failure)
 
     Hypergeometric log-likelihood. Discrete probability distribution that
@@ -853,13 +848,13 @@ def rinverse_gamma(alpha, beta,size=1):
 def inverse_gamma_expval(alpha, beta):
     """
     inverse_gamma_expval(alpha, beta)
-    
+
     Expected value of inverse gamma distribution.
     """
     return 1. / (asarray(beta) * (alpha-1.))
 
 def inverse_gamma_like(x, alpha, beta):
-    """
+    r"""
     inverse_gamma_like(x, alpha, beta)
 
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
@@ -899,13 +894,13 @@ def rlognormal(mu, tau,size=1):
 def lognormal_expval(mu, tau):
     """
     lognormal_expval(mu, tau)
-    
+
     Expected value of log-normal distribution.
     """
     return np.exp(mu + 1./2/tau)
 
 def lognormal_like(x, mu, tau):
-    """
+    r"""
     lognormal_like(x, mu, tau)
 
     Log-normal log-likelihood. Distribution of any random variable whose
@@ -947,13 +942,13 @@ def rmultinomial(n,p,size=1):
 def multinomial_expval(n,p):
     """
     multinomial_expval(n,p)
-    
+
     Expected value of multinomial distribution.
     """
     return asarray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
-    """
+    r"""
     multinomial_like(x, n, p)
 
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
@@ -1013,14 +1008,14 @@ def rmultivariate_hypergeometric(draws, colors, n=None):
 def multivariate_hypergeometric_expval(m):
     """
     multivariate_hypergeometric_expval(m)
-    
+
     Expected value of multivariate hypergeometric distribution.
     """
     return n * (asarray(m) / sum(m))
 
 
 def multivariate_hypergeometric_like(x, m):
-    """
+    r"""
     multivariate_hypergeometric_like(x, m)
 
     Multivariate hypergeometric log-likelihood
@@ -1047,13 +1042,13 @@ def rmultivariate_normal(mu, tau, size=1):
 def multivariate_normal_expval(mu, tau):
     """
     multivariate_normal_expval(mu, tau)
-    
+
     Expected value of multivariate normal distribution.
     """
     return mu
 
 def multivariate_normal_like(x, mu, tau):
-    """
+    r"""
     multivariate_normal_like(x, mu, tau)
 
     Multivariate normal log-likelihood
@@ -1084,14 +1079,14 @@ def rnegative_binomial(mu, alpha, size=1):
 def negative_binomial_expval(mu, alpha):
     """
     negative_binomial_expval(mu, alpha)
-    
+
     Expected value of negative binomial distribution.
     """
     return mu
 
 
 def negative_binomial_like(x, mu, alpha):
-    """
+    r"""
     negative_binomial_like(x, mu, alpha)
 
     Negative binomial log-likelihood
@@ -1121,13 +1116,13 @@ def rnormal(mu, tau,size=1):
 def normal_expval(mu, tau):
     """
     normal_expval(mu, tau)
-    
+
     Expected value of normal distribution.
     """
     return mu
 
 def normal_like(x, mu, tau):
-    """
+    r"""
     normal_like(x, mu, tau)
 
     Normal log-likelihood.
@@ -1169,14 +1164,14 @@ def rpoisson(mu, size=1):
 def poisson_expval(mu):
     """
     poisson_expval(mu)
-    
+
     Expected value of Poisson distribution.
     """
     return mu
 
 
 def poisson_like(x,mu):
-    """
+    r"""
     poisson_like(x,mu)
 
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
@@ -1218,13 +1213,13 @@ def runiform(lower, upper, size=1):
 def uniform_expval(lower, upper):
     """
     uniform_expval(lower, upper)
-    
+
     Expected value of uniform distribution.
     """
     return (upper - lower) / 2.
 
 def uniform_like(x,lower, upper):
-    """
+    r"""
     uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
@@ -1252,13 +1247,13 @@ def rweibull(alpha, beta,size=1):
 def weibull_expval(alpha,beta):
     """
     weibull_expval(alpha,beta)
-    
+
     Expected value of weibull distribution.
     """
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    """
+    r"""
     weibull_like(x, alpha, beta)
 
     Weibull log-likelihood
@@ -1288,7 +1283,9 @@ def weibull_like(x, alpha, beta):
 # Wishart---------------------------------------------------
 def rwishart(n, Tau, m=None):
     """
-    Returns Wishart random matrices
+    rwishart(n, Tau, m=None)
+
+    Return Wishart random matrices.
     """
 
     sigma = inverse(Tau)
@@ -1303,22 +1300,31 @@ def rwishart(n, Tau, m=None):
 def wishart_expval(n, Tau):
     """
     wishart_expval(n, Tau)
-    
+
     Expected value of wishart distribution.
     """
     return n * asarray(Tau)
 
 def wishart_like(X, n, Tau):
-    """
+    r"""
     wishart_like(X, n, Tau)
 
-    Wishart log-likelihood
+	Wishart log-likelihood. The Wishart distribution is the probability
+	distribution of the maximum-likelihood estimator (MLE) of the covariance
+	matrix of a multivariate normal distribution. If Tau=1, the distribution
+	is identical to the chi-square distribution with n degrees of freedom.
 
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
-    X, T symmetric and positive definite
-    n > 0
+    :Parameters:
+	  X : matrix
+	    Symmetric, positive definite.
+	  n : int
+	    Degrees of freedom, > 0.
+	  Tau : matrix
+	    Symmetric and positive definite
+
     """
 
     constrain(np.diagonal(Tau), lower=0)
@@ -1331,54 +1337,54 @@ def wishart_like(X, n, Tau):
 def create_distribution_instantiator(name, logp=None, random=None, module=locals()):
     """
     Return a function to instantiate a parameter from a particular distribution.
-     
+
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')
         >>> A = Exponential('A', value=2.3, beta=4)
     """
 
-    
+
     if type(module) is types.ModuleType:
         module = copy(module.__dict__)
     elif type(module) is dict:
         module = copy(module)
     else:
         raise AttributeError
-        
+
     if logp is None:
         try:
            logp = module[name+"_like"]
         except:
             raise "No likelihood found with this name ", name+"_like"
     if random is None:
-        try: 
+        try:
             random = module['r'+name]
         except:
-            raise "No random generator found with this name ", 'r'+name        
-    
+            raise "No random generator found with this name ", 'r'+name
+
     # Build parents dictionary by parsing the __func__tion's arguments.
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
     parent_names = args[1:]
     try:
         parents_default = dict(zip(args[-len(defaults):], defaults))
-    except TypeError: # No parents at all.   
+    except TypeError: # No parents at all.
         parents_default = {}
-        
-        
+
+
     def instantiator(name, value=None, trace=True, rseed=False, **kwds):
         """
-        
+
         Instantiate a Parameter instance with a %s prior.
         """
-        
+
         # Deal with keywords
         # Find which are parents
         parents=parents_default
-            
+
         for k in kwds.keys():
             if k in parent_names:
                 parents[k] = kwds.pop(k)
-        
+
         if value is None:
             print 'No initial value specified. rseed set to True. Is this allowed ?'
             rseed = True
@@ -1395,40 +1401,40 @@ def fortranlike(f, snapshot, mv=False):
     """
     Decorator function for fortran likelihoods
     ==========================================
-    
+
     Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
-    
+
     Assume args = (x, param1, param2, ...)
-    Before passing the arguments to the function, the wrapper makes sure that 
+    Before passing the arguments to the function, the wrapper makes sure that
     the parameters have the same shape as x.
 
     mv: multivariate (True/False)
-    
-    Add compatibility with GoF (Goodness of Fit) tests 
+
+    Add compatibility with GoF (Goodness of Fit) tests
     --------------------------------------------------
     * Add a 'prior' keyword (True/False)
     * If the keyword gof is given and is True, return the GoF (Goodness of Fit)
-    points instead of the likelihood. 
-    * A 'loss' keyword can be given, to specify the loss function used in the 
-    computation of the GoF points. 
+    points instead of the likelihood.
+    * A 'loss' keyword can be given, to specify the loss function used in the
+    computation of the GoF points.
     * If the keyword random is given and True, return a random variate instead
     of the likelihood.
     """
 
     name = f.__name__[:-5]
     # Take a snapshot of the main namespace.
-    
-    
+
+
     # Find the functions needed to compute the gof points.
     expval_func = snapshot[name+'_expval']
     random_func = snapshot['r'+name]
-    
+
     def wrapper(*args, **kwds):
         """
         This wraps a likelihood.
         """
 
-        
+
         # Shape manipulations
         if not mv:
             xshape = np.shape(args[0])
@@ -1446,14 +1452,14 @@ x, mu, Tau
             """
 
             xshape=np.shape(args[0])
-            newargs = [np.asarray(args[0])] 
+            newargs = [np.asarray(args[0])]
             newargs.append(np.resize(args[1], xshape))
             newargs.append(np.asarray(args[2]))
-            
+
         if kwds.pop('gof', False) and not kwds.pop('prior', False):
             """
 Return gof points."""
-            
+
             loss = kwds.pop('gof', squared_loss)
             #name = kwds.pop('name', name)
             expval = expval_func(*newargs[1:], **kwds)
@@ -1470,7 +1476,7 @@ Return likelihood."""
                 return f(*newargs, **kwds)
             except LikelihoodError:
                 return -np.Inf
-        
+
 
     # Assign function attributes to wrapper.
     wrapper.__doc__ = f.__doc__
@@ -1478,7 +1484,7 @@ Return likelihood."""
     wrapper.__name__ = f.__name__
     wrapper.name = name
     return wrapper
-    
+
 
 """
 Decorate the likelihoods
@@ -1489,12 +1495,12 @@ likelihoods = {}
 for name, obj in snapshot.iteritems():
     if name[-5:] == '_like' and name[:-5] in availabledistributions:
         likelihoods[name[:-5]] = snapshot[name]
-            
+
 def local_decorated_likelihoods(obj):
     """
     New interface likelihoods
     """
- 
+
     for name, like in likelihoods.iteritems():
         obj[name+'_like'] = fortranlike(like, snapshot)
 
