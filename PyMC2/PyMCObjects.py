@@ -1,30 +1,24 @@
 from copy import deepcopy
 from numpy import array
+from PyMCBase import PyMCBase
 
-class PyMCBase(object):
-    def __init__(self, doc, name, parents, cache_depth, trace):
+def import_LazyFunction():
+    try:
+        LazyFunction
+    except NameError:
+        # try:
+            from PyrexLazyFunction import LazyFunction
+        # except:
+        #     from LazyFunction import LazyFunction
+        #     print 'Using pure lazy functions'
+    return LazyFunction
+    
 
-        self.parents = parents
-        self.children = set()
-        self.__doc__ = doc
-        self.__name__ = name
-        self._value = None
-        self.trace = trace
-
-        self._cache_depth = cache_depth
-        
-        # Timestamp is an `array scalar' so it stays put in memory.
-        # That means self._node_parent_counters and 
-        # self._param_parent_counters can contain references
-        # directly to the parents' counter objects and skip the
-        # attribute lookup.     
-        self.counter = array(0,dtype=int)
-
-        
 class Node(PyMCBase):
-
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
-
+        
+        LazyFunction = import_LazyFunction()
+        
         PyMCBase.__init__(self, 
                                 doc=doc, 
                                 name=name, 
@@ -35,16 +29,10 @@ class Node(PyMCBase):
         # This function gets used to evaluate self's value.
         self._eval_fun = deepcopy(eval)
         
-        from LazyFunction import LazyFunction       
-        self._value = LazyFunction(fun = eval, arguments = parents.copy(), cache_depth = cache_depth, owner = self)
+        self._value = LazyFunction(fun = eval, arguments = parents.copy(), cache_depth = cache_depth)
 
     def get_value(self):
-        tup = self._value.get()
-        if tup[0] < 0:
-            # Recompute happened
-            self.counter += 1
-        
-        return tup[1]
+        return self._value.get()
         
     def set_value(self,value):
         raise AttributeError, 'Node '+self.__name__+'\'s value cannot be set.'
@@ -53,7 +41,7 @@ class Node(PyMCBase):
     
 
 class Parameter(PyMCBase):
-
+    
     def __init__(   self, 
                     logp, 
                     doc, 
@@ -65,6 +53,8 @@ class Parameter(PyMCBase):
                     rseed=False, 
                     isdata=False,
                     cache_depth=2):
+                    
+        LazyFunction = import_LazyFunction()                    
 
         PyMCBase.__init__(  self, 
                             doc=doc, 
@@ -85,8 +75,7 @@ class Parameter(PyMCBase):
         arguments = parents.copy()
         arguments['value'] = self
 
-        from LazyFunction import LazyFunction
-        self._logp = LazyFunction(fun = logp, arguments = arguments, cache_depth = cache_depth, owner = self)       
+        self._logp = LazyFunction(fun = logp, arguments = arguments, cache_depth = cache_depth)       
         
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.
@@ -112,15 +101,13 @@ class Parameter(PyMCBase):
         # Save current value as last_value
         self.last_value = self._value
         self._value = value
-        
-        self.counter += 1
 
     value = property(fget=get_value, fset=set_value)
 
-        
+
     def get_logp(self):
-        return self._logp.get()[1]
-    
+        return self._logp.get()
+
     def set_logp(self):
         raise AttributeError, 'Parameter '+self.__name__+'\'s logp attribute cannot be set'
 
@@ -128,28 +115,18 @@ class Parameter(PyMCBase):
 
 
     #
-    # Call this when rejecting a jump.
-    #
-    def revert(self):
-        """
-        Call this when rejecting a jump.
-        """
-        self._value = self.last_value
-        self.counter -= 1
-
-    #
     # Sample self's value conditional on parents.
     #
-    
+
     def random(self):
         """
         Sample self conditional on parents.
         """
         if self._random:
+            self._logp.refresh_argument_values()
             args = self._logp.argument_values.copy()
-            del args['value']
+            args.pop('value')
             self.value = self._random(**args)
         else:
             raise AttributeError, 'Parameter '+self.__name__+' does not know how to draw its value, see documentation'
         return self._value
-

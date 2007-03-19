@@ -199,7 +199,7 @@ class OneAtATimeMetropolis(SamplingMethod):
         try:
             logp_p = self.parameter.logp
         except LikelihoodError:
-            self.parameter.revert()
+            self.parameter.value = self.parameter.last_value
             self._rejected += 1
             return
 
@@ -208,7 +208,7 @@ class OneAtATimeMetropolis(SamplingMethod):
         # Test
         if log(random()) > logp_p + loglike_p - logp - loglike:
             # Revert parameter if fail
-            self.parameter.revert()
+            self.parameter.value = self.parameter.last_value
             
             self._rejected += 1
         else:
@@ -377,7 +377,7 @@ class JointMetropolis(SamplingMethod):
                 logp_p = sum([parameter.logp for parameter in self.parameters])
             except LikelihoodError:
                 for parameter in self.parameters:
-                    parameter.revert()
+                    parameter.value = parameter.last_value
                     self._rejected += 1
                 return
 
@@ -388,7 +388,7 @@ class JointMetropolis(SamplingMethod):
                 # Revert parameter if fail
                 self._rejected += 1
                 for parameter in self.parameters:
-                    parameter.revert()
+                    parameter.value = parameter.last_value
             else:
                 self._accepted += 1
 

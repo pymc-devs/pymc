@@ -15,6 +15,7 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
+from numpy import sqrt
 
 #
 # Find PyMC object's random children.
@@ -123,6 +124,7 @@ def _extract(__func__, kwds, keys):
 
 class LikelihoodError(ValueError):
     "Log-likelihood is invalid or negative informationnite"
+    pass
 
 
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):

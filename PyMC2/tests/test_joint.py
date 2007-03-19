@@ -3,12 +3,12 @@ from PyMC2.examples import model_for_joint
 from pylab import plot, show,title, xlabel, ylabel, figure
 
 from numpy.testing import *
-PLOT=True
+PLOT=False
 
 class test_Joint(NumpyTestCase):
     def check(self):
         M = Model(model_for_joint)
-        M.sample(iter=20000,burn=0,thin=100)
+        M.sample(iter=30000,burn=0,thin=100)
         if PLOT:
             plot(M.A.trace.gettrace()[:,0],M.B.trace.gettrace()[:,0],'b.')
             title('First elements')
@@ -21,6 +21,8 @@ class test_Joint(NumpyTestCase):
             ylabel('B')
             figure()
             plot(M.A.trace.gettrace()[:,0])
+            figure()
+            plot(M.A.trace.gettrace()[:,1])
             show()
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@
 
 __modules__ = [	'test_MCMC',
 				'test_joint',
-				'test_model_ave',
+                'test_model_ave',
 				'test_database',
 				'test_distributions']
          

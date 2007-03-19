@@ -5,7 +5,7 @@ The DisasterSampler example.
 
 """
 from numpy.testing import *
-from pylab import plot, show,title
+from pylab import *
 PLOT=False
 
 class test_Model(NumpyTestCase):
@@ -13,14 +13,14 @@ class test_Model(NumpyTestCase):
         from PyMC2 import Model
         from PyMC2.examples import DisasterModel
         M = Model(DisasterModel)
-        M.sample(500,0,100,verbose=False)
+        M.sample(500,0,10,verbose=False)
         if PLOT:
             # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.
             plot(M.s.trace())
             title('switchpoint')
             figure()
             plot(M.e.trace())
-            title('early mean')
+            title('early mean')            
             figure()
             title('late mean')
             plot(M.l.trace())

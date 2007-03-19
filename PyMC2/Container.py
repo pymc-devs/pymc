@@ -1,10 +1,10 @@
-from PyMCObjects import Parameter, Node, PyMCBase
-from SamplingMethods import SamplingMethod
+from PyMCObjects import Parameter, Node
+from PyMCBase import PyMCBase, ContainerBase
 from copy import copy
 from numpy import ndarray
 
 
-class Container(object):
+class Container(ContainerBase):
     def __init__(self, iterable, name = 'container'):
         """
         Takes any iterable in its constructor. On instantiation, it
@@ -71,6 +71,7 @@ class Container(object):
         if not hasattr(iterable,'__iter__'):
             raise ValueError, 'PyMC object containers can only be made from iterables.'
         self.value = ValueContainer(iterable)
+        self.all_objects = set()
         self.pymc_objects = set()
         self.nodes = set()
         self.parameters = set()
@@ -80,19 +81,7 @@ class Container(object):
         for i in xrange(len(iterable)):
             item = iterable[i]
             # Recursively unpacks nested iterables.
-            if isinstance(item, PyMCBase):
-                self.pymc_objects.add(item)
-                if isinstance(item, Parameter):
-                    if item.isdata:
-                        self.data.add(item)
-                    else:
-                        self.parameters.add(item)
-                elif isinstance(item, Node):
-                    self.nodes.add(item)
-            elif isinstance(item, SamplingMethod):
-                self.sampling_methods.add(item)
-
-            elif hasattr(item,'__getitem__'):
+            if hasattr(item,'__getitem__'):
 
                 new_container = Container(item)
                 self.value[i] = new_container
@@ -101,6 +90,19 @@ class Container(object):
                 self.parameters.update(new_container.parameters)
                 self.nodes.update(new_container.nodes)
                 self.data.update(new_container.data)
+                self.all_objects.update(new_container.all_objects)
+            else:
+                self.all_objects.add(item)
+                if isinstance(item, PyMCBase):
+                    self.pymc_objects.add(item)
+                    if isinstance(item, Parameter):
+                        if item.isdata:
+                            self.data.add(item)
+                        else:
+                            self.parameters.add(item)
+                    elif isinstance(item, Node):
+                        self.nodes.add(item)
+            
 
         def get_value(self):
             return self.value
@@ -186,9 +188,6 @@ class ArraySubclassContainer(Container, ndarray):
                         subtype.parameters.add(item)
                 elif isinstance(item, Node):
                     subtype.nodes.add(item)
-
-            elif isinstance(item, SamplingMethod):
-                subtype.sampling_methods.add(item)
 
             elif isinstance(item, ndarray):
                 self._ravelledvalue[i] = ArraySubclassContainer(item)  

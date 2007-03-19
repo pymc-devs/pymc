@@ -7,8 +7,11 @@ from numpy.distutils.core import setup, Extension
 
 # Compile flib (fortran source for statistical distributions.)
 flib = Extension(name='flib',sources=['PyMC2/flib.f'])
-
-ext_modules = [flib]
+try:
+    PyrexLazyFunction = Extension(name='PyrexLazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
+    ext_modules = [flib,PyrexLazyFunction]
+except:
+    ext_modules = [flib]
 
 distrib = setup(
 name="PyMC2",
