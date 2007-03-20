@@ -50,9 +50,16 @@ cdef class LazyFunction:
         
         self.ult_pymc_args = array(self.ult_pymc_args, dtype=object)
         self.ult_other_args = array(self.ult_other_args, dtype=object)
-                
-        self.N_pymc = len(self.ult_pymc_args)
-        self.N_other = len(self.ult_other_args)
+        
+        try:        
+            self.N_pymc = len(self.ult_pymc_args)
+        except TypeError:
+            self.N_pymc = 0
+        
+        try:
+            self.N_other = len(self.ult_other_args)
+        except TypeError:
+            self.N_other = 0
         
         self.ult_pymc_arg_cache = zeros((self.cache_depth, self.N_pymc), dtype=object)
         self.ult_other_arg_cache = zeros((self.cache_depth, self.N_other), dtype=object)        
