@@ -1,6 +1,8 @@
-from copy import deepcopy
+from copy import deepcopy, copy
 from numpy import array
 from PyMCBase import PyMCBase
+
+# 29/03/2007 -DH- removed function deepcopies.  
 
 def import_LazyFunction():
     try:
@@ -27,7 +29,7 @@ class Node(PyMCBase):
                                 trace=trace)
 
         # This function gets used to evaluate self's value.
-        self._eval_fun = deepcopy(eval)
+        self._eval_fun = eval
         
         self._value = LazyFunction(fun = eval, arguments = parents.copy(), cache_depth = cache_depth)
 
@@ -67,7 +69,7 @@ class Parameter(PyMCBase):
         self.isdata = isdata
         
         # This function will be used to evaluate self's log probability.
-        self._logp_fun = deepcopy(logp)
+        self._logp_fun = logp
         
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random

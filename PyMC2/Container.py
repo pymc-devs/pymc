@@ -142,12 +142,6 @@ class ValueContainer(object):
         return self._value.__setslice__(slice, value)
 
 
-def test():
-    from PyMC2.examples import DisasterModel as DM
-    A = [[DM.e, DM.s], [DM.l, DM.D, 3.], 54.323]
-    C = Container(A)
-    return C
-
 class ArraySubclassContainer(Container, ndarray):
     
     """

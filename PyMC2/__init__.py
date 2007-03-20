@@ -17,7 +17,8 @@ __modules__ = [ 'PyMCBase',
                 'Container',
                 'Model',
                 'MultiModelInference',
-                'InstantiationDecorators']
+                'InstantiationDecorators',
+                'testsuite']
                 
 __optmodules__ = []
 #ClosedCapture, OpenCapture   

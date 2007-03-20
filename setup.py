@@ -19,7 +19,7 @@ version="2.0",
 description = "PyMC version 2.0",
 license="Academic Free License",
 url="trichech.us",
-packages=["PyMC2", "PyMC2.database", "PyMC2.tests", "PyMC2.examples", 
+packages=["PyMC2", "PyMC2.database", "PyMC2/tests", "PyMC2.examples", 
 "PyMC2.MultiModelInference"],
 ext_modules = ext_modules
 )
