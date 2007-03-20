@@ -1,4 +1,4 @@
-from PyMC2.SamplingMethods import SamplingMethod
+from SamplingMethods import SamplingMethod
 
 class Gibbs(SamplingMethod):
     """

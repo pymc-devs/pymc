@@ -1288,14 +1288,11 @@ def rwishart(n, Tau, m=None):
     Return Wishart random matrices.
     """
 
-    sigma = inverse(Tau)
-    D = [i for i in ravel(t(chol(sigma))) if i]
-    np = len(sigma)
-
     if m:
         return [expand_triangular(flib.wshrt(D, n, np), np) for i in range(m)]
     else:
         return expand_triangular(flib.wshrt(D, n, np), np)
+
 
 def wishart_expval(n, Tau):
     """
@@ -1330,6 +1327,7 @@ def wishart_like(X, n, Tau):
     constrain(np.diagonal(Tau), lower=0)
     constrain(n, lower=0)
     return flib.wishart(X, n, Tau)
+
 
 # -----------------------------------------------------------
 # DECORATORS

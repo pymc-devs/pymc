@@ -17,7 +17,7 @@ At the end of a sampling loop, ready is set to false.
 
 import ram, no_trace
 import os, datetime, numpy
-import string 
+import string, cPickle 
 
 class Trace(ram.Trace):
     pass
@@ -44,13 +44,13 @@ class Database(object):
         self.model = model
         
         if self.filename is None:
-            modname = self.model.__name__.split('.')[-1]+'.pymc'
+            modname = self.model.__name__.split('.')[-1]
             name = modname
             i=0
             existing_names = os.listdir(".")
-            while again:
-                if name in existing_names:
-                    name = modname+'_%d'%i
+            while True:
+                if name+'.pymc' in existing_names:
+                    name = modname+'_%d'%i+'.pymc'
                     i += 1
                 else:
                     break
@@ -68,7 +68,7 @@ class Database(object):
         container={}
         for object in self.model._pymc_objects_to_tally:
             object.trace._finalize()
-            container[object.__name__] = object.gettrace()
+            container[object.__name__] = object.trace.gettrace()
         file = open(self.filename, 'w')
         cPickle.dump(container, file)
         file.close()

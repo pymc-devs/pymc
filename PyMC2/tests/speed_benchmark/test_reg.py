@@ -1,6 +1,6 @@
-from PyMC2 import Model
+from PyMC2 import Sampler
 from PyMC2.examples import DisasterModel
-M = Model(DisasterModel)
+M = Sampler(DisasterModel)
 
 
 # Sample

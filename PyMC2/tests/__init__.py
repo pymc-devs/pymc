@@ -5,12 +5,13 @@
 # Changeset
 # 19/03/2007 -DH- Commented modules import. They are now imported by testsuite.
 
-__modules__ = [	'test_MCMC',
-				'test_joint',
+__modules__ = [ 'test_MCMC',
+                'test_joint',
                 'test_model_ave',
-				'test_database',
-				'test_distributions',
-				'test_container']
+                'test_database',
+                'test_distributions',
+                'test_container',
+                'test_utils']
 
 """         
 for mod in __modules__:

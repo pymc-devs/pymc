@@ -1,10 +1,11 @@
 __docformat__='reStructuredText'
-from AbstractBase import *
-from utils import LikelihoodError, msqrt, extend_children
+from PyMC2.AbstractBase import *
+from PyMC2.utils import LikelihoodError, msqrt, extend_children
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
+from PyMC2 import flib
 from flib import fill_stdnormal
 
 
@@ -12,7 +13,7 @@ from flib import fill_stdnormal
 class SamplingMethod(object):
     """
     This object knows how to make Parameters take single MCMC steps.
-    It's sample() method will be called by Model at every MCMC iteration.
+    It's sample() method will be called by Sampler at every MCMC iteration.
 
     Externally-accessible attributes:
       - nodes:  The Nodes over which self has jurisdiction.
@@ -35,7 +36,7 @@ class SamplingMethod(object):
 
       >>> S = SamplingMethod(N)
 
-    :SeeAlso: OneAtATimeMetropolis, Model.
+    :SeeAlso: OneAtATimeMetropolis, Sampler.
     """
 
     def __init__(self, pymc_objects):
@@ -159,10 +160,10 @@ class SamplingMethod(object):
 
     loglike = property(fget = _get_loglike)
 
-# The default SamplingMethod, which Model uses to handle singleton parameters.
+# The default SamplingMethod, which Sampler uses to handle singleton parameters.
 class OneAtATimeMetropolis(SamplingMethod):
     """
-    The default SamplingMethod, which Model uses to handle singleton parameters.
+    The default SamplingMethod, which Sampler uses to handle singleton parameters.
 
     Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which
     self has jurisdiction.
@@ -171,10 +172,10 @@ class OneAtATimeMetropolis(SamplingMethod):
 
       >>> M = OneAtATimeMetropolis(P)
 
-    But you never really need to instantiate OneAtATimeMetropolis, Model does it
+    But you never really need to instantiate OneAtATimeMetropolis, Sampler does it
     automatically.
 
-    :SeeAlso: SamplingMethod, Model.
+    :SeeAlso: SamplingMethod, Sampler.
     """
     def __init__(self, parameter, scale=1, dist='Normal'):
         SamplingMethod.__init__(self,[parameter])

@@ -5,7 +5,7 @@ from numpy.testing import *
 
 def test_RJMCMC(NumpyTestCase):
     def check(self):
-        RM = Model(transd_model)
+        RM = Sampler(transd_model)
         RM.sample(100,10,1)
     
 if __name__=='__main__':

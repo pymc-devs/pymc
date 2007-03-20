@@ -9,7 +9,7 @@ model posterior probabilities. This'll probably be worse for more complicated
 models. Maybe there's a literature on this problem.
 """
 
-from PyMC2 import Model, weight
+from PyMC2 import Sampler, weight
 from numpy import log
 from PyMC2.examples import model_1, model_2, model_3
 
@@ -18,13 +18,13 @@ class test_model_ave(NumpyTestCase):
     def check(self):
         
         # Changepoint model
-        M1 = Model(model_1)
+        M1 = Sampler(model_1)
         
         # Constant rate model
-        M2 = Model(model_2)
+        M2 = Sampler(model_2)
         
         # Exponentially varying rate model
-        M3 = Model(model_3)
+        M3 = Sampler(model_3)
         
         print 'Docstring of model 1:'
         print model_1.__doc__
