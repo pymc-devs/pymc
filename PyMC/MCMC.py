@@ -89,7 +89,10 @@ class DivergenceError(ValueError):
 class ParameterError(ValueError):
     # Exception class for catching parameters with invalid values
     pass
-    
+
+class LikelihoodError(ValueError):
+    # Log-likelihood is invalid or negative informationnite
+    pass
 
 """ Transformations """
 def logit(p):
@@ -282,11 +285,6 @@ def double_exponential_deviate(beta, size):
     if u<0.5:
         return beta*log(2*u)
     return -beta*log(2*(1-u))
-
-
-class LikelihoodError(ValueError):
-    "Log-likelihood is invalid or negative informationnite"
-
 
 """ Core MCMC classes """
 
@@ -2190,7 +2188,7 @@ class Sampler:
         
         return self.cauchy_like(parameter, alpha, beta, prior=True)
     
-    def constrain(self, value, lower=-inf, upper=inf, allow_equal=False):
+    def constrain(self, value, lower=-inf, upper=inf, allow_equal=True):
         """Apply interval constraint on parameter value"""
         
         value = ravel(value)
@@ -2289,6 +2287,9 @@ class Sampler:
         
         # Pull sample node
         sample_item = summary[summary.keys()[0]]
+        if not shape(sample_item):
+            # Incase DIC was selected
+            sample_item = summary[summary.keys()[-1]]
         
         # Build header
         header = 'name'
