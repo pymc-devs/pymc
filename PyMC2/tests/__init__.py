@@ -11,7 +11,8 @@ __modules__ = [ 'test_MCMC',
                 'test_database',
                 'test_distributions',
                 'test_container',
-                'test_utils']
+                'test_utils',
+                'test_normal_approximation']
 
 """         
 for mod in __modules__:

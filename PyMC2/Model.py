@@ -212,65 +212,6 @@ class Model(object):
                 object.trace = no_trace.Trace(object,self.db)
 
 
-    #
-    # Tally
-    #
-    def tally(self):
-        """
-        tally()
-
-        Records the value of all tracing pymc_objects.
-        """
-        if self._cur_trace_index < self.max_trace_length:
-            for pymc_object in self._pymc_objects_to_tally:
-                pymc_object.trace.tally(self._cur_trace_index)
-
-        self._cur_trace_index += 1
-
-    #
-    # Return to a sampled state
-    #
-    def remember(self, trace_index = None):
-        """
-        remember(trace_index = randint(trace length to date))
-
-        Sets the value of all tracing pymc_objects to a value recorded in
-        their traces.
-        """
-        if trace_index is None:
-            trace_index = randint(self.cur_trace_index)
-
-        for pymc_object in self._pymc_objects_to_tally:
-            pymc_object.value = pymc_object.trace()[trace_index]
-
-    
-    def save_state(self):
-        """Save the sampler's current state in the database in order to 
-        restart sampling at a later time."""
-        self.db.state = dict(_current_iter = self._current_iter, 
-        _iter = self._iter, _burn = self._burn, _thin = self._thin)
-        
-
-    def save_traces(self,path='',fname=None):
-        import cPickle
-        
-        if fname is None:
-            try:
-                fname = self.__name__ + '.pymc'
-            except:
-                fname = 'Model.pymc'
-                
-        trace_dict = {}
-        for obj in self._pymc_objects_to_tally:
-            trace_new = copy(obj.trace)
-            trace_new.__delattr__('db')
-            trace_new.__delattr__('obj')
-            trace_dict[obj.__name__] = trace_new
-        
-        F = file(fname,'w')
-        cPickle.dump(trace_dict,F)
-        F.close()
-
     def _extend_children(self):
         """
         Makes a dictionary of self's PyMC objects' 'extended children.'
@@ -281,6 +222,71 @@ class Model(object):
             dummy.children = copy(pymc_object.children)
             extend_children(dummy)
             self.extended_children[pymc_object] = dummy.children
+            
+    def _parse_generations(self):
+        """
+        Parse up the _generations for model averaging.
+        """
+        if not self.extended_children:
+            self._extend_children()
+
+        # Find root generation
+        self._generations.append(set())
+        all_children = set()
+        for parameter in self.parameters:
+            all_children.update(self.extended_children[parameter] & self.parameters)
+        self._generations[0] = self.parameters - all_children
+
+        # Find subsequent _generations
+        children_remaining = True
+        gen_num = 0
+        while children_remaining:
+            gen_num += 1
+
+
+            # Find children of last generation
+            self._generations.append(set())
+            for parameter in self._generations[gen_num-1]:
+                self._generations[gen_num].update(self.extended_children[parameter] & self.parameters)
+
+
+            # Take away parameters that have parents in the current generation.
+            thisgen_children = set()
+            for parameter in self._generations[gen_num]:
+                thisgen_children.update(self.extended_children[parameter] & self.parameters)
+            self._generations[gen_num] -= thisgen_children
+
+
+            # Stop when no subsequent _generations remain
+            if len(thisgen_children) == 0:
+                children_remaining = False
+
+    def sample_model_likelihood(self,iter):
+        """
+        Returns iter samples of (log p(data|this_model_params, this_model) | data, this_model)
+        """
+        loglikes = zeros(iter)
+
+        if len(self._generations) == 0:
+            self._parse_generations()
+
+        try:
+            for i in xrange(iter):
+                if i % 10000 == 0:
+                    print 'Sample ',i,' of ',iter
+
+                for generation in self._generations:
+                    for parameter in generation:
+                        parameter.random()
+
+                for datum in self.data:
+                    loglikes[i] += datum.logp
+
+        except KeyboardInterrupt:
+            print 'Sample ',i,' of ',iter
+            raise KeyboardInterrupt
+
+        return loglikes
 
 
     def DAG(self,format='raw',path=None,consts=True):
@@ -390,6 +396,65 @@ class Model(object):
                 raise AttributeError, value
         return locals()
     status = property(**status())
+    
+    #
+    # Tally
+    #
+    def tally(self):
+        """
+        tally()
+
+        Records the value of all tracing pymc_objects.
+        """
+        if self._cur_trace_index < self.max_trace_length:
+            for pymc_object in self._pymc_objects_to_tally:
+                pymc_object.trace.tally(self._cur_trace_index)
+
+        self._cur_trace_index += 1
+
+    #
+    # Return to a sampled state
+    #
+    def remember(self, trace_index = None):
+        """
+        remember(trace_index = randint(trace length to date))
+
+        Sets the value of all tracing pymc_objects to a value recorded in
+        their traces.
+        """
+        if trace_index is None:
+            trace_index = randint(self.cur_trace_index)
+
+        for pymc_object in self._pymc_objects_to_tally:
+            pymc_object.value = pymc_object.trace()[trace_index]
+
+
+    def save_state(self):
+        """Save the sampler's current state in the database in order to 
+        restart sampling at a later time."""
+        self.db.state = dict(_current_iter = self._current_iter, 
+        _iter = self._iter, _burn = self._burn, _thin = self._thin)
+
+
+    def save_traces(self,path='',fname=None):
+        import cPickle
+
+        if fname is None:
+            try:
+                fname = self.__name__ + '.pymc'
+            except:
+                fname = 'Model.pymc'
+
+        trace_dict = {}
+        for obj in self._pymc_objects_to_tally:
+            trace_new = copy(obj.trace)
+            trace_new.__delattr__('db')
+            trace_new.__delattr__('obj')
+            trace_dict[obj.__name__] = trace_new
+
+        F = file(fname,'w')
+        cPickle.dump(trace_dict,F)
+        F.close()    
 
 
 
@@ -429,6 +494,9 @@ class Sampler(Model):
         self._loop()
         
     def interactive_sample(self, *args, **kwds):
+        # David- nice work! LikelihoodErrors seem to be ending up in the listener
+        # thread somehow. I seem to remember something weird about that in the threading
+        # documentation?
         self._thread = Thread(target=self.sample, args=args, kwargs=kwds)
         self._thread.start()
         self.listen()
@@ -516,71 +584,6 @@ class Sampler(Model):
         """
         for sampling_method in self.sampling_methods:
             sampling_method.tune()
-    
-    def _parse_generations(self):
-        """
-        Parse up the _generations for model averaging.
-        """
-        if not self.extended_children:
-            self._extend_children()
-
-        # Find root generation
-        self._generations.append(set())
-        all_children = set()
-        for parameter in self.parameters:
-            all_children.update(self.extended_children[parameter] & self.parameters)
-        self._generations[0] = self.parameters - all_children
-
-        # Find subsequent _generations
-        children_remaining = True
-        gen_num = 0
-        while children_remaining:
-            gen_num += 1
-
-
-            # Find children of last generation
-            self._generations.append(set())
-            for parameter in self._generations[gen_num-1]:
-                self._generations[gen_num].update(self.extended_children[parameter] & self.parameters)
-
-
-            # Take away parameters that have parents in the current generation.
-            thisgen_children = set()
-            for parameter in self._generations[gen_num]:
-                thisgen_children.update(self.extended_children[parameter] & self.parameters)
-            self._generations[gen_num] -= thisgen_children
-
-
-            # Stop when no subsequent _generations remain
-            if len(thisgen_children) == 0:
-                children_remaining = False
-
-    def sample_model_likelihood(self,iter):
-        """
-        Returns iter samples of (log p(data|this_model_params, this_model) | data, this_model)
-        """
-        loglikes = zeros(iter)
-
-        if len(self._generations) == 0:
-            self._parse_generations()
-
-        try:
-            for i in xrange(iter):
-                if i % 10000 == 0:
-                    print 'Sample ',i,' of ',iter
-
-                for generation in self._generations:
-                    for parameter in generation:
-                        parameter.random()
-
-                for datum in self.data:
-                    loglikes[i] += datum.logp
-
-        except KeyboardInterrupt:
-            print 'Sample ',i,' of ',iter
-            raise KeyboardInterrupt
-
-        return loglikes
         
     def listen(self):
         """
