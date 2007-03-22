@@ -21,14 +21,13 @@ def progress_timeout(self):
     if self.sampler.status == 'running':
         self.pbar.set_fraction(self.sampler._current_iter/self.sampler._iter)
     elif self.sampler.status == 'ready':
-        if self.sampler._current_iter == 0 : # Sampling is over
-            self.pbar.set_fraction(0.)
-            self.button2.set_label('Start')
-            self.button2.set_image(gtk.image_new_from_stock('gtk-yes', gtk.ICON_SIZE_BUTTON))
-            return False
+        self.pbar.set_fraction(0.)
+        self.button2.set_label('Start')
+        self.button2.set_image(gtk.image_new_from_stock('gtk-yes', gtk.ICON_SIZE_BUTTON))
+        return False
 
-        else:    # Sampling is interrupted.
-            return False
+    else:    # Sampling is interrupted.
+        return False
     # As this is a timeout function, return TRUE so that it
     # continues to get called
     return True
@@ -63,41 +62,39 @@ class GladeWidget:
         self.__dict__.update(W)
         self.get_widget = get_widget
 
-        #for db in PyMC2.database.available_modules:
-        #    self.combobox1.append_text(db)
-        #    self.combobox1.set_active(0)
+        for db in PyMC2.database.available_modules:
+            self.combobox1.append_text(db)
+            self.combobox1.set_active(0)
 
     def on_window1_destroy(self, widget):
         gtk.main_quit()
 
     def on_button1_clicked(self, widget):
-        pass
-##        dialog = gtk.FileChooserDialog("Open python module",
-##            None,
-##            gtk.FILE_CHOOSER_ACTION_OPEN,
-##            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-##            gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-##        dialog.set_default_response(gtk.RESPONSE_OK)
-##
-##        filter = gtk.FileFilter()
-##        filter.set_name("Python files")
-##        filter.add_pattern("*.py")
-##        dialog.add_filter(filter)
-##        dialog.set_filename(os.path.sep.join([os.environ['HOME'], 'science_svn', 'pymc', 'trial', 'PyMC2', 'examples', 'DisasterModel.py']))
-##        response = dialog.run()
-##        if response == gtk.RESPONSE_OK:
-##            self.filename= dialog.get_filename()
-##            self.modulename = os.path.splitext(os.path.basename(self.filename))[0]
-##            sys.path.append(os.path.dirname(self.filename))
-##            mod = __import__(self.modulename)
-##            db = self.combobox1.get_active_text()
-##            print db
-##            self.sampler = PyMC2.Sampler(mod, db=db)
-##
-##        elif response == gtk.RESPONSE_CANCEL:
-##            print 'Closed, no files selected'
-##        dialog.destroy()
-##        self.button1.set_label(self.modulename)
+        dialog = gtk.FileChooserDialog("Open python module",
+            None,
+            gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+            gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        filter = gtk.FileFilter()
+        filter.set_name("Python files")
+        filter.add_pattern("*.py")
+        dialog.add_filter(filter)
+        dialog.set_filename('ExtremeRainfall.py')
+        response = dialog.run()
+        if response == gtk.RESPONSE_OK:
+            self.filename= dialog.get_filename()
+            self.modulename = os.path.splitext(os.path.basename(self.filename))[0]
+            sys.path.append(os.path.dirname(self.filename))
+            mod = __import__(self.modulename)
+            db = self.combobox1.get_active_text()
+            self.sampler = PyMC2.Sampler(mod, db=db)
+
+        elif response == gtk.RESPONSE_CANCEL:
+            print 'Closed, no files selected'
+        dialog.destroy()
+        self.button1.set_label(self.modulename)
 
     def on_spinbuttonit_changed(self, widget):
         pass
@@ -109,43 +106,46 @@ class GladeWidget:
         pass
 
     def on_combobox1_changed(self, widget):
-        pass
-    #    """Close last database and assign new one."""
-    #    db = widget.get_active_text()
-    #    self.sampler.db._finalize()
-    #    self.sampler._assign_database_backend(db)
+        """Close last database and assign new one."""
+        db = widget.get_active_text()
+        try:
+            self.sampler.db._finalize()
+            self.sampler._assign_database_backend(db)
+        except AttributeError:
+            pass
 
     def on_button2_clicked(self, widget):
-        pass
-##        self.pbar = self.get_widget('progressbar1')
-##        # Not started, not sampling
-##        if self.sampler.status =='ready':
-##            self.iter = int(self.spinbuttonit.get_value())
-##            self.burn = int(self.spinbuttonburn.get_value())
-##            self.thin = int(self.spinbuttonthin.get_value())
-##            self.pbar.set_fraction(0.0)
-##
-##            self.T = Thread(target=self.sampler.sample, args=(self.iter, self.burn, self.thin))
-##            self.T.start()
-##
-##            self.timer = Thread(target=gobject.timeout_add, args= (100, progress_timeout, self))
-##            self.timer.start()
-##
-##
-##            # Change label to stop
-##            widget.set_label('Stop')
-##            widget.set_image(gtk.image_new_from_stock('gtk-stop', gtk.ICON_SIZE_BUTTON))
-##
-##        elif self.sampler.status == 'running':
-##            self.sampler.status = 'paused'
-##            widget.set_label('Continue')
-##            widget.set_image(gtk.image_new_from_stock('gtk-yes', gtk.ICON_SIZE_BUTTON))
-##
-##        elif self.sampler.status == 'paused':
-##            self.sampler.interactive_continue()
-##            widget.set_label('Stop')
-##            widget.set_image(gtk.image_new_from_stock('gtk-stop', gtk.ICON_SIZE_BUTTON))
+        self.pbar = self.get_widget('progressbar1')
+        # Not started, not sampling
+        if self.sampler.status =='ready':
+            self.iter = int(self.spinbuttonit.get_value())
+            self.burn = int(self.spinbuttonburn.get_value())
+            self.thin = int(self.spinbuttonthin.get_value())
+            #self.pbar.set_fraction(0.0)
 
+            self.T = Thread(target=self.sampler.sample, args=(self.iter, self.burn, self.thin))
+            self.T.start()
+
+            self.timer = Thread(target=gobject.timeout_add, args= (100, progress_timeout, self))
+            self.timer.start()
+
+            # Change label to stop
+            widget.set_label('Stop')
+            widget.set_image(gtk.image_new_from_stock('gtk-stop', gtk.ICON_SIZE_BUTTON))
+
+        elif self.sampler.status == 'running':
+            self.sampler.status = 'paused'
+            widget.set_label('Continue')
+            widget.set_image(gtk.image_new_from_stock('gtk-yes', gtk.ICON_SIZE_BUTTON))
+
+        elif self.sampler.status == 'paused':
+            self.sampler.interactive_continue()
+            
+            widget.set_label('Stop')
+            widget.set_image(gtk.image_new_from_stock('gtk-stop', gtk.ICON_SIZE_BUTTON))
+            
+            self.timer = Thread(target=gobject.timeout_add, args= (100, progress_timeout, self))
+            self.timer.start()
 
 if __name__ == "__main__":
     hwg = GladeWidget('gui.glade', 'window1')

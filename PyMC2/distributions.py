@@ -18,6 +18,7 @@ mvdistributions = ['dirichlet','multivariate_hypergeometric','multivariate_norma
 
 availabledistributions = distributions+mvdistributions
 import flib
+import PyMC2
 import numpy as np
 from utils import LikelihoodError
 from numpy import inf, random, sqrt, log, size, tan, pi
@@ -655,6 +656,7 @@ def gamma_like(x, alpha, beta):
 
 
 # GEV Generalized Extreme Value ------------------------
+# Modify parameterization -> Hosking (kappa, xi, alpha)
 @randomwrap
 def rgev(xi, mu=0, sigma=1, size=1):
     """
@@ -694,7 +696,7 @@ def gev_like(x, xi, mu=0, sigma=0):
 
     """
 
-    return flib.gev(x, xi, loc, scale)
+    return flib.gev(x, xi, mu, sigma)
 
 # Geometric----------------------------------------------
 # Changed the return value
@@ -1306,21 +1308,21 @@ def wishart_like(X, n, Tau):
     r"""
     wishart_like(X, n, Tau)
 
-	Wishart log-likelihood. The Wishart distribution is the probability
-	distribution of the maximum-likelihood estimator (MLE) of the covariance
-	matrix of a multivariate normal distribution. If Tau=1, the distribution
-	is identical to the chi-square distribution with n degrees of freedom.
+    Wishart log-likelihood. The Wishart distribution is the probability
+    distribution of the maximum-likelihood estimator (MLE) of the covariance
+    matrix of a multivariate normal distribution. If Tau=1, the distribution
+    is identical to the chi-square distribution with n degrees of freedom.
 
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
     :Parameters:
-	  X : matrix
-	    Symmetric, positive definite.
-	  n : int
-	    Degrees of freedom, > 0.
-	  Tau : matrix
-	    Symmetric and positive definite
+      X : matrix
+        Symmetric, positive definite.
+      n : int
+        Degrees of freedom, > 0.
+      Tau : matrix
+        Symmetric and positive definite
 
     """
 
@@ -1369,7 +1371,8 @@ def create_distribution_instantiator(name, logp=None, random=None, module=locals
         parents_default = {}
 
 
-    def instantiator(name, value=None, trace=True, rseed=False, **kwds):
+    def instantiator(name, value=None, trace=True, rseed=False, 
+        doc='PyMC parameter', **kwds):
         """
 
         Instantiate a Parameter instance with a %s prior.
@@ -1384,16 +1387,29 @@ def create_distribution_instantiator(name, logp=None, random=None, module=locals
                 parents[k] = kwds.pop(k)
 
         if value is None:
-            print 'No initial value specified. rseed set to True. Is this allowed ?'
+            if rseed is False:
+                raise 'No initial value given. Provide one or set rseed to True.'
             rseed = True
             value = random(**parents)
 
-        return Parameter(value=value, name=name, parents=parents, logp=logp, random=random, \
-        trace=trace, rseed=rseed, isdata=False, children=set())
+        return PyMC2.Parameter(value=value, name=name, parents=parents, logp=valuewrapper(logp), random=random, \
+        trace=trace, rseed=rseed, isdata=False, doc=doc)
 
     #instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
     return instantiator
 
+def valuewrapper(f):
+    """Return a likelihood accepting value instead of x as a keyword argument.
+    This is specifically intended for the instantiator above. 
+    """
+    def wrapper(**kwds):
+        value = kwds.pop('value')
+        return f(value, **kwds)
+    wrapper.__dict__.update(f.__dict__)
+    return wrapper
+        
+        
+        
 
 def fortranlike(f, snapshot, mv=False):
     """
@@ -1502,7 +1518,10 @@ def local_decorated_likelihoods(obj):
     for name, like in likelihoods.iteritems():
         obj[name+'_like'] = fortranlike(like, snapshot)
 
-local_decorated_likelihoods(locals())
+
+#local_decorated_likelihoods(locals())
+# Decorating the likelihoods breaks the creation of distribution instantiators -DH. 
+
 
 
 # Create parameter instantiators
