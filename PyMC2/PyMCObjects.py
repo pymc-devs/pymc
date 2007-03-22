@@ -13,6 +13,52 @@ def import_LazyFunction():
         #     print 'Using pure lazy functions'
     return LazyFunction
     
+    
+class ParentDict(dict):
+    """
+    A special subclass of dict which makes it safe to change parameters'
+    and nodes' parents. When __setitem__ is called, a ParentDict instance
+    removes its owner from the old parent's children set (if appropriate)
+    and adds its owner to the new parent's children set. It then asks
+    its owner to generate a new LazyFunction instance using its new
+    parents.
+    
+    XXX
+    
+    SamplingMethod and Model are expecting parameters' and nodes'
+    children to be static. We should figure out what to do about this.
+    """
+    def __init__(self, regular_dict, owner):
+        self.update(regular_dict)
+        self.owner = owner
+        
+    def __setitem__(self, key, new_parent):
+        
+        old_parent = dict.__getitem__(self, key)
+        
+        # Possibly remove me from old parent's children set.
+        if isinstance(old_parent, PyMCBase):
+            only_reference = True
+            
+            # See if I only claim the old parent via this key.
+            for item in self.iteritems():
+                if item[0] is old_parent and not item[1] == key:
+                    only_reference = False
+                    break
+            
+            # If so, remove me from the old parent's children set.
+            if only_reference:
+                old_parent.children.remove(self.owner)
+        
+        # If the new parent is a PyMC object, add me to its children set.
+        if isinstance(new_parent, PyMCBase):
+            new_parent.children.add(self.owner)
+        
+        dict.__setitem__(self, key, new_parent)
+        
+        # Tell my owner it needs a new lazy function.
+        self.owner.gen_lazy_function()
+        
 
 class Node(PyMCBase):
     """
@@ -57,7 +103,7 @@ class Node(PyMCBase):
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
         
-        LazyFunction = import_LazyFunction()
+        self.LazyFunction = import_LazyFunction()
         
         PyMCBase.__init__(self, 
                                 doc=doc, 
@@ -68,8 +114,12 @@ class Node(PyMCBase):
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
+        self.parents = ParentDict(regular_dict = self.parents, owner = self)        
         
-        self._value = LazyFunction(fun = eval, arguments = parents.copy(), cache_depth = cache_depth)
+        self.gen_lazy_function
+        
+    def gen_lazy_function(self):
+        self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self.cache_depth)
 
     def get_value(self):
         return self._value.get()
@@ -163,7 +213,6 @@ class Parameter(PyMCBase):
     :SeeAlso: Node, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
     
-    
     def __init__(   self, 
                     logp, 
                     doc, 
@@ -174,9 +223,9 @@ class Parameter(PyMCBase):
                     value=None, 
                     rseed=False, 
                     isdata=False,
-                    cache_depth=2):
-                    
-        LazyFunction = import_LazyFunction()                    
+                    cache_depth=2):                    
+
+        self.LazyFunction = import_LazyFunction()    
 
         PyMCBase.__init__(  self, 
                             doc=doc, 
@@ -193,11 +242,8 @@ class Parameter(PyMCBase):
         
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random
-            
-        arguments = parents.copy()
-        arguments['value'] = self
-
-        self._logp = LazyFunction(fun = logp, arguments = arguments, cache_depth = cache_depth)       
+        
+        self.parents = ParentDict(regular_dict = self.parents, owner = self)
         
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.
@@ -206,6 +252,15 @@ class Parameter(PyMCBase):
             self._value = self.random()
         else:
             self._value = value     
+            
+        self.gen_lazy_function()
+    
+    def gen_lazy_function(self):
+        
+        arguments = self.parents.copy()
+        arguments['value'] = self
+
+        self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
 
     #
     # Define value attribute
