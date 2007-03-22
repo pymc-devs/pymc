@@ -2,8 +2,6 @@ from copy import deepcopy, copy
 from numpy import array
 from PyMCBase import PyMCBase
 
-# 29/03/2007 -DH- removed function deepcopies.  
-
 def import_LazyFunction():
     try:
         LazyFunction
@@ -17,6 +15,46 @@ def import_LazyFunction():
     
 
 class Node(PyMCBase):
+    """
+    A variable whose value is determined by the values of its parents.
+
+    
+    Decorator instantiation:
+
+    @node(trace=True)
+    def A(x = B, y = C):
+        return sqrt(x ** 2 + y ** 2)
+
+    
+    Direct instantiation:
+
+    :Arguments:
+
+    eval:   The function that computes the node's value from the values 
+            of its parents.
+
+    doc:    The docstring for this node.
+
+    name:   The name of this node.
+
+    parents: A dictionary containing the parents of this node.
+
+    trace (optional):   A boolean indicating whether this node's value 
+                        should be traced (in MCMC).
+
+    cache_depth (optional): An integer indicating how many of this node's
+                            value computations should be 'memoized'.
+
+                            
+    Externally-accessible attribute:
+
+    value:  Returns the node's value given its parents' values. Skips
+            computation if possible.
+            
+    No methods.
+    
+    :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
+    """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
         
         LazyFunction = import_LazyFunction()
@@ -43,6 +81,88 @@ class Node(PyMCBase):
     
 
 class Parameter(PyMCBase):
+    
+    """
+    A variable whose value is not determined by the values of its parents.
+
+    
+    Decorator instantiation:
+
+    @parameter(trace=True)
+    def X(value = 0., mu = B, tau = C):
+        return Normal_like(value, mu, tau)
+        
+    @parameter(trace=True)
+    def X(value=0., mu=B, tau=C):
+
+        def logp(value, mu, tau):
+            return Normal_like(value, mu, tau)
+        
+        def random(mu, tau):
+            return Normal_r(mu, tau)
+            
+        rseed = 1.
+
+    
+    Direct instantiation:
+
+    :Arguments:
+
+    logp:   The function that computes the parameter's log-probability from
+            its value and the values of its parents.
+
+    doc:    The docstring for this parameter.
+
+    name:   The name of this parameter.
+
+    parents: A dictionary containing the parents of this parameter.
+    
+    random (optional):  A function that draws a new value for this
+                        parameter given its parents' values.
+
+    trace (optional):   A boolean indicating whether this node's value 
+                        should be traced (in MCMC).
+                        
+    value (optional):   An initial value for this parameter
+    
+    rseed (optional):   A seed for this parameter's rng. Either value or rseed must
+                        be given.
+                        
+    isdata (optional):  A flag indicating whether this parameter is data; whether
+                        its value is known.
+
+    cache_depth (optional): An integer indicating how many of this parameter's
+                            log-probability computations should be 'memoized'.
+
+                            
+    Externally-accessible attribute:
+
+    value:  Returns this parameter's current value.
+
+    logp:   Returns the parameter's log-probability given its value and its 
+            parents' values. Skips computation if possible.
+            
+    last_value: Returns this parameter's last value. Useful for rejecting
+                Metropolis-Hastings jumps. See touch() and the warning below.
+            
+    Externally-accessible methods:
+    
+    random():   Draws a new value for this parameter from its distribution and
+                returns it.
+                
+    touch():    If a parameter's value is changed in-place, the cache-checker will
+                get confused. In addition, in MCMC, there won't be a way to reject
+                the jump.
+                
+                **WARNING**
+                
+                If you want to update a parameter's value in-place, call touch()
+                FIRST. This will make a shallow copy of parameter's value which you
+                can overwrite, and will also store its current value in last_value.
+    
+    :SeeAlso: Node, PyMCBase, LazyFunction, parameter, node, data, Model, Container
+    """
+    
     
     def __init__(   self, 
                     logp, 
@@ -118,18 +238,24 @@ class Parameter(PyMCBase):
     #
     # If the user wants to update the parameter's value in-place,
     # they can call this to prevent the cache-checker from getting
-    # confused.
+    # confused. 
     #
     def touch(self):
-        self._value = copy(self._value)
+        """ 
+        If you want to update a parameter's value in-place,
+        please call touch FIRST.
+        """
+        self.value = copy(self._value)
     
     #
     # Sample self's value conditional on parents.
     #
-
     def random(self):
         """
-        Sample self conditional on parents.
+        Draws a new value for a parameter conditional on its parents
+        and returns it.
+        
+        Raises an error if no 'random' argument was passed to __init__.
         """
         if self._random:
             self._logp.refresh_argument_values()

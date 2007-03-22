@@ -1,11 +1,12 @@
-#TODO:
-# Need ContainerBase again to break cycle in inheritance tree.
-# Need ultimate_parents and ultimate_parent_values arrays, currently Container contents won't be checked.
-# It'll be convenient to keep non-PyMC-Object parents constant again (no cache checking), no big deal.
-# This is moot now, but don't copy the argument dictionary into the cache, make a new dictionary every time.
-
-
 class PyMCBase(object):
+    """
+    The base class from which Parameter and Node inherit.
+    Shouldn't need to be instantiated directly.
+    
+    See source code in PyMCBase.py if you want to subclass it.
+    
+    :SeeAlso: Parameter, Node
+    """
     def __init__(self, doc, name, parents, cache_depth, trace):
 
         self.parents = parents
@@ -23,4 +24,9 @@ class PyMCBase(object):
 
 
 class ContainerBase(object):
+    """
+    The abstract base class from which Container inherits.
+    
+    :SeeAlso: Container
+    """
     pass

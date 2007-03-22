@@ -3,6 +3,58 @@ from PyMCBase import PyMCBase, ContainerBase
 
 class LazyFunction(object):
 
+    """
+    A function that is bound to its arguments, and which caches
+    its last few evaluations so as to skip computation when possible.
+    
+    
+    
+    L = LazyFunction(fun, arguments[, cache_depth])
+    L.get()
+    
+    
+    
+    :Arguments:
+    fun:        The function that the LazyFunction uses to compute its
+                values.
+                
+    arguments:  A dictionary of arguments that the LazyFunction passes
+                to its function. If any of the arguments is a Parameter,
+                Node, or Container, that argument's 'value' attribute
+                will be substituted for it when passed to fun.
+                
+    cache_depth:    The number of prior computations to 'memoize' in
+                    order to skip unnecessary computations.
+    
+    
+                    
+    Externally-accessible methods:
+    
+    refresh_argument_values():  Iterates over LazyFunction's parents that are 
+                                Parameters, Nodes, or Containers and records their 
+                                current values for passing to self's internal 
+                                function.
+    
+    get():  Refreshes argument values, checks cache, calls internal function if
+            necessary, returns value.
+            
+    
+    
+    Externally-accessible attributes:
+    
+    arguments:  A dictionary containing self's arguments.
+
+    fun:        Self's internal function.
+    
+    argument_values:    A dictionary containing self's arguments, in which
+                        Parameters, Nodes, and Containers have been
+                        replaced by their 'value' attributes.
+    
+                
+    
+    :SeeAlso: Parameter, Node, Container
+    """
+    
     def __init__(self, fun, arguments, cache_depth):
         self.arguments = arguments
         self.cache_depth = cache_depth
@@ -66,6 +118,11 @@ class LazyFunction(object):
     # Extract the values of arguments that are PyMC objects or containers.
     # Don't worry about unpacking the containers, see their value attribute.
     def refresh_argument_values(self):
+        """
+        Iterates over LazyFunction's parents that are Parameters,
+        Nodes, or Containers and records their current values
+        for passing to self's internal function.
+        """
         for item in self.pymc_object_args.iteritems():
             self.argument_values[item[0]] = item[1].value
         for item in self.other_args.iteritems():
@@ -84,6 +141,11 @@ class LazyFunction(object):
             self.ult_other_arg_cache[0,j] = self.ult_other_args[j]
 
     def get(self):
+        """
+        Call this method to cause the LazyFunction to refresh its arguments'
+        values, decide whether it needs to recompute, and return its current
+        value.
+        """
         self.refresh_argument_values()
         recomp = self.check_argument_caches()
 

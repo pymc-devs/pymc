@@ -1,10 +1,6 @@
 from numpy import array, zeros, ones, arange, resize
 from PyMC2 import PyMCBase, ContainerBase
 
-# The numpy distutils support array element access as follows:
-# PyArray_GETPTR1(self.ultimate_args, 1). No need to explicitly
-# include the header.
-
 cdef extern from "stdlib.h":
     void* malloc(int size)
     
@@ -12,6 +8,57 @@ cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
 
 cdef class LazyFunction:
+    """
+    A function that is bound to its arguments, and which caches
+    its last few evaluations so as to skip computation when possible.
+    
+    
+    
+    L = LazyFunction(fun, arguments[, cache_depth])
+    L.get()
+    
+    
+    
+    :Arguments:
+    fun:        The function that the LazyFunction uses to compute its
+                values.
+                
+    arguments:  A dictionary of arguments that the LazyFunction passes
+                to its function. If any of the arguments is a Parameter,
+                Node, or Container, that argument's 'value' attribute
+                will be substituted for it when passed to fun.
+                
+    cache_depth:    The number of prior computations to 'memoize' in
+                    order to skip unnecessary computations.
+    
+    
+                    
+    Externally-accessible methods:
+    
+    refresh_argument_values():  Iterates over LazyFunction's parents that are 
+                                Parameters, Nodes, or Containers and records their 
+                                current values for passing to self's internal 
+                                function.
+    
+    get():  Refreshes argument values, checks cache, calls internal function if
+            necessary, returns value.
+            
+    
+    
+    Externally-accessible attributes:
+    
+    arguments:  A dictionary containing self's arguments.
+
+    fun:        Self's internal function.
+    
+    argument_values:    A dictionary containing self's arguments, in which
+                        Parameters, Nodes, and Containers have been
+                        replaced by their 'value' attributes.
+    
+                
+    
+    :SeeAlso: Parameter, Node, Container
+    """
     
     cdef public object arguments, fun, argument_values
     cdef object pymc_object_args, other_args
@@ -108,6 +155,11 @@ cdef class LazyFunction:
     # Extract the values of arguments that are PyMC objects or containers.
     # Don't worry about unpacking the containers, see their value attribute.
     def refresh_argument_values(self):
+        """
+        Iterates over LazyFunction's parents that are Parameters,
+        Nodes, or Containers and records their current values
+        for passing to self's internal function.
+        """
 
         cdef object item
         cdef int i
@@ -141,7 +193,11 @@ cdef class LazyFunction:
         
 
     def get(self):
-        
+        """
+        Call this method to cause the LazyFunction to refresh its arguments'
+        values, decide whether it needs to recompute, and return its current
+        value.
+        """
         cdef int match_index
         
         self.refresh_argument_values()

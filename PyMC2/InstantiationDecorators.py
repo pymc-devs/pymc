@@ -44,6 +44,8 @@ def parameter(__func__=None, **kwds):
     conditional on its value and its parents' values, and bar()
     generates a random value from A's distribution conditional on
     its parents' values.
+    
+    :SeeAlso: Parameter, Node, node, data, Model, Container
     """
 
     def instantiate_p(__func__):
@@ -75,6 +77,8 @@ def node(__func__ = None, **kwds):
         
     where baz returns the node B's value conditional
     on its parents.
+    
+    :SeeAlso: Node, Parameter, parameter, data, Model, Container
     """
 
     def instantiate_n(__func__):
@@ -96,6 +100,8 @@ def data(__func__=None, **kwds):
     """
     Decorator instantiating data objects. Usage is just like
     parameter.
+    
+    :SeeAlso: parameter, Parameter, node, Node, Model, Container
     """
     return parameter(__func__, isdata=True, trace = False, **kwds)
     
