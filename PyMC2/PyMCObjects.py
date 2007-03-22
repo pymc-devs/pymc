@@ -98,7 +98,7 @@ class Parameter(PyMCBase):
         
         # Value can't be updated if isdata=True
         if self.isdata:
-            raise AttributeError, self.__name__+'\'s Value cannot be updated if isdata flag is set'
+            raise AttributeError, 'Parameter '+self.__name__+'\'s value cannot be updated if isdata flag is set'
             
         # Save current value as last_value
         self.last_value = self._value
@@ -115,7 +115,14 @@ class Parameter(PyMCBase):
 
     logp = property(fget = get_logp, fset=set_logp)
 
-
+    #
+    # If the user wants to update the parameter's value in-place,
+    # they can call this to prevent the cache-checker from getting
+    # confused.
+    #
+    def touch(self):
+        self._value = copy(self._value)
+    
     #
     # Sample self's value conditional on parents.
     #

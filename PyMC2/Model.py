@@ -73,7 +73,6 @@ class Model(object):
         self.parameters = set()
         self.data = set()
         self.containers = set()
-        self.sampling_methods = set()
         self.extended_children = None
         
         
@@ -89,7 +88,7 @@ class Model(object):
 
         #Change input into a dictionary
         if isinstance(input, dict):
-            input_dict = input
+            self.input_dict = input
         else:
             try:
                 # If input is a module, reload it to make a fresh copy.
@@ -97,9 +96,9 @@ class Model(object):
             except TypeError:
                 pass
 
-            input_dict = input.__dict__
+            self.input_dict = input.__dict__
 
-        for item in input_dict.iteritems():
+        for item in self.input_dict.iteritems():
             if  isinstance(item[1],PyMCBase) \
                 or isinstance(item[1],SamplingMethod) \
                 or isinstance(item[1],Container):
@@ -126,16 +125,6 @@ class Model(object):
             self.parameters.update(item[1].parameters)
             self.data.update(item[1].data)
             self.nodes.update(item[1].nodes)
-            #self.pymc_objects.update(item[1].pymc_objects)
-            # isn't this redundant with line 109 ?
-            self.sampling_methods.update(item[1].sampling_methods)
-
-        # File away the SamplingMethods
-        if isinstance(item[1],SamplingMethod):
-            # Teach the SamplingMethod its name
-            #File it away
-            self.sampling_methods.add(item[1])
-            setattr(item[1], '_model', self)
 
         # File away the PyMC objects
         elif isinstance(item[1],PyMCBase):
@@ -148,28 +137,6 @@ class Model(object):
                 if item[1].isdata:
                     self.data.add(item[1])
                 else:  self.parameters.add(item[1])
-
-    
-    # Anand, overiding __setattr__ has the side effect that properties don't
-    # work. 
-    #
-    # Override __setattr__ so that PyMC objects are read-only once instantiated
-    #
-    
-##    def __setattr__(self, name, value):
-##
-##        # Don't allow changes to PyMC object attributes
-##        if self.__dict__.has_key(name):
-##            if isinstance(self.__dict__[name],PyMCBase):
-##                raise AttributeError, 'Attempt to write read-only attribute of Model.'
-##
-##            # Do allow other objects to be changed
-##            else:
-##                self.__dict__[name] = value
-##
-##        # Allow new attributes to be created.
-##        else:
-##            self.__dict__[name] = value
 
     def _assign_database_backend(self, db):
         """Assign Trace instance to parameters and nodes and Database instance
@@ -397,6 +364,17 @@ class Model(object):
         return locals()
     status = property(**status())
     
+    def seed(self):
+        """
+        Seed new initial values for the parameters.
+        """
+        for parameters in self.parameters:
+            try:
+                if parameters.rseed is not None:
+                    value = parameters.random(**parameters.parent_values)
+            except:
+                pass    
+    
     #
     # Tally
     #
@@ -461,6 +439,18 @@ class Model(object):
 class Sampler(Model):
     def __init__(self, input, db='ram'):
         Model.__init__(self, input, db)
+        self.sampling_methods = set()        
+        
+        for item in self.input_dict.iteritems():
+            if isinstance(item[1],Container):
+                self.__dict__[item[0]] = item[1]
+                self.sampling_methods.update(item[1].sampling_methods)
+
+            if isinstance(item[1],SamplingMethod):
+                self.__dict__[item[0]] = item[1]                
+                self.sampling_methods.add(item[1])
+                setattr(item[1], '_model', self)
+        
         
         # Default SamplingMethod
         self._SM = OneAtATimeMetropolis
@@ -566,17 +556,6 @@ class Sampler(Model):
             # If not, make it a new SamplingMethod
             if homeless:
                 self.sampling_methods.add(self._SM(parameter))
-        
-    def seed(self):
-        """
-        Seed new initial values for the parameters.
-        """
-        for parameters in self.parameters:
-            try:
-                if parameters.rseed is not None:
-                    value = parameters.random(**parameters.parent_values)
-            except:
-                pass
         
     def tune(self):
         """

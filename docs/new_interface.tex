@@ -61,7 +61,7 @@
 Installation and tutorial}
 \author{ Christopher Fonnesbeck\\ David Huard \\ Anand Patil }
 
-\date
+% \date
 
 % TODO: Logo.
 
@@ -263,7 +263,6 @@ Parameters expose the following attributes:
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed parameter's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
     \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
     \item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
-    \item[\texttt{timestamp}:] The number of times self's value has been updated since instantiation.
     \item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
     \item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Parameter} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
@@ -273,8 +272,8 @@ Parameters expose the following attributes:
 
 Parameters have the following methods:
 \begin{description}
-    \item[\texttt{revert()}] This sets self's current value to its previous value, and decrements the timestamp. This function should be used for rejecting Metropolis jumps, see section \ref{sec:SamplingMethod}.
-    \item[\texttt{random()}] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
+	\item[\texttt{touch()}:] PyMC parameters and nodes cache the last few values of their arguments. If a parameter's log-probability or a node's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that parameters' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a parameter's value in-place, be sure to call this method afterward. It simply replaces the parameter's value with a shallow copy of itself.
+    \item[\texttt{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
 \end{description}
 
 \subsubsection{Instantiation}
@@ -317,7 +316,8 @@ def A_logp(value, mu, tau):
 A = Parameter(logp = A_logp, name = 'A', value = 3.,
 parents = {'mu': B, 'tau': C}[,
 doc = 'Parameter A is normally distributed',
-random = rnormal, trace = True, rseed = 1., isdata = False])
+random = rnormal, trace = True, rseed = 1., isdata = False,
+cache_depth = 2])
 \end{verbatim}
 \end{description}
 
@@ -334,7 +334,6 @@ Nodes expose the following attributes:
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
     \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
     \item[\texttt{value}:] Self's current value. Unlike parameter, self's value depends on its parents. As with parameter's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Nodes cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
-    \item[\texttt{timestamp}:] The number of times self's value has changed since instantiation.
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
     \item[\texttt{\_\_name\_\_}:] The name of the node, should be unique.
     \item[\texttt{\_\_doc\_\_}:] The docstring of the node.
@@ -360,7 +359,8 @@ def D_eval(arg_1, arg_2):
 D = Node(eval = D_eval, name = 'D',
 parents = \{'arg_1': E, 'arg_2': F\})[],
 doc = 'The D node',
-trace = True)]
+trace = True),
+cache_depth = 2]
 \end{verbatim}
 The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.
 \end{description}
@@ -464,6 +464,26 @@ def D(  value = D_array, rate=r):
     return poisson_like(value,rate)
 \end{verbatim}
 In general, it's better to make heavyweight functions into their own nodes, because nodes' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
+
+\section{The \texttt{Model} class} \label{sec:Model} 
+This class serves as a container for probability models and as a stem class for other `model-level' classes like \texttt{Sampler}. Methods implemented:
+\begin{description}
+	\item[\texttt{sample\_model\_likelihood()}:] Returns an estimate of $\log p(d|M)$, the unconditional log-probability or log-density of all the data objects in model $M$. This is called by the function \texttt{weight()}, which finds the posterior probabilities of a set of models.
+	\item[\texttt{DAG()}:] Outputs a graphical representation of the model.
+	\item[\texttt{tally()}:] Tells all parameters and nodes to record their current values in their traces.
+	\item[\texttt{remember()}:] Tells all parameters and nodes to set their values to a certain element of their traces.
+	\item[\texttt{save\_state()}:] Under construction.
+	\item[\texttt{save\_traces()}:] Under construction.
+	\item[\texttt{seed()}:] All parameters with an \texttt{rseed} value draw a new value from their distributions.
+\end{description}
+
+Useful attributes:
+\begin{description}
+	\item[\texttt{containers}:] A set of self's PyMC object containers.
+	\item[\texttt{parameters}:] A set of self's parameters.
+	\item[\texttt{nodes}:] A set of self's nodes.
+	\item[\texttt{data}:] A set of self's data objects.
+\end{description}
 
 \chapter{Model fitting with PyMC} %(fold)
 \label{chap:MCMC}
@@ -770,9 +790,6 @@ Valid inference relies on the assumption that sample values are random (but not 
 Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in parameter space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 
-\section{The \texttt{Model} class}\label{sec:Model}
-
-
 \section{The \texttt{SamplingMethod} class}\label{sec:SamplingMethod}
 Sampling methods are responsible for making parameters or groups of parameters take single MCMC steps. PyMC provides several standard sampling methods, including \texttt{OneAtATimeMetropolis}, but \texttt{SamplingMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own sampling methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of sampling methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
 
@@ -871,7 +888,17 @@ Note that a proposal is made by actually updating the parameter's value, and jum
 
 %(end)
 
-
+\section{The \texttt{Sampler} class}\label{sec:Sampler}
+The Sampler class is a subclass of Model. In addition to those inherited from Model, it has the following attributes:
+\begin{description}
+	\item[\texttt{sampling\_methods}:]
+\end{description}
+and the following methods:
+\begin{description}
+	\item[\texttt{tune()}:]
+	\item[\texttt{sample()}:]
+	\item[\texttt{interactive\_sample()}:] 
+\end{description}
 
 
 \chapter{Diagnostics} %(fold)
@@ -1029,83 +1056,6 @@ So you can see where the bottlenecks are. It's easy in IPython. Timing your code
 PyMC aims to provide a fast and user-friendly interface to several standard probability distributions. However, we're not able to anticipate every usage case. We're not even going to try, but you can provide any Python-callable function you want. This is often fruitful, because in most cases the easiest way to buy efficiency is to optimize log-probability functions. Try Weave or f2py. Consider the DisasterSampler example with custom log-probability functions- speeds up by a factor of three! We've tried to keep the overhead low so optimization is worth your while. Quick runthrough of f2py.
 \subsection{Optimize custom subsamplers}\label{sub:optimize_custom_subsamplers}
 The second-most-likely place for a bottleneck is in a custom SubSampler. Model itself is probably not the bottleneck. Weave and f2py might be helpful here, too.
-
-\section{Subclassing \texttt{Parameter}, \texttt{Node}, and \texttt{PyMCObjectContainer} }
-\begin{center}
-	\begin{figure}[hhhh]
-		\centering
-			\epsfig{file=inheritance.pdf,width=10cm}
-		\caption{PyMC's inheritance tree. \texttt{PureParameter} and \texttt{PureNode} are pure Python versions of \texttt{Parameter} and \texttt{Node}. They're provided in case of compiler problems, and because they're easier to subclass.}
-		\label{fig:inheritance}
-	\end{figure}
-\end{center}
-
-Because of Python's weak typing, it shouldn't be necessary to subclass these objects very often. Exotic random variables can be implemented by simply assigning the base classes exotic values. Special MCMC algorithms can be implemented by writing specialized sampling methods, and possibly by subclassing \texttt{Model}. However, if you're sure you want to subclass the base objects, this section will help you do so safely.
-
-The inheritance tree for these classes is shown in figure \ref{fig:inheritance}. Standard parameters and nodes query one another's timestamps by simple C pointer member access rather than Python attribute access. This is much faster, but it makes these objects difficult to subclass. For this reason, and in case someone has compiler problems, PyMC also provides pure-Python versions called \texttt{PureParameter} and \texttt{PureNode}. The standard versions will query the pure versions' timestams via ordinary Python attribute access.
-
-Subclassing guidelines follow:
-\begin{itemize}
-	\item Any subclass of \texttt{PyMCBase} must have the following Python attributes:
-	\begin{itemize}
-		\item \texttt{value}, which can be just about anything.
-		\item \texttt{\_\_name\_\_}, which should be a string.
-		\item \texttt{trace}, which should be a boolean (Model will assign an actual trace object at instantiation).
-		\item \texttt{timestamp}, which should be an integer that increments every time the \texttt{value} attribute changes. See below.
-		\item \texttt{parents}, which should be a dictionary.
-		\item \texttt{children}, which should be some kind of iterable.
-	\end{itemize}
-	\item Any subclass of \texttt{ParameterBase}  must have the following Python attributes:
-	\begin{itemize}
-		\item \texttt{logp}, which must be a float
-		\item \texttt{isdata}, which must be a boolean  
-	\end{itemize} A \texttt{revert()} method is also required. Method \texttt{random()}, which should return a new value, is optional.
-	\item Any subclass of \texttt{ParameterBase} and \texttt{NodeBase} that \textbf{doesn't} also inherit from \texttt{PurePyMCBase} must be implemented as a C extension, and must have an \texttt{int*} struct member called \texttt{timestamp}. The value pointed to should correspond to its Python counterpart. 
-	\item Any subclass of \texttt{PyMCObjectContainerBase} must have the following attributes:
-	\begin{itemize}
-		\item \texttt{pymc\_objects}, an iterable containing all the objects in the container that inherit from \texttt{PyMCBase}.
-		\item \texttt{parameters}, an iterable containing all the objects that inherit from \texttt{ParameterBase} that have \texttt{isdata=False}.
-		\item \texttt{node}, an iterable containing all the objects that inherit from \texttt{NodeBase}.
-		\item \texttt{data}, an iterable containing all the objects that inherit from \texttt{ParameterBase} that have \texttt{isdata=False}.
-		\item \texttt{value}, which should contain a (possibly nested iterable) in which each reference to a subclass of \texttt{PyMCBase} is replaced by its value. 
-	\end{itemize}
-\end{itemize}
-
-
-\section{Under the hood of \texttt{Parameter} and \texttt{Node}}\label{sec:underhood} % (fold)
-
-\subsection{Caching}\label{sub:caching}
-
-Suppose A  is a data node which depends on parameters  B  and  C. The DAG shown in the cartoon below expresses this dependency structure. The cartoon shows how A uses its cache over the course of a complete Metropolis-Hastings step by B and the first half of a metropolis-hastings step by C.
-
-\begin{description}
-\item[Frame 1] B queries A's prior conditional on its current state. A computes and caches its prior.
-\begin{center}
-\epsfig{file=frame_1.pdf,width=10cm}
-\end{center}
-
-\item[Frame 2] B samples a candidate value and increments its state counter. It then queries A's prior. A computes and caches its prior.
-\begin{center}
-\epsfig{file=frame_2.pdf,width=10cm}
-\end{center}
-
-\item[Frame 3 possibility 1] B rejects the jump and decrements its state counter. C queries A's prior conditional on its current state, but A finds the current situation in its cache and skips the recompute. A does not cache anything.
-\begin{center}
-\epsfig{file=frame_3a.pdf,width=10cm}
-\end{center}
-
-\item[Frame 3 possibility 2] B accepts the jump and doesn't change its state counter. C queries A's prior conditional on its current state, but A finds the current situation in its cache and skips the recompute. A does not cache anything.
-\begin{center}
-\epsfig{file=frame_3b.pdf,width=10cm}
-\end{center}
-
-\end{description}
-
-Since A caches the last two prior evaluations, it's guaranteed not to have to recompute its prior when C queries from its current (as opposed to proposed) state.
-
-
-%(end)
-
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}
