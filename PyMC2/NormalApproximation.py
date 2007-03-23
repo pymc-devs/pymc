@@ -1,5 +1,9 @@
-#TODO: Make NormalApproximation check that all its parameters are scalar- or ndarray-valued
-#TODO: on instantiation, raise an error otherwise.
+# TODO: Check that all parameters are numerical/ ndarray in __init__
+# TODO: try to track down msqrt bug
+# TODO: put logp in docstring
+# TODO: make logp_at_max and AIC attributes
+# TODO: Split off MAP class. Don't let it use the method that requires a Hessian.
+# TODO: Allow scipy-less use with method='newton'.
 
 from PyMCObjects import Parameter
 from Model import Model

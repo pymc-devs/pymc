@@ -6,11 +6,11 @@ def import_LazyFunction():
     try:
         LazyFunction
     except NameError:
-        # try:
+        try:
             from PyrexLazyFunction import LazyFunction
-        # except:
-        #     from LazyFunction import LazyFunction
-        #     print 'Using pure lazy functions'
+        except:
+            from LazyFunction import LazyFunction
+            print 'Using pure lazy functions'
     return LazyFunction
         
 class Node(PyMCBase):
