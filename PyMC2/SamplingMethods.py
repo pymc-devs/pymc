@@ -34,7 +34,7 @@ class SamplingMethod(object):
 
       >>> S = SamplingMethod(N)
 
-    :SeeAlso: OneAtATimeMetropolis, Model.
+    :SeeAlso: OneAtATimeMetropolis, Sampler.
     """
 
     def __init__(self, pymc_objects):
@@ -166,21 +166,46 @@ class OneAtATimeMetropolis(SamplingMethod):
     Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which
     self has jurisdiction.
 
+
+
     To instantiate a OneAtATimeMetropolis called M with jurisdiction over a Parameter P:
 
-      >>> M = OneAtATimeMetropolis(P)
+      >>> M = OneAtATimeMetropolis(P, scale=1, dist='Normal')
 
-    But you never really need to instantiate OneAtATimeMetropolis, Model does it
-    automatically.
 
-    :SeeAlso: SamplingMethod, Model.
+
+    :Arguments:
+    P:      The parameter over which self has jurisdiction.
+
+    scale:  The proposal jump width is set to scale * parameter.value.
+
+    dist:   The proposal distribution. Options are:    
+        'Normal':           Use a normal random-walk proposal.
+        'RoundedNormal':    Use a rounded normal random-walk proposal (for discrete 
+                            parameters).
+        'Prior':            Propose from the prior. This is automatically assigned if no 
+                            parameters depend on P.
+
+
+    :SeeAlso: SamplingMethod, Sampler.
     """
-    def __init__(self, parameter, scale=1, dist='Normal'):
+    def __init__(self, parameter, scale=1., dist='Normal'):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
         self._dist = dist
+        
+        
+        # If self's extended children is the empty set (eg, if
+        # self's parameter is a posterior predictive quantity of
+        # interest), proposing from the prior is best.
+        if len(self.children) == 0:
+            try:
+                self.parameter.random()
+                self._dist = "Prior"
+            except:
+                pass
 
     #
     # Do a one-at-a-time Metropolis-Hastings step self's Parameter.
@@ -189,19 +214,26 @@ class OneAtATimeMetropolis(SamplingMethod):
 
         # Probability and likelihood for parameter's current value:
         
-        logp = self.parameter.logp
+        if self._dist == "Prior":
+            logp = 0.
+        else:
+            logp = self.parameter.logp
+            
         loglike = self.loglike
 
         # Sample a candidate value
         self.propose()
         
         # Probability and likelihood for parameter's proposed value:
-        try:
-            logp_p = self.parameter.logp
-        except LikelihoodError:
-            self.parameter.value = self.parameter.last_value
-            self._rejected += 1
-            return
+        if self._dist == "Prior":
+            logp_p = 0.
+        else:
+            try:
+                logp_p = self.parameter.logp
+            except LikelihoodError:
+                self.parameter.value = self.parameter.last_value
+                self._rejected += 1
+                return
 
         loglike_p = self.loglike
 
@@ -216,9 +248,16 @@ class OneAtATimeMetropolis(SamplingMethod):
 
 
     def propose(self):
+        
+        # Propose from prior if it's more informative than the likelihood, 
+        # or if no parameters depend on self.parameter.
+        if self._dist == "Prior":
+            self.parameter.random()
 
-        if self._dist == 'RoundedNormal':
+        # Use for discrete parameters
+        elif self._dist == 'RoundedNormal':
             self.parameter.value = int(round(rnormal(self.parameter.value,self.proposal_sig)))
+
         # Default to normal random-walk proposal
         else:
             self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)

@@ -1,96 +1,320 @@
-# FIXME: fmin_bfgs doesn't seem to be working. 
-# FIXME: Possibly just write grad and hessian methods
-# FIXME: and use one of the other optimizers.
+#TODO: Make NormalApproximation check that all its parameters are scalar- or ndarray-valued
+#TODO: on instantiation, raise an error otherwise.
 
-# TODO: Make mu and C model nodes that lazily update
-# TODO: when any of the model's parameters have changed.
-
-# TODO: Provide methods for nice extraction of mu and C
-# TODO: relevant to particular parameters. N.C[p1, p2]
-# TODO: would be a nice syntax.
-
-from PyMCObjects import Parameter, Node, PyMCBase
-from Container import Container
+from PyMCObjects import Parameter
 from Model import Model
-from numpy import zeros, inner, asmatrix, ndarray, reshape, shape
+from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel
 from numpy.random import normal
+from numpy.linalg import solve
 from utils import msqrt
+from copy import copy
 
 try:
-    from scipy.optimize import fmin_bfgs
+    from scipy.optimize import fmin_ncg, fmin, fmin_powell, fmin_cg, fmin_bfgs, fmin_ncg, fmin_l_bfgs_b
 except ImportError:
     raise ImportError, 'scipy must be installed to use NormalApproximation.'
 
-class NormalApproximation(Model):
+class NormApproxMu(object):
+    """
+    Returns the mean vector of some parameters.
+    """
+    def __init__(self, owner):
+        self.owner = owner
+    
+    def __getitem__(self, *params):
+        tot_len = 0
+        
+        try:
+            for p in params[0]:
+                pass
+            param_tuple = params[0]
+        except:
+            param_tuple = params
+        
+        for p in param_tuple:
+            tot_len += self.owner.param_len[p]
+            
+        mu = zeros(tot_len, dtype=float)
+        
+        start_index = 0
+        for p in param_tuple:
+            mu[start_index:(start_index + self.owner.param_len[p])] = self.owner._mu[self.owner._slices[p]]
+            start_index += self.owner.param_len[p]
+            
+        return mu
+        
 
-    def __init__(self, input, db='ram', eps=.000001):
+class NormApproxC(object):
+    """
+    Returns the covariance matrix of some parameters.
+    """
+    def __init__(self, owner):
+        self.owner = owner
+            
+    def __getitem__(self, *params):
+        tot_len = 0
+        
+        try:
+            for p in params[0]:
+                pass
+            param_tuple = params[0]
+        except:
+            param_tuple = params
+        
+        for p in param_tuple:
+            tot_len += self.owner.param_len[p]
+
+        C = asmatrix(zeros((tot_len, tot_len)), dtype=float)
+            
+        start_index1 = 0
+        for p1 in param_tuple:
+            start_index2 = 0
+            for p2 in param_tuple:                
+                C[start_index1:(start_index1 + self.owner.param_len[p1]), \
+                start_index2:(start_index2 + self.owner.param_len[p2])] = \
+                self.owner._C[self.owner._slices[p1],self.owner._slices[p2]]
+                
+                start_index2 += self.owner.param_len[p2]
+                
+            start_index1 += self.owner.param_len[p1]
+            
+        return C
+
+class NormalApproximation(Model):
+    """
+    N = NormalApproximation(input, db='ram', eps=.000001, method = 'fmin_l_bfgs_b')
+    
+    Normal approximation to the posterior of a model. Fits self on instantiation.
+    
+    Useful methods:
+    draw:           Draws values for all parameters using normal approximation
+    revert_to_mean: Sets all parameters to mean value under normal approximation
+    fit:            Finds the normal approximation. Call this if something changes.
+                    Will be useful in EM algorithms.
+    
+    Useful attributes:
+    mu[p1, p2, ...]:    Returns the posterior mean vector of parameters p1, p2, ...
+    C[p1, p2, ...]:     Returns the posterior covariance of parameters p1, p2, ...
+    
+    :Arguments:
+    input: A dictionary or module, as for Model
+    db: A database backend
+    eps: 'h' for computing numerical derivatives.
+    method: May be one of the following, from the scipy.optimize package:
+        -fmin_l_bfgs_b
+        -fmin_ncg
+        -fmin_cg
+        -fmin_powell
+        -fmin
+        -or newton, which is a simple implementation of Newton's method.
+        
+    :SeeAlso: Model, scipy.optimize
+    """
+
+    def __init__(self, input, db='ram', eps=.000001, method = 'fmin_l_bfgs_b'):
         Model.__init__(self, input, db)
 
         # Allocate memory for internal traces and get parameter slices
         self._slices = {}
         self._len = 0
         self.param_len = {}
+        self.method = method
         
-        for parameter in self.parameters:
+        self.param_list = list(self.parameters)
+        self.N_params = len(self.param_list)
+        self.param_indices = []
+        
+        for i in xrange(len(self.param_list)):
+
+            parameter = self.param_list[i]
             if isinstance(parameter.value, ndarray):
-                self.param_len[parameter] = len(parameter.value.ravel())
+                self.param_len[parameter] = len(ravel(parameter.value))
             else:
                 self.param_len[parameter] = 1
             self._slices[parameter] = slice(self._len, self._len + self.param_len[parameter])
             self._len += self.param_len[parameter]
-        self.eps = eps
+            
+            for j in range(len(ravel(parameter.value))):
+                self.param_indices.append((parameter, j))
+            
+        self.eps = eps        
         
         self._len_range = arange(self._len)
         self.grad = zeros(self._len, dtype=float)
-        self.hess = zeros((self._len, self._len), dtype=float)
+        self.hess = asmatrix(zeros((self._len, self._len), dtype=float))
         
-        self._maximize()
+        self._mu = None
+        self._C = None
+        self._sig = None
+        
+        self.mu = NormApproxMu(self)
+        self.C = NormApproxC(self)
+        self.fit()
         
     def _get_logp(self):
         return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data])
     
     logp = property(_get_logp)
+
+    def printp(self, p):
+        print p, self.logp
     
-    def _maximize(self):
+    def fit(self, iterlim=1000, tol=.00001):
         p = zeros(self._len,dtype=float)
         for parameter in self.parameters:
-            p[self._slices[parameter]] = parameter.value.ravel()
-
-        # fmin_bfgs doesn't seem to be working.
-        O = fmin_bfgs(f=self._get_logp_from_p, x0=p, fprime=self._get_gradient_from_p, full_output=True)
-        self.mu = O[0]
-        self.C = asmatrix(O[3])
-        self._sig = msqrt(self.C).T
+            p[self._slices[parameter]] = ravel(parameter.value)
+        
+        if self.method == 'fmin_ncg':
+            p=fmin_ncg(f = self.func, x0 = p, fprime = self.gradfunc, fhess = self.hessfunc, epsilon=self.eps)
+        elif self.method == 'fmin':
+            print fmin(func = self.func, x0=p)
+            p=fmin(func = self.func, x0=p)
+        elif self.method == 'fmin_powell':
+            p=fmin_powell(func = self.func, x0=p)
+        elif self.method == 'fmin_cg':
+            p=fmin_cg(f = self.func, x0 = p, fprime = self.gradfunc, epsilon=self.eps)
+        elif self.method == 'fmin_l_bfgs_b':
+            p=fmin_l_bfgs_b(func = self.func, x0 = p, fprime = self.gradfunc, epsilon = self.eps)[0]
+        
+        elif self.method == 'newton':
+            last_logp = self.logp
+        
+            for i in xrange(iterlim):
+                p_last = p
+            
+                self.grad_and_hess()      
+                p = p_last - solve(self.hess, self.grad)
+        
+                self._set_parameters(p)
+            
+                logp = self.logp
+        
+                if self.logp < last_logp or isnan(logp) or isinf(logp):
+                    p = p_last
+                    break
+                else:
+                    last_logp = logp
+                
+                if (abs((p-p_last) / p) < tol).all():
+                    break
+                
+            if i == iterlim-1:
+                raise RuntimeError, "Newton's method failed to converge."
+            else:
+                print "Newton's method converged in",i,"iterations."
+        else:
+            raise ValueError, 'Method unknown.'
+        
+        self._set_parameters(p) 
+        self.grad_and_hess()
+        self._mu = p
+        self._C = -1. * self.hess.I
+        self.sig = msqrt(self._C).T
+        
+    def func(self, p):
+        self._set_parameters(p)
+        return -1. * self.logp
+        
+    def gradfunc(self, p):
+        self._set_parameters(p)
+        for i in xrange(self._len):
+            self.grad[i] = self.diff(i)            
+        
+        return -1 * self.grad
+        
     
     def _set_parameters(self, p):
         for parameter in self.parameters:
-            parameter.value = parameter.value + reshape(p[self._slices[parameter]],shape(parameter.value))
-    
-    def _get_logp_from_p(self, p):
+            parameter.value = reshape(ravel(p)[self._slices[parameter]],shape(parameter.value))
+            
+    def __setitem__(self, index, value):
+        p, i = self.param_indices[index]
+        val = ravel(p.value).copy()
+        val[i] = value
+        p.value = reshape(val, shape(p.value))
+        
+    def __getitem__(self, index):
+        p, i = self.param_indices[index]
+        val = ravel(p.value)
+        return val[i]
+        
+    def diff(self, index):
+        base = self.logp
+
+        oldval = copy(self[index])
+        h = self.eps
+        
+        self[index] = oldval + h
+        up = self.logp
+        self[index] = oldval
+        
+        return (up - base) / h
+        
+    def diff2(self, i, j):
+        oldval = copy(self[j])
+        h = self.eps
+        
+        base = self.diff(i)
+        
+        self[j] = oldval + h
+        up = self.diff(i)
+        self[j] = oldval
+        
+        return (up - base) / h
+        
+    def diff2_diag(self, index):
+        base = self.logp
+
+        oldval = copy(self[index])
+        h = self.eps
+        
+        self[index] = oldval + h
+        up = self.logp
+        
+        self[index] = oldval - h
+        down = self.logp
+        
+        self[index] = oldval
+        
+        return (up + down - 2. * base) / h / h
+        
+                
+    def grad_and_hess(self):
+        for i in xrange(self._len):
+
+            di = self.diff(i)            
+            self.grad[i] = di
+            self.hess[i,i] = self.diff2_diag(i)
+            
+            if i < self._len - 1:
+                
+                for j in xrange(i+1, self._len):
+                    dij = self.diff2(i,j)
+                
+                    self.hess[i,j] = dij
+                    self.hess[j,i] = dij
+                    
+    def hessfunc(self, p):
         self._set_parameters(p)
-        return -1.*self.logp
-        
-    def _get_gradient_from_p(self, p):
-        # Try, may not work.
-        
-        self._set_parameters(p)
-        
-        for param in self.parameters:
-            base_logp = self.logp
-            for i in range(self.param_len[param]):
-                val = param.value.ravel()
-                h = val[i] * eps
-                val[i] = val[i] + h
-                param.value = reshape(val, shape(param.value))
+        for i in xrange(self._len):
 
-                up_logp = self.logp
-                self.grad[self._slices[parameter]][i] = (up_logp - base_logp) / h
+            di = self.diff(i)            
+            self.hess[i,i] = self.diff2_diag(i)
 
-                param.value = param.last_value
+            if i < self._len - 1:
 
-        return self.grad
+                for j in xrange(i+1, self._len):
+                    dij = self.diff2(i,j)
+
+                    self.hess[i,j] = dij
+                    self.hess[j,i] = dij 
+                    
+        return -1. * self.hess                   
         
     def draw(self):
         devs = normal(size=self._len)
-        p = inner(devs, self._sig)
+        p = inner(devs, self.sig)
         self._set_parameters(p)
+        
+    def revert_to_mean(self):
+        self._set_parameters(self.mu)

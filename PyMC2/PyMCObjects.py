@@ -1,5 +1,5 @@
 from copy import deepcopy, copy
-from numpy import array
+from numpy import array, ndarray, reshape
 from PyMCBase import PyMCBase, ParentDict
 
 def import_LazyFunction():
@@ -212,9 +212,8 @@ class Parameter(PyMCBase):
 
         self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
 
-    #
+
     # Define value attribute
-    #   
     def get_value(self):
         return self._value
 
@@ -240,21 +239,28 @@ class Parameter(PyMCBase):
 
     logp = property(fget = get_logp, fset=set_logp)
 
-    #
+
     # If the user wants to update the parameter's value in-place,
     # they can call this to prevent the cache-checker from getting
     # confused. 
-    #
     def touch(self):
         """ 
         If you want to update a parameter's value in-place,
-        please call touch FIRST.
+        you can call touch() to avoid confusing the cache 
+        checker... but last_value will be set to self.value, 
+        because otherwise the cache checker WOULD get confused. 
+        It's safest to avoid updating parameters' values in-place.
         """
-        self.value = copy(self._value)
+        if isinstance(self._value, ndarray):
+            # This is kind of a hack, but it's the only way I could figure
+            # out to _really_ make a shallow copy of an ndarray.            
+            self.value = reshape(self._value, self._value.shape)
+            self.last_value = self.value
+        else:
+            self.value = copy(self._value)
+
     
-    #
     # Sample self's value conditional on parents.
-    #
     def random(self):
         """
         Draws a new value for a parameter conditional on its parents
