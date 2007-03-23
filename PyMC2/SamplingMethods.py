@@ -319,7 +319,7 @@ class JointMetropolis(SamplingMethod):
         self.epoch = epoch
         self.memory = memory
         self.delay = delay
-        self._id = 'JointMetropolis_'+'_'.join(self.parameters)
+        self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
 
         # Flag indicating whether covariance has been computed
         self._ready = False
