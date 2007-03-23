@@ -7,6 +7,8 @@ from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Parameter, Node, PyMCBase
 
+# Changeset history
+# 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
 
 class SamplingMethod(object):
     """
@@ -28,8 +30,8 @@ class SamplingMethod(object):
         Must be overridden in subclasses.
       - tune():     Tunes proposal distribution widths for all self's Parameters.
 
-    
-    To instantiate a SamplingMethod called S with jurisdiction over a 
+
+    To instantiate a SamplingMethod called S with jurisdiction over a
     sequence/set N of PyMCBases:
 
       >>> S = SamplingMethod(N)
@@ -47,6 +49,7 @@ class SamplingMethod(object):
         self._asf = .1
         self._accepted = 0.
         self._rejected = 0.
+        self._state = ['_rejected', '_accepted', '_asf']
 
         # File away the pymc_objects
         for pymc_object in self.pymc_objects:
@@ -70,6 +73,7 @@ class SamplingMethod(object):
         self.children -= self.parameters
         self.children -= self.data
 
+        self._id = 'To define in subclasses'
     #
     # Must be overridden in subclasses
     #
@@ -83,7 +87,7 @@ class SamplingMethod(object):
         """
         Tunes the scaling hyperparameter for the proposal distribution
         according to the acceptance rate of the last k proposals:
-        
+
         Rate    Variance adaptation
         ----    -------------------
         <0.001        x 0.1
@@ -92,23 +96,23 @@ class SamplingMethod(object):
         >0.5          x 1.1
         >0.75         x 2
         >0.95         x 10
-        
+
         This method is called exclusively during the burn-in period of the
         sampling algorithm.
         """
-        
+
         if verbose:
             print
             print 'Tuning', self.name
             print '\tcurrent value:', self.get_value()
             print '\tcurrent proposal hyperparameter:', self._hyp*self._asf
-        
+
         # Calculate recent acceptance rate
         if not self._accepted > 0 or self._rejected > 0: return
         acc_rate = self._accepted / (self._accepted + self._rejected)
-        
+
         tuning = True
-        
+
         # Switch statement
         if acc_rate<0.001:
             # reduce by 90 percent
@@ -130,19 +134,19 @@ class SamplingMethod(object):
             self._asf *= 1.1
         else:
             tuning = False
-        
+
         # Re-initialize rejection count
         self._rejected = 0.
         self._accepted = 0.
-        
+
         # If the scaling factor is diverging, abort
         if self._asf > divergence_threshold:
             raise DivergenceError, 'Proposal distribution variance diverged'
-        
+
         # Compute covariance matrix in the multivariate case and the standard
         # variation in all other cases.
         #self.compute_scale(acc_rate,  int_length)
-        
+
         if verbose:
             print '\tacceptance rate:', acc_rate
             print '\tadaptive scaling factor:', self._asf
@@ -157,6 +161,14 @@ class SamplingMethod(object):
         return sum
 
     loglike = property(fget = _get_loglike)
+
+    def current_state(self):
+        """Return a dictionary with the current value of the variables defining
+        the state of the sampling method."""
+        state = {}
+        for s in self._state:
+            state[s] = getattr(self, s)
+        return state
 
 # The default SamplingMethod, which Model uses to handle singleton parameters.
 class OneAtATimeMetropolis(SamplingMethod):
@@ -179,11 +191,11 @@ class OneAtATimeMetropolis(SamplingMethod):
 
     scale:  The proposal jump width is set to scale * parameter.value.
 
-    dist:   The proposal distribution. Options are:    
+    dist:   The proposal distribution. Options are:
         'Normal':           Use a normal random-walk proposal.
-        'RoundedNormal':    Use a rounded normal random-walk proposal (for discrete 
+        'RoundedNormal':    Use a rounded normal random-walk proposal (for discrete
                             parameters).
-        'Prior':            Propose from the prior. This is automatically assigned if no 
+        'Prior':            Propose from the prior. This is automatically assigned if no
                             parameters depend on P.
 
 
@@ -195,8 +207,9 @@ class OneAtATimeMetropolis(SamplingMethod):
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
         self._dist = dist
-        
-        
+        self._id = 'OneAtATimeMetropolis_'+parameter.__name__
+
+
         # If self's extended children is the empty set (eg, if
         # self's parameter is a posterior predictive quantity of
         # interest), proposing from the prior is best.
@@ -213,17 +226,17 @@ class OneAtATimeMetropolis(SamplingMethod):
     def step(self):
 
         # Probability and likelihood for parameter's current value:
-        
+
         if self._dist == "Prior":
             logp = 0.
         else:
             logp = self.parameter.logp
-            
+
         loglike = self.loglike
 
         # Sample a candidate value
         self.propose()
-        
+
         # Probability and likelihood for parameter's proposed value:
         if self._dist == "Prior":
             logp_p = 0.
@@ -241,15 +254,15 @@ class OneAtATimeMetropolis(SamplingMethod):
         if log(random()) > logp_p + loglike_p - logp - loglike:
             # Revert parameter if fail
             self.parameter.value = self.parameter.last_value
-            
+
             self._rejected += 1
         else:
             self._accepted += 1
 
 
     def propose(self):
-        
-        # Propose from prior if it's more informative than the likelihood, 
+
+        # Propose from prior if it's more informative than the likelihood,
         # or if no parameters depend on self.parameter.
         if self._dist == "Prior":
             self.parameter.random()
@@ -306,6 +319,7 @@ class JointMetropolis(SamplingMethod):
         self.epoch = epoch
         self.memory = memory
         self.delay = delay
+        self._id = 'JointMetropolis_'+'_'.join(self.parameters)
 
         # Flag indicating whether covariance has been computed
         self._ready = False
@@ -336,22 +350,25 @@ class JointMetropolis(SamplingMethod):
             self._len += param_len
 
         self._proposal_deviate = zeros(self._len,dtype=float)
-            
-        self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)               
+
+        self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)
 
         # __init__ should also check that each parameter's value is an ndarray or
         # a numerical type.
+
+        self._state.append(['last_trace_index', '_cov', '_sig',
+        '_proposal_deviate', '_trace'])
 
     #
     # Compute and store matrix square root of covariance every epoch
     #
     def compute_sig(self):
-        
+
         try:
             print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
         except AttributeError:
             print 'Joint SamplingMethod ' + ' computing covariance.'
-        
+
         # Figure out which slice of the traces to use
         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
             trace_slice = slice(self._model._cur_trace_index-self.epoch * self.memory,\
@@ -360,24 +377,24 @@ class JointMetropolis(SamplingMethod):
         else:
             trace_slice = slice(self.delay, self._model._cur_trace_index)
             trace_len = (self._model._cur_trace_index - self.delay)
-            
-        
+
+
         # Store all the parameters' traces in self._trace
         for parameter in self.parameters:
             param_trace = parameter.trace(slicing=trace_slice)
-            
+
             # If parameter is an array, ravel each tallied value
             if isinstance(parameter.value, ndarray):
                 for i in range(trace_len):
                     self._trace[self._slices[parameter], i] = param_trace[i,:].ravel()
-            
+
             # If parameter is a scalar, there's no need.
             else:
                 self._trace[self._slices[parameter], :trace_len] = param_trace
 
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
-        
+
         self._sig = msqrt(self._cov).T
 
         self._ready = True

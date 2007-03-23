@@ -3,7 +3,9 @@
 # in the Py2App part of site-packages.
 
 # Changeset history
-# 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.  
+# 22/03/2007 -DH- Added methods to query the SamplingMethod's state and pass it to database.
+# 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
+
 __docformat__='reStructuredText'
 
 """ Summary"""
@@ -74,8 +76,7 @@ class Model(object):
         self.data = set()
         self.containers = set()
         self.extended_children = None
-        
-        
+
         self._generations = []
         self.__name__ = None
         self.status = 'ready'
@@ -189,7 +190,7 @@ class Model(object):
             dummy.children = copy(pymc_object.children)
             extend_children(dummy)
             self.extended_children[pymc_object] = dummy.children
-            
+
     def _parse_generations(self):
         """
         Parse up the _generations for model averaging.
@@ -363,7 +364,7 @@ class Model(object):
                 raise AttributeError, value
         return locals()
     status = property(**status())
-    
+
     def seed(self):
         """
         Seed new initial values for the parameters.
@@ -373,8 +374,8 @@ class Model(object):
                 if parameters.rseed is not None:
                     value = parameters.random(**parameters.parent_values)
             except:
-                pass    
-    
+                pass
+
     #
     # Tally
     #
@@ -407,13 +408,6 @@ class Model(object):
             pymc_object.value = pymc_object.trace()[trace_index]
 
 
-    def save_state(self):
-        """Save the sampler's current state in the database in order to 
-        restart sampling at a later time."""
-        self.db.state = dict(_current_iter = self._current_iter, 
-        _iter = self._iter, _burn = self._burn, _thin = self._thin)
-
-
     def save_traces(self,path='',fname=None):
         import cPickle
 
@@ -432,30 +426,33 @@ class Model(object):
 
         F = file(fname,'w')
         cPickle.dump(trace_dict,F)
-        F.close()    
+        F.close()
 
 
 
 class Sampler(Model):
     def __init__(self, input, db='ram'):
         Model.__init__(self, input, db)
-        self.sampling_methods = set()        
-        
+        self.sampling_methods = set()
+
         for item in self.input_dict.iteritems():
             if isinstance(item[1],Container):
                 self.__dict__[item[0]] = item[1]
                 self.sampling_methods.update(item[1].sampling_methods)
 
             if isinstance(item[1],SamplingMethod):
-                self.__dict__[item[0]] = item[1]                
+                self.__dict__[item[0]] = item[1]
                 self.sampling_methods.add(item[1])
                 setattr(item[1], '_model', self)
-        
-        
+
+
         # Default SamplingMethod
         self._SM = OneAtATimeMetropolis
         self._assign_steppingmethod()
-    
+
+        self._state = ['status', '_current_iter', '_iter', '_thin', '_burn',
+            '_tune_interval']
+
     def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000,verbose=True):
         """
         sample(iter,burn,thin)
@@ -476,25 +473,25 @@ class Sampler(Model):
         self.max_trace_length = length
 
         self.seed()
-        
+
         # Initialize database -> initialize traces.
         self.db._initialize(length, self)
-        
+
         # Loop
         self._loop()
-        
+
     def interactive_sample(self, *args, **kwds):
         # David- nice work! LikelihoodErrors seem to be ending up in the listener
         # thread somehow. I seem to remember something weird about that in the threading
         # documentation?
         self._thread = Thread(target=self.sample, args=args, kwargs=kwds)
         self._thread.start()
-        self.listen()
+        self.interactive_prompt()
 
     def interactive_continue(self):
         self._thread = Thread(target=self._loop)
         self._thread.start()
-        
+
     def _loop(self):
         self.status='running'
         try:
@@ -518,14 +515,14 @@ class Sampler(Model):
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
-                
+
                 self._current_iter += 1
-                
-            
+
+
                #self.save_traces() Made obsolete by the pickle database.Right?
         except Paused:
            return None
-           
+
         except KeyboardInterrupt:
             self.status='halted'
             print '\n Iteration ', i, ' of ', iter
@@ -537,13 +534,13 @@ class Sampler(Model):
         # Finalize
         self.db._finalize()
         self.status='ready'
-        
+
     def _assign_steppingmethod(self):
         """
-        Make sure every parameter has a SamplingMethod. If not, 
-        assign the default SM. 
+        Make sure every parameter has a SamplingMethod. If not,
+        assign the default SM.
         """
-        
+
         for parameter in self.parameters:
 
             # Is it a member of any SamplingMethod?
@@ -556,23 +553,23 @@ class Sampler(Model):
             # If not, make it a new SamplingMethod
             if homeless:
                 self.sampling_methods.add(self._SM(parameter))
-        
+
     def tune(self):
         """
         Tell all samplingmethods to tune themselves.
         """
         for sampling_method in self.sampling_methods:
             sampling_method.tune()
-        
-    def listen(self):
+
+    def interactive_prompt(self):
         """
         Drive the sampler from the prompt.
-        
-        Commands: 
+
+        Commands:
           i -- print current iteration index
           p -- pause
           c -- continue
-          q -- quit 
+          q -- quit
         """
         print self.listen.__doc__, '\n'
         while True:
@@ -596,3 +593,33 @@ class Sampler(Model):
             except KeyboardInterrupt:
                 print 'Exiting interactive prompt...'
                 break
+
+    def get_state(self):
+        """Return the sampler and sampling methods current state in order to
+        restart sampling at a later time."""
+        state = dict(sampler={}, sampling_methods={})
+        # The state of the sampler itself.
+        for s in self._state:
+            state['sampler'][s] = getattr(self, s)
+
+        # The state of each SamplingMethod.
+        for sm in self.sampling_methods:
+            smstate = {}
+            for s in sm._state:
+                smstate[s] = getattr(sm, s)
+            state['sampling_methods'][sm._id] = smstate.copy()
+
+        return state
+
+    def save_state(self):
+        """Tell the database to save the current state of the sampler."""
+        self.db.save_state(self.get_state())
+
+    def restore_state(self):
+        """Restore the state of the sampler and of the sampling methods to
+        the state stored in the database.
+        """
+        state = self.db.get_state()
+        self.__dict__.update(state['sampler'])
+        for sm in self.sampling_methods:
+            sm.__dict__.update(state['sampling_methods'][sm._id])
