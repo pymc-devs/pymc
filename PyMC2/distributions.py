@@ -21,7 +21,7 @@ import flib
 import PyMC2
 import numpy as np
 from utils import LikelihoodError
-from numpy import inf, random, sqrt, log, size, tan, pi
+from numpy import Inf, random, sqrt, log, size, tan, pi
 
 # Import utility functions
 import inspect, types
