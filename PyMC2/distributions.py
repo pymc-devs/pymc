@@ -250,9 +250,11 @@ def bernoulli_like(x, p):
       - :math:`Var(x)= p(1-p)`
 
     """
-
-    constrain(p, 0, 1,allow_equal=True)
-    constrain(x, 0, 1,allow_equal=True)
+    try:
+        constrain(p, 0, 1,allow_equal=True)
+        constrain(x, 0, 1,allow_equal=True)
+    except LikelihoodError:
+        return -inf
     return flib.bernoulli(x, p)
 
 
@@ -300,10 +302,12 @@ def beta_like(x, alpha, beta):
       - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-
-    constrain(alpha, lower=0, allow_equal=True)
-    constrain(beta, lower=0, allow_equal=True)
-    constrain(x, 0, 1, allow_equal=True)
+    try:
+        constrain(alpha, lower=0, allow_equal=True)
+        constrain(beta, lower=0, allow_equal=True)
+        constrain(x, 0, 1, allow_equal=True)
+    except LikelihoodError:
+        return -inf
     return flib.beta_like(x, alpha, beta)
 
 # Binomial----------------------------------------------
@@ -349,10 +353,12 @@ def binomial_like(x, n, p):
      - :math:`E(X)=np`
      - :math:`Var(X)=np(1-p)`
     """
-
-    constrain(p, 0, 1)
-    constrain(n, lower=x)
-    constrain(x, 0)
+    try:
+        constrain(p, 0, 1)
+        constrain(n, lower=x)
+        constrain(x, 0)
+    except LikelihoodError:
+        return -Inf
     return flib.binomial(x,n,p)
 
 # Categorical----------------------------------------------
@@ -420,8 +426,10 @@ def cauchy_like(x, alpha, beta):
     :Note:
       - Mode and median are at alpha.
     """
-
-    constrain(beta, lower=0)
+    try:
+        constrain(beta, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.cauchy(x,alpha,beta)
 
 # Chi square----------------------------------------------
@@ -464,9 +472,11 @@ def chi2_like(x, k):
       - :math:`Var(X)=2k`
 
     """
-
-    constrain(x, lower=0)
-    constrain(k, lower=0)
+    try:
+        constrain(x, lower=0)
+        constrain(k, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.gamma(x, 0.5*k, 2)
 
 # Dirichlet----------------------------------------------
@@ -514,8 +524,11 @@ def dirichlet_like(x, theta):
     """
 
     x = np.atleast_2d(x)
-    constrain(theta, lower=0)
-    constrain(x, lower=0)
+    try:
+        constrain(theta, lower=0)
+        constrain(x, lower=0)
+    except LikelihoodError:
+        return -inf
     #constrain(sum(x,1), upper=1, allow_equal=True) #??
     #constrain(sum(x,1), lower=1, allow_equal=True)
     if np.any(np.around(x.sum(1), 6)!=1):
@@ -564,9 +577,11 @@ def exponential_like(x, beta):
       - :math:`E(X) = \beta`
       - :math:`Var(X) = \beta^2`
     """
-
-    constrain(x, lower=0)
-    constrain(beta, lower=0)
+    try:
+        constrain(x, lower=0)
+        constrain(beta, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.gamma(x, 1, beta)
 
 # Exponentiated Weibull-----------------------------------
@@ -648,10 +663,12 @@ def gamma_like(x, alpha, beta):
         Scale parameter :math:`\beta > 0`.
 
     """
-
-    constrain(x, lower=0)
-    constrain(alpha, lower=0)
-    constrain(beta, lower=0)
+    try:
+        constrain(x, lower=0)
+        constrain(alpha, lower=0)
+        constrain(beta, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.gamma(x, alpha, beta)
 
 
@@ -739,9 +756,11 @@ def geometric_like(x, p):
       - :math:`Var(X)=\frac{1-p}{p^2}`
 
     """
-
-    constrain(p, 0, 1)
-    constrain(x, lower=0)
+    try:
+        constrain(p, 0, 1)
+        constrain(x, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.geometric(x, p)
 
 # Half-normal----------------------------------------------
@@ -781,9 +800,11 @@ def half_normal_like(x, tau):
         :math:`\tau > 0`
 
     """
-
-    constrain(tau, lower=0)
-    constrain(x, lower=0, allow_equal=True)
+    try:
+        constrain(tau, lower=0)
+        constrain(x, lower=0, allow_equal=True)
+    except LikelihoodError:
+        return -inf
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
@@ -829,8 +850,10 @@ def hypergeometric_like(x, draws, success, failure):
     :Note:
       :math:`E(X) = \frac{draws failures}{success+failures}`
     """
-
-    constrain(x, max(0, draws - failure), min(success, draws))
+    try:
+        constrain(x, max(0, draws - failure), min(success, draws))
+    except LikelihoodError:
+        return -inf
     return flib.hyperg(x, draws, success, success+failure)
 
 # Inverse gamma----------------------------------------------
@@ -876,10 +899,12 @@ def inverse_gamma_like(x, alpha, beta):
     :Note:
       :math:`E(X)=\frac{1}{\beta(\alpha-1)}` for :math:`\alpha > 1`.
     """
-
-    constrain(x, lower=0)
-    constrain(alpha, lower=0)
-    constrain(beta, lower=0)
+    try:
+        constrain(x, lower=0)
+        constrain(alpha, lower=0)
+        constrain(beta, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.igamma(x, alpha, beta)
 
 # Lognormal----------------------------------------------
@@ -925,9 +950,11 @@ def lognormal_like(x, mu, tau):
     :Note:
       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
     """
-
-    constrain(tau, lower=0)
-    constrain(x, lower=0)
+    try:
+        constrain(tau, lower=0)
+        constrain(x, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.lognormal(x,mu,tau)
 
 # Multinomial----------------------------------------------
@@ -981,10 +1008,13 @@ def multinomial_like(x, n, p):
 
     x = np.atleast_2d(x)
     p = np.atleast_2d(p)
-    constrain(p, lower=0, allow_equal=True)
-    constrain(x, lower=0, allow_equal=True)
-    constrain(p.sum(1), upper=1, allow_equal=True)
-    constrain(x.sum(1), upper=n, allow_equal=True)
+    try:
+        constrain(p, lower=0, allow_equal=True)
+        constrain(x, lower=0, allow_equal=True)
+        constrain(p.sum(1), upper=1, allow_equal=True)
+        constrain(x.sum(1), upper=n, allow_equal=True)
+    except LikelihoodError:
+        return -inf
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
@@ -1027,8 +1057,10 @@ def multivariate_hypergeometric_like(x, m):
 
     x < m
     """
-
-    constrain(x, upper=m)
+    try:
+        constrain(x, upper=m)
+    except LikelihoodError:
+        return -inf
     return flib.mvhyperg(x, m)
 
 # Multivariate normal--------------------------------------
@@ -1063,8 +1095,10 @@ def multivariate_normal_like(x, mu, tau):
     tau: (k,k)
     \trace(tau) > 0
     """
-
-    constrain(np.diagonal(tau), lower=0)
+    try:
+        constrain(np.diagonal(tau), lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.vec_mvnorm(x, mu, tau)
 
 # Negative binomial----------------------------------------
@@ -1098,10 +1132,12 @@ def negative_binomial_like(x, mu, alpha):
 
     x > 0, mu > 0, alpha > 0
     """
-
-    constrain(mu, lower=0)
-    constrain(alpha, lower=0)
-    constrain(x, lower=0)
+    try:
+        constrain(mu, lower=0)
+        constrain(alpha, lower=0)
+        constrain(x, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.negbin2(x, mu, alpha)
 
 # Normal---------------------------------------------------
@@ -1146,8 +1182,10 @@ def normal_like(x, mu, tau):
       - :math:`Var(X) = 1/\tau`
 
     """
-
-    constrain(tau, lower=0)
+    try:
+        constrain(tau, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.normal(x, mu, tau)
 
 
@@ -1196,9 +1234,11 @@ def poisson_like(x,mu):
       - :math:`E(x)=\mu`
       - :math:`Var(x)=\mu`
     """
-
-    constrain(x, lower=0,allow_equal=True)
-    constrain(mu, lower=0,allow_equal=True)
+    try:
+        constrain(x, lower=0,allow_equal=True)
+        constrain(mu, lower=0,allow_equal=True)
+    except LikelihoodError:
+        return -inf
     return flib.poisson(x,mu)
 
 # Uniform--------------------------------------------------
@@ -1276,10 +1316,12 @@ def weibull_like(x, alpha, beta):
       - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha}`
       - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2`
     """
-
-    constrain(alpha, lower=0)
-    constrain(beta, lower=0)
-    constrain(x, lower=0)
+    try:
+        constrain(alpha, lower=0)
+        constrain(beta, lower=0)
+        constrain(x, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.weibull(x, alpha, beta)
 
 # Wishart---------------------------------------------------
@@ -1325,9 +1367,11 @@ def wishart_like(X, n, Tau):
         Symmetric and positive definite
 
     """
-
-    constrain(np.diagonal(Tau), lower=0)
-    constrain(n, lower=0)
+    try:
+        constrain(np.diagonal(Tau), lower=0)
+        constrain(n, lower=0)
+    except LikelihoodError:
+        return -inf
     return flib.wishart(X, n, Tau)
 
 
