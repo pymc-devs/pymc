@@ -7,8 +7,8 @@ l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D','S']
-from PyMC2 import parameter, data, OneAtATimeMetropolis, node
-from numpy import array, log, sum, ones, concatenate
+from PyMC2 import parameter, data, OneAtATimeMetropolis, node, LikelihoodError
+from numpy import array, log, sum, ones, concatenate, inf
 from PyMC2 import constrain, exponential_like, poisson_like
 
 
@@ -25,7 +25,10 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 @parameter
 def s(value=50, length=110):
     """Change time for rate parameter."""
-    constrain(value, 0, length)
+    try:
+        constrain(value, 0, length)
+    except LikelihoodError:
+        return -inf
     return 0.
 
 @parameter

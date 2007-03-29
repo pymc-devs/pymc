@@ -109,8 +109,6 @@ class Model(object):
 
         self.pymc_objects = self.nodes | self.parameters | self.data
 
-        self._assign_database_backend(db)
-
     def _fileitem(self, item):
         """
         Store an item into the proper set:
@@ -138,46 +136,6 @@ class Model(object):
                 if item[1].isdata:
                     self.data.add(item[1])
                 else:  self.parameters.add(item[1])
-
-    def _assign_database_backend(self, db):
-        """Assign Trace instance to parameters and nodes and Database instance
-        to self.
-
-        :Parameters:
-          - `db` : string, Database instance
-            The name of the database module (see below), or a Database instance.
-
-        Available databases:
-          - `no_trace` : Traces are not stored at all.
-          - `ram` : Traces stored in memory.
-          - `txt` : Traces stored in memory and saved in txt files at end of
-                sampling.
-          - `sqlite` : Traces stored in sqlite database.
-          - `mysql` : Traces stored in a mysql database.
-          - `hdf5` : Traces stored in an HDF5 file.
-        """
-        # If not already done, load the trace backend from the database module,
-        # and assign database instance to Model.
-        if type(db) is str:
-            module = getattr(database, db)
-            self.db = module.Database()
-        #elif isinstance(db, database.BaseDatabase):
-        #    self.db = db
-        else:
-            module = db.__module__
-            self.db = db
-
-        no_trace = getattr(database,'no_trace')
-        #reload(no_trace) is that necessary ?
-
-        self._pymc_objects_to_tally = set()
-        # Assign trace instance to parameters and nodes.
-        for object in self.parameters | self.nodes :
-            if object.trace:
-                object.trace = module.Trace(object, self.db)
-                self._pymc_objects_to_tally.add(object)
-            else:
-                object.trace = no_trace.Trace(object,self.db)
 
 
     def _extend_children(self):
@@ -448,11 +406,57 @@ class Sampler(Model):
 
         # Default SamplingMethod
         self._SM = OneAtATimeMetropolis
-        self._assign_steppingmethod()
+        self._assign_samplingmethod()
 
         self._state = ['status', '_current_iter', '_iter', '_thin', '_burn',
             '_tune_interval']
+            
+        self._assign_database_backend(db)
 
+    def _assign_database_backend(self, db):
+        """Assign Trace instance to parameters and nodes and Database instance
+        to self.
+
+        :Parameters:
+          - `db` : string, Database instance
+            The name of the database module (see below), or a Database instance.
+
+        Available databases:
+          - `no_trace` : Traces are not stored at all.
+          - `ram` : Traces stored in memory.
+          - `txt` : Traces stored in memory and saved in txt files at end of
+                sampling.
+          - `sqlite` : Traces stored in sqlite database.
+          - `mysql` : Traces stored in a mysql database.
+          - `hdf5` : Traces stored in an HDF5 file.
+        """
+        # Objects that are not to be tallied are assigned a no_trace.Trace
+        # Tallyable objects are listed in the _pymc_objects_to_tally set. 
+        no_trace = getattr(database,'no_trace')
+        self._pymc_objects_to_tally = set()
+        for object in self.parameters | self.nodes :
+            if object.trace:
+                self._pymc_objects_to_tally.add(object)
+            else:
+                object.trace = no_trace.Trace()
+
+        # If not already done, load the trace backend from the database 
+        # module, and assign a database instance to Model.
+        if type(db) is str:
+            module = getattr(database, db)
+            self.db = module.Database()
+        elif isinstance(db, database.base.Database):
+            self.db = db
+            self.restore_state()
+        else:
+            module = db.__module__
+            self.db = db
+        
+        
+        # Assign Trace instances to tallyable objects. 
+        self.db.connect(self)
+        
+        
     def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000,verbose=True):
         """
         sample(iter,burn,thin)
@@ -475,7 +479,7 @@ class Sampler(Model):
         self.seed()
 
         # Initialize database -> initialize traces.
-        self.db._initialize(length, self)
+        self.db._initialize(length)
 
         # Loop
         self._loop()
@@ -532,10 +536,12 @@ class Sampler(Model):
 
 
         # Finalize
-        self.db._finalize()
         self.status='ready'
+        self.save_state()
+        self.db._finalize()
+        
 
-    def _assign_steppingmethod(self):
+    def _assign_samplingmethod(self):
         """
         Make sure every parameter has a SamplingMethod. If not,
         assign the default SM.
@@ -613,13 +619,13 @@ class Sampler(Model):
 
     def save_state(self):
         """Tell the database to save the current state of the sampler."""
-        self.db.save_state(self.get_state())
+        self.db._state_ = self.get_state()
 
     def restore_state(self):
         """Restore the state of the sampler and of the sampling methods to
         the state stored in the database.
         """
-        state = self.db.get_state()
+        state = self.db._state_
         self.__dict__.update(state['sampler'])
         for sm in self.sampling_methods:
             sm.__dict__.update(state['sampling_methods'][sm._id])

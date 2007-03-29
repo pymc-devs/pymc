@@ -13,7 +13,7 @@ There could be two ways to initialize a Database instance:
 2. Loading : db = PyMC2.database.pickle.load(file)
 
 Supporting 2 is a bit tricky, since it implies that we must :
-a) restore the state of the database, susing previously computed values,
+a) restore the state of the database, using previously computed values,
 b) restore the state of the Sampler.
 which means that the database must also store the Sampler's state.
 """
@@ -26,10 +26,11 @@ import string, cPickle
 class Trace(ram.Trace):
     pass
 
-class Database(object):
+class Database(no_trace.Database):
     """Pickle database backend.
     Saves the trace to a pickle file.
     """
+    Trace = Trace
     def __init__(self, filename=None):
         """
         Return a Pickle database instance.
@@ -38,56 +39,60 @@ class Database(object):
             - `filename` : Name of file where the results are stored.
         """
         self.filename = filename
-        self.state = {}
+        self.Trace = Trace
 
-    def _initialize(self, length, model):
+    def _initialize(self, length):
         """Define filename to store simulation results."""
-        self.model = model
 
         if self.filename is None:
             modname = self.model.__name__.split('.')[-1]
-            name = modname
+            name = modname+'.pickle'
             i=0
             existing_names = os.listdir(".")
             while True:
-                if name+'.pymc' in existing_names:
-                    name = modname+'_%d'%i+'.pymc'
+                if name+'.pickle' in existing_names:
+                    name = modname+'_%d'%i+'.pickle'
                     i += 1
                 else:
                     break
             self.filename = name
 
         for object in self.model._pymc_objects_to_tally:
-            if self.reloading:
-                object._trace = self.container[object.__name__]
-            else:
-                object.trace._initialize(length)
+            object.trace._initialize(length)
 
 
     def _finalize(self):
         """Dump traces using cPickle."""
         container={}
-        for object in self.model._pymc_objects_to_tally:
-            object.trace._finalize()
-            container[object.__name__] = object.trace.gettrace()
-        container['state'] = self.state
+        for obj in self.model._pymc_objects_to_tally:
+            obj.trace._finalize()
+            container[obj.__name__] = obj.trace._trace
+        container['_state_'] = self._state_
         file = open(self.filename, 'w')
         cPickle.dump(container, file)
         file.close()
 
-    def save_state(self, state):
-        self.state = state
-
-    def get_state(self):
-        return self.state
-
+##    def state():
+##        def fset(self, s):
+##            self.__state = s
+##        def fget(self):
+##            return self.__state
+##        return locals()
+##    state = property(**state())    
+    
 def load(file):
     """Load an existing database.
 
     Return a Database instance.
     """
-    container = cPickle.load(f)
-    f.close()
-    db = Database(f.name)
-
-    # Now traces must be reset to their previous state.
+    container = cPickle.load(file)
+    file.close()
+    db = Database(file.name)
+    for k,v in container.iteritems():
+        if k == '_state_':
+           db._state_ = v
+        else:
+            setattr(db, k, Trace(v))
+    return db
+        
+    

@@ -15,7 +15,7 @@ class Trace(object):
 
     Database backend based on the HDF5 format.
     """
-    def __init__(self, obj, db):
+    def __init__(self):
         """Initialize the instance.
         :Parameters:
           obj : PyMC object
@@ -23,8 +23,6 @@ class Trace(object):
           db : {'h5':<hdf5 file object>, 'group':<current group>}
           update_interval: how often database is updated from trace
         """
-        self.obj = obj
-        self.db = db
 
     def _initialize(self, length):
         """Initialize the trace."""

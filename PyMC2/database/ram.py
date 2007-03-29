@@ -5,36 +5,38 @@
 
 
 from numpy import zeros,shape
-import no_trace
+import base
 
-class Trace(object):
+class Trace(base.Trace):
     """RAM trace 
     
     Store the samples in memory. 
     """
-    def __init__(self, obj, db):
+    def __init__(self, value=None):
         """Initialize the trace attributes.
         
         :Parameters:
-          obj : PyMC object
-            Node or Parameter instance.
-          db : database instance
-            Reference to the database object.
+          - `value` : Initial value.
         """
-        self.obj = obj
-        self.db = db
-        self._trace = []
+        if value is None:
+            self._trace = []
+        else:
+            self._trace = value
 
     def _initialize(self, length):
         """Create an array of zeros with shape (length, shape(obj)).
+        :Parameters:
+          - `obj` : PyMC object
+                Node or Parameter instance.
+          - `length` : Length of array to initialize.
         """
         try:
             self._trace.append( zeros ((length,) + shape(self.obj.value), self.obj.value.dtype) )
         except AttributeError:
             self._trace.append( zeros ((length,) + shape(self.obj.value), dtype=object) )           
-
+        
     def tally(self, index):
-        """Put current value in trace."""
+        """Store current value of object."""
         try:
             self._trace[-1][index] = self.obj.value.copy()
         except AttributeError:
@@ -60,13 +62,10 @@ class Trace(object):
             slicing = slice(burn, None, thin)
         return self._trace[chain][slicing]
 
-    def _finalize(self):
-        """Nothing done here."""
-        pass
-
     __call__ = gettrace
 
-class Database(no_trace.Database):
+class Database(base.Database):
     """RAM database."""
-    pass
+    def __init__(self):
+        self.Trace = Trace
     
