@@ -1,4 +1,4 @@
-      double precision function whrand()
+      real function whrand()
 c
 c     Algorithm AS 183 Appl. Statist. (1982) vol.31, no.2
 c
@@ -35,7 +35,7 @@ c
       return
       end
 
-        double precision function uniform()
+        real function uniform()
 c
 c    Generate uniformly distributed random numbers using the 32-bit
 c    generator from figure 3 of:
@@ -86,13 +86,13 @@ c
 
 c Returns n samples from categorical random variable (histogram)
 
-cf2py double precision dimension(k),intent(in) :: hist
-cf2py double precision intent(in) :: mn,step
+cf2py real dimension(k),intent(in) :: hist
+cf2py real intent(in) :: mn,step
 cf2py integer intent(in) :: n
-cf2py double precision dimension(n),intent(out) :: s
+cf2py real dimension(n),intent(out) :: s
 cf2py integer intent(hide),depend(hist) :: k=len(hist)
 
-      DOUBLE PRECISION hist(k),s(n),mn,step,sump,u,rand
+      REAL hist(k),s(n),mn,step,sump,u,rand
       INTEGER n,k,i,j
 
 c repeat for n samples
@@ -118,14 +118,14 @@ c assign value to array
 
 c Categorical log-likelihood function
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(k),intent(in) :: hist
-cf2py double precision intent(in) :: mn,step
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(k),intent(in) :: hist
+cf2py real intent(in) :: mn,step
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(hist) :: k=len(hist)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
             
-      DOUBLE PRECISION hist(k),x(n),mn,step,val,like
+      REAL hist(k),x(n),mn,step,val,like
       INTEGER n,k,i,j
 
       like = 0.0
@@ -155,9 +155,9 @@ c Check that x is in [a, b] if allow_equal, or
 c that x is in ]a, b[ if not. 
 
 cf2py integer, intent(out) :: pass
-cf2py double precision dimension(n), intent(in) :: x
-cf2py double precision dimension(na), intent(in) :: a
-cf2py double precision dimension(nb), intent(in) :: b
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nb), intent(in) :: b
 cf2py integer intent(hide), depend(x) :: n = len(x)
 cf2py integer intent(hide), depend(a) :: na = len(a)
 cf2py integer intent(hide), depend(b) :: nb = len(b)
@@ -166,7 +166,7 @@ cf2py logical intent(in) :: allow_equal
       
       IMPLICIT NONE
       INTEGER n, na, nb, i, pass
-      DOUBLE PRECISION x(n), a(na), b(nb), ta, tb
+      REAL x(n), a(na), b(nb), ta, tb
       LOGICAL allow_equal, not_scalar_a, not_scalar_b
       pass = 1 
       
@@ -201,17 +201,17 @@ cf2py logical intent(in) :: allow_equal
       
 c Compute z = (x-mu)/scale
 
-cf2py double precision dimension(n), intent(in) :: x
-cf2py double precision dimension(n), intent(out) :: z
-cf2py double precision dimension(nloc), intent(in) :: loc
-cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(n), intent(out) :: z
+cf2py real dimension(nloc), intent(in) :: loc
+cf2py real dimension(nscale), intent(in) :: scale
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
 cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
 
 
-      DOUBLE PRECISION x(n), loc(nloc), scale(nscale), z(n)
-      DOUBLE PRECISION mu, sigma
+      REAL x(n), loc(nloc), scale(nscale), z(n)
+      REAL mu, sigma
       INTEGER n, nloc, nscale, i
       LOGICAL not_scalar_loc, not_scalar_scale
       
@@ -233,19 +233,19 @@ cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
 c Return the uniform likelihood of x.
 c CREATED 12/06 DH
 
-cf2py double precision dimension(n), intent(in) :: x
-cf2py double precision dimension(nlower), intent(in) :: lower
-cf2py double precision dimension(nupper), intent(in) :: upper 
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(nlower), intent(in) :: lower
+cf2py real dimension(nupper), intent(in) :: upper 
 cf2py integer intent(hide), depend(x) :: n=len(x)
 cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
 cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
 
         IMPLICIT NONE
         
         INTEGER n, nlower, nupper, i
-        DOUBLE PRECISION x(n), lower(nlower), upper(nupper)
-        DOUBLE PRECISION like, low, high
+        REAL x(n), lower(nlower), upper(nupper)
+        REAL like, low, high
                 
         low = lower(1)
         high = upper(1)       
@@ -269,24 +269,23 @@ c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
 c Where z is standardized, ie z = (x-mu)/scale
 c CREATED 12/06 DH
 
-cf2py double precision dimension(n), intent(in) :: x
-cf2py double precision dimension(na), intent(in) :: a
-cf2py double precision dimension(nc), intent(in) :: c
-cf2py double precision dimension(nloc), intent(in) :: loc
-cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py real dimension(n), intent(in) :: x
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nc), intent(in) :: c
+cf2py real dimension(nloc), intent(in) :: loc
+cf2py real dimension(nscale), intent(in) :: scale
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(a) :: na=len(a)
 cf2py integer intent(hide),depend(c) :: nc=len(c)
 cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
 cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
 
-      DOUBLE PRECISION x(n), z(n), a(na), c(nc) 
-      DOUBLE PRECISION loc(nloc), scale(nscale)
+      REAL x(n), z(n), a(na), c(nc), loc(nloc), scale(nscale)
       INTEGER i, n, na, nc, nloc, nscale
-      DOUBLE PRECISION like
+      REAL like
       LOGICAL not_scalar_a, not_scalar_c, not_scalar_scale
-      DOUBLE PRECISION aa, cc, sigma, pdf
+      REAL aa, cc, sigma, pdf
       
       aa = a(1)
       cc = c(1)
@@ -321,18 +320,18 @@ c     Accept parameters a,c of length 1 or n.
 
 c CREATED 12/06 DH.
 
-cf2py double precision dimension(n), intent(in) :: q
-cf2py double precision dimension(na), intent(in) :: a
-cf2py double precision dimension(nc), intent(in) :: c      
+cf2py real dimension(n), intent(in) :: q
+cf2py real dimension(na), intent(in) :: a
+cf2py real dimension(nc), intent(in) :: c      
 cf2py integer intent(hide),depend(q) :: n=len(q)
 cf2py integer intent(hide),depend(a) :: na=len(a)
 cf2py integer intent(hide),depend(c) :: nc=len(c)
-cf2py double precision dimension(n), intent(out) :: ppf
+cf2py real dimension(n), intent(out) :: ppf
 
 
       IMPLICIT NONE
       INTEGER n,na,nc,i
-      DOUBLE PRECISION q(n), a(na), c(nc), ppf(n),ta,tc
+      REAL q(n), a(na), c(nc), ppf(n),ta,tc
       LOGICAL not_scalar_a, not_scalar_c
       
 c     Check length of input arrays.
@@ -353,18 +352,18 @@ c     Check length of input arrays.
       END SUBROUTINE exponweib_ppf
 
 
-      DOUBLE PRECISION FUNCTION combinationln(n,k)
+	  REAL FUNCTION combinationln(n,k)
 
 c Ln of the number of different combinations of n different things, taken k at a time. 
 c DH, 5.02.2007
 
-      IMPLICIT NONE
-      INTEGER n, k
-      DOUBLE PRECISION factln
+	  IMPLICIT NONE
+	  INTEGER n, k
+	  REAL factln
 
-      combinationln= factln(n) - factln(k) - factln(n-k)
+	  combinationln= factln(n) - factln(k) - factln(n-k)
 
-      END FUNCTION combinationln
+	  END FUNCTION combinationln
 
       SUBROUTINE hyperg(x,draws,success,total,n,nd,ns,nt,like)
 
@@ -383,13 +382,13 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(draws,n),check(nd==1||nd==n) :: nd=len(draws)
 cf2py integer intent(hide),depend(success,n),check(ns==1||ns==n) :: ns=len(success)
 cf2py integer intent(hide),depend(total,n),check(nt==1||nt==n) :: nt=len(total)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
 
       IMPLICIT NONE
       INTEGER i,n,nd,ns,nt
       INTEGER x(n),draws(nd), success(ns),total(nt)
       INTEGER draws_tmp, s_tmp, t_tmp
-      DOUBLE PRECISION like, combinationln
+      REAL like, combinationln
 
 c      CALL constrain(d,x,total,allow_equal=1)
 c      CALL constrain(red,x,total,allow_equal=1)
@@ -404,10 +403,10 @@ c      CALL constrain(x, 0, d, allow_equal=1)
 c Combinations of x red balls
         if (nd .NE. 1) draws_tmp = draws(i)
         if (ns .NE. 1) s_tmp = success(i)
-        if (nt .NE. 1) t_tmp = total(i) 
-        like = like + combinationln(t_tmp-s_tmp, x(i))
-        like = like + combinationln(s_tmp,draws_tmp-x(i))
-        like = like - combinationln(t_tmp, draws_tmp)
+        if (nt .NE. 1) t_tmp = total(i)	
+		like = like + combinationln(t_tmp-s_tmp, x(i))
+		like = like + combinationln(s_tmp,draws_tmp-x(i))
+ 		like = like - combinationln(t_tmp, draws_tmp)
       enddo
       return
       END
@@ -419,11 +418,11 @@ c Multivariate hypergeometric log-likelihood function
 
 cf2py integer dimension(k),intent(in) :: x,color
 cf2py integer intent(hide),depend(x) :: k=len(x)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
 
       INTEGER x(k),color(k)
       INTEGER d,total,i,k
-      DOUBLE PRECISION like
+      REAL like
       
       total = 0
       d = 0
@@ -447,14 +446,14 @@ c Poisson log-likelihood function
 c UPDATED 1/16/07 AP
 
 cf2py integer dimension(n),intent(in) :: x
-cf2py double precision dimension(nmu),intent(in) :: mu
-cf2py double precision intent(out) :: like
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
      
       INTEGER x(n)
-      DOUBLE PRECISION mu(nmu)
-      DOUBLE PRECISION like,sumx, mut
+      REAL mu(nmu)
+      REAL like,sumx, mut
       INTEGER n,i
       LOGICAL not_scalar_mu
 
@@ -481,16 +480,16 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
 c Weibull log-likelihood function      
 c UPDATED 1/16/07 AP
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(nalpha),intent(in) :: alpha
-cf2py double precision dimension(nbeta),intent(in) :: beta
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nalpha),intent(in) :: alpha
+cf2py real dimension(nbeta),intent(in) :: beta
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
 cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
 
-      DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
-      DOUBLE PRECISION like
+      REAL x(n),alpha(nalpha),beta(nbeta)
+      REAL like
       INTEGER n,nalpha,nbeta,i
       LOGICAL not_scalar_alpha
       LOGICAL not_scalar_beta
@@ -520,18 +519,18 @@ c Cauchy log-likelihood function
 
 c UPDATED 17/01/2007 DH. 
 
-cf2py double precision dimension(nx),intent(in) :: x
-cf2py double precision dimension(na),intent(in) :: alpha
-cf2py double precision dimension(nb),intent(in) :: beta
-cf2py double precision intent(out) :: like
+cf2py real dimension(nx),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 
       IMPLICIT NONE
       INTEGER nx,na,nb,i
-      DOUBLE PRECISION x(nx),alpha(na),beta(nb)
-      DOUBLE PRECISION like, atmp, btmp, PI
+      REAL x(nx),alpha(na),beta(nb)
+      REAL like, atmp, btmp, PI
       LOGICAL not_scalar_alpha, not_scalar_beta
       PARAMETER (PI=3.141592653589793238462643d0) 
       
@@ -558,19 +557,19 @@ c Updated 24/01/2007.
       
 cf2py integer dimension(n),intent(in) :: x
 cf2py integer dimension(nr),intent(in) :: r
-cf2py double precision dimension(np),intent(in) :: p
+cf2py real dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(r,n),check(nr==1 || nr==n) :: nr=len(r)
 cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
       
       IMPLICIT NONE
       INTEGER n,nr,np,i
-      DOUBLE PRECISION like
-      DOUBLE PRECISION p(np),p_tmp
+      REAL like
+      REAL p(np),p_tmp
       INTEGER x(n),r(nr),r_tmp
       LOGICAL not_scalar_r, not_scalar_p
-      DOUBLE PRECISION factln
+      REAL factln
       
       not_scalar_r = (nr .NE. 1)
       not_scalar_p = (np .NE. 1)
@@ -595,20 +594,20 @@ c (alternative parameterization)
 c Updated 24/01/2007 DH.
 
 cf2py integer dimension(n),intent(in) :: x
-cf2py double precision dimension(na),intent(in) :: a
-cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py real dimension(na),intent(in) :: a
+cf2py real dimension(nmu),intent(in) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
 cf2py integer intent(hide),depend(a,x),check(na==1 || na==len(x)) :: na=len(a)
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
       
       IMPLICIT NONE
       INTEGER n,i,nmu,na
-      DOUBLE PRECISION like
-      DOUBLE PRECISION a(na),mu(nmu), a_tmp, mu_tmp
+      REAL like
+      REAL a(na),mu(nmu), a_tmp, mu_tmp
       INTEGER x(n)
       LOGICAL not_scalar_a, not_scalar_mu
-      DOUBLE PRECISION gammln, factln
+      REAL gammln, factln
 
       not_scalar_mu = (nmu .NE. 1)
       not_scalar_a = (na .NE. 1)
@@ -634,16 +633,16 @@ c Geometric log-likelihood
 c Created 29/01/2007 DH.
 
 cf2py integer dimension(n),intent(in) :: x
-cf2py double precision dimension(np),intent(in) :: p
+cf2py real dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
 
       IMPLICIT NONE
       INTEGER n,np,i
       INTEGER x(n)
-      DOUBLE PRECISION p(np), p_tmp
-      DOUBLE PRECISION like
+      REAL p(np), p_tmp
+      REAL like
 
       p_tmp = p(1)
       like = 0.0
@@ -663,19 +662,19 @@ c  Updated 17/01/2007. DH.
 
 cf2py integer dimension(nx),intent(in) :: x
 cf2py integer dimension(nn),intent(in) :: n
-cf2py double precision dimension(np),intent(in) :: p
+cf2py real dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
 cf2py integer intent(hide),depend(p),check(np==1 || np==len(x)) :: np=len(p)
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
       IMPLICIT NONE
       INTEGER nx,nn,np,i
-      DOUBLE PRECISION like, p(np)
+      REAL like, p(np)
       INTEGER x(nx),n(nn)
       LOGICAL not_scalar_n,not_scalar_p
       INTEGER ntmp
-      DOUBLE PRECISION ptmp
-      DOUBLE PRECISION factln
+      REAL ptmp
+      REAL factln
       
       not_scalar_n = (nn .NE. 1)
       not_scalar_p = (np .NE. 1) 
@@ -700,14 +699,14 @@ c Binomial log-likelihood function
 c Modified on Jan 16 2007 by D. Huard to allow scalar p.
 
 cf2py integer dimension(nx),intent(in) :: x
-cf2py double precision dimension(np),intent(in) :: p
+cf2py real dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(p),check(len(p)==1 || len(p)==len(x)):: np=len(p) 
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
       IMPLICIT NONE
       
       INTEGER np,nx,i
-      DOUBLE PRECISION p(np), ptmp, like
+      REAL p(np), ptmp, like
       INTEGER x(nx)
       LOGICAL not_scalar_p
 
@@ -728,20 +727,20 @@ C     Check parameter size
 C
 C     COMPUTE THE LIKELIHOOD OF THE GENERALIZED EXTREME VALUE DISTRIBUTION.
 C
-Cf2py double precision dimension(n), intent(in):: x
-Cf2py double precision dimension(nxi), intent(in):: xi
-Cf2py double precision dimension(nmu), intent(in):: mu
-Cf2py double precision dimension(nsigma), intent(in):: sigma
+Cf2py real dimension(n), intent(in):: x
+Cf2py real dimension(nxi), intent(in):: xi
+Cf2py real dimension(nmu), intent(in):: mu
+Cf2py real dimension(nsigma), intent(in):: sigma
 Cf2py integer intent(hide), depend(x) :: n=len(x)
 Cf2py integer intent(hide), depend(xi,n),check(nxi==1||nxi==n) :: nxi=len(xi)
 Cf2py integer intent(hide), depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 Cf2py integer intent(hide), depend(sigma,n),check(nsigma==1||nsigma==n) :: nsigma=len(sigma)
-Cf2py double precision intent(out):: like
+Cf2py real intent(out):: like
 
       INTEGER n, nmu, nxi, nsigma, i
-      DOUBLE PRECISION x(n), xi(nxi), mu(nmu), sigma(nsigma), like
-      DOUBLE PRECISION Z(N), EX(N), PEX(N)
-      DOUBLE PRECISION XI_tmp, SIGMA_tmp
+      REAL x(n), xi(nxi), mu(nmu), sigma(nsigma), like
+      REAL Z(N), EX(N), PEX(N)
+      REAL XI_tmp, SIGMA_tmp
         
       CALL standardize(x,mu,sigma,n,nmu,nsigma,z)
 
@@ -775,25 +774,25 @@ C     GENERALIZED EXTREME VALUE DISTRIBUTION.
 C
 C Created 29/01/2007 DH.
 C
-Cf2py double precision dimension(n), intent(in):: q
-Cf2py double precision dimension(nxi), intent(in):: xi
+Cf2py real dimension(n), intent(in):: q
+Cf2py real dimension(nxi), intent(in):: xi
 Cf2py integer intent(hide), depend(q)::n=len(q)
 Cf2py integer intent(hide), depend(xi,n),check(nxi==1 || nxi==n) :: nxi=len(xi)
-Cf2py double precision dimension(n), intent(out):: ppf
+Cf2py real dimension(n), intent(out):: ppf
 
       IMPLICIT NONE
       INTEGER n,nxi,i
-      DOUBLE PRECISION q(n), xi(nxi), ppf(n)
-      DOUBLE PRECISION xi_tmp
+      REAL q(n), xi(nxi), ppf(n)
+      REAL xi_tmp
     
       xi_tmp = xi(1)
       do i=1,n
         if (nxi .NE. 1) xi_tmp= xi(i)
-        IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
-          ppf(i) = -LOG(-LOG(q(i)))
-        ELSE
+		IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
+		  ppf(i) = -LOG(-LOG(q(i)))
+		ELSE
           ppf(i) = 1./xi_tmp * ( (-log(q(i)))**(-xi_tmp) -1. )
-        ENDIF
+		ENDIF
       enddo
       return 
       END SUBROUTINE gev_ppf
@@ -806,15 +805,15 @@ c Updated 12/02/2007 DH. N-D still buggy.
 
 cf2py integer dimension(nx,k),intent(in) :: x
 cf2py integer dimension(nn), intent(in) :: n
-cf2py double precision dimension(np,k),intent(in) :: p
+cf2py real dimension(np,k),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
 cf2py integer intent(hide),depend(n) :: nn=shape(n,0)
 cf2py integer intent(hide),depend(p) :: np=shape(p,0)
 cf2py integer intent(hide),depend(x,p),check(k==shape(p,1)) :: k=shape(x,1)
-cf2py double precision intent(out) :: like      
+cf2py real intent(out) :: like      
 
-      DOUBLE PRECISION like,sump
-      DOUBLE PRECISION p(np,k), p_tmp
+      REAL like,sump
+      REAL p(np,k), p_tmp
       INTEGER i,j,ll,n(nn),sumx, n_tmp
       INTEGER x(nx,k)
 
@@ -846,19 +845,19 @@ c Normal log-likelihood function
 
 c Updated 26/01/2007 DH.
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(nmu),intent(in) :: mu
-cf2py double precision dimension(ntau),intent(in) :: tau
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(ntau),intent(in) :: tau
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
       IMPLICIT NONE
       INTEGER n,i,ntau,nmu
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
-      DOUBLE PRECISION mu_tmp, tau_tmp
+      REAL like
+      REAL x(n),mu(nmu),tau(ntau)
+      REAL mu_tmp, tau_tmp
       LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
@@ -885,16 +884,16 @@ c Half-normal log-likelihood function
 
 c Updated 24/01/2007 DH.
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(ntau),intent(in) :: tau
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(ntau),intent(in) :: tau
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(tau)
       
       IMPLICIT NONE
       INTEGER n,i,ntau
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(n),tau(ntau),tau_tmp
+      REAL like
+      REAL x(n),tau(ntau),tau_tmp
       LOGICAL not_scalar_tau
 
       DOUBLE PRECISION PI
@@ -919,19 +918,19 @@ c Log-normal log-likelihood function
 
 c Updated 26/01/2007 DH.
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(nmu),intent(in) :: mu
-cf2py double precision dimension(ntau),intent(in) :: tau
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(ntau),intent(in) :: tau
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
       
       IMPLICIT NONE
       INTEGER n,i,ntau,nmu
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
-      DOUBLE PRECISION mu_tmp, tau_tmp
+      REAL like
+      REAL x(n),mu(nmu),tau(ntau)
+      REAL mu_tmp, tau_tmp
       LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
@@ -958,19 +957,19 @@ c Gamma log-likelihood function
 
 c Updated 19/01/2007 DH.
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(na),intent(in) :: alpha
-cf2py double precision dimension(nb),intent(in) :: beta
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 
 
       INTEGER i,n,na,nb
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(n),alpha(na),beta(nb)
-      DOUBLE PRECISION beta_tmp, alpha_tmp
+      REAL like
+      REAL x(n),alpha(na),beta(nb)
+      REAL beta_tmp, alpha_tmp
       LOGICAL not_scalar_a, not_scalar_b
 
       not_scalar_a = (na .NE. 1)
@@ -995,20 +994,20 @@ c Inverse gamma log-likelihood function
 
 c Updated 26/01/2007 DH.
 
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(na),intent(in) :: alpha
-cf2py double precision dimension(nb),intent(in) :: beta
-cf2py double precision intent(out) :: like
+cf2py real dimension(n),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha,n),check(na==1||na==n) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
 
       IMPLICIT NONE
       INTEGER i,n,na,nb
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(n),alpha(na),beta(nb)
-      DOUBLE PRECISION alpha_tmp, beta_tmp
-      DOUBLE PRECISION gammln
+      REAL like
+      REAL x(n),alpha(na),beta(nb)
+      REAL alpha_tmp, beta_tmp
+      REAL gammln
 
       alpha_tmp=alpha(1)
       beta_tmp=beta(1)
@@ -1031,18 +1030,18 @@ c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
 c Renamed to use alpha and beta arguments for compatibility with 
 c random.beta.
 
-cf2py double precision dimension(nx),intent(in) :: x
-cf2py double precision dimension(na),intent(in) :: alpha
-cf2py double precision dimension(nb),intent(in) :: beta
+cf2py real dimension(nx),intent(in) :: x
+cf2py real dimension(na),intent(in) :: alpha
+cf2py real dimension(nb),intent(in) :: beta
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
-cf2py double precision intent(out) :: like
+cf2py real intent(out) :: like
       IMPLICIT NONE
       INTEGER i,nx,na,nb
-      DOUBLE PRECISION like
-      DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
-      DOUBLE PRECISION gammln
+      REAL like
+      REAL x(nx),alpha(na),beta(nb), atmp, btmp
+      REAL gammln
 
       atmp = alpha(1)
       btmp = beta(1)
@@ -1064,19 +1063,19 @@ c Dirichlet multivariate log-likelihood function
       
 c Updated 22/01/2007 DH. 
 
-cf2py double precision dimension(nx,k),intent(in) :: x
-cf2py double precision dimension(nt,k),intent(in) :: theta
-cf2py double precision intent(out) :: like
+cf2py real dimension(nx,k),intent(in) :: x
+cf2py real dimension(nt,k),intent(in) :: theta
+cf2py real intent(out) :: like
 cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)||(k==shape(theta,0) && shape(theta,1)==1)) :: k=shape(x,1)
 cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
 cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(theta,0)
 
       IMPLICIT NONE
       INTEGER i,j,nx,nt,k
-      DOUBLE PRECISION like,sumt
-      DOUBLE PRECISION x(nx,k),theta(nt,k)
-      DOUBLE PRECISION theta_tmp(k)
-      DOUBLE PRECISION gammln
+      REAL like,sumt
+      REAL x(nx,k),theta(nt,k)
+      REAL theta_tmp(k)
+      REAL gammln
 
       like = 0.0
       do j=1,k
@@ -1104,14 +1103,14 @@ c normalizing constant
 c Dirichlet-multinomial log-likelihood function      
       
 cf2py integer dimension(k),intent(in) :: x
-cf2py double precision dimension(k),intent(in) :: theta      
-cf2py double precision intent(out) :: like
+cf2py real dimension(k),intent(in) :: theta      
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: k=len(x)
 
       INTEGER i,k,sumx
       INTEGER x(k)
-      DOUBLE PRECISION like,sumt
-      DOUBLE PRECISION theta(k)
+      REAL like,sumt
+      REAL theta(k)
 
       like = 0.0
       sumt = 0.0
@@ -1135,14 +1134,14 @@ c normalizing constant
 
 c Wishart log-likelihood function      
 
-cf2py double precision dimension(k,k),intent(in) :: X,sigma
-cf2py double precision intent(in) :: n
-cf2py double precision intent(out) :: like
+cf2py real dimension(k,k),intent(in) :: X,sigma
+cf2py real intent(in) :: n
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
 
       INTEGER i,k
-      DOUBLE PRECISION X(k,k),sigma(k,k),bx(k,k)
-      DOUBLE PRECISION dx,n,db,tbx,a,g,like
+      REAL X(k,k),sigma(k,k),bx(k,k)
+      REAL dx,n,db,tbx,a,g,like
       
 c determinants
       call dtrm(X,k,dx)
@@ -1170,14 +1169,14 @@ c trace of sigma*X
 
 c Multivariate normal log-likelihood function      
       
-cf2py double precision dimension(k),intent(in) :: x,mu
-cf2py double precision dimension(k,k),intent(in) :: tau
-cf2py double precision intent(out) :: like
+cf2py real dimension(k),intent(in) :: x,mu
+cf2py real dimension(k,k),intent(in) :: tau
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: k=len(x)
 
       INTEGER i,k
-      DOUBLE PRECISION x(k),dt(1,k),dtau(k),mu(k),d(k),tau(k,k)
-      DOUBLE PRECISION like,det,dtaud
+      REAL x(k),dt(1,k),dtau(k),mu(k),d(k),tau(k,k)
+      REAL like,det,dtaud
       
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
@@ -1209,18 +1208,18 @@ c Vectorized multivariate normal log-likelihood function
 c CREATED 12/06 DH.     
 c TODO: link BLAS/LAPACK, eliminate explicit transposition
       
-cf2py double precision dimension(k,n),intent(in) :: x
-cf2py double precision dimension(k,nmu),intent(in) :: mu
-cf2py double precision dimension(k,k),intent(in) :: tau
-cf2py double precision intent(out) :: like
+cf2py real dimension(k,n),intent(in) :: x
+cf2py real dimension(k,nmu),intent(in) :: mu
+cf2py real dimension(k,k),intent(in) :: tau
+cf2py real intent(out) :: like
 cf2py integer intent(hide),depend(x) :: k=shape(x,0)
 cf2py integer, intent(hide), depend(x):: n=shape(x,1)
 cf2py integer, intent(hide), depend(mu):: nmu=shape(mu,1)
     
       INTEGER i,j,k,n,nmu
-      DOUBLE PRECISION x(k,n), mu(k,n), tau(k,k),mut(k)
-      DOUBLE PRECISION dt(n,k),dtau(n,k),d(k,n), s(n)
-      DOUBLE PRECISION like,det
+      REAL x(k,n), mu(k,n), tau(k,k),mut(k)
+      REAL dt(n,k),dtau(n,k),d(k,n), s(n)
+      REAL like,det
       LOGICAL mu_not_1d
       
       DOUBLE PRECISION PI
@@ -1261,7 +1260,7 @@ c mulitply t(d) by tau -> dtau (n,k)
 c matrix trace (sum of diagonal elements)
       
       INTEGER k,i
-      DOUBLE PRECISION mat(k,k),tr
+      REAL mat(k,k),tr
 
       tr = 0.0
       do i=1,k
@@ -1276,11 +1275,11 @@ c matrix trace (sum of diagonal elements)
 c Return the logarithm of the gamma function
 c Corresponds to scipy.special.gammaln
 
-cf2py double precision intent(in) :: xx
-cf2py double precision intent(out) :: gx
+cf2py real intent(in) :: xx
+cf2py real intent(out) :: gx
 
       INTEGER i
-      DOUBLE PRECISION x,xx,ser,tmp,gx
+      REAL x,xx,ser,tmp,gx
       DIMENSION coeff(6)
       DATA coeff/76.18009173,-86.50532033,24.01409822,
      +-1.231739516,0.00120858003,-0.00000536382/
@@ -1302,13 +1301,13 @@ cf2py double precision intent(out) :: gx
       
 c matrix transposition      
 
-cf2py double precision dimension(m,n),intent(in) :: mat
-cf2py double precision dimension(n,m),intent(out) :: tmat
+cf2py real dimension(m,n),intent(in) :: mat
+cf2py real dimension(n,m),intent(out) :: tmat
 cf2py integer intent(hide),depend(mat) :: m=len(mat)
 cf2py integer intent(hide),depend(mat) :: n=shape(mat,1)
 
       INTEGER i,j,m,n
-      DOUBLE PRECISION mat(m,n),tmat(n,m)
+      REAL mat(m,n),tmat(n,m)
       
       do 88 i=1,m
         do 99 j=1,n
@@ -1324,16 +1323,16 @@ cf2py integer intent(hide),depend(mat) :: n=shape(mat,1)
       
 c matrix multiplication
 
-cf2py double precision dimension(m,q),intent(out) :: prod
-cf2py double precision dimension(m,n),intent(in) :: mat1
-cf2py double precision dimension(p,q),intent(in) :: mat2
+cf2py real dimension(m,q),intent(out) :: prod
+cf2py real dimension(m,n),intent(in) :: mat1
+cf2py real dimension(p,q),intent(in) :: mat2
 cf2py integer intent(hide),depend(mat1) :: m=len(mat1),n=shape(mat1,1)
 cf2py integer intent(hide),depend(mat2) :: p=len(mat2),q=shape(mat2,1)
 
 
       INTEGER i,j,k,m,n,p,q
-      DOUBLE PRECISION mat1(m,n), mat2(p,q), prod(m,q)
-      DOUBLE PRECISION sum
+      REAL mat1(m,n), mat2(p,q), prod(m,q)
+      REAL sum
       
       if (n.eq.p) then
         do 30 i = 1,m
@@ -1374,8 +1373,8 @@ C Subroutine for evaluating the determinant of a matrix using
 C the partial-pivoting Gaussian elimination scheme.
 C
 
-cf2py double precision dimension(N,N),intent(in) :: A
-cf2py double precision intent(out) :: D
+cf2py real dimension(N,N),intent(in) :: A
+cf2py real intent(out) :: D
 cf2py integer intent(hide),depend(A) :: N=len(A)      
 
       DIMENSION A(N,N),INDX(N)
@@ -1467,7 +1466,7 @@ C Modify other elements accordingly
       FUNCTION gammln(xx) 
 C Returns the value ln[gamma(xx)] for xx > 0. 
 
-      DOUBLE PRECISION gammln,xx         
+      REAL gammln,xx         
       INTEGER j 
       DOUBLE PRECISION ser,stp,tmp,x,y,cof(6) 
 
@@ -1491,14 +1490,14 @@ C a nicety that you can omit if five-figure accuracy is good enough.
       return 
       END
 
-      DOUBLE PRECISION FUNCTION factrl(n) 
+      REAL FUNCTION factrl(n) 
 C Returns the value n! as a floating-point number. 
 
       INTEGER n 
 
       INTEGER j,ntop 
 C Table to be filled in only as required. 
-      DOUBLE PRECISION a(33),gammln 
+      REAL a(33),gammln 
       SAVE ntop,a 
 C Table initialized with 0! only. 
       DATA ntop,a(1)/0,1./
@@ -1524,11 +1523,11 @@ C but no harm in trying.
       return 
       END 
 
-      DOUBLE PRECISION FUNCTION factln(n) 
+      REAL FUNCTION factln(n) 
 C USES gammln Returns ln(n!). 
 
       INTEGER n 
-      DOUBLE PRECISION a(100),gammln 
+      REAL a(100),gammln 
       SAVE a 
 C Initialize the table to negative values. 
       DATA a/100*-1./ 
@@ -1549,7 +1548,7 @@ C Out of range of the table.
 C USES factln Returns the binomial coefficient as a 
 C floating point number.
       INTEGER k,n
-      DOUBLE PRECISION bico
+      REAL bico
 C The nearest-integer function cleans up roundoff error
 C for smaller values of n and k. 
       bico=nint(exp(factln(n)-factln(k)-factln(n-k))) 
@@ -1558,11 +1557,11 @@ C for smaller values of n and k.
 
       subroutine chol(n,a,c)
 c...perform a Cholesky decomposition of matrix a, returned as c
-      implicit double precision*8 (a-h,o-z)
-      double precision c(n,n),a(n,n)
+      implicit real*8 (a-h,o-z)
+      real c(n,n),a(n,n)
 
-cf2py double precision dimension(n,n),intent(in) :: a
-cf2py double precision dimension(n,n),intent(out) :: c
+cf2py real dimension(n,n),intent(in) :: a
+cf2py real dimension(n,n),intent(out) :: c
 cf2py integer intent(in),depend(a) :: n=len(a)
 
       c(1,1) = sqrt(a(1,1))
@@ -1588,20 +1587,19 @@ cf2py integer intent(in),depend(a) :: n=len(a)
       
       SUBROUTINE rbin(n,pp,x) 
   
-cf2py double precision intent(in) :: pp
+cf2py real intent(in) :: pp
 cf2py integer intent(in) :: n
 cf2py integer intent(out) :: x  
       
       INTEGER n,x 
-      DOUBLE PRECISION pp,PI 
+      REAL pp,PI 
 C USES gammln,rand 
       PARAMETER (PI=3.141592654) 
 C Returns as a floating-point number an integer value that is a random deviate drawn from 
 C a binomial distribution of n trials each of probability pp, using rand as a source 
 C of uniform random deviates. 
       INTEGER j,nold
-      DOUBLE PRECISION am,em,en,g,oldg,p,pc
-      DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln,rand
+      REAL am,em,en,g,oldg,p,pc,pclog,plog,pold,sq,t,y,gammln,rand
       SAVE nold,pold,pc,plog,pclog,en,oldg 
 C     Arguments from previous calls.
       DATA nold /-1/, pold /-1./  
@@ -1677,11 +1675,11 @@ C     Remember to undo the symmetry transformation.
 c Fills an input array with standard normals in-place.
 c Created 2/4/07, AP
 
-cf2py double precision dimension(n),intent(inplace) :: array_in
+cf2py real dimension(n),intent(inplace) :: array_in
 cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
 
       INTEGER i, n, n_blocks, index
-      DOUBLE PRECISION U1, U2, array_in(n)
+      REAL U1, U2, array_in(n)
       LOGICAL iseven
 
       iseven = (MOD(n,2) .EQ. 0)
@@ -1708,6 +1706,72 @@ cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
       return
       END
 
+      SUBROUTINE rnormal_unrecommended(array_out,mu,sig,n,nmu,nsig)
+
+c Normal RNG
+c Created 2/4/07 AP.
+c Clumsy to use, and just a whisker faster than numpy's normal. Not recommended.
+
+cf2py real dimension(n),intent(out) :: array_out
+cf2py real dimension(nmu),intent(in) :: mu
+cf2py real dimension(nsig),intent(in) :: sig
+cf2py integer intent(in):: n
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(sig,n),check(nsig==1||nsig==n) :: nsig=len(sig)
+
+      IMPLICIT NONE
+      INTEGER n,i,nsig,nmu
+      REAL like
+      REAL array_out(n),mu(nmu),sig(nsig)
+      REAL mut1, mut2, sigt1, sigt2
+      LOGICAL not_scalar_mu, not_scalar_sig
+      INTEGER n_blocks, index
+      REAL U1, U2
+      LOGICAL iseven
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_sig = (nsig .NE. 1)
+      mut1 = mu(1)
+      sigt1 = sig(1)
+      mut2 = mu(1)
+      sigt2 = sig(1)
+
+      iseven = (MOD(n,2) .EQ. 0)
+
+      if (iseven) then
+        n_blocks = n/2
+      else 
+        n_blocks = (n-1)/2
+      endif
+
+      do i=1,n_blocks
+        call RNORM(U1,U2)
+        index = 2*(i-1) + 1
+        if (not_scalar_mu) then
+          mut1=mu(index)
+          mut2=mu(index+1)
+        endif
+        if (not_scalar_sig) then
+          sigt1=sig(index)
+          sigt2=sig(index+1)
+        endif
+        array_out(index) = U1 * mut1 + sigt1
+        array_out(index+1) = U2 * mut2 + sigt2
+      enddo
+
+      if(.NOT.iseven) then
+        if (not_scalar_mu) then
+          mut1=mu(n)
+        endif
+        if (not_scalar_sig) then
+          sigt1=sig(n)
+        endif
+        call RNORM(U1,U2)
+        array_out(n) = U1 * mut1 + sigt1
+      endif
+
+      return
+      END
 
 
       
@@ -1724,12 +1788,12 @@ C     distributed between the limits 0 and 1 exclusive.
 C     Note- this seems to be faster than Leva's algorithm from
 C     ACM Trans Math Soft, Dec. 1992 - AP
 C
-      DOUBLE PRECISION U1, U2
-      DOUBLE PRECISION RAND
+      REAL U1, U2
+      REAL RAND
 C
 C     Local variables
 C
-      DOUBLE PRECISION X, Y, S, ONE, TWO
+      REAL X, Y, S, ONE, TWO
       DATA ONE /1.0/, TWO /2.0/
 C
     1 X = RAND()
@@ -1760,21 +1824,21 @@ C     The Wichmann & Hill generator is included here.   It should be
 C     initialized in the calling program.
 
 
-cf2py double precision dimension(NNP),intent(in) :: D
-cf2py double precision dimension(NNP),intent(out) :: SA
-cf2py double precision dimension(NNP),intent(hide) :: SB
+cf2py real dimension(NNP),intent(in) :: D
+cf2py real dimension(NNP),intent(out) :: SA
+cf2py real dimension(NNP),intent(hide) :: SB
 cf2py integer intent(hide),depend(D) :: NNP=len(D)
 cf2py integer intent(in) :: NP
 cf2py integer intent(in) :: N
 
       INTEGER N, NP, NNP
-      DOUBLE PRECISION D(NNP), SB(NNP), SA(NNP)
+      REAL D(NNP), SB(NNP), SA(NNP)
 C
 C     Local variables
 C
       INTEGER K, NS, I, J, NR, IP, NQ, II
-      DOUBLE PRECISION DF, U1, U2, RN, C
-      DOUBLE PRECISION ZERO, ONE, TWO, NINE
+      REAL DF, U1, U2, RN, C
+      REAL ZERO, ONE, TWO, NINE
       DATA ZERO /0.0/, ONE /1.0/, TWO /2.0/, NINE /9.0/
 C
       K = 1
@@ -1900,20 +1964,20 @@ C
 C    Input, integer N, the highest order polynomial to compute.
 C    Note that polynomials 0 through N will be computed.
 C
-C    Input, double precision ( kind = 8 ) X, the point at which the polynomials are 
+C    Input, real ( kind = 8 ) X, the point at which the polynomials are 
 C    to be evaluated.
 C
-C    Output, double precision ( kind = 8 ) CX(0:N), the values of the first N+1 Hermite
+C    Output, real ( kind = 8 ) CX(0:N), the values of the first N+1 Hermite
 C    polynomials at the point X.
 C
 
-cf2py double precision intent(in) :: x
+cf2py real intent(in) :: x
 cf2py integer intent(in) :: n
-cf2py double precision dimension(n+1),intent(out) :: cx
+cf2py real dimension(n+1),intent(out) :: cx
       
       integer n,i
-      double precision cx(n+1)
-      double precision x
+      real cx(n+1)
+      real x
 
       if ( n < 0 ) then
         return
@@ -1928,7 +1992,7 @@ cf2py double precision dimension(n+1),intent(out) :: cx
       cx(2) = 2.0 * x
 
       do i = 3, n+1
-        cx(i) = 2.0 * x * cx(i-1) - 2.0 * cx(i - 1) * cx(i-2)
+        cx(i) = 2.0 * x * cx(i-1) - 2.0 * real(i - 1) * cx(i-2)
       end do
 
       return
