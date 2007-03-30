@@ -4,4 +4,4 @@ M = Sampler(fastDisasterModel)
 
 
 # Sample
-# M.sample(5000,0,10)
+M.sample(5000,0,10)

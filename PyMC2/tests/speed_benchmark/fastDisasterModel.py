@@ -9,7 +9,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 from PyMC2 import parameter, data, OneAtATimeMetropolis, LikelihoodError
 from numpy import array, log, sum
-from fastDisasterLikes import fpoisson
+from fastDisasterLikes import fpoisson, fpoisson_d
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -56,7 +56,7 @@ def disasters(  value = disasters_array,
                 late_mean = late_mean, 
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
-    return fpoisson(value,early_mean,late_mean,switchpoint)
+    return fpoisson_d(value,early_mean,late_mean,switchpoint)
 
 
 """
