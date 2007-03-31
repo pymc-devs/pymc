@@ -321,13 +321,13 @@ class test_gamma(NumpyTestCase):
         assert_array_almost_equal(hist, like,1)
 
     def test_calling(self):
-        a = flib.gamma([4,5],3,2)
-        b = flib.gamma([4,5], [3,3],[2,2])
+        a = flib.gamma(array([4,5],dtype=float),array(3,dtype=float),array(2,dtype=float))
+        b = flib.gamma(array([4,5],dtype=float), array([3,3],dtype=float),array([2,2],dtype=float))
         assert_equal(a,b)
 
     def check_normalization(self):
         params={'alpha':3, 'beta':2}
-        integral = normalization(flib.gamma, params, [.01,20], 200)
+        integral = normalization(flib.gamma, params, array([.01,20]), 200)
         assert_almost_equal(integral, 1, 2)
 
 class test_geometric(NumpyTestCase):
