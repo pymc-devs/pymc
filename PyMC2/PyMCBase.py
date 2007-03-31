@@ -1,8 +1,3 @@
-# TODO: Think about writing a Support class that implements a __contains__
-# TODO: method and tells what a parameter's allowable values are. It could
-# TODO: also implement a __call__ method that checks a candidate value,
-# TODO: returns None if it's OK, and returns LikelihoodError if it's not OK.
-
 class ParentDict(dict):
     """
     A special subclass of dict which makes it safe to change parameters'
@@ -85,7 +80,13 @@ class PyMCBase(object):
         self._parents = ParentDict(regular_dict = new_parents, owner = self)
         self.gen_lazy_function()
         
-    parents = property(_get_parents, _set_parents)
+    def _del_parents(self):
+        for parent in self._parents.itervalues():
+            if isinstance(parent, PyMCBase):
+                parent.children.discard(self)
+        del self._parents
+        
+    parents = property(fget=_get_parents, fset=_set_parents, fdel=_del_parents)
                 
                 
     def gen_lazy_function(self):

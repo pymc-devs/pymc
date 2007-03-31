@@ -326,6 +326,7 @@ class OneAtATimeMetropolis(SamplingMethod):
                 self.parameter.value = True
                 
             logp_true = self.parameter.logp
+            loglike_true = self.loglike
             
             if self._len > 1:
                 val[i] = False
@@ -334,9 +335,10 @@ class OneAtATimeMetropolis(SamplingMethod):
                 self.parameter.value = False
                 
             logp_false = self.parameter.logp
+            loglike_false = self.loglike            
             
-            p_true = exp(logp_true)
-            p_false = exp(logp_false)
+            p_true = exp(logp_true + loglike_true)
+            p_false = exp(logp_false + loglike_false)
             
             if log(random()) > p_true / (p_true + p_false):
                 if self._len > 1:

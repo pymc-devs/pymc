@@ -182,7 +182,7 @@ class MAP(Model):
 
         if not self.method == 'newton':
             if not scipy_imported:
-                raise ImportError, 'Scipy is required for any method other than Newton \n in MAP and NormalApproximation'
+                raise ImportError, 'Scipy is required for any method other than Newton in MAP and NormalApproximation'
 
         if self.method == 'fmin_ncg':
             p=fmin_ncg(f = self.func, x0 = p, fprime = self.gradfunc, fhess = self.hessfunc, epsilon=self.eps)
