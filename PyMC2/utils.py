@@ -51,13 +51,13 @@ def check_type(parameter):
     elif isinstance(val, complex):
         return complex, ()
     elif isinstance(val, ndarray):
-        if val.dtype is bool_:
+        if obj2sctype(val) is bool_:
             return bool, val.shape
-        elif val.dtype in [byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
+        elif obj2sctype(val) in [byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
             return int, val.shape
-        elif val.dtype in [single, float_, longfloat]:
+        elif obj2sctype(val) in [single, float_, longfloat]:
             return float, val.shape
-        elif val.dtype in [csingle, complex_, clongfloat]:
+        elif obj2sctype(val) in [csingle, complex_, clongfloat]:
             return complex, val.shape
     else:
         return 'object', ()
