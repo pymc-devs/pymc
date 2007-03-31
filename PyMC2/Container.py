@@ -145,8 +145,7 @@ class ValueContainer(object):
 class ArraySubclassContainer(Container, ndarray):
     
     """
-    Would we prefer to go with this? Kind of square, but
-    simple.
+    Would we prefer to go with this? Kind of square, but simple.
     """
     
     def __new__(subtype, array_in):

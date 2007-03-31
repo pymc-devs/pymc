@@ -6,14 +6,6 @@ early_mean ~ Exp(1.)
 late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
-
-All likelihoods commented out,
-- Timestamp: 16s
-- No timestamp: 8s
-
-With likelihoods,
-- Timestamp: 19.7s
-- No timestamp: 17.25 s
 """
 
 from PyMC2 import parameter, data, OneAtATimeMetropolis
@@ -79,14 +71,5 @@ def disasters(  value = disasters_array,
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint+1:],late_mean)
-    
-
-
-
-"""
-Make a special SamplingMethod for switchpoint that will keep it on integer values,
-and add it to M.
-"""
-S = OneAtATimeMetropolis(parameter=switchpoint)
 
 

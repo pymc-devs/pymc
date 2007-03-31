@@ -57,18 +57,16 @@ class Node(PyMCBase):
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
         
         self.LazyFunction = import_LazyFunction()
+
+        # This function gets used to evaluate self's value.
+        self._eval_fun = eval
         
         PyMCBase.__init__(self, 
                                 doc=doc, 
                                 name=name, 
                                 parents=parents, 
                                 cache_depth = cache_depth, 
-                                trace=trace)
-
-        # This function gets used to evaluate self's value.
-        self._eval_fun = eval
-        
-        self.gen_lazy_function()
+                                trace=trace)        
         
     def gen_lazy_function(self):
         self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self.cache_depth)
@@ -179,23 +177,21 @@ class Parameter(PyMCBase):
 
         self.LazyFunction = import_LazyFunction()    
 
-        PyMCBase.__init__(  self, 
-                            doc=doc, 
-                            name=name, 
-                            parents=parents, 
-                            cache_depth=cache_depth, 
-                            trace=trace)
-
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
         
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
         
-        self.gen_lazy_function()        
-        
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random
+        
+        PyMCBase.__init__(  self, 
+                            doc=doc, 
+                            name=name, 
+                            parents=parents, 
+                            cache_depth=cache_depth, 
+                            trace=trace)        
         
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.

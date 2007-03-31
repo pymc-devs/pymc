@@ -1,21 +1,21 @@
-from PyMC2 import Sampler
+# March 30 07 AP: This can work with any Model subclass, not just Sampler.
+
+from PyMC2 import Model
 from numpy import mean, exp
 
-#
 # Get posterior probabilities for a list of models
-#
-def weight(samplers, iter, priors = None):
+def weight(models, iter, priors = None):
     """
-    weight(samplers, iter, priors = None)
+    weight(models, iter, priors = None)
 
-    samplers is a list of Samplers, iter is the number of samples to use, and
+    models is a list of Models, iter is the number of samples to use, and
     priors is a dictionary of prior weights keyed by model.
 
     Example:
 
-    M1 = Sampler(model_1)
-    M2 = Sampler(model_2)
-    weight(samplers = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
+    M1 = Model(model_1)
+    M2 = Model(model_2)
+    weight(models = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
 
     Returns a dictionary keyed by model of the model posterior probabilities.
 
@@ -23,31 +23,31 @@ def weight(samplers, iter, priors = None):
     """
     loglikes = {}
     i=0
-    for sampler in samplers:
+    for model in models:
         print 'Model ', i
-        loglikes[sampler] = sampler.sample_model_likelihood(iter)
+        loglikes[model] = model.sample_model_likelihood(iter)
         i+=1
 
     # Find max log-likelihood for regularization purposes
     max_loglike = 0
-    for sampler in samplers:
-        max_loglike = max((max_loglike,loglikes[sampler].max()))
+    for model in models:
+        max_loglike = max((max_loglike,loglikes[model].max()))
 
     posteriors = {}
     sumpost = 0
-    for sampler in samplers:
+    for model in models:
         # Regularize
-        loglikes[sampler] -= max_loglike
+        loglikes[model] -= max_loglike
         # Exponentiate and average
-        posteriors[sampler] = mean(exp(loglikes[sampler]))
+        posteriors[model] = mean(exp(loglikes[model]))
         # Multiply in priors
         if priors is not None:
-            posteriors[sampler] *= priors[sampler]
+            posteriors[model] *= priors[model]
         # Count up normalizing constant
-        sumpost += posteriors[sampler]
+        sumpost += posteriors[model]
 
     # Normalize
-    for sampler in samplers:
-        posteriors[sampler] /= sumpost
+    for model in models:
+        posteriors[model] /= sumpost
 
     return posteriors

@@ -1,3 +1,8 @@
+# TODO: Think about writing a Support class that implements a __contains__
+# TODO: method and tells what a parameter's allowable values are. It could
+# TODO: also implement a __call__ method that checks a candidate value,
+# TODO: returns None if it's OK, and returns LikelihoodError if it's not OK.
+
 class ParentDict(dict):
     """
     A special subclass of dict which makes it safe to change parameters'
@@ -55,7 +60,7 @@ class PyMCBase(object):
     """
     def __init__(self, doc, name, parents, cache_depth, trace):
 
-        self.parents = ParentDict(regular_dict = parents, owner = self)
+        self._parents = ParentDict(regular_dict = parents, owner = self)
         self.children = set()
         self.__doc__ = doc
         self.__name__ = name
@@ -64,9 +69,23 @@ class PyMCBase(object):
 
         self._cache_depth = cache_depth
         
-        for object in self.parents.itervalues():
+        for object in self._parents.itervalues():
             if isinstance(object, PyMCBase):
                 object.children.add(self)
+        
+        self.gen_lazy_function()
+                
+    def _get_parents(self):
+        return self._parents
+        
+    def _set_parents(self, new_parents):
+        for parent in self._parents.itervalues():
+            if isinstance(parent, PyMCBase):
+                parent.children.discard(self)
+        self._parents = ParentDict(regular_dict = new_parents, owner = self)
+        self.gen_lazy_function()
+        
+    parents = property(_get_parents, _set_parents)
                 
                 
     def gen_lazy_function(self):

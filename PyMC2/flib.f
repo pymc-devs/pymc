@@ -352,18 +352,18 @@ c     Check length of input arrays.
       END SUBROUTINE exponweib_ppf
 
 
-	  REAL FUNCTION combinationln(n,k)
+      REAL FUNCTION combinationln(n,k)
 
 c Ln of the number of different combinations of n different things, taken k at a time. 
 c DH, 5.02.2007
 
-	  IMPLICIT NONE
-	  INTEGER n, k
-	  REAL factln
+      IMPLICIT NONE
+      INTEGER n, k
+      REAL factln
 
-	  combinationln= factln(n) - factln(k) - factln(n-k)
+      combinationln= factln(n) - factln(k) - factln(n-k)
 
-	  END FUNCTION combinationln
+      END FUNCTION combinationln
 
       SUBROUTINE hyperg(x,draws,success,total,n,nd,ns,nt,like)
 
@@ -403,10 +403,10 @@ c      CALL constrain(x, 0, d, allow_equal=1)
 c Combinations of x red balls
         if (nd .NE. 1) draws_tmp = draws(i)
         if (ns .NE. 1) s_tmp = success(i)
-        if (nt .NE. 1) t_tmp = total(i)	
-		like = like + combinationln(t_tmp-s_tmp, x(i))
-		like = like + combinationln(s_tmp,draws_tmp-x(i))
- 		like = like - combinationln(t_tmp, draws_tmp)
+        if (nt .NE. 1) t_tmp = total(i) 
+        like = like + combinationln(t_tmp-s_tmp, x(i))
+        like = like + combinationln(s_tmp,draws_tmp-x(i))
+        like = like - combinationln(t_tmp, draws_tmp)
       enddo
       return
       END
@@ -788,11 +788,11 @@ Cf2py real dimension(n), intent(out):: ppf
       xi_tmp = xi(1)
       do i=1,n
         if (nxi .NE. 1) xi_tmp= xi(i)
-		IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
-		  ppf(i) = -LOG(-LOG(q(i)))
-		ELSE
+        IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
+          ppf(i) = -LOG(-LOG(q(i)))
+        ELSE
           ppf(i) = 1./xi_tmp * ( (-log(q(i)))**(-xi_tmp) -1. )
-		ENDIF
+        ENDIF
       enddo
       return 
       END SUBROUTINE gev_ppf
@@ -1706,73 +1706,6 @@ cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
       return
       END
 
-      SUBROUTINE rnormal_unrecommended(array_out,mu,sig,n,nmu,nsig)
-
-c Normal RNG
-c Created 2/4/07 AP.
-c Clumsy to use, and just a whisker faster than numpy's normal. Not recommended.
-
-cf2py real dimension(n),intent(out) :: array_out
-cf2py real dimension(nmu),intent(in) :: mu
-cf2py real dimension(nsig),intent(in) :: sig
-cf2py integer intent(in):: n
-cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
-cf2py integer intent(hide),depend(sig,n),check(nsig==1||nsig==n) :: nsig=len(sig)
-
-      IMPLICIT NONE
-      INTEGER n,i,nsig,nmu
-      REAL like
-      REAL array_out(n),mu(nmu),sig(nsig)
-      REAL mut1, mut2, sigt1, sigt2
-      LOGICAL not_scalar_mu, not_scalar_sig
-      INTEGER n_blocks, index
-      REAL U1, U2
-      LOGICAL iseven
-
-      not_scalar_mu = (nmu .NE. 1)
-      not_scalar_sig = (nsig .NE. 1)
-      mut1 = mu(1)
-      sigt1 = sig(1)
-      mut2 = mu(1)
-      sigt2 = sig(1)
-
-      iseven = (MOD(n,2) .EQ. 0)
-
-      if (iseven) then
-        n_blocks = n/2
-      else 
-        n_blocks = (n-1)/2
-      endif
-
-      do i=1,n_blocks
-        call RNORM(U1,U2)
-        index = 2*(i-1) + 1
-        if (not_scalar_mu) then
-          mut1=mu(index)
-          mut2=mu(index+1)
-        endif
-        if (not_scalar_sig) then
-          sigt1=sig(index)
-          sigt2=sig(index+1)
-        endif
-        array_out(index) = U1 * mut1 + sigt1
-        array_out(index+1) = U2 * mut2 + sigt2
-      enddo
-
-      if(.NOT.iseven) then
-        if (not_scalar_mu) then
-          mut1=mu(n)
-        endif
-        if (not_scalar_sig) then
-          sigt1=sig(n)
-        endif
-        call RNORM(U1,U2)
-        array_out(n) = U1 * mut1 + sigt1
-      endif
-
-      return
-      END
-
 
       
       SUBROUTINE RNORM(U1, U2)
@@ -1992,7 +1925,7 @@ cf2py real dimension(n+1),intent(out) :: cx
       cx(2) = 2.0 * x
 
       do i = 3, n+1
-        cx(i) = 2.0 * x * cx(i-1) - 2.0 * real(i - 1) * cx(i-2)
+        cx(i) = 2.0 * x * cx(i-1) - 2.0 * cx(i - 1) * cx(i-2)
       end do
 
       return

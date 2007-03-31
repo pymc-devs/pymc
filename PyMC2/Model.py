@@ -1,7 +1,3 @@
-# TODO: Make DAG depend on py2app, not pydot. Less dependencies.
-# See modulegraph.modulegraph.Dot,
-# in the Py2App part of site-packages.
-
 # Changeset history
 # 22/03/2007 -DH- Added methods to query the SamplingMethod's state and pass it to database.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
