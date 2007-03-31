@@ -1,6 +1,6 @@
-# TODO: Check that all parameters are numerical/ ndarray in __init__
 # TODO: try to track down msqrt bug
 # TODO: Allow discrete parameters.
+# TODO: Smarter derivatives.
 
 from PyMCObjects import Parameter
 from Model import Model
@@ -117,7 +117,7 @@ class MAP(Model):
         
     :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize
     """
-    def __init__(self, input, db='ram', eps=.001, method = 'fmin'):
+    def __init__(self, input, db='ram', eps=.000001, method = 'fmin'):
         Model.__init__(self, input, db)
 
         # Allocate memory for internal traces and get parameter slices
@@ -253,12 +253,20 @@ class MAP(Model):
         p, i = self.param_indices[index]
         val = ravel(p.value)
         return val[i]
+        
+    def set_h(self, oldval):
+        # if not oldval == 0.:
+        #     h = self.eps * oldval
+        # else:
+        #     h = self.eps
+        # return h
+        return self.eps
 
     def diff(self, index):
         base = self.logp
 
         oldval = copy(self[index])
-        h = self.eps
+        h=self.set_h(oldval)
 
         self[index] = oldval + h
         up = self.logp
@@ -268,7 +276,7 @@ class MAP(Model):
 
     def diff2(self, i, j):
         oldval = copy(self[j])
-        h = self.eps
+        h=self.set_h(oldval)
 
         base = self.diff(i)
 
@@ -282,7 +290,7 @@ class MAP(Model):
         base = self.logp
 
         oldval = copy(self[index])
-        h = self.eps
+        h=self.set_h(oldval)
 
         self[index] = oldval + h
         up = self.logp
@@ -368,7 +376,7 @@ class NormalApproximation(MAP):
     :SeeAlso: Model, MAP, Sampler, scipy.optimize
     """
 
-    def __init__(self, input, db='ram', eps=.001, method = 'fmin'):
+    def __init__(self, input, db='ram', eps=.000001, method = 'fmin'):
         MAP.__init__(self, input, db, eps, method)
 
         self._C = None

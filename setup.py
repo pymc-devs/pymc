@@ -6,13 +6,12 @@ except ImportError:
 from numpy.distutils.core import setup, Extension
 
 # Compile flib (fortran source for statistical distributions.)
-flib_likelihoods = Extension(name='flib_likelihoods',sources=['PyMC2/flib_likelihoods.f'])
-flib_rngs = Extension(name='flib_rngs',sources=['PyMC2/flib_rngs.f'])
+flib = Extension(name='flib_likelihoods',sources=['PyMC2/flib.f'])
 try:
     PyrexLazyFunction = Extension(name='PyrexLazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
-    ext_modules = [flib_likelihoods, flib_rngs, PyrexLazyFunction]
+    ext_modules = [flib, PyrexLazyFunction]
 except:
-    ext_modules = [flib_likelihoods, flib_rngs]
+    ext_modules = [flib]
 
 distrib = setup(
 name="PyMC2",
