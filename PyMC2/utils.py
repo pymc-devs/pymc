@@ -15,7 +15,7 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
-from numpy import sqrt, obj2sctype, ndarray
+from numpy import sqrt, obj2sctype, ndarray, asmatrix
 
 from numpy import bool_
 from numpy import byte, short, intc, int_, longlong, intp
@@ -124,12 +124,12 @@ def msqrt(cov):
     """
     # Try Cholesky factorization
     try:
-        sig = cholesky(cov)
+        sig = asmatrix(cholesky(cov))
     
     # If there's a small eigenvalue, diagonalize
     except LinAlgError:
         val, vec = eigh(cov)
-        sig = np.zeros(vec.shape)
+        sig = asmatrix(np.zeros(vec.shape))
         for i in range(len(val)):
             if val[i]<0.:
                 val[i]=0.

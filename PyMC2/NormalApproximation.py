@@ -1,5 +1,3 @@
-# TODO: try to track down msqrt bug
-# TODO: Allow discrete parameters.
 # TODO: Smarter derivatives.
 
 from PyMCObjects import Parameter
@@ -7,7 +5,7 @@ from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type
+from utils import msqrt, check_type, round_array
 from copy import copy
 
 try:
@@ -129,14 +127,19 @@ class MAP(Model):
         self.param_list = list(self.parameters)
         self.N_params = len(self.param_list)
         self.param_indices = []
+        self.param_types = []
+        self.param_type_dict = {}
         
         for i in xrange(len(self.param_list)):
 
             parameter = self.param_list[i]
             
-            if not check_type(parameter)[0] is float:
-                raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be floating-point or ndarray with " + \
-                                    "floating-point dtype for NormalApproximation or MAP to be applied."
+            type_now = check_type(parameter)[0]
+            self.param_type_dict[parameter] = type_now
+            
+            if not type_now is float or type_now is int:
+                raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be numerical or ndarray with " + \
+                                    "numerical dtype for NormalApproximation or MAP to be applied."
             
             if isinstance(parameter.value, ndarray):
                 self.param_len[parameter] = len(ravel(parameter.value))
@@ -147,6 +150,7 @@ class MAP(Model):
             
             for j in range(len(ravel(parameter.value))):
                 self.param_indices.append((parameter, j))
+                self.param_types.append(type_now)
                 
         self.data_len = 0
         for datum in self.data:
@@ -241,7 +245,10 @@ class MAP(Model):
 
     def _set_parameters(self, p):
         for parameter in self.parameters:
-            parameter.value = reshape(ravel(p)[self._slices[parameter]],shape(parameter.value))
+            if self.param_type_dict[parameter] is int:
+                parameter.value = round_array(reshape(ravel(p)[self._slices[parameter]],shape(parameter.value)))
+            else:
+                parameter.value = reshape(ravel(p)[self._slices[parameter]],shape(parameter.value))
 
     def __setitem__(self, index, value):
         p, i = self.param_indices[index]
@@ -266,7 +273,10 @@ class MAP(Model):
         base = self.logp
 
         oldval = copy(self[index])
-        h=self.set_h(oldval)
+        if self.param_types[index] is int:
+            return 1
+        else:
+            h=self.set_h(oldval)
 
         self[index] = oldval + h
         up = self.logp
@@ -276,7 +286,10 @@ class MAP(Model):
 
     def diff2(self, i, j):
         oldval = copy(self[j])
-        h=self.set_h(oldval)
+        if self.param_types[j] is int:
+            return 1
+        else:
+            h=self.set_h(oldval)
 
         base = self.diff(i)
 
@@ -290,7 +303,10 @@ class MAP(Model):
         base = self.logp
 
         oldval = copy(self[index])
-        h=self.set_h(oldval)
+        if self.param_types[index] is int:
+            return 1
+        else:
+            h=self.set_h(oldval)
 
         self[index] = oldval + h
         up = self.logp
@@ -394,4 +410,4 @@ class NormalApproximation(MAP):
         MAP.fit(self, iterlim, tol)
         
         self._C = -1. * self.hess.I
-        # self.sig = msqrt(self._C).T
+        self.sig = msqrt(self._C).T
