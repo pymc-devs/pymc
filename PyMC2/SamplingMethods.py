@@ -1,5 +1,7 @@
+
+
 __docformat__='reStructuredText'
-from utils import LikelihoodError, msqrt, extend_children
+from utils import LikelihoodError, msqrt, extend_children, check_type, round_array
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
@@ -191,24 +193,26 @@ class OneAtATimeMetropolis(SamplingMethod):
 
     scale:  The proposal jump width is set to scale * parameter.value.
 
-    dist:   The proposal distribution. Options are:
-        'Normal':           Use a normal random-walk proposal.
-        'RoundedNormal':    Use a rounded normal random-walk proposal (for discrete
-                            parameters).
-        'Prior':            Propose from the prior. This is automatically assigned if no
-                            parameters depend on P.
-
-
     :SeeAlso: SamplingMethod, Sampler.
     """
-    def __init__(self, parameter, scale=1., dist='Normal'):
+    def __init__(self, parameter, scale=1.):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
-        self._dist = dist
         self._id = 'OneAtATimeMetropolis_'+parameter.__name__
-
+        
+        self._type = check_type(parameter)
+        if self._type[0] is bool:
+            self._dist = "Bernoulli"
+            self.step = self.bernoulli_proposal_step
+        elif self._type[0] is int:
+            self._dist = "RoundedNormal"
+        elif self._type[0] is float:
+            self._dist = "Normal"
+        else:
+            raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric or boolean"+\
+                                'or ndarray with numeric or boolean dtype for OneAtATimeMetropolis to be applied.'
 
         # If self's extended children is the empty set (eg, if
         # self's parameter is a posterior predictive quantity of
@@ -217,6 +221,7 @@ class OneAtATimeMetropolis(SamplingMethod):
             try:
                 self.parameter.random()
                 self._dist = "Prior"
+                self.step = self.prior_proposal_step
             except:
                 pass
 
@@ -227,10 +232,7 @@ class OneAtATimeMetropolis(SamplingMethod):
 
         # Probability and likelihood for parameter's current value:
 
-        if self._dist == "Prior":
-            logp = 0.
-        else:
-            logp = self.parameter.logp
+        logp = self.parameter.logp
 
         loglike = self.loglike
 
@@ -238,15 +240,12 @@ class OneAtATimeMetropolis(SamplingMethod):
         self.propose()
 
         # Probability and likelihood for parameter's proposed value:
-        if self._dist == "Prior":
-            logp_p = 0.
-        else:
-            try:
-                logp_p = self.parameter.logp
-            except LikelihoodError:
-                self.parameter.value = self.parameter.last_value
-                self._rejected += 1
-                return
+        try:
+            logp_p = self.parameter.logp
+        except LikelihoodError:
+            self.parameter.value = self.parameter.last_value
+            self._rejected += 1
+            return
 
         loglike_p = self.loglike
 
@@ -259,22 +258,50 @@ class OneAtATimeMetropolis(SamplingMethod):
         else:
             self._accepted += 1
 
+    def prior_proposal_step():
+        # Probability and likelihood for parameter's current value:
+
+        loglike = self.loglike
+
+        # Sample a candidate value
+        self.parameter.random()
+
+        loglike_p = self.loglike
+
+        # Test
+        if log(random()) > loglike_p - loglike:
+            # Revert parameter if fail
+            self.parameter.value = self.parameter.last_value
+
+            self._rejected += 1
+        else:
+            self._accepted += 1
+            
+    def bernoulli_proposal_step():
+
+        self.parameter.value = True
+        logp_true = self.parameter.logp
+        
+        self.parameter.value = False
+        logp_false = self.parameter.logp
+        
+        p_true = exp(logp_true)
+        p_false = exp(logp_false)
+        
+        if log(random()) > p_true / (p_true + p_false):
+            self.parameter.value = True
+        else:
+            self.parameter.value = False
 
     def propose(self):
 
-        # Propose from prior if it's more informative than the likelihood,
-        # or if no parameters depend on self.parameter.
-        if self._dist == "Prior":
-            self.parameter.random()
+        # Use for continuous parameters
+        if self._dist == 'Normal':
+            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
 
         # Use for discrete parameters
         elif self._dist == 'RoundedNormal':
-            self.parameter.value = int(round(rnormal(self.parameter.value,self.proposal_sig)))
-
-        # Default to normal random-walk proposal
-        else:
-            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
-
+            self.parameter.value = round_array(rnormal(self.parameter.value,self.proposal_sig))
 
 class JointMetropolis(SamplingMethod):
     """
@@ -320,6 +347,17 @@ class JointMetropolis(SamplingMethod):
         self.memory = memory
         self.delay = delay
         self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
+        self.isdiscrete = {}
+        
+        for parameter in self.parameters:
+            type_now = check_type(parameter)[0]
+            if not type_now is float and not type_now is int:
+                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric"+\
+                                    'or ndarray with numeric dtype for JointMetropolis to be applied.'
+            elif type_now is int:
+                self.isdiscrete[parameter] = True
+            else:
+                self.isdiscrete[parameter] = False
 
         # Flag indicating whether covariance has been computed
         self._ready = False
@@ -408,9 +446,17 @@ class JointMetropolis(SamplingMethod):
     def propose(self):
         # Eventually, round the proposed values for discrete parameters.
         fill_stdnormal(self._proposal_deviate)
+        
         proposed_vals = self._asf * inner(self._proposal_deviate, self._sig)
+        
         for parameter in self.parameters:
-            parameter.value = parameter.value + reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
+            
+            jump = reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
+            
+            if self.isdiscrete[parameter]:
+                parameter.value = parameter.value + round_array(jump)
+            else:
+                parameter.value = parameter.value + jump
 
     #
     # Make a step

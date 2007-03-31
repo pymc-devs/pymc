@@ -15,7 +15,13 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
-from numpy import sqrt
+from numpy import sqrt, obj2sctype, ndarray
+
+from numpy import bool_
+from numpy import byte, short, intc, int_, longlong, intp
+from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
+from numpy import single, float_, longfloat
+from numpy import csingle, complex_, clongfloat
 
 #
 # Find PyMC object's random children.
@@ -33,6 +39,34 @@ def extend_children(pymc_object):
     if need_recursion:
         extend_children(pymc_object)
     return
+    
+def check_type(parameter):
+    val = parameter.value
+    if isinstance(val, bool):
+        return bool, ()
+    elif isinstance(val, int) or isinstance(val, uint) or isinstance(val, long):
+        return int, ()
+    elif isinstance(val, float):
+        return float, ()
+    elif isinstance(val, complex):
+        return complex, ()
+    elif isinstance(val, ndarray):
+        if val.dtype is bool_:
+            return bool, val.shape
+        elif val.dtype in [byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
+            return int, val.shape
+        elif val.dtype in [single, float_, longfloat]:
+            return float, val.shape
+        elif val.dtype in [csingle, complex_, clongfloat]:
+            return complex, val.shape
+    else:
+        return 'object', ()
+        
+def round_array(array_in):
+    if isinstance(array_in, ndarray):
+        return array(round(array_in))
+    else:
+        return round(array_in)
 
 #
 # Returns a matrix square root of a covariance matrix.

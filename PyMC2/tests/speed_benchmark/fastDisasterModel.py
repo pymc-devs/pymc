@@ -63,4 +63,4 @@ def disasters(  value = disasters_array,
 Make a special SamplingMethod for switchpoint that will keep it on integer values,
 and add it to M.
 """
-S = OneAtATimeMetropolis(parameter=switchpoint, dist = 'RoundedNormal')
+S = OneAtATimeMetropolis(parameter=switchpoint)
