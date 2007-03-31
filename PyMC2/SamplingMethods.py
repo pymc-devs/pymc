@@ -1,7 +1,7 @@
 
 
 __docformat__='reStructuredText'
-from utils import LikelihoodError, msqrt, extend_children, check_type, round_array
+from utils import LikelihoodError, msqrt, extend_children, check_type, round_array, extend_parents
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
@@ -23,6 +23,7 @@ class SamplingMethod(object):
       - data:       The Parameters over which self has jurisdiction which have isdata = True.
       - pymc_objects:       The Nodes and Parameters over which self has jurisdiction.
       - children:   The combined children of all PyMCBases over which self has jurisdiction.
+      - parents:    The combined parents of all PyMCBases over which self has jurisdiction, as a set.
       - loglike:    The summed log-probability of self's children conditional on all of
                     self's PyMCBases' current values. These will be recomputed only as necessary.
                     This descriptor should eventually be written in C.
@@ -48,6 +49,7 @@ class SamplingMethod(object):
         self.parameters = set()
         self.data = set()
         self.children = set()
+        self.parents = set()
         self._asf = .1
         self._accepted = 0.
         self._rejected = 0.
@@ -68,8 +70,12 @@ class SamplingMethod(object):
         # Find children, no need to find parents; each pymc_object takes care of those.
         for pymc_object in self.pymc_objects:
             self.children |= pymc_object.children
+            for parent in pymc_object.parents.itervalues():
+                if isinstance(parent, PyMCBase):
+                    self.parents.add(parent) 
 
         extend_children(self)
+        extend_parents(self)
 
         self.children -= self.nodes
         self.children -= self.parameters
@@ -184,7 +190,7 @@ class OneAtATimeMetropolis(SamplingMethod):
 
     To instantiate a OneAtATimeMetropolis called M with jurisdiction over a Parameter P:
 
-      >>> M = OneAtATimeMetropolis(P, scale=1, dist='Normal')
+      >>> M = OneAtATimeMetropolis(P, scale=1, dist=None)
 
 
 
@@ -192,10 +198,14 @@ class OneAtATimeMetropolis(SamplingMethod):
     P:      The parameter over which self has jurisdiction.
 
     scale:  The proposal jump width is set to scale * parameter.value.
+    
+    dist:   The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
+            'Prior' or None. If None is provided, a proposal distribution is chosen by
+            examining P.value's type.
 
     :SeeAlso: SamplingMethod, Sampler.
     """
-    def __init__(self, parameter, scale=1.):
+    def __init__(self, parameter, scale=1., dist=None):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
@@ -203,32 +213,48 @@ class OneAtATimeMetropolis(SamplingMethod):
         self._id = 'OneAtATimeMetropolis_'+parameter.__name__
         
         self._type = check_type(parameter)
-        if self._type[0] is bool:
-            self._dist = "Bernoulli"
+        
+        # If no dist argument is provided, assign a proposal distribution automatically.
+        if dist is None:
+            if self._type[0] is bool:
+                self._dist = "Bernoulli"
+            elif self._type[0] is int:
+                self._dist = "RoundedNormal"
+            elif self._type[0] is float:
+                self._dist = "Normal"
+            else:
+                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric or boolean"+\
+                                    'or ndarray with numeric or boolean dtype for OneAtATimeMetropolis to be applied.'
+
+            # If self's extended children is the empty set (eg, if
+            # self's parameter is a posterior predictive quantity of
+            # interest), proposing from the prior is best.
+            if len(self.children) == 0:
+                try:
+                    self.parameter.random()
+                    self._dist = "Prior"
+                except:
+                    pass
+        
+        else: 
+            self._dist = dist
+        
+        # Override the step method if appropriate
+        if self._dist == "Bernoulli":
+            if len(self._type[1])>0:
+                self._len = len(self.parameter.ravel())
+            else:
+                self._len = 1
             self.step = self.bernoulli_proposal_step
-        elif self._type[0] is int:
-            self._dist = "RoundedNormal"
-        elif self._type[0] is float:
-            self._dist = "Normal"
-        else:
-            raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric or boolean"+\
-                                'or ndarray with numeric or boolean dtype for OneAtATimeMetropolis to be applied.'
+            
+        elif self._dist == "Prior":
+            self.step = self.prior_proposal_step
 
-        # If self's extended children is the empty set (eg, if
-        # self's parameter is a posterior predictive quantity of
-        # interest), proposing from the prior is best.
-        if len(self.children) == 0:
-            try:
-                self.parameter.random()
-                self._dist = "Prior"
-                self.step = self.prior_proposal_step
-            except:
-                pass
-
-    #
-    # Do a one-at-a-time Metropolis-Hastings step self's Parameter.
-    #
     def step(self):
+        """
+        The default step method applies if the parameter is floating-point
+        or integer valued, and is not being proposed from its prior.
+        """
 
         # Probability and likelihood for parameter's current value:
 
@@ -258,8 +284,11 @@ class OneAtATimeMetropolis(SamplingMethod):
         else:
             self._accepted += 1
 
-    def prior_proposal_step():
-        # Probability and likelihood for parameter's current value:
+    def prior_proposal_step(self):
+        """
+        This method is substituted for the default step() method if
+        self._dist is "Prior".
+        """
 
         loglike = self.loglike
 
@@ -277,23 +306,54 @@ class OneAtATimeMetropolis(SamplingMethod):
         else:
             self._accepted += 1
             
-    def bernoulli_proposal_step():
-
-        self.parameter.value = True
-        logp_true = self.parameter.logp
         
-        self.parameter.value = False
-        logp_false = self.parameter.logp
-        
-        p_true = exp(logp_true)
-        p_false = exp(logp_false)
-        
-        if log(random()) > p_true / (p_true + p_false):
-            self.parameter.value = True
+    def bernoulli_proposal_step(self):
+        """
+        This method is substituted for the default step() method if
+        self's parameter's value is a boolean or an array of booleans.
+        """
+        if self._len > 1:
+            val = self.parameter.value.ravel()
         else:
-            self.parameter.value = False
+            val = self.parameter.value
+
+        for i in xrange(self._len):
+
+            if self._len > 1:
+                val[i] = True
+                self.parameter.value = reshape(val, self._type[1])
+            else:
+                self.parameter.value = True
+                
+            logp_true = self.parameter.logp
+            
+            if self._len > 1:
+                val[i] = False
+                self.parameter.value = reshape(val, self._type[1])
+            else:
+                self.parameter.value = False
+                
+            logp_false = self.parameter.logp
+            
+            p_true = exp(logp_true)
+            p_false = exp(logp_false)
+            
+            if log(random()) > p_true / (p_true + p_false):
+                if self._len > 1:
+                    val[i] = True
+                    self.parameter.value = reshape(val, self._type[1])
+                else:
+                    self.parameter.value = True
+                
+        self._accepted += 1
+            
+            
 
     def propose(self):
+        """
+        This method is called by step() to generate proposed values
+        if self._dist is "Normal" or "RoundedNormal".
+        """
 
         # Use for continuous parameters
         if self._dist == 'Normal':
@@ -397,10 +457,12 @@ class JointMetropolis(SamplingMethod):
         self._state.append(['last_trace_index', '_cov', '_sig',
         '_proposal_deviate', '_trace'])
 
-    #
-    # Compute and store matrix square root of covariance every epoch
-    #
+
     def compute_sig(self):
+        """
+        This method computes and stores the matrix square root of the empirical
+        covariance every epoch.
+        """
 
         try:
             print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
@@ -437,14 +499,27 @@ class JointMetropolis(SamplingMethod):
 
         self._ready = True
 
+
     def tune(self, divergence_threshold = 1e10, verbose=False):
+        """
+        If the empirical covariance hasn't been computed yet (the first
+        epoch isn't over), this method passes the tune() call along to the
+        OneAtATimeMetropolis instances handling self's parameters. If the
+        empirical covariance has been computed, the OneAtATimeMetropolis
+        instances aren't in use anymore so this method does nothing.
+        
+        We may want to make this method do something eventually.
+        """
         if not self._accepted > 0 or self._rejected > 0:
             for handler in self._single_param_handlers:
                 handler.tune(divergence_threshold, verbose)
 
 
     def propose(self):
-        # Eventually, round the proposed values for discrete parameters.
+        """
+        This method proposes values for self's parameters based on the empirical
+        covariance.
+        """
         fill_stdnormal(self._proposal_deviate)
         
         proposed_vals = self._asf * inner(self._proposal_deviate, self._sig)
@@ -458,11 +533,15 @@ class JointMetropolis(SamplingMethod):
             else:
                 parameter.value = parameter.value + jump
 
-    #
-    # Make a step
-    #
     def step(self):
-        # Step
+        """
+        If the empirical covariance hasn't been computed yet, the step() call
+        is passed along to the OneAtATimeMetropolis instances that handle self's
+        parameters before the end of the first epoch.
+        
+        If the empirical covariance has been computed, values for self's parameters
+        are proposed and tested simultaneously.
+        """
         if not self._ready:
             for handler in self._single_param_handlers:
                 handler.step()

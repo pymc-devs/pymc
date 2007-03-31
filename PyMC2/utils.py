@@ -23,10 +23,16 @@ from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
 from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
-#
 # Find PyMC object's random children.
-#
 def extend_children(pymc_object):
+    """
+    extend_children(object)
+    
+    Replaces object's children set with a set containing
+    object's nearest stochastic (Parameter, not Node) descendants.
+    """
+    if not isinstance(pymc_object.children, set):
+        raise TypeError, "Input object's 'children' attribute must be a set."
     new_children = copy(pymc_object.children)
     need_recursion = False
     node_children = set()
@@ -40,7 +46,42 @@ def extend_children(pymc_object):
         extend_children(pymc_object)
     return
     
+def extend_parents(pymc_object):
+    """
+    extend_parents(object)
+    
+    Replaces object's parents set with a set containing object's
+    nearest stochastic (Parameter, not Node) ancestors.
+    """
+    if not isinstance(pymc_object.parents, set):
+        raise TypeError, "Input object's 'parents' attribute must be a set."
+    new_parents = copy(pymc_object.parents)
+    need_recursion = False
+    node_parents = set()
+    
+    for parent in pymc_object.parents:
+        if isinstance(parent, Node):
+            node_parents.add(parent)
+            need_recursion = True
+            for grandparent in parent.parents.itervalues():
+                if isinstance(grandparent, PyMCBase):
+                    new_parents.add(grandparent)
+                    
+    pymc_object.parents = new_parents - node_parents
+    if need_recursion:
+        extend_parents(pymc_object)
+    return
+    
+    
 def check_type(parameter):
+    """
+    type, shape = check_type(parameter)
+    
+    Checks the type of a parameter's value. Output value 'type' may be
+    bool, int, float, or complex. Nonnative numpy dtypes are lumped into
+    these categories. Output value 'shape' is () if the parameter's value 
+    is scalar, or a nontrivial tuple otherwise.
+    """
     val = parameter.value
     if isinstance(val, bool):
         return bool, ()
@@ -63,15 +104,24 @@ def check_type(parameter):
         return 'object', ()
         
 def round_array(array_in):
+    """
+    arr_out = round_array(array_in)
+    
+    Rounds an array and recasts it to int. Also works on scalars.
+    """
     if isinstance(array_in, ndarray):
         return array(round(array_in))
     else:
         return round(array_in)
 
-#
-# Returns a matrix square root of a covariance matrix.
-#
+
 def msqrt(cov):
+    """
+    sig = msqrt(cov)
+    
+    Returns a matrix square root of a covariance matrix. Tries Cholesky
+    factorization first, and factorizes by diagonalization if that fails.
+    """
     # Try Cholesky factorization
     try:
         sig = cholesky(cov)
