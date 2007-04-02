@@ -13,10 +13,11 @@ class Trace(object):
     def __init__(self,value=None, obj=None):
         """Assign an initial value and an internal PyMC object."""
         self._trace = value
-        if isinstance(obj, PyMC2.PyMCBase):
-            self._obj = obj
-        else:
-            raise AttributeError, 'Not PyMC object', obj
+        if obj is not None:
+            if isinstance(obj, PyMC2.PyMCBase):
+                self._obj = obj
+            else:
+                raise AttributeError, 'Not PyMC object', obj
         
     def _initialize(self, length):
         """Dummy method. Subclass if necessary."""
@@ -75,19 +76,19 @@ class Database(object):
         to their stored value, if a new database is created, instantiate
         a Trace for the PyMC objects to tally.
         """
-        if isinstance(m, PyMC2.Sampler):
+        if isinstance(sampler, PyMC2.Sampler):
             self.model = sampler
         else:
             raise AttributeError, 'Not a Sampler instance.'
                 
         if hasattr(self, '_state_'): 
             # Restore the state of the Sampler.
-            for o in model._pymc_objects_to_tally:
+            for o in sampler._pymc_objects_to_tally:
                 o.trace = getattr(self, o.__name__)
-                o.trace.obj = o
+                o.trace._obj = o
         else: 
             # Set a fresh new state
-            for o in model._pymc_objects_to_tally:
+            for o in sampler._pymc_objects_to_tally:
                 o.trace = self.Trace(obj=o)
     
     def _finalize(self):

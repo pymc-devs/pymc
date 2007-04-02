@@ -60,7 +60,7 @@ class Database(no_trace.Database):
         to their stored value, if a new database is created, instantiate
         a Trace for the PyMC objects to tally.
         """
-        self.no_trace.Database.connect(self, sampler)
+        no_trace.Database.connect(self, sampler)
         self.choose_name()
         
     def _finalize(self):
@@ -87,7 +87,7 @@ def load(file):
         if k == '_state_':
            db._state_ = v
         else:
-            setattr(db, k, Trace(v))
+            setattr(db, k, Trace(value=v))
     return db
         
     

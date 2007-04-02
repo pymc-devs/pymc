@@ -456,8 +456,8 @@ class JointMetropolis(SamplingMethod):
         # __init__ should also check that each parameter's value is an ndarray or
         # a numerical type.
 
-        self._state.append(['last_trace_index', '_cov', '_sig',
-        '_proposal_deviate', '_trace'])
+        self._state += ['last_trace_index', '_cov', '_sig',
+        '_proposal_deviate', '_trace']
 
 
     def compute_sig(self):

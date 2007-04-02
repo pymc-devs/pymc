@@ -3,7 +3,7 @@
 # Simply store the trace in memory
 ###
 
-
+import PyMC2
 from numpy import zeros,shape
 import base
 
@@ -19,10 +19,11 @@ class Trace(base.Trace):
         else:
             self._trace = value
         
-        if isinstance(obj, PyMC2.PyMCBase):
-            self._obj = obj
-        else:
-            raise AttributeError, 'Not PyMC object', obj
+        if obj is not None:
+            if isinstance(obj, PyMC2.PyMCBase):
+                self._obj = obj
+            else:
+                raise AttributeError, 'Not PyMC object', obj
 
     def _initialize(self, length):
         """Create an array of zeros with shape (length, shape(obj)), where 
