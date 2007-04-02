@@ -30,20 +30,15 @@ class Database(no_trace.Database):
     """Pickle database backend.
     Saves the trace to a pickle file.
     """
-    Trace = Trace
     def __init__(self, filename=None):
-        """
-        Return a Pickle database instance.
-
-        :Parameters:
-            - `filename` : Name of file where the results are stored.
+        """Assign a name to the file the database will be saved in.
         """
         self.filename = filename
         self.Trace = Trace
 
-    def _initialize(self, length):
-        """Define filename to store simulation results."""
-
+    def choose_name(self):
+        """If a file name has not been assigned, choose one from the 
+        name of the input module imported by the Sampler."""
         if self.filename is None:
             modname = self.model.__name__.split('.')[-1]
             name = modname+'.pickle'
@@ -57,29 +52,29 @@ class Database(no_trace.Database):
                     break
             self.filename = name
 
-        for object in self.model._pymc_objects_to_tally:
-            object.trace._initialize(length)
 
-
+    def connect(self, sampler):
+        """Link the Database to the Sampler instance. 
+        
+        If database is loaded from a file, restore the objects trace 
+        to their stored value, if a new database is created, instantiate
+        a Trace for the PyMC objects to tally.
+        """
+        self.no_trace.Database.connect(self, sampler)
+        self.choose_name()
+        
     def _finalize(self):
         """Dump traces using cPickle."""
         container={}
-        for obj in self.model._pymc_objects_to_tally:
-            obj.trace._finalize()
-            container[obj.__name__] = obj.trace._trace
+        for o in self.model._pymc_objects_to_tally:
+            o.trace._finalize()
+            container[o.__name__] = o.trace._trace
         container['_state_'] = self._state_
+        
         file = open(self.filename, 'w')
         cPickle.dump(container, file)
         file.close()
-
-##    def state():
-##        def fset(self, s):
-##            self.__state = s
-##        def fget(self):
-##            return self.__state
-##        return locals()
-##    state = property(**state())    
-    
+     
 def load(file):
     """Load an existing database.
 

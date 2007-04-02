@@ -19,4 +19,5 @@ class Database(base.Database):
     purposes.
     """ 
     def __init__(self):
+        """Get the Trace from the local scope."""
         self.Trace = Trace

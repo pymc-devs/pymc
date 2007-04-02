@@ -5,3 +5,5 @@ epydoc --verbose --debug --config epydoc.conf
 # Make manual
 rst2latex PyMC2/database/README.txt > docs/pdf/README.tex
 pdflatex -output-directory=docs/pdf docs/pdf/README
+pdflatex -output-directory=docs/pdf docs/new_interface
+pdflatex -output-directory=docs/pdf docs/pymc_users_guide

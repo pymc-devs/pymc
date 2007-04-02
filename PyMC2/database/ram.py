@@ -12,35 +12,33 @@ class Trace(base.Trace):
     
     Store the samples in memory. 
     """
-    def __init__(self, value=None):
-        """Initialize the trace attributes.
-        
-        :Parameters:
-          - `value` : Initial value.
-        """
+    def __init__(self, value=None, obj=None):
+        """Assign an initial value and an internal PyMC object."""
         if value is None:
             self._trace = []
         else:
             self._trace = value
+        
+        if isinstance(obj, PyMC2.PyMCBase):
+            self._obj = obj
+        else:
+            raise AttributeError, 'Not PyMC object', obj
 
     def _initialize(self, length):
-        """Create an array of zeros with shape (length, shape(obj)).
-        :Parameters:
-          - `obj` : PyMC object
-                Node or Parameter instance.
-          - `length` : Length of array to initialize.
+        """Create an array of zeros with shape (length, shape(obj)), where 
+        obj is the internal PyMC Parameter or Node.
         """
         try:
-            self._trace.append( zeros ((length,) + shape(self.obj.value), self.obj.value.dtype) )
+            self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.value.dtype) )
         except AttributeError:
-            self._trace.append( zeros ((length,) + shape(self.obj.value), dtype=object) )           
+            self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=object) )           
         
     def tally(self, index):
-        """Store current value of object."""
+        """Store current value."""
         try:
-            self._trace[-1][index] = self.obj.value.copy()
+            self._trace[-1][index] = self._obj.value.copy()
         except AttributeError:
-            self._trace[-1][index] = self.obj.value
+            self._trace[-1][index] = self._obj.value
 
     def truncate(self, index):
         """
@@ -65,7 +63,11 @@ class Trace(base.Trace):
     __call__ = gettrace
 
 class Database(base.Database):
-    """RAM database."""
+    """RAM database. 
+    
+    Store the samples in memory.
+    """
     def __init__(self):
+        """Get the Trace from the local scope."""
         self.Trace = Trace
     

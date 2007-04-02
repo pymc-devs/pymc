@@ -44,10 +44,10 @@ cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
       END
 
 
-      FUNCTION gammln(xx) 
+      DOUBLE PRECISION FUNCTION gammln(xx) 
 C Returns the value ln[gamma(xx)] for xx > 0. 
 
-      DOUBLE PRECISION gammln, xx
+      DOUBLE PRECISION xx
       INTEGER j 
       DOUBLE PRECISION ser,stp,tmp,x,y,cof(6) 
 
@@ -61,13 +61,13 @@ C a nicety that you can omit if five-figure accuracy is good enough.
       x=xx
       y=x 
       tmp=x+5.5d0 
-      tmp=(x+0.5d0)*log(tmp)-tmp 
+      tmp=(x+0.5d0)*dlog(tmp)-tmp 
       ser=1.000000000190015d0 
       do j=1,6
          y=y+1.d0 
          ser=ser+cof(j)/y 
       enddo 
-      gammln=tmp+log(stp*ser/x) 
+      gammln=tmp+dlog(stp*ser/x) 
       return 
       END
 
@@ -99,7 +99,7 @@ C Fill in table up to desired value.
 C Larger value than size of table is required. Actually, 
 C this big a value is going to overflow on many computers, 
 C but no harm in trying. 
-        factrl=exp(gammln(n+1.)) 
+        factrl=dexp(gammln(n+1.d0)) 
       endif 
       return 
       END 
@@ -1263,13 +1263,13 @@ cf2py double precision intent(out) :: gx
 
       x = xx
       tmp = x + 5.5
-      tmp = tmp - (x+0.5) * log(tmp)
+      tmp = tmp - (x+0.5) * dlog(tmp)
       ser = 1.000000000190015
       do i=1,6
         x = x+1
         ser = ser + coeff(i)/x
       enddo
-      gx = -tmp + log(2.50662827465*ser/xx)
+      gx = -tmp + dlog(2.50662827465*ser/xx)
       return
       END
 
@@ -1354,7 +1354,8 @@ cf2py double precision dimension(N,N),intent(in) :: A
 cf2py double precision intent(out) :: D
 cf2py integer intent(hide),depend(A) :: N=len(A)      
 
-      DIMENSION A(N,N),INDX(N)
+      DOUBLE PRECISION A(N,N), D
+      INTEGER INDX(N)
 
       CALL ELGS(A,N,INDX)
 C
@@ -1386,7 +1387,8 @@ C matrix plus the pivoting element ratios below the diagonal in
 C the output.  INDX(N) records the pivoting order.
 
 
-      DIMENSION A(N,N),INDX(N),C(N)
+      DOUBLE PRECISION A(N,N),C(N),C1
+      INTEGER INDX(N)
 
 C Initialize the index
 
@@ -1399,7 +1401,7 @@ C Find the rescaling factors, one from each row
         DO     100   I = 1, N
           C1= 0.0
           DO    90   J = 1, N
-            C1 = AMAX1(C1,ABS(A(I,J)))
+            C1 = MAX(C1,ABS(A(I,J)))
    90     CONTINUE
           C(I) = C1
   100   CONTINUE
@@ -1455,7 +1457,7 @@ C for smaller values of n and k.
 
       subroutine chol(n,a,c)
 c...perform a Cholesky decomposition of matrix a, returned as c
-      implicit double precision*8 (a-h,o-z)
+      implicit double precision (a-h,o-z)
       double precision c(n,n),a(n,n)
 
 cf2py double precision dimension(n,n),intent(in) :: a
@@ -1672,7 +1674,7 @@ cf2py integer intent(in) :: n
 cf2py double precision dimension(n),intent(out) :: s
 cf2py integer intent(hide),depend(hist) :: k=len(hist)
 
-      DOUBLE PRECISION hist(k),s(n),mn,step,sump,u,rand
+      DOUBLE PRECISION hist(k),s(n),mn,step,sump,u
       INTEGER n,k,i,j
 
 c repeat for n samples
@@ -1680,7 +1682,7 @@ c repeat for n samples
 c initialize sum      
         sump = 0.0
 c random draw
-        u = rand()
+        u = DBLE(rand())
         j = 0
 c find index to value        
     1   if (u.gt.sump) then
@@ -1708,15 +1710,15 @@ C     Note- this seems to be faster than Leva's algorithm from
 C     ACM Trans Math Soft, Dec. 1992 - AP
 C
       DOUBLE PRECISION U1, U2
-      DOUBLE PRECISION RAND
+c      DOUBLE PRECISION RAND
 C
 C     Local variables
 C
       DOUBLE PRECISION X, Y, S, ONE, TWO
       DATA ONE /1.0/, TWO /2.0/
 C
-    1 X = RAND()
-      Y = RAND()
+    1 X = DBLE(RAND())
+      Y = DBLE(RAND())
       X = TWO * X - ONE
       Y = TWO * Y - ONE
       S = X * X + Y * Y
@@ -1837,7 +1839,7 @@ C a binomial distribution of n trials each of probability pp, using rand as a so
 C of uniform random deviates. 
       INTEGER j,nold
       DOUBLE PRECISION am,em,en,g,oldg,p,pc
-      DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln,rand
+      DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln
       SAVE nold,pold,pc,plog,pclog,en,oldg 
 C     Arguments from previous calls.
       DATA nold /-1/, pold /-1./  

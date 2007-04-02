@@ -52,17 +52,16 @@
 %\pdftrue
 %\fi
 
-\ifpdf
-\usepackage[pdftex]{graphicx}
-\else
+%\ifpdf
+%\usepackage[pdftex]{graphicx}
+%\else
 \usepackage{graphicx}
-\fi
+%\fi
 \title{PyMC 2.0 svn User's Guide \\
 Installation and tutorial}
 \author{ Christopher Fonnesbeck\\ David Huard \\ Anand Patil }
-
+\graphicspath{{docs/}}
 % \date
-
 % TODO: Logo.
 
 \begin{document}
@@ -1066,6 +1065,7 @@ The second-most-likely place for a bottleneck is in a custom SubSampler. Model i
 \chapter{Probability distributions}
 David
 Link to the epydoc generated API ?
+%\include{docs/pdf/PyMC2.distributions-module}
 \chapter{epydoc class reference?}
 
 \chapter{Database backends}
