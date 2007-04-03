@@ -1,0 +1,193 @@
+\documentclass{report}
+\usepackage{fullpage}
+\usepackage{epsfig}
+\usepackage{pdfsync}
+\usepackage{amsfonts}
+
+\begin{document}
+
+\title{The GaussianProcess package}
+\author{Anand Patil}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}\label{cha:introduction} % (fold)
+
+Gaussian processes (GPs) are probability distributions for functions. They're useful if a functional form is unknown a priori.
+
+GPs are not hard to understand at a conceptual level, but implementing them on a computer can require fairly involved linear algebra. This makes it hard for beginners to get started, and even when you have experience it's annoying.
+
+This package provides Python classes that represent the components of the Gaussian process. They are meant to support many types of Gaussian process usage, from intuitive exploration to high-performance deployment in MCMC, with smooth transitions between.
+
+The package also provides a class which produces Gaussian process-valued PyMC parameters and a PyMC sampling method to handle it. That means the Gaussian process-related objects can be directly incorporated into larger probability models.
+
+You'll need to understand Python and a little bit of Bayesian statistics. Refs.
+
+% chapter introduction (end)
+
+\chapter{Tutorial}\label{cha:tutorial} 
+
+\section{Preliminaries}\label{sec:preliminaries}
+You need to know a bit about Python and numpy. Also a bit about Bayesian statistics and the normal distribution. Refs. All the code in the tutorial is in module/folder \texttt{examples}, which is distributed with this package.
+
+\section{A first look at Gaussian processes}\label{sec:first_look} % (fold)
+
+Gaussian processes are probability distributions for functions. The statement `$f$ has a Gaussian process distribution with mean $M$ and covariance $C$' is usually written as follows:
+\begin{equation}
+    f\sim\textup{GP}(M,C).
+\end{equation}
+Gaussian processes have two parameters, which are analogous to the parameters of the normal distribution:
+\begin{itemize}
+    \item $M$ is the mean function. Like the mean parameter of the normal distribution, $M$ gives the central tendency for $f$. In Bayesian statistics, $M$ is usually considered a prior guess for $f$. $M(x)$ gives the expectation of $f(x)$.
+    \item $C$  is the covariance function. Its role in the distribution of $f$ is harder to understand than the mean function, but among other things it regulates:
+    \begin{itemize}
+        \item the amount by which $f$ may deviate from $M$
+        \item the smoothness of $f$
+        \item the wiggliness of $f$.
+    \end{itemize}
+    $C(x,y)$ gives the covariance of $f(x)$ and $f(y)$; $C(x,x)$ gives the covariance of $f(x)$.
+    
+    Understanding covariance functions is essential for sensible application of Gaussian processes, but for the time being don't worry about them too much. Section \ref{sec:cov_mean} is all about covariance functions.
+\end{itemize}
+
+\subsection{Instantiating a Gaussian process} 
+
+It will be much easier to understand the role of the covariance function if we generate a Gaussian process to play around with. 
+\subsubsection{Covariance function} 
+The following code will produce a covariance function:
+\begin{small}
+\begin{verbatim}
+    # example_cov.py
+    
+    from GaussianProcess import *
+    from numpy import *
+
+    def exp_cov(x,y,pow,amp,scale):
+        """
+        amp and scale must be positive
+        pow must be positive and less than 2
+        """
+        C = zeros((len(x), len(y)))
+        for i in xrange(len(x)):
+            for j in xrange(len(y)):
+                C[i,j] = amp * exp(-(abs(x-y) / scale) ** pow)
+        return C
+
+    C = Covariance(eval_fun = exp_cov, nu = .49, amp = 1., scale = .3)
+    C.plot(x=arange(-1.,1.,.1), y=arange(-1.,1.,.1))
+\end{verbatim}
+\end{small}
+The first argument, \texttt{eval\_fun}, gives the Python function from which the covariance function will be made, in this case \texttt{exp\_cov}. The arguments \texttt{pow, amp} and \texttt{scale} will be passed to \texttt{exp\_cov}. See The last line displays a filled contour plot of $C(x,y)$ on the mesh ($-1<x<1$,$-1<y<1$). Try playing around with the parameters of \texttt{exp\_cov} and see how $C$ looks. Try calling it.
+
+\subsubsection{Mean function} 
+The following code will produce a mean function $M$ which is associated with $C$:
+\begin{small}
+\begin{verbatim}
+    # example_mean.py
+    
+    from GaussianProcess import *
+    from numpy import *
+
+    def exp_cov(x,y,pow,amp,scale):
+        """
+        amp and scale must be positive
+        pow must be positive and less than 2
+        """
+        C = zeros((len(x), len(y)))
+        for i in xrange(len(x)):
+            for j in xrange(len(y)):
+                C[i,j] = amp * exp(-(abs(x-y) / scale) ** pow)
+        return C
+
+    C = Covariance(eval_fun = exp_cov, nu = .49, amp = 1., scale = .3)
+
+    def linfun(x, m, b):
+        return m * x + b
+
+    M = Mean(eval_fun = linfun, C = C, m = 1., b = 0.)
+    M.plot(x=arange(-1.,1.,.1))
+\end{verbatim}
+\end{small}
+As with \texttt{Covariance}, the first argument to \texttt{Mean}'s init method is a Python function, in this case \texttt{linfun}. The second argument, \texttt{C}, is the \texttt{Covariance} instance with which the mean function is associated. The arguments \texttt{m} and \texttt{b} will be passed to \texttt{linfun}. The last line plots $M(x)$ on $-1<x<1$, and as expected the plot is a straight line through the origin with slope 1. Try calling it.
+
+\subsubsection{Realizations} 
+Now let's generate some realizations (draws) from the Gaussian process defined by $M$ and $C$ and take a look at them.
+\begin{small}
+\begin{verbatim}
+    # example_realizations.py
+    
+    from GaussianProcess import *
+    from numpy import *
+
+    def exp_cov(x,y,pow,amp,scale):
+        """
+        amp and scale must be positive
+        pow must be positive and less than 2
+        """
+        C = zeros((len(x), len(y)))
+        for i in xrange(len(x)):
+            for j in xrange(len(y)):
+                C[i,j] = amp * exp(-(abs(x-y) / scale) ** pow)
+        return C
+
+    C = Covariance(eval_fun = exp_cov, nu = .49, amp = 1., scale = .3)
+
+    def linfun(x, m, b):
+        return m * x + b
+
+    M = Mean(eval_fun = linfun, C = C, m = 1., b = 0.)
+
+    f=[]
+    for i in range(3):
+        f.append(Realization(M,C))
+
+    plot_envelope(M,C)
+    for i in range(3):
+        plot(arange(-1.,1.,.1), f[i])
+\end{verbatim}
+\end{small}
+The dashdot black line in the middle is $M$, and the gray band is the $\pm 1$ standard deviation envelope generated by $C$. Each realization is a callable function, so you can see their values.
+
+% section first_look (end)
+
+
+\section{The role of the covariance function}\label{sec:cov_mean} % (fold)
+
+Various visualization methods of covariance, relationship between covariance's shape and differentiability of realizations.
+
+% section cov_mean (end)
+
+
+\section{Nonparametric regression: observing Gaussian processes}\label{sec:observing} % (fold)
+
+The condition function, what it does. Some ecological examples.
+
+% section observing (end)
+
+
+\section{The array aspect}\label{sec:array} % (fold)
+
+\begin{equation}
+    \begin{array}{ll}
+        x\sim\textup N(\mu,V) & \textup{$x$, $y$, $V$ are scalars}\\\\
+        \vec x\sim\textup N(\vec \mu,C)& \textup{$\vec x$ and $\vec \mu$ are vectors, $C$ is a scalar}\\\\
+        f\sim\textup{GP}(M, C) & \textup{$f$ and $M$ are functions of one variable, $C$ is a function of two variables}
+    \end{array}
+\end{equation}
+
+The base mesh
+
+% section array (end)
+
+
+\section{Incorporating Gaussian processes in probability models with PyMC}\label{sec:PyMC} % (fold)
+
+% section PyMC (end)
+
+
+\chapter{API reference}\label{cha:reference} 
+
+Doxygen-style class reference here.
+
+
+\end{document}

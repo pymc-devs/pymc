@@ -1,38 +1,19 @@
-#TODO: Replace all the ndarrays with matrices, to eliminate all the
-#TODO: messing around with array dimensions.
-#TODO: Make the entire class a subclass of Matrix.
-#TODO: Get __call__ and condition working.
-#TODO: implement lintrans and dependent observation precision at some point.
+__docformat__='reStructuredText'
 
-"""
-@node
-def GP_cov(base_mesh, obs_mesh, lintrans=None, obs_taus = None, actual_GP_fun, **params):
-    
-    return GP_cov_obj(base_mesh, obs_mesh, lintrans, obs_taus, actual_GP_fun, **params)
-    
-    Valued as a special GP covariance object. On instantiation,
-    
-    this object produces a covariance matrix over base_mesh, according to actual_GP_fun,
-    with parameters **params, conditioned on lintrans acting on its evaluations at 
-    obs_mesh, with `observation precision' obs_taus.
-    
-    The object is indexable and callable. When indexed, it returns one of its stored
-    elements (static usage). When called with a point couple as arguments (dynamic usage), 
-    it returns the covariance of that point couple, again conditioned on the lintrans and obs_mesh
-    and all.
-"""
+# TODO: implement lintrans and dependent observation precision at some point.
+# TODO: Make the covariance functions return a matrix, not update it in-place. 
+# TODO: That's stupid. There's no benefit so far for in-place updating.
 
 from numpy import *
 from PyMC2.utils import msqrt
 
 
-class GPCovariance(matrix):
+class Covariance(matrix):
     
     """
-    C=GPCovariance(base_mesh, obs_mesh, lintrans, obs_taus, actual_GP_fun, **params)
+    C=Covariance(eval_fun, base_mesh, **params)
     
     Valued as a special GP covariance object. On instantiation,
-    
     this object produces a covariance matrix over base_mesh, according to actual_GP_fun,
     with parameters **params, conditioned on lintrans acting on its evaluations at 
     obs_mesh, with `observation precision' obs_taus.
@@ -41,6 +22,17 @@ class GPCovariance(matrix):
     elements (static usage). When called with a point couple as arguments (dynamic usage), 
     it returns the covariance of that point couple, again conditioned on the lintrans and obs_mesh
     and all.
+    
+    :Arguments:
+    - eval_fun: A function that takes a matrix as its first argument
+                and two ndarrays or vectors as its second and third 
+                arguments, and writes a covariance matrix in-place over
+                its first argument.
+    - base_mesh: The base mesh.
+    - params: Parameters to be passed to eval_fun.
+    
+    :SeeAlso:
+    GPMean, GPRealization, GaussianProcess, condition
     """
     
     def eval_fun():
@@ -55,6 +47,7 @@ class GPCovariance(matrix):
     obs_taus = None 
     Q = None   
     obs_len = None
+    __matrix__ = None
     
     __array_priority__ = 0.
     
@@ -85,6 +78,7 @@ class GPCovariance(matrix):
         C.base_mesh = base_mesh
         C.base_reshape = base_reshape
         C.ndim = ndim
+        C.__matrix__ = data
         
         # Return the data
         return C
@@ -97,6 +91,7 @@ class GPCovariance(matrix):
         lenx = x.shape[0]
             
         if y is None:
+            
             C = asmatrix(zeros((lenx,lenx)),dtype=float)
             self.eval_fun(C,x,x,**self.params)
             if not self.conditioned:
@@ -144,17 +139,15 @@ class GPCovariance(matrix):
         functional_part = 'functional aspect: ' + str(self.eval_fun)
         
         return '\n'.join(['Gaussian process covariance',functional_part,matrix_part])
-    
-    def __array__(self):
-        return self.view(matrix)
         
     def __getitem__(self, *args):
         return self.view(matrix).__getitem__(*args)
-
+    
     def __getslice__(self, *args):
         return self.view(matrix).__getslice__(*args)     
-        
+            
     # def __ipow__(self)
+    # def __pow__(self)
     # def __idiv__(self)
     # def __imul__(self)
     # def __iadd__(self)   
@@ -169,10 +162,6 @@ class GPCovariance(matrix):
     def _sqrt(self):
         return msqrt(self)
     S = property(_sqrt)
-    
-    def _transpose(self):
-        return self.view(matrix).T
-    T = property(_transpose)
 
     def plot(self, mesh=None):
         from pylab import contourf, colorbar

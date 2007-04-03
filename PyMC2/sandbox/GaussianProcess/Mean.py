@@ -1,11 +1,20 @@
-"""
-Just like GP_cov, but with a mean. Will need to have a covariance
-matrix as a parent to implement conditioning.
-"""
+__docformat__='reStructuredText'
 
 from numpy import *
 
-class GPMean(ndarray):
+class Mean(ndarray):
+    """
+    M = GPMean(eval_fun, C, **mean_params)
+    
+    A Gaussian process mean function.
+    
+    :Arguments:
+        - eval_fun: A function that takes a scalar or ndarray as its first argument and returns an ndarray.
+        - C: A Gaussian process covariance function
+        - mean_params: Parameters to be passed to eval_fun
+    
+    :SeeAlso: GPCovariance, GPRealization, GaussianProcess, condition
+    """
     
     def eval_fun():
         pass

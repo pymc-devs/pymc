@@ -1,3 +1,5 @@
+__docformat__='reStructuredText'
+
 """
 Indexable and callable. Values on base mesh ('static') must always exist,
 indexing returns one of those. Also keeps two nodes and an array:
@@ -6,12 +8,25 @@ indexing returns one of those. Also keeps two nodes and an array:
 
 from numpy import *
 from numpy.random import normal
-from PyMC2 import msqrt
-from GPCovariance import GPCovariance
-from GPMean import GPMean
-from GPutils import *
+from GPutils import msqrt
+from Covariance import Covariance
+from Mean import Mean
 
-class GPRealization(ndarray):
+class Realization(ndarray):
+    
+    """
+    f = Realization(M, C[, init_base_array])
+    
+    A realization from a Gaussian process. It's indexable and callable.
+    
+    :Arguments:
+        - M: A Gaussian process mean function.
+        - C: A Gaussian process covariance function.
+        - init_base_array:  An optional ndarray giving the value of f over its base mesh (got from C). If no value is given, f's value over its base mesh is sampled given M and C.
+                        
+    :SeeAlso:
+    GPMean, GPCovariance, GaussianProcess, condition
+    """
     
     def eval_fun():
         pass
@@ -55,7 +70,7 @@ class GPRealization(ndarray):
             f = init_base_array.view(subtype)
         else:
             q=reshape(asarray(C.S.T * normal(size = length)), base_mesh.shape)
-            f = q.view(subtype)
+            f = (M+q).view(subtype)
         
         f.base_mesh = base_mesh
         f.cov_params = cov_params
