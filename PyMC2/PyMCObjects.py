@@ -152,14 +152,9 @@ class Parameter(PyMCBase):
                 
     touch():    If a parameter's value is changed in-place, the cache-checker will
                 get confused. In addition, in MCMC, there won't be a way to reject
-                the jump.
-                
-                **WARNING**
-                
-                If you want to update a parameter's value in-place, call touch()
-                FIRST. This will make a shallow copy of parameter's value which you
-                can overwrite, and will also store its current value in last_value.
-    
+                the jump. If you update a parameter's value in-place, call touch()
+                immediately afterward.
+                    
     :SeeAlso: Node, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
     
@@ -248,12 +243,10 @@ class Parameter(PyMCBase):
         It's safest to avoid updating parameters' values in-place.
         """
         if isinstance(self._value, ndarray):
-            # This is kind of a hack, but it's the only way I could figure
-            # out to _really_ make a shallow copy of an ndarray.            
-            self.value = reshape(self._value, self._value.shape)
-            self.last_value = self.value
+            self.value = self.value.view()
         else:
             self.value = copy(self._value)
+        self.last_value = self.value
 
     
     # Sample self's value conditional on parents.

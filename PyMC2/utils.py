@@ -17,6 +17,7 @@ from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
 from numpy import sqrt, obj2sctype, ndarray, asmatrix
 
+# TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_
 from numpy import byte, short, intc, int_, longlong, intp
 from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
