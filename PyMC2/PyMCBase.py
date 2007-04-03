@@ -1,3 +1,5 @@
+__docformat__='reStructuredText'
+
 class ParentDict(dict):
     """
     A special subclass of dict which makes it safe to change parameters'

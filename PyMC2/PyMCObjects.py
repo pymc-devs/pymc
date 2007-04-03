@@ -1,3 +1,5 @@
+__docformat__='reStructuredText'
+
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape
 from PyMCBase import PyMCBase, ParentDict
@@ -29,26 +31,26 @@ class Node(PyMCBase):
 
     :Arguments:
 
-    eval:   The function that computes the node's value from the values 
-            of its parents.
+        -eval:  The function that computes the node's value from the values 
+                of its parents.
 
-    doc:    The docstring for this node.
+        -doc:    The docstring for this node.
 
-    name:   The name of this node.
+        -name:   The name of this node.
 
-    parents: A dictionary containing the parents of this node.
+        -parents: A dictionary containing the parents of this node.
 
-    trace (optional):   A boolean indicating whether this node's value 
-                        should be traced (in MCMC).
+        -trace (optional):  A boolean indicating whether this node's value 
+                            should be traced (in MCMC).
 
-    cache_depth (optional): An integer indicating how many of this node's
-                            value computations should be 'memoized'.
+        -cache_depth (optional):    An integer indicating how many of this node's
+                                    value computations should be 'memoized'.
 
                             
     Externally-accessible attribute:
 
-    value:  Returns the node's value given its parents' values. Skips
-            computation if possible.
+        -value: Returns the node's value given its parents' values. Skips
+                computation if possible.
             
     No methods.
     

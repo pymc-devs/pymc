@@ -1,18 +1,86 @@
+__docformat__='reStructuredText'
+
 # TODO: Implement lintrans, allow obs_taus to be a huge matrix or an ndarray.
 
 from GPCovariance import *
 from GPMean import *
-from numpy.linalg import solve
+from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
+from pylab import fill, plot, clf, axis
 
-def condition(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=None):
+def plot_envelope(M,C,mesh=None):
     """
-    condition(C, obs_mesh[, obs_taus, lintrans, obs_vals, M])
+    plot_envelope(M,C[, mesh])
+    
+    plots the pointwise mean +/- sd envelope defined by M and C
+    along their base mesh.
+    
+    :Arguments:
+        - M: A Gaussian process mean.
+        - C: A Gaussian process covariance
+        - mesh: The mesh on which to evaluate the mean and cov.
+                Base mesh used by default.
+    """
+    if mesh is None:
+        x = concatenate((C.base_mesh, C.base_mesh[::-1]))
+        sig = sqrt(diag(C))
+        y = concatenate((M-sig, (M+sig)[::-1]))
+        clf()
+    
+        fill(x,y,facecolor='.8',edgecolor='1.')
+        plot(C.base_mesh,M,'k-.')
+
+    else:
+        x=concatenate((mesh, mesh[::-1]))
+        sig = sqrt(diag(C(mesh,mesh)))
+        mean = M(mesh)
+        y=concatenate((mean-sig, (mean-sig)[::-1]))
+        clf()
+        fill(x,y,facecolor='.8',edgecolor='1.')
+        plot(mesh, mean, 'k-.')
+    
+
+def msqrt(cov):
+    """
+    sig = msqrt(cov)
+    
+    Returns a matrix square root of a covariance matrix. Tries Cholesky
+    factorization first, and factorizes by diagonalization if that fails.
+    """
+    # Try Cholesky factorization
+    try:
+        sig = asmatrix(cholesky(cov))
+    
+    # If there's a small eigenvalue, diagonalize
+    except LinAlgError:
+        val, vec = eigh(cov)
+        sig = asmatrix(np.zeros(vec.shape))
+        for i in range(len(val)):
+            if val[i]<0.:
+                val[i]=0.
+            sig[:,i] = vec[:,i]*sqrt(val[i])
+    return np.asmatrix(sig).T
+
+
+def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=None):
+    """
+    observe(C, obs_mesh[, obs_taus, lintrans, obs_vals, M])
     
     Updates C and M to condition f on the value of obs_vals in:
     
     obs_vals ~ N(lintrans * f(obs_mesh), obs_taus)
     f ~ GP(M, C)
+    
+    :Arguments:
+        - C: A Gaussian process covariance.
+        - obs_mesh: 
+        - obs_taus:
+        - lintrans:
+        - obs_vals:
+        - M:
+    
+    :SeeAlso:
+    GPMean, GPCovariance, GPRealization, GaussianProcess
     """
 
     base_mesh = C.base_reshape

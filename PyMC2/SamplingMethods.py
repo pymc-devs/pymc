@@ -1,5 +1,3 @@
-
-
 __docformat__='reStructuredText'
 from utils import LikelihoodError, msqrt, extend_children, check_type, round_array, extend_parents
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any

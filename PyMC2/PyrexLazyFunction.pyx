@@ -1,3 +1,5 @@
+__docformat__='reStructuredText'
+
 from numpy import array, zeros, ones, arange, resize
 from PyMC2 import PyMCBase, ContainerBase
 

@@ -3,6 +3,8 @@
 # TODO: Explicitly consider only probabilities of relevant parameters' Markov blankets
 # TODO: to reduce roundoff errors.
 
+__docformat__='reStructuredText'
+
 from PyMCObjects import Parameter
 from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log

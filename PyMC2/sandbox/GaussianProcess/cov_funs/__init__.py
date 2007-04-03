@@ -1,8 +1,13 @@
 from fcov import *
-from Matern import *
-
+try:
+    from Matern import *
+    pycov_functions = ['Matern', 'NormalizedMatern']
+except ImportError:
+    print 'Warning, Matern covariance functions not available. Install scipy for access to these.'
+    pycov_functions = []
+    
 fcov_functions = ['axi_gauss', 'axi_exp']
-pycov_functions = ['Matern', 'NormalizedMatern']
+
 
 def fwrap(cov_fun):
     
