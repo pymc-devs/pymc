@@ -615,13 +615,14 @@ class Sampler(Model):
 
     def save_state(self):
         """Tell the database to save the current state of the sampler."""
-        self.db._state_ = self.get_state()
+        self.db.savestate(self.get_state())
 
     def restore_state(self):
         """Restore the state of the sampler and of the sampling methods to
         the state stored in the database.
         """
-        state = self.db._state_
-        self.__dict__.update(state['sampler'])
+        state = self.db.getstate()
+        self.__dict__.update(state.get('sampler', {}))
         for sm in self.sampling_methods:
-            sm.__dict__.update(state['sampling_methods'][sm._id])
+            tmp = state.get('sampling_methods', {})
+            sm.__dict__.update(tmp.get(sm._id, {}))

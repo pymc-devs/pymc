@@ -4,7 +4,7 @@
 ###
 
 import PyMC2
-from numpy import zeros,shape
+from numpy import zeros,shape, hstack
 import base
 
 class Trace(base.Trace):
@@ -59,7 +59,13 @@ class Trace(base.Trace):
         """
         if slicing is None:
             slicing = slice(burn, None, thin)
-        return self._trace[chain][slicing]
+        if chain is not None:
+            return self._trace[chain][slicing]
+        else:
+            trace = self._trace[0][slicing] 
+            for t in self._trace[1:]:
+                trace = hstack([trace, t[slicing]])
+            return trace
 
     __call__ = gettrace
 

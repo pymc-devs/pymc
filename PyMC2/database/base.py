@@ -90,9 +90,26 @@ class Database(object):
             # Set a fresh new state
             for o in sampler._pymc_objects_to_tally:
                 o.trace = self.Trace(obj=o)
+        
+        for o in sampler._pymc_objects_to_tally:
+            o.trace.db = self
     
     def _finalize(self):
         """Tell the traces to finalize themselves."""
         for o in self.model._pymc_objects_to_tally:
             o.trace._finalize()
     
+    def close(self):
+        """Close the database."""
+        pass
+        
+    def savestate(self, state):
+        """Store a dictionnary containing the state of the Sampler and its 
+        SamplingMethods."""
+        self._state_ = state
+        
+    def getstate(self):
+        """Return a dictionary containing the state of the Sampler and its 
+        SamplingMethods."""
+        return self._state_
+        

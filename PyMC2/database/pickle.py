@@ -19,14 +19,14 @@ which means that the database must also store the Sampler's state.
 """
 
 
-import ram, no_trace
+import ram, no_trace, base
 import os, datetime, numpy
 import string, cPickle
 
 class Trace(ram.Trace):
     pass
 
-class Database(no_trace.Database):
+class Database(base.Database):
     """Pickle database backend.
     Saves the trace to a pickle file.
     """
@@ -36,17 +36,18 @@ class Database(no_trace.Database):
         self.filename = filename
         self.Trace = Trace
 
-    def choose_name(self):
+    def choose_name(self, extension):
         """If a file name has not been assigned, choose one from the 
         name of the input module imported by the Sampler."""
+        extension = '.'+extension
         if self.filename is None:
             modname = self.model.__name__.split('.')[-1]
-            name = modname+'.pickle'
+            name = modname+extension
             i=0
             existing_names = os.listdir(".")
             while True:
-                if name+'.pickle' in existing_names:
-                    name = modname+'_%d'%i+'.pickle'
+                if name+extension in existing_names:
+                    name = modname+'_%d'%i+extension
                     i += 1
                 else:
                     break
@@ -60,14 +61,13 @@ class Database(no_trace.Database):
         to their stored value, if a new database is created, instantiate
         a Trace for the PyMC objects to tally.
         """
-        no_trace.Database.connect(self, sampler)
-        self.choose_name()
+        base.Database.connect(self, sampler)
+        self.choose_name(extension='pickle')
         
-    def _finalize(self):
+    def close(self):
         """Dump traces using cPickle."""
         container={}
         for o in self.model._pymc_objects_to_tally:
-            o.trace._finalize()
             container[o.__name__] = o.trace._trace
         container['_state_'] = self._state_
         
