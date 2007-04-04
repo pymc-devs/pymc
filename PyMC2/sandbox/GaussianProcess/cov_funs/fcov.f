@@ -4,7 +4,7 @@ c subsequent dimensions iterate over spatial dimensions.
 
       SUBROUTINE axi_gauss(C,x,y,scale,amp,nx,ny,ndx,ndy,symm)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
+cf2py double precision dimension(nx,ny),intent(out)::C
 cf2py double precision dimension(nx,ndx),intent(in)::x
 cf2py double precision dimension(ny,ndy),intent(in)::y
 cf2py double precision intent(in), optional::scale=1.
@@ -51,7 +51,7 @@ cf2py logical intent(in), optional:: symm=0
 
       SUBROUTINE axi_exp(C,x,y,scale,amp,pow,nx,ny,ndx,ndy,symm)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
+cf2py double precision dimension(nx,ny),intent(out)::C
 cf2py double precision dimension(nx,ndx),intent(in)::x
 cf2py double precision dimension(ny,ndy),intent(in)::y
 cf2py double precision intent(in), optional::scale = 1.

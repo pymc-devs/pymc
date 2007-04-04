@@ -1,11 +1,9 @@
 __docformat__='reStructuredText'
 
 # TODO: implement lintrans and dependent observation precision at some point.
-# TODO: Make the covariance functions return a matrix, not update it in-place. 
-# TODO: That's stupid. There's no benefit so far for in-place updating.
 
 from numpy import *
-from PyMC2.utils import msqrt
+from numpy.linalg import eigh
 
 
 class Covariance(matrix):
@@ -30,6 +28,12 @@ class Covariance(matrix):
                 its first argument.
     - base_mesh: The base mesh.
     - params: Parameters to be passed to eval_fun.
+    
+    :Attributes:
+    - S: Matrix square root.
+    - Eval: Eigenvalues
+    - Evec: Eigenvectors
+    - logD: log-determinant
     
     :SeeAlso:
     GPMean, GPRealization, GaussianProcess, condition
@@ -66,12 +70,10 @@ class Covariance(matrix):
             
         base_reshape = base_mesh.reshape(-1,ndim)
         length = base_reshape.shape[0]        
-        data = asmatrix(zeros((length,length), dtype=float))
-
-        C = data.view(subtype)
         
         # Call the covariance evaluation function
-        eval_fun(data, base_reshape, base_reshape, **params)
+        data=eval_fun(base_reshape, base_reshape, **params)
+        C = data.view(subtype)
         
         C.eval_fun = eval_fun
         C.params = params
@@ -79,9 +81,23 @@ class Covariance(matrix):
         C.base_reshape = base_reshape
         C.ndim = ndim
         C.__matrix__ = data
+        C.update_sig_and_e()
         
         # Return the data
         return C
+    
+    def update_sig_and_e(self):
+        val, vec = eigh(self)
+        self.Eval = val
+        self.Evec = vec
+        sig = asmatrix(zeros(vec.shape))
+        for i in range(len(val)):
+            if val[i]<0.:
+                val[i]=0.
+            sig[:,i] = vec[:,i]*sqrt(val[i])
+        self.S = asmatrix(sig).T
+        
+        self.logEval = log(val)
                 
     def __call__(self, x, y=None):
         
@@ -92,13 +108,11 @@ class Covariance(matrix):
             
         if y is None:
             
-            C = asmatrix(zeros((lenx,lenx)),dtype=float)
-            self.eval_fun(C,x,x,**self.params)
+            C=self.eval_fun(x,x,**self.params)
             if not self.conditioned:
                 return C
                 
-            RF = asmatrix(zeros((lenx,self.obs_len),dtype=float))
-            self.eval_fun(RF, x, self.obs_mesh, **self.params)    
+            RF = self.eval_fun(x, self.obs_mesh, **self.params)    
             C -= RF * self.Q * RF.T
             
             return C
@@ -110,17 +124,14 @@ class Covariance(matrix):
             leny = y.shape[0]
             
             combo = vstack((x,y))
-            
-            C = asmatrix(zeros((lenx+leny,lenx+leny),dtype=float))
         
             # Evaluate the covariance
-            self.eval_fun(C,combo,combo,**self.params)
+            C=self.eval_fun(combo,combo,**self.params)
             if not self.conditioned:
                 return C[:lenx,lenx:]
 
-            # Condition        
-            RF = asmatrix(zeros((lenx + leny, self.obs_len), dtype=float))
-            self.eval_fun(RF, combo, self.obs_mesh, **self.params)
+            # Condition
+            RF = self.eval_fun(combo, self.obs_mesh, **self.params)
             C -= RF * self.Q * RF.T
             
             return C[:lenx,lenx:]
@@ -158,10 +169,6 @@ class Covariance(matrix):
         
     # Also need to forbid in-place multiplication and implement some methods, otherwise 
     # exponentiation makes it puke, etc.
-    
-    def _sqrt(self):
-        return msqrt(self)
-    S = property(_sqrt)
 
     def plot(self, mesh=None):
         from pylab import contourf, colorbar

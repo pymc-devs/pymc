@@ -1,13 +1,10 @@
-\contentsline {chapter}{\numberline {1}Introduction}{2}
+\contentsline {chapter}{\numberline {1}Introduction}{1}
 \contentsline {chapter}{\numberline {2}Tutorial}{3}
 \contentsline {section}{\numberline {2.1}Preliminaries}{3}
 \contentsline {section}{\numberline {2.2}A first look at Gaussian processes}{3}
 \contentsline {subsection}{\numberline {2.2.1}Instantiating a Gaussian process}{3}
-\contentsline {subsubsection}{Covariance function}{4}
-\contentsline {subsubsection}{Mean function}{4}
-\contentsline {subsubsection}{Realizations}{5}
 \contentsline {section}{\numberline {2.3}The role of the covariance function}{5}
 \contentsline {section}{\numberline {2.4}Nonparametric regression: observing Gaussian processes}{5}
-\contentsline {section}{\numberline {2.5}The array aspect}{6}
+\contentsline {section}{\numberline {2.5}The array aspect}{5}
 \contentsline {section}{\numberline {2.6}Incorporating Gaussian processes in probability models with PyMC}{6}
 \contentsline {chapter}{\numberline {3}API reference}{7}

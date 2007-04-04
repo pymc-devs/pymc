@@ -8,7 +8,6 @@ indexing returns one of those. Also keeps two nodes and an array:
 
 from numpy import *
 from numpy.random import normal
-from GPutils import msqrt
 from Covariance import Covariance
 from Mean import Mean
 

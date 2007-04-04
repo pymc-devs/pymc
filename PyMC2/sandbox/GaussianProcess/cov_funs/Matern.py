@@ -1,16 +1,15 @@
 from scipy import special
-from numpy import dot, sqrt, pi, array, ndarray
+from numpy import dot, sqrt, pi, array, ndarray, zeros, matrix
 
-def Matern(C,x,y,phi,nu,alpha):
+def Matern(x,y,phi,nu,alpha):
     """
-    Matern(C,x,y,nu,alpha)
+    C=Matern(x,y,nu,alpha)
     
     The isotropic Matern covariance function, as parametrized by Stein.
-    Updates C in-place to give the covariance of x and y.
     The pointwise variance of draws is:
     sqrt(pi) * gamma(nu) / gamma(nu + .5) / alpha ** (2. * nu)    
     """
-    
+    C = zeros((len(x),len(x)),dtype=float)
     symm=(x is y)
     
     prefac = sqrt(pi) * special.gamma(nu) / special.gamma(nu+.5) / alpha ** (2. * nu)
@@ -42,19 +41,21 @@ def Matern(C,x,y,phi,nu,alpha):
                 
     
     C *= phi
+    return C.view(matrix)
             
             
-def NormalizedMatern(C,x,y,nu,scale,amp):
+def NormalizedMatern(x,y,nu,scale,amp):
     """
-    NormalizedMatern(C,x,y,nu,scale,amp)
+    C=NormalizedMatern(x,y,nu,scale,amp)
     
     An alternative parametrization of the isotropic Matern covariance function.
     The pointwize variance of draws is 1 regardless of nu and alpha.
-    Updates C in-place to give the covariance of x and y.
     """
 
     prefac = 1. / 2. ** (nu-1.) / special.gamma(nu)
     scalesq = scale * scale
+    
+    C = zeros((len(x),len(y)),dtype=float)
 
     symm = (x is y)
 
@@ -83,4 +84,5 @@ def NormalizedMatern(C,x,y,nu,scale,amp):
                     C[i,j]=prefac * t ** nu * special.kv (nu, t)
 
     C *= amp            
+    return C.view(matrix)
             

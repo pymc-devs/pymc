@@ -1,12 +1,57 @@
 __docformat__='reStructuredText'
 
-# TODO: Implement lintrans, allow obs_taus to be a huge matrix or an ndarray.
+# TODO: Implement lintrans, allow obs_taus to be a huge matrix or an ndarray in observe().
 
 from GPCovariance import *
 from GPMean import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
 from pylab import fill, plot, clf, axis
+from PyMC2 import LikelihoodError
+
+half_log_2pi = .5 * log(2. * pi)
+
+def GP_logp(f,M,C,eff_zero = 1e-15):
+    """
+    logp = GP_logp(f,M,C,eff_zero = 1e-15)
+    
+    raises a LikelihoodError if f doesn't seem to
+    be in the support (that is, if the deviation
+    has a significant component in a direction with
+    a very small eigenvalue).
+    
+    Note: I thought about excluding contributions to
+    the log-probability from directions with small
+    eigenvalues if the deviation has a small component
+    in those directions. 
+    
+    This is numerically preferable, but unacceptable 
+    for comparing p(f|M,C1) and  p(f|M,C2). Reason: 
+    if f is in the support of both C1 and C2, but C2 
+    has more zero eigenvalues than C1, C2 should be 
+    very strongly preferred. However, if you discount 
+    contributions from the forbidden eigendirections, 
+    you won't see this.
+    """
+    dev = (f-M).ravel()
+    logp = 0.
+    
+    max_eval = max(C.Eval)
+    scaled_evals = C.Eval / max_eval
+    eff_inf = 1. / eff_zero
+    
+    dot = asarray((C.Evec.T * dev)).ravel()
+    dot_sq = dot ** 2
+    
+    if (scaled_evals == 0. and dot_sq > 0.).any():
+        raise LikelihoodError
+        
+    if (dot_sq / scaled_evals > eff_inf).any():
+        raise LikelihoodError
+    
+    logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval) 
+            
+    return logp
 
 def plot_envelope(M,C,mesh=None):
     """
@@ -39,28 +84,6 @@ def plot_envelope(M,C,mesh=None):
         fill(x,y,facecolor='.8',edgecolor='1.')
         plot(mesh, mean, 'k-.')
     
-
-def msqrt(cov):
-    """
-    sig = msqrt(cov)
-    
-    Returns a matrix square root of a covariance matrix. Tries Cholesky
-    factorization first, and factorizes by diagonalization if that fails.
-    """
-    # Try Cholesky factorization
-    try:
-        sig = asmatrix(cholesky(cov))
-    
-    # If there's a small eigenvalue, diagonalize
-    except LinAlgError:
-        val, vec = eigh(cov)
-        sig = asmatrix(np.zeros(vec.shape))
-        for i in range(len(val)):
-            if val[i]<0.:
-                val[i]=0.
-            sig[:,i] = vec[:,i]*sqrt(val[i])
-    return np.asmatrix(sig).T
-
 
 def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=None):
     """
@@ -121,17 +144,14 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
     C.obs_taus = obs_taus
     C.lintrans = lintrans
     C.obs_len = obs_len
-        
-                    
+                        
     try:
         
-        RF = asmatrix(zeros((base_len,obs_len),dtype=float))
+        RF = cov_fun(base_mesh, obs_mesh, **cov_params)
         if lintrans is not None:
             RF = RF * lintrans
-        Q = asmatrix(zeros((obs_len,obs_len),dtype=float))
         
-        cov_fun(RF, base_mesh, obs_mesh, **cov_params)
-        cov_fun(Q,obs_mesh, obs_mesh, **cov_params)
+        Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
         mean_under = mean_fun(obs_mesh, **mean_params)
         if have_obs_taus:
             Q += diag(1./obs_taus)
@@ -139,16 +159,18 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
             
         M.Q_mean_under = Q_mean_under
         C.Q = Q            
-
-        C -= RF * solve(Q, RF.T)
-        M += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
+        
+        tempC = C.view(matrix)
+        tempC -= RF * solve(Q, RF.T)
+        
+        tempM = M.view(ndarray)
+        tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
         
         
     except LinAlgError:
-        
-        combined_cov = asmatrix(zeros((combined_len, combined_len)))    
-        cov_fun(combined_cov,combined_mesh,combined_mesh,**cov_params)
-        combined_mean=mean_fun(combined_mesh,**mean_params)        
+           
+        combined_cov = cov_fun(combined_mesh,combined_mesh,**cov_params)
+        combined_mean = mean_fun(combined_mesh,**mean_params)       
         
         for i in xrange(obs_len):
                 
@@ -164,9 +186,13 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
             
             if M is not None:
                 combined_mean += (RF * (obs_vals[i] - combined_mean[base_len + i])).T / Q
-                
+        
+        tempM = M.view(ndarray)
+        tempC = C.view(matrix)
         for i in xrange(base_len):
-            M[i] = combined_mean[i]
+            tempM[i] = combined_mean[i]
             for j in xrange(base_len):
-                C[i,j] = combined_cov[i,j]
+                tempC[i,j] = combined_cov[i,j]
+    
+    C.update_sig_and_e()
         

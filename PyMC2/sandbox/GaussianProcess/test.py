@@ -1,7 +1,3 @@
-# TODO: You need to condition the mean together with the covariance, there's no way around it.
-# TODO: You can make the 'M' argument to condition optional though, so people can just condition
-# TODO: a covariance if they want to.
-
 import Realization
 reload(Realization)
 from Realization import *
@@ -33,12 +29,12 @@ M = Mean( eval_fun = linfun,
             m = 1.,
             b = 0.)
             
-# observe(    C=C,
-#             obs_mesh = obs_mesh,
-#             M=M,
-#             obs_taus = obs_taus,
-#             # lintrans = array([3.]),
-#             obs_vals = zeros(len(obs_mesh)))
+observe(    C=C,
+            obs_mesh = obs_mesh,
+            M=M,
+            obs_taus = obs_taus,
+            # lintrans = array([3.]),
+            obs_vals = zeros(len(obs_mesh)))
 
 f=[]
 for i in range(3):
@@ -54,9 +50,9 @@ show()
 
 
 
-# print C(array([.5,.6,.7,.9]), array([.2,.3,.9]))
-# print C(array([.5,.6,.7,.9])))
-# print M(array([.5,.6,.7,.9]))
+print C(array([.5,.6,.7,.9]), array([.2,.3,.9]))
+print C(array([.5,.6,.7,.9]))
+print M(array([.5,.6,.7,.9]))
 
 
 # clf()            

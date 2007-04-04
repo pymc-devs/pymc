@@ -89,8 +89,7 @@ class Mean(ndarray):
             return M.reshape(orig_shape)
         
         # Condition
-        RF = zeros((lenx,self.obs_len),dtype=float)
-        self.cov_fun(RF, x, self.obs_mesh, **self.cov_params)
+        RF = self.cov_fun(x, self.obs_mesh, **self.cov_params)
         M += (RF * self.Q_mean_under).view(ndarray).reshape(M.shape)
             
         return M.reshape(orig_shape)
