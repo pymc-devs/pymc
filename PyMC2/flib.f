@@ -155,7 +155,7 @@ c increment value
         goto 1
         endif
 c increment log-likelihood        
-        like = like + log(hist(j))
+        like = like + dlog(hist(j))
       enddo
       return
       END
@@ -189,7 +189,7 @@ cf2py double precision intent(out) :: like
             like = -3.4028235E+38
             RETURN
           else
-            like = like - log(high-low)
+            like = like - dlog(high-low)
           endif
         enddo
         END subroutine uniform_like
@@ -239,9 +239,9 @@ c      CALL constrain(z, 0.0, Infinity, n, .FALSE.)
         if (not_scalar_a) aa = a(i)
         if (not_scalar_c) cc = c(i)
         if (not_scalar_scale) sigma = scale(i)
-        t1 = exp(-z(i)**cc)
+        t1 = dexp(-z(i)**cc)
         pdf = aa*cc*(1.0-t1)**(aa-1.0)*t1*z(i)**(cc-1.0)
-        like = like + log(pdf/sigma)
+        like = like + dlog(pdf/sigma)
       enddo
       END SUBROUTINE EXPONWEIB
 
@@ -279,7 +279,7 @@ c     Check length of input arrays.
       DO i=1,n
         if (not_scalar_a) ta = a(i)
         if (not_scalar_c) tc = c(i)
-        ppf(i) = (-log(1.0 - q(i)**(1.0/ta)))**(1.0/tc)
+        ppf(i) = (-dlog(1.0 - q(i)**(1.0/ta)))**(1.0/tc)
       ENDDO
 
       END SUBROUTINE exponweib_ppf
@@ -361,7 +361,7 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       sumfact = 0.0
       do i=1,n
         if (not_scalar_mu) mut = mu(i)
-        sumx = sumx + x(i)*log(mut) - mut
+        sumx = sumx + x(i)*dlog(mut) - mut
         sumfact = sumfact + factln(x(i))
       enddo
       like = sumx - sumfact
@@ -386,7 +386,7 @@ cf2py double precision intent(out) :: like
       DOUBLE PRECISION p(np,k), p_tmp
       INTEGER i,j,ll,n(nn),sumx, n_tmp
       INTEGER x(nx,k)
-      DOUBLE PRECISION factln, log
+      DOUBLE PRECISION factln
 
       like = 0.0
       n_tmp = n(1)
@@ -398,7 +398,7 @@ cf2py double precision intent(out) :: like
         if (nn .NE. 1) n_tmp = n(j)
         do i=1,k
           p_tmp = p(ll,i)+1E-10
-          like = like + x(j,i)*log(p_tmp) - factln(x(j,i))
+          like = like + x(j,i)*dlog(p_tmp) - factln(x(j,i))
           sumx = sumx + x(j,i)
           sump = sump + p_tmp
         enddo
@@ -423,24 +423,20 @@ cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
 cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
 
       DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
-      DOUBLE PRECISION like
+      DOUBLE PRECISION like, alphat, betat
       INTEGER n,nalpha,nbeta,i
-      LOGICAL not_scalar_alpha
-      LOGICAL not_scalar_beta
 
-      not_scalar_alpha = (nalpha .NE. 1)
-      not_scalar_beta = (nbeta .NE. 1)
       alphat = alpha(1)
       betat = beta(1)
 
       like = 0.0      
       do i=1,n
-        if (not_scalar_alpha) alphat = alpha(i)
-        if (not_scalar_beta) betat = beta(i)
+        if (nalpha .NE. 1) alphat = alpha(i)
+        if (nbeta .NE. 1) betat = beta(i)
 c normalizing constant
-        like = like + (log(alphat) - alphat*log(betat))
+        like = like + (dlog(alphat) - alphat*dlog(betat))
 c kernel of distribution
-        like = like + (alphat-1) * log(x(i))
+        like = like + (alphat-1) * dlog(x(i))
         like = like - (x(i)/betat)**alphat
       enddo
       return
@@ -480,7 +476,7 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
         like = like - 0.5 * tau_tmp * (x(i)-mu_tmp)**2
-        like = like + 0.5*log(0.5*tau_tmp/PI)
+        like = like + 0.5*dlog(0.5*tau_tmp/PI)
       enddo
       return
       END
@@ -513,7 +509,7 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
       like = 0.0
       do i=1,n
         if (not_scalar_tau) tau_tmp = tau(i)
-        like = like + 0.5 * (log(2. * tau_tmp / PI)) 
+        like = like + 0.5 * (dlog(2. * tau_tmp / PI)) 
         like = like - (0.5 * x(i)**2 * tau_tmp)
       enddo
       return
@@ -552,8 +548,8 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
-        like = like + 0.5 * (log(tau_tmp) - log(2.0*PI)) 
-        like = like - 0.5*tau_tmp*(log(x(i))-mu_tmp)**2 - log(x(i))
+        like = like + 0.5 * (dlog(tau_tmp) - dlog(2.0*PI)) 
+        like = like - 0.5*tau_tmp*(dlog(x(i))-mu_tmp)**2 - dlog(x(i))
       enddo
       return
       END
@@ -587,7 +583,7 @@ Cf2py double precision intent(out):: like
         if (nxi .NE. 1) xi_tmp = xi(i)
         if (nsigma .NE. 1) sigma_tmp = sigma(i)          
         IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
-          LIKE = LIKE - Z(I) - EXP(-Z(I))/SIGMA_TMP
+          LIKE = LIKE - Z(I) - dexp(-Z(I))/SIGMA_TMP
         ELSE 
           EX(I) = 1. + xi_tmp*z(i)
           IF (EX(I) .LT. 0.) THEN
@@ -595,8 +591,8 @@ Cf2py double precision intent(out):: like
             RETURN
           ENDIF
           PEX(I) = EX(I)**(-1./xi_tmp)  
-          LIKE = LIKE - LOG(sigma_tmp) - PEX(I) 
-          LIKE = LIKE - (1./xi_tmp +1.)* LOG(EX(I))
+          LIKE = LIKE - dlog(sigma_tmp) - PEX(I) 
+          LIKE = LIKE - (1./xi_tmp +1.)* dlog(EX(I))
         ENDIF
       ENDDO
 
@@ -625,9 +621,9 @@ Cf2py double precision dimension(n), intent(out):: ppf
       do i=1,n
         if (nxi .NE. 1) xi_tmp= xi(i)
         IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
-          ppf(i) = -LOG(-LOG(q(i)))
+          ppf(i) = -dlog(-dlog(q(i)))
         ELSE
-          ppf(i) = 1./xi_tmp * ( (-log(q(i)))**(-xi_tmp) -1. )
+          ppf(i) = 1./xi_tmp * ( (-dlog(q(i)))**(-xi_tmp) -1. )
         ENDIF
       enddo
       return 
@@ -667,8 +663,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,n
         if (not_scalar_a) alpha_tmp = alpha(i)
         if (not_scalar_b) beta_tmp = beta(i)
-        like = like - gammln(alpha_tmp) - alpha_tmp*log(beta_tmp)
-        like = like + (alpha_tmp - 1.0)*log(x(i)) - x(i)/beta_tmp
+        like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
+        like = like + (alpha_tmp - 1.0)*dlog(x(i)) - x(i)/beta_tmp
       enddo     
 
       return
@@ -701,8 +697,8 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
       do i=1,n
         if (na .NE. 1) alpha_tmp=alpha(i)
         if (nb .NE. 1) beta_tmp=beta(i)
-        like = like - (gammln(alpha(i)) + alpha(i)*log(beta(i)))
-        like = like - (alpha(i)+1.0)*log(x(i)) - 1./(x(i)*beta(i)) 
+        like = like - (gammln(alpha(i)) + alpha(i)*dlog(beta(i)))
+        like = like - (alpha(i)+1.0)*dlog(x(i)) - 1./(x(i)*beta(i)) 
       enddo
 
       return
@@ -778,7 +774,7 @@ cf2py double precision intent(out) :: like
       like = 0.0
       do i=1, n
         if (np .NE. 1) p_tmp = p(i)
-        like = like + log(p_tmp) + (x(i)-1)* log(1-p_tmp)
+        like = like + dlog(p_tmp) + (x(i)-1)* dlog(1-p_tmp)
       enddo
       return
       END SUBROUTINE geometric
@@ -814,7 +810,7 @@ cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(t
         do j=1,k
           if (nt .NE. 1) theta_tmp(j) = theta(i,j)      
 c kernel of distribution      
-          like = like + (theta_tmp(j)-1.0)*log(x(i,j))  
+          like = like + (theta_tmp(j)-1.0)*dlog(x(i,j))  
 c normalizing constant        
           like = like - gammln(theta_tmp(j))
           sumt = sumt + theta_tmp(j)
@@ -851,12 +847,12 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
 
       atmp = alpha(1)
       btmp = beta(1)
-      like = -nx*log(PI)
+      like = -nx*dlog(PI)
       do i=1,nx
         if (not_scalar_alpha) atmp = alpha(i)
         if (not_scalar_beta) btmp = beta(i)
-        like = like - log(btmp)
-        like = like -  log( 1. + ((x(i)-atmp) / btmp) ** 2 )
+        like = like - dlog(btmp)
+        like = like -  dlog( 1. + ((x(i)-atmp) / btmp) ** 2 )
       enddo
       return
       END
@@ -892,7 +888,7 @@ cf2py double precision intent(out) :: like
       do i=1,n
         if (not_scalar_r) r_tmp = r(i)
         if (not_scalar_p) p_tmp = p(i)
-        like = like + r_tmp*log(p_tmp) + x(i)*log(1.-p_tmp)
+        like = like + r_tmp*dlog(p_tmp) + x(i)*dlog(1.-p_tmp)
         like = like + factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
       enddo
       return
@@ -931,8 +927,8 @@ cf2py double precision intent(out) :: like
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_a) a_tmp=a(i)
         like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
-        like=like+x(i)*(log(mu_tmp/a_tmp)-log(1.0+mu_tmp/a_tmp))
-        like=like-a_tmp * log(1.0 + mu_tmp/a_tmp)
+        like=like+x(i)*(dlog(mu_tmp/a_tmp)-dlog(1.0+mu_tmp/a_tmp))
+        like=like-a_tmp * dlog(1.0 + mu_tmp/a_tmp)
       enddo
       return
       END
@@ -972,7 +968,7 @@ cf2py double precision intent(out) :: like
       do i=1,nx
         if (not_scalar_n) ntmp = n(i)
         if (not_scalar_p) ptmp = p(i)
-        like = like + x(i)*log(ptmp) + (ntmp-x(i))*log(1.-ptmp)
+        like = like + x(i)*dlog(ptmp) + (ntmp-x(i))*dlog(1.-ptmp)
         like = like + factln(ntmp)-factln(x(i))-factln(ntmp-x(i)) 
       enddo
       return
@@ -1005,7 +1001,7 @@ C     Check parameter size
       ptmp = p(1)
       do i=1,nx
         if (not_scalar_p) ptmp = p(i)
-        like = like + log(ptmp**x(i)) + log((1.-ptmp)**(1-x(i)))
+        like = like + dlog(ptmp**x(i)) + dlog((1.-ptmp)**(1-x(i)))
       enddo
       return
       END
@@ -1038,7 +1034,7 @@ cf2py double precision intent(out) :: like
         if (na .NE. 1) atmp = alpha(i)
         if (nb .NE. 1) btmp = beta(i)
         like = like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
-        like = like + (atmp-1.0)*log(x(i)) + (btmp-1.0)*log(1.0-x(i))
+        like = like + (atmp-1.0)*dlog(x(i)) + (btmp-1.0)*dlog(1.0-x(i))
       enddo   
 
       return
@@ -1094,7 +1090,7 @@ cf2py integer intent(hide),depend(x) :: k=len(x)
       sumx = 0
       do 222 i=1,k
 c kernel of distribution      
-        like = like + log(x(i) + theta(i)) - log(theta(i)) 
+        like = like + dlog(x(i) + theta(i)) - dlog(theta(i)) 
         sumt = sumt + theta(i)
         sumx = sumx + x(i)
   222 continue
@@ -1127,15 +1123,15 @@ c trace of sigma*X
       call matmult(sigma,X,bx,k,k,k,k)
       call trace(bx,k,tbx)
 
-      like = (n - k - 1)/2.0 * log(dx)
-      like = like + (n/2.0)*log(db)
+      like = (n - k - 1)/2.0 * dlog(dx)
+      like = like + (n/2.0)*dlog(db)
       like = like - 0.5*tbx
-      like = like - (n*k/2.0)*log(2.0)
+      like = like - (n*k/2.0)*dlog(2.0d0)
 
       do i=1,k
         a = (n - i + 1)/2.0
         call gamfun(a, g)
-        like = like - log(g)
+        like = like - dlog(g)
       enddo
 
       return
@@ -1173,7 +1169,7 @@ c mulitply t(d) by tau
 c multiply dtau by d      
       call matmult(dtau,d,dtaud,1,k,k,1)
 
-      like = 0.5*log(det) - (k/2.0)*log(2.0*PI) - (0.5*dtaud)
+      like = 0.5*dlog(det) - (k/2.0)*dlog(2.0*PI) - (0.5*dtaud)
 
       return
       END
@@ -1229,7 +1225,7 @@ c mulitply t(d) by tau -> dtau (n,k)
         like = like + s(j)
       enddo
 
-      like = n*0.5*log(det) - (n*k/2.0)*log(2.0*PI) - (0.5*like)
+      like = n*0.5*dlog(det) - (n*k/2.0)*dlog(2.0*PI) - (0.5*like)
       END subroutine
 
       SUBROUTINE trace(mat,k,tr)
@@ -1451,7 +1447,7 @@ C floating point number.
       DOUBLE PRECISION factln
 C The nearest-integer function cleans up roundoff error
 C for smaller values of n and k. 
-      bico=nint(exp(factln(n)-factln(k)-factln(n-k))) 
+      bico=nint(dexp(factln(n)-factln(k)-factln(n-k))) 
       return 
       END
 
@@ -1723,7 +1719,7 @@ C
       Y = TWO * Y - ONE
       S = X * X + Y * Y
       IF (S .GT. ONE) GO TO 1
-      S = SQRT(- TWO * LOG(S) / S)
+      S = SQRT(- TWO * dlog(S) / S)
       U1 = X * S
       U2 = Y * S
       RETURN
@@ -1864,7 +1860,7 @@ C       require up to 25 calls to ran1.
 C       If fewer than one event is expected out of 25 or more tri- 
 C       als, then the distribution is quite accurately Poisson. Use 
 C       direct Poisson method. 
-        g=exp(-am) 
+        g=dexp(-am) 
         t=1. 
         do 12 j=0,n 
         t=t*rand() 
@@ -1883,8 +1879,8 @@ C         If n has changed, then compute useful quantities.
         if (p.ne.pold) then 
 C         If p has changed, then compute useful quantities. 
           pc=1.-p 
-          plog=log(p) 
-          pclog=log(pc) 
+          plog=dlog(p) 
+          pclog=dlog(pc) 
           pold=p 
         endif 
         sq=sqrt(2.*am*pc) 
@@ -1897,7 +1893,7 @@ C       Reject.
 
 C       Trick for integer-valued distribution.
         em=int(em)
-        t=1.2*sq*(1.+y**2)*exp(oldg-gammln(em+1.) 
+        t=1.2*sq*(1.+y**2)*dexp(oldg-gammln(em+1.) 
      +-gammln(en-em+1.)+em*plog+(en-em)*pclog) 
 C       Reject. This happens about 1.5 times per deviate, on average.
         if (rand().gt.t) goto 2 
