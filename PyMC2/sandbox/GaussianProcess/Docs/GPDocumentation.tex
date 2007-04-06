@@ -1,7 +1,8 @@
 \documentclass{manual}
 \usepackage{epsfig}
-\usepackage{pdfsync}
+% \usepackage{pdfsync}
 \usepackage{amsfonts}
+\release{0.0}
 
 
 
@@ -22,16 +23,42 @@ This package provides Python classes that represent the components of the Gaussi
 
 The package also provides a class which produces Gaussian process-valued PyMC parameters and a PyMC sampling method to handle it. That means the Gaussian process-related objects can be directly incorporated into larger probability models.
 
-You'll need to understand Python and a little bit of Bayesian statistics. Refs.
+You'll need to understand Python, numpy and a little bit of Bayesian statistics. Refs.
 
 % chapter introduction (end)
 
+
+
+\chapter{Installation}\label{cha:installation} % (fold)
+
+\section{Dependencies}
+\begin{itemize}
+	\item \citetitle[www.python.org]{Python version 2.4} or later.
+	\item \citetitle[www.scipy.org]{numpy}, Numerical Python. The core package for numerical work in Python.
+	\item Optional: \citetitle[www.matplotlib.org]{matplotlib/ pylab}, Matlab-like scientific plotting utilities for Python. Install this if you want to use any of the graphical functionality described in this manual.
+	\item Optional: \citetitle[www.trichech.us]{PyMC}, Bayesian statistics and MCMC support for Python. Install this if you want to embed Gaussian processes in larger probability models.
+\end{itemize} 
+
+\section{How to install}\label{sec:installing}
+
+Type this into a shell:
+\begin{verbatim}
+	python setup.py install
+\end{verbatim}
+etc.
+
+% chapter installation (end)
+
+
+
 \chapter{Tutorial}\label{cha:tutorial} 
 
-\section{Preliminaries}\label{sec:preliminaries}
-You need to know a bit about Python and numpy. Also a bit about Bayesian statistics and the normal distribution. Refs. All the code in the tutorial is in module/folder \texttt{examples}, which is distributed with this package.
+To understand GPs, you need to play around with them. You can be as good at math as you want, but to really know what they're like you have to build experience. For that reason, after a brief overview of what GP's can be good for, this tutorial will immediately show you how to actually instantiate a GP. That way you have one to play around with throughout the rest of the tutorial. All the code in the tutorial is in the folder \code{examples}, which is distributed with this package.
 
-\section{A first look at Gaussian processes}\label{sec:first_look} % (fold)
+\section{Prerequisites}\label{sec:prerequisites}
+You need to know a bit about Python and numpy. Also a bit about Bayesian statistics and the normal distribution. Refs. 
+
+\section{A first look at Gaussian processes}\label{sec:firstlook} % (fold)
 
 Gaussian processes are probability distributions for functions. The statement `$f$ has a Gaussian process distribution with mean $M$ and covariance $C$' is usually written as follows:
 \begin{equation}
@@ -40,40 +67,72 @@ Gaussian processes are probability distributions for functions. The statement `$
 Gaussian processes have two parameters, which are analogous to the parameters of the normal distribution:
 \begin{itemize}
     \item $M$ is the mean function. Like the mean parameter of the normal distribution, $M$ gives the central tendency for $f$. In Bayesian statistics, $M$ is usually considered a prior guess for $f$. $M(x)$ gives the expectation of $f(x)$.
-    \item $C$  is the covariance function. Its role in the distribution of $f$ is harder to understand than the mean function, but among other things it regulates:
+    \item $C$  is the covariance function. Its role is harder to understand than that of the mean function, but among other things it regulates:
     \begin{itemize}
         \item the amount by which $f$ may deviate from $M$
         \item the smoothness of $f$
         \item the wiggliness of $f$.
     \end{itemize}
-    $C(x,y)$ gives the covariance of $f(x)$ and $f(y)$; $C(x,x)$ gives the covariance of $f(x)$.
+    $C(x,y)$ gives the covariance of $f(x)$ and $f(y)$; $C(x,x)$ gives the variance of $f(x)$.
 \end{itemize}
-Understanding covariance functions is essential for sensible application of Gaussian processes, but for the time being don't worry about them too much. Section \ref{sec:cov} is all about covariance functions.
+An intuitive understanding of covariance functions is essential for appropriate application of Gaussian processes, but for the time being don't worry about them too much. Section \ref{sec:cov} is all about covariance functions.
 
+\textbf{A preliminary example- use Steve's paper}
 
-\subsection{Instantiating a Gaussian process} 
+\subsection{Instantiating a Gaussian process}\label{sub:inst}
 
-It will be much easier to understand the role of the covariance function if we generate a Gaussian process to play around with. 
+The rest of this tutorial will be much easier to understand with an actual Gaussian process in hand to experiment with. The \module{GaussianProcess} module supports multivariate as well as univariate GP's; the variables $x$ and $y$ in section \ref{sec:firstlook} can be vectors just as well as scalars. For the time being, however, let's concentrate on univariate GP's, as they're easier to visualize.
 
-The following code will produce a covariance function:
+\subsubsection{Instantiating a covariance function}\label{subsub:cov}
+The first component of a GP that we will generate is a covariance function. The covariance function of a univariate GP is a function of two variables. In this example we will use the function 
+\begin{equation}
+	C(x,y) = a\ e^{-\left(\frac{|x-y|} {s}\right) ^ p},
+\end{equation}
+where $a$, $s$ and $p$ are tunable parameters. This is known as the `power family' of covariance functions. It's not considered the best for most applications, but it's simple to write down.
+
+Not every function of two variables is acceptable as a covariance function. In fact, our function $C$ is only acceptable if $a>0$, $s>0$ and $0<p\le2$. If you want to write your own covariance function at some point, this module provides a function called \function{isPosDef} that can help you determine if your function is acceptable. That function is described in more detail later. However, this module provides a small library of readymade covariance functions implemented in Fortran, including the popular Mat\'ern covariance function, in the package \module{cov_funs}. 
+
+The code shown below will produce an instance of class \class{Covariance} called $C$. It will also display the covariance function $C(x,y)$ as a filled contour plot on the mesh ($-1<x<1$,$-1<y<1$).
 \verbatiminput{../examples/cov.py}
 
-\bigskip
-The first argument, \texttt{eval\_fun}, gives the Python function from which the covariance function will be made, in this case \texttt{exp\_cov}. The arguments \texttt{pow, amp} and \texttt{scale} will be passed to \texttt{exp\_cov}. See The last line displays a filled contour plot of $C(x,y)$ on the mesh ($-1<x<1$,$-1<y<1$). Try playing around with the parameters of \texttt{exp\_cov} and see how $C$ looks. Try calling it.
+The first argument, \function{eval_fun}, gives the Python function from which the covariance function will be made, in this case \function{exp_cov}. The \class{Covariance} class will raise an error if it is instantiated around an unacceptable function. The extra arguments \code{p, a} and \code{s} will be passed to \function{exp_cov}. 
 
-The following code will produce a mean function $M$ which is associated with $C$:
+At this stage, the covariance function exposes a very simple user interface. In fact, it behaves a lot like its input function \function{exp_cov}. Try calling it. The only differences are: you only call it with $x$ and $y$ meshes, not with the extra arguments $p$, $s$ and $a$; and you can just call it with one mesh, in which case it'll assume that the other mesh is the same and return a square matrix. Oh yeah- if you call it with array arguments, it'll return a matrix which gives it evaluated over all the values in the mesh. This behavior is handy. Input functions have to behave that way, too.
+
+The last line plots the covariance as a filled contour plot evaluated on a mesh. The width of the covariance function band controls how tightly nearby evaluations of $f$ are coupled to each other. You'll notice it looks like a band. If there's a wide band, $f(x)$ and $f(y)$ will tend to have similar values. If there's a narrower band, $f(x)$ and $f(y)$ won't be as tightly correlated. The height of the covariance function band controls the overall amplitude of $f$'s deviation from $M$. Try playing around with the parameters of \function{exp_cov} and see how $C$ looks.
+
+
+\subsubsection{Instantiating a mean function}\label{subsub:mean}
+The second component we will generate is the mean function. The mean function of a univariate GP can be interpreted as a prior guess for the GP, so it's a univariate function also. Unlike the covariance function, there are no restrictions whatsoever on the mean function; any univariate function is fine. We will use the parabola
+\begin{equation}
+	M(x) = ax^2 + bx + c.
+\end{equation}
+
+The following code will produce an instance of class \class{Mean} called $M$, which will be associated with $C$. This association is unnecessary in this part of the tutorial, but it's essential for nonparametric regression and other conditioning operations, which we'll discuss later.
 \verbatiminput{../examples/mean.py}
 
-\bigskip
-As with \texttt{Covariance}, the first argument to \texttt{Mean}'s init method is a Python function, in this case \texttt{linfun}. The second argument, \texttt{C}, is the \texttt{Covariance} instance with which the mean function is associated. The arguments \texttt{m} and \texttt{b} will be passed to \texttt{linfun}. The last line plots $M(x)$ on $-1<x<1$, and as expected the plot is a straight line through the origin with slope 1. Try calling it.
+As with \class{Covariance}, the first argument to \class{Mean}'s init method is a Python function, in this case \function{linfun}. The second argument, \code{C}, is the \class{Covariance} instance with which the mean function is associated. The extra arguments \code{a}, \code{b}  and \code{c} will be passed to \function{linfun}.
 
-Now let's generate some realizations (draws) from the Gaussian process defined by $M$ and $C$ and take a look at them.
+Like $C$, $M$ behaves a lot like an ordinary numpy universal function. The last line plots $M(x)$ on $-1<x<1$, and as expected the plot is a parabola. Mean functions are much less magical than covariance functions. As stated before, they're just an initial guess for $f$. In fact, they can be removed from the GP and added back in at will:
+\begin{eqnarray}
+	f\sim\textup{GP}(M,C)\\
+	\Rightarrow f = M + g,&\textup{where}&
+	g \sim\textup{GP}(0,C).
+\end{eqnarray}
+
+\subsubsection{Drawing realizations}\label{subsub:realizations}
+Finally, let's generate some realizations (draws) from the Gaussian process defined by $M$ and $C$ and take a look at them. The following code will generate a list of instances of class \class{Realization} called \code{f_list}:
 \verbatiminput{../examples/realizations.py}
 
-\bigskip
-The dashdot black line in the middle is $M$, and the gray band is the $\pm 1$ standard deviation envelope generated by $C$. Each realization is a callable function, so you can see their values.
+The init method of \class{Realization} takes only two arguments, a mean function and a covariance function. Each element of \code{f_list} is a Gaussian process realization, which is a randomly-drawn function. Like ordinary numpy universal functions, GP realizations can be called with either values or ndarrays as arguments.
 
-% section first_look (end)
+The third-to-last last line calls the function \function{plot_envelope}, which kind of summarizes the distribution. The dashdot black line in the middle is $M$, and the gray band is the $\pm 1$ standard deviation envelope generated by $C$. Each realization is a callable function, and their values over a mesh are plotted superimposed on the envelope.
+
+\subsubsection{Experiment!} 
+
+As stated before, no matter how much math you know, the only way you'll be able to use GPs with confidence is by getting some experience with them. Now is a good time to have fun playing with the parameters of the mean and covariance functions. Change parameters of the covariance function, see how it looks using the code in section \ref{subsub:cov}, and try to guess how the realizations will look. See if you're right. Try generating $M$ around a different function. Try generating $C$ around one of the covariance functions from \module{cov_funs}, or if you're feeling adventurous try writing your own. 
+
+% section firstlook (end)
 
 
 \section{The role of the covariance function}\label{sec:cov} % (fold)
@@ -90,7 +149,27 @@ The condition function, what it does. Some ecological examples.
 % section observing (end)
 
 
-\section{The array aspect}\label{sec:array} % (fold)
+\section{Integrals, derivatives and transforms: linear operations and constraints}\label{sec:lin_op} % (fold)
+
+Define linear operations, talk about derivatives, antiderivatives, integrals and Fourier transforms. Say that you can constrain the value of any linear operation, or softly constrain it. Introduce the \argument{lintrans} argument. 
+
+% section lin_op (end)
+
+
+\section{The array aspect and performance}\label{sec:array} % (fold)
+Conceptually, Gaussian process realizations are random functions, and the parameters of the Gaussian process are functions. To build intuition as quickly as possible, this tutorial has tried to stay faithful to the concepts by focussing on the \emph{functional} aspect of \class{Covariance}, \class{Mean} and \class{Realization} for as long as possible. 
+
+From the package author's point of view, this was the hard part. Making \class{Realization} act like a function is particularly difficult; its return values have to be evaluated on-demand (lazily) using a fairly complicated and expensive algorithm whose expense increases with the number of calls made so far.
+
+You may have noticed by now that \class{Covariance} is a subclass of \class{numpy.matrix}, and that \class{Mean} and \class{Realization} are subclasses of \class{numpy.ndarray}. That's because these objects are usually represented on a computer as arrays and matrices rather than functions. Certain properties of the Gaussian process distribution make this representation work well, though it requires a fair bit of linear algebra. Unfortunately, using the array representation of the Gaussian process is much faster than using the functional representation we have considered so far. If you need more performance from the Gaussian process than you've been getting so far, you may need to take a look at this section.
+
+This section will try to introduce you to the array aspect of the GP, while insulating you from as much linear algebra as possible. The first subsection will tell you the bare minimum you need to know to use the array aspect, and subsequent sections will go into more depth.
+
+\subsection{Utilitarian overview: the base mesh}
+
+The base mesh is where you should put evaluations you know ahead of time you're going to want. Redo examples with a base mesh. Indexing and slicing of objects. If you do MCMC, you're NEVER allowed to change the base mesh. DON'T DO IT. Talk about drawing realizations but specifying values on a base mesh.
+
+\subsection{Some light theory} 
 
 \begin{equation}
     \begin{array}{ll}
@@ -100,14 +179,16 @@ The condition function, what it does. Some ecological examples.
     \end{array}
 \end{equation}
 
-The base mesh
-
 % section array (end)
 
 
 \section{Incorporating Gaussian processes in probability models with PyMC}\label{sec:PyMC} % (fold)
 
 % section PyMC (end)
+
+\section{Writing your own covariance functions}\label{sec:user_cov} % (fold)
+
+% section user_cov (end)
 
 
 \chapter{API reference}\label{cha:reference} 

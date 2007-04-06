@@ -1,31 +1,35 @@
-# GaussianProcess/examples/realizations.py
+# GaussianProcess/exales/realizations.py
 
 from GaussianProcess import *
 from numpy import *
 
-def exp_cov(x,y,pow,amp,scale):
+def exp_cov(x,y,p,a,s):
     """
-    amp and scale must be positive
-    pow must be positive and less than 2
+    a and s must be positive
+    p must be positive and less than 2
     """
 
     C = zeros((len(x), len(y)))
     for i in xrange(len(x)):
         for j in xrange(len(y)):
-            C[i,j] = amp * exp(-(abs(x-y) / scale) ** pow)
+            C[i,j] = a * exp(-(abs(x-y) / s) ** p)
     return C
 
-C = Covariance(eval_fun = exp_cov, nu = .49, amp = 1., scale = .3)
+C = Covariance(eval_fun = exp_cov, p = .49, a = 1., s = .3)
 
-def linfun(x, m, b):
-    return m * x + b
+def linfun(x, a, b, c):
+    return a * x ** 2 + b * x + c
 
-M = Mean(eval_fun = linfun, C = C, m = 1., b = 0.)
+M = Mean(eval_fun = linfun, C = C, a = 1., b = .5, c = 2.)
 
-f=[]
+f_list=[]
 for i in range(3):
-    f.append(Realization(M,C))
+    f = Realization(M, C)
+    f_list.append(f)
 
-plot_envelope(M,C)
-for i in range(3):
-    plot(arange(-1.,1.,.1), f[i])
+x=arange(-1.,1.,.1)
+
+plot_envelope(M, C, mesh=x)
+
+for f in f_list
+    plot(x, f(x))

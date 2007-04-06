@@ -23,4 +23,3 @@ packages=["PyMC2", "PyMC2.database", "PyMC2/tests", "PyMC2.examples",
 "PyMC2.MultiModelInference"],
 ext_modules = ext_modules
 )
-    

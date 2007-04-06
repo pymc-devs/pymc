@@ -150,43 +150,43 @@ class ArraySubclassContainer(Container, ndarray):
     
     def __new__(subtype, array_in):
 
-        subtype.data = array_in.copy()
-        subtype._value = array_in.copy()
+        C.data = array_in.copy()
+        C._value = array_in.copy()
         
-        subtype._pymc_finder = zeros(shape(subtype.data),dtype=bool)
+        C._pymc_finder = zeros(shape(C.data),dtype=bool)
         
-        subtype._ravelleddata = subtype.data.ravel()
-        subtype._ravelledvalue = subtype._value.ravel()
-        subtype._ravelledfinder = subtype._pymc_finder.ravel()
+        C._ravelleddata = C.data.ravel()
+        C._ravelledvalue = C._value.ravel()
+        C._ravelledfinder = C._pymc_finder.ravel()
         
-        subtype.pymc_objects = set()
-        subtype.parameters = set()
-        subtype.nodes = set()
-        subtype.data = set()
-        subtype.sampling_methods = set()
+        C.pymc_objects = set()
+        C.parameters = set()
+        C.nodes = set()
+        C.data = set()
+        C.sampling_methods = set()
         
-        subtype.iterrange = arange(len(subtype.data.ravel()))
+        C.iterrange = arange(len(C.data.ravel()))
 
-        for i in subtype.iterrange:
-            item = subtype._ravelleddata[i]
+        for i in C.iterrange:
+            item = C._ravelleddata[i]
             if isinstance(item, PyMCBase):
     
-                subtype._ravelledfinder[i] = True   
-                subtype.pymc_objects.add(item)
+                C._ravelledfinder[i] = True   
+                C.pymc_objects.add(item)
 
                 if isinstance(item, Parameter):
                     if item.isdata:
-                        subtype.data.add(item)
+                        C.data.add(item)
                     else:
-                        subtype.parameters.add(item)
+                        C.parameters.add(item)
                 elif isinstance(item, Node):
-                    subtype.nodes.add(item)
+                    C.nodes.add(item)
 
             elif isinstance(item, ndarray):
                 self._ravelledvalue[i] = ArraySubclassContainer(item)  
-                subtype._ravelledfinder[i] = True
+                C._ravelledfinder[i] = True
             
-        return subtype.data.view(subtype)
+        return C.data.view(subtype)
         
     def __array__(self):
         return self.data

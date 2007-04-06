@@ -72,7 +72,10 @@ class Covariance(matrix):
         length = base_reshape.shape[0]        
         
         # Call the covariance evaluation function
-        data=eval_fun(base_reshape, base_reshape, **params)
+        if not sum(base_mesh.shape)==0:
+            data=eval_fun(base_reshape, base_reshape, **params)
+        else:
+            data = array([])
         C = data.view(subtype)
         
         C.eval_fun = eval_fun

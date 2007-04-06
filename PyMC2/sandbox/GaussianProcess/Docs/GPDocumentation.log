@@ -1,4 +1,4 @@
-This is pdfeTeXk, Version 3.141592-1.30.4-2.2 (Web2C 7.5.5) (format=pdflatex 2006.10.6)  4 APR 2007 15:11
+This is pdfeTeXk, Version 3.141592-1.30.4-2.2 (Web2C 7.5.5) (format=pdflatex 2006.10.6)  5 APR 2007 21:55
 entering extended mode
  file:line:error style messages enabled.
 **GPDocumentation.tex
@@ -130,13 +130,6 @@ File: pdftex.def 2002/06/19 v0.03k graphics/color for pdftex
 \epsfxsize=\dimen108
 \epsfysize=\dimen109
 )
-(/Applications/TextMate.app/Contents/SharedSupport/Bundles/Latex.tmbundle/Suppo
-rt/tex/latex/pdfsync.sty
-Package: pdfsync 2004/01/31 v0.6
-\PDFPOS=\write5
-\PDFSYNC@folio=\count97
-\PDFSYNC@rder=\count98
-)
 (/usr/local/teTeX/share/texmf.tetex/tex/latex/amsfonts/amsfonts.sty
 Package: amsfonts 2001/10/25 v2.2f
 \@emptytoks=\toks22
@@ -145,64 +138,140 @@ Package: amsfonts 2001/10/25 v2.2f
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 132.
 )
-No file GPDocumentation.aux.
+(./GPDocumentation.aux
+./GPDocumentation.aux:36: Missing \endcsname inserted.
+<to be read again> 
+                   \unhbox 
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+The control sequence marked <to be read again> should
+not appear between \csname and \endcsname.
+
+./GPDocumentation.aux:36: Extra \else.
+_...mode \sb \else \BreakableUnderscore \fi \else 
+                                                  \ifx \protect \@unexpandab...
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+I'm ignoring this; it doesn't match any \if.
+
+
+./GPDocumentation.aux:36: LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+You're in trouble here.  Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+./GPDocumentation.aux:36: Extra \endcsname.
+\@ifundefined ...dafter \ifx \csname #1\endcsname 
+                                                  \relax \expandafter \@firs...
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+I'm ignoring this, since I wasn't doing a \csname.
+
+./GPDocumentation.aux:36: Extra \else.
+\@ifundefined ... \expandafter \@firstoftwo \else 
+                                                  \expandafter \@secondoftwo...
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+I'm ignoring this; it doesn't match any \if.
+
+
+LaTeX Warning: Label `sec:lin_op' multiply defined.
+
+./GPDocumentation.aux:36: Missing \endcsname inserted.
+<to be read again> 
+                   \unhbox 
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+The control sequence marked <to be read again> should
+not appear between \csname and \endcsname.
+
+./GPDocumentation.aux:44: Missing \endcsname inserted.
+<to be read again> 
+                   \unhbox 
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+The control sequence marked <to be read again> should
+not appear between \csname and \endcsname.
+
+./GPDocumentation.aux:44: Extra \else.
+_...mode \sb \else \BreakableUnderscore \fi \else 
+                                                  \ifx \protect \@unexpandab...
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+I'm ignoring this; it doesn't match any \if.
+
+./GPDocumentation.aux:44: Extra \endcsname.
+\@ifundefined ...dafter \ifx \csname #1\endcsname 
+                                                  \relax \expandafter \@firs...
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+I'm ignoring this, since I wasn't doing a \csname.
+
+./GPDocumentation.aux:44: Extra \else.
+\@ifundefined ... \expandafter \@firstoftwo \else 
+                                                  \expandafter \@secondoftwo...
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+I'm ignoring this; it doesn't match any \if.
+
+
+LaTeX Warning: Label `sec:user_cov' multiply defined.
+
+./GPDocumentation.aux:44: Missing \endcsname inserted.
+<to be read again> 
+                   \unhbox 
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+The control sequence marked <to be read again> should
+not appear between \csname and \endcsname.
+
+)
 \openout1 = `GPDocumentation.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 8.
-LaTeX Font Info:    ... okay on input line 8.
-LaTeX Font Info:    Try loading font information for OT1+ptm on input line 8.
-(/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1ptm.fd
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 9.
+ (/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 (/usr/local/teTeX/share/texmf.local/tex/context/base/supp-pdf.tex
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count99
+\scratchcounter=\count97
 \scratchdimen=\dimen110
 \scratchbox=\box32
-\nofMPsegments=\count100
-\nofMParguments=\count101
-\MPscratchCnt=\count102
+\nofMPsegments=\count98
+\nofMParguments=\count99
+\MPscratchCnt=\count100
 \MPscratchDim=\dimen111
-\MPnumerator=\count103
+\MPnumerator=\count101
 \everyMPtoPDFconversion=\toks23
-)
-**** pdfsync.sty: Synchronization is enabled.
-\openout5 = `GPDocumentation.pdfsync'.
+) [1
 
-**** pdfsync.sty: Synchronizing par
-\everypar=\toks24
-**** pdfsync.sty: Synchronizing math
-**** pdfsync.sty: Synchronizing hbox
-**** pdfsync.sty: Synchronizing extra
-LaTeX Font Info:    Try loading font information for OT1+phv on input line 12.
- (/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1phv.fd
+{/usr/local/teTeX/share/texmf.local/fonts/map/pdftex/updmap/pdftex.map}]
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 13.
+
+(/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1phv.fd
 File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
 )
 LaTeX Font Info:    Font shape `OT1/phv/m/it' in size <17.28> not available
-(Font)              Font shape `OT1/phv/m/sl' tried instead on input line 12.
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[][]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[][]
- []
-
-[1
-
-{/usr/local/teTeX/share/texmf.local/fonts/map/pdftex/updmap/pdftex.map}]
+(Font)              Font shape `OT1/phv/m/sl' tried instead on input line 13.
+ [1]
 (./GPDocumentation.toc
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
@@ -216,8 +285,8 @@ LaTeX Font Info:    Try loading font information for U+msb on input line 3.
 (/usr/local/teTeX/share/texmf.tetex/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2002/01/19 v2.2g AMS font definitions
 ))
-\tf@toc=\write6
-\openout6 = `GPDocumentation.toc'.
+\tf@toc=\write5
+\openout5 = `GPDocumentation.toc'.
 
 
 Adding blank page after the table of contents.
@@ -226,9 +295,9 @@ Adding blank page after the table of contents.
 ] [2]
 Chapter 1.
 LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <10> not available
-(Font)              Font shape `OT1/phv/b/n' tried instead on input line 15.
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 16.
 LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/phv/b/n' tried instead on input line 15.
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 16.
 [1
 
 
@@ -236,85 +305,134 @@ LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <14.4> not available
 
 ]
 Chapter 2.
-LaTeX Font Info:    Try loading font information for OT1+pcr on input line 32.
-(/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1pcr.fd
-File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
-)
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 42.
-
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 36.
 (/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 42.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 36.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 45.
 
+(/usr/local/teTeX/share/texmf.tetex/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+) [3] [4
 
-LaTeX Warning: Reference `sec:cov' on page 3 undefined on input line 51.
-
-File: ../examples/cov.py  (verbatim)
-[3]
-File: ../examples/mean.py  (verbatim)
-File: ../examples/realizations.py  (verbatim)
- [4] [5] [6]
+]
 Chapter 3.
-[7
+[5]
+File: ../examples/cov.py  (verbatim)
+ [6]
+File: ../examples/mean.py  (verbatim)
+ [7]
+File: ../examples/realizations.py  (verbatim)
+ [8]
+./GPDocumentation.tex:154: Undefined control sequence.
+l.154 ...tly constrain it. Introduce the \argument
+                                                  {lintrans} argument.
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
+
+[9] [10]
+Chapter 4.
+[11
 
 ] (./GPDocumentation.aux
-./GPDocumentation.aux:14: Missing \endcsname inserted.
+./GPDocumentation.aux:36: Missing \endcsname inserted.
 <to be read again> 
                    \unhbox 
-l.14 \newlabel{sec:first_look}{{2.2}{3}}
-                                        
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
 The control sequence marked <to be read again> should
 not appear between \csname and \endcsname.
 
-./GPDocumentation.aux:14: Extra \else.
+./GPDocumentation.aux:36: Extra \else.
 _...mode \sb \else \BreakableUnderscore \fi \else 
                                                   \ifx \protect \@unexpandab...
-l.14 \newlabel{sec:first_look}{{2.2}{3}}
-                                        
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
 I'm ignoring this; it doesn't match any \if.
 
-./GPDocumentation.aux:14: Extra \endcsname.
+./GPDocumentation.aux:36: Extra \endcsname.
 \@newl@bel ...dafter \ifx \csname #1@#2\endcsname 
                                                   \reserved@a \else \@tempsw...
-l.14 \newlabel{sec:first_look}{{2.2}{3}}
-                                        
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
 I'm ignoring this, since I wasn't doing a \csname.
 
-./GPDocumentation.aux:14: Extra \else.
+./GPDocumentation.aux:36: Extra \else.
 \@newl@bel ...e #1@#2\endcsname \reserved@a \else 
                                                   \@tempswatrue \fi 
-l.14 \newlabel{sec:first_look}{{2.2}{3}}
-                                        
+l.36 \newlabel{sec:lin_op}{{3.5}{9}}
+                                    
+I'm ignoring this; it doesn't match any \if.
+
+./GPDocumentation.aux:44: Missing \endcsname inserted.
+<to be read again> 
+                   \unhbox 
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+The control sequence marked <to be read again> should
+not appear between \csname and \endcsname.
+
+./GPDocumentation.aux:44: Extra \else.
+_...mode \sb \else \BreakableUnderscore \fi \else 
+                                                  \ifx \protect \@unexpandab...
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+I'm ignoring this; it doesn't match any \if.
+
+./GPDocumentation.aux:44: Extra \endcsname.
+\@newl@bel ...dafter \ifx \csname #1@#2\endcsname 
+                                                  \reserved@a \else \@tempsw...
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
+I'm ignoring this, since I wasn't doing a \csname.
+
+./GPDocumentation.aux:44: Extra \else.
+\@newl@bel ...e #1@#2\endcsname \reserved@a \else 
+                                                  \@tempswatrue \fi 
+l.44 \newlabel{sec:user_cov}{{3.8}{10}}
+                                       
 I'm ignoring this; it doesn't match any \if.
 
 )
 
-LaTeX Warning: There were undefined references.
+LaTeX Warning: There were multiply-defined labels.
 
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
- ) 
+ )
+(\end occurred when \ifmmode on line 44 was incomplete)
+(\end occurred when \ifx on line 44 was incomplete)
+(\end occurred when \ifx on line 44 was incomplete)
+(\end occurred when \ifmmode on line 36 was incomplete)
+(\end occurred when \ifx on line 36 was incomplete)
+(\end occurred when \ifx on line 36 was incomplete) 
 Here is how much of TeX's memory you used:
- 2145 strings out of 95125
- 27301 string characters out of 1182969
- 2074148 words of memory out of 4528901
- 5248 multiletter control sequences out of 10000+50000
- 25927 words of font info for 52 fonts, out of 2000000 for 2000
+ 2107 strings out of 95125
+ 26696 string characters out of 1182969
+ 2073603 words of memory out of 4528356
+ 5199 multiletter control sequences out of 10000+50000
+ 28280 words of font info for 54 fonts, out of 2000000 for 2000
  59 hyphenation exceptions out of 5000
- 32i,10n,42p,488b,533s stack positions out of 5000i,500n,6000p,200000b,40000s
+ 32i,11n,42p,754b,317s stack positions out of 5000i,500n,6000p,200000b,40000s
 PDF statistics:
- 81 PDF objects out of 300000
- 16 named destinations out of 131072
+ 136 PDF objects out of 300000
+ 28 named destinations out of 131072
  1 words of extra memory for PDF output out of 10000
-</usr/local/teTeX/share/texmf.tetex/fonts/type1/bluesky/cm/cmr10.pfb></usr/lo
-cal/teTeX/share/texmf.tetex/fonts/type1/bluesky/cm/cmsy10.pfb></usr/local/teTeX
-/share/texmf.tetex/fonts/type1/bluesky/cm/cmmi10.pfb>{/usr/local/teTeX/share/te
-xmf.tetex/fonts/enc/dvips/psnfss/8r.enc}</usr/local/teTeX/share/texmf.tetex/fon
-ts/type1/urw/courier/ucrr8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1
-/urw/helvetic/uhvb8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/ti
-mes/utmb8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/times/utmr8a
-.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/helvetic/uhvr8a.pfb>
-Output written on GPDocumentation.pdf (10 pages, 85104 bytes).
+</usr/local/teTeX/share/texm
+f.tetex/fonts/type1/bluesky/cm/cmr7.pfb></usr/local/teTeX/share/texmf.tetex/fon
+ts/type1/bluesky/cm/cmmi5.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/b
+luesky/cm/cmsy5.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/bluesky/cm/
+cmsy7.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/bluesky/cm/cmmi10.pfb
+>{/usr/local/teTeX/share/texmf.tetex/fonts/enc/dvips/psnfss/8r.enc}</usr/local/
+teTeX/share/texmf.tetex/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/teTeX/sh
+are/texmf.tetex/fonts/type1/urw/times/utmri8a.pfb></usr/local/teTeX/share/texmf
+.tetex/fonts/type1/bluesky/cm/cmsy10.pfb></usr/local/teTeX/share/texmf.tetex/fo
+nts/type1/urw/helvetic/uhvb8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/typ
+e1/urw/times/utmb8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/tim
+es/utmr8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/helvetic/uhvr
+o8a.pfb></usr/local/teTeX/share/texmf.tetex/fonts/type1/urw/helvetic/uhvr8a.pfb
+></usr/local/teTeX/share/texmf.tetex/fonts/type1/bluesky/cm/cmr10.pfb>
+Output written on GPDocumentation.pdf (15 pages, 131898 bytes).
