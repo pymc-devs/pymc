@@ -15,7 +15,7 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
-from numpy import sqrt, obj2sctype, ndarray, asmatrix
+from numpy import sqrt, obj2sctype, ndarray, asmatrix, array
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_

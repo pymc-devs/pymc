@@ -1,0 +1,68 @@
+% TODO: Use Python's documentation tools?
+%
+%  PyMC User's Guide
+%
+%  Created by Chris Fonnesbeck on 2006-05-03.
+%  Copyright (c) 2006 . All rights reserved.
+%
+\documentclass[]{manual}
+
+% Use utf-8 encoding for foreign characters
+%\usepackage[utf8]{inputenc}
+
+% Setup for fullpage use
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{epsfig}
+
+% Flexible citation syntax
+\usepackage{natbib}
+% Uncomment some of the following if you use the features
+%
+
+% Multipart figures
+%\usepackage{subfigure}
+
+% More symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+
+% Surround parts of graphics with box
+%\usepackage{boxedminipage}
+
+% Enable hyeprlinks
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+
+\usepackage{graphicx}
+
+\title{PyMC 2.0 svn User's Guide \\
+Installation and tutorial}
+\author{ Christopher Fonnesbeck\\ David Huard \\ Anand Patil }
+\graphicspath{{docs/}}
+% \date
+% TODO: Logo.
+
+%%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
+\newcommand{\titlereference}[1]{\textsl{#1}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction} %(fold)
+\input{README}
+
+\chapter{Installation} %(fold)
+\input{INSTALL}
+
+\bibliographystyle{plainnat}
+\bibliography{pymc}
+
+\end{document}
+ 

@@ -2,19 +2,19 @@
 
 def geweke_zscores(x, first=.1, last=.5, intervals=20):
     """Return z-scores for convergence diagnostics.
-	
-	Compare the mean of the first % of series with the mean of the last % of 
-	series. x is divided into a number of segments for which this difference is
-	computed. 
+    
+    Compare the mean of the first % of series with the mean of the last % of 
+    series. x is divided into a number of segments for which this difference is
+    computed. 
 
-	:Parameters:
-	  `x` : series of data,
-	  `first` : first fraction of series,
-	  `last` : last fraction of series to compare with first,
-	  `intervals` : number of segments. 
-	  
-	:Note: Geweke (1992)
-	  """
+    :Parameters:
+      `x` : series of data,
+      `first` : first fraction of series,
+      `last` : last fraction of series to compare with first,
+      `intervals` : number of segments. 
+      
+    :Note: Geweke (1992)
+      """
     # Filter out invalid intervals
     if first + last >= 1:
         raise "Invalid intervals for Geweke convergence analysis",(first,last)
@@ -39,14 +39,15 @@ def geweke_zscores(x, first=.1, last=.5, intervals=20):
         z /= sqrt(first_slice.std()**2 + last_slice.std()**2)
         
         zscores.append([start, z])
-	
-	if intervals == None:
-	    return zscores[0]    
+    
+    if intervals == None:
+        return zscores[0]    
     else:
-    	return zscores
+        return zscores
     
 
 def gelman_rubin(x):
+    pass
 # x contains multiple chains
 # Transform positive or [0,1] variables using a logarithmic/logittranformation.
 # 

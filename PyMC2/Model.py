@@ -76,7 +76,6 @@ class Model(object):
         self._generations = []
         self.__name__ = None
         self.status = 'ready'
-        self._current_iter = 0
 
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
@@ -453,7 +452,7 @@ class Sampler(Model):
         self.db.connect(self)
         
         
-    def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000,verbose=True):
+    def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000,verbose=False):
         """
         sample(iter,burn,thin)
 
@@ -478,6 +477,7 @@ class Sampler(Model):
         self.db._initialize(length)
 
         # Loop
+        self._current_iter = 0
         self._loop()
 
     def interactive_sample(self, *args, **kwds):
