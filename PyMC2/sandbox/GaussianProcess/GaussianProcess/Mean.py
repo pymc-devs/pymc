@@ -1,6 +1,7 @@
 __docformat__='reStructuredText'
 
 from numpy import *
+from GPutils import regularize_array
 
 class Mean(ndarray):
     """
@@ -44,21 +45,14 @@ class Mean(ndarray):
         base_mesh = C.base_mesh
         cov_params = C.params
         cov_fun = C.eval_fun
-        
-        # if not sum(obs_vals.shape) == sum(C.obs_mesh.shape):
-        #     raise ValueError, 'C.obs_mesh and obs_vals must be the same shape. ' + \
-        #                         "C.obs_mesh's shape is " + repr(C.obs_mesh.shape) + \
-        #                         " but obs_vals' shape is " + repr(obs_vals.shape)
-        
-        if len(base_mesh.shape)>1:
-            ndim = base_mesh.shape[-1]
-        else:
-            ndim = 1
+        ndim = C.ndim
+        base_reshape = C.base_reshape
             
-        base_reshape = base_mesh.reshape(-1,ndim)        
-        length = base_reshape.shape[0]        
         # Call the covariance evaluation function
-        data=eval_fun(base_mesh, **mean_params)
+        if base_mesh is not None:
+            data=eval_fun(base_mesh, **mean_params)
+        else:
+            data=array([])
                 
         M = data.view(subtype)        
         
@@ -75,12 +69,14 @@ class Mean(ndarray):
 
     def __call__(self, x):
 
-        not_array = False
+        if self.ndim is not None:
+            if not self.ndim == ndimx:
+                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."        
 
-        if not isinstance(x,ndarray):
-            x=array([x])
         orig_shape = x.shape
-        x=x.reshape(-1,self.ndim)
+        x=regularize_array(x)
+        ndimx = x.shape[-1]
+        x=x.reshape(-1, ndimx)
         lenx = x.shape[0]
 
         # Evaluate the unconditioned mean

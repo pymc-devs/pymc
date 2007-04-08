@@ -1,9 +1,11 @@
 __docformat__='reStructuredText'
 
 # TODO: Implement lintrans, allow obs_taus to be a huge matrix or an ndarray in observe().
+# TODO: Use regularize_array in observe.
+# TODO: You could speed up the one-at-a-time algorithm. Instead of computing the covariance of
+# TODO: all called points together and Cholesky factorizing, you could do the called points one
+# TODO: at a time, getting the value of each using the previous. Suck it up and do the operation count.
 
-from Covariance import Covariance
-from Mean import Mean
 from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
@@ -11,6 +13,37 @@ from pylab import fill, plot, clf, axis
 from PyMC2 import LikelihoodError
 
 half_log_2pi = .5 * log(2. * pi)
+
+def enlarge_covariance(base, offdiag, diag):
+    old = base.shape[0]
+    new = diag.shape[0]
+    
+    new_mat = asmatrix(zeros((old+new,old+new),dtype=float))
+    new_mat[:old,:old] = base
+    new_mat[:old,old:] = offdiag.T
+    new_mat[old:,:old] = offdiag
+    new_mat[old:,old:] = diag
+
+    return new_mat
+
+def regularize_array(A):
+    """
+    Takes an ndarray as an input.
+    - If the array is one-dimensional, it's assumed to be an array of input values.
+    - If the array is more than one-dimensional, its last index is assumed to curse
+      over spatial dimension.
+    
+    Either way, the return value is at least two dimensional. A.shape[-1] gives the
+    number of spatial dimensions.
+    """
+    if not isinstance(A,ndarray):
+        A = array(A)
+    
+    if len(A.shape) <= 1:
+        return A.reshape(-1,1)
+        
+    else:
+        return asarray(A, dtype=float)
 
 def GP_logp(f,M,C,eff_zero = 1e-15):
     """
@@ -34,6 +67,9 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     contributions from the forbidden eigendirections, 
     you won't see this.
     """
+    if sum(C.base_mesh.shape)==0:
+        raise ValueError, 'Log-probability can only be computed if f, C and M have the same base mesh.'
+    
     dev = (f-M).ravel()
     logp = 0.
     
@@ -69,18 +105,18 @@ def plot_envelope(M,C,mesh=None):
     """
     if mesh is None:
         x = concatenate((C.base_mesh, C.base_mesh[::-1]))
-        sig = sqrt(diag(C))
+        sig = sqrt(abs(diag(C)))
         y = concatenate((M-sig, (M+sig)[::-1]))
         clf()
-    
         fill(x,y,facecolor='.8',edgecolor='1.')
         plot(C.base_mesh,M,'k-.')
 
     else:
         x=concatenate((mesh, mesh[::-1]))
-        sig = sqrt(diag(C(mesh,mesh)))
+        cov = C(mesh,mesh)
+        sig = sqrt(abs(diag(cov)))
         mean = M(mesh)
-        y=concatenate((mean-sig, (mean-sig)[::-1]))
+        y=concatenate((mean-sig, (mean+sig)[::-1]))
         clf()
         fill(x,y,facecolor='.8',edgecolor='1.')
         plot(mesh, mean, 'k-.')
@@ -120,18 +156,24 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
     M.conditioned = True
     C.conditioned = True        
 
-    ndim = base_mesh.shape[1]
-    if obs_mesh.shape[0] == 0:
-        return
+    obs_mesh = regularize_array(obs_mesh)    
+    ndim = obs_mesh.shape[-1]
     obs_mesh = obs_mesh.reshape(-1,ndim)
-    obs_taus = obs_taus.ravel()
+    
+
     obs_vals = obs_vals.ravel()
-    
     have_obs_taus = obs_taus is not None
-    combined_mesh = vstack((base_mesh, obs_mesh))
-    
+    if have_obs_taus:
+        obs_taus = obs_taus.ravel()
+            
+    if base_mesh is not None:
+        combined_mesh = vstack((base_mesh, obs_mesh))
+        base_len = base_mesh.shape[0]
+    else:
+        combined_mesh = obs_mesh
+        base_len = 0
+        
     combined_len = combined_mesh.shape[0]
-    base_len = base_mesh.shape[0]
     obs_len = obs_mesh.shape[0]
     
     if M is not None:
@@ -145,55 +187,58 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
     C.obs_taus = obs_taus
     C.lintrans = lintrans
     C.obs_len = obs_len
-                        
-    try:
-        
-        RF = cov_fun(base_mesh, obs_mesh, **cov_params)
-        if lintrans is not None:
-            RF = RF * lintrans
-        
-        Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
-        mean_under = mean_fun(obs_mesh, **mean_params)
-        if have_obs_taus:
-            Q += diag(1./obs_taus)
-        Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))            
-            
-        M.Q_mean_under = Q_mean_under
-        C.Q = Q            
-        
-        tempC = C.view(matrix)
-        tempC -= RF * solve(Q, RF.T)
-        
-        tempM = M.view(ndarray)
-        tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
-        
-        
-    except LinAlgError:
-           
-        combined_cov = cov_fun(combined_mesh,combined_mesh,**cov_params)
-        combined_mean = mean_fun(combined_mesh,**mean_params)       
-        
-        for i in xrange(obs_len):
-                
-            if have_obs_taus:
-                obs_V_now = 1./obs_taus[i]
-            else:
-                obs_V_now = 0.
-            
-            RF = combined_cov[:, base_len + i]
-            Q = combined_cov[base_len + i, base_len + i] + obs_V_now
-                
-            combined_cov -= RF* RF.T / Q
-            
-            if M is not None:
-                combined_mean += (RF * (obs_vals[i] - combined_mean[base_len + i])).T / Q
-        
-        tempM = M.view(ndarray)
-        tempC = C.view(matrix)
-        for i in xrange(base_len):
-            tempM[i] = combined_mean[i]
-            for j in xrange(base_len):
-                tempC[i,j] = combined_cov[i,j]
     
-    C.update_sig_and_e()
+    Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
+    mean_under = mean_fun(obs_mesh, **mean_params)
+    if have_obs_taus:
+        Q += diag(1./obs_taus)
+    Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))            
+    
+    M.Q_mean_under = Q_mean_under
+    C.Q = Q
+    
+    if base_mesh is not None:                    
+        try:
+        
+            RF = cov_fun(base_mesh, obs_mesh, **cov_params)
+            if lintrans is not None:
+                RF = RF * lintrans
+        
+            tempC = C.view(matrix)
+            tempC -= RF * solve(Q, RF.T)
+        
+            tempM = M.view(ndarray)
+            tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
+        
+        
+        except LinAlgError:
+            raise LinAlgError, 'Unable to invert covariance matrix. Suggest reducing number of observation points or increasing obs_Vs.'
+            # print 'Warning, using one-at-a-time method, which means calls to C and M will be wrong.'
+            #    
+            # combined_cov = cov_fun(combined_mesh,combined_mesh,**cov_params)
+            # combined_mean = mean_fun(combined_mesh,**mean_params)       
+            # 
+            # for i in xrange(obs_len):
+            #         
+            #     if have_obs_taus:
+            #         obs_V_now = 1./obs_taus[i]
+            #     else:
+            #         obs_V_now = 0.
+            #     
+            #     RF = combined_cov[:, base_len + i]
+            #     Q = combined_cov[base_len + i, base_len + i] + obs_V_now
+            #         
+            #     combined_cov -= RF* RF.T / Q
+            #     
+            #     if M is not None:
+            #         combined_mean += (RF * (obs_vals[i] - combined_mean[base_len + i])).T / Q
+        
+            tempM = M.view(ndarray)
+            tempC = C.view(matrix)
+            for i in xrange(base_len):
+                tempM[i] = combined_mean[i]
+                for j in xrange(base_len):
+                    tempC[i,j] = combined_cov[i,j]
+    
+        C.update_sig_and_e()
         

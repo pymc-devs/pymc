@@ -3,7 +3,8 @@ __docformat__='reStructuredText'
 # TODO: implement lintrans and dependent observation precision at some point.
 
 from numpy import *
-from numpy.linalg import eigh
+from numpy.linalg import eigh, solve
+from GPutils import regularize_array
 
 
 class Covariance(matrix):
@@ -57,32 +58,28 @@ class Covariance(matrix):
     
     def __new__(subtype, 
                 eval_fun,   
-                base_mesh = array([]),
+                base_mesh = None,
                 **params):
+
+        if not base_mesh is None:
+            base_mesh = regularize_array(base_mesh)
         
-        # You may need to reshape these so f2py doesn't puke.           
-        base_mesh = base_mesh.squeeze()
-        
-        if len(base_mesh.shape)>1:
             ndim = base_mesh.shape[-1]
-        else:
-            ndim = 1
+            base_reshape = base_mesh.reshape(-1,ndim)            
+            length = base_reshape.shape[0]        
             
-        base_reshape = base_mesh.reshape(-1,ndim)
-        length = base_reshape.shape[0]        
+            C.base_mesh = base_mesh
+            C.base_reshape = base_reshape
+            C.ndim = ndim            
         
-        # Call the covariance evaluation function
-        if not sum(base_mesh.shape)==0:
+            # Call the covariance evaluation function
             data=eval_fun(base_reshape, base_reshape, **params)
         else:
             data = array([])
+            
         C = data.view(subtype)
-        
         C.eval_fun = eval_fun
         C.params = params
-        C.base_mesh = base_mesh
-        C.base_reshape = base_reshape
-        C.ndim = ndim
         C.__matrix__ = data
         C.update_sig_and_e()
         
@@ -90,41 +87,55 @@ class Covariance(matrix):
         return C
     
     def update_sig_and_e(self):
-        val, vec = eigh(self)
-        self.Eval = val
-        self.Evec = vec
-        sig = asmatrix(zeros(vec.shape))
-        for i in range(len(val)):
-            if val[i]<0.:
-                val[i]=0.
-            sig[:,i] = vec[:,i]*sqrt(val[i])
-        self.S = asmatrix(sig).T
+        if self.base_mesh is not None:
+            val, vec = eigh(self)
+            self.Eval = val
+            self.Evec = vec
+            sig = zeros(vec.shape)
+            for i in range(len(val)):
+                if val[i]<0.:
+                    val[i]=0.
+                sig[:,i] = vec[:,i]*sqrt(val[i])
+            self.S = asmatrix(sig).T
         
-        self.logEval = log(val)
+            self.logEval = log(val)
+        else:
+            self.Eval = array([])
+            self.Evec = array([])
+            self.S = array([])
+            self.logEval = array([])
                 
     def __call__(self, x, y=None):
         
-        if not isinstance(x,ndarray):
-            x = array([x])
-        x=x.reshape(-1,self.ndim)
+        x=regularize_array(x)
+        ndimx = x.shape[-1]
+        x=x.reshape(-1,ndimx)
         lenx = x.shape[0]
+
+        if self.ndim is not None:
+            if not self.ndim == ndimx:
+                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Covariance instance's base mesh."
             
-        if y is None:
+        if y is None or y is x:
             
             C=self.eval_fun(x,x,**self.params)
+
             if not self.conditioned:
                 return C
                 
-            RF = self.eval_fun(x, self.obs_mesh, **self.params)    
-            C -= RF * self.Q * RF.T
+            RF = self.eval_fun(x, self.obs_mesh, **self.params)
+            C -= RF * solve(self.Q , RF.T)
             
             return C
 
         else:
-            if not isinstance(y,ndarray):
-                y = array([y])
-            y=y.reshape(-1,self.ndim)
+            y=regularize_array(y)
+            ndimy = y.shape[-1]
+            y=y.reshape(-1,ndimx)
             leny = y.shape[0]
+            
+            if not ndimx==ndimy:
+                raise ValueError, 'The last dimension of x and y (the number of spatial dimensions) must be the same.'
             
             combo = vstack((x,y))
         
@@ -135,7 +146,7 @@ class Covariance(matrix):
 
             # Condition
             RF = self.eval_fun(combo, self.obs_mesh, **self.params)
-            C -= RF * self.Q * RF.T
+            C -= RF * solve(self.Q, RF.T)
             
             return C[:lenx,lenx:]
         
