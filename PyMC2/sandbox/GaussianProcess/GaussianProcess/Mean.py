@@ -33,6 +33,7 @@ class Mean(ndarray):
     obs_taus = None
     Q_mean_under = None
     obs_len = None
+    observed = False
     
     __array_priority__ = 0.
     
@@ -68,16 +69,17 @@ class Mean(ndarray):
         return M
 
     def __call__(self, x):
-
-        if self.ndim is not None:
-            if not self.ndim == ndimx:
-                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."        
-
-        orig_shape = x.shape
+        
+        orig_shape = shape(x)
         x=regularize_array(x)
         ndimx = x.shape[-1]
         x=x.reshape(-1, ndimx)
         lenx = x.shape[0]
+        
+        if self.ndim is not None:
+            if not self.ndim == ndimx:
+                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."        
+        
 
         # Evaluate the unconditioned mean
         M = self.eval_fun(x,**self.mean_params)
@@ -89,8 +91,11 @@ class Mean(ndarray):
         M += (RF * self.Q_mean_under).view(ndarray).reshape(M.shape)
             
         return M.reshape(orig_shape)
-
+        
     def __repr__(self):
+        return object.__repr__(self)        
+
+    def __str__(self):
         # Thanks to the author of ma.array for this code.
         s = repr(self.__array__()).replace('array', 'array aspect: ')
 
@@ -104,6 +109,12 @@ class Mean(ndarray):
         cov_fun_part = 'associated covariance function: ' + str(self.cov_fun)
 
         return '\n'.join(['Gaussian process covariance',functional_part,cov_fun_part,array_part])
+        
+    def __getitem__(self, *args):
+        return self.view(ndarray).__getitem__(*args)
+
+    def __getslice__(self, *args):
+        return self.view(ndarray).__getslice__(*args)        
 
     def __array_wrap__(self, array_in):
         return array_in.view(ndarray)

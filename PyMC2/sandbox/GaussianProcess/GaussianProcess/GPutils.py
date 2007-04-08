@@ -69,7 +69,6 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     """
     if sum(C.base_mesh.shape)==0:
         raise ValueError, 'Log-probability can only be computed if f, C and M have the same base mesh.'
-    
     dev = (f-M).ravel()
     logp = 0.
     
@@ -80,7 +79,7 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     dot = asarray((C.Evec.T * dev)).ravel()
     dot_sq = dot ** 2
     
-    if (scaled_evals == 0. and dot_sq > 0.).any():
+    if (scaled_evals == 0.).any() and dot_sq > 0.:
         raise LikelihoodError
         
     if (dot_sq / scaled_evals > eff_inf).any():
@@ -105,7 +104,7 @@ def plot_envelope(M,C,mesh=None):
     """
     if mesh is None:
         x = concatenate((C.base_mesh, C.base_mesh[::-1]))
-        sig = sqrt(abs(diag(C)))
+        sig = sqrt(abs(diag(C))).reshape(C.base_mesh.shape)
         y = concatenate((M-sig, (M+sig)[::-1]))
         clf()
         fill(x,y,facecolor='.8',edgecolor='1.')
@@ -121,6 +120,7 @@ def plot_envelope(M,C,mesh=None):
         fill(x,y,facecolor='.8',edgecolor='1.')
         plot(mesh, mean, 'k-.')
     
+
 
 def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=None):
     """
@@ -201,9 +201,10 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
         try:
         
             RF = cov_fun(base_mesh, obs_mesh, **cov_params)
+
             if lintrans is not None:
                 RF = RF * lintrans
-        
+            
             tempC = C.view(matrix)
             tempC -= RF * solve(Q, RF.T)
         
@@ -213,25 +214,6 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
         
         except LinAlgError:
             raise LinAlgError, 'Unable to invert covariance matrix. Suggest reducing number of observation points or increasing obs_Vs.'
-            # print 'Warning, using one-at-a-time method, which means calls to C and M will be wrong.'
-            #    
-            # combined_cov = cov_fun(combined_mesh,combined_mesh,**cov_params)
-            # combined_mean = mean_fun(combined_mesh,**mean_params)       
-            # 
-            # for i in xrange(obs_len):
-            #         
-            #     if have_obs_taus:
-            #         obs_V_now = 1./obs_taus[i]
-            #     else:
-            #         obs_V_now = 0.
-            #     
-            #     RF = combined_cov[:, base_len + i]
-            #     Q = combined_cov[base_len + i, base_len + i] + obs_V_now
-            #         
-            #     combined_cov -= RF* RF.T / Q
-            #     
-            #     if M is not None:
-            #         combined_mean += (RF * (obs_vals[i] - combined_mean[base_len + i])).T / Q
         
             tempM = M.view(ndarray)
             tempC = C.view(matrix)
@@ -241,4 +223,6 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
                     tempC[i,j] = combined_cov[i,j]
     
         C.update_sig_and_e()
+    C.observed = True
+    M.observed = True
         

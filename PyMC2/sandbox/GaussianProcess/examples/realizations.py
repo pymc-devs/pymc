@@ -14,10 +14,13 @@ if __name__ == '__main__':
     x=arange(-1.,1.,.01)
 
     clf()
+
     plot_envelope(M, C, mesh=x)
+
     for f in f_list:
         plot(x, f(x))
     plot(obs_x,d,'k.',markersize=16)
+
     xlabel('x')    
     ylabel('f(x)')
     title('Three realizations from the observed GP')

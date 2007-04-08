@@ -53,6 +53,7 @@ class Covariance(matrix):
     Q = None   
     obs_len = None
     __matrix__ = None
+    observed = False
     
     __array_priority__ = 0.
     
@@ -67,17 +68,19 @@ class Covariance(matrix):
             ndim = base_mesh.shape[-1]
             base_reshape = base_mesh.reshape(-1,ndim)            
             length = base_reshape.shape[0]        
-            
-            C.base_mesh = base_mesh
-            C.base_reshape = base_reshape
-            C.ndim = ndim            
         
             # Call the covariance evaluation function
             data=eval_fun(base_reshape, base_reshape, **params)
         else:
             data = array([])
+            base_reshape = None
+            ndim = None
+
+        C = data.view(subtype)    
             
-        C = data.view(subtype)
+        C.base_mesh = base_mesh
+        C.base_reshape = base_reshape
+        C.ndim = ndim    
         C.eval_fun = eval_fun
         C.params = params
         C.__matrix__ = data
@@ -91,12 +94,12 @@ class Covariance(matrix):
             val, vec = eigh(self)
             self.Eval = val
             self.Evec = vec
-            sig = zeros(vec.shape)
+            sig = asmatrix(zeros(vec.shape))
             for i in range(len(val)):
                 if val[i]<0.:
                     val[i]=0.
                 sig[:,i] = vec[:,i]*sqrt(val[i])
-            self.S = asmatrix(sig).T
+            self.S = sig.T
         
             self.logEval = log(val)
         else:
@@ -149,9 +152,11 @@ class Covariance(matrix):
             C -= RF * solve(self.Q, RF.T)
             
             return C[:lenx,lenx:]
-        
-        
+
     def __repr__(self):
+        return object.__repr__(self)        
+        
+    def __str__(self):
         # Thanks to the author of ma.array for this code.
         s = repr(self.__array__()).replace('array', 'matrix aspect: ')
         

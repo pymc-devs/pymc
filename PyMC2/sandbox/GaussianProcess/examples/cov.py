@@ -19,7 +19,9 @@ if __name__ == '__main__':
     
     # Plot the covariance function
     subplot(1,2,1)
+
     imshow(C(x,x),origin='lower',extent=(-1.,1.,-1.,1.))
+
     xlabel('x')
     ylabel('y')
     title('C(x,y)')
@@ -28,8 +30,10 @@ if __name__ == '__main__':
     
     # Plot a slice of the covariance function
     subplot(1,2,2)
+
     C_slice = asarray(C_matrix[:,round(.5*len(x))]).ravel()
     plot(x,C_slice,'k-')
+
     xlabel('x')
     ylabel('C(x,0)')
     title('A slice of C')

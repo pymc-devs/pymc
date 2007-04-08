@@ -75,10 +75,10 @@ class Realization(ndarray):
         if base_mesh is not None:
             
             length = base_reshape.shape[0]
-            f.obs_mesh_sofar = base_reshape
-            f.M_sofar = M.ravel()
-            f.C_sofar = C
-            f.N_obs_sofar = length
+            obs_mesh_sofar = base_reshape
+            M_sofar = M.ravel()
+            C_sofar = C
+            N_obs_sofar = length
             
             if init_base_array is not None:
                 # If the value over the base array is specified, check it out.
@@ -96,7 +96,15 @@ class Realization(ndarray):
         else:
             f = array([]).view(subtype)
             base_reshape = array([])
+            obs_mesh_sofar = None
+            M_sofar = None
+            C_sofar = None
+            N_obs_sofar = 0
         
+        f.obs_mesh_sofar = obs_mesh_sofar
+        f.M_sofar = M_sofar
+        f.C_sofar = C_sofar
+        f.N_obs_sofar = N_obs_sofar
         f.base_mesh = base_mesh
         f.cov_params = cov_params
         f.mean_params = mean_params
@@ -182,8 +190,10 @@ class Realization(ndarray):
         
         return f.reshape(orig_shape)                
 
-        
     def __repr__(self):
+        return object.__repr__(self)
+        
+    def __str__(self):
         # Thanks to the author of ma.array for this code.
         s = repr(self.__array__()).replace('array', 'array aspect: ')
 
@@ -198,8 +208,13 @@ class Realization(ndarray):
         obs_part = 'Number of evaluations so far: %i' % self.N_obs_sofar
 
         return '\n'.join(['Gaussian process realization',mean_fun_part,cov_fun_part,obs_part,array_part])
-        
+                
+    def __getitem__(self, *args):
+        return self.view(ndarray).__getitem__(*args)
 
+    def __getslice__(self, *args):
+        return self.view(ndarray).__getslice__(*args)        
+        
     def __array_wrap__(self, array_in):
         return array_in.view(ndarray)
         

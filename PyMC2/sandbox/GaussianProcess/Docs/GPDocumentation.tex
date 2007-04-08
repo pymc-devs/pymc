@@ -50,7 +50,9 @@ Type this into a shell:
 
 
 
-\chapter{Tutorial}\label{cha:tutorial} 
+\chapter{Tutorial I: The basics}\label{cha:basics} % (fold)
+
+% chapter basics (end)
 
 To understand GPs, you need to play around with them. You can be as good at math as you want, but to really know what they're like you have to build experience. For that reason, after a brief overview of what GP's can be good for, this tutorial will immediately show you how to actually instantiate a GP. That way you have one to play around with throughout the rest of the tutorial. All the code in the tutorial is in the folder \file{examples}, which is distributed with this package.
 
@@ -211,29 +213,146 @@ This section will try to introduce you to the array aspect of the GP, while insu
 
 \subsection{Utilitarian overview: the base mesh}
 
-The base mesh is where you should put evaluations you know ahead of time you're going to want. Redo examples with a base mesh. Indexing and slicing of objects. If you do MCMC, you're NEVER allowed to change the size of the base mesh. DON'T DO IT. Talk about drawing realizations but specifying values on a base mesh.
+The init method of \class{Covariance} takes a parameter called \code{base_mesh}, which we haven't talked about yet. The base mesh is where you should put evaluations you know ahead of time you're going to want. The following code recreates the observed GP created in \file{examples/observation.py} and draws a single realization. However, this time a `base mesh' argument is provided.
+\verbatiminput{../examples/basemesh.py}
 
-If you absolutely have to make a lot of calls, consider a Fourier representation. It'll be way faster.
+The base mesh will be automatically inherited by $M$ and the realization $f$. We can do a few things now we couldn't do before.
 
-\subsection{Some light theory} 
+\subsubsection{Indexing and slicing}\label{subsub:indexslice}
+First, try typing the following command into the Python prompt, and you'll get the output below:
+\begin{verbatim}
+In [3]: print C
+Gaussian process covariance
+functional aspect: <function Matern at 0x496f4b0>
+matrix aspect: ([[  7.78885868e-02,   6.60273508e-02,   4.99286671e-02,
+                    3.22586177e-02,   1.53194936e-02,   1.48744121e-03,
+                   -7.22296442e-03,  -1.18739011e-02,  -1.37398672e-02,
+                   -1.36941495e-02,  -1.23668617e-02,  -1.02279152e-02,
+                   ...
+\end{verbatim}
+$C$'s new `matrix aspect' is just $C$ evaluated on its base mesh. Try typing \code{print M} and \code{print f} into the prompt also. 
 
+$C$ can still be called like a function, but now it can be treated like a matrix too:
+\begin{verbatim}
+In [11]: C(2.,3.)
+Out[11]: matrix([[ 0.06014876]])
+
+In [12]: C[3,:5]
+Out[12]: matrix([[ 0.03225862,  0.03155917,  0.02869263,  0.02249194,  0.01228326]])
+
+In [13]: isinstance(C,matrix)
+Out[13]: True
+\end{verbatim}
+Similarly, $f$ and $M$ can still be called like functions, but now they can be treated like arrays:
+\begin{verbatim}
+In [14]: M(3)
+Out[14]: array(12.506241348839085)
+
+In [15]: f(3)
+Out[15]: array(12.818659676751814)
+
+In [16]: M[:5]
+Out[16]: 
+array([[ 3.27805131],
+       [ 3.22089361],
+       [ 3.18082649],
+       [ 3.1518305 ],
+       [ 3.12490149]])
+
+In [17]: f[:5]
+Out[17]: 
+array([[ 3.22769661],
+       [ 3.11578558],
+       [ 3.07350289],
+       [ 3.10476021],
+       [ 3.09748845]])
+
+In [18]: isinstance(M,ndarray)
+Out[18]: True
+
+In [19]: isinstance(f,ndarray)
+Out[19]: True
+\end{verbatim}
+
+
+As you may have noticed, slicing (getting values from the array aspect) is much, much faster than calling (getting values from the functional aspect). If performance is a concern, you should make your base mesh include every value you're ever going to want, so that you don't have to make many calls at all. If that's not possible, you should keep the number of calls you make to a minimum. If you absolutely have to make a lot of calls but you still need high performance, consider a Fourier representation.
+ 
+\subsubsection{Computing log-probabilities of realizations}\label{subsub:logp}
+This module provides a function called \function{GP_logp} for computing the log-probability density of the evaluation of a realization $f$ on a base mesh, with respect to a mean function $M$ and a covariance function $C$. Try it out:
+\begin{verbatim}
+In [20]: GP_logp(f,M,C)
+Out[20]: 39.2993852418
+
+In [21]: GP_logp(2.*f,M,C)
+Out[21]: -4667.56968213
+\end{verbatim}
+It looks plausible that $f$ is a realization from the GP defined by $M$ and $C$, but much less plausible that $2f$ is such a realization. This makes sense; $f$ really is a realization from that GP, but $2f$ would be way too far away from $M$ (see the $\pm$ 1 sd bands in figure \ref{fig:obs}, and imagine how ridiculous the realizations would look if they were doubled in amplitude).
+
+If \function{GP_logp} is called with a realization $f$ that is way too ridiculous to ever have arisen from the GP, it raises a PyMC \exception{LikelihoodError} exception rather than returning \code{-Inf}. This is done for consistency with PyMC and for efficiency.
+
+\subsubsection{Specifying realizations' values on the base mesh}\label{subsub:force}
+
+The init method of \class{Realization} takes an argument we haven't used yet, called \code{init_base_array}. It allows us to force the realization to take particular values on the base mesh; that is, it allows us to force an array aspect on the realization. This is useful for proposing values in MCMC. We will defer further discussion of this feature until we need it in section \ref{sec:PyMC}. 
+
+\subsection{The theory behind the array aspect} 
+The Gaussian process generalizes the multivariate normal distribution from vectors to functions, just like the multivariate normal distribution generalizes the univariate normal distribution from scalars to vectors. The progression is as follows:
 \begin{equation}
     \begin{array}{ll}
-        x\sim\textup N(\mu,V) & \textup{$x$, $y$, $V$ are scalars}\\\\
-        \vec x\sim\textup N(\vec \mu,C)& \textup{$\vec x$ and $\vec \mu$ are vectors, $C$ is a scalar}\\\\
-        f\sim\textup{GP}(M, C) & \textup{$f$ and $M$ are functions of one variable, $C$ is a function of two variables}
+        y\sim\textup N(\mu,V): & \textup{$y$, $\mu$, $V$ are scalars}\\\\
+        \vec y\sim\textup N(\vec \mu,C): & \textup{$\vec y$ and $\vec \mu$ are vectors, $C$ is a matrix}\\\\
+        f\sim\textup{GP}(M, C): & \textup{$f$ and $M$ are functions of one variable, $C$ is a function of two variables}
     \end{array}
 \end{equation}
 
+One of the really nice things about this extended family of distributions is that it's easy to marginalize. For example, each element of a vector with a multivariate normal distribution has a univariate normal distribution:
+\begin{eqnarray*}
+    \vec y\sim\textup N(\vec \mu,C)\\
+	\Rightarrow \vec y_i\sim\textup N(\vec \mu_i,C_{i,i}),
+\end{eqnarray*}
+and any subvector of a vector with a multivariate normal distribution has a multivariate normal distribution:
+\begin{eqnarray*}
+    \vec y\sim\textup N(\vec \mu,C)\\
+	\Rightarrow \vec y_{i_1\ldots i_2}\sim\textup N(\vec \mu_{i_1\ldots i_2},C_{i_1\ldots i_2,i_1\ldots i_2}),
+\end{eqnarray*}
+
+This marginalizability applies to GP's as well. If $\vec x$ is a vector of values (a base mesh),
+\begin{equation}
+	\begin{array}{l}
+		f\sim\textup{GP}(M, C)\\\\
+		\Rightarrow f(\vec x) \sim\textup N(M(\vec x), C(\vec x,\vec x)).
+	\end{array}
+\end{equation}
+In other words, the array aspect of a Gaussian process \class{Realization} has a multivariate normal distribution. Its mean is the array aspect of $f$'s associated \class{Mean} function, and its covariance is the matrix aspect of $f$'s associated \class{Covariance} function. 
 % section array (end)
+
+\section{Higher-dimensional GPs}\label{sec:highdim} % (fold)
+Anytime you pass an array into an init method or evaluate a GP object on an array, the convention is that the array's last index iterates over spatial dimension. So if you wanted to evaluate a covariance function $C$ on the ordered pairs $(0,0)$, $(0,1)$, $(1,0)$ and $(1,1)$, you could pass in the following two-dimensional array:
+\begin{verbatim}
+[[0,0]
+ [0,1]
+ [1,0]
+ [1,1]]
+\end{verbatim}
+or the following three-dimensional array:
+\begin{verbatim}
+[[[0,0]
+  [0,1]],
+
+  [1,0]
+  [1,1]]]
+\end{verbatim}
+Either is fine, since in both the last index tells you which element of the ordered pair to use.
+
+\textbf{A spatial example in 2d}
+% section highdim (end)
+
+\chapter{Tutorial II: More advanced topics}\label{cha:adv} % (fold)
 
 \section{Incorporating Gaussian processes in probability models with PyMC}\label{sec:PyMC} % (fold)
 \textbf{XXX Need to think about this a bit.}
-% section PyMC (end)
 
-\section{Higher-dimensional GPs}\label{sec:highdim} % (fold)
-\textbf{A spatial example in 2d}
-% section highdim (end)
+You're NEVER allowed to change the base mesh. DON'T DO IT. I'll raise an error if you try.
+% section PyMC (end)
 
 \section{Integrals, derivatives and transforms: linear operations and constraints}\label{sec:linop} % (fold)
 
@@ -283,6 +402,8 @@ Three simple rules always apply to covariance functions, and keeping them in min
 The theoretical condition is that the covariance has to be a symmetric nonnegative-definite function: its evaluation on any finite mesh has to be a symmetric nonnegative-definite matrix, which is a symmetric matrix whose eigenvalues are all nonnegative.
 
 % section usercov (end)
+
+% chapter adv (end)
 
 \chapter{API reference}\label{cha:reference} 
 
