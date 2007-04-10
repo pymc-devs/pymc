@@ -14,12 +14,12 @@ class Covariance(matrix):
     
     Valued as a special GP covariance object. On instantiation,
     this object produces a covariance matrix over base_mesh, according to actual_GP_fun,
-    with parameters **params, conditioned on lintrans acting on its evaluations at 
+    with parameters **params, observed on lintrans acting on its evaluations at 
     obs_mesh, with `observation precision' obs_taus.
     
     The object is indexable and callable. When indexed, it returns one of its stored
     elements (static usage). When called with a point couple as arguments (dynamic usage), 
-    it returns the covariance of that point couple, again conditioned on the lintrans and obs_mesh
+    it returns the covariance of that point couple, again observed on the lintrans and obs_mesh
     and all.
     
     :Arguments:
@@ -46,7 +46,7 @@ class Covariance(matrix):
     base_mesh = None
     base_reshape = None
     ndim = None
-    conditioned = False
+    observed = False
     obs_mesh = None
     base_mesh = None
     obs_taus = None 
@@ -55,6 +55,10 @@ class Covariance(matrix):
     __matrix__ = None
     observed = False
     
+    # This is just a hacky drop-in slot for storage of information from
+    # conditioning, for faster conditioning of M.
+    RF = None
+    
     __array_priority__ = 0.
     
     def __new__(subtype, 
@@ -62,11 +66,11 @@ class Covariance(matrix):
                 base_mesh = None,
                 **params):
 
-        if not base_mesh is None:
-            base_mesh = regularize_array(base_mesh)
-        
-            ndim = base_mesh.shape[-1]
-            base_reshape = base_mesh.reshape(-1,ndim)            
+        if base_mesh is not None:
+            
+            base_reshape = regularize_array(base_mesh)
+            ndim = base_reshape.shape[-1]
+            base_reshape = base_reshape.reshape(-1,ndim)            
             length = base_reshape.shape[0]        
         
             # Call the covariance evaluation function
@@ -92,6 +96,7 @@ class Covariance(matrix):
     def update_sig_and_e(self):
         if self.base_mesh is not None:
             val, vec = eigh(self)
+            val = val.ravel()
             self.Eval = val
             self.Evec = vec
             sig = asmatrix(zeros(vec.shape))
@@ -123,7 +128,7 @@ class Covariance(matrix):
             
             C=self.eval_fun(x,x,**self.params)
 
-            if not self.conditioned:
+            if not self.observed:
                 return C
                 
             RF = self.eval_fun(x, self.obs_mesh, **self.params)
@@ -144,7 +149,7 @@ class Covariance(matrix):
         
             # Evaluate the covariance
             C=self.eval_fun(combo,combo,**self.params)
-            if not self.conditioned:
+            if not self.observed:
                 return C[:lenx,lenx:]
 
             # Condition
@@ -192,7 +197,7 @@ class Covariance(matrix):
     def plot(self, mesh=None):
         from pylab import contourf, colorbar
         if self.ndim==1:
-            contourf(self.base_mesh, self.base_mesh, self.view(ndarray))
+            contourf(self.base_reshape, self.base_reshape, self.view(ndarray))
         else:
             contourf(self.view(ndarray))
         colorbar()            

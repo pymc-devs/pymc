@@ -10,9 +10,15 @@ from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
 from pylab import fill, plot, clf, axis
-from PyMC2 import LikelihoodError
+
+try:
+    from PyMC2 import LikelihoodError
+except ImportError:
+    class LikelihoodError(ValueError):
+        pass
 
 half_log_2pi = .5 * log(2. * pi)
+
 
 def enlarge_covariance(base, offdiag, diag):
     old = base.shape[0]
@@ -25,6 +31,7 @@ def enlarge_covariance(base, offdiag, diag):
     new_mat[old:,old:] = diag
 
     return new_mat
+
 
 def regularize_array(A):
     """
@@ -67,8 +74,9 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     contributions from the forbidden eigendirections, 
     you won't see this.
     """
-    if sum(C.base_mesh.shape)==0:
-        raise ValueError, 'Log-probability can only be computed if f, C and M have the same base mesh.'
+    if C.base_mesh is None:
+        return 0.
+        
     dev = (f-M).ravel()
     logp = 0.
     
@@ -78,8 +86,7 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     
     dot = asarray((C.Evec.T * dev)).ravel()
     dot_sq = dot ** 2
-    
-    if (scaled_evals == 0.).any() and dot_sq > 0.:
+    if ((scaled_evals == 0. ) * ( dot_sq > 0.)).any():
         raise LikelihoodError
         
     if (dot_sq / scaled_evals > eff_inf).any():
@@ -88,6 +95,7 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval) 
             
     return logp
+
 
 def plot_envelope(M,C,mesh=None):
     """
@@ -118,15 +126,19 @@ def plot_envelope(M,C,mesh=None):
         y=concatenate((mean-sig, (mean+sig)[::-1]))
         clf()
         fill(x,y,facecolor='.8',edgecolor='1.')
-        plot(mesh, mean, 'k-.')
+        plot(mesh, mean, 'k-.')    
+
+
+def observe(C,M,obs_mesh, obs_taus = None, lintrans = None, obs_vals = None):
+    observe_cov(C, obs_mesh, obs_taus, lintrans)
+    observe_mean_from_cov(M,C,obs_vals)
     
 
-
-def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=None):
+def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
     """
-    observe(C, obs_mesh[, obs_taus, lintrans, obs_vals, M])
+    observe_cov(C, M, obs_mesh[, obs_taus, lintrans])
     
-    Updates C and M to condition f on the value of obs_vals in:
+    Updates C to condition f in:
     
     obs_vals ~ N(lintrans * f(obs_mesh), obs_taus)
     f ~ GP(M, C)
@@ -136,7 +148,6 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
         - obs_mesh: 
         - obs_taus:
         - lintrans:
-        - obs_vals:
         - M:
     
     :SeeAlso:
@@ -148,20 +159,13 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
     cov_fun = C.eval_fun
     cov_params = C.params
 
-    if M is not None:
-
-        mean_params = M.mean_params
-        mean_fun = M.eval_fun
-
-    M.conditioned = True
-    C.conditioned = True        
+    C.observed = True        
 
     obs_mesh = regularize_array(obs_mesh)    
     ndim = obs_mesh.shape[-1]
     obs_mesh = obs_mesh.reshape(-1,ndim)
     
 
-    obs_vals = obs_vals.ravel()
     have_obs_taus = obs_taus is not None
     if have_obs_taus:
         obs_taus = obs_taus.ravel()
@@ -176,27 +180,10 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
     combined_len = combined_mesh.shape[0]
     obs_len = obs_mesh.shape[0]
     
-    if M is not None:
-        M.obs_mesh = obs_mesh
-        M.obs_taus = obs_taus
-        M.lintrans = lintrans
-        M.obs_vals = obs_vals
-        M.obs_len = obs_len
-        
-    C.obs_mesh = obs_mesh
-    C.obs_taus = obs_taus
-    C.lintrans = lintrans
-    C.obs_len = obs_len
-    
     Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
-    mean_under = mean_fun(obs_mesh, **mean_params)
     if have_obs_taus:
         Q += diag(1./obs_taus)
-    Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))            
-    
-    M.Q_mean_under = Q_mean_under
-    C.Q = Q
-    
+            
     if base_mesh is not None:                    
         try:
         
@@ -206,23 +193,58 @@ def observe(C, obs_mesh, obs_taus = None, lintrans = None, obs_vals = None, M=No
                 RF = RF * lintrans
             
             tempC = C.view(matrix)
-            tempC -= RF * solve(Q, RF.T)
-        
-            tempM = M.view(ndarray)
-            tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
-        
+            tempC -= RF * solve(Q, RF.T)        
         
         except LinAlgError:
             raise LinAlgError, 'Unable to invert covariance matrix. Suggest reducing number of observation points or increasing obs_Vs.'
-        
-            tempM = M.view(ndarray)
-            tempC = C.view(matrix)
-            for i in xrange(base_len):
-                tempM[i] = combined_mean[i]
-                for j in xrange(base_len):
-                    tempC[i,j] = combined_cov[i,j]
+    else:
+        RF = None
     
-        C.update_sig_and_e()
     C.observed = True
+    C.obs_mesh = obs_mesh
+    C.obs_taus = obs_taus
+    C.lintrans = lintrans
+    C.obs_len = obs_len
+    C.Q = Q
+    C.RF = RF
+
+    C.update_sig_and_e()
+
+def observe_mean_from_cov(M,C,obs_vals):
+    """
+    If you need to observe the covariance and mean separately (as in PyMC),
+    use observe() to hit the covariance and then use this to hit the mean.
+    
+    RF will be passed to C by observe().
+    """
+    Q = C.Q
+    RF = C.RF
+    
+    obs_vals = obs_vals.ravel()
+    
+    M.cov_params = C.params
+    M.cov_fun = C.eval_fun
+    M.C = C
+    
+    obs_mesh = C.obs_mesh
+    obs_taus = C.obs_taus
+    lintrans = C.lintrans
+    obs_len = C.obs_len
+    
+    mean_params = M.mean_params
+    mean_fun = M.eval_fun
+    
+    mean_under = mean_fun(obs_mesh, **mean_params)
+    Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))
+    
+    if M.base_mesh is not None:
+        tempM = M.view(ndarray)
+        tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
+
     M.observed = True
-        
+    M.obs_mesh = obs_mesh
+    M.obs_taus = obs_taus
+    M.lintrans = lintrans
+    M.obs_vals = obs_vals
+    M.obs_len = obs_len
+    M.Q_mean_under = Q_mean_under

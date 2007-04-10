@@ -73,7 +73,6 @@ class Realization(ndarray):
         ndim = C.ndim
             
         if base_mesh is not None:
-            
             length = base_reshape.shape[0]
             obs_mesh_sofar = base_reshape
             M_sofar = M.ravel()

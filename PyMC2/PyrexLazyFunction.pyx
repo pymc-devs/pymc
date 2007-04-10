@@ -125,8 +125,7 @@ cdef class LazyFunction:
 
         self.fun = fun
         
-        self.get_array_data()
-    
+        self.get_array_data()    
     
     cdef void get_array_data(self):
         self.ultimate_arg_p = <void**> PyArray_DATA(self.ultimate_args)
@@ -216,3 +215,12 @@ cdef class LazyFunction:
         else: value = <object> self.cached_values[match_index]
 
         return value
+        
+    def force_compute(self):
+        """
+        Call this method to force a recompute without doing cache checking.
+        """
+        
+        value = self.fun(**self.argument_values)
+        self.cache(value)
+        

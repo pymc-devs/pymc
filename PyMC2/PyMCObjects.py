@@ -68,10 +68,12 @@ class Node(PyMCBase):
                                 name=name, 
                                 parents=parents, 
                                 cache_depth = cache_depth, 
-                                trace=trace)        
+                                trace=trace)
+        
+        self._value.force_compute()        
         
     def gen_lazy_function(self):
-        self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self.cache_depth)
+        self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
 
     def get_value(self):
         return self._value.get()
@@ -183,6 +185,10 @@ class Parameter(PyMCBase):
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random
         
+        # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
+        # taken from the constructor.
+        self.rseed = rseed
+        
         PyMCBase.__init__(  self, 
                             doc=doc, 
                             name=name, 
@@ -190,14 +196,15 @@ class Parameter(PyMCBase):
                             cache_depth=cache_depth, 
                             trace=trace)        
         
-        # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
-        # taken from the constructor.
-        self.rseed = rseed
-        if self.rseed and self._random:
-            self._value = self.random()
+        if value is None:
+            if self._random is not None:
+                self._value = self.random()
+            else:
+                print 'Warning, parameter ' + name + "'s value initialized to None; no initial value or random method provided."
+                self._value = None
         else:
-            self._value = value     
-    
+            self._value = value
+                
     def gen_lazy_function(self):
         
         arguments = self.parents.copy()
@@ -259,7 +266,7 @@ class Parameter(PyMCBase):
         
         Raises an error if no 'random' argument was passed to __init__.
         """
-        if self._random:
+        if self._random is not None:
             self._logp.refresh_argument_values()
             args = self._logp.argument_values.copy()
             args.pop('value')

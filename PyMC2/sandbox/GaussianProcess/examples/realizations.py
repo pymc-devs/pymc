@@ -1,7 +1,7 @@
 # GaussianProcess/examples/realizations.py
 
 # Import the mean and covariance
-from mean_and_cov import *
+from meanAndCov import *
 
 # Generate realizations
 f_list=[]
@@ -19,9 +19,10 @@ if __name__ == '__main__':
 
     for f in f_list:
         plot(x, f(x))
-    plot(obs_x,d,'k.',markersize=16)
 
     xlabel('x')    
     ylabel('f(x)')
     title('Three realizations from the observed GP')
     axis('tight')
+    
+    show()

@@ -1,5 +1,6 @@
 from PyMCObjects import Parameter, Node
 from PyMCBase import PyMCBase, ContainerBase
+from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray
 
@@ -76,6 +77,7 @@ class Container(ContainerBase):
         self.nodes = set()
         self.parameters = set()
         self.data = set()
+        self.sampling_methods = set()
         self.__name__ = name
 
         for i in xrange(len(iterable)):
@@ -91,6 +93,7 @@ class Container(ContainerBase):
                 self.nodes.update(new_container.nodes)
                 self.data.update(new_container.data)
                 self.all_objects.update(new_container.all_objects)
+                self.sampling_methods.update(new_container.sampling_methods)
             else:
                 self.all_objects.add(item)
                 if isinstance(item, PyMCBase):
@@ -102,6 +105,8 @@ class Container(ContainerBase):
                             self.parameters.add(item)
                     elif isinstance(item, Node):
                         self.nodes.add(item)
+                elif isinstance(item, SamplingMethod):
+                    self.sampling_methods.add(item)
             
 
         def get_value(self):
@@ -181,6 +186,9 @@ class ArraySubclassContainer(Container, ndarray):
                         C.parameters.add(item)
                 elif isinstance(item, Node):
                     C.nodes.add(item)
+                    
+            elif isinstance(item, SamplingMethod):
+                C.sampling_methods.add(item)
 
             elif isinstance(item, ndarray):
                 self._ravelledvalue[i] = ArraySubclassContainer(item)  

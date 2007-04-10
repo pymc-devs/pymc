@@ -257,7 +257,6 @@ class OneAtATimeMetropolis(SamplingMethod):
         # Probability and likelihood for parameter's current value:
 
         logp = self.parameter.logp
-
         loglike = self.loglike
 
         # Sample a candidate value
@@ -266,12 +265,13 @@ class OneAtATimeMetropolis(SamplingMethod):
         # Probability and likelihood for parameter's proposed value:
         try:
             logp_p = self.parameter.logp
+            loglike_p = self.loglike
+
         except LikelihoodError:
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
             return
-
-        loglike_p = self.loglike
+            
 
         # Test
         if log(random()) > logp_p + loglike_p - logp - loglike:
@@ -292,9 +292,13 @@ class OneAtATimeMetropolis(SamplingMethod):
 
         # Sample a candidate value
         self.parameter.random()
-
-        loglike_p = self.loglike
-
+        
+        try:
+            loglike_p = self.loglike
+        except LikelihoodError:
+            self.parameter.value = self.parameter.last_value
+            self._rejected += 1
+            
         # Test
         if log(random()) > loglike_p - loglike:
             # Revert parameter if fail
@@ -322,18 +326,24 @@ class OneAtATimeMetropolis(SamplingMethod):
                 self.parameter.value = reshape(val, self._type[1])
             else:
                 self.parameter.value = True
-                
-            logp_true = self.parameter.logp
-            loglike_true = self.loglike
+            
+            try:    
+                logp_true = self.parameter.logp
+                loglike_true = self.loglike
+            except LikelihoodError:
+                self.parameter.value = True
             
             if self._len > 1:
                 val[i] = False
                 self.parameter.value = reshape(val, self._type[1])
             else:
                 self.parameter.value = False
-                
-            logp_false = self.parameter.logp
-            loglike_false = self.loglike            
+            
+            try:    
+                logp_false = self.parameter.logp
+                loglike_false = self.loglike            
+            except LikelihoodError:
+                self.parameter.value = False
             
             p_true = exp(logp_true + loglike_true)
             p_false = exp(logp_false + loglike_false)
@@ -348,7 +358,6 @@ class OneAtATimeMetropolis(SamplingMethod):
         self._accepted += 1
             
             
-
     def propose(self):
         """
         This method is called by step() to generate proposed values

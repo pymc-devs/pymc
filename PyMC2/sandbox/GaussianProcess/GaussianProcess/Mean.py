@@ -5,28 +5,25 @@ from GPutils import regularize_array
 
 class Mean(ndarray):
     """
-    M = GPMean(eval_fun, C, **mean_params)
+    M = GPMean(eval_fun, base_mesh, **mean_params)
     
     A Gaussian process mean function.
     
     :Arguments:
         - eval_fun: A function that takes a scalar or ndarray as its first argument and returns an ndarray.
-        - C: A Gaussian process covariance function
+        - base_mesh: A base mesh
         - mean_params: Parameters to be passed to eval_fun
     
     :SeeAlso: GPCovariance, GPRealization, GaussianProcess, condition
     """
     
-    def eval_fun():
-        pass
-    def cov_fun():
-        pass
-                
+    eval_fun = None
+    cov_fun = None            
     cov_params = None
     base_mesh = None
     base_reshape = None
     ndim = None
-    conditioned = False
+    observed = False
     obs_mesh = None
     base_mesh = None
     obs_vals = None
@@ -39,27 +36,38 @@ class Mean(ndarray):
     
     def __new__(subtype, 
                 eval_fun,
-                C,   
+                base_mesh = None,
                 **mean_params):
         
-        # You may need to reshape these so f2py doesn't puke.           
-        base_mesh = C.base_mesh
-        cov_params = C.params
-        cov_fun = C.eval_fun
-        ndim = C.ndim
-        base_reshape = C.base_reshape
+        # You may need to reshape these so f2py doesn't puke.
+        # if C is not None:
+        #     base_mesh = C.base_mesh
+        #     cov_params = C.params
+        #     cov_fun = C.eval_fun
+        #     ndim = C.ndim
+        #     base_reshape = C.base_reshape
             
         # Call the covariance evaluation function
         if base_mesh is not None:
+            orig_shape = base_mesh.shape
+            base_reshape = regularize_array(base_mesh)
+
+            ndim = base_reshape.shape[-1]
+            base_reshape = base_reshape.reshape(-1,ndim)            
+            length = base_reshape.shape[0]        
+            
             data=eval_fun(base_mesh, **mean_params)
+
         else:
             data=array([])
+            ndim = None
+            base_reshape = None
                 
         M = data.view(subtype)        
         
         M.eval_fun = eval_fun
-        M.cov_fun = cov_fun
-        M.cov_params = cov_params
+        # M.cov_fun = cov_fun
+        # M.cov_params = cov_params
         M.mean_params = mean_params
         M.base_mesh = base_mesh
         M.ndim = ndim
@@ -81,9 +89,9 @@ class Mean(ndarray):
                 raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."        
         
 
-        # Evaluate the unconditioned mean
+        # Evaluate the unobserved mean
         M = self.eval_fun(x,**self.mean_params)
-        if not self.conditioned:
+        if not self.observed:
             return M.reshape(orig_shape)
         
         # Condition
@@ -108,7 +116,7 @@ class Mean(ndarray):
         functional_part = 'functional aspect: ' + str(self.eval_fun)
         cov_fun_part = 'associated covariance function: ' + str(self.cov_fun)
 
-        return '\n'.join(['Gaussian process covariance',functional_part,cov_fun_part,array_part])
+        return '\n'.join(['Gaussian process mean',functional_part,cov_fun_part,array_part])
         
     def __getitem__(self, *args):
         return self.view(ndarray).__getitem__(*args)
