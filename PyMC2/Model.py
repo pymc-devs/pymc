@@ -213,7 +213,7 @@ class Model(object):
 
     def DAG(self,format='raw',path=None,consts=True):
         """
-        DAG(format='raw', path=None)
+        DAG(format='raw', path=None, consts=True)
 
         Draw the directed acyclic graph for this model and writes it to path.
         If self.__name__ is defined and path is None, the output file is
@@ -225,12 +225,12 @@ class Model(object):
         'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
 
         format='raw' outputs a GraphViz dot file.
+        
+        If consts is True, constant parents are included in the graph; 
+        otherwise they're not.
 
         Returns the pydot 'dot' object for further user manipulation.
         """
-
-        if not self._prepared:
-            self._prepare()
 
         import pydot
 

@@ -349,10 +349,94 @@ Either is fine, since in both the last index tells you which element of the orde
 \chapter{Tutorial II: More advanced topics}\label{cha:adv} % (fold)
 
 \section{Incorporating Gaussian processes in probability models with PyMC}\label{sec:PyMC} % (fold)
-\textbf{XXX Need to think about this a bit.}
+This section will show you how to build statistical models that go beyond simple nonparametric regression. You'll want to do this eventually. There are so many places in ecology where a Gaussian process makes sense that can't be cast as simple nonparametric regressions. Plus you might just want more flexibility. We'll present a modest extension of the nonparametric regression here: we'll reproduce Munch, Mangel and Kottas' work by putting `hyperpriors' on the parameters of the mean and covariance functions, as well as the observation precision, and infer them along with $f$. A modest extension is best because it's not so complicated it obscures ideas, but I hope it whets your appetite.
 
-You're NEVER allowed to change the base mesh. DON'T DO IT. I'll raise an error if you try.
-% section PyMC (end)
+We will do this using PyMC, which provides very general support for specification and manipulation of Bayesian statistical models, with emphasis on Markov Chain Monte Carlo methods. PyMC is intended to provide at least basic support for any statistical model, and clear avenues for users and contributors to improve that support for specialized submodels. If you find a usage case we don't support, please let us know. Before proceeding, you should familiarize yourself with the PyMC documentation, available from \citetitle[www.trichech.us]{www.trichech.us}.
+
+If you want to run it, see \file{examples/MCMC.py}. 
+
+\subsection{The straightforward way}\label{sub:straightforwardPyMC}
+
+\begin{figure}
+	\centering
+		\epsfig{file=figs/unobservedModel.pdf, width=10cm}
+	\caption{The straightforward translation of Munch, Mangel and Kottas' nonparametric regression problem to a PyMC probability model. The parent-child structure resembles the natural statistical model given in section \ref{sub:straightforwardPyMC}. Ellipses represent \class{Parameter} objects (variables whose values are unknown even if their parents' values are known), triangles represent \class{Node} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \class{Parameter} objects with the \member{isdata} flag set to \member{True} (\class{Parameter} objects whose values happen to be known). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \class{C} considers \class{C_amp} to be its `\class{amp}' parameter.}
+	\label{fig:unobservedModel}
+\end{figure}
+
+The probability model we'll use, which is like Munch, Mangel and Kottas' nonparametric regression model, is as follows:
+\begin{equation}
+	\label{eqn:npregression}
+	\begin{array}{ll}
+		d_i|f,\tau\stackrel{{\tiny ind}}{\sim} \textup N(f(x_i), \tau),&i=1\ldots N\\\\
+		f|a,b,c,\nu,\phi,\alpha\sim\textup{GP}(M(a,b,c),C(\nu,\phi,\alpha))&\\\\
+		\{a,b,c,\nu,\phi,\alpha,\tau\} \sim \textup{priors}.
+	\end{array}
+\end{equation}
+
+This statistical model is visualized as a directed acyclic graph in figure \ref{fig:unobservedModel}. The straightforward, direct translation of it to a PyMC probability model is given in \file{examples/PyMC_unobserved_form.py}. The code is too long to quote here, but I will reproduce the sections involving Gaussian process objects:
+\begin{verbatim}
+# Exerpts from GaussianProcess/examples/PyMC_unobserved_form.py	
+	
+...	
+	
+@node
+def C(eval_fun = Matern, base_mesh = x, diff_degree=C_diff_degree, amp=C_amp, scale=C_scale):
+    return Covariance(eval_fun, base_mesh, diff_degree=diff_degree, amp=amp, scale=scale)
+
+...
+
+@node
+def M(eval_fun = linfun, base_mesh = x, a=M_a, b=M_b, c=M_c):
+    return Mean(eval_fun, base_mesh, a=a, b=b, c=c)
+
+...
+
+@parameter
+def f(value=Realization(M,C), M=M, C=C):
+
+    def logp(value, M, C):
+        return GP_logp(value,M,C)
+
+    def random(M, C):
+        return Realization(M,C)
+
+...
+
+@parameter
+def tau(value=500., alpha = 1., beta = 500.):
+    """tau ~ gamma(alpha, beta)"""
+    if value<=0.:
+        raise LikelihoodError
+    return flib.gamma(value, alpha, beta)
+
+...
+
+@data
+def d(value=array([3.1, 2.9]), x=obs_x, mu=f, tau=tau):
+    """
+    d ~ N(f(obs_x), tau)
+
+    Note that because of f's base mesh:
+        f[5] = f(-.5)
+        f[-5] = f(.5),
+    so
+        [f[5], f[-5]] = f(obs_x).
+        
+    The array aspect is therefore used for value access,
+    because it's much faster.
+    """
+    mu_array = array([mu[5],mu[-5]])
+    return flib.normal(value, mu_array, tau)
+
+...
+\end{verbatim}
+
+Recall from the PyMC documentation that the function supplied to the \function{node} decorator returns a variable's value given the values of its parents. The values of nodes \var{M} and \var{C}, therefore, are actual \class{Covariance} and \class{Mean} objects respectively; typing `\code{C.value}' into a prompt after running the script will return an actual \class{Covariance} instance. 
+
+Similarly, the value of parameter \var{f} is an actual \class{Realization} object. \var{f}'s log-probability is computed using the \function{GP_logp} function from this package. Its \method{random} method returns a new \class{Realization} object, since \class{Realization}s are really just draws from Gaussian process distributions.
+
+\textbf{XXX The `slick' way is incorrect, thank God. You need a Gibbs sampler.}
 
 \section{Integrals, derivatives and transforms: linear operations and constraints}\label{sec:linop} % (fold)
 

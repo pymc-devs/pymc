@@ -13,47 +13,47 @@ obs_x = array([-.5,.5])
 
 # Prior parameters of C
 @parameter
-def C_p1(value=1.4, mu=1.4, tau=1.):
-    """C_p1 ~ lognormal(mu, tau)"""
+def C_diff_degree(value=1.4, mu=1.4, tau=1.):
+    """C_diff_degree ~ lognormal(mu, tau)"""
     if value<=0.:
         raise LikelihoodError
     return flib.lognormal(value, mu, tau)
     
 @parameter
-def C_p2(value=.4, mu = .4, tau = 1.):
-    """C_p2 ~ lognormal(mu, tau)"""
+def C_amp(value=.4, mu = .4, tau = 1.):
+    """C_amp ~ lognormal(mu, tau)"""
     if value<=0.:
         raise LikelihoodError
     return flib.lognormal(value, mu, tau)
     
 @parameter
-def C_p3(value=1., mu=.5, tau=1.):
-    """C_p3 ~ lognormal(mu, tau)"""
+def C_scale(value=1., mu=.5, tau=1.):
+    """C_scale ~ lognormal(mu, tau)"""
     if value<=0.:
         raise LikelihoodError
     return flib.lognormal(value, mu, tau)
 
 # The covariance node C is valued as a Covariance object.                    
 @node
-def C(eval_fun = Matern, base_mesh = x, diff_degree=C_p1, amp=C_p2, scale=C_p3):
+def C(eval_fun = Matern, base_mesh = x, diff_degree=C_diff_degree, amp=C_amp, scale=C_scale):
     return Covariance(eval_fun, base_mesh, diff_degree=diff_degree, amp=amp, scale=scale)
 
 
 # Prior parameters of M
 
 @parameter
-def M_p1(value=1., mu=1., tau=1.):
-    """M_p1 ~ lognormal(mu, tau)"""
+def M_a(value=1., mu=1., tau=1.):
+    """M_a ~ lognormal(mu, tau)"""
     return flib.normal(value, mu, tau)
 
 @parameter
-def M_p2(value=.5, mu = .5, tau = 1.):
-    """M_p2 ~ normal(mu, tau)"""
+def M_b(value=.5, mu = .5, tau = 1.):
+    """M_b ~ normal(mu, tau)"""
     return flib.normal(value, mu, tau)
 
 @parameter
-def M_p3(value=2., mu=2., tau=1.):
-    """M_p3 ~ normal(mu, tau)"""
+def M_c(value=2., mu=2., tau=1.):
+    """M_c ~ normal(mu, tau)"""
     return flib.normal(value, mu, tau)
 
 # The mean node M is valued as a Mean object.
@@ -61,13 +61,13 @@ def linfun(x, a, b, c):
     return a * x ** 2 + b * x + c
     
 @node
-def M(eval_fun = linfun, base_mesh = x, a=M_p1, b=M_p2, c=M_p3):
+def M(eval_fun = linfun, base_mesh = x, a=M_a, b=M_b, c=M_c):
     return Mean(eval_fun, base_mesh, a=a, b=b, c=c)
 
 
 # The Gaussian process parameter f is valued as a Realization object.
 @parameter
-def f(value=None, M=M, C=C):
+def f(value=Realization(M,C), M=M, C=C):
 
     def logp(value, M, C):
         return GP_logp(value,M,C)
@@ -75,10 +75,6 @@ def f(value=None, M=M, C=C):
     def random(M, C):
         return Realization(M,C)
 
-    rseed = 1.
-
-# A GPMetropolis SamplingMethod to handle f    
-S = GPMetropolis(f=f, M=M, C=C)
 
 
 # Observation precision
@@ -92,6 +88,21 @@ def tau(value=500., alpha = 1., beta = 500.):
 # The data d is just array-valued. It's normally distributed about f(obs_x).
 @data
 def d(value=array([3.1, 2.9]), x=obs_x, mu=f, tau=tau):
-    """d ~ N(f(obs_x), tau)"""
-    mu_array = mu(obs_x)
+    """
+    d ~ N(f(obs_x), tau)
+
+    Note that because of f's base mesh:
+        f[5] = f(-.5)
+        f[-5] = f(.5),
+    so
+        [f[5], f[-5]] = f(obs_x).
+        
+    The array aspect is therefore used for value access,
+    because it's much faster.
+    """
+    mu_array = array([mu[5],mu[-5]])
     return flib.normal(value, mu_array, tau)
+
+    
+# A GPMetropolis SamplingMethod to handle f    
+S = GPMetropolis(f=f, M=M, C=C, scale=.5)
