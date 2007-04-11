@@ -11,7 +11,7 @@ import string
 import inspect
 import types, copy
 import distributions
-from PyMCBase import LikelihoodError
+from PyMCBase import ZeroProbability
 
 def node_to_NDarray(arg):
     if isinstance(arg,proposition5.Node):
@@ -77,7 +77,7 @@ def fortranlike_method(f, snapshot, mv=False):
             """Return likelihood."""
             try:
                 return f(*newargs, **kwds)
-            except LikelihoodError:
+            except ZeroProbability:
                 return -np.Inf
         
 

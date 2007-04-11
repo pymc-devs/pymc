@@ -2,7 +2,7 @@ __docformat__='reStructuredText'
 
 """Exceptions"""
 
-class LikelihoodError(ValueError):
+class ZeroProbability(ValueError):
     "Log-likelihood is invalid or negative informationnite"
     pass
 

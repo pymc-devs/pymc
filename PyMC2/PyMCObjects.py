@@ -2,7 +2,7 @@ __docformat__='reStructuredText'
 
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
-from PyMCBase import PyMCBase, ParentDict, LikelihoodError
+from PyMCBase import PyMCBase, ParentDict, ZeroProbability
 
 
 def import_LazyFunction():
@@ -237,7 +237,7 @@ class Parameter(PyMCBase):
         
         # Check if the value is smaller than a double precision infinity:
         if logp <= -1.79E308:
-            raise LikelihoodError
+            raise ZeroProbability
             
         return logp
 

@@ -2,7 +2,7 @@ import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter
 from utils import extend_children, _push, _extract
-from PyMCBase import LikelihoodError
+from PyMCBase import ZeroProbability
 import numpy as np
 
 

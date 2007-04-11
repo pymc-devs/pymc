@@ -10,7 +10,7 @@ from PyMC2 import parameter, data, OneAtATimeMetropolis
 from numpy import array, log, sum, zeros, arange
 from PyMC2 import poisson_like, normal_like, exponential_like
 from PyMC2 import rnormal, rexponential, constrain
-from PyMC2 import LikelihoodError
+from PyMC2 import ZeroProbability
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -37,7 +37,7 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
         if value[1]>0 and value[1] + value[0] * 110 > 0:
             return normal_like(value[0],0.,tau) + exponential_like(value[1], rate)
         else:
-            raise LikelihoodError
+            raise ZeroProbability
         
     def random(tau, rate):
         val = zeros(2)

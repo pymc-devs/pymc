@@ -6,7 +6,7 @@ The DisasterSampler example.
 """
 from numpy.testing import *
 from pylab import *
-PLOT=True
+PLOT=False
 
 class test_Sampler(NumpyTestCase):
     def check(self):

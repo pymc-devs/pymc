@@ -6,7 +6,7 @@ from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter
-from PyMCBase import LikelihoodError
+from PyMCBase import ZeroProbability
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
@@ -331,7 +331,7 @@ class OneAtATimeMetropolis(SamplingMethod):
                 logp_p = self.parameter.logp
             loglike_p = self.loglike
 
-        except LikelihoodError:
+        except ZeroProbability:
             # print self.parameter.__name__ + ' rejecting value ', self.parameter.value, ' back to ', self.parameter.last_value
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
@@ -445,7 +445,7 @@ class BinaryOneAtATimeMetropolis(OneAtATimeMetropolis):
                 try:    
                     logp_true = self.parameter.logp
                     loglike_true = self.loglike
-                except LikelihoodError:
+                except ZeroProbability:
                     self.set_param_val(i, val, False)
                     continue            
                 
@@ -454,7 +454,7 @@ class BinaryOneAtATimeMetropolis(OneAtATimeMetropolis):
                 try:    
                     logp_false = self.parameter.logp
                     loglike_false = self.loglike            
-                except LikelihoodError:
+                except ZeroProbability:
                     self.set_param_val(i,val,True)
                     continue
                 
@@ -676,7 +676,7 @@ class JointMetropolis(SamplingMethod):
             # Probability and likelihood for parameter's proposed value:
             try:
                 logp_p = sum([parameter.logp for parameter in self.parameters])
-            except LikelihoodError:
+            except ZeroProbability:
                 for parameter in self.parameters:
                     parameter.value = parameter.last_value
                     self._rejected += 1

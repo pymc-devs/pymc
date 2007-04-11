@@ -130,6 +130,7 @@ C Out of range of the table.
       SUBROUTINE categor(x,hist,mn,step,n,k,like)
 
 c Categorical log-likelihood function
+c Need to return -Infs when appropriate
 
 cf2py double precision dimension(n),intent(in) :: x
 cf2py double precision dimension(k),intent(in) :: hist
@@ -140,6 +141,8 @@ cf2py double precision intent(out) :: like
             
       DOUBLE PRECISION hist(k),x(n),mn,step,val,like
       INTEGER n,k,i,j
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       like = 0.0
 c loop over number of elements in x      
@@ -221,6 +224,8 @@ cf2py double precision intent(out) :: like
       DOUBLE PRECISION like
       LOGICAL not_scalar_a, not_scalar_c, not_scalar_scale
       DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
       
       aa = a(1)
       cc = c(1)
@@ -229,18 +234,33 @@ cf2py double precision intent(out) :: like
       not_scalar_c = (nc .NE. 1)
       not_scalar_scale = (nscale .NE. 1)
 
-c Check parameter c > 0
-c      CALL constrain(c, 0.0, Infinity, nc, .FALSE.)
 c Compute z
       CALL standardize(x, loc, scale, n, nloc, nscale, z)
-c Check z > 0
-c      CALL constrain(z, 0.0, Infinity, n, .FALSE.)
      
       like = 0.0
       do i=1,n
         if (not_scalar_a) aa = a(i)
         if (not_scalar_c) cc = c(i)
         if (not_scalar_scale) sigma = scale(i)
+
+! Check c(i) > 0
+        if (cc .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
+! Check a(i) > 0
+        if (aa .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
+! Check z(i) > 0
+        if (z(i) .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+
         t1 = dexp(-z(i)**cc)
         pdf = aa*cc*(1.0-t1)**(aa-1.0)*t1*z(i)**(cc-1.0)
         like = like + dlog(pdf/sigma)
@@ -268,6 +288,8 @@ cf2py double precision dimension(n), intent(out) :: ppf
       INTEGER n,na,nc,i
       DOUBLE PRECISION q(n), a(na), c(nc), ppf(n),ta,tc
       LOGICAL not_scalar_a, not_scalar_c
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
       
 c     Check length of input arrays.
       not_scalar_a = (na .NE. 1)
@@ -352,6 +374,8 @@ cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
       INTEGER n,i
       LOGICAL not_scalar_mu
       DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_mu =  (nmu .NE. 1)
       mut = mu(1)
@@ -363,6 +387,17 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       sumfact = 0.0
       do i=1,n
         if (not_scalar_mu) mut = mu(i)
+        
+        if (mut .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
+        if (x(i) .LT. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
         sumx = sumx + x(i)*dlog(mut) - mut
         sumfact = sumfact + factln(x(i))
       enddo
@@ -389,6 +424,8 @@ cf2py double precision intent(out) :: like
       INTEGER i,j,ll,n(nn),sumx, n_tmp
       INTEGER x(nx,k)
       DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       like = 0.0
       n_tmp = n(1)
@@ -398,9 +435,21 @@ cf2py double precision intent(out) :: like
         sump = 0.0
         if (np .NE. 1) ll=j
         if (nn .NE. 1) n_tmp = n(j)
+            
+        if ((ll .LT. 0) .OR. (n(j) .LT. 0)) then
+          like=-infinity
+          RETURN
+        endif
+        
         do i=1,k
           p_tmp = p(ll,i)+1E-10
           like = like + x(j,i)*dlog(p_tmp) - factln(x(j,i))
+
+          if (x(j,i) .LT. 0) then
+            like = -infinity
+            RETURN
+          endif
+
           sumx = sumx + x(j,i)
           sump = sump + p_tmp
         enddo
@@ -427,6 +476,8 @@ cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
       DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
       DOUBLE PRECISION like, alphat, betat
       INTEGER n,nalpha,nbeta,i
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       alphat = alpha(1)
       betat = beta(1)
@@ -435,6 +486,15 @@ cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
       do i=1,n
         if (nalpha .NE. 1) alphat = alpha(i)
         if (nbeta .NE. 1) betat = beta(i)
+        if ((alphat .LE. 0.0) .OR. (betat .LE. 0.0)) then
+          like=-infinity
+          RETURN
+        endif
+        if (x(i) .LE. 0.0) then
+          like=-infinity
+          RETURN
+        endif
+            
 c normalizing constant
         like = like + (dlog(alphat) - alphat*dlog(betat))
 c kernel of distribution
@@ -467,6 +527,8 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_mu = (nmu .NE. 1)
       not_scalar_tau = (ntau .NE. 1)
@@ -477,6 +539,10 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
+        if (tau_tmp .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
         like = like - 0.5 * tau_tmp * (x(i)-mu_tmp)**2
         like = like + 0.5*dlog(0.5*tau_tmp/PI)
       enddo
@@ -504,6 +570,8 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
 
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_tau = (ntau .NE. 1)
 
@@ -511,6 +579,10 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(t
       like = 0.0
       do i=1,n
         if (not_scalar_tau) tau_tmp = tau(i)
+        if ((tau_tmp .LE. 0.0) .OR. (x(i) .LT. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
         like = like + 0.5 * (dlog(2. * tau_tmp / PI)) 
         like = like - (0.5 * x(i)**2 * tau_tmp)
       enddo
@@ -540,6 +612,8 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       LOGICAL not_scalar_mu, not_scalar_tau
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_mu = (nmu .NE. 1)
       not_scalar_tau = (ntau .NE. 1)
@@ -550,6 +624,10 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
+        if (tau_tmp .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif            
         like = like + 0.5 * (dlog(tau_tmp) - dlog(2.0*PI)) 
         like = like - 0.5*tau_tmp*(dlog(x(i))-mu_tmp)**2 - dlog(x(i))
       enddo
@@ -575,6 +653,8 @@ Cf2py double precision intent(out):: like
       DOUBLE PRECISION x(n), xi(nxi), mu(nmu), sigma(nsigma), like
       DOUBLE PRECISION Z(N), EX(N), PEX(N)
       DOUBLE PRECISION XI_tmp, SIGMA_tmp
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       CALL standardize(x,mu,sigma,n,nmu,nsigma,z)
 
@@ -589,7 +669,7 @@ Cf2py double precision intent(out):: like
         ELSE 
           EX(I) = 1. + xi_tmp*z(i)
           IF (EX(I) .LT. 0.) THEN
-            LIKE = -3.4028235E+38
+            LIKE = -infinity
             RETURN
           ENDIF
           PEX(I) = EX(I)**(-1./xi_tmp)  
@@ -655,6 +735,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       DOUBLE PRECISION beta_tmp, alpha_tmp
       LOGICAL not_scalar_a, not_scalar_b
       DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_a = (na .NE. 1)
       not_scalar_b = (nb .NE. 1)
@@ -665,6 +747,14 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,n
         if (not_scalar_a) alpha_tmp = alpha(i)
         if (not_scalar_b) beta_tmp = beta(i)
+        if ((alpha_tmp .LE. 0.0) .OR. (beta_tmp .LE. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
+        if (x(i) .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
         like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
         like = like + (alpha_tmp - 1.0)*dlog(x(i)) - x(i)/beta_tmp
       enddo     
@@ -692,6 +782,8 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
       DOUBLE PRECISION x(n),alpha(na),beta(nb)
       DOUBLE PRECISION alpha_tmp, beta_tmp
       DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       alpha_tmp=alpha(1)
       beta_tmp=beta(1)
@@ -699,6 +791,14 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
       do i=1,n
         if (na .NE. 1) alpha_tmp=alpha(i)
         if (nb .NE. 1) beta_tmp=beta(i)
+        if ((alpha_tmp .LT. 0.0) .OR. (beta_tmp .LT. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
+        if (x(i) .LT. 0.0) then
+          like = -infinity
+          RETURN
+        endif
         like = like - (gammln(alpha(i)) + alpha(i)*dlog(beta(i)))
         like = like - (alpha(i)+1.0)*dlog(x(i)) - 1./(x(i)*beta(i)) 
       enddo
@@ -731,6 +831,8 @@ cf2py double precision intent(out) :: like
       INTEGER x(n),draws(nd), success(ns),total(nt)
       INTEGER draws_tmp, s_tmp, t_tmp
       DOUBLE PRECISION like, combinationln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
 c      CALL constrain(d,x,total,allow_equal=1)
 c      CALL constrain(red,x,total,allow_equal=1)
@@ -745,7 +847,19 @@ c      CALL constrain(x, 0, d, allow_equal=1)
 c Combinations of x red balls
         if (nd .NE. 1) draws_tmp = draws(i)
         if (ns .NE. 1) s_tmp = success(i)
-        if (nt .NE. 1) t_tmp = total(i) 
+        if (nt .NE. 1) t_tmp = total(i)
+        if ((draws_tmp .LE. 0) .OR. (s_tmp .LT. 0)) then
+          like = -infinity
+          RETURN
+        endif
+        if (t_tmp .LE. 0) then
+          like = -infinity
+          RETURN
+        endif
+        if (x(i) .LT. 0) then
+          like = -infinity
+          RETURN
+        endif
         like = like + combinationln(t_tmp-s_tmp, x(i))
         like = like + combinationln(s_tmp,draws_tmp-x(i))
         like = like - combinationln(t_tmp, draws_tmp)
@@ -771,12 +885,23 @@ cf2py double precision intent(out) :: like
       INTEGER x(n)
       DOUBLE PRECISION p(np), p_tmp
       DOUBLE PRECISION like
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
 
       p_tmp = p(1)
       like = 0.0
       do i=1, n
         if (np .NE. 1) p_tmp = p(i)
-        like = like + dlog(p_tmp) + (x(i)-1)* dlog(1-p_tmp)
+        if ((p_tmp .LE. 0.0) .OR. (p_tmp .GE. 1.0)) then
+          like = -infinity
+          RETURN
+        endif
+        if (x(i) .LT. 0) then
+          like = -infinity
+          RETURN
+        endif            
+        like = like + dlog(p_tmp) + (x(i)-1)* dlog(1.0D0-p_tmp)
       enddo
       return
       END SUBROUTINE geometric
@@ -801,6 +926,9 @@ cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(t
       DOUBLE PRECISION x(nx,k),theta(nt,k)
       DOUBLE PRECISION theta_tmp(k)
       DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
 
       like = 0.0
       do j=1,k
@@ -813,6 +941,10 @@ cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(t
           if (nt .NE. 1) theta_tmp(j) = theta(i,j)      
 c kernel of distribution      
           like = like + (theta_tmp(j)-1.0)*dlog(x(i,j))  
+          if ((x(i,j) .LE. 0.0) .OR. (theta_tmp(j) .LE. 0.0)) then
+            like = -infinity
+            RETURN
+          endif          
 c normalizing constant        
           like = like - gammln(theta_tmp(j))
           sumt = sumt + theta_tmp(j)
@@ -843,6 +975,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       DOUBLE PRECISION like, atmp, btmp, PI
       LOGICAL not_scalar_alpha, not_scalar_beta
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_alpha = (na .NE. 1)
       not_scalar_beta = (nb .NE. 1)
@@ -853,6 +987,12 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,nx
         if (not_scalar_alpha) atmp = alpha(i)
         if (not_scalar_beta) btmp = beta(i)
+
+        if (btmp .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
         like = like - dlog(btmp)
         like = like -  dlog( 1. + ((x(i)-atmp) / btmp) ** 2 )
       enddo
@@ -880,6 +1020,8 @@ cf2py double precision intent(out) :: like
       INTEGER x(n),r(nr),r_tmp
       LOGICAL not_scalar_r, not_scalar_p
       DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_r = (nr .NE. 1)
       not_scalar_p = (np .NE. 1)
@@ -890,6 +1032,17 @@ cf2py double precision intent(out) :: like
       do i=1,n
         if (not_scalar_r) r_tmp = r(i)
         if (not_scalar_p) p_tmp = p(i)
+        
+        if ((r_tmp .LE. 0.0) .OR. (x(i) .LT. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
+        
+        if ((p_tmp .LE. 0.0) .OR. (p_tmp .GE. 1.0)) then
+          like = -infinity
+          RETURN
+        endif
+            
         like = like + r_tmp*dlog(p_tmp) + x(i)*dlog(1.-p_tmp)
         like = like+factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
       enddo
@@ -902,6 +1055,7 @@ cf2py double precision intent(out) :: like
 c Negative binomial log-likelihood function 
 c (alternative parameterization)    
 c Updated 24/01/2007 DH.
+c I don't know how to constrain this one...
 
 cf2py integer dimension(n),intent(in) :: x
 cf2py double precision dimension(na),intent(in) :: a
@@ -959,6 +1113,8 @@ cf2py double precision intent(out) :: like
       INTEGER ntmp
       DOUBLE PRECISION ptmp
       DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_n = (nn .NE. 1)
       not_scalar_p = (np .NE. 1) 
@@ -970,6 +1126,17 @@ cf2py double precision intent(out) :: like
       do i=1,nx
         if (not_scalar_n) ntmp = n(i)
         if (not_scalar_p) ptmp = p(i)
+        
+        if ((x(i) .LT. 0) .OR. (ntmp .LT. 0)) then
+          like = -infinity
+          RETURN
+        endif
+        
+        if ((ptmp .LE. 0.0) .OR. (ptmp .GE. 1.0)) then
+          like = -infinity
+          RETURN
+        endif
+        
         like = like + x(i)*dlog(ptmp) + (ntmp-x(i))*dlog(1.-ptmp)
         like = like + factln(ntmp)-factln(x(i))-factln(ntmp-x(i)) 
       enddo
@@ -978,13 +1145,10 @@ cf2py double precision intent(out) :: like
 
 
       SUBROUTINE bernoulli(x,p,nx,np,like)
-      
-c TODO: Why is bernoulli actually binomial?
-
-c Binomial log-likelihood function     
+         
 c Modified on Jan 16 2007 by D. Huard to allow scalar p.
 
-cf2py integer dimension(nx),intent(in) :: x
+cf2py logical dimension(nx),intent(in) :: x
 cf2py double precision dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(p),check(len(p)==1 || len(p)==len(x)):: np=len(p) 
@@ -993,8 +1157,10 @@ cf2py double precision intent(out) :: like
 
       INTEGER np,nx,i
       DOUBLE PRECISION p(np), ptmp, like
-      INTEGER x(nx)
+      LOGICAL x(nx)
       LOGICAL not_scalar_p
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
 C     Check parameter size
       not_scalar_p = (np .NE. 1)
@@ -1003,7 +1169,17 @@ C     Check parameter size
       ptmp = p(1)
       do i=1,nx
         if (not_scalar_p) ptmp = p(i)
-        like = like + dlog(ptmp**x(i)) + dlog((1.-ptmp)**(1-x(i)))
+        if (ptmp .LT. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        
+        if (x(i)) then 
+          like = like + dlog(ptmp)
+        else 
+          like = like + dlog(1.0D0 - ptmp)
+        endif
+          
       enddo
       return
       END
@@ -1028,6 +1204,8 @@ cf2py double precision intent(out) :: like
       DOUBLE PRECISION like
       DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
       DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       atmp = alpha(1)
       btmp = beta(1)
@@ -1035,6 +1213,14 @@ cf2py double precision intent(out) :: like
       do i=1,nx
         if (na .NE. 1) atmp = alpha(i)
         if (nb .NE. 1) btmp = beta(i)
+        if ((atmp .LE. 0.0) .OR. (btmp .LE. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
+        if ((x(i) .LE. 0.0) .OR. (x(i) .GE. 1.0)) then
+          like = -infinity
+          RETURN
+        endif
         like = like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
         like = like + (atmp-1.0)*dlog(x(i)) + (btmp-1.0)*dlog(1.0-x(i))
       enddo   
@@ -1055,6 +1241,8 @@ cf2py double precision intent(out) :: like
       INTEGER d,total,i,k
       DOUBLE PRECISION like
       DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       total = 0
       d = 0
@@ -1063,9 +1251,17 @@ cf2py double precision intent(out) :: like
 c Combinations of x balls of color i     
         like = like + factln(color(i))-factln(x(i))
      +-factln(color(i)-x(i))
+        if ((color(i) .LT. 0.0) .OR. (x(i) .LT. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
         d = d + x(i)
         total = total + color(i)
       enddo
+      if (total .LE. 0.0) then
+        like = -infinity
+        RETURN
+      endif
 c Combinations of d draws from total    
       like = like - (factln(total)-factln(d)-factln(total-d))
       return
@@ -1086,17 +1282,29 @@ cf2py integer intent(hide),depend(x) :: k=len(x)
       DOUBLE PRECISION like,sumt
       DOUBLE PRECISION theta(k)
       DOUBLE PRECISION factln, gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       like = 0.0
       sumt = 0.0
       sumx = 0
       do 222 i=1,k
-c kernel of distribution      
+c kernel of distribution
         like = like + dlog(x(i) + theta(i)) - dlog(theta(i)) 
         sumt = sumt + theta(i)
         sumx = sumx + x(i)
+        if ((theta(i) .LT. 0.0) .OR. (x(i) .LT. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
   222 continue
 c normalizing constant 
+
+      if ((sumx .LE. 0.0) .OR. (sumt .LE. 0.0)) then
+        like = -infinity
+        RETURN
+      endif
+      
       like = like + factln(sumx)
       like = like + gammln(sumt)
       like = like - gammln(sumx + sumt)
@@ -1117,6 +1325,9 @@ cf2py integer intent(hide),depend(X) :: k=len(X)
       INTEGER i,k
       DOUBLE PRECISION X(k,k),sigma(k,k),bx(k,k)
       DOUBLE PRECISION dx,n,db,tbx,a,g,like
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
 
 c determinants
       call dtrm(X,k,dx)
@@ -1124,7 +1335,17 @@ c determinants
 c trace of sigma*X     
       call matmult(sigma,X,bx,k,k,k,k)
       call trace(bx,k,tbx)
-
+      
+      if ((dx .LE. 0.0) .OR. (db .LE. 0.0)) then
+        like = -infinity
+        RETURN
+      endif
+      
+      if (k .GT. n) then
+        like = -infinity
+        RETURN
+      endif
+      
       like = (n - k - 1)/2.0 * dlog(dx)
       like = like + (n/2.0)*dlog(db)
       like = like - 0.5*tbx
@@ -1155,9 +1376,16 @@ cf2py integer intent(hide),depend(x) :: k=len(x)
 
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
 c calculate determinant of precision matrix     
       call dtrm(tau,k,det)
+      
+      if (det .LT. 0.0) then
+        like = -infinity
+        RETURN
+      endif
 
 c calculate d=x-mu
       do i=1,k
@@ -1199,9 +1427,16 @@ cf2py integer, intent(hide), depend(mu):: nmu=shape(mu,1)
 
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
       mu_not_1d = (nmu .NE. 1)
 c calculate determinant of precision matrix     
       call dtrm(tau,k,det)
+      
+      if (det .LT. 0.0) then
+        like = -infinity
+        RETURN
+      endif
 
 
 c calculate d=(x-mu)

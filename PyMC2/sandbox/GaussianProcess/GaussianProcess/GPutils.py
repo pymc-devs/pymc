@@ -12,9 +12,9 @@ from numpy.linalg.linalg import LinAlgError
 from pylab import fill, plot, clf, axis
 
 try:
-    from PyMC2 import LikelihoodError
+    from PyMC2 import ZeroProbability
 except ImportError:
-    class LikelihoodError(ValueError):
+    class ZeroProbability(ValueError):
         pass
 
 half_log_2pi = .5 * log(2. * pi)
@@ -56,7 +56,7 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     """
     logp = GP_logp(f,M,C,eff_zero = 1e-15)
     
-    raises a LikelihoodError if f doesn't seem to
+    raises a ZeroProbability if f doesn't seem to
     be in the support (that is, if the deviation
     has a significant component in a direction with
     a very small eigenvalue).
@@ -87,10 +87,10 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     dot = asarray((C.Evec.T * dev)).ravel()
     dot_sq = dot ** 2
     if ((scaled_evals == 0. ) * ( dot_sq > 0.)).any():
-        raise LikelihoodError
+        raise ZeroProbability
         
     if (dot_sq / scaled_evals > eff_inf).any():
-        raise LikelihoodError
+        raise ZeroProbability
     
     logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval) 
             
