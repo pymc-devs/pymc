@@ -6,10 +6,10 @@ e ~ Exp(1.)
 l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
-__all__ = ['s','e','l','D','S']
-from PyMC2 import parameter, data, OneAtATimeMetropolis, node, LikelihoodError
+__all__ = ['s','e','l','D']
+from PyMC2 import parameter, data, node, discrete_parameter, DiscreteOneAtATimeMetropolis
 from numpy import array, log, sum, ones, concatenate, inf
-from PyMC2 import constrain, exponential_like, poisson_like
+from PyMC2 import uniform_like, exponential_like, poisson_like
 
 
 D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -22,11 +22,10 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and parameters
 
-@parameter
+@discrete_parameter
 def s(value=50, length=110):
     """Change time for rate parameter."""
-    constrain(value, 0, length)
-    return 0.
+    return uniform_like(value, 0, length)
 
 @parameter
 def e(value=1., rate=1.):
@@ -45,10 +44,3 @@ def D(  value = D_array,
         l = l):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
-
-
-"""
-Make a special SamplingMethod for s that will keep it on integer values,
-and add it to M.
-"""
-S = OneAtATimeMetropolis(parameter=s)

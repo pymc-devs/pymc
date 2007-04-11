@@ -178,6 +178,8 @@ cf2py double precision intent(out) :: like
         INTEGER n, nlower, nupper, i
         DOUBLE PRECISION x(n), lower(nlower), upper(nupper)
         DOUBLE PRECISION like, low, high
+        DOUBLE PRECISION infinity
+        PARAMETER (infinity = 1.7976931348623157d308)
                 
         low = lower(1)
         high = upper(1)       
@@ -186,7 +188,7 @@ cf2py double precision intent(out) :: like
           if (nlower .NE. 1) low = lower(i)
           if (nupper .NE. 1) high = upper(i)
           if ((x(i) < low) .OR. (x(i) > high)) then
-            like = -3.4028235E+38
+            like = -infinity
             RETURN
           else
             like = like - dlog(high-low)
@@ -889,7 +891,7 @@ cf2py double precision intent(out) :: like
         if (not_scalar_r) r_tmp = r(i)
         if (not_scalar_p) p_tmp = p(i)
         like = like + r_tmp*dlog(p_tmp) + x(i)*dlog(1.-p_tmp)
-        like = like + factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
+        like = like+factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
       enddo
       return
       END

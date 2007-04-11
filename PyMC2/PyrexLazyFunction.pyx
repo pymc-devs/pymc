@@ -63,11 +63,11 @@ cdef class LazyFunction:
     """
     
     cdef public object arguments, fun, argument_values
-    cdef object pymc_object_args, other_args
+    cdef public object pymc_object_args, other_args
     cdef int cache_depth, N_args, 
-    cdef object ultimate_args, ultimate_keys, ultimate_arg_values
+    cdef public object ultimate_args, ultimate_keys, ultimate_arg_values
     cdef void **ultimate_arg_p, **ultimate_keys_p, **ultimate_arg_value_p
-    cdef object cached_args, cached_values
+    cdef public object cached_args, cached_values
     cdef void **cached_arg_p
     
     def __init__(self, fun, arguments, cache_depth):
@@ -125,7 +125,8 @@ cdef class LazyFunction:
 
         self.fun = fun
         
-        self.get_array_data()    
+        self.get_array_data()
+    
     
     cdef void get_array_data(self):
         self.ultimate_arg_p = <void**> PyArray_DATA(self.ultimate_args)
@@ -215,12 +216,3 @@ cdef class LazyFunction:
         else: value = <object> self.cached_values[match_index]
 
         return value
-        
-    def force_compute(self):
-        """
-        Call this method to force a recompute without doing cache checking.
-        """
-        
-        value = self.fun(**self.argument_values)
-        self.cache(value)
-        

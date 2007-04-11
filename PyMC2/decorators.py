@@ -11,7 +11,7 @@ import string
 import inspect
 import types, copy
 import distributions
-from utils import LikelihoodError
+from PyMCBase import LikelihoodError
 
 def node_to_NDarray(arg):
     if isinstance(arg,proposition5.Node):

@@ -1,8 +1,9 @@
 __docformat__='reStructuredText'
 
 from copy import deepcopy, copy
-from numpy import array, ndarray, reshape
-from PyMCBase import PyMCBase, ParentDict
+from numpy import array, ndarray, reshape, Inf
+from PyMCBase import PyMCBase, ParentDict, LikelihoodError
+
 
 def import_LazyFunction():
     try:
@@ -232,7 +233,13 @@ class Parameter(PyMCBase):
 
 
     def get_logp(self):
-        return self._logp.get()
+        logp = self._logp.get()
+        
+        # Check if the value is smaller than a double precision infinity:
+        if logp <= -1.79E308:
+            raise LikelihoodError
+            
+        return logp
 
     def set_logp(self):
         raise AttributeError, 'Parameter '+self.__name__+'\'s logp attribute cannot be set'
@@ -274,3 +281,15 @@ class Parameter(PyMCBase):
         else:
             raise AttributeError, 'Parameter '+self.__name__+' does not know how to draw its value, see documentation'
         return self._value
+
+class DiscreteParameter(Parameter):
+    """
+    A subclass of Parameter that takes only integer values.
+    """
+    pass
+    
+class BinaryParameter(Parameter):
+    """
+    A subclass of Parameter that takes only boolean values.
+    """
+    pass

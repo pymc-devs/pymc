@@ -8,11 +8,11 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC2 import parameter, data, OneAtATimeMetropolis
+from PyMC2 import parameter, data, discrete_parameter
 from numpy import array, log, sum, random
 from numpy.random import randint
 from PyMC2 import uniform_like, exponential_like, poisson_like
-from PyMC2 import rexponential, constrain
+from PyMC2 import rexponential
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -24,13 +24,12 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and parameters
 
-@parameter
+@discrete_parameter
 def switchpoint(value=50, length=110):
     """Change time for rate parameter."""
 
     def logp(value, length):
-        constrain(value, 0, length)
-        return 0.
+        return uniform_like(model, 0, length)
         
     def random(length):
         return randint(length)
@@ -71,5 +70,3 @@ def disasters(  value = disasters_array,
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint+1:],late_mean)
-
-

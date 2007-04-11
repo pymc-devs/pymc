@@ -72,7 +72,7 @@ def extend_parents(pymc_object):
     if need_recursion:
         extend_parents(pymc_object)
     return
-    
+        
     
 def check_type(parameter):
     """
@@ -84,13 +84,13 @@ def check_type(parameter):
     is scalar, or a nontrivial tuple otherwise.
     """
     val = parameter.value
-    if isinstance(val, bool):
+    if val.__class__ is bool:
         return bool, ()
-    elif isinstance(val, int) or isinstance(val, uint) or isinstance(val, long):
+    elif val.__class__ in [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
         return int, ()
-    elif isinstance(val, float):
+    elif val.__class__ in [float, single, float_, longfloat]:
         return float, ()
-    elif isinstance(val, complex):
+    elif val.__class__ in [complex, csingle, complex_, clongfloat]:
         return complex, ()
     elif isinstance(val, ndarray):
         if obj2sctype(val) is bool_:
@@ -111,9 +111,9 @@ def round_array(array_in):
     Rounds an array and recasts it to int. Also works on scalars.
     """
     if isinstance(array_in, ndarray):
-        return array(round(array_in))
+        return array(array_in, dtype=float)
     else:
-        return round(array_in)
+        return int(array_in)
 
 
 def msqrt(cov):
@@ -203,13 +203,6 @@ def _extract(__func__, kwds, keys):
         value = None
         
     return (value, parents)
-
-
-"""Exceptions"""
-
-class LikelihoodError(ValueError):
-    "Log-likelihood is invalid or negative informationnite"
-    pass
 
 
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):

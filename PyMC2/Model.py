@@ -7,7 +7,7 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from SamplingMethods import SamplingMethod, OneAtATimeMetropolis
+from SamplingMethods import SamplingMethod, assign_method
 from PyMC2 import database
 from PyMCObjects import Parameter, Node, PyMCBase
 from Container import Container
@@ -51,7 +51,7 @@ class Model(object):
         All the plotting functions can probably go on the base namespace and take Parameters as
         arguments.
 
-    :SeeAlso: SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
+    :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
     def __init__(self, input, db='ram'):
         """Initialize a Model instance.
@@ -255,13 +255,13 @@ class Model(object):
         for container in self.containers:
             pydot_nodes[container] = pydot.Node(name=container.__name__,shape='house')
 
-        # Create subgraphs from pymc sampling methods
-        for sampling_method in self.sampling_methods:
-            if not isinstance(sampling_method,OneAtATimeMetropolis):
-                pydot_subgraphs[sampling_method] = pydot.Subgraph(graph_name = sampling_method.__class__.__name__)
-                for pymc_object in sampling_method.pymc_objects:
-                    pydot_subgraphs[sampling_method].add_node(pydot_nodes[pymc_object])
-                self.dot_object.add_subgraph(pydot_subgraphs[sampling_method])
+        # # Create subgraphs from pymc sampling methods
+        # for sampling_method in self.sampling_methods:
+        #     if not isinstance(sampling_method,OneAtATimeMetropolis):
+        #         pydot_subgraphs[sampling_method] = pydot.Subgraph(graph_name = sampling_method.__class__.__name__)
+        #         for pymc_object in sampling_method.pymc_objects:
+        #             pydot_subgraphs[sampling_method].add_node(pydot_nodes[pymc_object])
+        #         self.dot_object.add_subgraph(pydot_subgraphs[sampling_method])
 
 
         # Create edges from parent-child relationships
@@ -401,7 +401,6 @@ class Sampler(Model):
 
 
         # Default SamplingMethod
-        self._SM = OneAtATimeMetropolis
         self._assign_samplingmethod()
 
         self._state = ['status', '_current_iter', '_iter', '_thin', '_burn',
@@ -553,9 +552,9 @@ class Sampler(Model):
                     homeless = False
                     break
 
-            # If not, make it a new SamplingMethod
+            # If not, make it a new SamplingMethod using the registry
             if homeless:
-                self.sampling_methods.add(self._SM(parameter))
+                self.sampling_methods.add(assign_method(parameter))
 
     def tune(self):
         """

@@ -1,14 +1,85 @@
 __docformat__='reStructuredText'
-from utils import LikelihoodError, msqrt, extend_children, check_type, round_array, extend_parents
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any
+from utils import msqrt, extend_children, check_type, round_array, extend_parents
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from PyMCObjects import Parameter, Node, PyMCBase
+from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter
+from PyMCBase import LikelihoodError
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
+
+class DictWithDoc(dict):
+    """
+    The sampling method registry is a dictionary mapping each
+    sampling method to its competence function. Competence
+    functions must be of the form
+    
+    c = competence(parameter),
+    
+    where parameter is a Parameter object. c should be a competence 
+    score from 0 to 3, assigned as follows:
+
+    0:  I can't handle that parameter.
+    1:  I can handle that parameter, but I'm a generalist and
+        probably shouldn't be your top choice (OneAtATimeMetropolis
+        and friends fall into this category).
+    2:  I'm designed for this type of situation, but I could be 
+        more specialized.
+    3:  I was made for this situation, let me handle the parameter.
+    
+    In order to be eligible for inclusion in the registry, a sampling
+    method's init method must work with just a single argument, a
+    Parameter object.
+    
+    :SeeAlso: blacklist, pick_best_methods, assign_method
+    """
+    pass
+    
+SamplingMethodRegistry = DictWithDoc()
+
+def blacklist(parameter):
+    """
+    If you want to exclude a particular sampling method from 
+    consideration for handling a parameter, do this:
+    
+    from PyMC2 import SamplingMethodRegistry
+    SamplingMethodRegistry[bad_sampling_method] = blacklist
+    """
+    return 0
+    
+def pick_best_methods(parameter):
+    """
+    Picks the SamplingMethods best suited to handle
+    a parameter.
+    """
+    max_competence = 0
+    best_candidates = set([])
+
+    for item in SamplingMethodRegistry.iteritems():
+        method = item[0]
+        competence = item[1](parameter)
+        
+        if competence > max_competence:
+            best_candidates = set([method])
+            max_competence = competence
+
+        elif competence == max_competence:
+            best_candidates.add(method)
+    
+    # print parameter.__name__ + ': ', best_candidates, ' ', max_competence
+    return best_candidates
+    
+def assign_method(parameter):
+    """
+    Returns a sampling method instance to handle a 
+    parameter. If several methods have the same competence, 
+    it picks one arbitrarily (using set.pop()).
+    """
+    best_candidates = pick_best_methods(parameter)
+    return best_candidates.pop()(parameter=parameter)
 
 class SamplingMethod(object):
     """
@@ -175,11 +246,11 @@ class SamplingMethod(object):
         for s in self._state:
             state[s] = getattr(self, s)
         return state
-
+        
 # The default SamplingMethod, which Model uses to handle singleton parameters.
 class OneAtATimeMetropolis(SamplingMethod):
     """
-    The default SamplingMethod, which Model uses to handle singleton parameters.
+    The default SamplingMethod, which Model uses to handle singleton continuous parameters.
 
     Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which
     self has jurisdiction.
@@ -209,20 +280,16 @@ class OneAtATimeMetropolis(SamplingMethod):
         self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
         self._id = 'OneAtATimeMetropolis_'+parameter.__name__
-        
-        self._type = check_type(parameter)
+
+        if isinstance(self.parameter.value, ndarray):
+            self._len = len(self.parameter.value.ravel())
+        else:
+            self._len = 1
         
         # If no dist argument is provided, assign a proposal distribution automatically.
         if dist is None:
-            if self._type[0] is bool:
-                self._dist = "Bernoulli"
-            elif self._type[0] is int:
-                self._dist = "RoundedNormal"
-            elif self._type[0] is float:
-                self._dist = "Normal"
-            else:
-                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric or boolean"+\
-                                    'or ndarray with numeric or boolean dtype for OneAtATimeMetropolis to be applied.'
+            
+            self._dist = "Normal"
 
             # If self's extended children is the empty set (eg, if
             # self's parameter is a posterior predictive quantity of
@@ -236,27 +303,21 @@ class OneAtATimeMetropolis(SamplingMethod):
         
         else: 
             self._dist = dist
-        
-        # Override the step method if appropriate
-        if self._dist == "Bernoulli":
-            if len(self._type[1])>0:
-                self._len = len(self.parameter.ravel())
-            else:
-                self._len = 1
-            self.step = self.bernoulli_proposal_step
             
-        elif self._dist == "Prior":
-            self.step = self.prior_proposal_step
-
+        
     def step(self):
         """
-        The default step method applies if the parameter is floating-point
-        or integer valued, and is not being proposed from its prior.
+        The default step method applies if the parameter is floating-point 
+        valued, and is not being proposed from its prior.
         """
 
         # Probability and likelihood for parameter's current value:
-
-        logp = self.parameter.logp
+        
+        if self._dist == "Prior":
+            logp = 0.
+        else:
+            # print self.parameter.__name__ + ' ', self.parameter.value
+            logp = self.parameter.logp
         loglike = self.loglike
 
         # Sample a candidate value
@@ -264,10 +325,14 @@ class OneAtATimeMetropolis(SamplingMethod):
 
         # Probability and likelihood for parameter's proposed value:
         try:
-            logp_p = self.parameter.logp
+            if self._dist == "Prior":
+                logp_p = 0.
+            else:
+                logp_p = self.parameter.logp
             loglike_p = self.loglike
 
         except LikelihoodError:
+            # print self.parameter.__name__ + ' rejecting value ', self.parameter.value, ' back to ', self.parameter.last_value
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
             return
@@ -281,96 +346,136 @@ class OneAtATimeMetropolis(SamplingMethod):
             self._rejected += 1
         else:
             self._accepted += 1
-
-    def prior_proposal_step(self):
-        """
-        This method is substituted for the default step() method if
-        self._dist is "Prior".
-        """
-
-        loglike = self.loglike
-
-        # Sample a candidate value
-        self.parameter.random()
-        
-        try:
-            loglike_p = self.loglike
-        except LikelihoodError:
-            self.parameter.value = self.parameter.last_value
-            self._rejected += 1
-            
-        # Test
-        if log(random()) > loglike_p - loglike:
-            # Revert parameter if fail
-            self.parameter.value = self.parameter.last_value
-
-            self._rejected += 1
-        else:
-            self._accepted += 1
-            
-        
-    def bernoulli_proposal_step(self):
-        """
-        This method is substituted for the default step() method if
-        self's parameter's value is a boolean or an array of booleans.
-        """
-        if self._len > 1:
-            val = self.parameter.value.ravel()
-        else:
-            val = self.parameter.value
-
-        for i in xrange(self._len):
-
-            if self._len > 1:
-                val[i] = True
-                self.parameter.value = reshape(val, self._type[1])
-            else:
-                self.parameter.value = True
-            
-            try:    
-                logp_true = self.parameter.logp
-                loglike_true = self.loglike
-            except LikelihoodError:
-                self.parameter.value = True
-            
-            if self._len > 1:
-                val[i] = False
-                self.parameter.value = reshape(val, self._type[1])
-            else:
-                self.parameter.value = False
-            
-            try:    
-                logp_false = self.parameter.logp
-                loglike_false = self.loglike            
-            except LikelihoodError:
-                self.parameter.value = False
-            
-            p_true = exp(logp_true + loglike_true)
-            p_false = exp(logp_false + loglike_false)
-            
-            if log(random()) > p_true / (p_true + p_false):
-                if self._len > 1:
-                    val[i] = True
-                    self.parameter.value = reshape(val, self._type[1])
-                else:
-                    self.parameter.value = True
-                
-        self._accepted += 1
-            
             
     def propose(self):
         """
         This method is called by step() to generate proposed values
-        if self._dist is "Normal" or "RoundedNormal".
+        if self._dist is "Normal"
         """
-
-        # Use for continuous parameters
-        if self._dist == 'Normal':
+        if self._dist == "Normal":
             self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
+        
+def OMCompetence(parameter):
+    
+    """
+    The competence function for OneAtATimeMetropolis
+    """
+    
+    if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
+        # If the parameter's binary or discrete, I can't do it.
+        return 0
 
-        # Use for discrete parameters
-        elif self._dist == 'RoundedNormal':
-            self.parameter.value = round_array(rnormal(self.parameter.value,self.proposal_sig))
+    else:
+        # If the parameter's value is an ndarray or a number, I can do it,
+        # but not necessarily particularly well.
+        _type = check_type(parameter)[0]
+        if _type in [float, int]:
+            return 1
+        else:
+            return 0
+            
+SamplingMethodRegistry[OneAtATimeMetropolis] = OMCompetence
+
+            
+class DiscreteOneAtATimeMetropolis(OneAtATimeMetropolis):
+    """
+    Just like OneAtATimeMetropolis, but rounds the parameter's value.
+    Good for DiscreteParameters.
+    """
+    def __init__(self, parameter, scale=1., dist=None):
+        OneAtATimeMetropolis.__init__(self, parameter, scale=scale, dist=dist)
+        self._id = 'DiscreteOneAtATimeMetropolis_'+parameter.__name__
+    
+    def propose(self):      
+        if self._dist == "Normal":
+            new_val = rnormal(self.parameter.value,self.proposal_sig)
+            # print new_val, ' ', round_array(new_val)
+
+        self.parameter.value = round_array(new_val)
+
+def DOMCompetence(parameter):
+    """
+    The competence function for DiscreteOneAtATimeMetropolis.
+    """
+    if isinstance(parameter, DiscreteParameter):
+        return 1
+    else:
+        return 0
+    
+SamplingMethodRegistry[DiscreteOneAtATimeMetropolis] = DOMCompetence
+
+
+class BinaryOneAtATimeMetropolis(OneAtATimeMetropolis):
+    """
+    Like OneAtATimeMetropolis, but with a modified step() method.
+    Good for binary parameters.
+    """
+    def __init__(self, parameter, dist=None):
+        OneAtATimeMetropolis.__init__(self, parameter, dist=dist)
+        self._id = 'BinaryOneAtATimeMetropolis_'+parameter.__name__
+    
+    def set_param_val(self, i, val, to_value):
+        """
+        Utility method for setting a particular element of a parameter's value.
+        """
+        if self._len>1:
+            val[i] = value
+            self.parameter.value = reshape(val, self._type[1])
+        else:
+            self.parameter.value = value
+    
+    def step(self):
+        """
+        This method is substituted for the default step() method in
+        BinaryMetropolis.
+        """
+        if self._dist=="Prior":
+            self.parameter.random()
+            
+        else:        
+            if self._len > 1:
+                val = self.parameter.value.ravel()
+            else:
+                val = self.parameter.value
+
+            for i in xrange(self._len):
+
+                self.set_param_val(i, val, True)
+
+                try:    
+                    logp_true = self.parameter.logp
+                    loglike_true = self.loglike
+                except LikelihoodError:
+                    self.set_param_val(i, val, False)
+                    continue            
+                
+                self.set_param_val(i, val, False)
+            
+                try:    
+                    logp_false = self.parameter.logp
+                    loglike_false = self.loglike            
+                except LikelihoodError:
+                    self.set_param_val(i,val,True)
+                    continue
+                
+                p_true = exp(logp_true + loglike_true)
+                p_false = exp(logp_false + loglike_false)
+            
+                if log(random()) > p_true / (p_true + p_false):
+                    self.set_param_val(i,val,True)
+            self._accepted += 1
+            
+def BOMCompetence(parameter):
+    """
+    The competence function for Binary One-At-A-Time Metropolis
+    """
+    if isinstance(parameter, BinaryParameter):
+        return 1
+    else:
+        return 0
+        
+SamplingMethodRegistry[BinaryOneAtATimeMetropolis] = BOMCompetence
+    
 
 class JointMetropolis(SamplingMethod):
     """
@@ -406,10 +511,16 @@ class JointMetropolis(SamplingMethod):
                         Metropolis algorithm.
 
         tune():         sets _asf according to a heuristic.
+        
+    TODO: Make this round DiscreteParameters' values and assign Discrete
+    individual sampling methods to them, figure out what to do about binary
+    parameters.
 
     """
-    def __init__(self, pymc_objects, epoch=1000, memory=10, delay = 0, oneatatime_scales=None):
-
+    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, oneatatime_scales=None):
+        
+        if parameter is not None:
+            pymc_objects = [parameter]
         SamplingMethod.__init__(self,pymc_objects)
 
         self.epoch = epoch
@@ -589,3 +700,18 @@ class JointMetropolis(SamplingMethod):
 
             self.compute_sig()
             self.last_trace_index = self._model._cur_trace_index
+
+
+def JMCompetence(parameter):
+    """
+    The competence function for OneAtATimeMetropolis
+    """
+
+    if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
+        # If the parameter's binary or discrete, I can't do it.
+        return 0
+
+    elif isinstance(parameter.value, ndarray):
+        return 2
+
+SamplingMethodRegistry[JointMetropolis] = JMCompetence

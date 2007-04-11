@@ -1,11 +1,12 @@
 import sys, inspect
 from imp import load_dynamic
-from PyMCObjects import Parameter, Node
-from utils import extend_children, _push, _extract, LikelihoodError
+from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter
+from utils import extend_children, _push, _extract
+from PyMCBase import LikelihoodError
 import numpy as np
 
 
-def parameter(__func__=None, **kwds):
+def parameter(__func__=None, __class__=Parameter, **kwds):
     """
     Decorator function for instantiating parameters. Usages:
     
@@ -50,7 +51,7 @@ def parameter(__func__=None, **kwds):
 
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
-        return Parameter(value=value, parents=parents, **kwds)      
+        return __class__(value=value, parents=parents, **kwds)      
     keys = ['logp','random','rseed']
 
     if __func__ is None:
@@ -61,6 +62,24 @@ def parameter(__func__=None, **kwds):
         return instantiate_p(__func__)
 
     return instantiate_p
+    
+def discrete_parameter(__func__=None, **kwds):
+    """
+    Instantiates a DiscreteParameter instance, which takes only
+    integer values.
+    
+    Same usage as parameter.
+    """
+    return parameter(__func__=__func__, __class__ = DiscreteParameter, **kwds)
+    
+def binary_parameter(__func__=None, **kwds):
+    """
+    Instantiates a BinaryParameter instance, which takes only boolean
+    values.
+    
+    Same usage as parameter.
+    """
+    return parameter(__func__=__func__, __class__ = BinaryParameter, **kwds)
 
 
 def node(__func__ = None, **kwds):

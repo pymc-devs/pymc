@@ -7,7 +7,7 @@ late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
-from PyMC2 import parameter, data, OneAtATimeMetropolis, LikelihoodError
+from PyMC2 import parameter, data, LikelihoodError, discrete_parameter
 from numpy import array, log, sum
 from fastDisasterLikes import fpoisson, fpoisson_d
 
@@ -22,12 +22,11 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and parameters
 
-@parameter
+@discrete_parameter
 def switchpoint(value=50, length=110):
     """Change time for rate parameter."""
     if value < 0 or value > length:
         raise LikelihoodError
-        # return -inf
     return 0.
 
 
@@ -36,7 +35,6 @@ def early_mean(value=1., rate=1.):
     """Rate parameter of poisson distribution."""
     if value<0:
         raise LikelihoodError
-        # return -inf
     return -rate * value
 
 
@@ -46,7 +44,6 @@ def late_mean(value=.1, rate = 1.):
     """Rate parameter of poisson distribution."""
     if value<0:
         raise LikelihoodError
-        # return -inf
     return -rate * value
 
         
@@ -57,10 +54,3 @@ def disasters(  value = disasters_array,
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
     return fpoisson_d(value,early_mean,late_mean,switchpoint)
-
-
-"""
-Make a special SamplingMethod for switchpoint that will keep it on integer values,
-and add it to M.
-"""
-S = OneAtATimeMetropolis(parameter=switchpoint)

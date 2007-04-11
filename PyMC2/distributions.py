@@ -20,7 +20,7 @@ availabledistributions = distributions+mvdistributions
 import flib
 import PyMC2
 import numpy as np
-from utils import LikelihoodError
+from PyMCBase import LikelihoodError
 from numpy import Inf, random, sqrt, log, size, tan, pi
 
 # Import utility functions
