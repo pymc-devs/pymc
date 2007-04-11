@@ -190,6 +190,8 @@ class Parameter(PyMCBase):
         # taken from the constructor.
         self.rseed = rseed
         
+        self.d_neg_inf = float(-1.79E308)    
+        
         PyMCBase.__init__(  self, 
                             doc=doc, 
                             name=name, 
@@ -236,7 +238,7 @@ class Parameter(PyMCBase):
         logp = self._logp.get()
         
         # Check if the value is smaller than a double precision infinity:
-        if logp <= -1.79E308:
+        if logp <= self.d_neg_inf:
             raise ZeroProbability
             
         return logp

@@ -40,8 +40,7 @@ class Covariance(matrix):
     GPMean, GPRealization, GaussianProcess, condition
     """
     
-    def eval_fun():
-        pass        
+    eval_fun = None    
     params = None
     base_mesh = None
     base_reshape = None
@@ -53,7 +52,10 @@ class Covariance(matrix):
     Q = None   
     obs_len = None
     __matrix__ = None
-    observed = False
+    Eval = None
+    Evec = None
+    S = None
+    logEval = None
     
     # This is just a hacky drop-in slot for storage of information from
     # conditioning, for faster conditioning of M.
@@ -112,6 +114,33 @@ class Covariance(matrix):
             self.Evec = array([])
             self.S = array([])
             self.logEval = array([])
+    
+    def __copy__(self, order='C'):
+        C = self.view(matrix).copy().view(Covariance)
+        C.base_mesh = self.base_mesh
+        C.base_reshape = self.base_reshape
+        C.ndim = self.ndim    
+        C.eval_fun = self.eval_fun
+        C.params = self.params
+        C.__matrix__ = self.__matrix__
+        
+        C.Eval = self.Eval
+        C.Evec = self.Evec
+        C.S = self.S
+        C.logEval = self.logEval
+        
+        C.observed = self.observed
+        C.obs_mesh = self.obs_mesh
+        C.base_mesh = self.base_mesh
+        C.obs_taus = self.obs_taus
+        C.Q = self.Q
+        C.obs_len = self.obs_len
+        C.RF = self.RF
+        
+        return C
+        
+    def copy(self, order='C'):
+        return self.__copy__()
                 
     def __call__(self, x, y=None):
         

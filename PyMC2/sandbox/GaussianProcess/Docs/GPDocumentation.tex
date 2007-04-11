@@ -249,23 +249,13 @@ In [14]: M(3)
 Out[14]: array(12.506241348839085)
 
 In [15]: f(3)
-Out[15]: array(12.818659676751814)
+Out[15]: array(12.492415530964509)
 
 In [16]: M[:5]
-Out[16]: 
-array([[ 3.27805131],
-       [ 3.22089361],
-       [ 3.18082649],
-       [ 3.1518305 ],
-       [ 3.12490149]])
+Out[16]: array([ 3.27805131,  3.22089361,  3.18082649,  3.1518305 ,  3.12490149])
 
 In [17]: f[:5]
-Out[17]: 
-array([[ 3.22769661],
-       [ 3.11578558],
-       [ 3.07350289],
-       [ 3.10476021],
-       [ 3.09748845]])
+Out[17]: array([ 3.5334958 ,  3.46852459,  3.47008632,  3.3340304 ,  3.14679477])
 
 In [18]: isinstance(M,ndarray)
 Out[18]: True
@@ -273,7 +263,6 @@ Out[18]: True
 In [19]: isinstance(f,ndarray)
 Out[19]: True
 \end{verbatim}
-
 
 As you may have noticed, slicing (getting values from the array aspect) is much, much faster than calling (getting values from the functional aspect). If performance is a concern, you should make your base mesh include every value you're ever going to want, so that you don't have to make many calls at all. If that's not possible, you should keep the number of calls you make to a minimum. If you absolutely have to make a lot of calls but you still need high performance, consider a Fourier representation.
  
@@ -353,14 +342,10 @@ This section will show you how to build statistical models that go beyond simple
 
 We will do this using PyMC, which provides very general support for specification and manipulation of Bayesian statistical models, with emphasis on Markov Chain Monte Carlo methods. PyMC is intended to provide at least basic support for any statistical model, and clear avenues for users and contributors to improve that support for specialized submodels. If you find a usage case we don't support, please let us know. Before proceeding, you should familiarize yourself with the PyMC documentation, available from \citetitle[www.trichech.us]{www.trichech.us}.
 
-If you want to run it, see \file{examples/MCMC.py}. 
-
-\subsection{The straightforward way}\label{sub:straightforwardPyMC}
-
 \begin{figure}
 	\centering
 		\epsfig{file=figs/unobservedModel.pdf, width=10cm}
-	\caption{The straightforward translation of Munch, Mangel and Kottas' nonparametric regression problem to a PyMC probability model. The parent-child structure resembles the natural statistical model given in section \ref{sub:straightforwardPyMC}. Ellipses represent \class{Parameter} objects (variables whose values are unknown even if their parents' values are known), triangles represent \class{Node} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \class{Parameter} objects with the \member{isdata} flag set to \member{True} (\class{Parameter} objects whose values happen to be known). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \class{C} considers \class{C_amp} to be its `\class{amp}' parameter.}
+	\caption{The PyMC-generated directed acyclic graph representation of Munch, Mangel and Kottas' nonparametric regression model, given in section \ref{sec:PyMC}. Ellipses represent \class{Parameter} objects (variables whose values are unknown even if their parents' values are known), triangles represent \class{Node} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \class{Parameter} objects with the \member{isdata} flag set to \member{True} (\class{Parameter} objects whose values happen to be known). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \class{C} considers \class{C_amp} to be its `\class{amp}' parameter.}
 	\label{fig:unobservedModel}
 \end{figure}
 
@@ -374,12 +359,10 @@ The probability model we'll use, which is like Munch, Mangel and Kottas' nonpara
 	\end{array}
 \end{equation}
 
-This statistical model is visualized as a directed acyclic graph in figure \ref{fig:unobservedModel}. The straightforward, direct translation of it to a PyMC probability model is given in \file{examples/PyMC_unobserved_form.py}. The code is too long to quote here, but I will reproduce the sections involving Gaussian process objects:
+This statistical model is visualized as a directed acyclic graph in figure \ref{fig:unobservedModel}. The straightforward, direct translation of it to a PyMC probability model is given in \file{examples/PyMC_model.py}. The code is too long to quote here, but I will reproduce the sections involving Gaussian process objects. 
+
+First, take a look at the following portions:
 \begin{verbatim}
-# Exerpts from GaussianProcess/examples/PyMC_unobserved_form.py	
-	
-...	
-	
 @node
 def C(eval_fun = Matern, base_mesh = x, diff_degree=C_diff_degree, amp=C_amp, scale=C_scale):
     return Covariance(eval_fun, base_mesh, diff_degree=diff_degree, amp=amp, scale=scale)
@@ -390,9 +373,16 @@ def C(eval_fun = Matern, base_mesh = x, diff_degree=C_diff_degree, amp=C_amp, sc
 def M(eval_fun = linfun, base_mesh = x, a=M_a, b=M_b, c=M_c):
     return Mean(eval_fun, base_mesh, a=a, b=b, c=c)
 
-...
+\end{verbatim}
+This code declares two nodes, \var{M} and \var{C}, whose \member{value} attributes are actually a \class{Mean} instance and a \class{Covariance} instance, respectively.  
 
-@parameter
+Now, look at this line:
+\begin{verbatim}
+f = GaussianProcess(M=M, C=C, name='f')
+\end{verbatim}
+As explained in the source code, this is shorthand for the more standard PyMC notation
+\begin{verbatim}
+@parameter(__class__ = GaussianProcess)
 def f(value=Realization(M,C), M=M, C=C):
 
     def logp(value, M, C):
@@ -400,17 +390,18 @@ def f(value=Realization(M,C), M=M, C=C):
 
     def random(M, C):
         return Realization(M,C)
+\end{verbatim}
+The parameter \var{f} will be an instance of a special \class{Parameter} subclass called \class{GaussianProcess}, and this helps \class{Sampler} figure out which sampling method can best handle it. The value of \var{f} is an actual \class{Realization} object. \var{f}'s log-probability is computed using the \function{GP_logp} function from this package. Its \method{random} method returns a new \class{Realization} object, since \class{Realization}s are really just draws from Gaussian process distributions.
 
-...
 
+The following standard PyMC code declares the observation precision (which is unknown) and the data:
+\begin{verbatim}
 @parameter
 def tau(value=500., alpha = 1., beta = 500.):
     """tau ~ gamma(alpha, beta)"""
     if value<=0.:
         raise LikelihoodError
     return flib.gamma(value, alpha, beta)
-
-...
 
 @data
 def d(value=array([3.1, 2.9]), x=obs_x, mu=f, tau=tau):
@@ -428,15 +419,21 @@ def d(value=array([3.1, 2.9]), x=obs_x, mu=f, tau=tau):
     """
     mu_array = array([mu[5],mu[-5]])
     return flib.normal(value, mu_array, tau)
-
-...
 \end{verbatim}
 
-Recall from the PyMC documentation that the function supplied to the \function{node} decorator returns a variable's value given the values of its parents. The values of nodes \var{M} and \var{C}, therefore, are actual \class{Covariance} and \class{Mean} objects respectively; typing `\code{C.value}' into a prompt after running the script will return an actual \class{Covariance} instance. 
+Finally, the following line declares a special Gibbs sampling method to handle \var{f}:
+\begin{verbatim}
+S = ObservedGPGibbs(f=f, M=M, C=C, obs_mesh=obs_x, obs_taus=tau, obs_vals=d)
+\end{verbatim}
+If you comment this line out, \class{Sampler} will assign a \class{GPMetropolis} sampling method to \var{f} instead of a \class{ObservedGPGibbs} sampling method. Running \file{examples/MCMC.py} will run the MCMC loop and plot output; some of its output using \class{GPMetropolis} and \class{ObservedGPGibbs}. is shown in \ref{fig:MCMCOutput}. 
 
-Similarly, the value of parameter \var{f} is an actual \class{Realization} object. \var{f}'s log-probability is computed using the \function{GP_logp} function from this package. Its \method{random} method returns a new \class{Realization} object, since \class{Realization}s are really just draws from Gaussian process distributions.
-
-\textbf{XXX The `slick' way is incorrect, thank God. You need a Gibbs sampler.}
+\begin{figure}
+	\centering
+		\epsfig{file=figs/metroSamples.pdf,width=10cm}
+		\epsfig{file=figs/gibbsSamples.pdf,width=10cm}		
+	\caption{The output of {\sffamily `examples/MCMC.py'} using the default \class{GPMetropolis} sampling method (above) and a user-declared \class{GPGibbs} sampling method (below). You can see that the Metropolis samples take a while to burn in, but the Gibbs samples of course start right in their support and mix better. However, the Metropolis sampler is cheaper and has gentler numerical properties, and you don't have to declare anything to use it. In applications, you'll have to see which one works better.}
+	\label{fig:MCMCOutput}
+\end{figure} 
 
 \section{Integrals, derivatives and transforms: linear operations and constraints}\label{sec:linop} % (fold)
 

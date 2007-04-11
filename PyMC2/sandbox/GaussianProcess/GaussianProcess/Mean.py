@@ -18,6 +18,7 @@ class Mean(ndarray):
     """
     
     eval_fun = None
+    mean_params = None
     cov_fun = None            
     cov_params = None
     base_mesh = None
@@ -75,6 +76,32 @@ class Mean(ndarray):
         
         # Return the data
         return M
+        
+    def __copy__(self, order='C'):
+        
+        M = self.view(ndarray).copy().view(Mean)
+        
+        M.eval_fun = self.eval_fun
+        M.mean_params = self.mean_params
+        M.cov_fun = self.cov_fun
+        M.cov_params = self.cov_params
+        M.base_mesh = self.base_mesh
+        M.base_reshape = self.base_reshape
+        M.ndim = self.ndim
+        M.observed = self.observed
+        M.obs_mesh = self.obs_mesh
+        M.base_mesh = self.base_mesh
+        M.obs_vals = self.obs_vals
+        M.obs_taus = self.obs_taus
+        M.Q_mean_under = self.Q_mean_under
+        M.obs_len = self.obs_len
+        M.observed = self.observed
+        
+        return M
+
+    def copy(self, order='C'):
+        return self.__copy__()
+    
 
     def __call__(self, x):
         

@@ -165,10 +165,6 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
     ndim = obs_mesh.shape[-1]
     obs_mesh = obs_mesh.reshape(-1,ndim)
     
-
-    have_obs_taus = obs_taus is not None
-    if have_obs_taus:
-        obs_taus = obs_taus.ravel()
             
     if base_mesh is not None:
         combined_mesh = vstack((base_mesh, obs_mesh))
@@ -179,6 +175,15 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
         
     combined_len = combined_mesh.shape[0]
     obs_len = obs_mesh.shape[0]
+    
+    have_obs_taus = obs_taus is not None
+    if have_obs_taus:
+        if isinstance(obs_taus, ndarray):
+            obs_taus = obs_taus.ravel()
+            if not len(obs_taus) == obs_len:
+                obs_taus.resize(obs_len)
+        else:
+            obs_taus = obs_taus * ones(obs_len, dtype=float)
     
     Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
     if have_obs_taus:

@@ -1492,27 +1492,28 @@ def fortranlike(f, snapshot, mv=False):
         This wraps a likelihood.
         """
 
-
+        # Do we really need the shape manipulations, or does f2py take care of
+        # all of this on its own?
         # Shape manipulations
-        if not mv:
-            xshape = np.shape(args[0])
-            newargs = [np.asarray(args[0])]
-            for arg in args[1:]:
-                newargs.append(np.resize(arg, xshape))
-            for key in kwds.iterkeys():
-                kwds[key] = kwds[key]
-        else:
-            """
-x, mu, Tau
-            x: (kxN)
-            mu: (kxN) or (kx1)
-            Tau: (k,k)
-            """
-
-            xshape=np.shape(args[0])
-            newargs = [np.asarray(args[0])]
-            newargs.append(np.resize(args[1], xshape))
-            newargs.append(np.asarray(args[2]))
+        # if not mv:
+        #     xshape = np.shape(args[0])
+        #     newargs = [np.asarray(args[0])]
+        #     for arg in args[1:]:
+        #         newargs.append(np.resize(arg, xshape))
+        #     for key in kwds.iterkeys():
+        #         kwds[key] = kwds[key]
+        # else:
+        #     """
+# x, mu, Tau
+            # x: (kxN)
+            # mu: (kxN) or (kx1)
+            # Tau: (k,k)
+            # """
+            # 
+            # xshape=np.shape(args[0])
+            # newargs = [np.asarray(args[0])]
+            # newargs.append(np.resize(args[1], xshape))
+            # newargs.append(np.asarray(args[2]))
 
         if kwds.pop('gof', False) and not kwds.pop('prior', False):
             """
@@ -1530,10 +1531,10 @@ Return gof points."""
             """
 Return likelihood."""
 
-            try:
-                return f(*newargs, **kwds)
-            except ZeroProbability:
-                return -np.Inf
+            # try:
+            return f(*newargs, **kwds)
+            # except ZeroProbability:
+            # return -np.Inf
 
 
     # Assign function attributes to wrapper.

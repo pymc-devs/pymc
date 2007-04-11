@@ -111,7 +111,7 @@ def round_array(array_in):
     Rounds an array and recasts it to int. Also works on scalars.
     """
     if isinstance(array_in, ndarray):
-        return array(array_in, dtype=float)
+        return asarray(array_in, dtype=int)
     else:
         return int(array_in)
 

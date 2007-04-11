@@ -37,10 +37,8 @@ class Realization(ndarray):
     GPMean, GPCovariance, GaussianProcess, condition
     """
     
-    def mean_fun():
-        pass
-    def cov_fun():
-        pass
+    cov_fun = None
+    mean_fun = None
                 
     cov_params = None
     mean_params = None
@@ -117,6 +115,32 @@ class Realization(ndarray):
         
         return f
         
+    def __copy__(self, order='C'):
+
+        f = self.view(ndarray).copy().view(Realization)
+
+        cov_fun = self.cov_fun
+        mean_fun = self.mean_fun
+
+        cov_params = self.cov_params
+        mean_params = self.mean_params
+        base_mesh = self.base_mesh
+        base_reshape = self.base_reshape
+
+        ndim = self.ndim
+        C = self.C
+        M = self.M
+
+        N_obs_sofar = self.N_obs_sofar
+        obs_mesh_sofar = self.obs_mesh_sofar
+        dev_sofar = self.dev_sofar
+        M_sofar = self.M_sofar
+        C_sofar = self.C_sofar
+
+        return f
+
+    def copy(self, order='C'):
+        return self.__copy__()        
             
     def __call__(self, x):
 
@@ -224,3 +248,63 @@ class Realization(ndarray):
             plot(self.base_mesh, self.view(ndarray))
         elif self.ndim==2:
             contourf(self.base_mesh[:,0], self.base_mesh[:,1],self.view(ndarray))
+            
+#
+# The Gaussian Process parameter class, if PyMC2 is installed
+#
+try:
+    from PyMC2 import Parameter
+    from GPutils import GP_logp
+
+    class GaussianProcess(Parameter):
+        """
+        A subclass of Parameter that is valued as a Gaussian process Realization
+        object.
+
+        Instantiating this class with
+
+        >>> f = GaussianProcess(M, C, name='f')
+
+        is equivalent to the following:
+
+        @parameter
+        def f(value=Realization(M.value,C.value), M=M, C=C):
+
+            def logp(value, M, C):
+                return GP_logp(value,M,C)
+
+            def random(M, C):
+                return Realization(M,C)
+
+            rseed =  1.
+
+        """
+        
+        
+        def __init__(self, M, C, name='f', doc="A Gaussian process", trace=True, rseed=1., isdata=False, cache_depth=2):
+            
+            self.M = M
+            self.C = C
+            
+            def logp_fun(value, M, C):
+                return GP_logp(value, M, C)
+                
+            def random_fun(M, C):
+                return Realization(M, C)
+            
+            Parameter.__init__( self, 
+                                logp = logp_fun,
+                                doc=doc, 
+                                name=name, 
+                                parents = {'M': M, 'C': C}, 
+                                random = random_fun, 
+                                trace = trace, 
+                                value = Realization(M.value, C.value), 
+                                rseed = rseed, 
+                                isdata = isdata,
+                                cache_depth=cache_depth)
+                                
+except ImportError:
+    class GaussianProcess(object):
+        def __init__(self, *args, **kwargs):
+            raise ImportError, 'You must install PyMC to use the Gaussian process object.'

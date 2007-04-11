@@ -1,8 +1,9 @@
-from PyMC2 import SamplingMethod, OneAtATimeMetropolis
-from Realization import Realization
-from numpy import reshape, asarray
+from PyMC2 import SamplingMethod, OneAtATimeMetropolis, node, SamplingMethodRegistry
+from Realization import Realization, GaussianProcess
+from numpy import reshape, asarray, array
 from numpy.random import normal
-
+from GPutils import observe_cov, observe_mean_from_cov
+from copy import copy
 
 
 class GPMetropolis(OneAtATimeMetropolis):
@@ -12,11 +13,17 @@ class GPMetropolis(OneAtATimeMetropolis):
     proposing from the prior if there are no 
     children.
     """
-    def __init__(self, f, M, C, scale=.1, dist=None):
-        SamplingMethod.__init__(self, pymc_objects=[f])
-        self.parameter = f
+    def __init__(self, parameter, M = None, C = None, scale=.5, dist=None):
+        self._dist = 'GP'
+        SamplingMethod.__init__(self, pymc_objects=[parameter])
+        self.parameter = parameter
         self._id = 'GPMetropolis_'+self.parameter.__name__
         self.scale = scale
+        
+        if M is None:
+            M = parameter.M
+        if C is None:
+            C = parameter.C
         
         self.M = M
         self.C = C
@@ -40,6 +47,16 @@ class GPMetropolis(OneAtATimeMetropolis):
         # Create a new realization, forcing it to that value.
         self.parameter.value = Realization(self.M.value, self.C.value, init_base_array = f_p)
 
+# Register GPMetropolis with the sampling method regsitry.
+def GPMetropolisCompetence(parameter):
+
+    if isinstance(parameter, GaussianProcess):
+        return 3
+        
+    else:
+        return 0
+
+SamplingMethodRegistry[GPMetropolis] = GPMetropolisCompetence
 
 
 class ObservedGPGibbs(SamplingMethod):
@@ -54,7 +71,7 @@ class ObservedGPGibbs(SamplingMethod):
     """
     
     def __init__(self, f, M, C, obs_mesh, obs_taus, obs_vals):
-
+        
         SamplingMethod.__init__(self, pymc_objects = [f])
         self.f = f
         self._id = 'GPGibbs_'+self.f.__name__
@@ -63,18 +80,19 @@ class ObservedGPGibbs(SamplingMethod):
         # distribution.
         @node
         def C_local(C_real = C,
-                    base_mesh = C.base_mesh, 
+                    base_mesh = C.value.base_mesh, 
                     obs_mesh = obs_mesh, 
                     obs_taus = obs_taus):
-
+            
+            # Copy is not working. You need to write the method.
             val = C_real.copy()
-            observe_cov(val, obs_mesh, obs_taus = array([obs_tau, obs_tau]))
+            observe_cov(val, obs_mesh, obs_taus = obs_taus)
             return val
         
         # This local node is valued as the mean of f's conditional distribution.    
         @node
-        def M_local(M_real = M
-                    base_mesh = C.base_mesh, 
+        def M_local(M_real = M,
+                    base_mesh = C.value.base_mesh, 
                     C = C_local,
                     obs_vals = obs_vals):
 

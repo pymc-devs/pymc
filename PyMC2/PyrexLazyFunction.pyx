@@ -198,6 +198,11 @@ cdef class LazyFunction:
         # Store new
         for j from 0 <= j < self.N_args:
             self.cached_arg_p[j] = self.ultimate_arg_value_p[j]
+    
+    def force_compute(self):
+        self.refresh_argument_values()
+        value = self.fun(**self.argument_values)
+        self.cache(value)
         
 
     def get(self):

@@ -95,7 +95,9 @@ class PyMCBase(object):
         del self._parents
         
     parents = property(fget=_get_parents, fset=_set_parents, fdel=_del_parents)
-                
+    
+    def __str__(self):
+        return self.value.__str__()
                 
     def gen_lazy_function(self):
         pass                
