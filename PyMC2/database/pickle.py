@@ -75,11 +75,12 @@ class Database(base.Database):
         cPickle.dump(container, file)
         file.close()
      
-def load(file):
+def load(filename):
     """Load an existing database.
 
     Return a Database instance.
     """
+    file = open(filename, 'r')
     container = cPickle.load(file)
     file.close()
     db = Database(file.name)

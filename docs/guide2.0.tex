@@ -46,6 +46,8 @@ Installation and tutorial}
 %%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
 \newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
 \newcommand{\titlereference}[1]{\textsl{#1}}
+\newlength{\locallinewidth}
+\setlength{\locallinewidth}{\linewidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -63,6 +65,9 @@ Installation and tutorial}
 
 \chapter{Markov chain Monte Carlo} %(fold)
 \input{theory}
+
+\chapter{Saving and managing sampling results}
+\input{database}
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}

@@ -277,7 +277,11 @@ class OneAtATimeMetropolis(SamplingMethod):
     def __init__(self, parameter, scale=1., dist=None):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
-        self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        if self.parameter.value != 0.:
+            self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        else:
+            self.proposal_sig = ones(shape(self.parameter.value)) * scale
+            
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
         self._id = 'OneAtATimeMetropolis_'+parameter.__name__
 
