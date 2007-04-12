@@ -130,7 +130,7 @@ def msqrt(cov):
     # If there's a small eigenvalue, diagonalize
     except LinAlgError:
         val, vec = eigh(cov)
-        sig = asmatrix(np.zeros(vec.shape))
+        sig = np.zeros(vec.shape)
         for i in range(len(val)):
             if val[i]<0.:
                 val[i]=0.

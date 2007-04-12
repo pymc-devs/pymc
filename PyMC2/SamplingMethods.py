@@ -1,6 +1,6 @@
 __docformat__='reStructuredText'
 from utils import msqrt, extend_children, check_type, round_array, extend_parents
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, all, any, array
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -277,7 +277,7 @@ class OneAtATimeMetropolis(SamplingMethod):
     def __init__(self, parameter, scale=1., dist=None):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
-        if self.parameter.value != 0.:
+        if all(self.parameter.value != 0.):
             self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         else:
             self.proposal_sig = ones(shape(self.parameter.value)) * scale
