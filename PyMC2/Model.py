@@ -79,7 +79,7 @@ class Model(object):
 
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
-        elif haskey(input, '__name__'):
+        elif input.has_key('__name__'):
             self.__name__ = input['__name__']
         else:
             self.__name__ = 'PyMC_Model'
