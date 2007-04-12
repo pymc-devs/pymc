@@ -1,11 +1,11 @@
 # GaussianProcess/examples/cov.py
 
 from GaussianProcess import *
-from GaussianProcess.cov_funs import Matern
+from GaussianProcess.cov_funs import matern
 from numpy import *
 from pylab import *
 
-C = Covariance(eval_fun = Matern, diff_degree = 1.4, amp = .4, scale = .5)
+C = Covariance(eval_fun = matern, diff_degree = 1.4, amp = .4, scale = .5)
 
 # Plot
 if __name__ == '__main__':

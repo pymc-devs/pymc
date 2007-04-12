@@ -1,7 +1,7 @@
 # GaussianProcess/examples/cov.py
 
 from GaussianProcess import *
-from GaussianProcess.cov_funs import Matern
+from GaussianProcess.cov_funs import matern
 from numpy import *
 from pylab import *
 
@@ -10,7 +10,7 @@ x = arange(-1.,1.,.1)
 
 
 # Create a Covariance object with x as the base mesh
-C = Covariance( eval_fun = Matern, 
+C = Covariance( eval_fun = matern, 
                 base_mesh = x,
                 diff_degree = 1.4, amp = .4, scale = .5)
 

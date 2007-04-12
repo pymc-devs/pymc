@@ -2,71 +2,69 @@ c A collection of covariance functions for Gaussian processes, implemented in Fo
 c By convention, the first dimension of each input array iterates over points, and 
 c subsequent dimensions iterate over spatial dimensions.
 
-      SUBROUTINE norm_matern(C,x,y,nu,scale,amp,nx,ny,ndx,ndy,symm)
+      SUBROUTINE matern(C,x,y,diff_degree,scale,amp,nx,ny,ndx,ndy,
+     +symm,BI,DI,BK,DK,N)
 
 cf2py double precision dimension(nx,ny),intent(out)::C
 cf2py double precision dimension(nx,ndx),intent(in)::x
 cf2py double precision dimension(ny,ndy),intent(in)::y
-cf2py double precision intent(in)::nu
-cf2py double precision intent(in), optional::scale=1.
-cf2py double precision intent(in), optional::amp=1.
+cf2py double precision intent(in)::diff_degree
+cf2py double precision intent(in), optional::scale=1.0
+cf2py double precision intent(in), optional::amp=1.0
 cf2py integer intent(hide),depend(x)::nx=shape(x,0)
 cf2py integer intent(hide),depend(y)::ny=shape(y,0)
 cf2py integer intent(hide),depend(x)::ndx=shape(x,1)
 cf2py integer intent(hide),depend(y)::ndy=shape(y,1)
 cf2py logical intent(in), optional:: symm=0
+cf2py double precision dimension(N), intent(hide) :: BI
+cf2py double precision dimension(N), intent(hide) :: BK
+cf2py double precision dimension(N), intent(hide) :: DI
+cf2py double precision dimension(N), intent(hide) :: DK
+cf2py integer intent(hide), depend(diff_degree) :: N = diff_degree+2
 
-      DOUBLE PRECISION C(nx,ny), x(nx,ndx), y(ny,ndy), scale, amp, nu
-      DOUBLE PRECISION GA, prefac, scalesq, dev, VM
+      DOUBLE PRECISION C(nx,ny), x(nx,ndx), y(ny,ndy)
+      DOUBLE PRECISION scale, amp, diff_degree
+      DOUBLE PRECISION GA, prefac, dev, VM, t
       INTEGER nx, ny, ndx, ndy, i, j, k, N
+      DOUBLE PRECISION BI(N), BK(N), DI(N), DK(N)
       LOGICAL symm
-      DOUBLE PRECISION BI, DI, BK, DK
       
-      print *,'Warning, norm_matern is not working yet!'
-      
-      CALL GAMMA2(nu,GA)
-      prefac = .5 ** (nu-1.0) / GA
-      scalesq = scale ** 2
-      
-      if (INT(nu) .EQ. 0) then 
-        N=1
-      else 
-        N = INT(nu)
-      endif
+      CALL GAMMA2(diff_degree,GA)
+      prefac = 0.5D0 ** (diff_degree-1.0D0) / GA
       
       do i=1,nx
 
         if(symm) then            
-          C(i,i)=1.0
-          do j=nx+1,ny
-            t = 0.0
+          C(i,i)=amp
+          do j=i+1,ny
+            t = 0.0D0
             do k=1,ndx
               dev = x(i,k) - y(j,k)
               t = t + dev * dev
             enddo
-            t = t / scalesq
-            if (t .EQ. 0) then
-              C(i,j)=1.0
+            t = dsqrt(t) / scale
+            if (t .EQ. 0.0) then
+              C(i,j)=amp
             else
-              CALL IKV(nu,t,VM,BI,DI,BK,DK)
-              C(i,j)=prefac * (t ** nu) * BK
+              CALL IKV(diff_degree,t,VM,BI,DI,BK,DK,N)
+              C(i,j)=amp * prefac * (t ** diff_degree) * BK(N+1)
             endif
             C(j,i) = C(i,j)
           enddo
 
         else
           do j=1,ny
-            t = 0.0
+            t = 0.0D0
             do k=1,ndx
               dev = x(i,k) - y(j,k)
               t = t + dev * dev
             enddo
-            t = t / scalesq
-            if (t .EQ. 0) then
-              C(i,j)=1.0
+            t = dsqrt(t) / scale
+            if (t .EQ. 0.0) then
+              C(i,j)=amp
             else
-              CALL IKV(nu,t,VM,BI,DI,BK,DK)            
-              C(i,j)=prefac * (t ** nu) * BK
+              CALL IKV(diff_degree,t,VM,BI,DI,BK,DK,N)         
+              C(i,j)=amp * prefac * (t ** diff_degree) * BK(N+1)
             endif
           enddo    
         endif
@@ -143,8 +141,8 @@ cf2py logical intent(in), optional:: symm=0
       LOGICAL symm
 
       if(symm) then
-        C(i,i)=amp
         do i=1,nx
+          C(i,i)=amp            
           do j=i+1,ny
             val_now = 0.0
             do k=1,ndx
@@ -322,7 +320,17 @@ C
 
 C       **********************************
 
-        SUBROUTINE IKV(V,X,VM,BI,DI,BK,DK)
+        SUBROUTINE IKV(V,X,VM,BI,DI,BK,DK,N)
+
+cf2py double precision intent(in):: V
+cf2py double precision intent(in):: x
+cf2py double precision intent(out):: VM
+cf2py double precision dimension(N), intent(out):: BI
+cf2py double precision dimension(N), intent(out):: DI
+cf2py double precision dimension(N), intent(out):: BK
+cf2py double precision dimension(N), intent(out):: DK
+cf2py integer intent(in) :: N
+        
 C
 C       =======================================================
 C       Purpose: Compute modified Bessel functions Iv(x) and
