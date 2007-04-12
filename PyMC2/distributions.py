@@ -23,6 +23,12 @@ import numpy as np
 from PyMCBase import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi
 
+# This needs to be here so that the BLAS get properly linked...
+# If we figure out a way to take it out, let's do it.
+import flib_blas
+from flib_blas import *
+
+
 # Import utility functions
 import inspect, types
 from copy import copy
@@ -1093,13 +1099,56 @@ def multivariate_normal_like(x, mu, tau):
     x: (k,n)
     mu: (k,n) or (k,1)
     tau: (k,k)
-    \trace(tau) > 0
+    tau positive definite
     """
     # try:
     #     constrain(np.diagonal(tau), lower=0)
     # except ZeroProbability:
     #     return -Inf
-    return flib.vec_mvnorm(x, mu, tau)
+    if tau.shape[0] < 50:
+        return flib.vec_mvnorm(x, mu, tau)
+    else:
+        # This version is faster for large matrices, but oddly enough
+        # it's slower for small matrices. Stupid BLAS.
+        return flib_blas.blas_mvnorm(x,mu,tau)
+        
+# Multivariate normal, parametrized with covariance---------------------------
+def rmultivariate_normal_cov(mu, C, size=1):
+    """
+    rmultivariate_normal_cov(mu, C, size=1)
+
+    Random multivariate normal variates.
+    """
+
+    return random.multivariate_normal(mu, C, size)
+
+def multivariate_normal_cov_expval(mu, C):
+    """
+    multivariate_normal_cov_expval(mu, C)
+
+    Expected value of multivariate normal distribution.
+    """
+    return mu
+
+def multivariate_normal_cov_like(x, mu, C):
+    r"""
+    multivariate_normal_cov_like(x, mu, C)
+
+    Multivariate normal log-likelihood
+
+    .. math::
+        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+
+    x: (k,n)
+    mu: (k,n) or (k,1)
+    C: (k,k)
+    C positive definite
+    """
+    # try:
+    #     constrain(np.diagonal(tau), lower=0)
+    # except ZeroProbability:
+    #     return -Inf
+    return flib_blas.cov_mvnorm(x,mu,tau)        
 
 # Negative binomial----------------------------------------
 @randomwrap
