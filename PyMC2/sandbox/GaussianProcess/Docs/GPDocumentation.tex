@@ -15,18 +15,21 @@
 
 \chapter{Introduction}\label{cha:introduction} % (fold)
 
-Gaussian processes (GPs) are probability distributions for functions. They're useful if a functional form is unknown a priori.
+Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they're often used as priors for functions whose forms are unknown. Like all priors, they summarize the modeler's knowledge about the object or quantity in question before seeing data. Gaussian processes can encode lots of types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms.
 
-GPs are not hard to understand at a conceptual level, but implementing them on a computer can require fairly involved linear algebra. This makes it hard for beginners to get started, and even when you have experience it's annoying.
+GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra.
 
-This package provides Python classes that represent the components of the Gaussian process. They are meant to support many types of Gaussian process usage, from intuitive exploration to high-performance deployment in MCMC, with smooth transitions between.
+This package provides Python classes that represent the components of GPs. They are meant to support many types of usage, from intuitive exploration to high-performance deployment in larger probability models via MCMC, with smooth transitions between. They will help you get concepts from your head to the computer as directly as possible, without worrying about the details of implementation or sacrificing performance.
 
-The package also provides a class which produces Gaussian process-valued PyMC parameters and a PyMC sampling method to handle it. That means the Gaussian process-related objects can be directly incorporated into larger probability models.
-
-You'll need to understand Python, numpy and a little bit of Bayesian statistics. Refs.
+\section{Prerequisites}\label{sec:prerequisites}
+To use this package effectively, you will need to know:
+\begin{itemize}
+	\item How to program in \citetitle[www.python.org]{Python}. Several online tutorials can be found by clicking around the Python website, including \citetitle[www.ibiblio.org/obp/thinkCSpy/]{How to think like a computer scientist: Learning with Python} by Downey, Elkner and Meyers. More experienced programmers may prefer \citetitle[docs.python.org/tut/]{another tutorial} by Python's author, Guido van Rossum. Python is generally regarded as having unusually good documentation for open-source software, and it is also considered one of the easiest general-purpose programming languages to learn.
+	\item How to use Numerical Python, or \citetitle[www.scipy.org/numpy]{numpy}. This package provides array and matrix objects and associated functions that are much faster than their equivalents in pure Python would be, and also more convenient for scientific and numerical work. If you're familiar with a matrix language such as Matlab or R, this shouldn't be too difficult, but please do read the first few chapters of the documentation; there are a few differences which can function as `gotchas' early on, though you'll eventually come to appreciate them. Although numpy itself is available free of charge, its documentation costs \$40 and is available from \citetitle[www.scipy.org/Documentation]{here}. 
+	\item A good conceptual understanding of Bayesian statistics. You \emph{don't} need a detailed understanding of advanced Bayesian model-fitting methods, though some familiarity with the normal distribution would help. See \textbf{ref} for an introduction to the ideas.
+\end{itemize}
 
 % chapter introduction (end)
-
 
 
 \chapter{Installation}\label{cha:installation} % (fold)
@@ -34,9 +37,9 @@ You'll need to understand Python, numpy and a little bit of Bayesian statistics.
 \section{Dependencies}
 \begin{itemize}
 	\item \citetitle[www.python.org]{Python version 2.4} or later.
-	\item \citetitle[www.scipy.org]{numpy}, Numerical Python. The core package for numerical work in Python.
+	\item \citetitle[www.scipy.org/numpy]{numpy}, Numerical Python. The core package for scientific computation, numerical analysis and statistics in Python.
 	\item Optional: \citetitle[www.matplotlib.org]{matplotlib/ pylab}, Matlab-like scientific plotting utilities for Python. Install this if you want to use any of the graphical functionality described in this manual.
-	\item Optional: \citetitle[www.trichech.us]{PyMC}, Bayesian statistics and MCMC support for Python. Install this if you want to embed Gaussian processes in larger probability models.
+	\item Optional: \citetitle[trichech.us/?page_id=4]{PyMC}, Bayesian statistics and MCMC support for Python. Install this if you want to embed Gaussian processes in larger probability models.
 \end{itemize} 
 
 \section{How to install}\label{sec:installing}
@@ -45,6 +48,7 @@ Type this into a shell:
 \begin{verbatim}
 	python setup.py install
 \end{verbatim}
+\textbf{XXX: We may just distribute this in PyMC, in which case the dependencies will be satisfied as a matter of course.}
 
 % chapter installation (end)
 
@@ -54,12 +58,7 @@ Type this into a shell:
 
 % chapter basics (end)
 
-To understand GPs, you need to play around with them. You can be as good at math as you want, but to really know what they're like you have to build experience. For that reason, after a brief overview of what GP's can be good for, this tutorial will immediately show you how to actually instantiate a GP. That way you have one to play around with throughout the rest of the tutorial. All the code in the tutorial is in the folder \file{examples}, which is distributed with this package.
-
-Sections \ref{sec:firstlook} through \ref{sec:observing} will give you the bare minimum you need to know to get started; section \ref{sec:array} is highly recommended. Section \ref{sec:PyMC} will tell you how to incorporate your GPs into larger probability models using PyMC. The remaining sections cover more advanced topics, and are referenced at appropriate points from the introductory sections.
-
-\section{Prerequisites}\label{sec:prerequisites}
-You need to know a bit about Python and numpy. Also a bit about Bayesian statistics and the normal distribution. Refs. 
+To understand GPs, you need to play around with them. Very few people could translate their beliefs into Gaussian process priors without doing some experimentation on a computer beforehand. For that reason, after a brief overview of what GPs can be good for, this tutorial will immediately show you how to actually instantiate a GP to have in hand throughout the remainder. All the code in the tutorial is in the folder \file{examples}, which is distributed with this package.
 
 \section{A first look at Gaussian processes}\label{sec:firstlook} % (fold)
 
@@ -69,24 +68,30 @@ Gaussian processes are probability distributions for functions. The statement `$
 \end{equation}
 Gaussian processes have two parameters, which are analogous to the parameters of the normal distribution:
 \begin{itemize}
-    \item $M$ is the mean function. Like the mean parameter of the normal distribution, $M$ gives the central tendency for $f$. In Bayesian statistics, $M$ is usually considered a prior guess for $f$. $M(x)$ gives the expectation of $f(x)$.
+    \item $M$ is the mean function. Like the mean parameter of the normal distribution, $M$ gives the central tendency for $f$ in that $M(x)$ gives the expectation of $f(x)$. In Bayesian statistics, $M$ is usually considered a prior guess for $f$.
     \item $C$  is the covariance function. Its role is harder to understand than that of the mean function, but among other things it regulates:
     \begin{itemize}
-        \item the amount by which $f$ may deviate from $M$
-        \item the smoothness of $f$
+        \item the amount by which $f$ may deviate from $M$ at any $x$,
+        \item the smoothness of $f$,
         \item the wiggliness of $f$.
     \end{itemize}
-    $C(x,y)$ gives the covariance of $f(x)$ and $f(y)$; $C(x,x)$ gives the variance of $f(x)$.
+Also, $C(x,y)$ gives the covariance of $f(x)$ and $f(y)$, and $C(x,x)$ gives the variance of $f(x)$.
 \end{itemize}
 An intuitive understanding of covariance functions is essential for appropriate application of Gaussian processes, but for the time being don't worry about them too much. Section \ref{sec:cov} is all about covariance functions.
 
+As for any probability distribution, random values can be drawn from a Gaussian process. However, these values are actually mathematical functions rather than the usual numbers or vectors. On the computer, the random values we draw will essentially be Python functions, with a few extra features.
 
 \subsection{What are Gaussian processes good for?}\label{sub:applications}
-\textbf{Need to collect some applications. I was thinking Steve and Thanasis' Bayesian nonparametric stock recruitment paper, and possibly an actual spatial statistical application.}
+\textbf{XXX needs work}
+This tutorial will focus on a recent application of Gaussian processes in ecology, which represents a promising body of applications in that field: a study by Munch, Mangel and Kottas, blah blah blah.
+
+They're also good for spatial statistics. The \module{GaussianProcess} module supports multivariate as well as univariate GP's. In a multivariate GP, the variables $x$ and $y$ would be vectors rather than scalars. For the time being, however, let's concentrate on univariate GP's, as they're easier to visualize.
+
+They're also good in classification problems, and are partially supplanting artificial neural networks for supervised learning.
 
 \subsection{Instantiating a Gaussian process}\label{sub:inst}
 
-The rest of this tutorial will be much easier to understand with an actual Gaussian process in hand to experiment with. The \module{GaussianProcess} module supports multivariate as well as univariate GP's; the variables $x$ and $y$ in section \ref{sec:firstlook} can be vectors just as well as scalars. For the time being, however, let's concentrate on univariate GP's, as they're easier to visualize.
+The rest of this tutorial will be much easier to understand with an actual Gaussian process in hand to experiment with. The following subsections will show you how to instantiate objects representing a covariance function, a mean function, and finally several random functions drawn from the GP distribution defined by those objects.
 
 \subsubsection{Instantiating a covariance function}\label{subsub:cov}
 \begin{figure}
@@ -96,16 +101,16 @@ The rest of this tutorial will be much easier to understand with an actual Gauss
 	\label{fig:cov}
 \end{figure}
 
-The first component of a GP that we will generate is a covariance function, which is represented by the class \class{Covariance}. The covariance function of a univariate GP is a function of two variables, and the \class{Covariance} class is a wrapper for an ordinary Python function of two variables. In this example we will use the popular Mat\'ern covariance function, which is provided in module \module{cov_funs}. In addition to the two variables, this function takes three tunable parameters: \code{amp} controls the amount by which $f$ may deviate from $M$, \code{diff_degree} controls the smoothness of $f$ (the degree of differentiability), and \code{scale} controls the wiggliness of $f$.
+The first component of a GP that we will generate is a covariance function, which is represented by the class \class{Covariance}. The covariance function of a univariate GP is a function of two variables, and the \class{Covariance} class is a wrapper for a Python function of two variables. In this example we will use the popular Mat\'ern covariance function, which is provided in module \module{cov_funs}. In addition to the two variables, this function takes three tunable parameters: \code{amp} controls the amount by which $f$ may deviate from $M$, \code{diff_degree} controls the smoothness of $f$ (the degree of differentiability), and \code{scale} controls the wiggliness of $f$.
 
-You're free to write your own covariance functions if you want, but not every function of two variables is acceptable as a covariance function. See section \ref{sec:usercov} for more information.
+You're free to write your own functions to wrap in \class{Covariance} objects if you want, but not every function of two variables is acceptable as a covariance function. See section \ref{sec:usercov} for more information.
 
 The code shown below will produce an instance of class \class{Covariance} called $C$. It will also display the covariance function $C(x,y)$ as a filled contour plot on the mesh ($-1<x<1$,$-1<y<1$).
 \verbatiminput{../examples/cov.py}
 
-The first argument, \function{eval_fun}, gives the Python function from which the covariance function will be made, in this case \function{Matern}. The \class{Covariance} class will raise an error if it is instantiated around an unacceptable function. The extra arguments \code{diff_degree, amp} and \code{scale} will be passed to \function{Matern}.
+The first argument, \function{eval_fun}, gives the Python function from which the covariance function will be made, in this case \function{Matern}. The extra arguments \code{diff_degree, amp} and \code{scale} will be passed to \function{Matern} every time $C$ is called.
 
-At this stage, the covariance function exposes a very simple user interface. In fact, it behaves a lot like its input function \function{Matern}. Try calling it. The only differences are: you only call it with $x$ and $y$ meshes, not with the extra arguments \code{diff_degree, amp} and \code{scale}; and you can just call it with one mesh, in which case it'll assume that the other mesh is the same and return a square matrix. Oh yeah- if you call it with array arguments, it'll return a matrix which gives it evaluated over all the values in the mesh. This behavior is handy. Input functions have to behave that way, too.
+At this stage, the covariance function exposes a very simple user interface. In fact, it behaves a lot like its input function \function{Matern}. \textbf{XXX HERE} The only differences are: you only call it with $x$ and $y$ meshes, not with the extra arguments \code{diff_degree, amp} and \code{scale}; and you can just call it with one mesh, in which case it'll assume that the other mesh is the same and return a square matrix. Oh yeah- if you call it with array arguments, it'll return a matrix which gives it evaluated over all the values in the mesh. This behavior is handy. Input functions have to behave that way, too.
 
 The last line plots the covariance as a filled contour plot evaluated on a mesh, which is shown in figure \ref{fig:cov}. You'll notice it looks like a band. The width of the covariance function band controls how tightly nearby evaluations of $f$ are coupled to each other. If there's a wide band, $f(x)$ and $f(y)$ will tend to have similar values when $x$ and $y$ are close to one another. If there's a narrower band, $f(x)$ and $f(y)$ won't be as tightly correlated. The height of the covariance function band controls the overall amplitude of $f$'s deviation from $M$. 
 

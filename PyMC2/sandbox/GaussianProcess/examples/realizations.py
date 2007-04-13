@@ -1,7 +1,8 @@
 # GaussianProcess/examples/realizations.py
 
 # Import the mean and covariance
-from meanAndCov import *
+from mean import *
+from cov import *
 
 # Generate realizations
 f_list=[]

@@ -1,6 +1,6 @@
 __docformat__='reStructuredText'
 from utils import msqrt, extend_children, check_type, round_array, extend_parents
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, all, any, array
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
