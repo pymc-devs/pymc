@@ -123,6 +123,7 @@ class Mean(ndarray):
         
         # Condition
         RF = self.cov_fun(x, self.obs_mesh, **self.cov_params)
+        
         M += (RF * self.Q_mean_under).view(ndarray).reshape(M.shape)
             
         return M.reshape(orig_shape)

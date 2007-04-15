@@ -179,7 +179,11 @@ class Realization(ndarray):
             # Iterative conditioning may be better for this, but it is probably not:
 
             RF = self.C(x,self.obs_mesh_sofar)
-                        
+            
+            # TODO: The local Q needs to be Cholesky factorized by Bach and Jordan's method each time a
+            # new observation comes in, unless you figure out something better. Actually, something better
+            # should be fairly easily available... but Bach and Jordan may be faster for big observation
+            # vectors.            
             C_now -= RF * solve(self.C_sofar, RF.T)
             M_now += asarray(RF * solve(self.C_sofar, self.dev_sofar)).ravel()
 
@@ -287,6 +291,8 @@ try:
             self.C = C
             
             def logp_fun(value, M, C):
+                # TODO: Catch the error, change it to a ZeroProbability. DON'T handle the error
+                # in the new R Q.I R.T function, you'll screw up the cache checking.
                 return GP_logp(value, M, C)
                 
             def random_fun(M, C):

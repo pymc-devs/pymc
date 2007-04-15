@@ -4,8 +4,11 @@ __docformat__='reStructuredText'
 
 from numpy import *
 from numpy.linalg import eigh, solve
-from GPutils import regularize_array
+from GPutils import regularize_array, robust_chol
 
+# TODO: Eliminate the eigenvalues and eigenvectors,
+# take the matrix square root using robust_chol.
+# Don't be afraid to let the log-determinant be -Inf.
 
 class Covariance(matrix):
     
@@ -161,6 +164,7 @@ class Covariance(matrix):
                 return C
                 
             RF = self.eval_fun(x, self.obs_mesh, **self.params)
+            # TODO: This solve should be done using the output from Bach and Jordan's method.
             C -= RF * solve(self.Q , RF.T)
             
             return C
@@ -183,6 +187,7 @@ class Covariance(matrix):
 
             # Condition
             RF = self.eval_fun(combo, self.obs_mesh, **self.params)
+            # TODO: This solve should be done using the output from Bach and Jordan's method.            
             C -= RF * solve(self.Q, RF.T)
             
             return C[:lenx,lenx:]

@@ -10,6 +10,7 @@ from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
 from pylab import fill, plot, clf, axis
+from futils import *
 
 try:
     from PyMC2 import ZeroProbability
@@ -19,8 +20,76 @@ except ImportError:
 
 half_log_2pi = .5 * log(2. * pi)
 
+# The following linear algebra routines are too dangerous for
+# general usage, but good for the relatively controlled
+# GP application.
+
+def robust_chol(C):
+    """
+    L=robust_chol(C)
+    
+    Attempts to compute the Cholesky factorization by normal means.
+    Upon failure, computes the Cholesky factorization by LU decomposition.
+    
+    L lower triangular, L.T * L = C
+    """
+    chol = C.copy()
+    info=dpotrf_wrap(chol)
+    if info>0:
+        chol = C.copy()
+        dgetrf_wrap(chol)
+    return chol
+    
+def fragile_chol(C):
+    """
+    L=fragile_chol(C)
+    
+    Attempts to compute the Cholesky factorization by normal means.
+    Upon failure, raises an error.
+    
+    L lower triangular, L.T * L = C    
+    """
+    chol = C.copy()
+    info=dpotrf_wrap(chol)
+    if info>0:
+        raise ZeroProbability
+        
+def LU(C):
+    """
+    L=LU(C)
+    
+    Cholesky factorizes a symmetric nonnegative-definite matrix using
+    the LU algorithm. Slower but more robust than the Cholesky algorithm.
+    
+    L lower triangular, L.T * L = C    
+    """
+    lu = C.copy()
+    info, ipiv = dgetrf_wrap(lu)
+    return lu
+    
+def trisolve(L, b):
+    """
+    x = trisolve(L, b)
+    
+    Solves C x = b, where C = L.T * L. Much more efficient than algorithms
+    not based on the Cholesky factorization.
+    
+    Raises a LinAlgError if L is singular.
+    """
+    # TODO: In addition to trisolve, make an R Q.I R.T function in Fortran.
+    b_copy = b.copy()
+    info = dpotrs_wrap(L, b)
+    if info<0:
+        raise LinAlgError
 
 def enlarge_covariance(base, offdiag, diag):
+    """
+    C = enlarge_covariance(base, offdiag, diag):
+
+        [base  offdiag.T]
+    C = [               ]
+        [offdiag    diag]
+    """
     old = base.shape[0]
     new = diag.shape[0]
     
@@ -74,6 +143,11 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     contributions from the forbidden eigendirections, 
     you won't see this.
     """
+    # TODO: This solve should be done using trisolve.
+    # Check the determinant of C ahead of time,
+    # and just puke if it's singular. You don't need
+    # to be responsible for changing base measures.
+    
     if C.base_mesh is None:
         return 0.
         
@@ -92,7 +166,7 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
     if (dot_sq / scaled_evals > eff_inf).any():
         raise ZeroProbability
     
-    logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval) 
+    logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval)
             
     return logp
 
@@ -198,6 +272,8 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
                 RF = RF * lintrans
             
             tempC = C.view(matrix)
+            
+            #TODO: C should be Choleskified using Bach and Jordan's method.
             tempC -= RF * solve(Q, RF.T)        
         
         except LinAlgError:
@@ -240,6 +316,10 @@ def observe_mean_from_cov(M,C,obs_vals):
     mean_fun = M.eval_fun
     
     mean_under = mean_fun(obs_mesh, **mean_params)
+    
+    #TODO: This solve should be computed using the output of Bach and Jordan's method.
+    # This matrix has a name, it's the regression matrix or something.
+    # Call it that.
     Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))
     
     if M.base_mesh is not None:

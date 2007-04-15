@@ -31,8 +31,7 @@ if __name__ == '__main__':
     # Plot a slice of the covariance function
     subplot(1,2,2)
 
-    C_slice = asarray(C_matrix[:,round(.5*len(x))]).ravel()
-    plot(x,C_slice,'k-')
+    plot(x,C(x,0),'k-')
 
     xlabel('x')
     ylabel('C(x,0)')

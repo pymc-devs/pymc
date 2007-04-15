@@ -1,62 +1,50 @@
-import Realization
-reload(Realization)
-from Realization import *
-
-import GPutils
-reload(GPutils)
-from GPutils import observe, plot_envelope
-
-from cov_funs import *
+from GaussianProcess import *
+from GaussianProcess.cov_funs import matern
 from numpy import *
-from pylab import *
+from numpy.linalg import eigh, cholesky
+from scipy.linalg import lu
+from GP_fortran_utils import *
 
-x=arange(-1.,1.,.02)
-# obs_mesh = array([-1.,.5])
-obs_mesh = array([-.8, 0., .8])
-obs_taus =  1000000.*ones(len(obs_mesh), dtype=float)
 
-def linfun(x, m, b):
-    return m * x + b
+# x will be the base mesh
+x = arange(-1.,1.,.5)
 
-C = Covariance(   eval_fun = NormalizedMatern,
-                    base_mesh = x,
-                    nu = .49,
-                    amp = 1.,
-                    scale = .3)
 
-M = Mean( eval_fun = linfun,
-            C = C,
-            m = 1.,
-            b = 0.)
-            
-observe(    C=C,
-            obs_mesh = obs_mesh,
-            M=M,
-            obs_taus = obs_taus,
-            # lintrans = array([3.]),
-            obs_vals = zeros(len(obs_mesh)))
+# Create a Covariance object with x as the base mesh
+C = Covariance( eval_fun = matern, 
+                base_mesh = x,
+                diff_degree = 1.4, amp = .4, scale = .5)
 
-f=[]
-for i in range(3):
-    f.append(Realization(M,C))
+C_mat = C.view(matrix)
 
-# print C ** 2
+def fast_chol(C):
+    chol = C.copy()
+    info=dpotrf_wrap(chol)
+    if info>0:
+        chol = C.copy()
+        dgetrf_wrap(chol)
+    return chol
 
-plot_envelope(M,C)
-for i in range(3):
-    plot(x,f[i])
+def fast_LU(C):
+    lu = C.copy()
+    info, ipiv = dgetrf_wrap(lu)
+    return lu
     
-show()
+def trisolve(chol_factor, b):
+    b_copy = b.copy()
+    info = dpotrs_wrap(chol_factor, b)
+    if info<0:
+        raise ValueError
 
-
-
-print C(array([.5,.6,.7,.9]), array([.2,.3,.9]))
-print C(array([.5,.6,.7,.9]))
-print M(array([.5,.6,.7,.9]))
-
-
-# clf()            
-# M.plot()
-# C.plot()
-# plot(C.base_mesh, diag(C))
-# show()
+# for i in xrange(10):
+#     # val, vec = eigh(C_mat)
+#     # L = cholesky(C_mat)
+#     # L,D,U = lu(C_mat)
+#     # L = fast_chol(C_mat)
+#     # L = fast_LU(C_mat)
+    
+    
+# dx = .01, 100 iter:
+# eigh: 8.6s
+# cholesky: 1.45s
+# lu: 1.38s
