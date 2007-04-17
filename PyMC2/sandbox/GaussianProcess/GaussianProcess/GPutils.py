@@ -24,83 +24,120 @@ half_log_2pi = .5 * log(2. * pi)
 # general usage, but good for the relatively controlled
 # GP application.
 
+def downdate(chol_LHS, RF, chol_RHS):
+    """
+    Returns the Cholesky factor of:
+    chol_LHS.T * chol_LHS - RF * (chol_RHS.T * chol_RHS).I * RF.T
+    
+    in a way that's sensitive to the fact that chol_RHS may be low-rank.
+    
+    XXX Use linpack.dchex, if the manual ever comes.
+    """
+    return robust_chol(chol_LHS.T * chol_LHS - RF * (chol_RHS.T * chol_RHS).I * RF.T)
+    
+def enlarge_chol(diag_chol_old, offdiag, diag_new):
+    """
+    Returns the (robust) Cholesky factor of:
+    [diag_old  offdiag.T]
+    [offdiat    diag_new].
+    
+    XXX This will be the hardest one. Either use the 'obvious' 
+    formula, enlarge the array and use Bach and Jordan's 
+    algorithm, or possibly ask Michael Jordan if he has a 
+    better idea.
+    """
+    diag_old = diag_chol_old.T * diag_chol_old
+    N_old = diag_old.shape[0]
+    N=N_old + diag_new.shape[0]
+    new_mat = asmatrix(zeros((N,N),dtype=float))
+    
+    new_mat[:N_old,:N_old] = diag_old
+    new_mat[:N_old,N_old:] = offdiag.T
+    new_mat[N_old:,:N_old] = offdiag
+    new_mat[N_old:,N_old:] = diag_new
+    
+    return robust_chol(new_mat)
+
 def robust_chol(C):
     """
-    L=robust_chol(C)
+    U=robust_chol(C)
     
-    Attempts to compute the Cholesky factorization by normal means.
-    Upon failure, computes the Cholesky factorization by LU decomposition.
+    Computes a Cholesky factorization of C. Works for matrices that are
+    positive-semidefinite as well as positive-definite, though in these
+    cases the Cholesky factorization isn't unique.
     
-    L lower triangular, L.T * L = C
+    U will be upper triangular.
+    
     """
     chol = C.copy()
-    info=dpotrf_wrap(chol)
-    if info>0:
-        chol = C.copy()
-        dgetrf_wrap(chol)
-    return chol
+    good_rows, N_good_rows = robust_dpotf2(chol)
+    good_rows = good_rows[:N_good_rows]
+    return good_rows, chol[good_rows,]
     
 def fragile_chol(C):
     """
-    L=fragile_chol(C)
+    U=fragile_chol(C)
     
     Attempts to compute the Cholesky factorization by normal means.
-    Upon failure, raises an error.
+    If C is not positive definite, a LinAlgError will be raised.
     
-    L lower triangular, L.T * L = C    
+    U will be upper triangular.
     """
     chol = C.copy()
     info=dpotrf_wrap(chol)
     if info>0:
-        raise ZeroProbability
+        raise LinAlgError
+    return chol
         
-def LU(C):
+    
+def solve_from_chol(U, b, uplo='U'):
     """
-    L=LU(C)
+    x = solve_from_chol(U, b, uplo)
     
-    Cholesky factorizes a symmetric nonnegative-definite matrix using
-    the LU algorithm. Slower but more robust than the Cholesky algorithm.
+    Solves C x = b, where C = U.T * U if uplo='U' or C=L * L.T if
+    uplo='L'. Much more efficient than algorithms not based on the 
+    Cholesky factorization.
     
-    L lower triangular, L.T * L = C    
+    Raises a LinAlgError if U is singular.
     """
-    lu = C.copy()
-    info, ipiv = dgetrf_wrap(lu)
-    return lu
-    
-def trisolve(L, b):
-    """
-    x = trisolve(L, b)
-    
-    Solves C x = b, where C = L.T * L. Much more efficient than algorithms
-    not based on the Cholesky factorization.
-    
-    Raises a LinAlgError if L is singular.
-    """
-    # TODO: In addition to trisolve, make an R Q.I R.T function in Fortran.
+
     b_copy = b.copy()
-    info = dpotrs_wrap(L, b)
+    info = dpotrs_wrap(U, b_copy, uplo)
     if info<0:
         raise LinAlgError
-
-def enlarge_covariance(base, offdiag, diag):
+    return b_copy
+        
+def trisolve(U,b,uplo='U'):
     """
-    C = enlarge_covariance(base, offdiag, diag):
-
-        [base  offdiag.T]
-    C = [               ]
-        [offdiag    diag]
-    """
-    old = base.shape[0]
-    new = diag.shape[0]
+    x = trisolve(U,b, uplo='U')
     
-    new_mat = asmatrix(zeros((old+new,old+new),dtype=float))
-    new_mat[:old,:old] = base
-    new_mat[:old,old:] = offdiag.T
-    new_mat[old:,:old] = offdiag
-    new_mat[old:,old:] = diag
+    Solves U x = b, where U is upper triangular if uplo='U'
+    or lower triangular if uplo = 'L'.
+    
+    If a degenerate column is found, an error is raised.
+    """
+    x = b.copy()
+    dtrsm_wrap(U,x,uplo)
+    return x
+    
+def gentle_trisolve(U, b, good_rows, uplo='U',):
+    """
+    x=gentle_trisolve(U, b)
+    
+    Kind of solves U x = b, where U is upper triangular.
 
-    return new_mat
+    If a degenerate column is found (a zero pivot), the corresponding 
+    row of b is simply ignored.
+    
+    This is good for prediction/regression, BAD for log-probability
+    computation.
+    """
+    x = b[good_rows].copy()
+    dtrsm_wrap(U[:,good_rows],x,uplo)
+    return x
 
+    
+    
 
 def regularize_array(A):
     """
@@ -153,22 +190,13 @@ def GP_logp(f,M,C,eff_zero = 1e-15):
         
     dev = (f-M).ravel()
     logp = 0.
+
+    try:
+        devvec = trisolve(C.S, dev)
+    except LinAlgError:
+        return -Inf
     
-    max_eval = max(C.Eval)
-    scaled_evals = C.Eval / max_eval
-    eff_inf = 1. / eff_zero
-    
-    dot = asarray((C.Evec.T * dev)).ravel()
-    dot_sq = dot ** 2
-    if ((scaled_evals == 0. ) * ( dot_sq > 0.)).any():
-        raise ZeroProbability
-        
-    if (dot_sq / scaled_evals > eff_inf).any():
-        raise ZeroProbability
-    
-    logp = -.5 * sum(half_log_2pi * C.logEval + dot_sq / C.Eval)
-            
-    return logp
+    return -.5 * (C.logD + dot(devvec, devvec))
 
 
 def plot_envelope(M,C,mesh=None):
@@ -260,6 +288,8 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
             obs_taus = obs_taus * ones(obs_len, dtype=float)
     
     Q = cov_fun(obs_mesh, obs_mesh, **cov_params)
+    Q_chol = robust_chol(Q)
+
     if have_obs_taus:
         Q += diag(1./obs_taus)
             
@@ -271,10 +301,7 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
             if lintrans is not None:
                 RF = RF * lintrans
             
-            tempC = C.view(matrix)
-            
-            #TODO: C should be Choleskified using Bach and Jordan's method.
-            tempC -= RF * solve(Q, RF.T)        
+            C.S = downdate(C.S,RF,Q_chol)  
         
         except LinAlgError:
             raise LinAlgError, 'Unable to invert covariance matrix. Suggest reducing number of observation points or increasing obs_Vs.'
@@ -286,10 +313,8 @@ def observe_cov(C, obs_mesh, obs_taus = None, lintrans = None):
     C.obs_taus = obs_taus
     C.lintrans = lintrans
     C.obs_len = obs_len
-    C.Q = Q
+    C.Q_chol = Q_chol
     C.RF = RF
-
-    C.update_sig_and_e()
 
 def observe_mean_from_cov(M,C,obs_vals):
     """
@@ -298,7 +323,7 @@ def observe_mean_from_cov(M,C,obs_vals):
     
     RF will be passed to C by observe().
     """
-    Q = C.Q
+    Q_chol = C.Q_chol
     RF = C.RF
     
     obs_vals = obs_vals.ravel()
@@ -320,11 +345,12 @@ def observe_mean_from_cov(M,C,obs_vals):
     #TODO: This solve should be computed using the output of Bach and Jordan's method.
     # This matrix has a name, it's the regression matrix or something.
     # Call it that.
-    Q_mean_under = solve(Q,(asmatrix(obs_vals).T - mean_under))
+    Q_I_dev=gentle_trisolve(Q_chol, (asmatrix(obs_vals).T - mean_under))
+    reg_part = gentle_trisolve(Q_chol, Q_I_dev)
     
     if M.base_mesh is not None:
         tempM = M.view(ndarray)
-        tempM += (RF * Q_mean_under).view(ndarray).reshape(M.shape)
+        tempM += (RF * reg_part).view(ndarray).reshape(M.shape)
 
     M.observed = True
     M.obs_mesh = obs_mesh
@@ -332,4 +358,4 @@ def observe_mean_from_cov(M,C,obs_vals):
     M.lintrans = lintrans
     M.obs_vals = obs_vals
     M.obs_len = obs_len
-    M.Q_mean_under = Q_mean_under
+    M.reg_part = reg_part

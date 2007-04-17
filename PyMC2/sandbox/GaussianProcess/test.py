@@ -3,48 +3,23 @@ from GaussianProcess.cov_funs import matern
 from numpy import *
 from numpy.linalg import eigh, cholesky
 from scipy.linalg import lu
-from GP_fortran_utils import *
 
 
 # x will be the base mesh
-x = arange(-1.,1.,.5)
+x = ones(3,dtype=float)
 
 
 # Create a Covariance object with x as the base mesh
 C = Covariance( eval_fun = matern, 
-                base_mesh = x,
                 diff_degree = 1.4, amp = .4, scale = .5)
 
-C_mat = C.view(matrix)
+B=asmatrix(ones((3,3),dtype=float))
+B[2,2] = 1.5
+# B[1,1]=1.5
 
-def fast_chol(C):
-    chol = C.copy()
-    info=dpotrf_wrap(chol)
-    if info>0:
-        chol = C.copy()
-        dgetrf_wrap(chol)
-    return chol
+# B=C([1,2,3])
 
-def fast_LU(C):
-    lu = C.copy()
-    info, ipiv = dgetrf_wrap(lu)
-    return lu
-    
-def trisolve(chol_factor, b):
-    b_copy = b.copy()
-    info = dpotrs_wrap(chol_factor, b)
-    if info<0:
-        raise ValueError
-
-# for i in xrange(10):
-#     # val, vec = eigh(C_mat)
-#     # L = cholesky(C_mat)
-#     # L,D,U = lu(C_mat)
-#     # L = fast_chol(C_mat)
-#     # L = fast_LU(C_mat)
-    
-    
-# dx = .01, 100 iter:
-# eigh: 8.6s
-# cholesky: 1.45s
-# lu: 1.38s
+good_rows, U=robust_chol(B)
+b= gentle_trisolve(U,x,good_rows = good_rows)
+print U.T*U
+print U[:,good_rows]*b

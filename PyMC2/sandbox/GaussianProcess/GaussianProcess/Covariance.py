@@ -4,11 +4,7 @@ __docformat__='reStructuredText'
 
 from numpy import *
 from numpy.linalg import eigh, solve
-from GPutils import regularize_array, robust_chol
-
-# TODO: Eliminate the eigenvalues and eigenvectors,
-# take the matrix square root using robust_chol.
-# Don't be afraid to let the log-determinant be -Inf.
+from GPutils import regularize_array, fragile_chol, gentle_trisolve
 
 class Covariance(matrix):
     
@@ -34,9 +30,7 @@ class Covariance(matrix):
     - params: Parameters to be passed to eval_fun.
     
     :Attributes:
-    - S: Matrix square root.
-    - Eval: Eigenvalues
-    - Evec: Eigenvectors
+    - S: Cholesky factor.
     - logD: log-determinant
     
     :SeeAlso:
@@ -52,13 +46,11 @@ class Covariance(matrix):
     obs_mesh = None
     base_mesh = None
     obs_taus = None 
-    Q = None   
+    Q_chol = None   
     obs_len = None
     __matrix__ = None
-    Eval = None
-    Evec = None
     S = None
-    logEval = None
+    logD = None
     
     # This is just a hacky drop-in slot for storage of information from
     # conditioning, for faster conditioning of M.
@@ -80,10 +72,18 @@ class Covariance(matrix):
         
             # Call the covariance evaluation function
             data=eval_fun(base_reshape, base_reshape, **params)
+            
+            try:
+                S=fragile_chol(data)
+                logD = 2. * sum(log(diag(S)))
+            except LinAlgError:
+                raise LinAlgError, self.__repr__() + ': Matrix aspect is not positive definite. Suggest thinning base mesh.'
         else:
             data = array([])
             base_reshape = None
             ndim = None
+            S=None
+            logD=None
 
         C = data.view(subtype)    
             
@@ -93,30 +93,11 @@ class Covariance(matrix):
         C.eval_fun = eval_fun
         C.params = params
         C.__matrix__ = data
-        C.update_sig_and_e()
+        C.S = S
+        C.logD = logD
         
         # Return the data
         return C
-    
-    def update_sig_and_e(self):
-        if self.base_mesh is not None:
-            val, vec = eigh(self)
-            val = val.ravel()
-            self.Eval = val
-            self.Evec = vec
-            sig = asmatrix(zeros(vec.shape))
-            for i in range(len(val)):
-                if val[i]<0.:
-                    val[i]=0.
-                sig[:,i] = vec[:,i]*sqrt(val[i])
-            self.S = sig.T
-        
-            self.logEval = log(val)
-        else:
-            self.Eval = array([])
-            self.Evec = array([])
-            self.S = array([])
-            self.logEval = array([])
     
     def __copy__(self, order='C'):
         C = self.view(matrix).copy().view(Covariance)
@@ -127,16 +108,14 @@ class Covariance(matrix):
         C.params = self.params
         C.__matrix__ = self.__matrix__
         
-        C.Eval = self.Eval
-        C.Evec = self.Evec
         C.S = self.S
-        C.logEval = self.logEval
+        C.logD = self.logD
         
         C.observed = self.observed
         C.obs_mesh = self.obs_mesh
         C.base_mesh = self.base_mesh
         C.obs_taus = self.obs_taus
-        C.Q = self.Q
+        C.Q_chol = self.Q_chol
         C.obs_len = self.obs_len
         C.RF = self.RF
         
@@ -164,8 +143,10 @@ class Covariance(matrix):
                 return C
                 
             RF = self.eval_fun(x, self.obs_mesh, **self.params)
-            # TODO: This solve should be done using the output from Bach and Jordan's method.
-            C -= RF * solve(self.Q , RF.T)
+            # This multiply doesn't need any fancy downdating, you're just returning C.
+            # downdate_chol = gentle_trisolve(self.Q_chol, RF.T)            
+            # C -= downdate_chol.T * downdate_chol
+            C -= RF * solve(self.Q_chol.T * self.Q_chol, RF.T)            
             
             return C
 
@@ -186,9 +167,12 @@ class Covariance(matrix):
                 return C[:lenx,lenx:]
 
             # Condition
-            RF = self.eval_fun(combo, self.obs_mesh, **self.params)
-            # TODO: This solve should be done using the output from Bach and Jordan's method.            
-            C -= RF * solve(self.Q, RF.T)
+            # This multiply doesn't need any fancy downdating, you're just returning C.
+            RF = self.eval_fun(combo, self.obs_mesh, **self.params)            
+            downdate_chol = gentle_trisolve(self.Q_chol, RF.T)            
+            # print downdate_chol.T * downdate_chol - RF * solve(self.Q_chol.T * self.Q_chol, RF.T)
+            # C -= downdate_chol.T * downdate_chol
+            C -= RF * solve(self.Q_chol.T * self.Q_chol, RF.T)
             
             return C[:lenx,lenx:]
 

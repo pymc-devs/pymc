@@ -29,7 +29,7 @@ class Mean(ndarray):
     base_mesh = None
     obs_vals = None
     obs_taus = None
-    Q_mean_under = None
+    reg_part = None
     obs_len = None
     observed = False
     
@@ -93,7 +93,7 @@ class Mean(ndarray):
         M.base_mesh = self.base_mesh
         M.obs_vals = self.obs_vals
         M.obs_taus = self.obs_taus
-        M.Q_mean_under = self.Q_mean_under
+        M.reg_part = self.reg_part
         M.obs_len = self.obs_len
         M.observed = self.observed
         
@@ -124,7 +124,7 @@ class Mean(ndarray):
         # Condition
         RF = self.cov_fun(x, self.obs_mesh, **self.cov_params)
         
-        M += (RF * self.Q_mean_under).view(ndarray).reshape(M.shape)
+        M += (RF * self.reg_part).view(ndarray).reshape(M.shape)
             
         return M.reshape(orig_shape)
         

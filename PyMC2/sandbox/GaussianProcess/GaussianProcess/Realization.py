@@ -19,7 +19,7 @@ from numpy.random import normal
 from numpy.linalg import cholesky, eigh, solve
 from Covariance import Covariance
 from Mean import Mean
-from GPutils import regularize_array, enlarge_covariance
+from GPutils import regularize_array, enlarge_chol, robust_chol, downdate, gentle_trisolve, fragile_chol
 
 class Realization(ndarray):
     
@@ -53,7 +53,7 @@ class Realization(ndarray):
     obs_mesh_sofar = None
     dev_sofar = None
     M_sofar = None
-    C_sofar = None
+    chol_sofar = None
     
     __array_priority__ = 0.
 
@@ -74,7 +74,9 @@ class Realization(ndarray):
             length = base_reshape.shape[0]
             obs_mesh_sofar = base_reshape
             M_sofar = M.ravel()
-            C_sofar = C
+            
+            chol_sofar = C.S
+            
             N_obs_sofar = length
             
             if init_base_array is not None:
@@ -88,19 +90,19 @@ class Realization(ndarray):
             else:
                 # Otherwise, draw a value over the base array.
 
-                q=reshape(asarray(C.S.T * normal(size = length)), base_mesh.shape)
+                q=reshape(asarray(normal(size = length) * C.S), base_mesh.shape)
                 f = (M+q).view(subtype)
         else:
             f = array([]).view(subtype)
             base_reshape = array([])
             obs_mesh_sofar = None
             M_sofar = None
-            C_sofar = None
+            chol_sofar = None
             N_obs_sofar = 0
         
         f.obs_mesh_sofar = obs_mesh_sofar
         f.M_sofar = M_sofar
-        f.C_sofar = C_sofar
+        f.chol_sofar = chol_sofar
         f.N_obs_sofar = N_obs_sofar
         f.base_mesh = base_mesh
         f.cov_params = cov_params
@@ -119,23 +121,23 @@ class Realization(ndarray):
 
         f = self.view(ndarray).copy().view(Realization)
 
-        cov_fun = self.cov_fun
-        mean_fun = self.mean_fun
+        f.cov_fun = self.cov_fun
+        f.mean_fun = self.mean_fun
 
-        cov_params = self.cov_params
-        mean_params = self.mean_params
-        base_mesh = self.base_mesh
-        base_reshape = self.base_reshape
+        f.cov_params = self.cov_params
+        f.mean_params = self.mean_params
+        f.base_mesh = self.base_mesh
+        f.base_reshape = self.base_reshape
 
-        ndim = self.ndim
-        C = self.C
-        M = self.M
+        f.ndim = self.ndim
+        f.C = self.C
+        f.M = self.M
 
-        N_obs_sofar = self.N_obs_sofar
-        obs_mesh_sofar = self.obs_mesh_sofar
-        dev_sofar = self.dev_sofar
-        M_sofar = self.M_sofar
-        C_sofar = self.C_sofar
+        f.N_obs_sofar = self.N_obs_sofar
+        f.obs_mesh_sofar = self.obs_mesh_sofar
+        f.dev_sofar = self.dev_sofar
+        f.M_sofar = self.M_sofar
+        f.chol_sofar = self.chol_sofar
 
         return f
 
@@ -159,18 +161,17 @@ class Realization(ndarray):
         x = x.reshape(-1,self.ndim)
         lenx = x.shape[0]
         
-        M_now = self.M(x).ravel()
-        C_now = self.C(x)
-        
-        M_pure = M_now.copy()
-        C_pure = C_now.copy()
+        M_pure = self.M(x).ravel()
+        C_pure = self.C(x)
+
+        chol_now = fragile_chol(C_pure)
+        M_now = M_pure.copy()
         
         # print self.N_obs_sofar
         # First observation:
         if self.N_obs_sofar == 0:
-            
             self.M_sofar = M_now
-            self.C_sofar = C_now
+            self.chol_sofar = chol_now
             self.obs_mesh_sofar = x
 
         # Subsequent observations:    
@@ -183,29 +184,20 @@ class Realization(ndarray):
             # TODO: The local Q needs to be Cholesky factorized by Bach and Jordan's method each time a
             # new observation comes in, unless you figure out something better. Actually, something better
             # should be fairly easily available... but Bach and Jordan may be faster for big observation
-            # vectors.            
-            C_now -= RF * solve(self.C_sofar, RF.T)
-            M_now += asarray(RF * solve(self.C_sofar, self.dev_sofar)).ravel()
+            # vectors.
+            downdate(chol_now, RF, self.chol_sofar)
+
+            term_1=gentle_trisolve(self.chol_sofar.T, RF.T)
+            term_2=gentle_trisolve(self.chol_sofar, self.dev_sofar)
+
+            M_now += asarray(term_1.T * term_2.T).ravel()
 
             self.obs_mesh_sofar = concatenate((self.obs_mesh_sofar, x), axis=0)
             self.M_sofar = concatenate((self.M_sofar, M_pure), axis=0)
-            self.C_sofar = enlarge_covariance(self.C_sofar, RF, C_pure)
+            self.chol_sofar = enlarge_chol(self.chol_sofar, RF, C_pure)
             
         
-        try:
-            sig = cholesky(C_now)
-
-        except:
-            val, vec = eigh(C_now)
-            sig = asmatrix(zeros(vec.shape))
-
-            for i in range(len(val)):
-                if val[i]<0.:
-                    val[i]=0.
-                sig[:,i] = vec[:,i]*sqrt(val[i])
-
-        f = M_now + asarray(sig * normal(size=lenx)).ravel()
-
+        f = M_now + asarray(normal(size=lenx) * chol_now).ravel()
 
         
         if self.N_obs_sofar > 0:

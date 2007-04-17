@@ -6,7 +6,7 @@ except ImportError:
 from numpy.distutils.core import setup, Extension
 
 fcov = Extension(name='fcov',sources=['GaussianProcess/cov_funs/fcov.f'])
-futils = Extension(name='futils',sources=['GaussianProcess/cov_funs/futils.f'])
+futils = Extension(name='futils',sources=['GaussianProcess/futils.f'])
 
 distrib = setup(
 name="GaussianProcess",
