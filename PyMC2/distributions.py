@@ -25,8 +25,8 @@ from numpy import Inf, random, sqrt, log, size, tan, pi
 
 # This needs to be here so that the BLAS get properly linked...
 # If we figure out a way to take it out, let's do it.
-import flib_blas
-from flib_blas import *
+#import flib_blas
+#from flib_blas import *
 
 
 # Import utility functions
@@ -1110,7 +1110,7 @@ def multivariate_normal_like(x, mu, tau):
     else:
         # This version is faster for large matrices, but oddly enough
         # it's slower for small matrices. Stupid BLAS.
-        return flib_blas.blas_mvnorm(x,mu,tau)
+        return flib.blas_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
 def rmultivariate_normal_cov(mu, C, size=1):
@@ -1148,7 +1148,7 @@ def multivariate_normal_cov_like(x, mu, C):
     #     constrain(np.diagonal(tau), lower=0)
     # except ZeroProbability:
     #     return -Inf
-    return flib_blas.cov_mvnorm(x,mu,tau)        
+    return flib.cov_mvnorm(x,mu,tau)        
 
 # Negative binomial----------------------------------------
 @randomwrap

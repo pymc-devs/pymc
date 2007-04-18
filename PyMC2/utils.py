@@ -14,7 +14,7 @@ except ImportError:
 from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
-from numpy.linalg import cholesky, eigh
+from numpy.linalg import cholesky, eigh, det, inv
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
@@ -373,4 +373,13 @@ def multinomial(x,n,p):
     x = np.atleast_2d(x)
     return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
 
+def multivariate_normal(x, mu, C):
+    N = len(x)
+    x = asmatrix(x)
+    mu = asmatrix(mu)
+    C = asmatrix(C)
+    
+    A = (2*pi)**(N/2.) * sqrt(det(C))
+    z = (x-mu)
+    return (A * exp(-.5 * z * inv(C) * z.T)).A[0][0]
 

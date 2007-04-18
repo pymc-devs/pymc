@@ -8,19 +8,6 @@ For each distribution:
 5. Compare histogram with likelihood.
 6. Assert if they fit or not.
 
-David- constrain() in flib is giving me bus errors, try for instance
-uncommenting the constrain lines in poisson().
--A
-Well, you're not calling it correctly, and g77 doesn't understand INFINITY.
-At first, I wanted to constrain everything from fortran, but g77 doesn't
-really handle exceptions. I finally wrapped the fortran constrain and called
-it from python. We'll need a brainstorm on this. One idea is to use f2py for this.
-There is some checking that can be done using the check argument. Maybe we can
-insert C code to do a loop on each argument and check the constraints.
-With pure fortran, the only way I see out of it is to return a very large
-negative number to approximate -inf. For the time being, let's leave the
-constraining to python.
--D
 """
 
 # TODO: Improve the assertion of consistency.
@@ -34,7 +21,7 @@ import unittest
 from numpy.testing import *
 from PyMC2 import flib, utils
 import numpy as np
-from numpy import exp, array
+from numpy import exp, array, cov
 import os
 PLOT=True
 if PLOT is True:
@@ -448,7 +435,26 @@ class test_multinomial(NumpyTestCase):
 
     def check_vectorization(self):
         assert_equal(0,1)
+
+class test_multivariate_hypergeometric(NumpyTestCase):
+    pass
         
+class test_multivariate_normal(NumpyTestCase):
+    def check_random(self):
+        mu = [3,4]
+        C = [[1, .5],[.5,1]]
+        r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
+        assert_array_almost_equal(mu, r.mean(0))
+        assert_array_almost_equal(C, cov(r))
+    
+    def check_likelihood(self):
+        mu = [3,4]
+        C = [[1, .5],[.5,1]]
+        r = rmultivariate_normal(mu, np.linalg.inv(C), 2)
+        a = multivariate_normal_like(r, mu, C)
+        b = prod([utils.multivariate_normal(x, mu, C) for x in r])
+        assert_almost_equal(exp(a), b)
+    
 class test_normal(NumpyTestCase):
     def check_consistency(self):
         params=dict(mu=3, tau = .5)
@@ -501,7 +507,8 @@ class test_weibull(NumpyTestCase):
         b = flib.weibull([1,2], [2,2], [3,3])
         assert_equal(a,b)
 
-
+class test_wishart(NumpyTestCase):
+    pass
 
 
 """

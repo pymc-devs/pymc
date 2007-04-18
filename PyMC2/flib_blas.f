@@ -145,7 +145,7 @@ cf2py integer intent(hide),depend(X) :: k=len(X)
 ! DSYMM(SIDE,UPLO,M,N,ALPHA,A,LDA,B,LDB,BETA,C,LDC) alpha*A*B + beta*C when side='l'
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization      
-      
+
       print *, 'Warning, vectorized Wisharts are untested'
 c determinants
       call dtrm(X,k,dx) 
@@ -195,32 +195,6 @@ c Get the trace and log-sqrt-determinants
         like = like - g
       enddo
 
-      return
-      END
-
-      SUBROUTINE gamfun(xx,gx)
-
-c Return the logarithm of the gamma function
-c Corresponds to scipy.special.gammaln
-
-cf2py double precision intent(in) :: xx
-cf2py double precision intent(out) :: gx
-
-      INTEGER i
-      DOUBLE PRECISION x,xx,ser,tmp,gx
-      DIMENSION coeff(6)
-      DATA coeff/76.18009173,-86.50532033,24.01409822,
-     +-1.231739516,0.00120858003,-0.00000536382/
-
-      x = xx
-      tmp = x + 5.5
-      tmp = tmp - (x+0.5) * dlog(tmp)
-      ser = 1.000000000190015
-      do i=1,6
-        x = x+1
-        ser = ser + coeff(i)/x
-      enddo
-      gx = -tmp + dlog(2.50662827465*ser/xx)
       return
       END
 

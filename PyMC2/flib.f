@@ -897,7 +897,7 @@ cf2py double precision intent(out) :: like
           like = -infinity
           RETURN
         endif
-        if (x(i) .LT. 0) then
+        if (x(i) .LT. 1) then
           like = -infinity
           RETURN
         endif            
