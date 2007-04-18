@@ -23,10 +23,12 @@ import numpy as np
 from PyMCBase import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi
 
-# This needs to be here so that the BLAS get properly linked...
-# If we figure out a way to take it out, let's do it.
-#import flib_blas
-#from flib_blas import *
+try:
+    import flib_blas
+    from flib_blas import *
+    flib_blas_OK = True
+except:
+    flib_blas_OK = False
 
 
 # Import utility functions
@@ -1105,7 +1107,7 @@ def multivariate_normal_like(x, mu, tau):
     #     constrain(np.diagonal(tau), lower=0)
     # except ZeroProbability:
     #     return -Inf
-    if tau.shape[0] < 50:
+    if tau.shape[0] < 50 or not flib_blas_OK:
         return flib.vec_mvnorm(x, mu, tau)
     else:
         # This version is faster for large matrices, but oddly enough
