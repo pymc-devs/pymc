@@ -610,7 +610,8 @@ class Sampler(Model):
         for sm in self.sampling_methods:
             smstate = {}
             for s in sm._state:
-                smstate[s] = getattr(sm, s)
+                if hasattr(sm, s):
+                    smstate[s] = getattr(sm, s)
             state['sampling_methods'][sm._id] = smstate.copy()
 
         return state
