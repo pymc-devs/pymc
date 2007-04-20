@@ -342,8 +342,7 @@ class Model(object):
         Records the value of all tracing pymc_objects.
         """
         if self._cur_trace_index < self.max_trace_length:
-            for pymc_object in self._pymc_objects_to_tally:
-                pymc_object.trace.tally(self._cur_trace_index)
+            self.db.tally(self._cur_trace_index)
 
         self._cur_trace_index += 1
 
@@ -575,7 +574,7 @@ class Sampler(Model):
           c -- continue
           q -- quit
         """
-        print self.listen.__doc__, '\n'
+        print self.interactive_prompt.__doc__, '\n'
         while True:
             try:
                 sys.stdout.write('PyMC> ')
@@ -593,7 +592,7 @@ class Sampler(Model):
                     break
                 else:
                     print 'Unknown command'
-                    print self.listen.__doc__
+                    print self.interactive_prompt.__doc__
             except KeyboardInterrupt:
                 print 'Exiting interactive prompt...'
                 break

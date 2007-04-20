@@ -31,8 +31,7 @@ class test_pickle(NumpyTestCase):
         M.db.close()
         
     def check_load(self):
-        file = open('DisasterModel.pickle', 'r')
-        db = database.pickle.load(file)
+        db = database.pickle.load('DisasterModel.pickle')
         S = Sampler(DisasterModel, db)
         S.sample(200,0,1)
         assert_equal(len(S.e.trace._trace),2)
@@ -67,6 +66,13 @@ class test_sqlite(NumpyTestCase):
 ##    def check(self):
 ##        M = Sampler(DisasterModel, db='hdf5')
 ##        M.sample(300,100,2, verbose=False)
+    
+class test_hdf5_tables(NumpyTestCase):
+    def check(self):
+        S = Sampler(DisasterModel, db='hdf5_tables')
+        S.sample(300,100,2, verbose=False)
+        assert_array_equal(S.e.trace().shape, (150,))
+        S.db.close()
     
 if __name__ == '__main__':
     NumpyTest().run()

@@ -37,7 +37,7 @@ __author__ = ["David Huard <david.huard@gmail.com>",
                 "Chris Fonnesbeck"]
 __version__ = "2.0.beta"
 
-__modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5"]
+__modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5", "hdf5_tables"]
 
 
 available_modules = []

@@ -69,6 +69,11 @@ class Database(object):
         for o in self.model._pymc_objects_to_tally:
             o.trace._initialize(length)
         
+    def tally(self, index):
+        """Dummy method. Subclass if necessary."""
+        for o in self.model._pymc_objects_to_tally:
+            o.trace.tally(index)
+            
     def connect(self, sampler):
         """Link the Database to the Sampler instance. 
         
