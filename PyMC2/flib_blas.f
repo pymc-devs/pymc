@@ -1,10 +1,62 @@
+      SUBROUTINE chol_mvnorm(x, mu, sig, n, like, info)
+
+cf2py double precision dimension(n), intent(copy) :: x
+cf2py double precision dimension(n), intent(copy) :: mu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py double precision dimension(n,n), intent(copy) :: sig
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide) :: info
+
+      DOUBLE PRECISION sig(n,n), x(n), mu(n), like
+      INTEGER n, info
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION twopi_N, log_detC
+
+      EXTERNAL DPOTRS
+! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
+      EXTERNAL DAXPY
+! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
+      EXTERNAL DCOPY
+! DCOPY(N,DX,INCX,DY,INCY) copies x to y
+      EXTERNAL DDOT
+      
+!     x <- (x-mu)      
+      call DAXPY(n, -1.0D0, mu, 1, x, 1)
+      
+!       mu <- x
+      call DCOPY(n,x,1,mu,1)
+      
+!     x <- sig ^-1 * x
+      call DPOTRS('L',n,1,sig,n,x,n,info)
+      
+!     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
+      like = -0.5D0 * DDOT(n, x, 1, mu, 1)
+!       print *, like
+      
+      twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
+!       print *, twopi_N
+      
+      log_detC = 0.0D0
+      do i=1,n
+        log_detC = log_detC + log(sig(i,i))
+      enddo
+!       print *, log_detC
+      
+      like = like - twopi_N - log_detC
+      
+      return
+      END
+
+
       SUBROUTINE cov_mvnorm(x, mu, C, n, like, info)
 
 cf2py double precision dimension(n), intent(copy) :: x
 cf2py double precision dimension(n), intent(copy) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(copy) :: C
-cf2py integer intent(hide), depend(C) :: n = shape(C,0)
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide) :: info
 
@@ -69,7 +121,6 @@ cf2py double precision dimension(n), intent(copy) :: x
 cf2py double precision dimension(n), intent(copy) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(in) :: tau
-cf2py integer intent(hide), depend(tau) :: n = shape(tau,0)
 cf2py double precision intent(out) :: like
 
       DOUBLE PRECISION tau(n,n), x(n), mu(n), like
