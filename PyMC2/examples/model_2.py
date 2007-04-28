@@ -5,7 +5,7 @@ global_rate ~ Exp(3.)
 disasters[t] ~ Po(global_rate)
 """
 
-from PyMC2 import parameter, data, OneAtATimeMetropolis
+from PyMC2 import parameter, data, Metropolis, discrete_parameter
 from numpy import array, log, sum
 from PyMC2 import exponential_like, poisson_like
 from PyMC2 import rexponential, constrain
@@ -34,6 +34,7 @@ def global_rate(value=1., rate=3.):
     
 
 @data
+@discrete_parameter
 def disasters(value = disasters_array, rate = global_rate):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value, rate)

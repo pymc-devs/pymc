@@ -66,7 +66,7 @@ class PyMCBase(object):
         self._parents = ParentDict(regular_dict = parents, owner = self)
         self.children = set()
         self.__doc__ = doc
-        self._value = None
+        # self._value = None
         self.__name__ = name
         self.trace = trace
 

@@ -1,7 +1,7 @@
 from PyMC2 import parameter, data, discrete_parameter
 from numpy import arange, ones, eye, sum, zeros, exp, concatenate
 from numpy.random import normal
-from PyMC2 import normal_like,  uniform_like, JointMetropolis, DiscreteOneAtATimeMetropolis
+from PyMC2 import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
 
 # Generate data
 K_true = 5

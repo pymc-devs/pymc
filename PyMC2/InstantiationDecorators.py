@@ -115,14 +115,14 @@ def node(__func__ = None, **kwds):
     return instantiate_n
 
 
-def data(__func__=None, **kwds):
+def data(parameter):
     """
-    Decorator instantiating data objects. Usage is just like
-    parameter.
+    Sets a parameter's isdata flag to True.
     
     :SeeAlso: parameter, Parameter, node, Node, Model, Container
     """
-    return parameter(__func__, isdata=True, trace = False, **kwds)
+    parameter.isdata = True
+    return parameter
     
 
 

@@ -6,7 +6,7 @@ amp_of_mean ~ Exp(3)
 disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 """
 
-from PyMC2 import parameter, data, OneAtATimeMetropolis
+from PyMC2 import parameter, data, Metropolis, discrete_parameter
 from numpy import array, log, sum, zeros, arange
 from PyMC2 import poisson_like, normal_like, exponential_like
 from PyMC2 import rnormal, rexponential, constrain
@@ -51,6 +51,7 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     rseed = .1
     
 @data       
+@discrete_parameter
 def disasters(value = disasters_array, params_of_mean = params_of_mean):
     """Annual occurences of coal mining disasters."""
     val = params_of_mean[1] + params_of_mean[0] * arange(111)

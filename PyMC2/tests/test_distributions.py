@@ -21,7 +21,7 @@ import unittest
 from numpy.testing import *
 from PyMC2 import flib, utils
 import numpy as np
-from numpy import exp, array, cov
+from numpy import exp, array, cov, prod
 import os
 PLOT=True
 if PLOT is True:

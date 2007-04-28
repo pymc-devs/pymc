@@ -7,7 +7,7 @@ l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D']
-from PyMC2 import parameter, data, node, discrete_parameter, DiscreteOneAtATimeMetropolis
+from PyMC2 import parameter, data, node, discrete_parameter, DiscreteMetropolis
 from numpy import array, log, sum, ones, concatenate, inf
 from PyMC2 import uniform_like, exponential_like, poisson_like
 
@@ -38,6 +38,7 @@ def l(value=.1, rate = 1.):
     return exponential_like(value, rate)
         
 @data
+@discrete_parameter
 def D(  value = D_array,
         s = s,
         e = e,

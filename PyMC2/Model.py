@@ -555,7 +555,9 @@ class Sampler(Model):
 
             # If not, make it a new SamplingMethod using the registry
             if homeless:
-                self.sampling_methods.add(assign_method(parameter))
+                new_method = assign_method(parameter)
+                setattr(new_method, '_model', self)
+                self.sampling_methods.add(new_method)
 
     def tune(self):
         """

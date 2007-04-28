@@ -24,7 +24,7 @@ class DictWithDoc(dict):
 
     0:  I can't handle that parameter.
     1:  I can handle that parameter, but I'm a generalist and
-        probably shouldn't be your top choice (OneAtATimeMetropolis
+        probably shouldn't be your top choice (Metropolis
         and friends fall into this category).
     2:  I'm designed for this type of situation, but I could be 
         more specialized.
@@ -108,7 +108,7 @@ class SamplingMethod(object):
 
       >>> S = SamplingMethod(N)
 
-    :SeeAlso: OneAtATimeMetropolis, Sampler.
+    :SeeAlso: Metropolis, Sampler.
     """
 
     def __init__(self, pymc_objects):
@@ -248,7 +248,7 @@ class SamplingMethod(object):
         return state
         
 # The default SamplingMethod, which Model uses to handle singleton parameters.
-class OneAtATimeMetropolis(SamplingMethod):
+class Metropolis(SamplingMethod):
     """
     The default SamplingMethod, which Model uses to handle singleton continuous parameters.
 
@@ -257,9 +257,9 @@ class OneAtATimeMetropolis(SamplingMethod):
 
 
 
-    To instantiate a OneAtATimeMetropolis called M with jurisdiction over a Parameter P:
+    To instantiate a Metropolis called M with jurisdiction over a Parameter P:
 
-      >>> M = OneAtATimeMetropolis(P, scale=1, dist=None)
+      >>> M = Metropolis(P, scale=1, dist=None)
 
 
 
@@ -283,7 +283,7 @@ class OneAtATimeMetropolis(SamplingMethod):
             self.proposal_sig = ones(shape(self.parameter.value)) * scale
             
         self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
-        self._id = 'OneAtATimeMetropolis_'+parameter.__name__
+        self._id = 'Metropolis_'+parameter.__name__
 
         if isinstance(self.parameter.value, ndarray):
             self._len = len(self.parameter.value.ravel())
@@ -359,10 +359,10 @@ class OneAtATimeMetropolis(SamplingMethod):
         if self._dist == "Normal":
             self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
         
-def OMCompetence(parameter):
+def MetroCompetence(parameter):
     
     """
-    The competence function for OneAtATimeMetropolis
+    The competence function for Metropolis
     """
     
     if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
@@ -378,17 +378,17 @@ def OMCompetence(parameter):
         else:
             return 0
             
-SamplingMethodRegistry[OneAtATimeMetropolis] = OMCompetence
+SamplingMethodRegistry[Metropolis] = MetroCompetence
 
             
-class DiscreteOneAtATimeMetropolis(OneAtATimeMetropolis):
+class DiscreteMetropolis(Metropolis):
     """
-    Just like OneAtATimeMetropolis, but rounds the parameter's value.
+    Just like Metropolis, but rounds the parameter's value.
     Good for DiscreteParameters.
     """
     def __init__(self, parameter, scale=1., dist=None):
-        OneAtATimeMetropolis.__init__(self, parameter, scale=scale, dist=dist)
-        self._id = 'DiscreteOneAtATimeMetropolis_'+parameter.__name__
+        Metropolis.__init__(self, parameter, scale=scale, dist=dist)
+        self._id = 'DiscreteMetropolis_'+parameter.__name__
     
     def propose(self):      
         if self._dist == "Normal":
@@ -397,26 +397,26 @@ class DiscreteOneAtATimeMetropolis(OneAtATimeMetropolis):
 
         self.parameter.value = round_array(new_val)
 
-def DOMCompetence(parameter):
+def DiscreteMetroCompetence(parameter):
     """
-    The competence function for DiscreteOneAtATimeMetropolis.
+    The competence function for DiscreteMetropolis.
     """
     if isinstance(parameter, DiscreteParameter):
         return 1
     else:
         return 0
     
-SamplingMethodRegistry[DiscreteOneAtATimeMetropolis] = DOMCompetence
+SamplingMethodRegistry[DiscreteMetropolis] = DiscreteMetroCompetence
 
 
-class BinaryOneAtATimeMetropolis(OneAtATimeMetropolis):
+class BinaryMetropolis(Metropolis):
     """
-    Like OneAtATimeMetropolis, but with a modified step() method.
+    Like Metropolis, but with a modified step() method.
     Good for binary parameters.
     """
     def __init__(self, parameter, dist=None):
-        OneAtATimeMetropolis.__init__(self, parameter, dist=dist)
-        self._id = 'BinaryOneAtATimeMetropolis_'+parameter.__name__
+        Metropolis.__init__(self, parameter, dist=dist)
+        self._id = 'BinaryMetropolis_'+parameter.__name__
     
     def set_param_val(self, i, val, to_value):
         """
@@ -469,7 +469,7 @@ class BinaryOneAtATimeMetropolis(OneAtATimeMetropolis):
                     self.set_param_val(i,val,True)
             self._accepted += 1
             
-def BOMCompetence(parameter):
+def BinaryMetroCompetence(parameter):
     """
     The competence function for Binary One-At-A-Time Metropolis
     """
@@ -478,7 +478,7 @@ def BOMCompetence(parameter):
     else:
         return 0
         
-SamplingMethodRegistry[BinaryOneAtATimeMetropolis] = BOMCompetence
+SamplingMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
     
 
 class JointMetropolis(SamplingMethod):
@@ -550,15 +550,15 @@ class JointMetropolis(SamplingMethod):
         # on the same trace index
         self.last_trace_index = 0
 
-        # Use OneAtATimeMetropolis instances to handle independent jumps
+        # Use Metropolis instances to handle independent jumps
         # before first epoch is complete
         self._single_param_handlers = set()
         for parameter in self.parameters:
             if oneatatime_scales is not None:
-                self._single_param_handlers.add(OneAtATimeMetropolis(parameter,
+                self._single_param_handlers.add(Metropolis(parameter,
                                                 scale=oneatatime_scales[parameter]))
             else:
-                self._single_param_handlers.add(OneAtATimeMetropolis(parameter))
+                self._single_param_handlers.add(Metropolis(parameter))
 
         # Allocate memory for internal traces and get parameter slices
         self._slices = {}
@@ -628,8 +628,8 @@ class JointMetropolis(SamplingMethod):
         """
         If the empirical covariance hasn't been computed yet (the first
         epoch isn't over), this method passes the tune() call along to the
-        OneAtATimeMetropolis instances handling self's parameters. If the
-        empirical covariance has been computed, the OneAtATimeMetropolis
+        Metropolis instances handling self's parameters. If the
+        empirical covariance has been computed, the Metropolis
         instances aren't in use anymore so this method does nothing.
         
         We may want to make this method do something eventually.
@@ -660,7 +660,7 @@ class JointMetropolis(SamplingMethod):
     def step(self):
         """
         If the empirical covariance hasn't been computed yet, the step() call
-        is passed along to the OneAtATimeMetropolis instances that handle self's
+        is passed along to the Metropolis instances that handle self's
         parameters before the end of the first epoch.
         
         If the empirical covariance has been computed, values for self's parameters
@@ -706,9 +706,9 @@ class JointMetropolis(SamplingMethod):
             self.last_trace_index = self._model._cur_trace_index
 
 
-def JMCompetence(parameter):
+def JointMetroCompetence(parameter):
     """
-    The competence function for OneAtATimeMetropolis
+    The competence function for Metropolis
     """
 
     if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
@@ -718,4 +718,4 @@ def JMCompetence(parameter):
     elif isinstance(parameter.value, ndarray):
         return 2
 
-SamplingMethodRegistry[JointMetropolis] = JMCompetence
+SamplingMethodRegistry[JointMetropolis] = JointMetroCompetence

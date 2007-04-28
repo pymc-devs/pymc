@@ -3,7 +3,7 @@
 
 # License: Scipy compatible
 # Author: David Huard, 2006
-# A bit slow. try to optimize
+
 import numpy as np
 import sys, inspect
 try:
@@ -15,7 +15,7 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array
+from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_

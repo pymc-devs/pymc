@@ -192,13 +192,6 @@ class Parameter(PyMCBase):
         
         self.d_neg_inf = float(-1.79E308)    
         
-        PyMCBase.__init__(  self, 
-                            doc=doc, 
-                            name=name, 
-                            parents=parents, 
-                            cache_depth=cache_depth, 
-                            trace=trace)        
-        
         if value is None:
             if self._random is not None:
                 self._value = self.random()
@@ -207,6 +200,13 @@ class Parameter(PyMCBase):
                 self._value = None
         else:
             self._value = value
+        
+        PyMCBase.__init__(  self, 
+                            doc=doc, 
+                            name=name, 
+                            parents=parents, 
+                            cache_depth=cache_depth, 
+                            trace=trace)        
                 
     def gen_lazy_function(self):
         

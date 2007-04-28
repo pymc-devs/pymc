@@ -64,6 +64,7 @@ def late_mean(value=.1, rate = 1.):
 
     
 @data
+@discrete_parameter
 def disasters(  value = disasters_array, 
                 early_mean = early_mean, 
                 late_mean = late_mean, 

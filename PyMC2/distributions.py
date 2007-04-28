@@ -1103,11 +1103,7 @@ def multivariate_normal_like(x, mu, tau):
     tau: (k,k)
     tau positive definite
     """
-    # try:
-    #     constrain(np.diagonal(tau), lower=0)
-    # except ZeroProbability:
-    #     return -Inf
-    if tau.shape[0] < 50 or not flib_blas_OK:
+    if len(tau) < 50 or not flib_blas_OK:
         return flib.vec_mvnorm(x, mu, tau)
     else:
         # This version is faster for large matrices, but oddly enough
@@ -1115,14 +1111,14 @@ def multivariate_normal_like(x, mu, tau):
         return flib.blas_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
-def rmultivariate_normal_cov(mu, C, size=1):
+def rmultivariate_normal_cov(mu, C):
     """
-    rmultivariate_normal_cov(mu, C, size=1)
+    rmultivariate_normal_cov(mu, C)
 
     Random multivariate normal variates.
     """
 
-    return random.multivariate_normal(mu, C, size)
+    return random.multivariate_normal(mu, C)
 
 def multivariate_normal_cov_expval(mu, C):
     """
@@ -1139,18 +1135,51 @@ def multivariate_normal_cov_like(x, mu, C):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
 
     x: (k,n)
     mu: (k,n) or (k,1)
     C: (k,k)
     C positive definite
     """
-    # try:
-    #     constrain(np.diagonal(tau), lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+
     return flib.cov_mvnorm(x,mu,tau)        
+
+# Multivariate normal, parametrized with Cholesky factorization.----------
+def rmultivariate_normal_chol(mu, sig):
+    """
+    rmultivariate_normal(mu, tau)
+
+    Random multivariate normal variates.
+    """
+
+    return (asmatrix(sig) * random.normal(size=mu.ravel().shape)).reshape(mu.shape)
+
+def multivariate_normal_expval_chol(mu, sig):
+    """
+    multivariate_normal_expval(mu, tau)
+
+    Expected value of multivariate normal distribution.
+    """
+    return mu
+
+def multivariate_normal_like_chol(x, mu, sig):
+    r"""
+    multivariate_normal_like(x, mu, tau)
+
+    Multivariate normal log-likelihood
+
+    .. math::
+        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
+
+    x: (k,n)
+    mu: (k,n) or (k,1)
+    sigma: (k,k)
+    sigma lower triangular
+    """
+
+    return flib_blas.chol_mvnorm(x,mu,sig)
+
 
 # Negative binomial----------------------------------------
 @randomwrap
