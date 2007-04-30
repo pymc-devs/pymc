@@ -121,7 +121,6 @@ class Model(object):
             self.parameters.update(item[1].parameters)
             self.data.update(item[1].data)
             self.nodes.update(item[1].nodes)
-            self.sampling_methods.update(item[1].sampling_methods)
 
         # File away the PyMC objects
         elif isinstance(item[1],PyMCBase):

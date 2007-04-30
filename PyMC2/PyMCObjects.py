@@ -192,14 +192,25 @@ class Parameter(PyMCBase):
         
         self.d_neg_inf = float(-1.79E308)    
         
+        # Initialize value, either from value provided or from random function.
+        self._value = value
         if value is None:
-            if self._random is not None:
-                self._value = self.random()
+            
+            # Use random function if provided
+            if random is not None:
+                value_dict = {}
+                for key in parents.keys():
+                    if isinstance(parents[key], PyMCBase) or isinstance(parents[key], Container):
+                        value_dict[key] = parents[key].value
+                    else:
+                        value_dict[key] = parents[key]
+
+                self._value = random(**value_dict)
+                
+            # Otherwise leave initial value at None and warn.
             else:
                 print 'Warning, parameter ' + name + "'s value initialized to None; no initial value or random method provided."
-                self._value = None
-        else:
-            self._value = value
+
         
         PyMCBase.__init__(  self, 
                             doc=doc, 
