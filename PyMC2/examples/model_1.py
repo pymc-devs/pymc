@@ -29,7 +29,7 @@ def switchpoint(value=50, length=110):
     """Change time for rate parameter."""
 
     def logp(value, length):
-        return uniform_like(model, 0, length)
+        return uniform_like(value, 0, length)
         
     def random(length):
         return randint(length)
