@@ -7,7 +7,7 @@ late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
-from PyMC2 import parameter, data, LikelihoodError, discrete_parameter
+from PyMC2 import parameter, data, ZeroProbability, discrete_parameter
 from numpy import array, log, sum
 from fastDisasterLikes import fpoisson, fpoisson_d
 
@@ -26,7 +26,7 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 def switchpoint(value=50, length=110):
     """Change time for rate parameter."""
     if value < 0 or value > length:
-        raise LikelihoodError
+        raise ZeroProbability
     return 0.
 
 
@@ -34,7 +34,7 @@ def switchpoint(value=50, length=110):
 def early_mean(value=1., rate=1.):
     """Rate parameter of poisson distribution."""
     if value<0:
-        raise LikelihoodError
+        raise ZeroProbability
     return -rate * value
 
 
@@ -43,7 +43,7 @@ def early_mean(value=1., rate=1.):
 def late_mean(value=.1, rate = 1.):
     """Rate parameter of poisson distribution."""
     if value<0:
-        raise LikelihoodError
+        raise ZeroProbability
     return -rate * value
 
         

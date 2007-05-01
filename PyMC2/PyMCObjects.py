@@ -77,7 +77,10 @@ class Node(PyMCBase):
         self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
 
     def get_value(self):
-        return self._value.get()
+        _value = self._value.get()
+        if isinstance(val, ndarray):
+            _value.flags['W'] = False
+        return _value
         
     def set_value(self,value):
         raise AttributeError, 'Node '+self.__name__+'\'s value cannot be set.'
@@ -238,9 +241,13 @@ class Parameter(PyMCBase):
         if self.isdata:
             raise AttributeError, 'Parameter '+self.__name__+'\'s value cannot be updated if isdata flag is set'
             
+        if isinstance(value, ndarray):
+            value.flags['W'] = False            
+            
         # Save current value as last_value
         self.last_value = self._value
         self._value = value
+
 
     value = property(fget=get_value, fset=set_value)
 
@@ -257,25 +264,7 @@ class Parameter(PyMCBase):
     def set_logp(self):
         raise AttributeError, 'Parameter '+self.__name__+'\'s logp attribute cannot be set'
 
-    logp = property(fget = get_logp, fset=set_logp)
-
-
-    # If the user wants to update the parameter's value in-place,
-    # they can call this to prevent the cache-checker from getting
-    # confused. 
-    def touch(self):
-        """ 
-        If you want to update a parameter's value in-place,
-        you can call touch() to avoid confusing the cache 
-        checker... but last_value will be set to self.value, 
-        because otherwise the cache checker WOULD get confused. 
-        It's safest to avoid updating parameters' values in-place.
-        """
-        if isinstance(self._value, ndarray):
-            self.value = self.value.view()
-        else:
-            self.value = copy(self._value)
-        self.last_value = self.value
+    logp = property(fget = get_logp, fset=set_logp)        
 
     
     # Sample self's value conditional on parents.
