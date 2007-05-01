@@ -78,7 +78,7 @@ class Node(PyMCBase):
 
     def get_value(self):
         _value = self._value.get()
-        if isinstance(val, ndarray):
+        if isinstance(_value, ndarray):
             _value.flags['W'] = False
         return _value
         
