@@ -8,7 +8,7 @@ Updated by DH on 2007-04-04.
 """
 
 from numpy import zeros, shape, squeeze, transpose
-from pysqlite2 import dbapi2 as sql
+import sqlite3
 import base, pickle, ram, PyMC2
 
 class Trace(object):
@@ -101,7 +101,7 @@ class Database(pickle.Database):
         """
         base.Database.connect(self, sampler)
         self.choose_name('sqlite')
-        self.DB = sql.connect(self.filename)
+        self.DB = sqlite3.connect(self.filename)
         self.cur = self.DB.cursor()
                    
     def close(self, *args, **kwds):
