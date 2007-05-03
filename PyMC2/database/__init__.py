@@ -33,9 +33,9 @@ file. Look at template.py for a skeleton, and the other modules for examples.
 
 """
 
-__author__ = ["David Huard <david.huard@gmail.com>",
-                "Chris Fonnesbeck"]
-__version__ = "2.0.beta"
+#__author__ = ["David Huard <david.huard@gmail.com>",
+#                "Chris Fonnesbeck"]
+#__version__ = "2.0.beta"
 
 __modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5", "hdf5_tables"]
 

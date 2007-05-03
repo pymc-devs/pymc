@@ -15,7 +15,7 @@ from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp
+from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp, pi
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_
@@ -120,7 +120,7 @@ def msqrt(cov):
     """
     sig = msqrt(cov)
     
-    Returns a matrix square root of a covariance matrix. Tries Cholesky
+    Return a matrix square root of a covariance matrix. Tries Cholesky
     factorization first, and factorizes by diagonalization if that fails.
     """
     # Try Cholesky factorization

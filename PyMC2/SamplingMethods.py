@@ -533,15 +533,15 @@ class JointMetropolis(SamplingMethod):
         self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
         self.isdiscrete = {}
         
-        for parameter in self.parameters:
-            type_now = check_type(parameter)[0]
-            if not type_now is float and not type_now is int:
-                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric"+\
-                                    'or ndarray with numeric dtype for JointMetropolis to be applied.'
-            elif type_now is int:
-                self.isdiscrete[parameter] = True
-            else:
-                self.isdiscrete[parameter] = False
+##        for parameter in self.parameters:
+##            type_now = check_type(parameter)[0]
+##            if not type_now is float and not type_now is int:
+##                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric"+\
+##                                    'or ndarray with numeric dtype for JointMetropolis to be applied.'
+##            elif type_now is int:
+##                self.isdiscrete[parameter] = True
+##            else:
+##                self.isdiscrete[parameter] = False
 
         # Flag indicating whether covariance has been computed
         self._ready = False
@@ -652,10 +652,7 @@ class JointMetropolis(SamplingMethod):
             
             jump = reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
             
-            if self.isdiscrete[parameter]:
-                parameter.value = parameter.value + round_array(jump)
-            else:
-                parameter.value = parameter.value + jump
+            parameter.value = parameter.value + jump
 
     def step(self):
         """
@@ -681,9 +678,9 @@ class JointMetropolis(SamplingMethod):
             try:
                 logp_p = sum([parameter.logp for parameter in self.parameters])
             except ZeroProbability:
+                self._rejected += 1
                 for parameter in self.parameters:
                     parameter.value = parameter.last_value
-                    self._rejected += 1
                 return
 
             loglike_p = self.loglike

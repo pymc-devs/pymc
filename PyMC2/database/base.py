@@ -116,5 +116,5 @@ class Database(object):
     def getstate(self):
         """Return a dictionary containing the state of the Sampler and its 
         SamplingMethods."""
-        return self._state_
+        return getattr(self, '_state_', {})
         

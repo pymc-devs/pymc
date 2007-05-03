@@ -665,7 +665,7 @@ Cf2py double precision intent(out):: like
         if (nxi .NE. 1) xi_tmp = xi(i)
         if (nsigma .NE. 1) sigma_tmp = sigma(i)          
         IF (ABS(xi_tmp) .LT. 10.**(-5.)) THEN
-          LIKE = LIKE - Z(I) - dexp(-Z(I))/SIGMA_TMP
+          LIKE = LIKE - Z(I) - dexp(-Z(I)) - dlog(sigma_tmp)
         ELSE 
           EX(I) = 1. + xi_tmp*z(i)
           IF (EX(I) .LT. 0.) THEN

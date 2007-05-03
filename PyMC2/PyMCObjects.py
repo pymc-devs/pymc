@@ -288,7 +288,22 @@ class DiscreteParameter(Parameter):
     """
     A subclass of Parameter that takes only integer values.
     """
-    pass
+        # Record new value and increment counter
+    def set_value(self, value):
+        
+        # Value can't be updated if isdata=True
+        if self.isdata:
+            raise AttributeError, 'Parameter '+self.__name__+'\'s value cannot be updated if isdata flag is set'
+            
+        # Save current value as last_value
+        self.last_value = self._value
+        self._value = int(value)
+
+    # Define value attribute
+    def get_value(self):
+        return self._value
+        
+    value = property(fget=get_value, fset=set_value)
     
 class BinaryParameter(Parameter):
     """

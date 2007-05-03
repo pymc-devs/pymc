@@ -21,7 +21,7 @@ import flib
 import PyMC2
 import numpy as np
 from PyMCBase import ZeroProbability
-from numpy import Inf, random, sqrt, log, size, tan, pi
+from numpy import Inf, random, sqrt, log, size, tan, pi, shape
 
 try:
     import flib_blas
@@ -702,9 +702,9 @@ def gev_expval(xi, mu=0, sigma=1):
     """
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
 
-def gev_like(x, xi, mu=0, sigma=0):
+def gev_like(x, xi, mu=0, sigma=1):
     r"""
-    gev_like(x, xi, mu=0, sigma=0)
+    gev_like(x, xi, mu=0, sigma=1)
 
     Generalized Extreme Value log-likelihood
 
@@ -1103,6 +1103,7 @@ def multivariate_normal_like(x, mu, tau):
     tau: (k,k)
     tau positive definite
     """
+
     if len(tau) < 50 or not flib_blas_OK:
         return flib.vec_mvnorm(x, mu, tau)
     else:

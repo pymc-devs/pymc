@@ -79,10 +79,11 @@ class Model(object):
 
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
-        elif input.has_key('__name__'):
-            self.__name__ = input['__name__']
         else:
-            self.__name__ = 'PyMC_Model'
+            try:
+                self.__name__ = input['__name__']
+            except: 
+                self.__name__ = 'PyMC_Model'
 
         #Change input into a dictionary
         if isinstance(input, dict):
@@ -96,11 +97,11 @@ class Model(object):
 
             self.input_dict = input.__dict__
 
-        for item in self.input_dict.iteritems():
-            if  isinstance(item[1],PyMCBase) \
-                or isinstance(item[1],SamplingMethod) \
-                or isinstance(item[1],Container):
-                self.__dict__[item[0]] = item[1]
+        for name, item in self.input_dict.iteritems():
+            if  isinstance(item,PyMCBase) \
+                or isinstance(item,SamplingMethod) \
+                or isinstance(item,Container):
+                self.__dict__[name] = item
 
             self._fileitem(item)
 
@@ -116,25 +117,30 @@ class Model(object):
           - container
         """
         # If a dictionary is passed in, open it up.
-        if isinstance(item[1],Container):
-            self.containers.add(item[1])
-            self.parameters.update(item[1].parameters)
-            self.data.update(item[1].data)
-            self.nodes.update(item[1].nodes)
+        if isinstance(item,Container):
+            self.containers.add(item)
+            self.parameters.update(item.parameters)
+            self.data.update(item.data)
+            self.nodes.update(item.nodes)
+            self.sampling_methods.update(item.sampling_methods)
 
         # File away the PyMC objects
-        elif isinstance(item[1],PyMCBase):
+        elif isinstance(item,PyMCBase):
             # Add an attribute to the object referencing the model instance.
 
-            if isinstance(item[1],Node):
-                self.nodes.add(item[1])
+            if isinstance(item,Node):
+                self.nodes.add(item)
 
-            elif isinstance(item[1],Parameter):
-                if item[1].isdata:
-                    self.data.add(item[1])
-                else:  self.parameters.add(item[1])
+            elif isinstance(item,Parameter):
+                if item.isdata:
+                    self.data.add(item)
+                else:  self.parameters.add(item)
 
-
+        elif isinstance(item, SamplingMethod):
+            self.nodes.update(item.nodes)
+            self.parameters.update(item.parameters)
+            self.data.update(item.data)
+        
     def _extend_children(self):
         """
         Makes a dictionary of self's PyMC objects' 'extended children.'

@@ -8,7 +8,9 @@ __modules__ = [ 'test_MCMC',
                 'test_distributions',
                 'test_container',
                 'test_utils',
-                'test_normal_approximation']
+                'test_normal_approximation',
+                #'test_interactive'
+                ]
 
 """         
 for mod in __modules__:

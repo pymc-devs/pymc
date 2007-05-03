@@ -6,6 +6,7 @@
 # HDF5 >= 1.6.5
 # Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
+#TODO: implement file compression
 
 from numpy import zeros,shape
 import tables
