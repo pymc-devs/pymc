@@ -71,10 +71,14 @@ from flib import igamma as figamma
 from flib import wshrt
 from flib import gamfun
 from flib import chol
+from flib import logit, invlogit as _invlogit
 
 # Shorthand of some verbose local variables
 
 t = transpose
+
+# Vectorize invlogit
+invlogit = vectorize(_invlogit)
 
 # Not sure why this doesnt work on Windoze!
 try:
@@ -93,23 +97,6 @@ class ParameterError(ValueError):
 class LikelihoodError(ValueError):
     # Log-likelihood is invalid or negative informationnite
     pass
-
-""" Transformations """
-def logit(p):
-    """Logit transformation"""
-    
-    try:
-        return log(p/(1.0-p))
-    except ZeroDivisionError:
-        return inf
-
-def invlogit(x):
-    """Inverse-logit transformation"""
-    
-    try:
-        return 1.0 / (1.0 + exp(-1.0*x))
-    except OverflowError:
-        return 0.0
 
 """ Random number generation """
 
