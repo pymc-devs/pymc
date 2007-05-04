@@ -1326,4 +1326,33 @@ cf2py real dimension(n+1),intent(out) :: cx
 
       return
       end
+      
+      SUBROUTINE invlogit(x, ilx)
+
+c Returns the inverse-logit transform of x
+
+cf2py real intent(in) :: x
+cf2py real intent(out) :: ilx
+
+      REAL x, ilx
+      
+      ilx = 1.0 / (1.0 + exp(-1.0 * x))
+        
+      return
+      END
+      
+      
+      SUBROUTINE logit(x, lx)
+
+c Returns the logit transform of x
+
+cf2py real intent(in) :: x
+cf2py real intent(out) :: lx
+
+      REAL x, lx
+      
+      lx = log( x / (1.0 - x) ) 
+        
+      return
+      END
 
