@@ -213,21 +213,21 @@ cdef class LazyFunction:
 
         cdef object item
         cdef int i
-        cdef void* name
+        cdef object name
         
         for i from 0 <= i < self.N_args:
             
             # Query the value of all ultimate arguments, even those not in the
             # argument list, and store their references for cache checking.
-            item = (<object> self.ultimate_arg_p[i]).value
-            self.ultimate_arg_value_p[i] = <void*> item
+            item = self.ultimate_args[i].value
+            self.ultimate_arg_values[i] = item
 
-            name = self.ultimate_keys_p[i]
+            name = self.ultimate_keys[i]
 
             # If name is not None, this ultimate argument is in the argument dictionary.
             # Record its value for possible passing to the underlying function.
-            if not name == <void*> None:
-                self.argument_values[<object> name] = item
+            if name is not None:
+                self.argument_values[name] = item
             
         
     cdef void cache(self, value):
@@ -245,11 +245,11 @@ cdef class LazyFunction:
             # Push back
             for i from 0 <= i < self.cache_depth - 1:
                 for j from 0 <= j < self.N_args:
-                    self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
+                    self.cached_args[(i+1) * self.N_args + j] = self.cached_args[i * self.N_args + j]
         
             # Store new
             for j from 0 <= j < self.N_args:
-                self.cached_arg_p[j] = self.ultimate_arg_value_p[j]
+                self.cached_args[j] = self.ultimate_arg_values[j]
     
     def force_compute(self):
         """
