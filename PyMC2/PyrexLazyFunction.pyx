@@ -81,20 +81,34 @@ cdef class LazyFunction:
         cdef object arg, name
         cdef int i
         
+        # arguments will be parents and value for parameters, just parents for nodes.
         self.arguments = arguments
+        
         self.cache_depth = cache_depth
         
+        # A dictionary containing the arguments that are parameters and nodes, with the same keys
+        # as arguments.
         self.pymc_object_args = {}
+        # dictionary containing the other arguments.
         self.other_args = {}
         
+        # The ultimate arguments are the arguments, plus the contents of.
+        # any argument that is a container.
         self.ultimate_args=[]
+        # The names corresponding to the ultimate arguments.
         self.ultimate_keys=[]
 
+        # A dictionary of values to pass to the underlying function.
         self.argument_values = {}
         
+        # Populate argument iterables
         for name in arguments.iterkeys():
+            
+            # This object is arg.
             arg = arguments[name]
 
+            # If arg is a container, it and all of its contents go into
+            # ultimate_args.
             if isinstance(arg, ContainerBase):
                 
                 self.argument_values[name] = arg.value
@@ -104,64 +118,92 @@ cdef class LazyFunction:
                 for obj in arg.pymc_objects:
                     self.ultimate_args.append(obj)
                     self.ultimate_keys.append(None)
-                
+            
+            # If arg is a parameter or node, it goes into
+            # pymc_object_args and ultimate_args.    
             elif isinstance(arg, PyMCBase):
                 self.pymc_object_args[name] = arg
                 self.ultimate_args.append(arg)
                 self.ultimate_keys.append(name)
                 self.argument_values[name] = arg.value
-                
+            
+            # If arg is neither parameter, node, nor container, it goes
+            # into other_args.    
             else:
                 self.other_args[name] = arg
                 self.argument_values[name] = arg
-                
+        
+        # Change ultimate_args and ultimate_keys from lists to arrays.
+        # Arrays of dtype object are wrappers for continuous blocks
+        # of PyObject* pointers.        
         self.ultimate_args = array(self.ultimate_args, dtype=object)
         self.ultimate_keys = array(self.ultimate_keys, dtype=object)
                 
         self.N_args = len(self.ultimate_args)
-        
+
+        # Initialize container for current values        
         self.ultimate_arg_values = zeros(self.N_args, dtype=object)
+        
+        # Initialize caches
         self.cached_args = zeros(self.cache_depth * self.N_args, dtype=object)
         self.cached_values = []
         for i in range(self.cache_depth):
             self.cached_values.append(None)
         
+        # Initialize current values and caches to None
         self.ultimate_arg_values[:] = None
         self.cached_args[:] = None
 
+        # Underlying function
         self.fun = fun
         
+        # Get pointers from arrays. This has to be a separate method
+        # because __init__ can't be a C method.
         self.get_array_data()
     
     
     cdef void get_array_data(self):
+        """
+        Get underlying pointers from arrays ultimate_args, ultimate_keys,
+        ultimate_arg_values, and cached_args.
+        
+        Although the underlying pointers are PyObject**, they're cast to 
+        void** because Pyrex doesn't let you work with object* pointers.
+        """
         self.ultimate_arg_p = <void**> PyArray_DATA(self.ultimate_args)
         self.ultimate_keys_p = <void**> PyArray_DATA(self.ultimate_keys)
         self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_arg_values)
         self.cached_arg_p = <void**> PyArray_DATA(self.cached_args)
         
-        
-        
     
-    # See if a recompute is necessary.
     cdef int check_argument_caches(self):
+        """
+        Compare the value of the ultimate arguments to the values in the cache.
+        If there's a mismatch (match is by reference, not value), return -1.
+        Otherwise return 0.
+        """
         cdef int i, j, mismatch
-
-        for i from 0 <= i < self.cache_depth:
-            mismatch = 0
+        
+        if self.cache_depth > 0:
             
-            for j from 0 <= j < self.N_args:
-                if not self.ultimate_arg_value_p[j] == self.cached_arg_p[i * self.N_args + j]:
-                    mismatch = 1
-                    break
+            for i from 0 <= i < self.cache_depth:
+                mismatch = 0
+            
+                for j from 0 <= j < self.N_args:
+                    # self.ultimate_arg_value_p[j] and self.cached_arg_p[i * self.N_args + j] are
+                    # both void*, so comparing them _should_ be equivalent to casting them to PyObject*
+                    # (object) and comparing them with is. Maybe do that instead? I seem to remember that
+                    # not working.
+                    if not self.ultimate_arg_value_p[j] == self.cached_arg_p[i * self.N_args + j]:
+                        mismatch = 1
+                        break
                     
-            if mismatch == 0:
-                return i        
+                if mismatch == 0:
+                    return i        
 
         return -1;
 
-    # Extract the values of arguments that are PyMC objects or containers.
-    # Don't worry about unpacking the containers, see their value attribute.
+
     def refresh_argument_values(self):
         """
         Iterates over LazyFunction's parents that are Parameters,
@@ -174,32 +216,45 @@ cdef class LazyFunction:
         cdef void* name
         
         for i from 0 <= i < self.N_args:
+            
+            # Query the value of all ultimate arguments, even those not in the
+            # argument list, and store their references for cache checking.
             item = (<object> self.ultimate_arg_p[i]).value
             self.ultimate_arg_value_p[i] = <void*> item
 
             name = self.ultimate_keys_p[i]
+
+            # If name is not None, this ultimate argument is in the argument dictionary.
+            # Record its value for possible passing to the underlying function.
             if not name == <void*> None:
                 self.argument_values[<object> name] = item
             
         
-        
-        
     cdef void cache(self, value):
+        """
+        Stick self's value in the cache, and also the values of all self's
+        ultimate arguments for future caching.
+        """
         cdef int i, j
         
-        self.cached_values.pop()
-        self.cached_values.insert(0,value)
+        if self.cache_depth > 0:
+            
+            self.cached_values.pop()
+            self.cached_values.insert(0,value)
         
-        # Push back
-        for i from 0 <= i < self.cache_depth - 1:
+            # Push back
+            for i from 0 <= i < self.cache_depth - 1:
+                for j from 0 <= j < self.N_args:
+                    self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
+        
+            # Store new
             for j from 0 <= j < self.N_args:
-                self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
-        
-        # Store new
-        for j from 0 <= j < self.N_args:
-            self.cached_arg_p[j] = self.ultimate_arg_value_p[j]
+                self.cached_arg_p[j] = self.ultimate_arg_value_p[j]
     
     def force_compute(self):
+        """
+        For debugging purposes. Skip cache checking and compute a value.
+        """
         self.refresh_argument_values()
         value = self.fun(**self.argument_values)
         self.cache(value)

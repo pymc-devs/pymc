@@ -12,10 +12,12 @@ import flib
 
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
+
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort
+
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_
@@ -117,27 +119,49 @@ def round_array(array_in):
     else:
         return int(array_in)
 
+try:
+    from flib_blas import dchdc_wrap
+    def msqrt(C):
+        """
+        U=incomplete_chol(C)
+        
+        Computes a Cholesky factorization of C. Works for matrices that are
+        positive-semidefinite as well as positive-definite, though in these
+        cases the Cholesky factorization isn't unique.
+        
+        U will be upper triangular.
+    
+        This is the dchdc version. It's faster for full-rank matrices,
+        but it has to compute the entire matrix.
+        
+        """
+        chol = C.copy()
+        piv, N = dchdc_wrap(a=chol)
+        if N<0:
+            raise ValueError, "Matrix does not appear to be positive semidefinite"
+        return asmatrix(chol[:N,argsort(piv)])
 
-def msqrt(cov):
-    """
-    sig = msqrt(cov)
+except:    
+    def msqrt(cov):
+        """
+        sig = msqrt(cov)
     
-    Return a matrix square root of a covariance matrix. Tries Cholesky
-    factorization first, and factorizes by diagonalization if that fails.
-    """
-    # Try Cholesky factorization
-    try:
-        sig = asmatrix(cholesky(cov))
+        Return a matrix square root of a covariance matrix. Tries Cholesky
+        factorization first, and factorizes by diagonalization if that fails.
+        """
+        # Try Cholesky factorization
+        try:
+            sig = asmatrix(cholesky(cov))
     
-    # If there's a small eigenvalue, diagonalize
-    except LinAlgError:
-        val, vec = eigh(cov)
-        sig = np.zeros(vec.shape)
-        for i in range(len(val)):
-            if val[i]<0.:
-                val[i]=0.
-            sig[:,i] = vec[:,i]*sqrt(val[i])
-    return np.asmatrix(sig).T
+        # If there's a small eigenvalue, diagonalize
+        except LinAlgError:
+            val, vec = eigh(cov)
+            sig = np.zeros(vec.shape)
+            for i in range(len(val)):
+                if val[i]<0.:
+                    val[i]=0.
+                sig[:,i] = vec[:,i]*sqrt(val[i])
+        return np.asmatrix(sig).T
 
 def _push(seq,new_value):
     """
