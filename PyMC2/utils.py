@@ -214,7 +214,8 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
     :Parameters:
       - `a` : Array sample.
       - `bins` : Number of bins, or an array of bin edges, in which case the 
-                range is not used.
+                range is not used. If 'Scott' or 'Freeman' is passed, then 
+                the named method is used to find the optimal number of bins.
       - `range` : Lower and upper bin edges, default: [min, max].
       - `normed` :Boolean, if False, return the number of samples in each bin,
                 if True, return the density.  
@@ -250,30 +251,37 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
             weights = atleast_1d(weights.ravel())
         axis = 0 
         
-    # Bin edges.   
-       
-    if not iterable(bins):
-        if range is None:
-            range = (a.min(), a.max())
-        mn, mx = [mi+0.0 for mi in range]
+    # Define the range    
+    if range is None:
+        mn, mx = a.min(), a.max()
         if mn == mx:
-            mn -= 0.5
-            mx += 0.5
-            
-        if bins is None or type(bins) == str:
-            bins = _optimize_binning(a, range, bins)
-            
-        edges = linspace(mn, mx, bins+1, endpoint=True)
+            mn = mn - .5
+            mx = mx + .5
+        range = [mn, mx]
+    
+    # Find the optimal number of bins.
+    if bins is None or type(bins) == str:
+        bins = _optimize_binning(a, range, bins)
+        
+    # Compute the bin edges if they are not given explicitely.    
+    # For the rightmost bin, we want values equal to the right 
+    # edge to be counted in the last bin, and not as an outlier. 
+    # Hence, we shift the last bin by a tiny amount.
+    if not iterable(bins):
+        dr = diff(range)/bins*1e-10
+        edges = linspace(range[0], range[1]+dr, bins+1, endpoint=True)
     else:
         edges = asarray(bins, float)
     
-    nbin = len(edges)-1
     dedges = diff(edges)
     bincenters = edges[:-1] + dedges/2.
-        
-    # Measure of bin precision.
-    decimal = int(-log10(dedges.min())+10)
     
+    # Number of bins
+    nbin = len(edges)-1
+    
+        # Measure of bin precision.
+    decimal = int(-log10(dedges.min())+10)
+        
     # Choose the fastest histogramming method
     even = (len(set(around(dedges, decimal))) == 1)
     if strategy is None:
@@ -290,17 +298,10 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
         if strategy == 'binsize' and not even:
             raise 'This binsize strategy cannot be used for uneven bins.'
         
-    # Parameters for the even functions.
+    # Parameters for the fixed_binsize functions.
     start = float(edges[0])
     binwidth = float(dedges[0])
-    
-    # For the rightmost bin, we want values equal to the right 
-    # edge to be counted in the last bin, and not as an outlier. 
-    # Hence, we shift the last bin by a tiny amount.
-    if not iterable(bins):
-        binwidth += pow(10, -decimal)
-        edges[-1] += pow(10, -decimal)
-    
+       
     # Looping to reduce memory usage
     block = 66600 
     slices = [slice(None)]*a.ndim
@@ -317,7 +318,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
                         _histogram_searchsort_weighted, edges)
             elif strategy == 'digitize':
                     count = apply_along_axis(_splitinmiddle,axis,at,\
-                        _histogram_digitize,edges,decimal,normed)
+                        _histogram_digitize,edges,normed)
         else:
             if strategy == 'binsize':
                 count = apply_along_axis(flib.fixed_binsize,axis,at,start,binwidth,nbin)
@@ -325,7 +326,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
                 count = apply_along_axis(_histogram_searchsort,axis,at,edges)
             elif strategy == 'digitize':
                 count = apply_along_axis(_histogram_digitize,axis,at,None,edges,
-                        decimal, normed)
+                        normed)
                     
         if i == 0:
             total = count
@@ -422,13 +423,11 @@ def _splitinmiddle(x, function, *args, **kwds):
     x1,x2 = hsplit(x, 2)
     return function(x1,x2,*args, **kwds)
 
-def _histogram_digitize(a, w, edges, decimal, normed):
+def _histogram_digitize(a, w, edges, normed):
     """Internal routine to compute the 1d weighted histogram for uneven bins.
     a: sample
     w: weights
     edges: bin edges
-    decimal: approximation to put values lying on the rightmost edge in the last
-             bin.
     weighted: Means that the weights are appended to array a. 
     Return the bin count or frequency if normed.
     """
@@ -457,17 +456,17 @@ def _optimize_binning(x, range, method='Freedman'):
     """Find the optimal number of bins.
     Available methods : Freedman, Scott
     """
-    
     N = x.shape[0]
-    if method=='Freedman':
-        s=x.sort() 
+    if method.lower()=='freedman':
+        s=sort(x) 
         IQR = s[int(N*.75)] - s[int(N*.25)] # Interquantile range (75% -25%)
         width = 2* IQR*N**(-1./3)
         
-    elif method=='Scott':
+    elif method.lower()=='scott':
         width = 3.49 * x.std()* N**(-1./3)
-    
-    return range.ptp()/width
+    else:
+        raise 'Method must be Scott or Freedman', method
+    return int(diff(range)/width)
 
 
 
