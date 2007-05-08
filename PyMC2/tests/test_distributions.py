@@ -30,11 +30,11 @@ if PLOT is True:
     except:
         pass
 try:
-    from scipy import integrate
+    from scipy import integrate, special, factorial, comb
     from scipy.stats import genextreme
     SP = True
 except:
-    print 'You really should install SciPy. Some of the tests might not pass.'
+    print 'Some of the tests might not pass because they depend on SciPy functions.'
     SP= False
 try:
     import pylab as P
@@ -42,6 +42,54 @@ except:
     print 'Plotting disabled'
     PLOT=False
 SP = False
+
+# Some python densities for comparison
+def cauchy(x, x0, gamma):
+    return 1/pi * gamma/((x-x0)**2 + gamma**2)
+
+def gamma(x, alpha, beta):
+    return x**(alpha-1) * exp(-x/beta)/(special.gamma(alpha) * beta**alpha)
+
+def multinomial_beta(alpha):
+    nom = (special.gamma(alpha)).prod(0)
+    den = special.gamma(alpha.sum(0))
+    return nom/den
+
+def dirichlet(x, theta):
+    """Dirichlet multivariate probability density.
+
+    :Parameters:
+      x : (n,k) array
+        Input data
+      theta : (n,k) or (1,k) array
+        Distribution parameter
+    """
+    x = np.atleast_2d(x)
+    theta = np.atleast_2d(theta)
+    f = (x**(theta-1)).prod(0)
+    return f/multinomial_beta(theta)
+
+def geometric(x, p):
+    return p*(1.-p)**(x-1)
+
+def hypergeometric(x, d, S, N):
+    return comb(N-S, x) * comb(S, d-x) / comb(N,d)
+
+def multinomial(x,n,p):
+    x = np.atleast_2d(x)
+    return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
+
+def multivariate_normal(x, mu, C):
+    N = len(x)
+    x = asmatrix(x)
+    mu = asmatrix(mu)
+    C = asmatrix(C)
+    
+    A = (2*pi)**(N/2.) * sqrt(det(C))
+    z = (x-mu)
+    return (A * exp(-.5 * z * inv(C) * z.T)).A[0][0]
+
+
 def consistency(randomf, likef, params, nbins=10, nrandom=1000, nintegration=15,\
     range=None, plot=None):
     """Check the random generator is consistent with the likelihood.
@@ -274,7 +322,7 @@ class test_dirichlet(NumpyTestCase):
         theta = np.array([2.,3.])
         x = [4.,2]
         l = flib.dirichlet(x, theta)
-        f = utils.dirichlet(x, theta)
+        f = dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
 
     def check_vectorization(self):
@@ -291,12 +339,21 @@ class test_exponential(NumpyTestCase):
     """Based on gamma."""
     def check_consistency(self):
         params={'beta':4}
-        hist, like, figdata = consistency(rexponential, exponential_like, params,\
-            nrandom=5000)
+        hist, like, figdata = consistency(rexponential, exponential_like, 
+            params, nrandom=5000)
         if PLOT:
             compare_hist(figname='exponential', **figdata)
         assert_array_almost_equal(hist, like,1)
 
+class test_exponweib(NumpyTestCase):
+    #TODO: Check the small k case, seems to bug.
+    def check_consistency(self):
+        params = {'alpha':2, 'k':3, 'loc':1, 'scale':3}
+        hist,like,figdata=consistency(rexponweib, exponweib_like, 
+            params, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='exponweib', **figdata)
+        assert_array_almost_equal(hist, like, 1)
 
 class test_gamma(NumpyTestCase):
     def check_consistency(self):
@@ -436,7 +493,7 @@ class test_multinomial(NumpyTestCase):
         n = 10
         x = rmultinomial(n, p, size=5)
         a = multinomial_like(x,n,p)
-        b = log(utils.multinomial(x,n,p).prod())
+        b = log(multinomial(x,n,p).prod())
         assert_almost_equal(a,b,4)
 
     def check_vectorization(self):
@@ -459,7 +516,7 @@ class test_multivariate_normal(NumpyTestCase):
         C = [[1, .5],[.5,1]]
         #r = rmultivariate_normal(mu, np.linalg.inv(C), 2)
         #a = multivariate_normal_like(r, mu, C)
-        #b = prod([utils.multivariate_normal(x, mu, C) for x in r])
+        #b = prod([multivariate_normal(x, mu, C) for x in r])
         #assert_almost_equal(exp(a), b)
     
 class test_normal(NumpyTestCase):

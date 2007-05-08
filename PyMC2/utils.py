@@ -6,16 +6,16 @@
 
 import numpy as np
 import sys, inspect
-try:
-    from scipy import special, factorial
-    from scipy import comb
-except ImportError:
-    print 'Warning, SciPy special functions not available'
 from copy import copy
 from PyMCObjects import Parameter, Node, PyMCBase
+import flib
+
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp, pi
+from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
+    pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
+    zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
+    hsplit, argsort
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_
@@ -205,181 +205,269 @@ def _extract(__func__, kwds, keys):
     return (value, parents)
 
 
-def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None):
-    """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None)
+def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
+    """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None) 
                                                                    -> H, dict
-
+    
     Return the distribution of sample.
-
-    Parameters
-    ----------
-    a:       Array sample.
-    bins:    Number of bins, or
-             an array of bin edges, in which case the range is not used.
-    range:   Lower and upper bin edges, default: [min, max].
-    normed:  Boolean, if False, return the number of samples in each bin,
-             if True, return the density.
-    weights: Sample weights. The weights are normed only if normed is True.
-             Should weights.sum() not equal len(a), the total bin count will
-             not be equal to the number of samples.
-    axis:    Specifies the dimension along which the histogram is computed.
-             Defaults to None, which aggregates the entire sample array.
-
-    Output
-    ------
-    H:            The number of samples in each bin.
-                  If normed is True, H is a frequency distribution.
-    dict{
-    'edges':      The bin edges, including the rightmost edge.
-    'upper':      Upper outliers.
-    'lower':      Lower outliers.
-    'bincenters': Center of bins.
-    }
-
-    Examples
-    --------
-    x = random.rand(100,10)
-    H, Dict = histogram(x, bins=10, range=[0,1], normed=True)
-    H2, Dict = histogram(x, bins=10, range=[0,1], normed=True, axis=0)
-
-    See also: histogramnd
+    
+    :Parameters:
+      - `a` : Array sample.
+      - `bins` : Number of bins, or an array of bin edges, in which case the 
+                range is not used.
+      - `range` : Lower and upper bin edges, default: [min, max].
+      - `normed` :Boolean, if False, return the number of samples in each bin,
+                if True, return the density.  
+      - `weights` : Sample weights. The weights are normed only if normed is 
+                True. Should weights.sum() not equal len(a), the total bin count 
+                will not be equal to the number of samples.
+      - `axis` : Specifies the dimension along which the histogram is computed. 
+                Defaults to None, which aggregates the entire sample array.
+      - `strategy` : Histogramming method (binsize, searchsorted or digitize).
+    
+    :Return:
+      - `H` : The number of samples in each bin. 
+        If normed is True, H is a frequency distribution.
+      - dict{ 'edges':      The bin edges, including the rightmost edge.
+        'upper':      Upper outliers.
+        'lower':      Lower outliers.
+        'bincenters': Center of bins. 
+        'strategy': the histogramming method employed.}
+    
+    :Examples:
+      >>> x = random.rand(100,10)
+      >>> H, D = histogram(x, bins=10, range=[0,1], normed=True)
+      >>> H2, D = histogram(x, bins=10, range=[0,1], normed=True, axis=0)
+    
+    :SeeAlso: histogramnd
     """
-
-    a = np.asarray(a)
+    weighted = weights is not None
+    
+    a = asarray(a)
     if axis is None:
-        a = np.atleast_1d(a.ravel())
-        axis = 0
-
-    # Bin edges.
-    if not np.iterable(bins):
+        a = atleast_1d(a.ravel())
+        if weighted:
+            weights = atleast_1d(weights.ravel())
+        axis = 0 
+        
+    # Bin edges.   
+       
+    if not iterable(bins):
         if range is None:
             range = (a.min(), a.max())
         mn, mx = [mi+0.0 for mi in range]
         if mn == mx:
             mn -= 0.5
             mx += 0.5
-        edges = np.linspace(mn, mx, bins+1, endpoint=True)
+            
+        if bins is None or type(bins) == str:
+            bins = _optimize_binning(a, range, bins)
+            
+        edges = linspace(mn, mx, bins+1, endpoint=True)
     else:
-        edges = np.asarray(bins, float)
-
-    dedges = np.diff(edges)
-    decimal = int(-np.log10(dedges.min())+6)
+        edges = asarray(bins, float)
+    
+    nbin = len(edges)-1
+    dedges = diff(edges)
     bincenters = edges[:-1] + dedges/2.
-
-    # apply_along_axis accepts only one array input, but we need to pass the
-    # weights along with the sample. The strategy here is to concatenate the
-    # weights array along axis, so the passed array contains [sample, weights].
-    # The array is then split back in  __hist1d.
-    if weights is not None:
-        aw = np.concatenate((a, weights), axis)
-        weighted = True
+        
+    # Measure of bin precision.
+    decimal = int(-log10(dedges.min())+10)
+    
+    # Choose the fastest histogramming method
+    even = (len(set(around(dedges, decimal))) == 1)
+    if strategy is None:
+        if even:
+            strategy = 'binsize'
+        else:
+            if nbin > 30: # approximative threshold
+                strategy = 'searchsort'
+            else:
+                strategy = 'digitize'
     else:
-        aw = a
-        weighted = False
-
-    count = np.apply_along_axis(hist1d, axis, aw, edges, decimal, weighted, normed)
-
+        if strategy not in ['binsize', 'digitize', 'searchsort']:
+            raise 'Unknown histogramming strategy.', strategy
+        if strategy == 'binsize' and not even:
+            raise 'This binsize strategy cannot be used for uneven bins.'
+        
+    # Parameters for the even functions.
+    start = float(edges[0])
+    binwidth = float(dedges[0])
+    
+    # For the rightmost bin, we want values equal to the right 
+    # edge to be counted in the last bin, and not as an outlier. 
+    # Hence, we shift the last bin by a tiny amount.
+    if not iterable(bins):
+        binwidth += pow(10, -decimal)
+        edges[-1] += pow(10, -decimal)
+    
+    # Looping to reduce memory usage
+    block = 66600 
+    slices = [slice(None)]*a.ndim
+    for i in arange(0,len(a),block):
+        slices[axis] = slice(i,i+block)
+        at = a[slices]
+        if weighted:
+            at = concatenate((at, weights[slices]), axis)        
+            if strategy == 'binsize':   
+                count = apply_along_axis(_splitinmiddle,axis,at,
+                    flib.weighted_fixed_binsize,start,binwidth,nbin)               
+            elif strategy == 'searchsort':
+                count = apply_along_axis(_splitinmiddle,axis,at, \
+                        _histogram_searchsort_weighted, edges)
+            elif strategy == 'digitize':
+                    count = apply_along_axis(_splitinmiddle,axis,at,\
+                        _histogram_digitize,edges,decimal,normed)
+        else:
+            if strategy == 'binsize':
+                count = apply_along_axis(flib.fixed_binsize,axis,at,start,binwidth,nbin)
+            elif strategy == 'searchsort':
+                count = apply_along_axis(_histogram_searchsort,axis,at,edges)
+            elif strategy == 'digitize':
+                count = apply_along_axis(_histogram_digitize,axis,at,None,edges,
+                        decimal, normed)
+                    
+        if i == 0:
+            total = count
+        else:
+            total += count
+        
     # Outlier count
-    upper = count.take(np.array([-1]), axis)
-    lower = count.take(np.array([0]), axis)
-
+    upper = total.take(array([-1]), axis)
+    lower = total.take(array([0]), axis)
+    
     # Non-outlier count
     core = a.ndim*[slice(None)]
     core[axis] = slice(1, -1)
-    hist = count[core]
-
+    hist = total[core]
+    
     if normed:
-        normalize = lambda x: np.atleast_1d(x/(x*dedges).sum())
-        hist = np.apply_along_axis(normalize, axis, hist)
+        normalize = lambda x: atleast_1d(x/(x*dedges).sum())
+        hist = apply_along_axis(normalize, axis, hist)
 
     return hist, {'edges':edges, 'lower':lower, 'upper':upper, \
-        'bincenters':bincenters}
+        'bincenters':bincenters, 'strategy':strategy}
+        
 
 
-def hist1d(aw, edges, decimal, weighted, normed):
-    """Internal routine to compute the 1d histogram.
-    aw: sample, [weights]
+def _histogram_fixed_binsize(a, start, width, n):
+    """histogram_even(a, start, width, n) -> histogram
+    
+    Return an histogram where the first bin counts the number of lower
+    outliers and the last bin the number of upper outliers. Works only with 
+    fixed width bins. 
+    
+    :Parameters:
+      a : array
+        Array of samples.
+      start : float
+        Left-most bin edge.
+      width : float
+        Width of the bins. All bins are considered to have the same width.
+      n : int
+        Number of bins. 
+    
+    :Return:
+      H : array
+        Array containing the number of elements in each bin. H[0] is the number
+        of samples smaller than start and H[-1] the number of samples 
+        greater than start + n*width.
+    """    
+                 
+    return flib.fixed_binsize(a, start, width, n)
+
+
+def _histogram_binsize_weighted(a, w, start, width, n):
+    """histogram_even_weighted(a, start, width, n) -> histogram
+    
+    Return an histogram where the first bin counts the number of lower
+    outliers and the last bin the number of upper outliers. Works only with 
+    fixed width bins. 
+    
+    :Parameters:
+      a : array
+        Array of samples.
+      w : array
+        Weights of samples.
+      start : float
+        Left-most bin edge.
+      width : float
+        Width of the bins. All bins are considered to have the same width.
+      n : int
+        Number of bins. 
+    
+    :Return:
+      H : array
+        Array containing the number of elements in each bin. H[0] is the number
+        of samples smaller than start and H[-1] the number of samples 
+        greater than start + n*width.
+    """    
+    return flib.weighted_fixed_binsize(a, w, start, width, n)
+       
+def _histogram_searchsort(a, bins):
+    n = sort(a).searchsorted(bins)
+    n = concatenate([n, [len(a)]])
+    count = concatenate([[n[0]], n[1:]-n[:-1]])
+    return count
+    
+def _histogram_searchsort_weighted(a, w, bins):
+    i = sort(a).searchsorted(bins)
+    sw = w[argsort(a)]
+    i = concatenate([i, [len(a)]])
+    n = concatenate([[0],sw.cumsum()])[i]
+    count = concatenate([[n[0]], n[1:]-n[:-1]])
+    return count
+
+def _splitinmiddle(x, function, *args, **kwds):
+    x1,x2 = hsplit(x, 2)
+    return function(x1,x2,*args, **kwds)
+
+def _histogram_digitize(a, w, edges, decimal, normed):
+    """Internal routine to compute the 1d weighted histogram for uneven bins.
+    a: sample
+    w: weights
     edges: bin edges
     decimal: approximation to put values lying on the rightmost edge in the last
              bin.
-    weighted: Means that the weights are appended to array a.
+    weighted: Means that the weights are appended to array a. 
     Return the bin count or frequency if normed.
     """
+    weighted = w is not None
     nbin = edges.shape[0]+1
     if weighted:
-        count = np.zeros(nbin, dtype=float)
-        a,w = np.hsplit(aw,2)
-        if normed:
+        count = zeros(nbin, dtype=w.dtype)
+        if normed:    
+            count = zeros(nbin, dtype=float)
             w = w/w.mean()
     else:
-        a = aw
-        count = np.zeros(nbin, dtype=int)
-        w = None
-
-
-    binindex = np.digitize(a, edges)
-
-    # Values that fall on an edge are put in the right bin.
-    # For the rightmost bin, we want values equal to the right
-    # edge to be counted in the last bin, and not as an outlier.
-    on_edge = np.where(np.around(a,decimal) == np.around(edges[-1], decimal))[0]
-    binindex[on_edge] -= 1
-
+        count = zeros(nbin, int)
+            
+    binindex = digitize(a, edges)
+        
     # Count the number of identical indices.
-    flatcount = np.bincount(binindex, w)
-
+    flatcount = bincount(binindex, w)
+    
     # Place the count in the histogram array.
-    i = np.arange(len(flatcount))
-    count[i] = flatcount
-
+    count[:len(flatcount)] = flatcount
+       
     return count
 
 
-
-
-# Some python densities for comparison
-def cauchy(x, x0, gamma):
-    return 1/pi * gamma/((x-x0)**2 + gamma**2)
-
-def gamma(x, alpha, beta):
-    return x**(alpha-1) * exp(-x/beta)/(special.gamma(alpha) * beta**alpha)
-
-def multinomial_beta(alpha):
-    nom = (special.gamma(alpha)).prod(0)
-    den = special.gamma(alpha.sum(0))
-    return nom/den
-
-def dirichlet(x, theta):
-    """Dirichlet multivariate probability density.
-
-    :Parameters:
-      x : (n,k) array
-        Input data
-      theta : (n,k) or (1,k) array
-        Distribution parameter
+def _optimize_binning(x, range, method='Freedman'):
+    """Find the optimal number of bins.
+    Available methods : Freedman, Scott
     """
-    x = np.atleast_2d(x)
-    theta = np.atleast_2d(theta)
-    f = (x**(theta-1)).prod(0)
-    return f/multinomial_beta(theta)
-
-def geometric(x, p):
-    return p*(1.-p)**(x-1)
-
-def hypergeometric(x, d, S, N):
-    return comb(N-S, x) * comb(S, d-x) / comb(N,d)
-
-def multinomial(x,n,p):
-    x = np.atleast_2d(x)
-    return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
-
-def multivariate_normal(x, mu, C):
-    N = len(x)
-    x = asmatrix(x)
-    mu = asmatrix(mu)
-    C = asmatrix(C)
     
-    A = (2*pi)**(N/2.) * sqrt(det(C))
-    z = (x-mu)
-    return (A * exp(-.5 * z * inv(C) * z.T)).A[0][0]
+    N = x.shape[0]
+    if method=='Freedman':
+        s=x.sort() 
+        IQR = s[int(N*.75)] - s[int(N*.25)] # Interquantile range (75% -25%)
+        width = 2* IQR*N**(-1./3)
+        
+    elif method=='Scott':
+        width = 3.49 * x.std()* N**(-1./3)
+    
+    return range.ptp()/width
+
+
 

@@ -594,9 +594,9 @@ def exponential_like(x, beta):
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap
-def rexponweib(alpha, k, loc, scale, size=1):
+def rexponweib(alpha, k, loc=0, scale=1, size=1):
     """
-    rexponweib(alpha, k, loc, scale, size=1)
+    rexponweib(alpha, k, loc=0, scale=1, size=1)
 
     Random exponentiated Weibull variates.
     """
@@ -629,7 +629,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
     """
 
-    return flib.exponweib(x,a,c,loc,scale)
+    return flib.exponweib(x,alpha,k,loc,scale)
 
 # Gamma----------------------------------------------
 @randomwrap
@@ -944,8 +944,8 @@ def lognormal_like(x, mu, tau):
     small independent factors.
 
     .. math::
-        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi x}}
-        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
+        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
     :Parameters:
       x : float

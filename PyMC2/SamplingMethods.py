@@ -1,6 +1,6 @@
 __docformat__='reStructuredText'
 from utils import msqrt, extend_children, check_type, round_array, extend_parents
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs 
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -179,13 +179,11 @@ class SamplingMethod(object):
         """
 
         if verbose:
-            print
-            print 'Tuning', self.name
-            print '\tcurrent value:', self.get_value()
-            print '\tcurrent proposal hyperparameter:', self._hyp*self._asf
-
+            print 'Tuning'
+            
         # Calculate recent acceptance rate
-        if not self._accepted > 0 or self._rejected > 0: return
+        #if not self._accepted > 0 or self._rejected > 0: return ???
+        if self._accepted + self._rejected ==0:return
         acc_rate = self._accepted / (self._accepted + self._rejected)
 
         tuning = True
@@ -211,7 +209,10 @@ class SamplingMethod(object):
             self._asf *= 1.1
         else:
             tuning = False
-
+        
+        self.proposal_sig *= self._asf
+        self._asf = 1.
+        
         # Re-initialize rejection count
         self._rejected = 0.
         self._accepted = 0.
@@ -226,8 +227,7 @@ class SamplingMethod(object):
 
         if verbose:
             print '\tacceptance rate:', acc_rate
-            print '\tadaptive scaling factor:', self._asf
-            print '\tnew proposal hyperparameter:', self._hyp*self._asf
+            print '\tnew proposal hyperparameter:', self.proposal_sig
 
     #
     # Define attribute loglike.
