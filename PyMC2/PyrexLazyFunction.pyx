@@ -245,6 +245,8 @@ cdef class LazyFunction:
             # Push back
             for i from 0 <= i < self.cache_depth - 1:
                 for j from 0 <= j < self.N_args:
+                    # It SHOULD be safe to pointerize this... try it eventually.
+                    # self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
                     self.cached_args[(i+1) * self.N_args + j] = self.cached_args[i * self.N_args + j]
         
             # Store new
