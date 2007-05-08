@@ -24,6 +24,8 @@ from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
 from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
+# TODO : Wrap the nd histogramming fortran function. 
+
 # Find PyMC object's random children.
 def extend_children(pymc_object):
     """

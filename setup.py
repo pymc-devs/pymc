@@ -10,7 +10,7 @@ from numpy.distutils.system_info import get_info
 config = Configuration('PyMC2',parent_package=None,top_path=None)
 
 # Compile flib (fortran source for statistical distributions.)
-config.add_extension(name='flib',sources=['PyMC2/flib.f'])
+config.add_extension(name='flib',sources=['PyMC2/flib.f', 'PyMC2/histogram.f'])
 
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
 lapack_info = get_info('lapack_opt',0)
