@@ -4,7 +4,7 @@
 ###
 
 import PyMC2
-from numpy import zeros,shape, hstack
+from numpy import zeros,shape,concatenate
 import base
 
 class Trace(base.Trace):
@@ -62,10 +62,7 @@ class Trace(base.Trace):
         if chain is not None:
             return self._trace[chain][slicing]
         else:
-            trace = self._trace[0][slicing] 
-            for t in self._trace[1:]:
-                trace = hstack([trace, t[slicing]])
-            return trace
+            return concatenate(self._trace)[slicing]
 
     __call__ = gettrace
 

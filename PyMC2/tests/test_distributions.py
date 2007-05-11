@@ -477,6 +477,12 @@ class test_lognormal(NumpyTestCase):
         params=dict(mu=3, tau = .5)
         integral = normalization(flib.lognormal, params, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
+        
+    def check_vectorization(self):
+        r = rlognormal(3, .5, 2)
+        a = lognormal_like(r, 3, .5)
+        b = lognormal_like(r, [3,3], [.5,.5])
+        assert_array_equal(a,b)
 
 class test_multinomial(NumpyTestCase):
     def check_random(self):
@@ -497,24 +503,30 @@ class test_multinomial(NumpyTestCase):
         assert_almost_equal(a,b,4)
 
     def check_vectorization(self):
-        assert_equal(0,1)
+        p = array([[.2,.3,.5], [.2,.3,.5]])
+        r = rmultinomial(10, p=p[0], size=2)
+        a = multinomial_like(r,10,p[0])
+        b = multinomial_like(r,[10,10],p)
+        assert_equal(a,b)
 
 class test_multivariate_hypergeometric(NumpyTestCase):
-    pass
+    def check(self):
+        assert_equal(0,1)
 
 # the multivariate functions segfault.
 class test_multivariate_normal(NumpyTestCase):
     def check_random(self):
         mu = [3,4]
         C = [[1, .5],[.5,1]]
-        #r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
-        #assert_array_almost_equal(mu, r.mean(0), 1)
-        #assert_array_almost_equal(C, cov(r), 1)
+        assert_equal(0,1)
+        r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
+        assert_array_almost_equal(mu, r.mean(0), 1)
+        assert_array_almost_equal(C, cov(r), 1)
     
     def check_likelihood(self):
         mu = [3,4]
         C = [[1, .5],[.5,1]]
-        #r = rmultivariate_normal(mu, np.linalg.inv(C), 2)
+        r = rmultivariate_normal(mu, np.linalg.inv(C), 2)
         #a = multivariate_normal_like(r, mu, C)
         #b = prod([multivariate_normal(x, mu, C) for x in r])
         #assert_almost_equal(exp(a), b)
@@ -538,7 +550,7 @@ class test_normal(NumpyTestCase):
 class test_poisson(NumpyTestCase):
     def check_consistency(self):
         params = {'mu':2.}
-        hist,like, figdata = consistency(rpoisson, flib.poisson, params, nrandom=5000, range=[0,10])
+        hist,like, figdata = discrete_consistency(rpoisson, flib.poisson, params, nrandom=5000, range=[0,10])
         if PLOT:
             compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)

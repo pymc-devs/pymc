@@ -145,7 +145,6 @@ class SamplingMethod(object):
 
         extend_children(self)
         extend_parents(self)
-
         self.children -= self.nodes
         self.children -= self.parameters
         self.children -= self.data
@@ -346,10 +345,10 @@ class Metropolis(SamplingMethod):
         if log(random()) > logp_p + loglike_p - logp - loglike:
             # Revert parameter if fail
             self.parameter.value = self.parameter.last_value
-
             self._rejected += 1
         else:
             self._accepted += 1
+            
             
     def propose(self):
         """
@@ -357,7 +356,7 @@ class Metropolis(SamplingMethod):
         if self._dist is "Normal"
         """
         if self._dist == "Normal":
-            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
+            self.parameter.value += rnormal(0,self.proposal_sig)
         
 def MetroCompetence(parameter):
     

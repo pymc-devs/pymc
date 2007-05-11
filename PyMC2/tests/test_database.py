@@ -75,22 +75,22 @@ class test_sqlite(NumpyTestCase):
 ##        M = Sampler(DisasterModel, db='hdf5')
 ##        M.sample(300,100,2, verbose=False)
     
-class test_hdf5_tables(NumpyTestCase):
+class test_hdf5(NumpyTestCase):
     def check(self):
-        S = Sampler(DisasterModel, db='hdf5_tables')
+        S = Sampler(DisasterModel, db='hdf5')
         S.sample(500,100,2, verbose=False)
         assert_array_equal(S.e.trace().shape, (250,))
         S.db.close()
         
     def check_load(self):
-        db = database.hdf5_tables.load('DisasterModel.hdf5', 'a')
+        db = database.hdf5.load('DisasterModel.hdf5', 'a')
         S = Sampler(DisasterModel, db)
         S.sample(200,0,1)
         assert_array_equal(S.e.trace(chain=None).shape, (450,))
         S.db.close()
         
     def check_compression(self):
-        db = database.hdf5_tables.Database('DisasterModelCompressed.hdf5', complevel=5)
+        db = database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
         S = Sampler(DisasterModel,db)
         S.sample(450,100,1, verbose=False)
         assert_array_equal(S.e.trace().shape, (450,))

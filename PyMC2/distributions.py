@@ -991,8 +991,8 @@ def multinomial_like(x, n, p):
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
     "failure", each one results in exactly one of some fixed finite number k
-    of possible outcomes over n independent trials. Xi indicates the number of
-    times outcome number i was observed over the n trials.
+    of possible outcomes over n independent trials. `x[i]` indicates the number 
+    of times outcome number i was observed over the n trials.
 
     .. math::
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
