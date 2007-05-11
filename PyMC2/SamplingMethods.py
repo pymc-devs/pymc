@@ -356,7 +356,7 @@ class Metropolis(SamplingMethod):
         if self._dist is "Normal"
         """
         if self._dist == "Normal":
-            self.parameter.value += rnormal(0,self.proposal_sig)
+            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
         
 def MetroCompetence(parameter):
     
