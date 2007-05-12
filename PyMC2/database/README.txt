@@ -16,7 +16,7 @@ A typical MCMC run will generate thousands of samples, and some application requ
              medium size samples. 
   pickle     Store samples in memory, then dump them in a        Cpickle
              pickle file. 
-  sqlite     Store samples in a sqlite database.                 pysqlite2
+  sqlite     Store samples in a sqlite database.                 sqlite3
   mysql      Store samples in a mysql database.                  MySQLdb
   txt        Store samples in memory, then dump them in a txt    None
              file.
