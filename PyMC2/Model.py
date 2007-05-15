@@ -113,8 +113,7 @@ class Model(object):
           - parameters
           - nodes
           - data
-          - sampling_methods
-          - container
+          - containers
         """
         # If a dictionary is passed in, open it up.
         if isinstance(item,Container):
@@ -122,7 +121,6 @@ class Model(object):
             self.parameters.update(item.parameters)
             self.data.update(item.data)
             self.nodes.update(item.nodes)
-            self.sampling_methods.update(item.sampling_methods)
 
         # File away the PyMC objects
         elif isinstance(item,PyMCBase):
@@ -404,7 +402,6 @@ class Sampler(Model):
                 self.__dict__[item[0]] = item[1]
                 self.sampling_methods.add(item[1])
                 setattr(item[1], '_model', self)
-
 
         # Default SamplingMethod
         self._assign_samplingmethod()

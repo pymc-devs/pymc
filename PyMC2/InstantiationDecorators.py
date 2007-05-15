@@ -1,10 +1,58 @@
 import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter
-from utils import extend_children, _push, _extract
+from utils import extend_children, _push
 from PyMCBase import ZeroProbability
 import numpy as np
 
+def _extract(__func__, kwds, keys): 
+    """
+    Used by decorators parameter and node to inspect declarations
+    """
+    kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
+    parents = {}
+    
+    def probeFunc(frame, event, arg):
+        if event == 'return':
+            locals = frame.f_locals
+            kwds.update(dict((k,locals.get(k)) for k in keys))
+            sys.settrace(None)
+        return probeFunc
+
+    # Get the __func__tions logp and random (complete interface).
+    sys.settrace(probeFunc)
+    try:
+        __func__()
+    except:
+        if 'logp' in keys:  
+            kwds['logp']=__func__
+        else:
+            kwds['eval'] =__func__
+
+    for key in keys:
+        if not kwds.has_key(key):
+            kwds[key] = None            
+            
+    for key in ['logp', 'eval']:
+        if key in keys:
+            if kwds[key] is None:
+                kwds[key] = __func__
+
+    # Build parents dictionary by parsing the __func__tion's arguments.
+    (args, varargs, varkw, defaults) = inspect.getargspec(__func__)
+    try:
+        parents.update(dict(zip(args[-len(defaults):], defaults)))
+
+    # No parents at all     
+    except TypeError: 
+        pass
+        
+    if parents.has_key('value'):
+        value = parents.pop('value')
+    else:
+        value = None
+        
+    return (value, parents)
 
 def parameter(__func__=None, __class__=Parameter, **kwds):
     """
@@ -48,19 +96,18 @@ def parameter(__func__=None, __class__=Parameter, **kwds):
     
     :SeeAlso: Parameter, Node, node, data, Model, Container
     """
-
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
         return __class__(value=value, parents=parents, **kwds)      
     keys = ['logp','random','rseed']
-
+    
     if __func__ is None:
-        instantiate_p.kwds = kwds   
+        instantiate_p.kwds = kwds
         return instantiate_p
     else:
         instantiate_p.kwds = kwds
         return instantiate_p(__func__)
-
+        
     return instantiate_p
     
 def discrete_parameter(__func__=None, **kwds):
@@ -99,12 +146,10 @@ def node(__func__ = None, **kwds):
     
     :SeeAlso: Node, Parameter, parameter, data, Model, Container
     """
-
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys)
-        return Node(parents=parents, **kwds)        
+        return Node(parents=parents, **kwds)
     keys = ['eval']
-    
     if __func__ is None:
         instantiate_n.kwds = kwds   
         return instantiate_n

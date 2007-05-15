@@ -58,18 +58,18 @@ class Node(PyMCBase):
     :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
-        
+
         self.LazyFunction = import_LazyFunction()
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
         
         PyMCBase.__init__(self, 
-                                doc=doc, 
-                                name=name, 
-                                parents=parents, 
-                                cache_depth = cache_depth, 
-                                trace=trace)
+                            doc=doc, 
+                            name=name, 
+                            parents=parents, 
+                            cache_depth = cache_depth, 
+                            trace=trace)
         
         self._value.force_compute()        
         

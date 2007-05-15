@@ -180,57 +180,6 @@ def _push(seq,new_value):
         seq[0] = copy(new_value)
 
 
-
-def _extract(__func__, kwds, keys): 
-    """
-    Used by decorators parameter and node to inspect declarations
-    """
-    kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
-    parents = {}
-
-    def probeFunc(frame, event, arg):
-        if event == 'return':
-            locals = frame.f_locals
-            kwds.update(dict((k,locals.get(k)) for k in keys))
-            sys.settrace(None)
-        return probeFunc
-
-    # Get the __func__tions logp and random (complete interface).
-    sys.settrace(probeFunc)
-    try:
-        __func__()
-    except:
-        if 'logp' in keys:  
-            kwds['logp']=__func__
-        else:
-            kwds['eval'] =__func__
-
-    for key in keys:
-        if not kwds.has_key(key):
-            kwds[key] = None            
-            
-    for key in ['logp', 'eval']:
-        if key in keys:
-            if kwds[key] is None:
-                kwds[key] = __func__
-
-    # Build parents dictionary by parsing the __func__tion's arguments.
-    (args, varargs, varkw, defaults) = inspect.getargspec(__func__)
-    try:
-        parents.update(dict(zip(args[-len(defaults):], defaults)))
-
-    # No parents at all     
-    except TypeError: 
-        pass
-        
-    if parents.has_key('value'):
-        value = parents.pop('value')
-    else:
-        value = None
-        
-    return (value, parents)
-
-
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None) 
                                                                    -> H, dict
