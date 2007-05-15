@@ -319,12 +319,14 @@ class Metropolis(SamplingMethod):
         if self._dist == "Prior":
             logp = 0.
         else:
-            # print self.parameter.__name__ + ' ', self.parameter.value
             logp = self.parameter.logp
         loglike = self.loglike
 
         # Sample a candidate value
-        self.propose()
+        if self._dist == "Prior":
+            self.parameter.random()
+        else:
+            self.propose()
 
         # Probability and likelihood for parameter's proposed value:
         try:

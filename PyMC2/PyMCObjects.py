@@ -71,7 +71,9 @@ class Node(PyMCBase):
                             cache_depth = cache_depth, 
                             trace=trace)
         
-        self._value.force_compute()        
+        self._value.force_compute()
+        if self.value is None:
+            print  "WARNING: Node " + self.__name__ + "'s initial value is None"
         
     def gen_lazy_function(self):
         self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
@@ -214,13 +216,18 @@ class Parameter(PyMCBase):
             else:
                 print 'Warning, parameter ' + name + "'s value initialized to None; no initial value or random method provided."
 
-        
         PyMCBase.__init__(  self, 
                             doc=doc, 
                             name=name, 
                             parents=parents, 
                             cache_depth=cache_depth, 
-                            trace=trace)        
+                            trace=trace)
+                            
+        self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
+
+        if not isinstance(self.logp, float):
+            raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+            
                 
     def gen_lazy_function(self):
         
@@ -257,7 +264,7 @@ class Parameter(PyMCBase):
         
         # Check if the value is smaller than a double precision infinity:
         if logp <= self.d_neg_inf:
-            raise ZeroProbability
+            raise ZeroProbability, self.zero_logp_error_msg
             
         return logp
 
