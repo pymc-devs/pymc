@@ -8,10 +8,11 @@ Plotting module using matplotlib.
 # Import matplotlib functions
 import matplotlib
 from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
-from pylab import setp, axis, contourf, cm, title, colorbar, clf
+from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill
+from pprint import pformat
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes
+from numpy import arange, log, ravel, rank, swapaxes, concatenate
 from numpy import histogram2d, mean, std, sort, prod, floor, shape
 
 def get_index_list(shape, j):
@@ -75,7 +76,7 @@ def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
 
     return quants, alphas
 
-def func_envelopes(pymc_object, HPD):
+def func_envelopes(pymc_object, HPD=[.25, .5, .95]):
     """
     func_envelopes(pymc_object, HPD = [.25, .5, .95])
 
