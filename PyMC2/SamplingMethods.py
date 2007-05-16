@@ -273,9 +273,10 @@ class Metropolis(SamplingMethod):
 
     :SeeAlso: SamplingMethod, Sampler.
     """
-    def __init__(self, parameter, scale=1., dist=None):
+    def __init__(self, parameter, scale=1., dist=None, verbose=False):
         SamplingMethod.__init__(self,[parameter])
         self.parameter = parameter
+        self.verbose = verbose
         if all(self.parameter.value != 0.):
             self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         else:
@@ -342,14 +343,21 @@ class Metropolis(SamplingMethod):
             self._rejected += 1
             return
             
+        if self.verbose:
+            print 'logp_p - logp: ', logp_p - logp
+            print 'loglike_p - loglike: ', loglike_p - loglike
 
         # Test
         if log(random()) > logp_p + loglike_p - logp - loglike:
             # Revert parameter if fail
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
+            if self.verbose:
+                print 'Rejecting'
         else:
             self._accepted += 1
+            if self.verbose:
+                print 'Accepting'
             
             
     def propose(self):
@@ -520,6 +528,12 @@ class JointMetropolis(SamplingMethod):
     TODO: Make this round DiscreteParameters' values and assign Discrete
     individual sampling methods to them, figure out what to do about binary
     parameters.
+    
+    Also: don't start joint sampling until all parameters have mixed at 
+    least a little. Warn if another epoch of one-at-a-time sampling is
+    required.
+    
+    Also: when the covariance is nonsquare,
 
     """
     def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, oneatatime_scales=None):
@@ -647,7 +661,9 @@ class JointMetropolis(SamplingMethod):
         """
         fill_stdnormal(self._proposal_deviate)
         
-        proposed_vals = self._asf * inner(self._proposal_deviate, self._sig)
+        N = self._sig.shape[1]
+        
+        proposed_vals = self._asf * inner(self._proposal_deviate[:N], self._sig)
         
         for parameter in self.parameters:
             
@@ -699,9 +715,15 @@ class JointMetropolis(SamplingMethod):
         if  (float(self._model._cur_trace_index - self.delay)) % self.epoch == 0 \
             and self._model._cur_trace_index > self.delay \
             and not self._model._cur_trace_index == self.last_trace_index:
-
-            self.compute_sig()
-            self.last_trace_index = self._model._cur_trace_index
+            
+            # Make sure all the one-at-a-time handlers mixed.
+            if not self._ready:
+                for handler in self._single_param_handlers:
+                    if handler._accepted == 0:
+                        print self._id+ ": Warnining, parameter " + handler.parameter.__name__ + " did not mix, continuing one-at-a-time sampling"
+                    
+                self.compute_sig()
+                self.last_trace_index = self._model._cur_trace_index
 
 
 def JointMetroCompetence(parameter):

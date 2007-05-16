@@ -225,12 +225,15 @@ class Parameter(PyMCBase):
                             
         self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
 
+        # Check initial value
         if not isinstance(self.logp, float):
             raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
             
                 
     def gen_lazy_function(self):
-        
+        """
+        Will be called by PyMCBase at instantiation.
+        """
         arguments = self.parents.copy()
         arguments['value'] = self
 
