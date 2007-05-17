@@ -2178,5 +2178,35 @@ cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
 
       return
       END
+      
+      
+      SUBROUTINE invlogit(x, ilx)
+
+c Returns the inverse-logit transform of x
+
+cf2py real intent(in) :: x
+cf2py real intent(out) :: ilx
+
+      REAL x, ilx
+      
+      ilx = 1.0 / (1.0 + exp(-1.0 * x))
+        
+      return
+      END
+      
+      
+      SUBROUTINE logit(x, lx)
+
+c Returns the logit transform of x
+
+cf2py real intent(in) :: x
+cf2py real intent(out) :: lx
+
+      REAL x, lx
+      
+      lx = log( x / (1.0 - x) ) 
+        
+      return
+      END
 
 
