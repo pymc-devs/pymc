@@ -10,6 +10,7 @@ Updated by DH on 2007-04-04.
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
 import base, pickle, ram, PyMC2
+import pdb
 
 class Trace(object):
     """SQLite Trace class."""
@@ -42,15 +43,21 @@ class Trace(object):
 
     def tally(self,index):
         """Adds current value to trace"""
+        size = 1
+        try:
+            size = len(self._obj.value)
+        except TypeError:
+            pass
+            
         try:
             value = self._obj.value.copy()
-            valstring = ', '.join(value.astype('c'))
+            valstring = ', '.join([str(x) for x in value])
         except AttributeError:
             value = self._obj.value
             valstring = str(value)  
             
         # Add value to database
-        self.db.cur.execute("INSERT INTO %s values (NULL, %s, %s)" % (self._obj.__name__, self.current_trace, valstring))
+        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self._obj.__name__, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
 
 # TODO: It looks like the chain=None doesn't work. Look at the test. 
     def gettrace(self, burn=0, thin=1, chain=None, slicing=None):
