@@ -8,7 +8,7 @@
 ###
 
 
-from numpy import zeros,shape, asarray, hstack, size
+from numpy import zeros,shape, asarray, hstack, size, dtype
 import PyMC2
 from PyMC2.database import base, pickle
 from copy import copy
@@ -25,12 +25,14 @@ class Trace(base.Trace):
         if obj is not None:
             if isinstance(obj, PyMC2.PyMCBase):
                 self._obj = obj
+                self.name = self._obj.__name__
             else:
                 raise AttributeError, 'Not PyMC object', obj
-        self.name = name
+        else:
+            self.name = name
             
     def _initialize(self, length):
-        """Get the table instance"""
+        """Make sure the object name is known"""
         if self.name is None:
             self.name = self._obj.__name__
     
@@ -161,7 +163,11 @@ class Database(pickle.Database):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}
         for o in self.model._pymc_objects_to_tally:
-            D[o.__name__] = tables.Col.from_dtype(asarray(o.value).dtype)
+            arr = asarray(o.value)
+            #if len(s) == 0: 
+            #    D[o.__name__] = tables.Col.from_scdtype(arr.dtype)
+            #else:
+            D[o.__name__] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
         return D
 
     def close(self):

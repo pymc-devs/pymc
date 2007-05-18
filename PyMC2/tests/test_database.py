@@ -3,14 +3,7 @@
 from numpy.testing import *
 from PyMC2 import Sampler, database
 from PyMC2.examples import DisasterModel
-import os
-try:
-    os.system('rm DisasterModel.pickle')
-    os.system('rm DisasterModel.sqlite')
-    os.system('rm DisasterModel.sqlite-journal')
-    os.system('rm DisasterModel.hdf5')
-except:
-    pass
+import os,sys
 
 class test_no_trace(NumpyTestCase):
     def check(self):
@@ -31,6 +24,13 @@ class test_ram(NumpyTestCase):
         assert_array_equal(M.e.trace(chain=None).shape, (450,))
         
 class test_pickle(NumpyTestCase):
+    def __init__(*args, **kwds):
+        NumpyTestCase.__init__(*args, **kwds)
+        try: 
+            os.remove('DisasterModel.pickle')
+        except:
+            pass
+            
     def check(self):
         M = Sampler(DisasterModel, db='pickle')
         M.sample(500,100,2, verbose=False)
@@ -55,46 +55,61 @@ class test_pickle(NumpyTestCase):
 ##        M = Sampler(DisasterModel, db='mysql')
 ##        M.sample(300,100,2, verbose=False)
 ##    
-
-class test_sqlite(NumpyTestCase):
-    def check(self):
-        M = Sampler(DisasterModel, db='sqlite')
-        M.sample(500,100,2, verbose=False)
-        assert_array_equal(M.e.trace().shape, (250,))
-        M.db.close()
-        
-    def check_load(self):
-        db = database.sqlite.load('DisasterModel.sqlite')
-        S = Sampler(DisasterModel, db)
-        S.sample(200,0,1)
-        assert_array_equal(S.e.trace(chain=None).shape, (450,))
-        S.db.close()
+if hasattr(database, 'sqlite'):
+    class test_sqlite(NumpyTestCase):
+        def __init__(*args, **kwds):
+            NumpyTestCase.__init__(*args, **kwds)
+            try:    
+                os.remove('DisasterModel.sqlite')
+                os.remove('DisasterModel.sqlite-journal')
+            except:
+                pass
+                
+        def check(self):
+            M = Sampler(DisasterModel, db='sqlite')
+            M.sample(500,100,2, verbose=False)
+            assert_array_equal(M.e.trace().shape, (250,))
+            M.db.close()
+            
+        def check_load(self):
+            db = database.sqlite.load('DisasterModel.sqlite')
+            S = Sampler(DisasterModel, db)
+            S.sample(200,0,1)
+            assert_array_equal(S.e.trace(chain=None).shape, (450,))
+            S.db.close()
         
 ##class test_hdf5(NumpyTestCase):
 ##    def check(self):
 ##        M = Sampler(DisasterModel, db='hdf5')
 ##        M.sample(300,100,2, verbose=False)
-    
-class test_hdf5(NumpyTestCase):
-    def check(self):
-        S = Sampler(DisasterModel, db='hdf5')
-        S.sample(500,100,2, verbose=False)
-        assert_array_equal(S.e.trace().shape, (250,))
-        S.db.close()
+if hasattr(database, 'hdf5'):
+    class test_hdf5(NumpyTestCase):
+        def __init__(*args, **kwds):
+            NumpyTestCase.__init__(*args, **kwds)        
+            try: 
+                os.remove('DisasterModel.hdf5')
+            except:
+                pass
         
-    def check_load(self):
-        db = database.hdf5.load('DisasterModel.hdf5', 'a')
-        S = Sampler(DisasterModel, db)
-        S.sample(200,0,1)
-        assert_array_equal(S.e.trace(chain=None).shape, (450,))
-        S.db.close()
-        
-    def check_compression(self):
-        db = database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
-        S = Sampler(DisasterModel,db)
-        S.sample(450,100,1, verbose=False)
-        assert_array_equal(S.e.trace().shape, (450,))
-        S.db.close()
+        def check(self):
+            S = Sampler(DisasterModel, db='hdf5')
+            S.sample(500,100,2, verbose=False)
+            assert_array_equal(S.e.trace().shape, (250,))
+            S.db.close()
+            
+        def check_load(self):
+            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            S = Sampler(DisasterModel, db)
+            S.sample(200,0,1)
+            assert_array_equal(S.e.trace(chain=None).shape, (450,))
+            S.db.close()
+            
+        def check_compression(self):
+            db = database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
+            S = Sampler(DisasterModel,db)
+            S.sample(450,100,1, verbose=False)
+            assert_array_equal(S.e.trace().shape, (450,))
+            S.db.close()
         
 if __name__ == '__main__':
     NumpyTest().run()

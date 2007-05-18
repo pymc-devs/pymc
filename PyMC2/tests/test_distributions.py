@@ -31,7 +31,7 @@ if PLOT is True:
         pass
 try:
     from scipy import integrate, special, factorial, comb
-    from scipy.stats import genextreme
+    from scipy.stats import genextreme, exponweib
     SP = True
 except:
     print 'Some of the tests might not pass because they depend on SciPy functions.'
@@ -346,14 +346,25 @@ class test_exponential(NumpyTestCase):
         assert_array_almost_equal(hist, like,1)
 
 class test_exponweib(NumpyTestCase):
-    #TODO: Check the small k case, seems to bug.
     def check_consistency(self):
-        params = {'alpha':2, 'k':3, 'loc':1, 'scale':3}
+        params = {'alpha':2, 'k':2, 'loc':1, 'scale':3}
         hist,like,figdata=consistency(rexponweib, exponweib_like, 
             params, nrandom=5000)
         if PLOT:
             compare_hist(figname='exponweib', **figdata)
         assert_array_almost_equal(hist, like, 1)
+
+    def check_random(self):
+        r = rexponweib(2, 1, 4, 5, size=1000)
+        r.mean(), r.var()
+        # scipy.exponweib.stats is buggy. may 17, 2007
+
+    def check_with_scipy(self):
+        params = {'alpha':2, 'k':.3, 'loc':1, 'scale':3}
+        r = rexponweib(size=10, **params)
+        a = exponweib.pdf(r, 2,.3, 1, 3)
+        b = exponweib_like(r, **params)
+        assert_almost_equal(log(a).sum(), b, 6)
 
 class test_gamma(NumpyTestCase):
     def check_consistency(self):

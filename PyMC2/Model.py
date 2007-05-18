@@ -87,7 +87,7 @@ class Model(object):
 
         #Change input into a dictionary
         if isinstance(input, dict):
-            self.input_dict = input
+            self.input_dict = input.copy()
         else:
             try:
                 # If input is a module, reload it to make a fresh copy.
@@ -95,7 +95,7 @@ class Model(object):
             except TypeError:
                 pass
 
-            self.input_dict = input.__dict__
+            self.input_dict = input.__dict__.copy()
 
         for name, item in self.input_dict.iteritems():
             if  isinstance(item,PyMCBase) \

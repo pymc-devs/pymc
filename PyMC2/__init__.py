@@ -33,10 +33,10 @@ for mod in __optmodules__:
 for mod in __modules__:
     exec "from %s import *" % mod
 
-try:
-   import parallel
-except ImportError:
-   print 'For parallel-processing functionality install IPython1.'
+##try:
+##   import parallel
+##except ImportError:
+##   print 'For parallel-processing functionality install IPython1.'
 
 del mod
 

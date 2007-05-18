@@ -46,7 +46,8 @@ for mod in __modules__:
         exec "from %s import *" % mod
         available_modules.append(mod)
     except ImportError, msg:
-        print "Database module " + mod + " could not be loaded: "
-        print msg
+        pass
+        #print "Database module " + mod + " could not be loaded: "
+        #print msg
 del mod
 

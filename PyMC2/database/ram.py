@@ -34,12 +34,12 @@ class Trace(base.Trace):
         except AttributeError:
             self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=object) )           
         
-    def tally(self, index):
+    def tally(self, index, chain=-1):
         """Store current value."""
         try:
-            self._trace[-1][index] = self._obj.value.copy()
+            self._trace[chain][index] = self._obj.value.copy()
         except AttributeError:
-            self._trace[-1][index] = self._obj.value
+            self._trace[chain][index] = self._obj.value
 
     def truncate(self, index):
         """
