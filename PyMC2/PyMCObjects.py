@@ -57,7 +57,7 @@ class Node(PyMCBase):
     
     :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
-    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2):
+    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=False):
 
         self.LazyFunction = import_LazyFunction()
 
@@ -69,7 +69,8 @@ class Node(PyMCBase):
                             name=name, 
                             parents=parents, 
                             cache_depth = cache_depth, 
-                            trace=trace)
+                            trace=trace,
+                            verbose=verbose)
         
         self._value.force_compute()
         if self.value is None:
@@ -79,12 +80,16 @@ class Node(PyMCBase):
         self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
 
     def get_value(self):
+        if self.verbose:
+            print '\t' + self.__name__ + ': value accessed.'
         _value = self._value.get()
         if isinstance(_value, ndarray):
             _value.flags['W'] = False
+        if self.verbose:
+            print '\t' + self.__name__ + ': Returning value ',_value
         return _value
         
-    def set_value(self,value):
+    def set_value(self,value):      
         raise AttributeError, 'Node '+self.__name__+'\'s value cannot be set.'
 
     value = property(fget = get_value, fset=set_value)
@@ -178,7 +183,8 @@ class Parameter(PyMCBase):
                     value=None, 
                     rseed=False, 
                     isdata=False,
-                    cache_depth=2):                    
+                    cache_depth=2,
+                    verbose = False):                    
 
         self.LazyFunction = import_LazyFunction()    
 
@@ -221,7 +227,8 @@ class Parameter(PyMCBase):
                             name=name, 
                             parents=parents, 
                             cache_depth=cache_depth, 
-                            trace=trace)
+                            trace=trace,
+                            verbose=verbose)
                             
         self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
 
@@ -242,10 +249,14 @@ class Parameter(PyMCBase):
 
     # Define value attribute
     def get_value(self):
+        if self.verbose:
+            print '\t' + self.__name__ + ': value accessed.'
         return self._value
 
     # Record new value and increment counter
     def set_value(self, value):
+        if self.verbose:
+            print '\t' + self.__name__ + ': value set to ', value
         
         # Value can't be updated if isdata=True
         if self.isdata:
@@ -263,12 +274,16 @@ class Parameter(PyMCBase):
 
 
     def get_logp(self):
+        if self.verbose:
+            print '\t' + self.__name__ + ': logp accessed.'
         logp = self._logp.get()
+        if self.verbose:
+            print '\t' + self.__name__ + ': Returning log-probability ', logp
         
         # Check if the value is smaller than a double precision infinity:
         if logp <= self.d_neg_inf:
             raise ZeroProbability, self.zero_logp_error_msg
-            
+    
         return logp
 
     def set_logp(self):

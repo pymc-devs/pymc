@@ -111,7 +111,7 @@ class SamplingMethod(object):
     :SeeAlso: Metropolis, Sampler.
     """
 
-    def __init__(self, pymc_objects):
+    def __init__(self, pymc_objects, verbose=False):
 
         self.pymc_objects = set(pymc_objects)
         self.nodes = set()
@@ -123,6 +123,7 @@ class SamplingMethod(object):
         self._accepted = 0.
         self._rejected = 0.
         self._state = ['_rejected', '_accepted', '_asf']
+        self.verbose = verbose
 
         # File away the pymc_objects
         for pymc_object in self.pymc_objects:
@@ -177,8 +178,8 @@ class SamplingMethod(object):
         sampling algorithm.
         """
 
-        if verbose:
-            print 'Tuning'
+        if verbose or self.verbose:
+            print self._id + ' tuning.'
             
         # Calculate recent acceptance rate
         #if not self._accepted > 0 or self._rejected > 0: return ???
@@ -224,16 +225,19 @@ class SamplingMethod(object):
         # variation in all other cases.
         #self.compute_scale(acc_rate,  int_length)
 
-        if verbose:
-            print '\tacceptance rate:', acc_rate
-            print '\tnew proposal hyperparameter:', self.proposal_sig
+        if verbose or self.verbose:
+            print self._id+' acceptance rate:', acc_rate
+            print self._id+' hyperparameter:', self.proposal_sig
 
     #
     # Define attribute loglike.
     #
     def _get_loglike(self):
         sum = 0.
-        for child in self.children: sum += child.logp
+        for child in self.children: 
+            if self.verbose:
+                print '\t'+self._id+' Getting log-probability from child ' + child.__name__
+            sum += child.logp
         return sum
 
     loglike = property(fget = _get_loglike)
@@ -274,7 +278,7 @@ class Metropolis(SamplingMethod):
     :SeeAlso: SamplingMethod, Sampler.
     """
     def __init__(self, parameter, scale=1., dist=None, verbose=False):
-        SamplingMethod.__init__(self,[parameter])
+        SamplingMethod.__init__(self,[parameter],verbose)
         self.parameter = parameter
         self.verbose = verbose
         if all(self.parameter.value != 0.):
@@ -307,7 +311,6 @@ class Metropolis(SamplingMethod):
         
         else: 
             self._dist = dist
-            
         
     def step(self):
         """
@@ -317,11 +320,21 @@ class Metropolis(SamplingMethod):
 
         # Probability and likelihood for parameter's current value:
         
+        if self.verbose:
+            print
+            print self._id + ' getting initial prior.'
+            
         if self._dist == "Prior":
             logp = 0.
         else:
             logp = self.parameter.logp
+
+        if self.verbose:
+            print self._id + ' getting initial likelihood.'
         loglike = self.loglike
+
+        if self.verbose:
+            print self._id + ' proposing.'
 
         # Sample a candidate value
         if self._dist == "Prior":
@@ -338,9 +351,12 @@ class Metropolis(SamplingMethod):
             loglike_p = self.loglike
 
         except ZeroProbability:
-            # print self.parameter.__name__ + ' rejecting value ', self.parameter.value, ' back to ', self.parameter.last_value
+            if self.verbose:
+                print self._id + ' rejecting due to ZeroProbability.'
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
+            if self.verbose:
+                print self._id + ' returning.'
             return
             
         if self.verbose:
@@ -353,13 +369,16 @@ class Metropolis(SamplingMethod):
             self.parameter.value = self.parameter.last_value
             self._rejected += 1
             if self.verbose:
-                print 'Rejecting'
+                print self._id + ' rejecting'
         else:
             self._accepted += 1
             if self.verbose:
-                print 'Accepting'
-            
-            
+                print self._id + ' accepting'
+
+        if self.verbose:
+            print self._id + ' returning.'        
+        
+                    
     def propose(self):
         """
         This method is called by step() to generate proposed values

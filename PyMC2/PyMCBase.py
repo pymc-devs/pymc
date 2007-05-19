@@ -61,7 +61,7 @@ class PyMCBase(object):
     
     :SeeAlso: Parameter, Node
     """
-    def __init__(self, doc, name, parents, cache_depth, trace):
+    def __init__(self, doc, name, parents, cache_depth, trace, verbose):
 
         self._parents = ParentDict(regular_dict = parents, owner = self)
         self.children = set()
@@ -69,6 +69,7 @@ class PyMCBase(object):
         # self._value = None
         self.__name__ = name
         self.trace = trace
+        self.verbose = verbose
 
         self._cache_depth = cache_depth
         

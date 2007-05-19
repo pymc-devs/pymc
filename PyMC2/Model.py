@@ -53,7 +53,7 @@ class Model(object):
 
     :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, db='ram'):
+    def __init__(self, input, db='ram', verbose=False):
         """Initialize a Model instance.
 
         :Parameters:
@@ -76,6 +76,8 @@ class Model(object):
         self._generations = []
         self.__name__ = None
         self.status = 'ready'
+        
+        self.verbose=verbose
 
         if hasattr(input,'__name__'):
             self.__name__ = input.__name__
@@ -344,10 +346,14 @@ class Model(object):
 
         Records the value of all tracing pymc_objects.
         """
+        if self.verbose:
+            print self.__name__ + ' tallying.'
         if self._cur_trace_index < self.max_trace_length:
             self.db.tally(self._cur_trace_index)
 
         self._cur_trace_index += 1
+        if self.verbose:
+            print self.__name__ + ' done tallying.'
 
     #
     # Return to a sampled state
@@ -389,8 +395,8 @@ class Model(object):
 
 
 class Sampler(Model):
-    def __init__(self, input, db='ram'):
-        Model.__init__(self, input, db)
+    def __init__(self, input, db='ram', verbose=False):
+        Model.__init__(self, input, db, verbose)
         self.sampling_methods = set()
 
         for item in self.input_dict.iteritems():
@@ -455,7 +461,7 @@ class Sampler(Model):
         self.db.connect(self)
         
         
-    def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000,verbose=False):
+    def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000):
         """
         sample(iter,burn,thin)
 
@@ -469,7 +475,6 @@ class Sampler(Model):
         self._burn = burn
         self._thin = thin
         self._tune_interval = tune_interval
-        self._verbose = verbose
         self._cur_trace_index = 0
         length = iter/thin
         self.max_trace_length = length
@@ -514,7 +519,7 @@ class Sampler(Model):
                 if (i % self._tune_interval) == 0:
                     self.tune()
 
-                if i % 10000 == 0 and self._verbose:
+                if i % 10000 == 0 and self.verbose:
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
