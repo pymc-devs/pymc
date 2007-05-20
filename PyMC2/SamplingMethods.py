@@ -353,7 +353,7 @@ class Metropolis(SamplingMethod):
         except ZeroProbability:
             if self.verbose:
                 print self._id + ' rejecting due to ZeroProbability.'
-            self.parameter.value = self.parameter.last_value
+            self.reject()
             self._rejected += 1
             if self.verbose:
                 print self._id + ' returning.'
@@ -366,7 +366,7 @@ class Metropolis(SamplingMethod):
         # Test
         if log(random()) > logp_p + loglike_p - logp - loglike:
             # Revert parameter if fail
-            self.parameter.value = self.parameter.last_value
+            self.reject()
             self._rejected += 1
             if self.verbose:
                 print self._id + ' rejecting'
@@ -376,8 +376,10 @@ class Metropolis(SamplingMethod):
                 print self._id + ' accepting'
 
         if self.verbose:
-            print self._id + ' returning.'        
-        
+            print self._id + ' returning.'
+    
+    def reject(self):
+        self.parameter.value = self.parameter.last_value
                     
     def propose(self):
         """
@@ -441,6 +443,9 @@ class BinaryMetropolis(Metropolis):
     """
     Like Metropolis, but with a modified step() method.
     Good for binary parameters.
+    
+    NOTE this is not compliant with the Metropolis standard
+    yet because it lacks a reject() method.
     """
     def __init__(self, parameter, dist=None):
         Metropolis.__init__(self, parameter, dist=dist)
@@ -690,6 +695,11 @@ class JointMetropolis(SamplingMethod):
             
             parameter.value = parameter.value + jump
 
+    def reject(self):
+        """Reject a jump."""
+        for parameter in self.parameters:
+            parameter.value = parameter.last_value
+
     def step(self):
         """
         If the empirical covariance hasn't been computed yet, the step() call
@@ -715,8 +725,7 @@ class JointMetropolis(SamplingMethod):
                 logp_p = sum([parameter.logp for parameter in self.parameters])
             except ZeroProbability:
                 self._rejected += 1
-                for parameter in self.parameters:
-                    parameter.value = parameter.last_value
+                self.reject()
                 return
 
             loglike_p = self.loglike
@@ -725,8 +734,7 @@ class JointMetropolis(SamplingMethod):
             if log(random()) > logp_p + loglike_p - logp - loglike:
                 # Revert parameter if fail
                 self._rejected += 1
-                for parameter in self.parameters:
-                    parameter.value = parameter.last_value
+                self.reject()
             else:
                 self._accepted += 1
 

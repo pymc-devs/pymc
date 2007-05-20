@@ -11,7 +11,7 @@ class test_Sampler(NumpyTestCase):
         from PyMC2 import Sampler
         from PyMC2.examples import DisasterModel
         M = Sampler(DisasterModel)
-        M.sample(5000,0,10,verbose=False)
+        M.sample(5000,0,10)
         if PLOT:
             # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.
             plot(M.s.trace())

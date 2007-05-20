@@ -12,7 +12,7 @@ from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill
 from pprint import pformat
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes, linspace, interp
+from numpy import arange, log, ravel, rank, swapaxes, linspace#, interp
 from numpy import arange, log, ravel, rank, swapaxes, concatenate
 from numpy import histogram2d, mean, std, sort, prod, floor, shape
 from numpy import apply_along_axis

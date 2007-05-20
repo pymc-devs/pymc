@@ -5,16 +5,16 @@ from numpy import array, ndarray, reshape, Inf
 from PyMCBase import PyMCBase, ParentDict, ZeroProbability
 
 
-def import_LazyFunction():
-    try:
-        LazyFunction
-    except NameError:
-        try:
-            from PyrexLazyFunction import LazyFunction
-        except:
-            from LazyFunction import LazyFunction
-            print 'Using pure lazy functions'
-    return LazyFunction
+# def import_LazyFunction():
+#     try:
+#         LazyFunction
+#     except NameError:
+try:
+    from PyrexLazyFunction import LazyFunction
+except:
+    from LazyFunction import LazyFunction
+    print 'Using pure lazy functions'
+# return LazyFunction
         
 class Node(PyMCBase):
     """
@@ -59,7 +59,8 @@ class Node(PyMCBase):
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=False):
 
-        self.LazyFunction = import_LazyFunction()
+        # self.LazyFunction = import_LazyFunction()
+        self.LazyFunction = LazyFunction
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
@@ -77,7 +78,8 @@ class Node(PyMCBase):
             print  "WARNING: Node " + self.__name__ + "'s initial value is None"
         
     def gen_lazy_function(self):
-        self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
+        # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
+        self._value = LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)        
 
     def get_value(self):
         if self.verbose:
@@ -186,7 +188,7 @@ class Parameter(PyMCBase):
                     cache_depth=2,
                     verbose = False):                    
 
-        self.LazyFunction = import_LazyFunction()    
+        # self.LazyFunction = import_LazyFunction()    
 
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
@@ -244,7 +246,8 @@ class Parameter(PyMCBase):
         arguments = self.parents.copy()
         arguments['value'] = self
 
-        self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
+        # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
+        self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)                
 
 
     # Define value attribute
