@@ -59,7 +59,6 @@ class Trace(object):
         # Add value to database
         self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self._obj.__name__, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
 
-# TODO: It looks like the chain=None doesn't work. Look at the test. 
     def gettrace(self, burn=0, thin=1, chain=None, slicing=None):
         """Return the trace (last by default).
 
