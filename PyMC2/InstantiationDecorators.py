@@ -9,9 +9,14 @@ def _extract(__func__, kwds, keys):
     """
     Used by decorators parameter and node to inspect declarations
     """
+    
+    # Add docs and name
     kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
+    
+    # Instanitate dictionary of parents
     parents = {}
     
+    # Define global tracing function (I assume this is for debugging??)
     def probeFunc(frame, event, arg):
         if event == 'return':
             locals = frame.f_locals
@@ -19,8 +24,9 @@ def _extract(__func__, kwds, keys):
             sys.settrace(None)
         return probeFunc
 
-    # Get the __func__tions logp and random (complete interface).
     sys.settrace(probeFunc)
+    
+    # Get the __func__tions logp and random (complete interface).
     try:
         __func__()
     except:
@@ -96,16 +102,16 @@ def parameter(__func__=None, __class__=Parameter, **kwds):
     
     :SeeAlso: Parameter, Node, node, data, Model, Container
     """
+    
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
-        return __class__(value=value, parents=parents, **kwds)      
+        return __class__(value=value, parents=parents, **kwds)  
+            
     keys = ['logp','random','rseed']
     
-    if __func__ is None:
-        instantiate_p.kwds = kwds
-        return instantiate_p
-    else:
-        instantiate_p.kwds = kwds
+    instantiate_p.kwds = kwds
+    
+    if __func__:
         return instantiate_p(__func__)
         
     return instantiate_p
@@ -149,12 +155,12 @@ def node(__func__ = None, **kwds):
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys)
         return Node(parents=parents, **kwds)
+        
     keys = ['eval']
-    if __func__ is None:
-        instantiate_n.kwds = kwds   
-        return instantiate_n
-    else:
-        instantiate_n.kwds = kwds
+    
+    instantiate_n.kwds = kwds
+    
+    if __func__:
         return instantiate_n(__func__)
 
     return instantiate_n
