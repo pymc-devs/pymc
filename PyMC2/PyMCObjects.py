@@ -232,12 +232,14 @@ class Parameter(PyMCBase):
                             trace=trace,
                             verbose=verbose)
                             
-        self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
+        self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support,\n or possibly it forbids one of its parents' initial values."
 
         # Check initial value
-        if not isinstance(self.logp, float):
-            raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
-            
+        try:
+            if not isinstance(self.logp, float):
+                raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+        except ZeroProbability:
+            raise ZeroProbability, "Parameter " + self.__name__ + "'s initial value is outside its support."
                 
     def gen_lazy_function(self):
         """

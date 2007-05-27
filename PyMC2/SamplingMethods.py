@@ -11,6 +11,8 @@ from PyMCBase import ZeroProbability
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
 
+# TODO: Actually use _asf
+
 class DictWithDoc(dict):
     """
     The sampling method registry is a dictionary mapping each
@@ -72,14 +74,18 @@ def pick_best_methods(parameter):
     # print parameter.__name__ + ': ', best_candidates, ' ', max_competence
     return best_candidates
     
-def assign_method(parameter):
+def assign_method(parameter, scale=None):
     """
     Returns a sampling method instance to handle a 
     parameter. If several methods have the same competence, 
     it picks one arbitrarily (using set.pop()).
     """
     best_candidates = pick_best_methods(parameter)
-    return best_candidates.pop()(parameter=parameter)
+    method = best_candidates.pop()
+    if scale is not None:
+        return method(parameter=parameter, scale = scale)
+    else:
+        return method(parameter = parameter)
 
 class SamplingMethod(object):
     """
@@ -210,16 +216,13 @@ class SamplingMethod(object):
         else:
             tuning = False
         
-        self.proposal_sig *= self._asf
-        self._asf = 1.
-        
         # Re-initialize rejection count
         self._rejected = 0.
         self._accepted = 0.
 
         # If the scaling factor is diverging, abort
-        if self._asf > divergence_threshold:
-            raise DivergenceError, 'Proposal distribution variance diverged'
+        # if self._asf > divergence_threshold:
+        #     raise DivergenceError, 'Proposal distribution variance diverged'
 
         # Compute covariance matrix in the multivariate case and the standard
         # variation in all other cases.
@@ -227,7 +230,7 @@ class SamplingMethod(object):
 
         if verbose or self.verbose:
             print self._id+' acceptance rate:', acc_rate
-            print self._id+' hyperparameter:', self.proposal_sig
+            print self._id+' adaptive scale factor:', self._asf
 
     #
     # Define attribute loglike.
@@ -239,6 +242,9 @@ class SamplingMethod(object):
                 print '\t'+self._id+' Getting log-probability from child ' + child.__name__
             sum += child.logp
         return sum
+        
+    def _del_loglike(self):
+        self.loglike = None
 
     loglike = property(fget = _get_loglike)
 
@@ -560,8 +566,10 @@ class JointMetropolis(SamplingMethod):
     Also: when the covariance is nonsquare,
 
     """
-    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, oneatatime_scales=None):
+    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, oneatatime_scales=None, verbose=False):
         
+        self.verbose = verbose
+                
         if parameter is not None:
             pymc_objects = [parameter]
         SamplingMethod.__init__(self,pymc_objects)
@@ -571,16 +579,6 @@ class JointMetropolis(SamplingMethod):
         self.delay = delay
         self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
         self.isdiscrete = {}
-        
-##        for parameter in self.parameters:
-##            type_now = check_type(parameter)[0]
-##            if not type_now is float and not type_now is int:
-##                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric"+\
-##                                    'or ndarray with numeric dtype for JointMetropolis to be applied.'
-##            elif type_now is int:
-##                self.isdiscrete[parameter] = True
-##            else:
-##                self.isdiscrete[parameter] = False
 
         # Flag indicating whether covariance has been computed
         self._ready = False
@@ -591,13 +589,21 @@ class JointMetropolis(SamplingMethod):
 
         # Use Metropolis instances to handle independent jumps
         # before first epoch is complete
+        if self.verbose:
+            print self._id + ': Assigning single-parameter handlers.'
         self._single_param_handlers = set()
+
+        SamplingMethodRegistry[JointMetropolis] = blacklist
         for parameter in self.parameters:
             if oneatatime_scales is not None:
-                self._single_param_handlers.add(Metropolis(parameter,
-                                                scale=oneatatime_scales[parameter]))
+                scale_now = oneatatime_scales[parameter]
             else:
-                self._single_param_handlers.add(Metropolis(parameter))
+                scale_now = None
+            
+            new_method = assign_method(parameter, scale_now)
+            self._single_param_handlers.add(new_method)
+        SamplingMethodRegistry[JointMetropolis] = JointMetroCompetence
+
 
         # Allocate memory for internal traces and get parameter slices
         self._slices = {}
@@ -627,10 +633,8 @@ class JointMetropolis(SamplingMethod):
         covariance every epoch.
         """
 
-        try:
-            print 'Joint SamplingMethod ' + self.__name__ + ' computing covariance.'
-        except AttributeError:
-            print 'Joint SamplingMethod ' + ' computing covariance.'
+        if self.verbose:
+            print 'Joint SamplingMethod ' + self._id + ' computing covariance.'
 
         # Figure out which slice of the traces to use
         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
@@ -687,7 +691,7 @@ class JointMetropolis(SamplingMethod):
         
         N = self._sig.shape[1]
         
-        proposed_vals = self._asf * inner(self._proposal_deviate[:N], self._sig)
+        proposed_vals = inner(self._proposal_deviate[:N], self._sig)
         
         for parameter in self.parameters:
             

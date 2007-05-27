@@ -624,7 +624,7 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
-        if (tau_tmp .LE. 0.0) then
+        if ((tau_tmp .LE. 0.0).OR.(x(i) .LE. 0.0)) then
           like = -infinity
           RETURN
         endif            
