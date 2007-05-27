@@ -125,7 +125,7 @@ class SamplingMethod(object):
         self.data = set()
         self.children = set()
         self.parents = set()
-        self._asf = .1
+        self._asf = 1.
         self._accepted = 0.
         self._rejected = 0.
         self._state = ['_rejected', '_accepted', '_asf']
@@ -566,7 +566,7 @@ class JointMetropolis(SamplingMethod):
     Also: when the covariance is nonsquare,
 
     """
-    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, oneatatime_scales=None, verbose=False):
+    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=False):
         
         self.verbose = verbose
                 
@@ -579,6 +579,7 @@ class JointMetropolis(SamplingMethod):
         self.delay = delay
         self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
         self.isdiscrete = {}
+        self.scale = scale
 
         # Flag indicating whether covariance has been computed
         self._ready = False
@@ -662,7 +663,7 @@ class JointMetropolis(SamplingMethod):
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
 
-        self._sig = msqrt(self._cov).T
+        self._sig = msqrt(self._cov).T * self.scale
 
         self._ready = True
 
