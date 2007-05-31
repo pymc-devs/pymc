@@ -60,7 +60,7 @@ def _extract(__func__, kwds, keys):
         
     return (value, parents)
 
-def parameter(__func__=None, __class__=Parameter, **kwds):
+def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, **kwds):
     """
     Decorator function for instantiating parameters. Usages:
     
@@ -102,6 +102,11 @@ def parameter(__func__=None, __class__=Parameter, **kwds):
     
     :SeeAlso: Parameter, Node, node, data, Model, Container
     """
+    
+    if binary:
+        __class__ = BinaryParameter
+    elif discrete:
+        __class__ = DiscreteParameter
     
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys)
@@ -173,12 +178,13 @@ def data(*args, **kwds):
     
     :SeeAlso: parameter, Parameter, node, Node, Model, Container
     """
-    if isinstance(args[0], Parameter):
-        p = args[0]
-    else:
-        p = parameter(*args, **kwds)
-    p.isdata = True
-    return p
-    
+    def decorate_parameter(func):
+        if isinstance(func, Parameter):
+            p = func
+        else:
+            p = parameter(*args, **kwds)
+        p.isdata = True
+        return p
+    return decorate_parameter
 
 
