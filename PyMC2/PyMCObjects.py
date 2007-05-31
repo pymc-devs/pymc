@@ -232,14 +232,12 @@ class Parameter(PyMCBase):
                             trace=trace,
                             verbose=verbose)
                             
-        self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support,\n or possibly it forbids one of its parents' initial values."
+        self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
 
         # Check initial value
-        try:
-            if not isinstance(self.logp, float):
-                raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
-        except ZeroProbability:
-            raise ZeroProbability, "Parameter " + self.__name__ + "'s initial value is outside its support."
+        if not isinstance(self.logp, float):
+            raise ValueError, "Parameter " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+            
                 
     def gen_lazy_function(self):
         """
@@ -250,16 +248,18 @@ class Parameter(PyMCBase):
 
         # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
         self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)                
-
-
-    # Define value attribute
+    
     def get_value(self):
+        # Define value attribute
+        
         if self.verbose:
             print '\t' + self.__name__ + ': value accessed.'
         return self._value
 
-    # Record new value and increment counter
+    
     def set_value(self, value):
+        # Record new value and increment counter
+        
         if self.verbose:
             print '\t' + self.__name__ + ': value set to ', value
         
@@ -318,8 +318,9 @@ class DiscreteParameter(Parameter):
     """
     A subclass of Parameter that takes only integer values.
     """
-        # Record new value and increment counter
+        
     def set_value(self, value):
+        # Record new value and increment counter
         
         # Value can't be updated if isdata=True
         if self.isdata:
@@ -327,16 +328,24 @@ class DiscreteParameter(Parameter):
             
         # Save current value as last_value
         self.last_value = self._value
-        self._value = int(value)
-
-    # Define value attribute
-    def get_value(self):
-        return self._value
+        self._value = int(round(value, 0))
         
-    value = property(fget=get_value, fset=set_value)
     
 class BinaryParameter(Parameter):
     """
     A subclass of Parameter that takes only boolean values.
     """
-    pass
+    
+    def set_value(self, value):
+        # Record new value and increment counter
+        
+        # Value can't be updated if isdata=True
+        if self.isdata:
+            raise AttributeError, 'Parameter '+self.__name__+'\'s value cannot be updated if isdata flag is set'
+            
+        # As a first shot at this, all non-zero values are coded as unity and 
+        # zero as zero. Better way? (e.g. positives as 1, otherwise zero)
+            
+        # Save current value as last_value
+        self.last_value = self._value
+        self._value = bool(value)
