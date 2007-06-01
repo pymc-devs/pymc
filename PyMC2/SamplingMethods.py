@@ -57,17 +57,25 @@ def pick_best_methods(parameter):
     Picks the SamplingMethods best suited to handle
     a parameter.
     """
+    
+    # Keep track of most competent methohd
     max_competence = 0
+    # Empty set of appropriate SamplingMethods
     best_candidates = set([])
 
+    # Loop over SamplingMethodRegistry
     for item in SamplingMethodRegistry.iteritems():
+        
+        # Parse method and its associated competence
         method = item[0]
         competence = item[1](parameter)
         
+        # If better than current best method, promote it
         if competence > max_competence:
             best_candidates = set([method])
             max_competence = competence
 
+        # If same competence, add it to the set of best methods
         elif competence == max_competence:
             best_candidates.add(method)
     
@@ -80,12 +88,17 @@ def assign_method(parameter, scale=None):
     parameter. If several methods have the same competence, 
     it picks one arbitrarily (using set.pop()).
     """
+    
+    # Retrieve set of best candidates
     best_candidates = pick_best_methods(parameter)
+    
+    # Randomly grab and appropriate method
     method = best_candidates.pop()
-    if scale is not None:
-        return method(parameter=parameter, scale = scale)
-    else:
-        return method(parameter = parameter)
+    
+    if scale:
+        return method(parameter = parameter, scale = scale)
+        
+    return method(parameter = parameter)
 
 class SamplingMethod(object):
     """
@@ -93,20 +106,17 @@ class SamplingMethod(object):
     It's sample() method will be called by Model at every MCMC iteration.
 
     Externally-accessible attributes:
-      - nodes:  The Nodes over which self has jurisdiction.
-      - parameters: The Parameters over which self has jurisdiction which have isdata = False.
-      - data:       The Parameters over which self has jurisdiction which have isdata = True.
-      - pymc_objects:       The Nodes and Parameters over which self has jurisdiction.
-      - children:   The combined children of all PyMCBases over which self has jurisdiction.
-      - parents:    The combined parents of all PyMCBases over which self has jurisdiction, as a set.
-      - loglike:    The summed log-probability of self's children conditional on all of
-                    self's PyMCBases' current values. These will be recomputed only as necessary.
-                    This descriptor should eventually be written in C.
+      nodes: The Nodes over which self has jurisdiction.
+      parameters: The Parameters over which self has jurisdiction which have isdata = False.
+      data: The Parameters over which self has jurisdiction which have isdata = True.
+      pymc_objects: The Nodes and Parameters over which self has jurisdiction.
+      children: The combined children of all PyMCBases over which self has jurisdiction.
+      parents: The combined parents of all PyMCBases over which self has jurisdiction, as a set.
+      loglike: The summed log-probability of self's children conditional on all of self's PyMCBases' current values. These will be recomputed only as necessary. This descriptor should eventually be written in C.
 
     Externally accesible methods:
-      - sample():   A single MCMC step for all the Parameters over which self has jurisdiction.
-        Must be overridden in subclasses.
-      - tune():     Tunes proposal distribution widths for all self's Parameters.
+      sample(): A single MCMC step for all the Parameters over which self has jurisdiction. Must be overridden in subclasses.
+      tune(): Tunes proposal distribution widths for all self's Parameters.
 
 
     To instantiate a SamplingMethod called S with jurisdiction over a
@@ -118,13 +128,17 @@ class SamplingMethod(object):
     """
 
     def __init__(self, pymc_objects, verbose=False):
-
+        # SamplingMethod initialization
+        
+        # Initialize public attributes
         self.pymc_objects = set(pymc_objects)
         self.nodes = set()
         self.parameters = set()
         self.data = set()
         self.children = set()
         self.parents = set()
+        
+        # Initialize hidden attributes
         self._asf = 1.
         self._accepted = 0.
         self._rejected = 0.
@@ -150,22 +164,26 @@ class SamplingMethod(object):
                 if isinstance(parent, PyMCBase):
                     self.parents.add(parent) 
 
+        # Find nearest descendent Parameters
         extend_children(self)
+        # Find nearest parent Parameters
         extend_parents(self)
+        
+        # Remove own PyMCObjects from set of children
         self.children -= self.nodes
         self.children -= self.parameters
         self.children -= self.data
 
+        # ID string for verbose feedback
         self._id = 'To define in subclasses'
-    #
-    # Must be overridden in subclasses
-    #
+    
     def step(self):
+        """
+        Specifies single step of sampling method.
+        Must be overridden in subclasses.
+        """
         pass
 
-    #
-    # May be overridden in subclasses
-    #
     def tune(self, divergence_threshold=1e10, verbose=False):
         """
         Tunes the scaling hyperparameter for the proposal distribution
@@ -182,16 +200,20 @@ class SamplingMethod(object):
 
         This method is called exclusively during the burn-in period of the
         sampling algorithm.
+        
+        May be overridden in subclasses.
         """
 
+        # Verbose feedback
         if verbose or self.verbose:
             print self._id + ' tuning.'
             
         # Calculate recent acceptance rate
-        #if not self._accepted > 0 or self._rejected > 0: return ???
-        if self._accepted + self._rejected ==0:return
+        # if not self._accepted > 0 or self._rejected > 0: return ???
+        if self._accepted + self._rejected ==0: return
         acc_rate = self._accepted / (self._accepted + self._rejected)
 
+        # Flag for tuning state
         tuning = True
 
         # Switch statement
@@ -228,24 +250,35 @@ class SamplingMethod(object):
         # variation in all other cases.
         #self.compute_scale(acc_rate,  int_length)
 
+        # More verbose feedback, if requested
         if verbose or self.verbose:
             print self._id+' acceptance rate:', acc_rate
             print self._id+' adaptive scale factor:', self._asf
 
-    #
-    # Define attribute loglike.
-    #
     def _get_loglike(self):
+        # Fetch log-probability (as sum of childrens' log probability)
+        
+        # Initialize sum
         sum = 0.
+        
+        # Loop over children
         for child in self.children: 
+            
+            # Verbose feedback
             if self.verbose:
                 print '\t'+self._id+' Getting log-probability from child ' + child.__name__
+                
+            # Increment sum
             sum += child.logp
+            
         return sum
         
     def _del_loglike(self):
+        # Delete log-likelihood
+        
         self.loglike = None
 
+    # Make get property for retrieving log-probability
     loglike = property(fget = _get_loglike)
 
     def current_state(self):
@@ -259,18 +292,13 @@ class SamplingMethod(object):
 # The default SamplingMethod, which Model uses to handle singleton parameters.
 class Metropolis(SamplingMethod):
     """
-    The default SamplingMethod, which Model uses to handle singleton continuous parameters.
+    The default SamplingMethod, which Model uses to handle singleton, continuous parameters.
 
-    Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which
-    self has jurisdiction.
-
-
+    Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which self has jurisdiction.
 
     To instantiate a Metropolis called M with jurisdiction over a Parameter P:
 
       >>> M = Metropolis(P, scale=1, dist=None)
-
-
 
     :Arguments:
     P:      The parameter over which self has jurisdiction.
@@ -283,32 +311,45 @@ class Metropolis(SamplingMethod):
 
     :SeeAlso: SamplingMethod, Sampler.
     """
+    
     def __init__(self, parameter, scale=1., dist=None, verbose=False):
-        SamplingMethod.__init__(self,[parameter],verbose)
+        # Metropolis class initialization
+        
+        # Initialize superclass
+        SamplingMethod.__init__(self, [parameter], verbose)
+        
+        # Set public attributes
         self.parameter = parameter
         self.verbose = verbose
+        
+        # Avoid zeros when setting proposal variance
         if all(self.parameter.value != 0.):
             self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
         else:
             self.proposal_sig = ones(shape(self.parameter.value)) * scale
             
-        self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
+        # Initialize proposal deviate with array of zeros
+        self.proposal_deviate = zeros(shape(self.parameter.value), dtype=float)
+        
+        # Initialize verbose feedback string
         self._id = 'Metropolis_'+parameter.__name__
 
+        # Determine size of parameter
         if isinstance(self.parameter.value, ndarray):
             self._len = len(self.parameter.value.ravel())
         else:
             self._len = 1
         
         # If no dist argument is provided, assign a proposal distribution automatically.
-        if dist is None:
+        if not dist:
             
+            # Pick Gaussian, just because
             self._dist = "Normal"
 
             # If self's extended children is the empty set (eg, if
             # self's parameter is a posterior predictive quantity of
             # interest), proposing from the prior is best.
-            if len(self.children) == 0:
+            if self.children:
                 try:
                     self.parameter.random()
                     self._dist = "Prior"
@@ -330,7 +371,8 @@ class Metropolis(SamplingMethod):
             print
             print self._id + ' getting initial prior.'
             
-        if self._dist == "Prior":
+        if "Prior" in self._dist:
+            # No children
             logp = 0.
         else:
             logp = self.parameter.logp
@@ -343,24 +385,29 @@ class Metropolis(SamplingMethod):
             print self._id + ' proposing.'
 
         # Sample a candidate value
-        if self._dist == "Prior":
+        if "Prior" in self._dist:
             self.parameter.random()
         else:
             self.propose()
 
         # Probability and likelihood for parameter's proposed value:
         try:
-            if self._dist == "Prior":
+            if "Prior" in self._dist:
                 logp_p = 0.
             else:
                 logp_p = self.parameter.logp
             loglike_p = self.loglike
 
         except ZeroProbability:
+            
+            # Reject proposal
             if self.verbose:
                 print self._id + ' rejecting due to ZeroProbability.'
             self.reject()
+            
+            # Increment rejected count
             self._rejected += 1
+            
             if self.verbose:
                 print self._id + ' returning.'
             return
@@ -369,14 +416,18 @@ class Metropolis(SamplingMethod):
             print 'logp_p - logp: ', logp_p - logp
             print 'loglike_p - loglike: ', loglike_p - loglike
 
-        # Test
+        # Evaluate acceptance ratio
         if log(random()) > logp_p + loglike_p - logp - loglike:
+            
             # Revert parameter if fail
             self.reject()
+            
+            # Increment rejected count
             self._rejected += 1
             if self.verbose:
                 print self._id + ' rejecting'
         else:
+            # Increment accepted count
             self._accepted += 1
             if self.verbose:
                 print self._id + ' accepting'
@@ -385,18 +436,18 @@ class Metropolis(SamplingMethod):
             print self._id + ' returning.'
     
     def reject(self):
+        # Sets current parameter value to the last accepted value
         self.parameter.value = self.parameter.last_value
                     
     def propose(self):
         """
         This method is called by step() to generate proposed values
-        if self._dist is "Normal"
+        if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
+            self.parameter.value = rnormal(self.parameter.value, self.proposal_sig)
         
-def MetroCompetence(parameter):
-    
+def MetroCompetence(parameter):  
     """
     The competence function for Metropolis
     """
@@ -422,16 +473,23 @@ class DiscreteMetropolis(Metropolis):
     Just like Metropolis, but rounds the parameter's value.
     Good for DiscreteParameters.
     """
+    
     def __init__(self, parameter, scale=1., dist=None):
+        # DiscreteMetropolis class initialization
+        
+        # Initialize superclass
         Metropolis.__init__(self, parameter, scale=scale, dist=dist)
+        
+        # Initialize verbose feedback string
         self._id = 'DiscreteMetropolis_'+parameter.__name__
     
     def propose(self):      
+        # Propose new parameter values using normal distribution
+        
         if self._dist == "Normal":
             new_val = rnormal(self.parameter.value,self.proposal_sig)
-            # print new_val, ' ', round_array(new_val)
 
-        self.parameter.value = round_array(new_val)
+            self.parameter.value = round_array(new_val)
 
 def DiscreteMetroCompetence(parameter):
     """
@@ -453,26 +511,35 @@ class BinaryMetropolis(Metropolis):
     NOTE this is not compliant with the Metropolis standard
     yet because it lacks a reject() method.
     """
+    
     def __init__(self, parameter, dist=None):
+        # BinaryMetropolis class initialization
+        
+        # Initialize superclass
         Metropolis.__init__(self, parameter, dist=dist)
+        
+        # Initialize verbose feedback string
         self._id = 'BinaryMetropolis_'+parameter.__name__
     
     def set_param_val(self, i, val, to_value):
         """
         Utility method for setting a particular element of a parameter's value.
         """
+        
         if self._len>1:
-            val[i] = value
+            val[i] = to_value
             self.parameter.value = reshape(val, self._type[1])
         else:
-            self.parameter.value = value
+            self.parameter.value = to_value
     
     def step(self):
         """
         This method is substituted for the default step() method in
         BinaryMetropolis.
         """
-        if self._dist=="Prior":
+        
+        if "Prior" in self._dist:
+            # No children
             self.parameter.random()
             
         else:        
