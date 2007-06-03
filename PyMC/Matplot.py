@@ -33,6 +33,7 @@ class PlotFactory:
         if not len(xlim):
             alldata = ravel(data)
             xlim = min(alldata), max(alldata)
+            del alldata
         
         # If there is only one data array, go ahead and plot it ...
         if rank(data)==1:

@@ -71,14 +71,15 @@ from flib import igamma as figamma
 from flib import wshrt
 from flib import gamfun
 from flib import chol
-from flib import logit, invlogit as _invlogit
+from flib import logit as _logit, invlogit as _invlogit
 
 # Shorthand of some verbose local variables
 
 t = transpose
 
-# Vectorize invlogit
+# Vectorize invlogit and logit
 invlogit = vectorize(_invlogit)
+logit = vectorize(_logit)
 
 # Not sure why this doesnt work on Windoze!
 try:
@@ -402,6 +403,7 @@ class Node:
             try:
                 trace = self.get_trace(burn, thin, chain, composite)
                 plotter.plot(trace, self.name, color=color)
+                del trace
             except Exception:
                 print 'Could not generate %s plots' % self.name
     
