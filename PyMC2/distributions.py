@@ -21,7 +21,7 @@ import flib
 import PyMC2
 import numpy as np
 from PyMCBase import ZeroProbability
-from numpy import Inf, random, sqrt, log, size, tan, pi, shape
+from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
 
 try:
     import flib_blas
@@ -187,7 +187,7 @@ def expand_triangular(X,k):
 
     X = X.tolist()
     # Unflatten matrix
-    Y = asarray([[0] * i + X[i * k - (i * (i - 1)) / 2 : i * k + (k - i)] for i in range(k)])
+    Y = np.asarray([[0] * i + X[i * k - (i * (i - 1)) / 2 : i * k + (k - i)] for i in range(k)])
     # Loop over rows
     for i in range(k):
         # Loop over columns
@@ -1406,17 +1406,18 @@ def weibull_like(x, alpha, beta):
     return flib.weibull(x, alpha, beta)
 
 # Wishart---------------------------------------------------
-def rwishart(n, Tau, m=None):
+def rwishart(n, Tau):
     """
-    rwishart(n, Tau, m=None)
+    rwishart(n, Tau)
 
-    Return Wishart random matrices.
+    Return a Wishart random matrix.
+    
+    Tau is the inverse of the covariance matrix :math:`\Sigma`.
     """
-
-    if m:
-        return [expand_triangular(flib.wshrt(D, n, np), np) for i in range(m)]
-    else:
-        return expand_triangular(flib.wshrt(D, n, np), np)
+    Sigma = inverse(Tau)
+    D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
+    np = len(Sigma)
+    return expand_triangular(flib.wshrt(D, n, np), np)
 
 
 def wishart_expval(n, Tau):
@@ -1438,7 +1439,9 @@ def wishart_like(X, n, Tau):
 
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
-
+    
+    where :math:`k` is the rank of X.
+    
     :Parameters:
       X : matrix
         Symmetric, positive definite.

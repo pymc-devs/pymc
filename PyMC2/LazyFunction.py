@@ -25,7 +25,7 @@ class LazyFunction(object):
                 Node, or Container, that argument's 'value' attribute
                 will be substituted for it when passed to fun.
                 
-    cache_depth:    The number of prior computations to 'memoize' in
+    cache_depth:    The number of prior computations to 'memorize' in
                     order to skip unnecessary computations.
     
     

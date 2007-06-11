@@ -271,9 +271,10 @@ class Parameter(PyMCBase):
             value.flags['W'] = False            
             
         # Save current value as last_value
+        # Don't copy because caching depends on the object's reference. 
         self.last_value = self._value
         self._value = value
-
+        
 
     value = property(fget=get_value, fset=set_value)
 

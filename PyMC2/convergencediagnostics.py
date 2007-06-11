@@ -1,4 +1,5 @@
 # Convergence diagnostics
+# Heidelberger and Welch (1983) ?
 
 def geweke_zscores(x, first=.1, last=.5, intervals=20):
     """Return z-scores for convergence diagnostics.

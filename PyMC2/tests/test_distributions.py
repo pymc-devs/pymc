@@ -595,7 +595,14 @@ class test_weibull(NumpyTestCase):
         assert_equal(a,b)
 
 class test_wishart(NumpyTestCase):
-    pass
+    """How do we know it's really working ?"""
+    def check(self):
+        S = [[2,.4],[.4,3]]
+        T = np.linalg.inv(S)
+        n=2
+        r = rwishart(n, T)
+        wishart_like(r, n, T)
+        
 
 
 """

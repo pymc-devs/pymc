@@ -41,7 +41,7 @@ class Database(base.Database):
         name of the input module imported by the Sampler."""
         extension = '.'+extension
         if self.filename is None:
-            modname = self.model.__name__.split('.')[-1]
+            modname = self.model.__name__
             name = modname+extension
             i=0
             existing_names = os.listdir(".")
@@ -67,13 +67,17 @@ class Database(base.Database):
     def close(self):
         """Dump traces using cPickle."""
         container={}
-        for o in self.model._pymc_objects_to_tally:
-            container[o.__name__] = o.trace._trace
-        container['_state_'] = self._state_
+        try:
+            for o in self.model._pymc_objects_to_tally:
+                container[o.__name__] = o.trace._trace
+            container['_state_'] = self._state_
         
-        file = open(self.filename, 'w')
-        cPickle.dump(container, file)
-        file.close()
+            file = open(self.filename, 'w')
+            cPickle.dump(container, file)
+            file.close()
+        except AttributeError:
+            pass
+        
      
 def load(filename):
     """Load an existing database.

@@ -42,7 +42,8 @@ class test_pickle(NumpyTestCase):
         S = Sampler(DisasterModel, db)
         S.sample(200,0,1)
         assert_equal(len(S.e.trace._trace),2)
-        assert_array_equal(S.e.trace(chain=None).shape, (200,))
+        assert_array_equal(S.e.trace().shape, (200,))
+        assert_array_equal(S.e.trace(chain=None).shape, (450,))
         S.db.close()
 ##class test_txt(NumpyTestCase):
 ##    def check(self):
@@ -75,7 +76,8 @@ if hasattr(database, 'sqlite'):
             db = database.sqlite.load('DisasterModel.sqlite')
             S = Sampler(DisasterModel, db)
             S.sample(200,0,1)
-            assert_array_equal(S.e.trace(chain=None).shape, (200,))
+            assert_array_equal(S.e.trace(chain=-1).shape, (200,))
+            assert_array_equal(S.e.trace(chain=None).shape, (450,))
             S.db.close()
         
 ##class test_hdf5(NumpyTestCase):

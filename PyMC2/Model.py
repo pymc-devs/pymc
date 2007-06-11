@@ -12,7 +12,7 @@ from PyMC2 import database
 from PyMCObjects import Parameter, Node, PyMCBase
 from Container import Container
 from utils import extend_children
-import gc, sys
+import gc, sys,os
 from copy import copy
 from threading import Thread
 
@@ -80,7 +80,8 @@ class Model(object):
         self.verbose=verbose
 
         if hasattr(input,'__name__'):
-            self.__name__ = input.__name__
+            _filename = os.path.split(input.__file__)[-1]
+            self.__name__ = os.path.splitext(_filename)[0]
         else:
             try:
                 self.__name__ = input['__name__']

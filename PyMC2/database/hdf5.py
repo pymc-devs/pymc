@@ -60,9 +60,9 @@ class Trace(base.Trace):
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
             
         groups = self.db.h5file.listNodes("/")
-        nchains = len(groups)-1
+        nchains = len(groups)-1     # -1 to remove root group
         if chain == -1:
-            chains = [nchains-1]
+            chains = [nchains-1]    # Index of last group
         elif chain is None:
             chains = range(nchains)
         elif size(chain) == 1:
