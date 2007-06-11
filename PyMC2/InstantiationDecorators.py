@@ -176,6 +176,20 @@ def data(*args, **kwds):
     Decorator function to instantiate data objects.     
     If given a Parameter, sets a the isdata flag to True.
     
+    Can be used as
+    
+    @data
+    def A(value = ., parent_name = .,  ...):
+        return foo(value, parent_name, ...)
+    
+    or as
+    
+    @data
+    @parameter
+    def A(value = ., parent_name = .,  ...):
+        return foo(value, parent_name, ...)
+        
+    
     :SeeAlso: parameter, Parameter, node, Node, Model, Container
     """
     def decorate_parameter(func):
