@@ -422,7 +422,7 @@ class Sampler(Model):
         # Default SamplingMethod
         self._assign_samplingmethod()
 
-        self._state = ['status', '_current_iter', '_iter', '_tune_interval']
+        self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
             
         self._assign_database_backend(db)
 
@@ -470,22 +470,30 @@ class Sampler(Model):
         self.db.connect(self)
         
         
-    def sample(self, iter=1000, tune_interval=1000):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000):
         """
-        sample(iter, tune_interval)
+        sample(iter, burn, thin, tune_interval)
 
         Prepare pymc_objects, initialize traces, run MCMC loop.
         """
         
         self._iter = iter
+        self._burn = burn
+        self._thin = thin
         self._tune_interval = tune_interval
         self._cur_trace_index = 0
-        self.max_trace_length = iter
+        length = iter/thin
+        self.max_trace_length = length
 
         self.seed()
 
         # Initialize database -> initialize traces.
-        self.db._initialize(iter)
+        self.db._initialize(length)
+        
+        # Set flag for tuning
+        self._still_tuning = True
+        # Number of consecutive tuning intervals with no tuning required
+        self._tuned_count = 0
 
         # Loop
         self._current_iter = 0
@@ -511,18 +519,34 @@ class Sampler(Model):
                     raise Paused
 
                 i = self._current_iter
+                
+                # No tuning allowed beyond burn-in
+                if i >= self._burn: self._still_tuning = False
+                
+                # Initialize counter for number of tuning parameters
+                tuning_count = 0
 
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
+                    if not i % self._tune_interval and self._still_tuning:
+                        # Tune sampling methods
+                        tuning_count += sampling_method.tune()
+                        
+                if not tuning_count:
+                    # If no sampling methods needed tuning, increment count
+                    self._tuned_count += 1
+                else:
+                    # Otherwise re-initialize count
+                    self._tuned_count = 0
+                    
+                # 5 consecutive clean intervals removed tuning
+                if self._tuned_count == 5: self._still_tuning = False
 
-                #if (i % self._thin) == 0:
-                #    self.tally()
+                if not i % self._thin and i >= self._burn:
+                    self.tally()
 
-                if (i % self._tune_interval) == 0:
-                    self.tune()
-
-                if i % 10000 == 0 and self.verbose > 0:
+                if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
@@ -568,13 +592,6 @@ class Sampler(Model):
                 new_method = assign_method(parameter)
                 setattr(new_method, '_model', self)
                 self.sampling_methods.add(new_method)
-
-    def tune(self):
-        """
-        Tell all samplingmethods to tune themselves.
-        """
-        for sampling_method in self.sampling_methods:
-            sampling_method.tune()
 
     def interactive_prompt(self):
         """

@@ -261,6 +261,8 @@ class SamplingMethod(object):
         if verbose > 1 or self.verbose > 1:
             print self._id+' acceptance rate:', acc_rate
             print self._id+' adaptive scale factor:', self._asf
+            
+        return tuning
 
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
@@ -329,7 +331,7 @@ class Metropolis(SamplingMethod):
         # Metropolis class initialization
         
         # Initialize superclass
-        SamplingMethod.__init__(self, [parameter], verbose)
+        SamplingMethod.__init__(self, [parameter], verbose=verbose)
         
         # Set public attributes
         self.parameter = parameter
@@ -699,7 +701,7 @@ class JointMetropolis(SamplingMethod):
                 
         if parameter is not None:
             pymc_objects = [parameter]
-        SamplingMethod.__init__(self, pymc_objects)
+        SamplingMethod.__init__(self, pymc_objects, verbose=verbose)
 
         self.epoch = epoch
         self.memory = memory
