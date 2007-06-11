@@ -59,40 +59,83 @@ class PyMCBase(object):
     
     See source code in PyMCBase.py if you want to subclass it.
     
+    :Parameters:
+          -doc : string
+              The docstring for this node.
+
+          -name : string
+              The name of this node.
+
+          -parents : dictionary
+              A dictionary containing the parents of this node.
+
+          -trace : boolean
+              A boolean indicating whether this node's value 
+              should be traced (in MCMC).
+
+          -cache_depth : integer   
+              An integer indicating how many of this node's
+              value computations should be 'memorized'.
+              
+          - verbose (optional) : integer
+              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+    
     :SeeAlso: Parameter, Node
     """
-    def __init__(self, doc, name, parents, cache_depth, trace, verbose=False):
+    def __init__(self, doc, name, parents, cache_depth, trace, verbose=0):
 
+        # Initialize parents and children
         self._parents = ParentDict(regular_dict = parents, owner = self)
         self.children = set()
+        
+        # Name and docstrings
         self.__doc__ = doc
-        # self._value = None
         self.__name__ = name
+        
+        # Adopt passed trace
         self.trace = trace
+        
+        # Flag for feedback verbosity
         self.verbose = verbose
 
         self._cache_depth = cache_depth
         
+        # Add self as child of parents
         for object in self._parents.itervalues():
             if isinstance(object, PyMCBase):
                 object.children.add(self)
         
+        # New lazy function
         self.gen_lazy_function()
                 
     def _get_parents(self):
+        # Get parents of this object
         return self._parents
         
     def _set_parents(self, new_parents):
+        # Define parents of this object
+        
+        # Iterate over items in ParentDict
         for parent in self._parents.itervalues():
             if isinstance(parent, PyMCBase):
+                # Remove self as child
                 parent.children.discard(self)
+                
+        # Specify new parents
         self._parents = ParentDict(regular_dict = new_parents, owner = self)
+        
+        # Get new lazy function
         self.gen_lazy_function()
         
     def _del_parents(self):
+        # Deletes all parents of current object
+        
+        # Remove as child from parents
         for parent in self._parents.itervalues():
             if isinstance(parent, PyMCBase):
                 parent.children.discard(self)
+                
+        # Delete parents
         del self._parents
         
     parents = property(fget=_get_parents, fset=_set_parents, fdel=_del_parents)

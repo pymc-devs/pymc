@@ -104,6 +104,13 @@ class SamplingMethod(object):
     """
     This object knows how to make Parameters take single MCMC steps.
     It's sample() method will be called by Model at every MCMC iteration.
+    
+    :Parameters:
+          -pymc_objects : list, array or set
+            Collection of PyMCObjects 
+              
+          - verbose (optional) : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Externally-accessible attributes:
       nodes: The Nodes over which self has jurisdiction.
@@ -127,7 +134,7 @@ class SamplingMethod(object):
     :SeeAlso: Metropolis, Sampler.
     """
 
-    def __init__(self, pymc_objects, verbose=False):
+    def __init__(self, pymc_objects, verbose=0):
         # SamplingMethod initialization
         
         # Initialize public attributes
@@ -184,7 +191,7 @@ class SamplingMethod(object):
         """
         pass
 
-    def tune(self, divergence_threshold=1e10, verbose=False):
+    def tune(self, divergence_threshold=1e10, verbose=0):
         """
         Tunes the scaling hyperparameter for the proposal distribution
         according to the acceptance rate of the last k proposals:
@@ -205,7 +212,7 @@ class SamplingMethod(object):
         """
 
         # Verbose feedback
-        if verbose or self.verbose:
+        if verbose > 1 or self.verbose > 1:
             print self._id + ' tuning.'
             
         # Calculate recent acceptance rate
@@ -251,7 +258,7 @@ class SamplingMethod(object):
         #self.compute_scale(acc_rate,  int_length)
 
         # More verbose feedback, if requested
-        if verbose or self.verbose:
+        if verbose > 1 or self.verbose > 1:
             print self._id+' acceptance rate:', acc_rate
             print self._id+' adaptive scale factor:', self._asf
 
@@ -265,7 +272,7 @@ class SamplingMethod(object):
         for child in self.children: 
             
             # Verbose feedback
-            if self.verbose:
+            if self.verbose > 2:
                 print '\t'+self._id+' Getting log-probability from child ' + child.__name__
                 
             # Increment sum
@@ -301,18 +308,24 @@ class Metropolis(SamplingMethod):
       >>> M = Metropolis(P, scale=1, dist=None)
 
     :Arguments:
-    P:      The parameter over which self has jurisdiction.
+    - parameter : Parameter      
+            The parameter over which self has jurisdiction.
 
-    scale:  The proposal jump width is set to scale * parameter.value.
+    - scale (optional) : number  
+            The proposal jump width is set to scale * parameter.value.
     
-    dist:   The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
-            'Prior' or None. If None is provided, a proposal distribution is chosen by
-            examining P.value's type.
+    - dist (optional) : string  
+            The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
+            'Prior' or None. If None is provided, a proposal distribution is 
+            chosen by examining P.value's type.
+            
+    - verbose (optional) : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     :SeeAlso: SamplingMethod, Sampler.
     """
     
-    def __init__(self, parameter, scale=1., dist=None, verbose=False):
+    def __init__(self, parameter, scale=1., dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
@@ -367,7 +380,7 @@ class Metropolis(SamplingMethod):
 
         # Probability and likelihood for parameter's current value:
         
-        if self.verbose:
+        if self.verbose > 2:
             print
             print self._id + ' getting initial prior.'
             
@@ -377,11 +390,11 @@ class Metropolis(SamplingMethod):
         else:
             logp = self.parameter.logp
 
-        if self.verbose:
+        if self.verbose > 2:
             print self._id + ' getting initial likelihood.'
         loglike = self.loglike
 
-        if self.verbose:
+        if self.verbose > 2:
             print self._id + ' proposing.'
 
         # Sample a candidate value
@@ -401,18 +414,18 @@ class Metropolis(SamplingMethod):
         except ZeroProbability:
             
             # Reject proposal
-            if self.verbose:
+            if self.verbose > 2:
                 print self._id + ' rejecting due to ZeroProbability.'
             self.reject()
             
             # Increment rejected count
             self._rejected += 1
             
-            if self.verbose:
+            if self.verbose > 2:
                 print self._id + ' returning.'
             return
             
-        if self.verbose:
+        if self.verbose > 2:
             print 'logp_p - logp: ', logp_p - logp
             print 'loglike_p - loglike: ', loglike_p - loglike
 
@@ -424,15 +437,15 @@ class Metropolis(SamplingMethod):
             
             # Increment rejected count
             self._rejected += 1
-            if self.verbose:
+            if self.verbose > 2:
                 print self._id + ' rejecting'
         else:
             # Increment accepted count
             self._accepted += 1
-            if self.verbose:
+            if self.verbose > 2:
                 print self._id + ' accepting'
 
-        if self.verbose:
+        if self.verbose > 2:
             print self._id + ' returning.'
     
     def reject(self):
@@ -510,6 +523,7 @@ class BinaryMetropolis(Metropolis):
     
     NOTE this is not compliant with the Metropolis standard
     yet because it lacks a reject() method.
+    (??? But, it is a subclass of Metropolis, which has a reject() method)
     """
     
     def __init__(self, parameter, dist=None):
@@ -527,9 +541,14 @@ class BinaryMetropolis(Metropolis):
         """
         
         if self._len>1:
+            # Vector-valued parameters
+            
             val[i] = to_value
             self.parameter.value = reshape(val, self._type[1])
+            
         else:
+            # Scalar parameters
+            
             self.parameter.value = to_value
     
     def step(self):
@@ -539,10 +558,12 @@ class BinaryMetropolis(Metropolis):
         """
         
         if "Prior" in self._dist:
-            # No children
+            # If no children, just sample new value
             self.parameter.random()
             
         else:        
+            
+            # Make local variable for value
             if self._len > 1:
                 val = self.parameter.value.ravel()
             else:
@@ -571,8 +592,12 @@ class BinaryMetropolis(Metropolis):
                 p_true = exp(logp_true + loglike_true)
                 p_false = exp(logp_false + loglike_false)
             
+                # Stochastically set value according to relative
+                # probabilities of True and False
                 if log(random()) > p_true / (p_true + p_false):
                     self.set_param_val(i,val,True)
+                    
+            # Increment accepted count
             self._accepted += 1
             
 def BinaryMetroCompetence(parameter):
@@ -595,6 +620,41 @@ class JointMetropolis(SamplingMethod):
     together. Jumping density is a multivariate normal distribution
     with mean zero and covariance equal to the empirical covariance
     of the parameters, times _asf ** 2.
+    
+    :Arguments:
+    - pymc_objects (optional) : list or array      
+            A sequence of pymc objects to handle using
+            this SamplingMethod.
+            
+    - parameter (optional) : Parameter
+            Alternatively to pymc_objects, a single parameter can be passed.
+
+    - epoch (optional) : integer  
+            After epoch values are stored in the internal
+            traces, the covariance is recomputed.
+            
+    - memory (optional) : integer
+            The maximum number of epochs to consider when
+            computing the covariance.
+            
+    - delay (optional) : integer
+            Number of one-at-a-time iterations to do before
+            starting to record values for computing the joint
+            covariance.
+    
+    - dist (optional) : string  
+            The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
+            'Prior' or None. If None is provided, a proposal distribution is 
+            chosen by examining P.value's type.
+            
+    - scale (optional) : float 
+            Scale parameter.
+    
+    - oneatatime_scales (optional) : dict
+            Dictionary of scales for one-at-a-time iterations.
+            
+    - verbose (optional) : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Externally-accessible attributes:
 
@@ -633,13 +693,13 @@ class JointMetropolis(SamplingMethod):
     Also: when the covariance is nonsquare,
 
     """
-    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=False):
+    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
         
         self.verbose = verbose
                 
         if parameter is not None:
             pymc_objects = [parameter]
-        SamplingMethod.__init__(self,pymc_objects)
+        SamplingMethod.__init__(self, pymc_objects)
 
         self.epoch = epoch
         self.memory = memory
@@ -657,7 +717,7 @@ class JointMetropolis(SamplingMethod):
 
         # Use Metropolis instances to handle independent jumps
         # before first epoch is complete
-        if self.verbose:
+        if self.verbose > 2:
             print self._id + ': Assigning single-parameter handlers.'
         self._single_param_handlers = set()
 
@@ -701,7 +761,7 @@ class JointMetropolis(SamplingMethod):
         covariance every epoch.
         """
 
-        if self.verbose:
+        if self.verbose > 1:
             print 'Joint SamplingMethod ' + self._id + ' computing covariance.'
 
         # Figure out which slice of the traces to use
@@ -735,7 +795,7 @@ class JointMetropolis(SamplingMethod):
         self._ready = True
 
 
-    def tune(self, divergence_threshold = 1e10, verbose=False):
+    def tune(self, divergence_threshold = 1e10, verbose=0):
         """
         If the empirical covariance hasn't been computed yet (the first
         epoch isn't over), this method passes the tune() call along to the

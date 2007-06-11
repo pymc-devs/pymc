@@ -28,24 +28,24 @@ class Model(object):
     :Arguments:
         prob_def : class, module, dictionary
           Contains PyMC objects and SamplingMethods
-        dbase: module name
+        dbase : module name
           Database backend used to tally the samples.
           Implemented backends: None, hdf5, txt.
 
     Externally-accessible attributes:
-      - nodes: All extant Nodes.
-      - parameters: All extant Parameters with isdata = False.
-      - data: All extant Parameters with isdata = True.
-      - pymc_objects: All extant Parameters and Nodes.
-      - sampling_methods: All extant SamplingMethods.
+      - nodes : All extant Nodes.
+      - parameters : All extant Parameters with isdata = False.
+      - data : All extant Parameters with isdata = True.
+      - pymc_objects : All extant Parameters and Nodes.
+      - sampling_methods : All extant SamplingMethods.
 
     Externally-accessible methods:
-       - sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
+       - sample(iter) : At each MCMC iteration, calls each sampling_method's step() method.
          Tallies Parameters and Nodes as appropriate.
-       - trace(parameter, burn, thin, slice): Return the trace of parameter,
+       - trace(parameter, burn, thin, slice) : Return the trace of parameter, 
          sliced according to slice or burn and thin arguments.
-       - remember(trace_index): Return the entire model to the tallied state indexed by trace_index.
-       - DAG: Draw the model as a directed acyclic graph.
+       - remember(trace_index) : Return the entire model to the tallied state indexed by trace_index.
+       - DAG : Draw the model as a directed acyclic graph.
 
     :Note:
         All the plotting functions can probably go on the base namespace and take Parameters as
@@ -53,33 +53,39 @@ class Model(object):
 
     :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, db='ram', verbose=False):
+    def __init__(self, input, db='ram', verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
           - input : module
-              A module containing the model definition, in terms of Parameters,
+              A module containing the model definition, in terms of Parameters, 
               and Nodes.
           - dbase : string
               The name of the database backend that will store the values
               of the parameters and nodes sampled during the MCMC loop.
-          - kwds : dict
-              Arguments to pass to instantiate the Database object.
+          - verbose : integer
+              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
 
+        # Instantiate public attributes
         self.nodes = set()
         self.parameters = set()
         self.data = set()
         self.containers = set()
         self.extended_children = None
 
+        # Instantiate hidden attributes
         self._generations = []
         self.__name__ = None
+        
+        # Flag for model state
         self.status = 'ready'
         
-        self.verbose=verbose
+        # Flag for verbose output
+        self.verbose = verbose
 
-        if hasattr(input,'__name__'):
+        # Check for input name
+        if hasattr(input, '__name__'):
             _filename = os.path.split(input.__file__)[-1]
             self.__name__ = os.path.splitext(_filename)[0]
         else:
@@ -88,7 +94,7 @@ class Model(object):
             except: 
                 self.__name__ = 'PyMC_Model'
 
-        #Change input into a dictionary
+        # Change input into a dictionary
         if isinstance(input, dict):
             self.input_dict = input.copy()
         else:
@@ -100,14 +106,17 @@ class Model(object):
 
             self.input_dict = input.__dict__.copy()
 
+        # Look for PyMC objects
         for name, item in self.input_dict.iteritems():
-            if  isinstance(item,PyMCBase) \
-                or isinstance(item,SamplingMethod) \
-                or isinstance(item,Container):
+            if  isinstance(item, PyMCBase) \
+                or isinstance(item, SamplingMethod) \
+                or isinstance(item, Container):
                 self.__dict__[name] = item
 
+            # Allocate to appropriate set
             self._fileitem(item)
 
+        # Union of PyMC objects
         self.pymc_objects = self.nodes | self.parameters | self.data
 
     def _fileitem(self, item):
@@ -119,20 +128,20 @@ class Model(object):
           - containers
         """
         # If a dictionary is passed in, open it up.
-        if isinstance(item,Container):
+        if isinstance(item, Container):
             self.containers.add(item)
             self.parameters.update(item.parameters)
             self.data.update(item.data)
             self.nodes.update(item.nodes)
 
         # File away the PyMC objects
-        elif isinstance(item,PyMCBase):
+        elif isinstance(item, PyMCBase):
             # Add an attribute to the object referencing the model instance.
 
-            if isinstance(item,Node):
+            if isinstance(item, Node):
                 self.nodes.add(item)
 
-            elif isinstance(item,Parameter):
+            elif isinstance(item, Parameter):
                 if item.isdata:
                     self.data.add(item)
                 else:  self.parameters.add(item)
@@ -147,7 +156,7 @@ class Model(object):
         Makes a dictionary of self's PyMC objects' 'extended children.'
         """
         self.extended_children = {}
-        dummy = PyMCBase('','',{},0,None)
+        dummy = PyMCBase('', '', {}, 0, None)
         for pymc_object in self.pymc_objects:
             dummy.children = copy(pymc_object.children)
             extend_children(dummy)
@@ -191,7 +200,7 @@ class Model(object):
             if len(thisgen_children) == 0:
                 children_remaining = False
 
-    def sample_model_likelihood(self,iter):
+    def sample_model_likelihood(self, iter):
         """
         Returns iter samples of (log p(data|this_model_params, this_model) | data, this_model)
         """
@@ -203,7 +212,7 @@ class Model(object):
         try:
             for i in xrange(iter):
                 if i % 10000 == 0:
-                    print 'Sample ',i,' of ',iter
+                    print 'Sample ', i, ' of ', iter
 
                 for generation in self._generations:
                     for parameter in generation:
@@ -213,13 +222,13 @@ class Model(object):
                     loglikes[i] += datum.logp
 
         except KeyboardInterrupt:
-            print 'Sample ',i,' of ',iter
+            print 'Sample ', i, ' of ', iter
             raise KeyboardInterrupt
 
         return loglikes
 
 
-    def DAG(self,format='raw',path=None,consts=True):
+    def DAG(self, format='raw', path=None, consts=True):
         """
         DAG(format='raw', path=None, consts=True)
 
@@ -228,8 +237,8 @@ class Model(object):
         ./'name'.'format'.
 
         Format is a string. Options are:
-        'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg',
-        'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp',
+        'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
+        'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
         'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
 
         format='raw' outputs a GraphViz dot file.
@@ -249,7 +258,7 @@ class Model(object):
 
         # Create the pydot nodes from pymc objects
         for datum in self.data:
-            pydot_nodes[datum] = pydot.Node(name=datum.__name__,shape='box')
+            pydot_nodes[datum] = pydot.Node(name=datum.__name__, shape='box')
             self.dot_object.add_node(pydot_nodes[datum])
 
         for parameter in self.parameters:
@@ -257,15 +266,15 @@ class Model(object):
             self.dot_object.add_node(pydot_nodes[parameter])
 
         for node in self.nodes:
-            pydot_nodes[node] = pydot.Node(name=node.__name__,shape='invtriangle')
+            pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
             self.dot_object.add_node(pydot_nodes[node])
 
         for container in self.containers:
-            pydot_nodes[container] = pydot.Node(name=container.__name__,shape='house')
+            pydot_nodes[container] = pydot.Node(name=container.__name__, shape='house')
 
         # # Create subgraphs from pymc sampling methods
         # for sampling_method in self.sampling_methods:
-        #     if not isinstance(sampling_method,OneAtATimeMetropolis):
+        #     if not isinstance(sampling_method, OneAtATimeMetropolis):
         #         pydot_subgraphs[sampling_method] = pydot.Subgraph(graph_name = sampling_method.__class__.__name__)
         #         for pymc_object in sampling_method.pymc_objects:
         #             pydot_subgraphs[sampling_method].add_node(pydot_nodes[pymc_object])
@@ -277,7 +286,7 @@ class Model(object):
         for pymc_object in self.pymc_objects:
             for key in pymc_object.parents.iterkeys():
                 plot_edge=True
-                if not isinstance(pymc_object.parents[key],PyMCBase) and not isinstance(pymc_object.parents[key],Container):
+                if not isinstance(pymc_object.parents[key], PyMCBase) and not isinstance(pymc_object.parents[key], Container):
                     if consts:
                         parent_name = pymc_object.parents[key].__class__.__name__ + ' const ' + str(counter)
                         self.dot_object.add_node(pydot.Node(name = parent_name, shape = 'trapezium'))
@@ -288,8 +297,8 @@ class Model(object):
                     parent_name = pymc_object.parents[key].__name__
 
                 if plot_edge:
-                    new_edge = pydot.Edge(  src = parent_name,
-                                            dst = pymc_object.__name__,
+                    new_edge = pydot.Edge(  src = parent_name, 
+                                            dst = pymc_object.__name__, 
                                             label = key)
 
 
@@ -297,12 +306,12 @@ class Model(object):
 
         # Draw the graph
         if not path == None:
-            self.dot_object.write(path=path,format=format)
+            self.dot_object.write(path=path, format=format)
         else:
             ext=format
             if format=='raw':
                 ext='dot'
-            self.dot_object.write(path='./' + self.__name__ + '.' + ext,format=format)
+            self.dot_object.write(path='./' + self.__name__ + '.' + ext, format=format)
 
         return self.dot_object
 
@@ -347,13 +356,13 @@ class Model(object):
 
         Records the value of all tracing pymc_objects.
         """
-        if self.verbose:
+        if self.verbose > 2:
             print self.__name__ + ' tallying.'
         if self._cur_trace_index < self.max_trace_length:
             self.db.tally(self._cur_trace_index)
 
         self._cur_trace_index += 1
-        if self.verbose:
+        if self.verbose > 2:
             print self.__name__ + ' done tallying.'
 
     #
@@ -373,7 +382,7 @@ class Model(object):
             pymc_object.value = pymc_object.trace()[trace_index]
 
 
-    def save_traces(self,path='',fname=None):
+    def save_traces(self, path='', fname=None):
         import cPickle
 
         if fname is None:
@@ -389,8 +398,8 @@ class Model(object):
             trace_new.__delattr__('obj')
             trace_dict[obj.__name__] = trace_new
 
-        F = file(fname,'w')
-        cPickle.dump(trace_dict,F)
+        F = file(fname, 'w')
+        cPickle.dump(trace_dict, F)
         F.close()
 
 
@@ -401,11 +410,11 @@ class Sampler(Model):
         self.sampling_methods = set()
 
         for item in self.input_dict.iteritems():
-            if isinstance(item[1],Container):
+            if isinstance(item[1], Container):
                 self.__dict__[item[0]] = item[1]
                 self.sampling_methods.update(item[1].sampling_methods)
 
-            if isinstance(item[1],SamplingMethod):
+            if isinstance(item[1], SamplingMethod):
                 self.__dict__[item[0]] = item[1]
                 self.sampling_methods.add(item[1])
                 setattr(item[1], '_model', self)
@@ -413,8 +422,7 @@ class Sampler(Model):
         # Default SamplingMethod
         self._assign_samplingmethod()
 
-        self._state = ['status', '_current_iter', '_iter', '_thin', '_burn',
-            '_tune_interval']
+        self._state = ['status', '_current_iter', '_iter', '_tune_interval']
             
         self._assign_database_backend(db)
 
@@ -437,7 +445,7 @@ class Sampler(Model):
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace
         # Tallyable objects are listed in the _pymc_objects_to_tally set. 
-        no_trace = getattr(database,'no_trace')
+        no_trace = getattr(database, 'no_trace')
         self._pymc_objects_to_tally = set()
         for object in self.parameters | self.nodes :
             if object.trace:
@@ -462,28 +470,22 @@ class Sampler(Model):
         self.db.connect(self)
         
         
-    def sample(self,iter=1000,burn=0,thin=1,tune_interval=1000):
+    def sample(self, iter=1000, tune_interval=1000):
         """
-        sample(iter,burn,thin)
+        sample(iter, tune_interval)
 
         Prepare pymc_objects, initialize traces, run MCMC loop.
         """
-        if iter <= burn:
-            raise 'Iteration (%i) must be greater than burn period (%i).'\
-                %(iter,burn)
-
+        
         self._iter = iter
-        self._burn = burn
-        self._thin = thin
         self._tune_interval = tune_interval
         self._cur_trace_index = 0
-        length = iter/thin
-        self.max_trace_length = length
+        self.max_trace_length = iter
 
         self.seed()
 
         # Initialize database -> initialize traces.
-        self.db._initialize(length)
+        self.db._initialize(iter)
 
         # Loop
         self._current_iter = 0
@@ -514,13 +516,13 @@ class Sampler(Model):
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
 
-                if (i % self._thin) == 0:
-                    self.tally()
+                #if (i % self._thin) == 0:
+                #    self.tally()
 
                 if (i % self._tune_interval) == 0:
                     self.tune()
 
-                if i % 10000 == 0 and self.verbose:
+                if i % 10000 == 0 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
@@ -548,7 +550,7 @@ class Sampler(Model):
 
     def _assign_samplingmethod(self):
         """
-        Make sure every parameter has a SamplingMethod. If not,
+        Make sure every parameter has a SamplingMethod. If not, 
         assign the default SM.
         """
 

@@ -46,6 +46,9 @@ class Node(PyMCBase):
 
         -cache_depth (optional):    An integer indicating how many of this node's
                                     value computations should be 'memoized'.
+                                    
+        - verbose (optional) : integer
+              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
                             
     Externally-accessible attribute:
@@ -57,7 +60,7 @@ class Node(PyMCBase):
     
     :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
-    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=False):
+    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=0):
 
         # self.LazyFunction = import_LazyFunction()
         self.LazyFunction = LazyFunction
@@ -82,12 +85,12 @@ class Node(PyMCBase):
         self._value = LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)        
 
     def get_value(self):
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': value accessed.'
         _value = self._value.get()
         if isinstance(_value, ndarray):
             _value.flags['W'] = False
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': Returning value ',_value
         return _value
         
@@ -125,31 +128,44 @@ class Parameter(PyMCBase):
 
     :Arguments:
 
-    logp:   The function that computes the parameter's log-probability from
+    - logp : function   
+            The function that computes the parameter's log-probability from
             its value and the values of its parents.
 
-    doc:    The docstring for this parameter.
+    - doc : string    
+            The docstring for this parameter.
 
-    name:   The name of this parameter.
+    - name : string   
+            The name of this parameter.
 
-    parents: A dictionary containing the parents of this parameter.
+    - parents: dict
+            A dictionary containing the parents of this parameter.
     
-    random (optional):  A function that draws a new value for this
-                        parameter given its parents' values.
+    - random (optional) : function 
+            A function that draws a new value for this
+            parameter given its parents' values.
 
-    trace (optional):   A boolean indicating whether this node's value 
-                        should be traced (in MCMC).
+    - trace (optional) : boolean   
+            A boolean indicating whether this node's value 
+            should be traced (in MCMC).
                         
-    value (optional):   An initial value for this parameter
+    - value (optional) : number or array  
+            An initial value for this parameter
     
-    rseed (optional):   A seed for this parameter's rng. Either value or rseed must
-                        be given.
+    - rseed (optional) : integer or rseed
+            A seed for this parameter's rng. Either value or rseed must
+            be given.
                         
-    isdata (optional):  A flag indicating whether this parameter is data; whether
-                        its value is known.
+    - isdata (optional) :  boolean
+            A flag indicating whether this parameter is data; whether
+            its value is known.
 
-    cache_depth (optional): An integer indicating how many of this parameter's
-                            log-probability computations should be 'memoized'.
+    - cache_depth (optional) : integer
+            An integer indicating how many of this parameter's
+            log-probability computations should be 'memoized'.
+                            
+    - verbose (optional) : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
                             
     Externally-accessible attribute:
@@ -186,7 +202,7 @@ class Parameter(PyMCBase):
                     rseed=False, 
                     isdata=False,
                     cache_depth=2,
-                    verbose = False):                    
+                    verbose = 0):                    
 
         # self.LazyFunction = import_LazyFunction()    
 
@@ -252,7 +268,7 @@ class Parameter(PyMCBase):
     def get_value(self):
         # Define value attribute
         
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': value accessed.'
         return self._value
 
@@ -260,7 +276,7 @@ class Parameter(PyMCBase):
     def set_value(self, value):
         # Record new value and increment counter
         
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': value set to ', value
         
         # Value can't be updated if isdata=True
@@ -280,10 +296,10 @@ class Parameter(PyMCBase):
 
 
     def get_logp(self):
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': logp accessed.'
         logp = self._logp.get()
-        if self.verbose:
+        if self.verbose > 2:
             print '\t' + self.__name__ + ': Returning log-probability ', logp
         
         # Check if the value is smaller than a double precision infinity:
@@ -306,10 +322,14 @@ class Parameter(PyMCBase):
         
         Raises an error if no 'random' argument was passed to __init__.
         """
-        if self._random is not None:
+        
+        if self._random:
+            # Get current values of parents for use as arguments for _random()
             self._logp.refresh_argument_values()
             args = self._logp.argument_values.copy()
             args.pop('value')
+            
+            # Set Parameter's value to drawn value
             self.value = self._random(**args)
         else:
             raise AttributeError, 'Parameter '+self.__name__+' does not know how to draw its value, see documentation'

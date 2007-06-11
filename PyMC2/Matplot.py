@@ -22,8 +22,8 @@ def get_index_list(shape, j):
     index_list = get_index_list(shape, j)
 
     :Arguments:
-    shape: a tuple
-    j: an integer
+        shape: a tuple
+        j: an integer
 
     Assumes index j is from a ravelled version of an array
     with specified shape, returns the corresponding
@@ -253,6 +253,16 @@ class centered_envelope(object):
 
 
 class PlotFactory:
+    """
+    Class with methods for generating all summary plots for PyMC objects.
+    
+    :Arguments:
+        format: Graphic output format (defaults to png).
+        
+        backend: Specifies matplotlib graphical toolkit backend (defaults to TkAgg).
+        
+        plotpath: Specifies location for saving plots (defaults to local directory).
+    """
     
     def __init__(self, format='png', backend='TkAgg', plotpath=''):
         # Class initialization
