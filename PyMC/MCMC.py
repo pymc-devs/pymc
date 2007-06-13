@@ -2620,10 +2620,11 @@ class Sampler:
         # Loop over the sets of points for plotting
         for name,points in zip(like_names,D_points):
             
-            try:
-                plots[name] += points
+            if plots.has_key(name):
+                # Append points, if already exists
+                plots[name] = concatenate((plots[name], points), 1)
             
-            except KeyError:
+            else:
                 plots[name] = points
             
             count = sum(s>o for o,s in t(points))
