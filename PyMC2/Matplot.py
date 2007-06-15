@@ -8,7 +8,7 @@ Plotting module using matplotlib.
 # Import matplotlib functions
 import matplotlib
 from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
-from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill
+from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
 from pprint import pformat
 
 # Import numpy functions
@@ -127,8 +127,8 @@ class func_sd_envelope(object):
 
         func_stacks = pymc_object.trace()
         self.name = pymc_object.__name__
-        self.format=format
-        self.plotpath=plotpath
+        self._format=format
+        self._plotpath=plotpath
         self.suffix=suffix
 
         self.mean = mean(func_stacks,axis=0)
@@ -186,7 +186,7 @@ class func_sd_envelope(object):
             colorbar()
         else:
             raise ValueError, 'Only 1- and 2- dimensional functions can be displayed'
-        savefig("%s%s%s.%s" % (self.plotpath,self.name,self.suffix,self.format))
+        savefig("%s%s%s.%s" % (self._plotpath,self.name,self.suffix,self._format))
 
 class centered_envelope(object):
     """
@@ -252,7 +252,7 @@ class centered_envelope(object):
                 colorbar()
 
 
-class PlotFactory:
+class Plotter:
     """
     Class with methods for generating all summary plots for PyMC objects.
     
@@ -264,22 +264,48 @@ class PlotFactory:
         plotpath: Specifies location for saving plots (defaults to local directory).
     """
     
-    def __init__(self, format='png', backend='TkAgg', plotpath=''):
+    def __init__(self, format='png', backend='TkAgg', plotpath=None):
         # Class initialization
         
         # Specify pylab backend
         matplotlib.use(backend)
         
         # Store output format
-        self.format = format
+        self._format = format
 
-        self.plotpath = plotpath
+        self._plotpath = plotpath or ''
         
         # Store fontmap
         self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     
     def plot(self, pymc_object, suffix='', new=True, last=True, rows=1, num=1):
-        # Plots summary of parameter/node trace
+        """ 
+        Plots summary of parameter/node trace, including trace and histogram.
+        
+        :Arguments:
+            pymc_object: PyMCObject
+                An entity that is plottable (i.e. has a trace from an MCMC sample).
+            
+            suffix (optional): string
+                Filename suffix.
+                
+            new (optional): boolean
+                Flag indicating if a new figure is to be generated for this plot, 
+                or if the plot is to be added to an existing figure.
+                
+            last (optional): boolean
+                Flag indicating if the current plot is the last in the current
+                figure.
+                
+            rows (optional): integer
+                The number of rows in a composite plot.
+                
+            columns (optional): integer
+                The number of columns in a composite plot.
+                
+            num (optional): integer
+                The number of the current plot within the composite plot.
+        """
 
         data = pymc_object.trace()
         name = pymc_object.__name__
@@ -297,10 +323,10 @@ class PlotFactory:
             # Call trace
             self.trace(data, name, rows=rows, columns=2, num=num, last=last)
             # Call histogram
-            self.histogram(data, 'Value', rows=rows, columns=2, num=num+1, last=last)
+            self.histogram(data, name, rows=rows, columns=2, num=num+1, last=last)
             
             if last:
-                savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
         
         else:
@@ -323,11 +349,8 @@ class PlotFactory:
 
 
     
-    def histogram(self, pymc_object, nbins=None, suffix='', rows=1, columns=1, num=1, last=True):
+    def histogram(self, data, name, nbins=None, suffix='', rows=1, columns=1, num=1, last=True):
 
-        data = pymc_object.trace()
-        name = pymc_object.__name__
-        
         # Internal histogram specification for handling nested arrays
         try:
             
@@ -359,18 +382,14 @@ class PlotFactory:
             
             if standalone:
                 # Save to file
-                savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
         
         except OverflowError:
             print '... cannot generate histogram'
 
     
-    def trace(self, pymc_object, suffix='', rows=1, columns=1, num=1, last=True):
-
-        data = pymc_object.trace()
-        name = pymc_object.__name__
-        
+    def trace(self, data, name, suffix='', rows=1, columns=1, num=1, last=True):
         # Internal plotting specification for handling nested arrays
         
         # Stand-alone plot or subplot?
@@ -397,7 +416,7 @@ class PlotFactory:
         
         if standalone:
             # Save to file
-            savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+            savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
             #close()
     
     def geweke_plot(self, pymc_object, suffix='-diagnostic'):
@@ -427,7 +446,7 @@ class PlotFactory:
         xlim(0, max(x))
         
         # Save to file
-        savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+        savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
     def gof_plot(self, pymc_object, suffix='-gof'):
@@ -455,7 +474,7 @@ class PlotFactory:
         ylabel('Simulated deviates', fontsize='x-small')
         
         # Save to file
-        savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+        savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
     def bar_series_plot(self, values, ylab='Y', suffix=''):
@@ -500,7 +519,7 @@ class PlotFactory:
                 # Label X-axis on last subplot
                 xlabel('Lag', fontsize='x-small')
                 
-                savefig("%s%s%s.%s" % (self.plotpath, name, suffix, self.format))
+                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
     
 
@@ -626,5 +645,5 @@ class PlotFactory:
         plotname = ''
         for obj in pymc_objects:
             plotname += obj.__name__ + ''
-        savefig("%s%s%s.%s" % (self.plotpath, plotname, suffix, self.format))
+        savefig("%s%s%s.%s" % (self._plotpath, plotname, suffix, self._format))
 

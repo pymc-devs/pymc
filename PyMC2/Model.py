@@ -8,7 +8,8 @@ __docformat__='reStructuredText'
 
 from numpy import zeros, floor
 from SamplingMethods import SamplingMethod, assign_method
-from PyMC2 import database
+from Matplot import Plotter, show
+import database
 from PyMCObjects import Parameter, Node, PyMCBase
 from Container import Container
 from utils import extend_children
@@ -53,7 +54,7 @@ class Model(object):
 
     :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, db='ram', verbose=0):
+    def __init__(self, input, db='ram'):
         """Initialize a Model instance.
 
         :Parameters:
@@ -80,9 +81,6 @@ class Model(object):
         
         # Flag for model state
         self.status = 'ready'
-        
-        # Flag for verbose output
-        self.verbose = verbose
 
         # Check for input name
         if hasattr(input, '__name__'):
@@ -405,8 +403,12 @@ class Model(object):
 
 
 class Sampler(Model):
-    def __init__(self, input, db='ram', verbose=False):
-        Model.__init__(self, input, db, verbose)
+    def __init__(self, input, db='ram', output_path=None):
+        
+        # Instantiate superclass
+        Model.__init__(self, input, db)
+        
+        # Instantiate and populate sampling methods set
         self.sampling_methods = set()
 
         for item in self.input_dict.iteritems():
@@ -424,7 +426,19 @@ class Sampler(Model):
 
         self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
             
+        # Specify database backend
         self._assign_database_backend(db)
+        
+        # Location of model outputs
+        self._output_path = output_path or self.__name__ + '_output/'
+            
+        try:
+            os.mkdir(self._output_path)
+        except OSError:
+            print 'Output directory %s already exists' % self._output_path
+            
+        # Instantiate plotter
+        self._plotter = Plotter(plotpath=self._output_path)
 
     def _assign_database_backend(self, db):
         """Assign Trace instance to parameters and nodes and Database instance
@@ -470,7 +484,7 @@ class Sampler(Model):
         self.db.connect(self)
         
         
-    def sample(self, iter, burn=0, thin=1, tune_interval=1000):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
         sample(iter, burn, thin, tune_interval)
 
@@ -484,6 +498,9 @@ class Sampler(Model):
         self._cur_trace_index = 0
         length = iter/thin
         self.max_trace_length = length
+        
+        # Flag for verbose output
+        self.verbose = verbose
 
         self.seed()
 
@@ -520,8 +537,11 @@ class Sampler(Model):
 
                 i = self._current_iter
                 
+                if i == self._burn: print 'Burn-in interval complete'
+                
                 # No tuning allowed beyond burn-in
-                if i >= self._burn: self._still_tuning = False
+                if i >= self._burn and self._still_tuning:
+                    self._still_tuning = False
                 
                 # Initialize counter for number of tuning parameters
                 tuning_count = 0
@@ -529,19 +549,23 @@ class Sampler(Model):
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
+                    
                     if not i % self._tune_interval and self._still_tuning:
                         # Tune sampling methods
                         tuning_count += sampling_method.tune()
                         
-                if not tuning_count:
-                    # If no sampling methods needed tuning, increment count
-                    self._tuned_count += 1
-                else:
-                    # Otherwise re-initialize count
-                    self._tuned_count = 0
+                if self._still_tuning:
+                    if not tuning_count:
+                        # If no sampling methods needed tuning, increment count
+                        self._tuned_count += 1
+                    else:
+                        # Otherwise re-initialize count
+                        self._tuned_count = 0
                     
-                # 5 consecutive clean intervals removed tuning
-                if self._tuned_count == 5: self._still_tuning = False
+                    # 5 consecutive clean intervals removed tuning
+                    if self._tuned_count == 5: 
+                        if self.verbose > 0: print 'Finished tuning'
+                        self._still_tuning = False
 
                 if not i % self._thin and i >= self._burn:
                     self.tally()
@@ -550,7 +574,7 @@ class Sampler(Model):
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
                     # gc.collect()
-
+                    
                 self._current_iter += 1
 
 
@@ -657,3 +681,177 @@ class Sampler(Model):
         for sm in self.sampling_methods:
             tmp = state.get('sampling_methods', {})
             sm.__dict__.update(tmp.get(sm._id, {}))
+            
+    def plot(self):
+        """
+        Plots traces and histograms for nodes and parameters.
+        """
+        
+        # Loop over PyMC objects
+        for pymc_object in self._pymc_objects_to_tally:
+            
+            # Plot object
+            self._plotter.plot(pymc_object)
+            
+        show()
+            
+    def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
+        """
+        Calculates Goodness-Of-Fit according to Brooks et al. 1998
+        
+        :Arguments:
+            - iterations : integer
+                Number of samples to draw from the model for GOF evaluation.
+            - loss (optional) : string
+                Loss function; valid entries include 'squared', 'absolute' and
+                'chi-square'.
+            - plot (optional) : booleam
+                Flag for printing GOF plots.
+            - color (optional) : string
+                Color of plot; see matplotlib docs for valid entries (usually
+                the first letter of the desired color).
+            - filename (optional) : string
+                File name for output statistics.
+        """
+        
+        if self.verbose > 0:
+            print
+            print "Goodness-of-fit"
+            print '='*50
+            print 'Generating %s goodness-of-fit simulations' % iterations
+        
+        
+        # Specify loss function
+        if loss=='squared':
+            self.loss = squared_loss
+        elif loss=='absolute':
+            self.loss = absolute_loss
+        elif loss=='chi-square':
+            self.loss = chi_square_loss
+        else:
+            print 'Invalid loss function specified.'
+            return
+            
+        # Open file for GOF output
+        outfile = open(filename + '.csv', 'w')
+        outfile.write('Goodness of Fit based on %s iterations\n' % iterations)
+        
+        # Empty list of GOF plot points
+        D_points = []
+        
+        # Set GOF flag
+        self._gof = True
+        
+        # List of names for conditional likelihoods
+        self._like_names = []
+        
+        # Local variable for the same
+        like_names = None
+        
+        # Generate specified number of points
+        for i in range(iterations):
+            
+            valid_gof_points = False
+            
+            # Sometimes the likelihood bombs out and doesnt produce
+            # GOF points
+            while not valid_gof_points:
+                
+                # Initializealize list of GOF error loss values
+                self._gof_loss = []
+                
+                # Loop over parameters
+                for name in self.parameters:
+                    
+                    # Look up parameter
+                    parameter = self.parameters[name]
+                    
+                    # Retrieve copy of trace
+                    trace = parameter.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
+                    
+                    # Sample value from trace
+                    sample = trace[random_integers(len(trace)) - 1]
+                    
+                    # Set current value to sampled value
+                    parameter.set_value(sample)
+                
+                # Run calculate likelihood with sampled parameters
+                try:
+                    self()
+                except (LikelihoodError, OverflowError, ZeroDivisionError):
+                    # Posterior dies for some reason
+                    pass
+                
+                try:
+                    like_names = self._like_names
+                    del(self._like_names)
+                except AttributeError:
+                    pass
+                
+                # Conform that length of GOF points is valid
+                if len(self._gof_loss) == len(like_names):
+                    valid_gof_points = True
+            
+            # Append points to list
+            D_points.append(self._gof_loss)
+        
+        # Transpose and plot GOF points
+        
+        D_points = t([[y for y in x if shape(y)] for x in D_points], (1,2,0))
+        
+        # Keep track of number of simulation deviances that are
+        # larger than the corresponding observed deviance
+        sim_greater_obs = 0
+        n = 0
+        
+        # Dictionary to hold GOF statistics
+        stats = {}
+        
+        # Dictionary to hold GOF plot data
+        plots = {}
+        
+        # Loop over the sets of points for plotting
+        for name,points in zip(like_names,D_points):
+            
+            if plots.has_key(name):
+                # Append points, if already exists
+                plots[name] = concatenate((plots[name], points), 1)
+            
+            else:
+                plots[name] = points
+            
+            count = sum(s>o for o,s in t(points))
+            
+            try:
+                stats[name] += array([count,iterations])
+            except KeyError:
+                stats[name] = array([1.*count,iterations])
+            
+            sim_greater_obs += count
+            n += iterations
+        
+        # Generate plots
+        if plot:
+            for name in plots:
+                self.plotter.gof_plot(plots[name], name, color=color)
+        
+        # Report p(D(sim)>D(obs))
+        for name in stats:
+            num,denom = stats[name]
+            print 'p( D(sim) > D(obs) ) for %s = %s' % (name,num/denom)
+            outfile.write('%s,%f\n' % (name,num/denom))
+        
+        p = 1.*sim_greater_obs/n
+        print 'Overall p( D(sim) > D(obs) ) =', p
+        print
+        outfile.write('overall,%f\n' % p)
+        
+        stats['overall'] = array([1.*sim_greater_obs,n])
+        
+        # Unset flag
+        self._gof = False
+        
+        # Close output file
+        outfile.close()
+        
+        return stats
