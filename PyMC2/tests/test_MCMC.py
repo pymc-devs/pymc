@@ -6,11 +6,16 @@ from numpy.testing import *
 from pylab import *
 PLOT=True
 
+
 class test_Sampler(NumpyTestCase):
     def check(self):
         from PyMC2 import Sampler
         from PyMC2.examples import DisasterModel
         M = Sampler(DisasterModel)
+        assert_equal(len(M.parameters), 3)
+        assert_equal(len(M.data),1)
+        assert_array_equal(M.D.value, DisasterModel.D_array)
+        
         M.sample(5000,0,10)
         if PLOT:
             # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.

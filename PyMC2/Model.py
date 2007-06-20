@@ -496,7 +496,7 @@ class Sampler(Model):
         self._thin = thin
         self._tune_interval = tune_interval
         self._cur_trace_index = 0
-        length = iter/thin
+        length = (iter-burn)/thin
         self.max_trace_length = length
         
         # Flag for verbose output
@@ -517,9 +517,9 @@ class Sampler(Model):
         self._loop()
 
     def interactive_sample(self, *args, **kwds):
-        # David- nice work! LikelihoodErrors seem to be ending up in the listener
+        # LikelihoodErrors seem to be ending up in the listener
         # thread somehow. I seem to remember something weird about that in the threading
-        # documentation?
+        # documentation? -AP
         self._thread = Thread(target=self.sample, args=args, kwargs=kwds)
         self._thread.start()
         self.interactive_prompt()

@@ -16,6 +16,7 @@ Supporting 2 is a bit tricky, since it implies that we must :
 a) restore the state of the database, using previously computed values,
 b) restore the state of the Sampler.
 which means that the database must also store the Sampler's state.
+This is partially achieved.
 """
 
 

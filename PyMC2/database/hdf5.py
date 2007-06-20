@@ -145,6 +145,11 @@ class Database(pickle.Database):
         self.row = self.table.row
         for object in self.model._pymc_objects_to_tally:
             object.trace._initialize(length)
+        
+        # Store data objects
+        for object in self.model.data:
+            if object.trace is True:
+                setattr(self.table.attrs, object.__name__, object.value)
     
     def tally(self, index):
         for o in self.model._pymc_objects_to_tally:
@@ -158,7 +163,6 @@ class Database(pickle.Database):
         # add attributes. Computation time.
         self.table.flush()
         
-
     def description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}

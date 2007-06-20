@@ -196,7 +196,8 @@ def data(*args, **kwds):
         if isinstance(func, Parameter):
             p = func
         else:
-            p = parameter(*args, **kwds)
+            decorate = parameter(*args, **kwds)
+            p = decorate(func)
         p.isdata = True
         return p
     return decorate_parameter
