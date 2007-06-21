@@ -170,8 +170,13 @@ def node(__func__ = None, **kwds):
 
     return instantiate_n
 
+# @data(discrete=True): obj-> None,   kwds-> {'discrete':True}
+# data(parameter)     : obj-> <PyMC2 Parameter>, kwds->{}
+# @data
+# def ...             : obj-> <function>,  kwds-> {}
 
-def data(*args, **kwds):
+
+def data(obj=None, **kwds):
     """
     Decorator function to instantiate data objects.     
     If given a Parameter, sets a the isdata flag to True.
@@ -192,14 +197,17 @@ def data(*args, **kwds):
     
     :SeeAlso: parameter, Parameter, node, Node, Model, Container
     """
-    def decorate_parameter(func):
-        if isinstance(func, Parameter):
-            p = func
+    if obj is not None:
+        if isinstance(obj, Parameter):
+            obj.isdata=True
+            return obj
         else:
-            decorate = parameter(*args, **kwds)
-            p = decorate(func)
-        p.isdata = True
-        return p
-    return decorate_parameter
-
+            p = parameter(__func__=obj, isdata=True, **kwds)
+            return p
+    
+    kwds['isdata']=True
+    def instantiate_data(func):
+        return parameter(func, **kwds)
+        
+    return instantiate_data
 

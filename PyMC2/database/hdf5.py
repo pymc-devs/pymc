@@ -60,7 +60,7 @@ class Trace(base.Trace):
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
             
         groups = self.db.h5file.listNodes("/")
-        nchains = len(groups)-1     # -1 to remove root group
+        nchains = len(groups)    
         if chain == -1:
             chains = [nchains-1]    # Index of last group
         elif chain is None:
@@ -131,14 +131,14 @@ class Database(pickle.Database):
         except IOError:
             print "Database file seems already open. Skipping."
         root = self.h5file.root
-        try:
-            self.main = self.h5file.createGroup(root, "main")
-        except tables.exceptions.NodeError:
-            pass
+        #try:
+        #    self.main = self.h5file.createGroup(root, "main")
+        #except tables.exceptions.NodeError:
+        #    pass
         
     def _initialize(self, length):
         """Create group for the current chain."""
-        i = len(self.h5file.listNodes('/'))
+        i = len(self.h5file.listNodes('/'))+1
         self.group = self.h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
         self.table = self.h5file.createTable(self.group, 'PyMCsamples', self.description(), 'PyMC samples from chain %d'%i, filters=self.filter)
@@ -185,7 +185,10 @@ def load(filename, mode='a'):
     """ 
     db = Database(filename)
     db.h5file = tables.openFile(filename, mode)
-    table = db.h5file.root.chain1.PyMCsamples
+    groups = db.h5file.root._g_listGroup()[0]
+    groups.sort()
+    last_chain = '/'+groups[-1]
+    table = db.h5file.getNode(last_chain, 'PyMCsamples')
     for k in table.colnames:
         if k == '_state_':
            db._state_ = v
@@ -193,5 +196,7 @@ def load(filename, mode='a'):
             setattr(db, k, Trace(name=k))
             o = getattr(db,k)
             setattr(o, 'db', db)
+    for k in table.attrs._v_attrnamesuser:
+        setattr(db, k, getattr(table.attrs, k))
     return db
         

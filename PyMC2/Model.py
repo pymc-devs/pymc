@@ -54,7 +54,7 @@ class Model(object):
 
     :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, db='ram'):
+    def __init__(self, input, db='ram', verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
@@ -74,7 +74,7 @@ class Model(object):
         self.data = set()
         self.containers = set()
         self.extended_children = None
-
+        self.verbose = verbose
         # Instantiate hidden attributes
         self._generations = []
         self.__name__ = None
@@ -403,10 +403,10 @@ class Model(object):
 
 
 class Sampler(Model):
-    def __init__(self, input, db='ram', output_path=None):
+    def __init__(self, input, db='ram', output_path=None, verbose=0):
         
         # Instantiate superclass
-        Model.__init__(self, input, db)
+        Model.__init__(self, input, db, verbose)
         
         # Instantiate and populate sampling methods set
         self.sampling_methods = set()
@@ -435,7 +435,8 @@ class Sampler(Model):
         try:
             os.mkdir(self._output_path)
         except OSError:
-            print 'Output directory %s already exists' % self._output_path
+            if self.verbose > 0:
+                print 'Output directory %s already exists' % self._output_path
             
         # Instantiate plotter
         self._plotter = Plotter(plotpath=self._output_path)
@@ -537,7 +538,8 @@ class Sampler(Model):
 
                 i = self._current_iter
                 
-                if i == self._burn: print 'Burn-in interval complete'
+                if i == self._burn and self.verbose>0: 
+                    print 'Burn-in interval complete'
                 
                 # No tuning allowed beyond burn-in
                 if i >= self._burn and self._still_tuning:
