@@ -210,16 +210,16 @@ class SamplingMethod(object):
         
         May be overridden in subclasses.
         """
-
+        
         # Verbose feedback
         if verbose > 1 or self.verbose > 1:
-            print self._id + ' tuning.'
+            print '\t%s tuning:' % self._id
             
         # Calculate recent acceptance rate
         # if not self._accepted > 0 or self._rejected > 0: return ???
         if self._accepted + self._rejected ==0: return
         acc_rate = self._accepted / (self._accepted + self._rejected)
-
+        
         # Flag for tuning state
         tuning = True
 
@@ -259,8 +259,9 @@ class SamplingMethod(object):
 
         # More verbose feedback, if requested
         if verbose > 1 or self.verbose > 1:
-            print self._id+' acceptance rate:', acc_rate
-            print self._id+' adaptive scale factor:', self._asf
+            print '\t\tacceptance rate:', acc_rate
+            print '\t\tadaptive scale factor:', self._asf
+            print
             
         return tuning
 
@@ -347,7 +348,7 @@ class Metropolis(SamplingMethod):
         self.proposal_deviate = zeros(shape(self.parameter.value), dtype=float)
         
         # Initialize verbose feedback string
-        self._id = 'Metropolis_'+parameter.__name__
+        self._id = parameter.__name__
 
         # Determine size of parameter
         if isinstance(self.parameter.value, ndarray):
@@ -496,7 +497,7 @@ class DiscreteMetropolis(Metropolis):
         Metropolis.__init__(self, parameter, scale=scale, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = 'DiscreteMetropolis_'+parameter.__name__
+        self._id = parameter.__name__
     
     def propose(self):      
         # Propose new parameter values using normal distribution
@@ -535,7 +536,7 @@ class BinaryMetropolis(Metropolis):
         Metropolis.__init__(self, parameter, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = 'BinaryMetropolis_'+parameter.__name__
+        self._id = parameter.__name__
     
     def set_param_val(self, i, val, to_value):
         """
@@ -706,7 +707,7 @@ class JointMetropolis(SamplingMethod):
         self.epoch = epoch
         self.memory = memory
         self.delay = delay
-        self._id = 'JointMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
+        self._id = ''.join([p.__name__ for p in self.parameters])
         self.isdiscrete = {}
         self.scale = scale
 

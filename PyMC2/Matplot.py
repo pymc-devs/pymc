@@ -7,6 +7,7 @@ Plotting module using matplotlib.
 
 # Import matplotlib functions
 import matplotlib
+import os
 from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
 from pprint import pformat
@@ -327,7 +328,7 @@ class Plotter:
             
             if last:
                 if not os.path.exists(self._plotpath):
-                    os.mkdir(self._output_path)
+                    os.mkdir(self._plotpath)
                     
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         
@@ -384,7 +385,7 @@ class Plotter:
             
             if standalone:
                 if not os.path.exists(self._plotpath):
-                    os.mkdir(self._output_path)
+                    os.mkdir(self._plotpath)
                 # Save to file
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
@@ -420,7 +421,7 @@ class Plotter:
         
         if standalone:
             if not os.path.exists(self._plotpath):
-                os.mkdir(self._output_path)
+                os.mkdir(self._plotpath)
             # Save to file
             savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
             #close()
@@ -453,7 +454,7 @@ class Plotter:
         
         # Save to file
         if not os.path.exists(self._plotpath):
-            os.mkdir(self._output_path)
+            os.mkdir(self._plotpath)
         savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
@@ -483,7 +484,7 @@ class Plotter:
         
         # Save to file
         if not os.path.exists(self._plotpath):
-            os.mkdir(self._output_path)
+            os.mkdir(self._plotpath)
         savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
@@ -530,7 +531,7 @@ class Plotter:
                 xlabel('Lag', fontsize='x-small')
                 
                 if not os.path.exists(self._plotpath):
-                    os.mkdir(self._output_path)
+                    os.mkdir(self._plotpath)
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
     
@@ -658,6 +659,6 @@ class Plotter:
         for obj in pymc_objects:
             plotname += obj.__name__ + ''
         if not os.path.exists(self._plotpath):
-            os.mkdir(self._output_path)
+            os.mkdir(self._plotpath)
         savefig("%s%s%s.%s" % (self._plotpath, plotname, suffix, self._format))
 

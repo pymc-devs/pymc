@@ -543,14 +543,18 @@ class Sampler(Model):
                 if i == self._burn and still_tuning:
                     still_tuning = False
                 
-                if not i % self._tune_interval and still_tuning:
+                if still_tuning and not (i % self._tune_interval):
+                    
+                    if self.verbose > 1:
+                        print
+                        print 'Tuning parameters at iteration', i
                     
                     # Initialize counter for number of tuning parameters
                     tuning_count = 0
                     
                     for sampling_method in self.sampling_methods:
                         # Tune sampling methods
-                        tuning_count += sampling_method.tune()
+                        tuning_count += sampling_method.tune(verbose=self.verbose)
                         
                     if not tuning_count:
                         # If no sampling methods needed tuning, increment count
@@ -558,7 +562,7 @@ class Sampler(Model):
                     else:
                         # Otherwise re-initialize count
                         tuned_count = 0
-                    
+                        
                     # 5 consecutive clean intervals removed tuning
                     if tuned_count == 5: 
                         if self.verbose > 0: print 'Finished tuning'

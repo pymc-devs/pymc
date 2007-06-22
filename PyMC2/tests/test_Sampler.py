@@ -9,25 +9,24 @@ PLOT=True
 
 class test_Sampler(NumpyTestCase):
     def check(self):
+        
+        # Import modules
         from PyMC2 import Sampler
         from PyMC2.examples import DisasterModel
+        
+        # Instantiate samplers
         M = Sampler(DisasterModel)
+        
+        # Check parameter arrays
         assert_equal(len(M.parameters), 3)
         assert_equal(len(M.data),1)
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
-        M.sample(5000,0,10)
-        if PLOT:
-            # It would be nicer to write plot(M.trace(switchpoint)), since switchpoint is local to M.
-            plot(M.s.trace())
-            title('switchpoint')
-            figure()
-            plot(M.e.trace())
-            title('early mean')            
-            figure()
-            title('late mean')
-            plot(M.l.trace())
-            show()
+        # Sample
+        M.sample(50000,10000)
+        
+        # Plot samples
+        M.plot()
 
 if __name__ == '__main__':
     NumpyTest().run()
