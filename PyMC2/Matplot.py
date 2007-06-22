@@ -326,8 +326,10 @@ class Plotter:
             self.histogram(data, name, rows=rows, columns=2, num=num+1, last=last)
             
             if last:
+                if not os.path.exists(self._plotpath):
+                    os.mkdir(self._output_path)
+                    
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-                #close()
         
         else:
             # ... otherwise plot recursively
@@ -381,6 +383,8 @@ class Plotter:
             setp(tlabels, 'fontsize', self.fontmap[rows])
             
             if standalone:
+                if not os.path.exists(self._plotpath):
+                    os.mkdir(self._output_path)
                 # Save to file
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
@@ -415,6 +419,8 @@ class Plotter:
         setp(tlabels, 'fontsize', self.fontmap[rows])
         
         if standalone:
+            if not os.path.exists(self._plotpath):
+                os.mkdir(self._output_path)
             # Save to file
             savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
             #close()
@@ -446,6 +452,8 @@ class Plotter:
         xlim(0, max(x))
         
         # Save to file
+        if not os.path.exists(self._plotpath):
+            os.mkdir(self._output_path)
         savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
@@ -474,6 +482,8 @@ class Plotter:
         ylabel('Simulated deviates', fontsize='x-small')
         
         # Save to file
+        if not os.path.exists(self._plotpath):
+            os.mkdir(self._output_path)
         savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
@@ -519,6 +529,8 @@ class Plotter:
                 # Label X-axis on last subplot
                 xlabel('Lag', fontsize='x-small')
                 
+                if not os.path.exists(self._plotpath):
+                    os.mkdir(self._output_path)
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
     
@@ -645,5 +657,7 @@ class Plotter:
         plotname = ''
         for obj in pymc_objects:
             plotname += obj.__name__ + ''
+        if not os.path.exists(self._plotpath):
+            os.mkdir(self._output_path)
         savefig("%s%s%s.%s" % (self._plotpath, plotname, suffix, self._format))
 

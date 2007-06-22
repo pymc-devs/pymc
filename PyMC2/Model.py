@@ -428,18 +428,9 @@ class Sampler(Model):
             
         # Specify database backend
         self._assign_database_backend(db)
-        
-        # Location of model outputs
-        self._output_path = output_path or self.__name__ + '_output/'
-            
-        try:
-            os.mkdir(self._output_path)
-        except OSError:
-            if self.verbose > 0:
-                print 'Output directory %s already exists' % self._output_path
             
         # Instantiate plotter
-        self._plotter = Plotter(plotpath=self._output_path)
+        self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
 
     def _assign_database_backend(self, db):
         """Assign Trace instance to parameters and nodes and Database instance
