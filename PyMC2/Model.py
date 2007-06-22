@@ -499,11 +499,6 @@ class Sampler(Model):
         # Initialize database -> initialize traces.
         self.db._initialize(length)
         
-        # Set flag for tuning
-        self._still_tuning = True
-        # Number of consecutive tuning intervals with no tuning required
-        self._tuned_count = 0
-
         # Loop
         self._current_iter = 0
         self._loop()
@@ -522,6 +517,11 @@ class Sampler(Model):
 
     def _loop(self):
         self.status='running'
+        
+        # Tuning flag and counter
+        still_tuning = True
+        tuned_count = 0
+        
         try:
             while self._current_iter < self._iter:
                 if self.status == 'paused':
@@ -531,37 +531,38 @@ class Sampler(Model):
                 
                 if i == self._burn and self.verbose>0: 
                     print 'Burn-in interval complete'
-                
-                # No tuning allowed beyond burn-in
-                if i >= self._burn and self._still_tuning:
-                    self._still_tuning = False
-                
-                # Initialize counter for number of tuning parameters
-                tuning_count = 0
-
+                    
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
                     sampling_method.step()
-                    
-                    if not i % self._tune_interval and self._still_tuning:
-                        # Tune sampling methods
-                        tuning_count += sampling_method.tune()
-                        
-                if self._still_tuning:
-                    if not tuning_count:
-                        # If no sampling methods needed tuning, increment count
-                        self._tuned_count += 1
-                    else:
-                        # Otherwise re-initialize count
-                        self._tuned_count = 0
-                    
-                    # 5 consecutive clean intervals removed tuning
-                    if self._tuned_count == 5: 
-                        if self.verbose > 0: print 'Finished tuning'
-                        self._still_tuning = False
 
                 if not i % self._thin and i >= self._burn:
                     self.tally()
+                
+                # No tuning allowed beyond burn-in
+                if i == self._burn and still_tuning:
+                    still_tuning = False
+                
+                if not i % self._tune_interval and still_tuning:
+                    
+                    # Initialize counter for number of tuning parameters
+                    tuning_count = 0
+                    
+                    for sampling_method in self.sampling_methods:
+                        # Tune sampling methods
+                        tuning_count += sampling_method.tune()
+                        
+                    if not tuning_count:
+                        # If no sampling methods needed tuning, increment count
+                        tuned_count += 1
+                    else:
+                        # Otherwise re-initialize count
+                        tuned_count = 0
+                    
+                    # 5 consecutive clean intervals removed tuning
+                    if tuned_count == 5: 
+                        if self.verbose > 0: print 'Finished tuning'
+                        still_tuning = False
 
                 if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
