@@ -17,6 +17,7 @@ from numpy import arange, log, ravel, rank, swapaxes, linspace#, interp
 from numpy import arange, log, ravel, rank, swapaxes, concatenate
 from numpy import histogram2d, mean, std, sort, prod, floor, shape
 from numpy import apply_along_axis
+import pdb
 
 def get_index_list(shape, j):
     """
@@ -279,7 +280,7 @@ class Plotter:
         # Store fontmap
         self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     
-    def plot(self, pymc_object, suffix='', new=True, last=True, rows=1, num=1):
+    def plot(self, pymc_object, suffix=''):
         """ 
         Plots summary of parameter/node trace, including trace and histogram.
         
@@ -310,6 +311,11 @@ class Plotter:
 
         data = pymc_object.trace()
         name = pymc_object.__name__
+        
+        # Call plotting logic method
+        self._plot(data, name, suffix=suffix)
+                
+    def _plot(self, data, name, suffix='', new=True, last=True, rows=1, num=1):
         
         # If there is only one data array, go ahead and plot it ...
         if rank(data)==1:
@@ -348,7 +354,7 @@ class Plotter:
                 # Final subplot of current figure?
                 _last = not (_num + 1) % (_rows * 2)
                 
-                self.plot(tdata[i], name+'_'+str(i), suffix, new=_new, last=_last, rows=_rows, num=_num)
+                self._plot(tdata[i], name+'_'+str(i), suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
     
