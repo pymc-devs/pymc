@@ -188,15 +188,15 @@ def load(filename, mode='a'):
     groups = db.h5file.root._g_listGroup()[0]
     groups.sort()
     last_chain = '/'+groups[-1]
-    table = db.h5file.getNode(last_chain, 'PyMCsamples')
-    for k in table.colnames:
+    db.table = db.h5file.getNode(last_chain, 'PyMCsamples')
+    for k in db.table.colnames:
         if k == '_state_':
            db._state_ = v
         else:
             setattr(db, k, Trace(name=k))
             o = getattr(db,k)
             setattr(o, 'db', db)
-    for k in table.attrs._v_attrnamesuser:
-        setattr(db, k, getattr(table.attrs, k))
+    for k in db.table.attrs._v_attrnamesuser:
+        setattr(db, k, getattr(db.table.attrs, k))
     return db
         

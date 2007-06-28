@@ -23,11 +23,9 @@ import numpy as np
 from PyMCBase import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
 
-try:
-    import flib_blas
-    from flib_blas import *
+if hasattr(flib, 'cov_mvnorm'):
     flib_blas_OK = True
-except:
+else:
     flib_blas_OK = False
 
 
@@ -1144,7 +1142,7 @@ def multivariate_normal_cov_like(x, mu, C):
     C positive definite
     """
 
-    return flib.cov_mvnorm(x,mu,tau)        
+    return flib.cov_mvnorm(x,mu,C)        
 
 # Multivariate normal, parametrized with Cholesky factorization.----------
 def rmultivariate_normal_chol(mu, sig):

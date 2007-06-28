@@ -635,6 +635,51 @@ cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau
       END
 
 
+      SUBROUTINE arlognormal(x, mu, sigma, rho, beta, n, nmu, like)
+
+C Autocorrelated lognormal loglikelihood.
+C David Huard, June 2007
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision intent(in) :: sigma, rho, beta
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+
+      IMPLICIT NONE
+      INTEGER n,i,nmu
+      DOUBLE PRECISION like
+      DOUBLE PRECISION x(n),mu(nmu),sigma, rho, beta
+      DOUBLE PRECISION mu_tmp,logx(n),r(n),t1,t2,t3,t4,quad
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      t1 = n/2. *dlog(2*pi)
+      t2 = .5 * (dlog(beta) + 2*n*dlog(sigma) - dlog(1.-rho**2))
+
+      t3 = 0.0
+      mu_tmp = mu(1)
+      do i=1,n
+        logx(i) = dlog(x(i))
+        t3 = t3+logx(i)
+        if (nmu .NE. 1) mu_tmp=mu(i)
+        r(i) = logx(i) - mu_tmp
+      enddo
+
+      quad = 1.0/beta * (1.-rho**2)*r(1)**2
+      do i=1,n-1
+        quad = quad + (r(i+1) - rho*r(i))**2
+      enddo
+
+      t4 = .5 * quad/sigma**2
+      like = -t1-t2-t3-t4
+      END SUBROUTINE
+    
+
+
       SUBROUTINE gev(x,xi,mu,sigma,n,nxi,nmu,nsigma,like)
 C
 C     COMPUTE THE LIKELIHOOD OF THE GENERALIZED EXTREME VALUE DISTRIBUTION.

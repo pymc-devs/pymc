@@ -1,3 +1,17 @@
+###
+# Test that decorators return the appropriate object.
+# David Huard
+# June 21, 2007
+###
+
+###
+# TODO
+# ----
+# Add test for node
+# Check discrete and binary parameters
+# Test the distribution instantiators.
+###
+
 from numpy.testing import *
 import PyMC2
 from PyMC2 import Sampler, data, parameter, node, discrete_parameter, \
@@ -49,6 +63,15 @@ def F(value = D_array*.5,
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
         
+@data
+@parameter
+def G(value = D_array*.5,
+        s = s,
+        e = e,
+        l = l):
+    """Annual occurences of coal mining disasters."""
+    return poisson_like(value[:s],e) + poisson_like(value[s:],l)
+        
 class test_instantiation(NumpyTestCase):
     def check_data(self):
         assert(isinstance(D, Parameter))
@@ -57,6 +80,8 @@ class test_instantiation(NumpyTestCase):
         assert(E.isdata)
         assert(isinstance(F, Parameter))
         assert(F.isdata)
+        assert(isinstance(G, Parameter))
+        assert(G.isdata)
     def check_parameter(self):
         assert(isinstance(l, Parameter))
         assert(not l.isdata)
