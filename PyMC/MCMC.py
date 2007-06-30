@@ -1612,10 +1612,10 @@ class Sampler:
                 expval = array([pr * n for pr in p])
                 
                 # Simulated values
-                y = rmultinomial(n, p)
+                y = rmultinomial(n, concatenate((p, [1.-sum(p)])))
                 
                 # Generate GOF points
-                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y[:-1], expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
@@ -2853,7 +2853,7 @@ class MetropolisHastings(Sampler):
                     tuning = False
                 
                 # Adapt sampling distribution at appropriate intervals
-                if tuning and iteration % tune_interval == 0 and iteration:
+                if tuning and not iteration % tune_interval and iteration:
                     
                     # Negate tuning flag
                     still_tuning = 0
