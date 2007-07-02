@@ -23,7 +23,7 @@ class test_Sampler(NumpyTestCase):
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
         # Sample
-        M.sample(50000,10000)
+        M.sample(100000,50000,verbose=2)
         
         # Plot samples
         M.plot()

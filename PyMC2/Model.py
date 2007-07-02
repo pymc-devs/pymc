@@ -493,6 +493,10 @@ class Sampler(Model):
         
         # Flag for verbose output
         self.verbose = verbose
+        
+        # Flags for tuning
+        self._tuning = True
+        self._tuned_count = 0
 
         self.seed()
 
@@ -512,15 +516,44 @@ class Sampler(Model):
         self.interactive_prompt()
 
     def interactive_continue(self):
+        # Restarts thread in interactive mode
+        
         self._thread = Thread(target=self._loop)
         self._thread.start()
+        
+    def tune(self):
+        
+        # Only tune during burn-in
+        if self._current_iter > self._burn:
+            self._tuning = False
+            return
+            
+        if self.verbose > 1:
+            print '\tTuning at iteration', self._current_iter
+        
+        # Initialize counter for number of tuning parameters
+        tuning_count = 0
+        
+        for sampling_method in self.sampling_methods:
+            # Tune sampling methods
+            tuning_count += sampling_method.tune(verbose=self.verbose)
+        
+        if not tuning_count:
+            # If no sampling methods needed tuning, increment count
+            self._tuned_count += 1
+        else:
+            # Otherwise re-initialize count
+            self._tuned_count = 0
+        
+        # 5 consecutive clean intervals removed tuning
+        if self._tuned_count == 5:
+            if self.verbose > 0: print 'Finished tuning'
+            self._tuning = False
 
     def _loop(self):
-        self.status='running'
         
-        # Tuning flag and counter
-        still_tuning = True
-        tuned_count = 0
+        # Set status flag
+        self.status='running'
         
         try:
             while self._current_iter < self._iter:
@@ -532,42 +565,19 @@ class Sampler(Model):
                 if i == self._burn and self.verbose>0: 
                     print 'Burn-in interval complete'
                     
+                # Tune at interval
+                if i and not (i % self._tune_interval) and self._tuning:
+                    self.tune()
+                    
                 # Tell all the sampling methods to take a step
                 for sampling_method in self.sampling_methods:
+                        
+                    # Step the sampling method
                     sampling_method.step()
 
                 if not i % self._thin and i >= self._burn:
                     self.tally()
                 
-                # No tuning allowed beyond burn-in
-                if i == self._burn and still_tuning:
-                    still_tuning = False
-                
-                if still_tuning and not (i % self._tune_interval):
-                    
-                    if self.verbose > 1:
-                        print
-                        print 'Tuning parameters at iteration', i
-                    
-                    # Initialize counter for number of tuning parameters
-                    tuning_count = 0
-                    
-                    for sampling_method in self.sampling_methods:
-                        # Tune sampling methods
-                        tuning_count += sampling_method.tune(verbose=self.verbose)
-                        
-                    if not tuning_count:
-                        # If no sampling methods needed tuning, increment count
-                        tuned_count += 1
-                    else:
-                        # Otherwise re-initialize count
-                        tuned_count = 0
-                        
-                    # 5 consecutive clean intervals removed tuning
-                    if tuned_count == 5: 
-                        if self.verbose > 0: print 'Finished tuning'
-                        still_tuning = False
-
                 if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
                     # Uncommenting this causes errors in some models.
