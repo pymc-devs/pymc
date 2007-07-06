@@ -171,8 +171,15 @@ class SamplingMethod(object):
                 if isinstance(parent, PyMCBase):
                     self.parents.add(parent)
         
-        # Find nearest descendent Parameters
+        # Find descendent Parameters
         extend_children(self)
+        child_nodes = set([])
+        for child in self.children:
+            if isinstance(child, Node):
+                child_nodes.add(child)
+        self.children.difference_update(child_nodes)
+    
+        
         # Find nearest parent Parameters
         extend_parents(self)
         
@@ -181,7 +188,8 @@ class SamplingMethod(object):
         self.children -= self.parameters
         self.children -= self.data
         
-        # ID string for verbose feedback
+        # Identification used to save the sampling method's state.
+        # Each sampling method must have a unique identifier.
         self._id = 'To define in subclasses'
     
     def step(self):
@@ -217,7 +225,7 @@ class SamplingMethod(object):
             print '\t%s tuning:' % self._id
         
         # Calculate recent acceptance rate
-        if not (self._accepted + self._rejected): return
+        if not (self._accepted + self._rejected): return 0
         acc_rate = self._accepted / (self._accepted + self._rejected)
         
         # Flag for tuning state
@@ -264,7 +272,7 @@ class SamplingMethod(object):
             print '\t\tadaptive scale factor:', self._asf
             print
         
-        return tuning
+        return tuning*1
     
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
@@ -349,7 +357,12 @@ class Metropolis(SamplingMethod):
         self.proposal_deviate = zeros(shape(self.parameter.value), dtype=float)
         
         # Initialize verbose feedback string
-        self._id = parameter.__name__
+        # Choose something else , like self.name
+        
+        # Guys,  _id is used to identify the sampling method in order
+        # to save the state of the sampler. This should be 
+        # Metropolis_ + parameter.__name__
+        self._id ='Metropolis_' + parameter.__name__
         
         # Determine size of parameter
         if isinstance(self.parameter.value, ndarray):
@@ -812,7 +825,7 @@ class JointMetropolis(SamplingMethod):
         if not self._accepted > 0 or self._rejected > 0:
             for handler in self._single_param_handlers:
                 handler.tune(divergence_threshold, verbose)
-
+        return 1
     
     def propose(self):
         """

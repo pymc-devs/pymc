@@ -34,23 +34,26 @@ def extend_children(pymc_object):
     extend_children(object)
     
     Replaces object's children set with a set containing
-    object's nearest stochastic (Parameter, not Node) descendants.
+    object's stochastic (Parameter & Data, not Node) descendants.
     """
     if not isinstance(pymc_object.children, set):
         raise TypeError, "Input object's 'children' attribute must be a set."
-    new_children = copy(pymc_object.children)
-    need_recursion = False
-    node_children = set()
+    
+    new_children = set([])
+    recurse = False
+    
     for child in pymc_object.children:
-        if isinstance(child,Node):
-            new_children |= child.children
-            node_children.add(child)
-            need_recursion = True
-    pymc_object.children = new_children - node_children
-    if need_recursion:
+        #print child.__name__, ':', child.children
+        #raw_input()
+        if not child.children.issubset(pymc_object.children):
+            new_children.update(child.children)
+            recurse = True
+    pymc_object.children.update(new_children)
+
+    if recurse:
         extend_children(pymc_object)
     return
-    
+
 def extend_parents(pymc_object):
     """
     extend_parents(object)
