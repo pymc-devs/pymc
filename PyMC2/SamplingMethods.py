@@ -475,7 +475,7 @@ class Metropolis(SamplingMethod):
         if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.parameter.value = rnormal(self.parameter.value, self.proposal_sig)
+            self.parameter.value = rnormal(self.parameter.value, self._asf * self.proposal_sig)
 
 def MetroCompetence(parameter):
     """
@@ -517,7 +517,7 @@ class DiscreteMetropolis(Metropolis):
         # Propose new parameter values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.parameter.value,self.proposal_sig)
+            new_val = rnormal(self.parameter.value,self._asf * self.proposal_sig)
             
             self.parameter.value = round_array(new_val)
 
@@ -836,7 +836,7 @@ class JointMetropolis(SamplingMethod):
         
         N = self._sig.shape[1]
         
-        proposed_vals = inner(self._proposal_deviate[:N], self._sig)
+        proposed_vals = inner(self._proposal_deviate[:N], self._asf * self._sig)
         
         for parameter in self.parameters:
             
