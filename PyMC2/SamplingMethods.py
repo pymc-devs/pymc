@@ -913,5 +913,7 @@ def JointMetroCompetence(parameter):
     
     elif isinstance(parameter.value, ndarray):
         return 2
+    else:
+        return 0
 
 SamplingMethodRegistry[JointMetropolis] = JointMetroCompetence
