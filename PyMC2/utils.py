@@ -444,4 +444,6 @@ def _optimize_binning(x, range, method='Freedman'):
     return int(diff(range)/width)
 
 
-
+# Logit and inverse-logit functions
+logit = vectorize(flib.logit)
+invlogit = vectorize(flib.invlogit)
