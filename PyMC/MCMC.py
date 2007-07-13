@@ -23,6 +23,7 @@ from numpy import tan, transpose, vectorize, zeros
 permutation = random.permutation
 
 from TimeSeries import autocorr as acf
+import Backends
 
 try:
     from Matplot import PlotFactory
@@ -287,7 +288,7 @@ class Node:
     class, or its subclasses.
     """
     
-    def __init__(self, name, sampler, shape=None, plot=True):
+    def __init__(self, name, sampler, shape=None, dtype='d', plot=True):
         """Class initialization"""
         
         self.name = name
@@ -299,15 +300,18 @@ class Node:
         self._plot = plot
         
         if shape:
-            self.set_value(zeros(shape, 'd'))
+            self.set_value(zeros(shape, dtype))
         
-        # Empty list of traces
-        self._traces = []
+        self._trace = sampler.db.Trace(name)
     
-    def init_trace(self, size):
+    def init_trace(self, size, value):
         """Initialize trace"""
         
-        self._traces.append(zeros(size, 'd'))
+        self._trace._initialize(size, value) 
+        
+    def finalize(self):
+        
+        self._trace.finalize()
     
     def get_value(self):
         """Retrieves the current value of node from sampler dictionary"""
@@ -317,12 +321,12 @@ class Node:
     def clear_trace(self):
         """Removes last trace"""
         
-        self._traces.pop()
+        self._trace.pop()
     
     def set_value(self, value):
         """Stores new value for node in sampler dictionary"""
         
-        # Cast to array if value is not scalar (Please do not change this behaviour)
+        # Cast to array if value is not scalar
         if shape(value):
             self._sampler.__dict__[self.name] = array(value)
         else:
@@ -334,34 +338,31 @@ class Node:
         
         # Need to make a copy of arrays
         try:
-            self._traces[-1][index] = self.get_value().copy()
+            self._trace.tally(self.get_value().copy(), index)
         except AttributeError:
-            self._traces[-1][index] = self.get_value()
+            self._trace.tally(self.get_value(), index)
     
-    def get_trace(self, burn=0, thin=1, chain=-1, composite=False):
+    def get_trace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the specified trace (last by default)"""
         
         try:
-            if composite:
-                
-                return concatenate([trace[arange(burn, len(trace), step=thin)] for trace in self._traces])
             
-            return array(self._traces[chain][arange(burn, len(self._traces[chain]), step=thin)])
+            return self._trace.get_trace(burn=burn, thin=thin, chain=chain, slicing=slicing)
         
         except IndexError:
             
             return
     
-    def trace_count(self):
-        """Return number of stored traces"""
+    def chain_count(self):
+        """Return number of stored chains in trace"""
         
-        return len(self._traces)
+        return len(self._trace)
     
-    def quantiles(self, qlist=[2.5, 25, 50, 75, 97.5], burn=0, thin=1, chain=-1, composite=False):
+    def quantiles(self, qlist=[2.5, 25, 50, 75, 97.5], burn=0, thin=1, chain=-1, slicing=None):
         """Returns a dictionary of requested quantiles"""
         
         # Make a copy of trace
-        trace = self.get_trace(burn, thin, chain, composite)
+        trace = self.get_trace(burn, thin, chain, slicing)
         
         # For multivariate node
         if ndim(trace)>1:
@@ -395,23 +396,24 @@ class Node:
             for k in keys:
                 print '\t', k, ':', quants[k]
     
-    def plot(self, plotter, burn=0, thin=1, chain=-1, color='b', composite=False):
+    def plot(self, plotter, burn=0, thin=1, chain=-1, color='b', slicing=None):
         """Plot trace and histogram using Matplotlib"""
         
         if self._plot:
             # Call plotting support function
             try:
-                trace = self.get_trace(burn, thin, chain, composite)
+                trace = self.get_trace(burn, thin, chain, slicing)
                 plotter.plot(trace, self.name, color=color)
+                # Get rid of trace to save memory
                 del trace
             except Exception:
                 print 'Could not generate %s plots' % self.name
     
-    def mean(self, burn=0, thin=1, chain=-1, composite=False):
+    def mean(self, burn=0, thin=1, chain=-1, slicing=None):
         """Calculate mean of sampled values"""
         
         # Make a copy of trace
-        trace = self.get_trace(burn, thin, chain, composite)
+        trace = self.get_trace(burn, thin, chain, slicing)
         
         # For multivariate node
         if ndim(trace)>1:
@@ -433,11 +435,11 @@ class Node:
             
             return trace.mean()
     
-    def std(self, burn=0, thin=1, chain=-1, composite=False):
+    def std(self, burn=0, thin=1, chain=-1, slicing=None):
         """Calculate standard deviation of sampled values"""
         
         # Make a copy of trace
-        trace = self.get_trace(burn, thin, chain, composite)
+        trace = self.get_trace(burn, thin, chain, slicing)
         
         # For multivariate node
         if ndim(trace)>1:
@@ -459,11 +461,11 @@ class Node:
             
             return trace.std()
     
-    def mcerror(self, burn=0, thin=1, chain=-1, composite=False):
+    def mcerror(self, burn=0, thin=1, chain=-1, slicing=None):
         """Calculate MC error of chain"""
         
-        sigma = self.std(burn, thin, chain, composite)
-        n = len(self.get_trace(burn, thin, chain, composite))
+        sigma = self.std(burn, thin, chain, slicing)
+        n = len(self.get_trace(burn, thin, chain, slicing))
         
         return sigma/sqrt(n)
     
@@ -508,11 +510,11 @@ class Node:
             print 'Too few elements for interval calculation'
             return [None,None]
     
-    def hpd(self, alpha, burn=0, thin=1, chain=-1, composite=False):
+    def hpd(self, alpha, burn=0, thin=1, chain=-1, slicing=None):
         """Calculate HPD (minimum width BCI) for given alpha"""
         
         # Make a copy of trace
-        trace = self.get_trace(burn, thin, chain, composite)
+        trace = self.get_trace(burn, thin, chain, slicing)
         
         # For multivariate node
         if ndim(trace)>1:
@@ -664,11 +666,11 @@ class Parameter(Node):
     acceptance rate (between 20 and 50 percent).
     """
     
-    def __init__(self, name, init_val, sampler, dist='normal', scale=None, random=False, plot=True):
+    def __init__(self, name, init_val, sampler, dist='normal', scale=None, random=False, dtype='d', plot=True):
         # Class initialization
         
         # Initialize superclass
-        Node.__init__(self, name, sampler, plot=plot)
+        Node.__init__(self, name, sampler, dtype=dtype, plot=plot)
         
         # Counter for rejected proposals; used for adaptation.
         self._rejected = 0
@@ -887,7 +889,7 @@ class BinaryParameter(Parameter):
         # Class initialization
         
         # Initialize superclass
-        Parameter.__init__(self, name, init_val, sampler, dist='normal', scale=None, random=False, plot=True)
+        Parameter.__init__(self, name, init_val, sampler, dist='normal', scale=None, random=False, dtype='i', plot=True)
         
         # Counter for rejected proposals; used for adaptation.
         self._rejected = 0
@@ -921,7 +923,7 @@ class DiscreteParameter(Parameter):
         # Class initialization
         
         # Initialize superclass
-        Parameter.__init__(self, name, init_val, sampler, scale=scale, random=random, plot=plot)
+        Parameter.__init__(self, name, init_val, sampler, scale=scale, random=random, dtype='i', plot=plot)
         
         # Specify distribution of random walk deviate, and associated
         # scale parameters
@@ -962,15 +964,12 @@ class Sampler:
     MCMC algorithms should be subclassed (e.g. Slice and MetropolisHastings).
     """
     
-    def __init__(self, plot_format='png', plot_backend='TkAgg'):
+    def __init__(self, plot_format='png', db_backend='ram', plot_backend='TkAgg'):
         """Class initializer"""
         
         # Initialize parameter and node dictionaries
         self.parameters = {}
         self.nodes = {}
-        
-        # Create and initialize node for model deviance
-        self.node('deviance')
         
         # Create plotter, if module was imported
         try:
@@ -978,9 +977,17 @@ class Sampler:
             self.plotter = PlotFactory(format=plot_format, backend=plot_backend)
         except NameError:
             self.plotter = None
+            
+        if db_backend == 'sqlite':
+            self.db = Backends.sqlite.Database("pymcdb.sqlite3")
+        else:
+            self.db = Backends.ram.Database()     
         
         # Goodness of Fit flag
         self._gof = False
+        
+        # Create and initialize node for model deviance
+        self.node('deviance')
     
     def profile(self, iterations=2000, burn=1000, name='pymc'):
         """Profile sampler with hotshot"""
@@ -2206,7 +2213,7 @@ class Sampler:
         
         self.nodes[name] = Node(name, self, shape=shape, plot=plot)
     
-    def summary(self, burn=0, thin=1, alpha=0.05, composite=False):
+    def summary(self, burn=0, thin=1, alpha=0.05, slicing=None):
         """Generates summary statistics"""
         
         # Initialize dictionary
@@ -2226,17 +2233,17 @@ class Sampler:
                     k += 1
         
         # Calculate AIC quantiles
-        aic_quantiles = deviance.quantiles(burn=burn, thin=thin, composite=composite)
+        aic_quantiles = deviance.quantiles(burn=burn, thin=thin, slicing=slicing)
         for q in aic_quantiles:
             aic_quantiles[q] += 2*k
         
         try:
             results['AIC'] = {
-                'n': len(deviance.get_trace(burn=burn, thin=thin, composite=composite)),
-                'standard deviation': deviance.std(burn=burn, thin=thin, composite=composite),
-                'mean': deviance.mean(burn=burn, thin=thin, composite=composite) + 2*k,
-                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): [d + 2*k for d in deviance.hpd(alpha=alpha, burn=burn, thin=thin, composite=composite)],
-                'mc error': deviance.mcerror(burn=burn, thin=thin, composite=composite),
+                'n': len(deviance.get_trace(burn=burn, thin=thin, slicing=slicing)),
+                'standard deviation': deviance.std(burn=burn, thin=thin, slicing=slicing),
+                'mean': deviance.mean(burn=burn, thin=thin, slicing=slicing) + 2*k,
+                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): [d + 2*k for d in deviance.hpd(alpha=alpha, burn=burn, thin=thin, slicing=slicing)],
+                'mc error': deviance.mcerror(burn=burn, thin=thin, slicing=slicing),
                 'quantiles': aic_quantiles
             }
         except TypeError:
@@ -2246,19 +2253,19 @@ class Sampler:
         for p in self.parameters.values()+self.nodes.values():
             try:
                 results[p.name] = {
-                    'n': len(p.get_trace(burn=burn, thin=thin, composite=composite)),
-                    'standard deviation': p.std(burn=burn, thin=thin, composite=composite),
-                    'mean': p.mean(burn=burn, thin=thin, composite=composite),
-                    '%s%s HPD interval' % (int(100*(1-alpha)),'%'): p.hpd(alpha=alpha, burn=burn, thin=thin, composite=composite),
-                    'mc error': p.mcerror(burn=burn, thin=thin, composite=composite),
-                    'quantiles': p.quantiles(burn=burn, thin=thin, composite=composite)
+                    'n': len(p.get_trace(burn=burn, thin=thin, slicing=slicing)),
+                    'standard deviation': p.std(burn=burn, thin=thin, slicing=slicing),
+                    'mean': p.mean(burn=burn, thin=thin, slicing=slicing),
+                    '%s%s HPD interval' % (int(100*(1-alpha)),'%'): p.hpd(alpha=alpha, burn=burn, thin=thin, slicing=slicing),
+                    'mc error': p.mcerror(burn=burn, thin=thin, slicing=slicing),
+                    'quantiles': p.quantiles(burn=burn, thin=thin, slicing=slicing)
                 }
             except AttributeError:
                 print "Could not find", p.name
             except TypeError:
                 print "Could not generate summary of", p.name
         
-        results['DIC'] = self.calculate_dic(burn, thin, composite=composite)
+        results['DIC'] = self.calculate_dic(burn, thin, slicing=slicing)
         
         return results
     
@@ -2501,6 +2508,9 @@ class Sampler:
         print "Running convergence diagnostics"
         print '='*50
         
+        # Connect to database
+        self.db.connect()
+        
         # Initialize dictionary scores
         zscores = {}
         
@@ -2514,10 +2524,13 @@ class Sampler:
             
             # Geweke diagnostic
             zscores.update(node.geweke(first=first, last=last, intervals=intervals, burn=burn, thin=thin, chain=chain, plotter=plotter, color=color))
+            
+        # Close database
+        self.db.close()
         
         return zscores
     
-    def goodness(self, iterations, plot=True, loss='squared', burn=0, thin=1, chain=-1, composite=False, color='b', filename='gof'):
+    def goodness(self, iterations, plot=True, loss='squared', burn=0, thin=1, chain=-1, slicing=None, color='b', filename='gof'):
         """
         Calculates Goodness-Of-Fit according to Brooks et al. 1998
         """
@@ -2527,6 +2540,8 @@ class Sampler:
         print '='*50
         print 'Generating %s goodness-of-fit simulations' % iterations
         
+        # Connect to database
+        self.db.connect()
         
         # Specify loss function
         if loss=='squared':
@@ -2574,7 +2589,7 @@ class Sampler:
                     parameter = self.parameters[name]
                     
                     # Retrieve copy of trace
-                    trace = parameter.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
+                    trace = parameter.get_trace(burn=burn, thin=thin, chain=chain, slicing=slicing)
                     
                     # Sample value from trace
                     sample = trace[random_integers(len(trace)) - 1]
@@ -2661,6 +2676,9 @@ class Sampler:
         # Close output file
         outfile.close()
         
+        # Close database
+        self.db.close()
+        
         return stats
     
     def autocorrelation(self, max_lag=100, burn=0, thin=1, chain=-1, color='b'):
@@ -2669,6 +2687,9 @@ class Sampler:
         print
         print "Plotting parameter autocorrelation"
         print '='*50
+        
+        # Connect to database
+        self.db.connect()
         
         # Loop over parameters
         for parameter in self.parameters.values():
@@ -2690,8 +2711,11 @@ class Sampler:
             return array([d + 2.*k for d in deviance])
         except TypeError:
             return deviance + 2*k
+        finally:
+            # Close database
+            self.db.close()
     
-    def calculate_dic(self, burn=0, thin=1, composite=False):
+    def calculate_dic(self, burn=0, thin=1, slicing=None):
         """Calculates deviance information Criterion"""
         
         # Set values of all parameters to their mean
@@ -2699,12 +2723,12 @@ class Sampler:
             
             # Calculate mean of paramter
             parameter = self.parameters[name]
-            meanval = parameter.mean(burn=burn, thin=thin, composite=composite)
+            meanval = parameter.mean(burn=burn, thin=thin, slicing=slicing)
             
             # Set current value to mean
             parameter.set_value(meanval)
         
-        mean_deviance = self.nodes['deviance'].mean(burn, thin, composite=composite)
+        mean_deviance = self.nodes['deviance'].mean(burn, thin, slicing=slicing)
         
         # Return twice deviance minus deviance at means
         try:
@@ -2760,11 +2784,11 @@ class MetropolisHastings(Sampler):
     
     """
     
-    def __init__(self, plot_format='png', plot_backend='TkAgg'):
+    def __init__(self, plot_format='png', db_backend='ram', plot_backend='TkAgg'):
         """Class initializer"""
         
         # Initialize superclass
-        Sampler.__init__(self, plot_format, plot_backend)
+        Sampler.__init__(self, plot_format, db_backend, plot_backend)
     
     def test(self):
         """Accept or reject proposed parameter values"""
@@ -2811,16 +2835,24 @@ class MetropolisHastings(Sampler):
         # Initialize model
         try:
             self()
+            self.deviance = -2 * self._post
             self._last_post = self._post
         except (LikelihoodError, OverflowError, ZeroDivisionError):
-            self._last_post = -inf
+            self.deviance = self._last_post = -inf
+            
+        # Connect to backend
+        self.db.connect()
         
         # Initialize traces of each parameter and node
         for node in self.parameters.values() + self.nodes.values():
+            
+            node.init_trace(iterations, node.get_value())
+            """
             try:
-                node.init_trace(concatenate(([iterations], shape(node.get_value()))))
+                node.init_trace(iterations, node.get_value())
             except KeyError:
                 node.init_trace(iterations)
+            """
         
         try:
             
@@ -2900,7 +2932,9 @@ class MetropolisHastings(Sampler):
                 for node in self.nodes.values():
                     node.tally(iteration)
         
-        
+            # Finalize the nodes
+            for node in self.parameters.values()+self.nodes.values():
+                node.finalize()
         
             # Generate summary
             results = self.summary(burn=burn, thin=thin)
@@ -2931,6 +2965,10 @@ class MetropolisHastings(Sampler):
                 node.clear_trace()
             
             return
+            
+        finally:
+            
+            self.db.close()
 
 """Unit testing code"""
 
@@ -2948,7 +2986,10 @@ class DisasterSampler(MetropolisHastings):
     def __init__(self):
         """Class initialization"""
         
-        MetropolisHastings.__init__(self)
+        try:
+            MetropolisHastings.__init__(self, db_backend='sqlite')
+        except Exception:
+            MetropolisHastings.__init__(self, db_backend='ram')
         
         # Sample changepoint data (Coal mining disasters per year)
         self.data = (4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

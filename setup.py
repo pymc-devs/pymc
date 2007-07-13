@@ -7,7 +7,7 @@ from numpy.distutils.core import setup, Extension
 
 
 flib = Extension(name='PyMC.flib',sources=['PyMC/flib.f'])
-version = "1.2"
+version = "1.3"
 
 distrib = setup(
 	version=version,
@@ -17,6 +17,6 @@ distrib = setup(
 	license="Academic Free License",
 	name="PyMC",
 	url="trichech.us",
-	packages=["PyMC"],
+	packages=["PyMC", "PyMC/Backends", "PyMC/Extensions"],
 	ext_modules = [flib]	
 )
