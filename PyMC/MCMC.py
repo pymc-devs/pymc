@@ -1308,29 +1308,79 @@ class Sampler:
         """Dirichlet multinomial prior distribution"""
         
         return self.dirichlet_multinomial_like(parameter, theta, prior=True)
-    
+        
     @_add_to_post
-    def negative_binomial_like(self, x, mu, alpha, name='negative_binomial', prior=False):
+    def negative_binomial_like(self, x, r, p, name='negative_binomial', prior=False):
         """Negative binomial log-likelihood"""
         
-        if not shape(mu) == shape(alpha): raise ParameterError, 'Parameters must have same dimensions'
+        if not shape(r) == shape(p): raise ParameterError, 'Parameters must have same dimensions'
+        
+        # Allow for multidimensional arguments
+        if ndim(r) > 1:
+            
+            return sum(self.negative_binomial_like(y, rr, pp, name=name, prior=prior) for y, rr, pp in zip(x, r, p))
+        
+        else:
+            
+            # Ensure valid values of parameters
+            self.constrain(r, lower=0)
+            self.constrain(p, lower=0)
+            self.constrain(x, lower=0, allow_equal=True)
+            
+            # Enforce array type
+            x = ravel(x)
+            r = resize(r, shape(x))
+            p = resize(p, shape(x))
+            
+            # Goodness-of-fit
+            if self._gof and not prior:
+                
+                try:
+                    self._like_names.append(name)
+                except AttributeError:
+                    pass
+                
+                expval = r * (1.-p) / p
+                
+                # Simulated values
+                y = array(map(rnegbin, r, p))
+                
+                # Generate GOF points
+                gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
+                
+                self._gof_loss.append(gof_points)
+            
+            return fnegbin(x, r, p)
+    
+    def negative_binomial_prior(self, parameter, r, p):
+        """Negative binomial prior distribution"""
+        
+        return self.negative_binomial_like(parameter, r, p, prior=True)
+    
+    @_add_to_post
+    def negative_binomial2_like(self, x, mu, omega, name='negative_binomial2', prior=False):
+        """Negative binomial log-likelihood
+        (Alternative parameterization)
+        """
+        
+        if not shape(mu) == shape(omega): raise ParameterError, 'Parameters must have same dimensions'
         
         # Allow for multidimensional arguments
         if ndim(mu) > 1:
             
-            return sum(self.negative_binomial_like(y, _l, _p, name=name, prior=prior) for y, _l, _p in zip(x, mu, alpha))
+            return sum(self.negative_binomial2_like(y, m, w, name=name, prior=prior) for y, m, w in zip(x, mu, omega))
         
         else:
             
             # Ensure valid values of parameters
             self.constrain(mu, lower=0)
-            self.constrain(alpha, lower=0)
+            self.constrain(omega, lower=0)
             self.constrain(x, lower=0, allow_equal=True)
             
             # Enforce array type
             x = ravel(x)
             mu = resize(mu, shape(x))
-            alpha = resize(alpha, shape(x))
+            omega = resize(omega, shape(x))
             
             # Goodness-of-fit
             if self._gof and not prior:
@@ -1343,19 +1393,19 @@ class Sampler:
                 expval = mu
                 
                 # Simulated values
-                y = array(map(rnegbin, alpha, alpha / (mu + alpha)))
+                y = array(map(rnegbin, omega, omega / (mu + omega)))
                 
                 # Generate GOF points
                 gof_points = sum(transpose([self.loss(x, expval), self.loss(y, expval)]), 0)
                 
                 self._gof_loss.append(gof_points)
             
-            return fnegbin2(x, mu, alpha)
+            return fnegbin2(x, mu, omega)
     
-    def negative_binomial_prior(self, parameter, lamda, omega):
+    def negative_binomial2_prior(self, parameter, mu, omega):
         """Negative binomial prior distribution"""
         
-        return self.negative_binomial_like(parameter, lamda, omega, prior=True)
+        return self.negative_binomial2_like(parameter, mu, omega, prior=True)
         
     @_add_to_post
     def geometric_like(self, x, p, name='geometric', prior=False):
