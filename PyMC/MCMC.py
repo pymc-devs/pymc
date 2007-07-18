@@ -3,7 +3,7 @@ Markov chain Monte Carlo (MCMC) simulation, implementing an adaptive form of ran
 """
 
 # Import system functions
-import sys, time, unittest, pdb, csv
+import sys, time, pdb, csv
 
 # Import numpy functions
 from numpy import random, linalg
@@ -288,10 +288,10 @@ class Node:
     class, or its subclasses.
     """
     
-    def __init__(self, name, sampler, shape=None, dtype='d', plot=True):
+    def __init__(self, name, sampler, value=None, shape=None, dtype='d', plot=True):
         """Class initialization"""
         
-        self.name = name
+        self._name = name
         
         # Specify sampler
         self._sampler = sampler
@@ -299,49 +299,40 @@ class Node:
         # Flag for plotting
         self._plot = plot
         
-        if shape:
-            self.set_value(zeros(shape, dtype))
+        self.set_value(value or zeros(shape, dtype))
         
         self._trace = sampler.db.Trace(name)
+        
+    def get_name(self): return self._name
     
-    def init_trace(self, size, value):
+    def set_name(self, name): self._name = name
+    
+    name = property(get_name, set_name, doc="Name of Node")
+    
+    def get_value(self):
+        """Retrieves the current value of node from sampler dictionary"""
+        return self._value
+        
+    def set_value(self, value):
+        """Stores new value for node in sampler dictionary"""
+        # Cast to array if value is not scalar
+        if shape(value):
+            self._value = array(value)
+        else:
+            self._value = value
+            
+    #value = property(get_value, set_value)
+    
+    def init_trace(self, size, value=None):
         """Initialize trace"""
         
         self._trace._initialize(size, value) 
         
-    def finalize(self):
-        
-        self._trace.finalize()
-    
-    def get_value(self):
-        """Retrieves the current value of node from sampler dictionary"""
-        
-        return self._sampler.__dict__[self.name]
-    
     def clear_trace(self):
         """Removes last trace"""
         
         self._trace.pop()
-    
-    def set_value(self, value):
-        """Stores new value for node in sampler dictionary"""
         
-        # Cast to array if value is not scalar
-        if shape(value):
-            self._sampler.__dict__[self.name] = array(value)
-        else:
-            self._sampler.__dict__[self.name] = value
-    
-    
-    def tally(self, index):
-        """Adds current value to trace"""
-        
-        # Need to make a copy of arrays
-        try:
-            self._trace.tally(self.get_value().copy(), index)
-        except AttributeError:
-            self._trace.tally(self.get_value(), index)
-    
     def get_trace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the specified trace (last by default)"""
         
@@ -352,6 +343,20 @@ class Node:
         except IndexError:
             
             return
+        
+    trace = property(get_trace, fdel=clear_trace)
+        
+    def finalize(self):
+        
+        self._trace.finalize()
+    
+    def tally(self, index):
+        """Adds current value to trace"""
+        # Need to make a copy of arrays
+        try:
+            self._trace.tally(self.get_value().copy(), index)
+        except AttributeError:
+            self._trace.tally(self.get_value(), index)
     
     def chain_count(self):
         """Return number of stored chains in trace"""
@@ -751,7 +756,6 @@ class Parameter(Node):
         
         where e ~ proposal(hyperparameters)
         """
-        
         # Current value of parameter
         current_value = self.get_value()
         
@@ -941,9 +945,9 @@ class DiscreteParameter(Parameter):
         """Stores new value for node in sampler dictionary"""
         
         try:
-            self._sampler.__dict__[self.name] = around(value, 0).astype(int)
+            self._value = around(value, 0).astype(int)
         except TypeError:
-            self._sampler.__dict__[self.name] = int(round(value, 0))
+            self._value = int(round(value, 0))
     
     def compute_scale(self, acc_rate, int_length):
         """Returns 1 for discrete parameters.'"""
@@ -954,7 +958,7 @@ class DiscreteParameter(Parameter):
 
 
 
-class Sampler:
+class Sampler(object):
     """
     Superclass for Markov chain Monte Carlo samplers. Includes methods for
     calculating log-likelihoods, initializing parameters and nodes,
@@ -967,9 +971,9 @@ class Sampler:
     def __init__(self, plot_format='png', db_backend='ram', plot_backend='TkAgg'):
         """Class initializer"""
         
-        # Initialize parameter and node dictionaries
-        self.parameters = {}
-        self.nodes = {}
+        # Initialize parameter and node sets
+        self._parameters = set()
+        self._nodes = set()
         
         # Create plotter, if module was imported
         try:
@@ -986,32 +990,31 @@ class Sampler:
         # Goodness of Fit flag
         self._gof = False
         
-        # Create and initialize node for model deviance
+        # Initialize deviance node
         self.node('deviance')
+        
+        # Optional initialization method
+        self.init()
     
-    def profile(self, iterations=2000, burn=1000, name='pymc'):
-        """Profile sampler with hotshot"""
+    def __getattribute__(self, name):
+        """
+        Override __getattr__ to accomodate Nodes and Parameters
+        """
+        item = object.__getattribute__(self, name)
+        if isinstance(item, Node):
+            return item.get_value()
+        return item
         
-        from hotshot import Profile, stats
-        
-        # Create profile object
-        prof = Profile("%s.prof" % name)
-        
-        # Run profile
-        results = prof.runcall(self.sample, iterations, burn=burn, plot=False, verbose=False)
-        prof.close()
-        
-        # Load stats
-        s = stats.load("%s.prof" % name)
-        s.strip_dirs()
-        s.sort_stats('time','calls')
-        
-        # Print
-        s.print_stats()
-        
-        # Clear traces of each parameter and node after profiling
-        for node in self.parameters.values()+self.nodes.values():
-            node.clear_trace()
+    def __setattr__(self, name, value):
+        """
+        Override __setattr__ to accomodate Nodes and Parameters
+        """
+        if self.__dict__.has_key(name):
+            item = object.__getattribute__(self, name)
+            if isinstance(item, Node):
+                item.set_value(value)
+                return
+        object.__setattr__(self, name, value)
     
     # Decorator function for compiling log-posterior
     def _add_to_post(like):
@@ -1036,6 +1039,12 @@ class Sampler:
             return factor * value
         
         return wrapped_like
+        
+    def init(self):
+        """
+        Optional method for initializing parameters. Override in subclas.
+        """
+        pass
     
     # Log likelihood functions
     
@@ -2252,16 +2261,23 @@ class Sampler:
         """Create a new parameter"""
         
         if binary:
-            self.parameters[name] = BinaryParameter(name, init_val, sampler=self, plot=plot, random=random)
+            p = BinaryParameter(name, init_val, sampler=self, plot=plot, random=random)
         elif discrete:
-            self.parameters[name] = DiscreteParameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
+            p = DiscreteParameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
         else:
-            self.parameters[name] = Parameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
+            p = Parameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
+            
+        self._parameters.add(p)
+        
+        self.__setattr__(name, p)
     
     def node(self, name, shape=None, plot=True):
         """Create a new node"""
         
-        self.nodes[name] = Node(name, self, shape=shape, plot=plot)
+        n = Node(name, self, shape=shape, plot=plot)
+        self._nodes.add(n)
+        
+        self.__setattr__(name, n)
     
     def summary(self, burn=0, thin=1, alpha=0.05, slicing=None):
         """Generates summary statistics"""
@@ -2269,16 +2285,15 @@ class Sampler:
         # Initialize dictionary
         results = {}
         
-        # Retrieve deviance node
-        deviance = self.nodes['deviance']
+        deviance = self.__dict__['deviance']
         
         # Count parameters
         k = 0
-        for parameter in self.parameters:
+        for parameter in self._parameters:
             # Only count non-random-effect parameters
-            if not self.parameters[parameter].random:
+            if not parameter.random:
                 try:
-                    k += len(ravel(self.__dict__[parameter]))
+                    k += len(ravel(self.__dict__[parameter.name]))
                 except TypeError:
                     k += 1
         
@@ -2300,7 +2315,7 @@ class Sampler:
             print "Could not generate summary of AIC"
         
         # Loop over parameters and nodes
-        for p in self.parameters.values()+self.nodes.values():
+        for p in self._parameters | self._nodes:
             try:
                 results[p.name] = {
                     'n': len(p.get_trace(burn=burn, thin=thin, slicing=slicing)),
@@ -2446,7 +2461,7 @@ class Sampler:
         index = 1
         
         # Loop over all parameters
-        for p in self.parameters.values()+self.nodes.values():
+        for p in self._parameters | self._nodes:
             
             print "Processing", p.name
             
@@ -2570,7 +2585,7 @@ class Sampler:
             plotter = self.plotter
         
         # Loop over all parameters and nodes
-        for node in self.parameters.values():
+        for node in self._parameters:
             
             # Geweke diagnostic
             zscores.update(node.geweke(first=first, last=last, intervals=intervals, burn=burn, thin=thin, chain=chain, plotter=plotter, color=color))
@@ -2633,10 +2648,7 @@ class Sampler:
                 self._gof_loss = []
                 
                 # Loop over parameters
-                for name in self.parameters:
-                    
-                    # Look up parameter
-                    parameter = self.parameters[name]
+                for parameter in self._parameters:
                     
                     # Retrieve copy of trace
                     trace = parameter.get_trace(burn=burn, thin=thin, chain=chain, slicing=slicing)
@@ -2742,25 +2754,25 @@ class Sampler:
         self.db.connect()
         
         # Loop over parameters
-        for parameter in self.parameters.values():
+        for parameter in self._parameters:
             
             parameter.autocorrelation(max_lag=max_lag, burn=burn, thin=thin, chain=chain, plotter=self.plotter, color=color)
     
-    def calculate_aic(self, deviance):
+    def calculate_aic(self):
         """Calculates Akaikes Information Criterion (AIC)"""
         
         k = 0
-        for parameter in self.parameters:
-            if not self.parameters[parameter].random:
+        for parameter in self._parameters:
+            if not parameter.random:
                 try:
-                    k += len(ravel(self.__dict__[parameter]))
+                    k += len(ravel(self.__dict__[parameter.name]))
                 except TypeError:
                     k += 1
         
         try:
-            return array([d + 2.*k for d in deviance])
+            return array([d + 2.*k for d in self.deviance])
         except TypeError:
-            return deviance + 2*k
+            return self.deviance + 2*k
         finally:
             # Close database
             self.db.close()
@@ -2769,25 +2781,47 @@ class Sampler:
         """Calculates deviance information Criterion"""
         
         # Set values of all parameters to their mean
-        for name in self.parameters:
+        for parameter in self._parameters:
             
             # Calculate mean of paramter
-            parameter = self.parameters[name]
             meanval = parameter.mean(burn=burn, thin=thin, slicing=slicing)
             
             # Set current value to mean
             parameter.set_value(meanval)
         
-        mean_deviance = self.nodes['deviance'].mean(burn, thin, slicing=slicing)
+        meandeviance = self.__dict__['deviance'].mean(burn, thin, slicing=slicing)
         
         # Return twice deviance minus deviance at means
         try:
             self()
-            return 2*mean_deviance + 2*self._post
+            return 2*meandeviance + 2*self._post
         except LikelihoodError:
             return -inf
 
-
+    def profile(self, iterations=2000, burn=1000, name='pymc'):
+        """Profile sampler with hotshot"""
+        
+        from hotshot import Profile, stats
+        
+        # Create profile object
+        prof = Profile("%s.prof" % name)
+        
+        # Run profile
+        results = prof.runcall(self.sample, iterations, burn=burn, plot=False, verbose=False)
+        prof.close()
+        
+        # Load stats
+        s = stats.load("%s.prof" % name)
+        s.strip_dirs()
+        s.sort_stats('time','calls')
+        
+        # Print
+        s.print_stats()
+        
+        # Clear traces of each parameter and node after profiling
+        for node in self._parameters | self._nodes:
+            node.clear_trace()
+            
 
 class Slice(Sampler):
     """
@@ -2839,6 +2873,22 @@ class MetropolisHastings(Sampler):
         
         # Initialize superclass
         Sampler.__init__(self, plot_format, db_backend, plot_backend)
+        
+    def _instantiate_nodes(self, sampler_dict):
+        """
+        Automatically instantiates nodes based on the difference
+        of the sampler's __dict__ before and after an iteration.
+        """
+        
+        for name in set(self.__dict__) - set(sampler_dict):
+            
+            if not name.startswith('_'):
+                # Grab value of element
+                value = self.__dict__[name]
+                # Turn it into a node
+                self.node(name)
+                # Set its value
+                self.__dict__[name].set_value(value)
     
     def test(self):
         """Accept or reject proposed parameter values"""
@@ -2878,31 +2928,33 @@ class MetropolisHastings(Sampler):
         self._rejected = 0
         
         # Initialize divergence counter
-        infinite_deviance_count = 0
+        infinitedeviance_count = 0
         
         if debug: pdb.set_trace()
         
         # Initialize model
         try:
+            current_dict = self.__dict__.keys()
+            # Run sampler once
             self()
+            # Initialize deviance
             self.deviance = -2 * self._post
+            # Set last posterior to current
             self._last_post = self._post
+            
         except (LikelihoodError, OverflowError, ZeroDivisionError):
             self.deviance = self._last_post = -inf
+            
+        # Locate nodes
+        self._instantiate_nodes(current_dict)
             
         # Connect to backend
         self.db.connect()
         
         # Initialize traces of each parameter and node
-        for node in self.parameters.values() + self.nodes.values():
+        for node in self._parameters | self._nodes:
             
             node.init_trace(iterations, node.get_value())
-            """
-            try:
-                node.init_trace(iterations, node.get_value())
-            except KeyError:
-                node.init_trace(iterations)
-            """
         
         try:
             
@@ -2921,13 +2973,13 @@ class MetropolisHastings(Sampler):
                         
                         # If this is the third consecutive check
                         # with infinite deviance, abort
-                        if infinite_deviance_count == 2:
+                        if infinitedeviance_count == 2:
                             raise DivergenceError
                         
                         # Increment deviance counter
-                        infinite_deviance_count += 1
+                        infinitedeviance_count += 1
                     
-                    else: infinite_deviance_count = 0
+                    else: infinitedeviance_count = 0
                 
                 # Halt tuning
                 if iteration == burn:
@@ -2941,12 +2993,12 @@ class MetropolisHastings(Sampler):
                     still_tuning = 0
                     
                     # Adapt each parameter
-                    for parameter in self.parameters.values():
+                    for parameter in self._parameters:
                         # Check to see if this parameter is still adapting
                         still_tuning += parameter.tune(tune_interval, divergence_threshold, verbose)
                     
                     if verbose:
-                        for node in self.nodes.values():
+                        for node in self._nodes:
                             print '\nNode %s current value: %s' % (node.name,node.get_value())
                     
                     # Halt tuning if all parameters are tuned
@@ -2961,8 +3013,8 @@ class MetropolisHastings(Sampler):
                         clean = 0
                 
                 # Sample each parameter in turn
-                for parameter in self.parameters.values():
-                    
+                for parameter in self._parameters:
+
                     # New value of parameter
                     parameter.propose(debug)
                     
@@ -2979,11 +3031,11 @@ class MetropolisHastings(Sampler):
                     self.deviance = -inf
                 
                 # Tally current value of nodes
-                for node in self.nodes.values():
+                for node in self._nodes:
                     node.tally(iteration)
         
             # Finalize the nodes
-            for node in self.parameters.values()+self.nodes.values():
+            for node in self._parameters | self._nodes:
                 node.finalize()
         
             # Generate summary
@@ -2996,7 +3048,7 @@ class MetropolisHastings(Sampler):
             # Plot if requested
             if plot:
                 # Loop over parameters and nodes
-                for p in self.parameters.values()+self.nodes.values():
+                for p in self._parameters | self._nodes:
                     p.plot(self.plotter, burn=burn, thin=thin, color=color)
         
             return results
@@ -3011,7 +3063,7 @@ class MetropolisHastings(Sampler):
             print "Divergent model. Aborting run."
             
             # Remove remnant trace from each node
-            for node in self.parameters.values()+self.nodes.values():
+            for node in self._parameters | self._nodes:
                 node.clear_trace()
             
             return
@@ -3019,91 +3071,3 @@ class MetropolisHastings(Sampler):
         finally:
             
             self.db.close()
-
-"""Unit testing code"""
-
-
-class DisasterSampler(MetropolisHastings):
-    """
-    Test example based on annual coal mining disasters in the UK. Occurrences
-    of disasters in the time series is thought to be derived from a
-    Poisson process with a large rate parameter in the early part of
-    the time series, and from one with a smaller rate in the later part.
-    We are interested in locating the switchpoint in the series using
-    MCMC.
-    """
-    
-    def __init__(self):
-        """Class initialization"""
-        
-        try:
-            MetropolisHastings.__init__(self, db_backend='sqlite')
-        except Exception:
-            MetropolisHastings.__init__(self, db_backend='ram')
-        
-        # Sample changepoint data (Coal mining disasters per year)
-        self.data = (4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-            3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-            2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-            1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-            0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-            3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-            0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1)
-        
-        # Switchpoint is specified as a parameter to be estimated
-        self.parameter(name='k', init_val=50, discrete=True)
-        
-        # Rate parameters of poisson distributions
-        self.parameter(name='theta', init_val=array([1.0, 1.0]))
-    
-    def model(self):
-        """Joint log-posterior"""
-        
-        # Obtain current values of parameters as local variables
-        theta0, theta1 = self.theta
-        k = self.k
-        
-        # Constrain k with prior
-        self.uniform_prior(k, 1, len(self.data)-2)
-
-        # Joint likelihood of parameters based on 2 assumed Poisson densities
-        self.poisson_like(self.data[:k], theta0, name='early_mean')
-
-        self.poisson_like(self.data[k:], theta1, name='late_mean')
-
-
-class MCMCTest(unittest.TestCase):
-    
-    def testCoalMiningDisasters(self):
-        """Run coal mining disasters example sampler"""
-        
-        print 'Running coal mining disasters test case ...'
-        
-        # Create an instance of the sampler
-        self.sampler = DisasterSampler()
-        
-        # Specify the nimber of iterations to execute
-        iterations = 10000
-        thin = 2
-        burn = 5000
-        chains = 2
-        
-        # Run MCMC simulation
-        for i in range(chains):
-            
-            self.failUnless(self.sampler.sample(iterations, burn=burn, thin=thin, plot=True, color='r'))
-            
-            # Run convergence diagnostics
-            self.sampler.convergence(burn=burn, thin=thin)
-            
-            # Plot autocorrelation
-            self.sampler.autocorrelation(burn=burn, thin=thin)
-        
-        # Goodness of fit
-        x, n = self.sampler.goodness(iterations/10, burn=burn, thin=thin)['overall']
-        self.failIf(x/n < 0.05 or x/n > 0.95)
-
-
-if __name__=='__main__':
-    # Run unit tests
-    unittest.main()

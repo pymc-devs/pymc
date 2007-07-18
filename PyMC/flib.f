@@ -313,7 +313,7 @@ cf2py real intent(out) :: like
 
       like = 0.0
       do i=1,n
-        like = like + r(i) * log(p) + x(i) * log(1. - p)
+        like = like + r(i) * log(p(i)) + x(i) * log(1. - p(i))
         like = like + gammln(x(i)+r(i)) - factln(x(i)) 
         like = like - gammln(r(i)) 
       enddo
