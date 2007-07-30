@@ -16,7 +16,7 @@ from numpy.linalg import cholesky, eigh, det, inv
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort
+    hsplit, argsort, vectorize
 
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
