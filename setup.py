@@ -17,6 +17,6 @@ distrib = setup(
 	license="Academic Free License",
 	name="PyMC",
 	url="trichech.us",
-	packages=["PyMC", "PyMC/Backends", "PyMC/Extensions"],
+	packages=["PyMC", "PyMC/Backends", "PyMC/Extensions", "PyMC/Tests"],
 	ext_modules = [flib]	
 )
