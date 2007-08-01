@@ -3,7 +3,7 @@ Markov chain Monte Carlo (MCMC) simulation, implementing an adaptive form of ran
 """
 
 # Import system functions
-import sys, time, pdb, csv
+import sys, time, pdb
 
 # Import numpy functions
 from numpy import random, linalg
@@ -18,7 +18,7 @@ from numpy import mean, cov, std
 from numpy import ndim, ones, outer
 from numpy import pi
 from numpy import ravel, resize
-from numpy import searchsorted, shape, sqrt, sort, swapaxes, where
+from numpy import shape, sqrt, sort, swapaxes, where
 from numpy import tan, transpose, vectorize, zeros
 permutation = random.permutation
 
@@ -277,7 +277,7 @@ def double_exponential_deviate(beta, size):
 
 """ Core MCMC classes """
 
-class Node:
+class Node(object):
     """
     A class for stochastic process variables that are updated through
     stochastic simulation. The current value is stored as an element in the
@@ -302,7 +302,7 @@ class Node:
         self.set_value(value or zeros(shape, dtype))
         
         self._trace = sampler.db.Trace(name)
-        
+    
     def get_name(self): return self._name
     
     def set_name(self, name): self._name = name
@@ -312,7 +312,7 @@ class Node:
     def get_value(self):
         """Retrieves the current value of node from sampler dictionary"""
         return self._value
-        
+    
     def set_value(self, value):
         """Stores new value for node in sampler dictionary"""
         # Cast to array if value is not scalar
@@ -320,19 +320,19 @@ class Node:
             self._value = array(value)
         else:
             self._value = value
-            
+    
     #value = property(get_value, set_value)
     
     def init_trace(self, size, value=None):
         """Initialize trace"""
         
-        self._trace._initialize(size, value) 
-        
+        self._trace._initialize(size, value)
+    
     def clear_trace(self):
         """Removes last trace"""
         
         self._trace.pop()
-        
+    
     def get_trace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the specified trace (last by default)"""
         
@@ -343,9 +343,9 @@ class Node:
         except IndexError:
             
             return
-        
+    
     trace = property(get_trace, fdel=clear_trace)
-        
+    
     def finalize(self):
         
         self._trace.finalize()
@@ -701,7 +701,7 @@ class Parameter(Node):
             self._dist = lambda S, size : rmvnormal(zeros(self.dim), S)
         else:
             raise AttributeError, 'Proposal distribution for %s not recognized' % name
-            
+        
         
         # Vectorize proposal distribution if parameter is vector-valued
         # But not multivariate_normal, since it is already vectorized
@@ -721,14 +721,14 @@ class Parameter(Node):
                 self._hyp = 1.0
             """
         elif dist == 'multivariate_normal':
-            # Only the std variations are given. 
+            # Only the std variations are given.
             if shape(scale) == shape(init_val):
                 self._hyp = diag(scale)
             # The complete covariance matrix is given
             elif shape(scale) == shape(init_val)*2:
                 self._hyp = asarray(scale)
         else:
-            # Scalar or vector scale. Will raise an error if scale is not 
+            # Scalar or vector scale. Will raise an error if scale is not
             # compatible with init_val.
             self._hyp = ones(self.dim) * asarray(scale)
         
@@ -869,7 +869,7 @@ class Parameter(Node):
                 
                 # Correlated multivariate case
                 # Compute correlation coefficients and clip correlation to .9 to
-                # in order to avoid perfect correlations. 
+                # in order to avoid perfect correlations.
                 # Compute the covariance matrix and set it as _hyp.
                 else:
                     d = diag(_var)
@@ -877,8 +877,8 @@ class Parameter(Node):
                         corr = _var / sqrt(outer(d,d))
                         corr = corr.clip(-.9, .9)
                         corr[range(self.ndim), range(self.ndim)] = 1.
-                        covariance = corr * sqrt(outer(d,d)) 
-                        self._hyp = covariance                       
+                        covariance = corr * sqrt(outer(d,d))
+                        self._hyp = covariance
         
         except AttributeError:
                 pass
@@ -906,7 +906,7 @@ class BinaryParameter(Parameter):
         
         # Random effect flag (for use in AIC calculation)
         self.random = random
-        
+    
     def sample_candidate(self):
         """Samples a candidate value based on proposal distribution"""
         
@@ -918,8 +918,8 @@ class BinaryParameter(Parameter):
         except ValueError:
             print 'Hyperparameter approaching zero:', self._hyp
             raise DivergenceError
-        
-    
+
+
 
 class DiscreteParameter(Parameter):
     
@@ -956,7 +956,29 @@ class DiscreteParameter(Parameter):
         # take care of the tuning.
         pass
 
-
+# Decorator function for compiling log-posterior
+def add_to_post(like):
+    # Adds the outcome of the likelihood or prior to self._post
+    
+    def wrapped_like(*args, **kwargs):
+        
+        # Initialize multiplier factor for likelihood
+        factor = 1.0
+        try:
+            # Look for multiplier in keywords
+            factor = kwargs.pop('factor')
+        except KeyError:
+            pass
+        
+        # Call likelihood
+        value = like(*args, **kwargs)
+        
+        # Increment posterior total
+        args[0]._post += factor * value
+        
+        return factor * value
+    
+    return wrapped_like
 
 class Sampler(object):
     """
@@ -981,11 +1003,11 @@ class Sampler(object):
             self.plotter = PlotFactory(format=plot_format, backend=plot_backend)
         except NameError:
             self.plotter = None
-            
+        
         if db_backend == 'sqlite':
             self.db = Backends.sqlite.Database("pymcdb.sqlite3")
         else:
-            self.db = Backends.ram.Database()     
+            self.db = Backends.ram.Database()
         
         # Goodness of Fit flag
         self._gof = False
@@ -1004,7 +1026,7 @@ class Sampler(object):
         if isinstance(item, Node):
             return item.get_value()
         return item
-        
+    
     def __setattr__(self, name, value):
         """
         Override __setattr__ to accomodate Nodes and Parameters
@@ -1016,30 +1038,6 @@ class Sampler(object):
                 return
         object.__setattr__(self, name, value)
     
-    # Decorator function for compiling log-posterior
-    def _add_to_post(like):
-        # Adds the outcome of the likelihood or prior to self._post
-        
-        def wrapped_like(*args, **kwargs):
-            
-            # Initialize multiplier factor for likelihood
-            factor = 1.0
-            try:
-                # Look for multiplier in keywords
-                factor = kwargs.pop('factor')
-            except KeyError:
-                pass
-                
-            # Call likelihood
-            value = like(*args, **kwargs)
-            
-            # Increment posterior total
-            args[0]._post += factor * value 
-            
-            return factor * value
-        
-        return wrapped_like
-        
     def init(self):
         """
         Optional method for initializing parameters. Override in subclas.
@@ -1048,7 +1046,7 @@ class Sampler(object):
     
     # Log likelihood functions
     
-    @_add_to_post
+    @add_to_post
     def categorical_like(self, x, probs, minval=0, step=1, name='categorical', prior=False):
         """Categorical log-likelihood. Accepts an array of probabilities associated with the histogram, the minimum value of the histogram (defaults to zero), and a step size (defaults to 1)."""
         
@@ -1078,7 +1076,7 @@ class Sampler(object):
         
         return self.categorical_like(parameters, probs, minval=0, step=1, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def uniform_like(self, x, lower, upper, name='uniform', prior=False):
         """Beta log-likelihood"""
         
@@ -1124,7 +1122,7 @@ class Sampler(object):
         
         return self.uniform_like(parameter, lower, upper, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def uniform_mixture_like(self, x, lower, median, upper, name='uniform_mixture', prior=False):
         """Uniform mixture log-likelihood
         
@@ -1177,7 +1175,7 @@ class Sampler(object):
         
         return self.uniform_mixture_like(parameter, lower, median, upper, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def beta_like(self, x, alpha, beta, name='beta', prior=False):
         """Beta log-likelihood"""
         
@@ -1225,7 +1223,7 @@ class Sampler(object):
         
         return self.beta_like(parameter, alpha, beta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def dirichlet_like(self, x, theta, name='dirichlet', prior=False):
         """Dirichlet log-likelihood"""
         
@@ -1272,7 +1270,7 @@ class Sampler(object):
         
         return self.dirichlet_like(parameter, theta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def dirichlet_multinomial_like(self, x, theta, name='dirichlet_multinomial', prior=False):
         """Dirichlet multinomial log-likelihood"""
         
@@ -1317,8 +1315,8 @@ class Sampler(object):
         """Dirichlet multinomial prior distribution"""
         
         return self.dirichlet_multinomial_like(parameter, theta, prior=True)
-        
-    @_add_to_post
+    
+    @add_to_post
     def negative_binomial_like(self, x, r, p, name='negative_binomial', prior=False):
         """Negative binomial log-likelihood"""
         
@@ -1366,7 +1364,7 @@ class Sampler(object):
         
         return self.negative_binomial_like(parameter, r, p, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def negative_binomial2_like(self, x, mu, omega, name='negative_binomial2', prior=False):
         """Negative binomial log-likelihood
         (Alternative parameterization)
@@ -1415,8 +1413,8 @@ class Sampler(object):
         """Negative binomial prior distribution"""
         
         return self.negative_binomial2_like(parameter, mu, omega, prior=True)
-        
-    @_add_to_post
+    
+    @add_to_post
     def geometric_like(self, x, p, name='geometric', prior=False):
         """Geometric log-likelihood
         
@@ -1463,7 +1461,7 @@ class Sampler(object):
         
         return self.geometric_like(parameter, p, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def hypergeometric_like(self, x, n, m, N, name='hypergeometric', prior=False):
         """
         Hypergeometric log-likelihood
@@ -1517,7 +1515,7 @@ class Sampler(object):
         
         return self.hypergeometric_like(parameter, n, m, N, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def multivariate_hypergeometric_like(self, x, m, name='multivariate_hypergeometric', prior=False):
         """Multivariate hypergeometric log-likelihood"""
         
@@ -1561,7 +1559,7 @@ class Sampler(object):
         
         return self.multivariate_hypergeometric_like(parameter, m, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def binomial_like(self, x, n, p, name='binomial', prior=False):
         """Binomial log-likelihood"""
         
@@ -1592,7 +1590,7 @@ class Sampler(object):
                     pass
                 
                 expval = p * n
-
+                
                 # Simulated values
                 y = array(map(rbinomial, n, p))
                 
@@ -1608,7 +1606,7 @@ class Sampler(object):
         
         return self.binomial_like(parameter, n, p, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def bernoulli_like(self, x, p, name='bernoulli', prior=False):
         """Bernoulli log-likelihood"""
         
@@ -1651,7 +1649,7 @@ class Sampler(object):
         
         return self.bernoulli_like(parameter, p, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def multinomial_like(self, x, n, p, name='multinomial', prior=False):
         """Multinomial log-likelihood with k-1 bins"""
         
@@ -1692,7 +1690,7 @@ class Sampler(object):
         
         return self.multinomial_like(parameter, n, p, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def poisson_like(self, x, mu, name='poisson', prior=False):
         """Poisson log-likelihood"""
         
@@ -1737,7 +1735,7 @@ class Sampler(object):
         
         return self.poisson_like(parameter, mu, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def gamma_like(self, x, alpha, beta, name='gamma', prior=False):
         """Gamma log-likelihood"""
         
@@ -1787,7 +1785,7 @@ class Sampler(object):
         
         return self.gamma_like(parameter, alpha, beta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def chi2_like(self, x, df, name='chi_squared', prior=False):
         """Chi-squared log-likelihood"""
         
@@ -1830,7 +1828,7 @@ class Sampler(object):
         
         return self.chi2_like(parameter, df, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def inverse_gamma_like(self, x, alpha, beta, name='inverse_gamma', prior=False):
         """Inverse gamma log-likelihood"""
         
@@ -1879,7 +1877,7 @@ class Sampler(object):
         
         return self.inverse_gamma_like(parameter, alpha, beta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def exponential_like(self, x, beta, name='exponential', prior=False):
         """Exponential log-likelihood"""
         
@@ -1925,7 +1923,7 @@ class Sampler(object):
         
         return self.exponential_like(parameter, beta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def normal_like(self, x, mu, tau, name='normal', prior=False):
         """Normal log-likelihood"""
         
@@ -1971,8 +1969,8 @@ class Sampler(object):
         """Normal prior distribution"""
         
         return self.normal_like(parameter, mu, tau, prior=True)
-        
-    @_add_to_post
+    
+    @add_to_post
     def half_normal_like(self, x, tau, name='halfnormal', prior=False):
         """Half-normal log-likelihood"""
         
@@ -2017,7 +2015,7 @@ class Sampler(object):
         
         return self.half_normal_like(parameter, tau, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def lognormal_like(self, x, mu, tau, name='lognormal', prior=False):
         """Log-normal log-likelihood"""
         
@@ -2065,7 +2063,7 @@ class Sampler(object):
         
         return self.lognormal_like(parameter, mu, tau, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def multivariate_normal_like(self, x, mu, tau, name='multivariate_normal', prior=False):
         """Multivariate normal"""
         
@@ -2108,7 +2106,7 @@ class Sampler(object):
         
         return self.multivariate_normal_like(parameter, mu, tau, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def wishart_like(self, X, n, Tau, name='wishart', prior=False):
         """Wishart log-likelihood"""
         
@@ -2149,7 +2147,7 @@ class Sampler(object):
         
         return self.wishart_like(parameter, n, Tau, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def weibull_like(self, x, alpha, beta, name='weibull', prior=False):
         """Weibull log-likelihood"""
         
@@ -2197,7 +2195,7 @@ class Sampler(object):
         
         return self.weibull_like(parameter, alpha, beta, prior=True)
     
-    @_add_to_post
+    @add_to_post
     def cauchy_like(self, x, alpha, beta, name='cauchy', prior=False):
         """Cauchy log-likelhood"""
         
@@ -2250,9 +2248,9 @@ class Sampler(object):
         
         if allow_equal:
             if any(lower > value) or any(value > upper):
-            
+                
                 raise LikelihoodError
-            
+        
         elif any(lower >= value) or any(value >= upper):
             
             raise LikelihoodError
@@ -2266,7 +2264,7 @@ class Sampler(object):
             p = DiscreteParameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
         else:
             p = Parameter(name, init_val, sampler=self, dist=dist, scale=scale, plot=plot, random=random)
-            
+        
         self._parameters.add(p)
         
         self.__setattr__(name, p)
@@ -2472,7 +2470,7 @@ class Sampler(object):
         # Close files
         trace_file.close()
         index_file.close()
-        
+    
     def output(self, filename='coda', burn=0, thin=1):
         """Deprecated method name"""
         
@@ -2544,22 +2542,22 @@ class Sampler(object):
         
         print 'DIC =', summary['DIC']
         print
-        
+    
     def get_value(self):
-        # Returns last-calculated posterior (log scale) 
+        # Returns last-calculated posterior (log scale)
         
         try:
             return self._post
         except AttributeError:
             print 'Posterior has not yet been calculated'
-        
+    
     def __call__(self):
         # Initializes posterior return value, then calls model
         
         self._post = 0.0
         
         return self.model()
-
+    
     def model(self):
         # To be specified in subclass
         
@@ -2589,7 +2587,7 @@ class Sampler(object):
             
             # Geweke diagnostic
             zscores.update(node.geweke(first=first, last=last, intervals=intervals, burn=burn, thin=thin, chain=chain, plotter=plotter, color=color))
-            
+        
         # Close database
         self.db.close()
         
@@ -2618,7 +2616,7 @@ class Sampler(object):
         else:
             print 'Invalid loss function specified.'
             return
-            
+        
         # Open file for GOF output
         outfile = open(filename + '.csv', 'w')
         outfile.write('Goodness of Fit based on %s iterations\n' % iterations)
@@ -2797,7 +2795,7 @@ class Sampler(object):
             return 2*meandeviance + 2*self._post
         except LikelihoodError:
             return -inf
-
+    
     def profile(self, iterations=2000, burn=1000, name='pymc'):
         """Profile sampler with hotshot"""
         
@@ -2821,7 +2819,7 @@ class Sampler(object):
         # Clear traces of each parameter and node after profiling
         for node in self._parameters | self._nodes:
             node.clear_trace()
-            
+
 
 class Slice(Sampler):
     """
@@ -2857,7 +2855,7 @@ class MetropolisHastings(Sampler):
     a(x, y) = p(y)/p(x)
     
     Subclasses of MetropolisHastings need only specify relevant Parameters and
-    Nodes in the __init__() method, as well as the model specification 
+    Nodes in the __init__() method, as well as the model specification
     method, model(). Parameter and Node objects created by the
     parameter() and node() methods, respectively, are automatically associated
     with the sampler, and therefore sampled automatically during the
@@ -2873,7 +2871,7 @@ class MetropolisHastings(Sampler):
         
         # Initialize superclass
         Sampler.__init__(self, plot_format, db_backend, plot_backend)
-        
+    
     def _instantiate_nodes(self, sampler_dict):
         """
         Automatically instantiates nodes based on the difference
@@ -2941,13 +2939,13 @@ class MetropolisHastings(Sampler):
             self.deviance = -2 * self._post
             # Set last posterior to current
             self._last_post = self._post
-            
+        
         except (LikelihoodError, OverflowError, ZeroDivisionError):
             self.deviance = self._last_post = -inf
-            
+        
         # Locate nodes
         self._instantiate_nodes(current_dict)
-            
+        
         # Connect to backend
         self.db.connect()
         
@@ -3014,7 +3012,7 @@ class MetropolisHastings(Sampler):
                 
                 # Sample each parameter in turn
                 for parameter in self._parameters:
-
+                    
                     # New value of parameter
                     parameter.propose(debug)
                     
@@ -3033,26 +3031,26 @@ class MetropolisHastings(Sampler):
                 # Tally current value of nodes
                 for node in self._nodes:
                     node.tally(iteration)
-        
+            
             # Finalize the nodes
             for node in self._parameters | self._nodes:
                 node.finalize()
-        
+            
             # Generate summary
             results = self.summary(burn=burn, thin=thin)
-        
+            
             # Generate output
             if verbose:
                 self.print_summary(results)
-        
+            
             # Plot if requested
             if plot:
                 # Loop over parameters and nodes
                 for p in self._parameters | self._nodes:
                     p.plot(self.plotter, burn=burn, thin=thin, color=color)
-        
+            
             return results
-
+        
         except KeyboardInterrupt:
             # Stopped by hand
             pass
@@ -3067,7 +3065,7 @@ class MetropolisHastings(Sampler):
                 node.clear_trace()
             
             return
-            
+        
         finally:
             
             self.db.close()

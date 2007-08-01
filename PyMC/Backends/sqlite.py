@@ -34,7 +34,7 @@ class Trace(list):
             else:
                 data_type = 'REAL'
         except AttributeError:
-            if type(value) == type(0):
+            if isinstance(value, int):
                 data_type = 'INTEGER'
             else:
                 data_type = 'REAL'

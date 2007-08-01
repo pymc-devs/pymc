@@ -10,7 +10,7 @@ from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, savefig, figure, 
 from numpy import arange, log, ravel, rank, swapaxes
 
 
-class PlotFactory:
+class PlotFactory(object):
     
     def __init__(self, format='png', backend='TkAgg'):
         # Class initialization

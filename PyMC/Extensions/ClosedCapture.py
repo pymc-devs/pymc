@@ -140,38 +140,15 @@ class M0(MetropolisHastings):
         
         # Specify parameters and nodes
         self.parameter('p', init_val=0.5)
-        self.parameter('N', init_val=self.M)
-        
-    def _add_to_post(like):
-        # Adds the outcome of the likelihood or prior to self._post
-        
-        def wrapped_like(*args, **kwargs):
-            
-            # Initialize multiplier factor for likelihood
-            factor = 1.0
-            try:
-                # Look for multiplier in keywords
-                factor = kwargs.pop('factor')
-            except KeyError:
-                pass
-                
-            # Call likelihood
-            value = like(*args, **kwargs)
-            
-            # Increment posterior total
-            args[0]._post += factor * value 
-            
-            return factor * value
-        
-        return wrapped_like
-        
-    @_add_to_post
+        self.parameter('N', init_val=self.M, discrete=True)
+
+    @add_to_post
     def capture_like(self, x, N, n, M, k, p, name='capture'):
         """Capture log-likelihood"""
         
-        llike = factln(N) - sum(map(factln, x)) - factln(N - M)
-        llike += n * log(p)
-        llike += (k*N - n) * log(1.-p)
+        llike = factln(int(N)) - sum(map(factln, x)) - factln(int(N - M))
+        llike += n * log(float(p))
+        llike += (k*N - n) * log(float(1.-p))
         
         return llike
     
@@ -181,10 +158,50 @@ class M0(MetropolisHastings):
         self.beta_prior(self.p, 1, 1)
         self.capture_like(self.data.values(), self.N, self.n, self.M, self.k, self.p)
 
+class Mt(MetropolisHastings):
+    """docstring for Mt"""
+    
+    def __init__(self, data):
+        
+        # Class initialization
+        MetropolisHastings.__init__(self)
+        
+        self.data = data
+        self.k = len(data.keys()[0])
+        self.n = sum(array([array(i)*data[i] for i in data]))
+        self.M = sum(data.values())
+        
+        self.parameter('p', init_val=array([0.5]*self.k))
+        self.parameter('N', init_val=self.M, discrete=True)
+        pdb.set_trace()
+    
+    @add_to_post
+    def capture_like(self, N, n, M, p, name='capture'):
+        """Capture log-likelihood"""
+        
+        llike = factln(int(N)) - factln(int(N - M))
+        llike += sum([_n*log(float(_p)) + (N-_n)*log(float(1.-_p)) for _n, _p in zip(n, p)])
+        
+        return llike
+
+    def calculate_likelihood(self):
+        # Joint log-likelihood
+        self.constrain(self.N, lower=self.M)
+        self.beta_prior(self.p, 1, 1)
+        
+        self.capture_like(self.N, self.n, self.M, self.p)
 def run():
     # Run model
     
+    print 'Running M0 model ...'
+    
     sampler = M0(capture_data)
+    
+    results = sampler.sample(50000, burn=10000)
+    
+    print 'Running Mt model ...'
+    
+    sampler = Mt(capture_data)
     
     results = sampler.sample(50000, burn=10000)
 
