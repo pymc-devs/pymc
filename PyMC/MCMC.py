@@ -2766,14 +2766,15 @@ class Sampler(object):
                     k += len(ravel(self.__dict__[parameter.name]))
                 except TypeError:
                     k += 1
+                    
+        # Close database
+        self.db.close()
         
         try:
             return array([d + 2.*k for d in self.deviance])
         except TypeError:
             return self.deviance + 2*k
-        finally:
-            # Close database
-            self.db.close()
+            
     
     def calculate_dic(self, burn=0, thin=1, slicing=None):
         """Calculates deviance information Criterion"""
@@ -3049,6 +3050,9 @@ class MetropolisHastings(Sampler):
                 for p in self._parameters | self._nodes:
                     p.plot(self.plotter, burn=burn, thin=thin, color=color)
             
+            # Close database
+            self.db.close()
+            
             return results
         
         except KeyboardInterrupt:
@@ -3064,8 +3068,9 @@ class MetropolisHastings(Sampler):
             for node in self._parameters | self._nodes:
                 node.clear_trace()
             
+            # Close database
+            self.db.close()
+            
             return
         
-        finally:
             
-            self.db.close()
