@@ -44,20 +44,15 @@ class Trace(object):
 
     __call__ = gettrace
     
-##    def obj():
-##        def fset(self, obj):
-##            if isinstance(obj, PyMC2.PyMCBase):
-##               self.__obj = obj
-##            else:
-##                raise AttributeError, 'Not PyMC object'
-##        def fget(self):
-##            return self.__obj
-##        return locals()
-##    obj = property(**obj())
-    
+   
     def _finalize(self):
         pass
     
+    def length(self, chain=-1):
+        """Return the sample length of given chain. If chain is None,
+        return the total length of all chains."""
+        pass
+
 class Database(object):
     """Dummy Database backend"""
     def __init__(self):

@@ -59,18 +59,9 @@ class Trace(base.Trace):
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
             
-        groups = self.db.h5file.listNodes("/")
-        nchains = len(groups)    
-        if chain == -1:
-            chains = [nchains-1]    # Index of last group
-        elif chain is None:
-            chains = range(nchains)
-        elif size(chain) == 1:
-           chains = [chain]
+        tables = self._gettable(chain)
         
-        for i,c in enumerate(chains):
-            gr = groups[c]
-            table = getattr(gr, 'PyMCsamples')
+        for i,table in enumerate(tables):
             if slicing is None:
                 stop = table.nrows
             col = table.read(start=burn, stop=stop, step=thin, field=self.name)
@@ -81,11 +72,41 @@ class Trace(base.Trace):
         
         return data
                       
+    def _gettable(self, chain):
+        """Return a sequence of hdf5 tables storing the chain. 
+        
+        chain : scalar or sequence.
+        """
+        
+        groups = self.db.h5file.listNodes("/")
+        nchains = len(groups)    
+        if chain == -1:
+            chains = [nchains-1]    # Index of last group
+        elif chain is None:
+            chains = range(nchains)
+        elif size(chain) == 1:
+           chains = [chain]
+        
+        table = []
+        for i,c in enumerate(chains):
+            gr = groups[c]
+            table.append(getattr(gr, 'PyMCsamples'))
+
+        return table
+        
+                      
     def _finalize(self):
         """Nothing done here."""
         pass
 
     __call__ = gettrace
+
+    def length(self, chain=-1):
+        """Return the sample length of given chain. If chain is None,
+        return the total length of all chains."""
+        tables = self._gettable(chain)
+        n = asarray([table.nrows for table in tables])
+        return n.sum()
 
 class Database(pickle.Database):
     """HDF5 database

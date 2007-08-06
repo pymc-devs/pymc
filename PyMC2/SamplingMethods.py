@@ -809,10 +809,12 @@ class JointMetropolis(SamplingMethod):
         
         We may want to make this method do something eventually.
         """
+        
         if not self._accepted > 0 or self._rejected > 0:
             for handler in self._single_param_handlers:
                 handler.tune(divergence_threshold, verbose)
-
+        # This has to return something... please check this. DH
+        return False 
     
     def propose(self):
         """

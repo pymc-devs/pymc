@@ -19,9 +19,11 @@ class test_ram(NumpyTestCase):
         M = Sampler(DisasterModel, db='ram')
         M.sample(500,100,2)
         assert_array_equal(M.e.trace().shape, (200,))
+        assert_equal(M.e.trace.length(), 200)
         M.sample(100)
         assert_array_equal(M.e.trace().shape, (100,))
         assert_array_equal(M.e.trace(chain=None).shape, (300,))
+        
         
 class test_pickle(NumpyTestCase):
     def __init__(*args, **kwds):
@@ -35,6 +37,7 @@ class test_pickle(NumpyTestCase):
         M = Sampler(DisasterModel, db='pickle')
         M.sample(500,100,2)
         assert_array_equal(M.e.trace().shape, (200,))
+        assert_equal(M.e.trace.length(), 200)
         M.db.close()
         
     def check_load(self):
@@ -44,6 +47,7 @@ class test_pickle(NumpyTestCase):
         assert_equal(len(S.e.trace._trace),2)
         assert_array_equal(S.e.trace().shape, (100,))
         assert_array_equal(S.e.trace(chain=None).shape, (300,))
+        assert_equal(S.e.trace.length(None), 300)
         S.db.close()
 ##class test_txt(NumpyTestCase):
 ##    def check(self):
@@ -97,6 +101,7 @@ if hasattr(database, 'hdf5'):
             S = Sampler(DisasterModel, db='hdf5')
             S.sample(500,100,2)
             assert_array_equal(S.e.trace().shape, (200,))
+            assert_equal(S.e.trace.length(), 200)
             assert_array_equal(S.D.value, DisasterModel.D_array)
             S.db.close()
             
@@ -109,6 +114,7 @@ if hasattr(database, 'hdf5'):
             
             S.sample(100,0,1)
             assert_array_equal(S.e.trace(chain=None).shape, (300,))
+            assert_equal(S.e.trace.length(None), 300)
             S.db.close()
             
         def check_compression(self):
