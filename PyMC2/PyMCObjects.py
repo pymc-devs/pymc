@@ -328,12 +328,14 @@ class Parameter(PyMCBase):
             self._logp.refresh_argument_values()
             args = self._logp.argument_values.copy()
             args.pop('value')
-            
-            # Set Parameter's value to drawn value
-            self.value = self._random(**args)
+            r = self._random(**args)
         else:
             raise AttributeError, 'Parameter '+self.__name__+' does not know how to draw its value, see documentation'
-        return self._value
+        
+        # Set Parameter's value to drawn value
+        if self.isdata is False:
+            self.value = r
+        return r
 
 class DiscreteParameter(Parameter):
     """

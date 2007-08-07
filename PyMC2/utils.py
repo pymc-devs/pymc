@@ -458,4 +458,13 @@ def invcdf(x):
     """Inverse of normal cumulative density function."""
     return flib.ppnd16(x,1)
     
-
+def trace_generator(trace, start=0, stop=None, thin=1):
+    """Return a generator returning values from the object's trace.
+    """
+    i = start
+    stop = stop or np.inf
+    size = min(trace.length(), stop)
+    while i < size:
+        index = slice(i, i+1)
+        yield trace.gettrace(slicing=index)[0]
+        i+=thin
