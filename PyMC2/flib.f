@@ -657,21 +657,21 @@ cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
-	  if ((abs(rho) > 1).OR.(sigma <= 0.0)) then 
-		like = -infinity
-	    RETURN
- 	  endif
-	
+      if ((abs(rho) > 1).OR.(sigma <= 0.0)) then 
+        like = -infinity
+        RETURN
+      endif
+    
       t1 = n/2. *dlog(2*pi)
       t2 = .5 * (dlog(beta) + 2*n*dlog(sigma) - dlog(1.-rho**2))
 
       t3 = 0.0
       mu_tmp = mu(1)
       do i=1,n
-		if (x(i) <= 0.0) then
-		  like = -infinity
-		  RETURN 
-	    endif
+        if (x(i) <= 0.0) then
+          like = -infinity
+          RETURN 
+        endif
         logx(i) = dlog(x(i))
         t3 = t3+logx(i)
         if (nmu .NE. 1) mu_tmp=mu(i)
@@ -2262,5 +2262,7 @@ cf2py real intent(out) :: lx
         
       return
       END
+
+
 
 

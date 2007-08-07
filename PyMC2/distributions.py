@@ -8,15 +8,15 @@
 # TODO: categorical, mvhypergeometric
 
 __docformat__='reStructuredText'
-distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
+univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'lognormal', 'multinomial',
  'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull', 'wishart']
 
-mvdistributions = ['dirichlet','multivariate_hypergeometric','multivariate_normal']
+mv_distributions = ['dirichlet','multivariate_hypergeometric','multivariate_normal']
 
-availabledistributions = distributions+mvdistributions
+availabledistributions = univ_distributions+mv_distributions
 import flib
 import PyMC2
 import numpy as np
@@ -80,7 +80,7 @@ def randomwrap(func):
     #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
-    mv = func.__name__[1:] in mvdistributions
+    mv = func.__name__[1:] in mv_distributions
 
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
@@ -93,15 +93,9 @@ def randomwrap(func):
                 else:
                     args.append(defaults[n-npos+i])
 
-        r = [];s=[];largs=[];length=[];dimension=[];nr = args[-1]
-        for arg in args:
-            try:
-                length.append(np.shape(arg)[0])
-                dimension.append(np.shape(arg)[1])
-            except:
-                length.append(1)
-                dimension.append(1)
-                pass
+        r = [];s=[];largs=[];nr = args[-1]
+        length = [np.atleast_1d(a).shape[0] for a in args]
+        dimension = [np.atleast_1d(a).ndim for a in args]
         N = max(length)
         if len(set(dimension))>2:
             raise 'Dimensions do not agree.'
@@ -1320,6 +1314,29 @@ def poisson_like(x,mu):
     #     return -Inf
     return flib.poisson(x,mu)
 
+# Truncated normal distribution--------------------------
+@randomwrap
+def rtruncnorm(mu, tau, a, b, size=1):
+    """rtruncnorm(mu, tau, a, b, size=1)
+    
+    Random truncated normal variates.
+    """
+    
+    # Normalize domain
+    na = PyMC2.utils.normcdf((a-mu)*sqrt(tau))
+    nb = PyMC2.utils.normcdf((b-mu)*sqrt(tau))
+    
+    # Use the inverse CDF generation method.
+    U = np.random.mtrand.uniform(size=size)
+    q = U * nb + (1-U)*na
+    R = PyMC2.utils.invcdf(q)
+    
+    # Unnormalize
+    return R/sqrt(tau) + mu
+
+
+
+
 # Uniform--------------------------------------------------
 @randomwrap
 def runiform(lower, upper, size=1):
@@ -1328,7 +1345,6 @@ def runiform(lower, upper, size=1):
 
     Random uniform variates.
     """
-
     return random.uniform(lower, upper, size)
 
 def uniform_expval(lower, upper):

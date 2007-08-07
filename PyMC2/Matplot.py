@@ -60,6 +60,9 @@ def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
     :SeeAlso: func_envelopes, func_hist, weightplot
     """
 
+    # For very large objects, this will be rather long. 
+    # Too get the length of the table, use obj.trace.length()
+    
     func_stacks = pymc_object.trace()
 
     if any(qlist<0.) or any(qlist>1.):

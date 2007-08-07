@@ -85,6 +85,12 @@ class Trace(object):
 
     __call__ = gettrace
 
+
+    def length(self, chain=-1):
+        """Return the sample length of given chain. If chain is None,
+        return the total length of all chains."""
+        return len(self.gettrace(chain=chain))
+
 class Database(pickle.Database):
     """Define the methods that will be assigned to the Model class"""
     def __init__(self, filename=None):

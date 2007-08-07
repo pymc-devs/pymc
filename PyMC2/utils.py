@@ -447,3 +447,14 @@ def _optimize_binning(x, range, method='Freedman'):
 # Logit and inverse-logit functions
 logit = vectorize(flib.logit)
 invlogit = vectorize(flib.invlogit)
+
+def normcdf(x):
+    """Normal cumulative density function."""
+    return .5*(1+flib.derf(x/sqrt(2)))
+    
+@vectorize
+def invcdf(x):
+    """Inverse of normal cumulative density function."""
+    return flib.ppnd16(x,1)
+    
+

@@ -13,6 +13,9 @@ from PyMCBase import ZeroProbability
 
 # TODO: Actually use _asf
 
+__all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'SamplingMethod', 'assign_method', 
+'pick_best_methods']
+
 class DictWithDoc(dict):
     """
     The sampling method registry is a dictionary mapping each

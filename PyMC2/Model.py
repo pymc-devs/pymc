@@ -429,8 +429,13 @@ class Sampler(Model):
         # Specify database backend
         self._assign_database_backend(db)
             
-        # Instantiate plotter
-        self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
+        # Instantiate plotter 
+        # Hardcoding the matplotlib backend raises error in
+        # interactive use. DH
+        try:
+            self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
+        except:
+            self._plotter = 'Could not be instantiated.'
 
     def _assign_database_backend(self, db):
         """Assign Trace instance to parameters and nodes and Database instance
