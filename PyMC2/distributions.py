@@ -1316,15 +1316,14 @@ def poisson_like(x,mu):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncnorm(mu, tau, a, b, size=1):
-    """rtruncnorm(mu, tau, a, b, size=1)
+def rtruncnorm(mu, sigma, a, b, size=1):
+    """rtruncnorm(mu, sigma, a, b, size=1)
     
     Random truncated normal variates.
     """
     
-    # Normalize domain
-    na = PyMC2.utils.normcdf((a-mu)*sqrt(tau))
-    nb = PyMC2.utils.normcdf((b-mu)*sqrt(tau))
+    na = PyMC2.utils.normcdf((a-mu)/sigma)
+    nb = PyMC2.utils.normcdf((b-mu)/sigma)
     
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
@@ -1332,10 +1331,41 @@ def rtruncnorm(mu, tau, a, b, size=1):
     R = PyMC2.utils.invcdf(q)
     
     # Unnormalize
-    return R/sqrt(tau) + mu
+    return R*sigma + mu
 
+# TODO: code this.
+def truncnorm_expval(mu, sigma, a, b):
+    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable."""
+    pass
 
-
+def truncnorm_like(x, mu, sigma, a, b):
+    """truncnorm_like(x, mu, sigma, a, b)
+    
+    Truncated normal log-likelihood.
+    
+    .. math::
+        f(x \mid \mu, \sigma, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})}, 
+    
+    """
+    x = np.atleast_1d(x)
+    a = np.atleast_1d(a)
+    b = np.atleast_1d(b)
+    mu = np.atleast_1d(mu)
+    sigma = np.atleast_1d(sigma)
+    
+    if (x < a).any() or (x>b).any():
+        return -np.inf
+    else:
+        n = len(x)
+        phi = normal_like(x, mu, 1./sigma**2)
+        Phia = PyMC2.utils.normcdf((a-mu)/sigma)
+        Phib = PyMC2.utils.normcdf((b-mu)/sigma)
+        d = log(Phib-Phia)
+        if len(d) == n:
+            Phi = d.sum()
+        else:
+            Phi = n*d
+        return phi - Phi
 
 # Uniform--------------------------------------------------
 @randomwrap

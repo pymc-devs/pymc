@@ -575,7 +575,31 @@ class test_poisson(NumpyTestCase):
         a = flib.poisson([1,2,3], 2)
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
-
+class test_truncnorm(NumpyTestCase):
+    def check_consistency(self):
+        params = dict(mu=1, sigma=1, a=0, b=5)
+        hist,like, figdata = consistency(rtruncnorm, truncnorm_like, params, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='truncnorm', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
+    def normalization(self):
+        params = dict(mu=1, sigma=1, a=0, b=2)
+        integral = normalization(truncnorm_like, params, [-1, 3], 200)
+        assert_almost_equal(integral, 1, 2)
+        
+    def test_calling(self):
+        a = truncnorm_like([0,1,2], 2, 1, 0, 2)
+        b = truncnorm_like([0,1,2], [2,2,2], 1, 0, 2)
+        c = truncnorm_like([0,1,2], [2,2,2], [1,1,1], 0,2)
+        d = truncnorm_like([0,1,2], [2,2,2], [1,1,1], [0,0,0], 2)
+        e = truncnorm_like([0,1,2], [2,2,2], [1,1,1], 0, [2,2,2])
+        assert_equal(a,b)
+        assert_equal(a,b)
+        assert_equal(a,c)
+        assert_equal(a,d)
+        assert_equal(a,e)
+    
 class test_weibull(NumpyTestCase):
     def check_consistency(self):
         params = {'alpha': 2., 'beta': 3.}

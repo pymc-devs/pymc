@@ -448,6 +448,7 @@ def _optimize_binning(x, range, method='Freedman'):
 logit = vectorize(flib.logit)
 invlogit = vectorize(flib.invlogit)
 
+@vectorize
 def normcdf(x):
     """Normal cumulative density function."""
     return .5*(1+flib.derf(x/sqrt(2)))
