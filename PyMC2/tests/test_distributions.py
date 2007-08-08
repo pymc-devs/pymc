@@ -32,6 +32,7 @@ if PLOT is True:
 try:
     from scipy import integrate, special, factorial, comb
     from scipy.stats import genextreme, exponweib
+    from scipy.optimize import fmin
     SP = True
 except:
     print 'Some of the tests might not pass because they depend on SciPy functions.'
@@ -81,13 +82,24 @@ def multinomial(x,n,p):
 
 def multivariate_normal(x, mu, C):
     N = len(x)
+    x = np.asmatrix(x)
+    mu = np.asmatrix(mu)
+    C = np.asmatrix(C)
+    
+    A = (2*pi)**(N/2.) * sqrt(np.linalg.det(C))
+    z = (x-mu)
+    return (A * exp(-.5 * z * np.linalg.inv(C) * z.T)).A[0][0]
+
+def multivariate_lognormal(x, mu, C):
+    N = len(x)
     x = asmatrix(x)
     mu = asmatrix(mu)
     C = asmatrix(C)
     
     A = (2*pi)**(N/2.) * sqrt(det(C))
-    z = (x-mu)
+    z = (np.log(x)-mu)
     return (A * exp(-.5 * z * inv(C) * z.T)).A[0][0]
+
 
 
 def consistency(randomf, likef, params, nbins=10, nrandom=1000, nintegration=15,\
@@ -213,6 +225,46 @@ def normalization(like, params, domain, N=100):
             y.append(f(i))
         return np.trapz(y,x)
 
+class test_arlognormal(NumpyTestCase):
+    def like(self, params, r):
+        a = params[2:]
+        sigma = params[1]
+        rho = params[0]
+        like = np.array([arlognorm_like(x, a, sigma, rho) for x in r])
+        return -like.sum()
+            
+    def check_random(self):
+        a = (1,2)
+        sigma = .1
+        rho = 0
+        r = rarlognorm(a, sigma, rho, size=1000) 
+        assert_array_almost_equal(np.median(r), [1,2],1)
+        
+        rho =.8
+        sigma = .1
+        r = rarlognorm(1, sigma, rho, size=1000)
+        corr = PyMC2.TimeSeries.autocorr(np.log(r))
+        assert_almost_equal(corr, rho, 1)
+        assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
+    
+    def check_consistency(self):
+    
+        # 1D case
+        a = 1
+        rho =.8
+        sigma = .1
+        r = rarlognorm(a, sigma, rho, size=1000)
+        opt = fmin(self.like, (.8, .4, .9), args=([r],), disp=0)
+        assert_array_almost_equal(opt, [rho, sigma, a], 1)
+
+        # 2D case
+        a = (1,2)
+        sigma = .1
+        rho = .7
+        r = rarlognorm(a, sigma, rho, size=2000) 
+        opt = fmin(self.like, (.75, .15, 1.1, 2.1), xtol=.05, args=(r,), disp=0)
+        assert_array_almost_equal(opt, (rho, sigma)+a, 1)
+    
 
 class test_bernoulli(NumpyTestCase):
     def check_consistency(self):

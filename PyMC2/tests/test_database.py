@@ -107,7 +107,7 @@ if hasattr(database, 'hdf5'):
             
         def check_load(self):
             db = database.hdf5.load('DisasterModel.hdf5', 'a')
-            assert_array_equal(db.h5file.root.chain1.PyMCsamples.attrs.D, 
+            assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
                DisasterModel.D_array)
             assert_array_equal(db.D, DisasterModel.D_array)
             S = Sampler(DisasterModel, db)

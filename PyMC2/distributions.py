@@ -19,6 +19,7 @@ mv_distributions = ['dirichlet','multivariate_hypergeometric','multivariate_norm
 availabledistributions = univ_distributions+mv_distributions
 import flib
 import PyMC2
+import PyMC2.TimeSeries
 import numpy as np
 from PyMCBase import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
@@ -203,6 +204,39 @@ def GOFpoints(x,y,expval,loss):
 # Statistical distributions
 # random generator, expval, log-likelihood
 #--------------------------------------------------------
+
+# Autoregressive normal 
+def rarlognorm(a, sigma, rho, size=1):
+    """rarlognorm(a, sigma, rho)
+    
+    Autoregressive normal random variates.
+    
+    If a is a scalar, generates one series of length size. 
+    If a is a sequence, generates size series of the same length
+    as a. 
+    """
+    f = PyMC2.utils.ar1
+    if np.isscalar(a):
+        r = f(rho, 0, sigma, size)
+        return a*np.exp(r)
+    else:
+        n = len(a)
+        return a*np.exp([f(rho, 0, sigma, n) for i in range(size)])
+            
+
+def arlognorm_like(x, a, sigma, rho):
+    """arlognorm(x, a, sigma, rho, beta=1)
+    
+    Autoregressive normal log-likelihood.
+    
+    .. math::
+        x_i = a_i \exp(e_i)
+        e_i = \rho e_{i-1} + \epsilon_i
+    
+    where :math:`\epsilon_u \sim N(0,\sigma)`.
+    """
+    return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
+    
 
 # Bernoulli----------------------------------------------
 @randomwrap

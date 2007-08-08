@@ -458,8 +458,58 @@ def invcdf(x):
     """Inverse of normal cumulative density function."""
     return flib.ppnd16(x,1)
     
-def trace_generator(trace, start=0, stop=None, thin=1):
+def ar1_gen(rho, mu, sigma, size=1):
+    """Create an autoregressive series of order one AR(1) generator.
+    
+    .. math::
+        X_t = \mu_t + \rho (X_{t-1}-\mu_{t-1} + \epsilon_t
+        
+    If mu is a sequence and size > len(mu), the algorithm loops through 
+    mu. 
+    
+    :Parameters:
+        rho : scalar in [0,1]
+        mu : scalar or sequence
+        sigma : scalar > 0
+        size : integer
+    """
+    mu = np.asarray(mu, float)
+    mu = np.resize(mu, size)
+    r = mu.copy()
+    r += np.random.randn(size)*sigma
+    r[0] = np.random.randn(1)*sigma/np.sqrt(1-rho**2)
+    i = 0
+    while True:
+        yield r[i]
+        i+=1
+        if i==size:
+            break
+        r[i] += rho*(r[i-1]-mu[i-1])   
+
+def ar1(rho, mu, sigma, size=1):
+    """Return an autoregressive series of order one AR(1).
+    
+    .. math::
+        X_t = \mu_t + \rho (X_{t-1}-\mu_{t-1} + \epsilon_t
+        
+    If mu is a sequence and size > len(mu), the algorithm loops through 
+    mu. 
+    
+    :Parameters:
+        rho : scalar in [0,1]
+        mu : scalar or sequence
+        sigma : scalar > 0
+        size : integer
+    """
+    return np.array([x for x in ar1_gen(rho, mu, sigma, size)])
+
+def trace_generator(trace, start=0, stop=None, step=1):
     """Return a generator returning values from the object's trace.
+    
+    Ex:
+    T = trace_generator(theta.trace)
+    T.next()
+    for t in T:...
     """
     i = start
     stop = stop or np.inf
@@ -467,4 +517,19 @@ def trace_generator(trace, start=0, stop=None, thin=1):
     while i < size:
         index = slice(i, i+1)
         yield trace.gettrace(slicing=index)[0]
-        i+=thin
+        i+=step
+
+def draw_random(obj, **kwds):
+    """Draw random variates from obj.random method. 
+    
+    If the object has parents whose value must be updated, use  
+    parent_name=trace_generator_function.
+    
+    Ex:
+    R = draw_random(theta, beta=PyMC2.utils.trace_generator(beta.trace))
+    R.next()
+    """
+    while True:
+        for k,v in kwds.iteritems():
+            obj.parents[k] = v.next()
+        yield obj.random()

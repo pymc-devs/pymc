@@ -38,7 +38,7 @@ class Trace(base.Trace):
     
     def tally(self):
         """Adds current value to trace"""
-        self.db.row[self.name] = self._obj.value
+        self.db._row[self.name] = self._obj.value
                
     def truncate(self, index):
         """
@@ -78,7 +78,7 @@ class Trace(base.Trace):
         chain : scalar or sequence.
         """
         
-        groups = self.db.h5file.listNodes("/")
+        groups = self.db._h5file.listNodes("/")
         nchains = len(groups)    
         if chain == -1:
             chains = [nchains-1]    # Index of last group
@@ -148,10 +148,10 @@ class Database(pickle.Database):
         base.Database.connect(self, sampler)
         self.choose_name('hdf5')
         try:
-            self.h5file = tables.openFile(self.filename, 'a')
+            self._h5file = tables.openFile(self.filename, 'a')
         except IOError:
             print "Database file seems already open. Skipping."
-        root = self.h5file.root
+        root = self._h5file.root
         #try:
         #    self.main = self.h5file.createGroup(root, "main")
         #except tables.exceptions.NodeError:
@@ -159,30 +159,30 @@ class Database(pickle.Database):
         
     def _initialize(self, length):
         """Create group for the current chain."""
-        i = len(self.h5file.listNodes('/'))+1
-        self.group = self.h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
+        i = len(self._h5file.listNodes('/'))+1
+        self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
-        self.table = self.h5file.createTable(self.group, 'PyMCsamples', self.description(), 'PyMC samples from chain %d'%i, filters=self.filter)
-        self.row = self.table.row
+        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self.description(), 'PyMC samples from chain %d'%i, filters=self.filter)
+        self._row = self._table.row
         for object in self.model._pymc_objects_to_tally:
             object.trace._initialize(length)
         
         # Store data objects
         for object in self.model.data:
             if object.trace is True:
-                setattr(self.table.attrs, object.__name__, object.value)
+                setattr(self._table.attrs, object.__name__, object.value)
     
     def tally(self, index):
         for o in self.model._pymc_objects_to_tally:
             o.trace.tally()
-        self.row.append()
-        self.table.flush()
-        self.row = self.table.row
+        self._row.append()
+        self._table.flush()
+        self._row = self._table.row
         
     def _finalize(self):
         """Close file."""
         # add attributes. Computation time.
-        self.table.flush()
+        self._table.flush()
         
     def description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
@@ -196,7 +196,7 @@ class Database(pickle.Database):
         return D
 
     def close(self):
-        self.h5file.close()
+        self._h5file.close()
 
 
 def load(filename, mode='a'):
@@ -205,19 +205,20 @@ def load(filename, mode='a'):
     Return a Database instance.
     """ 
     db = Database(filename)
-    db.h5file = tables.openFile(filename, mode)
-    groups = db.h5file.root._g_listGroup()[0]
+    db._h5file = tables.openFile(filename, mode)
+    groups = db._h5file.root._g_listGroup()[0]
     groups.sort()
     last_chain = '/'+groups[-1]
-    db.table = db.h5file.getNode(last_chain, 'PyMCsamples')
-    for k in db.table.colnames:
+    db._table = db._h5file.getNode(last_chain, 'PyMCsamples')
+    db._group = db._table._g_getparent()
+    for k in db._table.colnames:
         if k == '_state_':
            db._state_ = v
         else:
             setattr(db, k, Trace(name=k))
             o = getattr(db,k)
             setattr(o, 'db', db)
-    for k in db.table.attrs._v_attrnamesuser:
-        setattr(db, k, getattr(db.table.attrs, k))
+    for k in db._table.attrs._v_attrnamesuser:
+        setattr(db, k, getattr(db._table.attrs, k))
     return db
         

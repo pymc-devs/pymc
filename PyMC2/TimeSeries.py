@@ -3,7 +3,7 @@
 # TimeSeries
 # Copyright (c) 2006 Chris Fonnesbeck
 
-from numpy import random
+from numpy import random, squeeze, asarray
 from numpy import arange, array, atleast_1d, concatenate, dot, resize
 import unittest, pdb
 
