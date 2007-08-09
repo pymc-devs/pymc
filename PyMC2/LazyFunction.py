@@ -1,7 +1,7 @@
 __docformat__='reStructuredText'
 
 from numpy import array, zeros, ones, arange, resize
-from PyMCBase import PyMCBase, ContainerBase
+from PyMCBase import PyMCBase, ContainerBase, Variable
 
 class LazyFunction(object):
 

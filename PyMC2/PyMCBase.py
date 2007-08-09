@@ -1,5 +1,7 @@
 __docformat__='reStructuredText'
 
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 """Exceptions"""
 
 class ZeroProbability(ValueError):
@@ -146,6 +148,12 @@ class PyMCBase(object):
     def gen_lazy_function(self):
         pass                
 
+class Variable(PyMCBase):
+    """
+    The base class for Parameters and Nodes;
+    represents variables that actually participate in the probability model.
+    """
+    pass
 
 class ContainerBase(object):
     """

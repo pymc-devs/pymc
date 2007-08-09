@@ -5,8 +5,8 @@ from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter
-from PyMCBase import ZeroProbability
+from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter, Potential
+from PyMCBase import ZeroProbability, PyMCBase, Variable
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
@@ -109,7 +109,7 @@ class SamplingMethod(object):
     It's sample() method will be called by Model at every MCMC iteration.
     
     :Parameters:
-          -pymc_objects : list, array or set
+          -variables : list, array or set
             Collection of PyMCObjects
           
           - verbose (optional) : integer
@@ -119,7 +119,7 @@ class SamplingMethod(object):
       nodes: The Nodes over which self has jurisdiction.
       parameters: The Parameters over which self has jurisdiction which have isdata = False.
       data: The Parameters over which self has jurisdiction which have isdata = True.
-      pymc_objects: The Nodes and Parameters over which self has jurisdiction.
+      variables: The Nodes and Parameters over which self has jurisdiction.
       children: The combined children of all PyMCBases over which self has jurisdiction.
       parents: The combined parents of all PyMCBases over which self has jurisdiction, as a set.
       loglike: The summed log-probability of self's children conditional on all of self's PyMCBases' current values. These will be recomputed only as necessary. This descriptor should eventually be written in C.
@@ -137,11 +137,11 @@ class SamplingMethod(object):
     :SeeAlso: Metropolis, Sampler.
     """
     
-    def __init__(self, pymc_objects, verbose=0):
+    def __init__(self, variables, verbose=0):
         # SamplingMethod initialization
         
         # Initialize public attributes
-        self.pymc_objects = set(pymc_objects)
+        self.variables = set(variables)
         self.nodes = set()
         self.parameters = set()
         self.data = set()
@@ -155,23 +155,23 @@ class SamplingMethod(object):
         self._state = ['_rejected', '_accepted', '_asf']
         self.verbose = verbose
         
-        # File away the pymc_objects
-        for pymc_object in self.pymc_objects:
+        # File away the variables
+        for variable in self.variables:
             
             # Sort.
-            if isinstance(pymc_object,Node):
-                self.nodes.add(pymc_object)
-            elif isinstance(pymc_object,Parameter):
-                if pymc_object.isdata:
-                    self.data.add(pymc_object)
+            if isinstance(variable,Node):
+                self.nodes.add(variable)
+            elif isinstance(variable,Parameter):
+                if variable.isdata:
+                    self.data.add(variable)
                 else:
-                    self.parameters.add(pymc_object)
+                    self.parameters.add(variable)
         
-        # Find children, no need to find parents; each pymc_object takes care of those.
-        for pymc_object in self.pymc_objects:
-            self.children |= pymc_object.children
-            for parent in pymc_object.parents.itervalues():
-                if isinstance(parent, PyMCBase):
+        # Find children, no need to find parents; each variable takes care of those.
+        for variable in self.variables:
+            self.children |= variable.children
+            for parent in variable.parents.itervalues():
+                if isinstance(parent, Variable):
                     self.parents.add(parent)
         
         # Find nearest descendent Parameters
@@ -621,7 +621,7 @@ SamplingMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
 
 class JointMetropolis(SamplingMethod):
     """
-    S = Joint(pymc_objects, epoch=1000, memory=10, delay=1000)
+    S = Joint(variables, epoch=1000, memory=10, delay=1000)
     
     Applies the Metropolis-Hastings algorithm to several parameters
     together. Jumping density is a multivariate normal distribution
@@ -629,12 +629,12 @@ class JointMetropolis(SamplingMethod):
     of the parameters, times _asf ** 2.
     
     :Arguments:
-    - pymc_objects (optional) : list or array
+    - variables (optional) : list or array
             A sequence of pymc objects to handle using
             this SamplingMethod.
     
     - parameter (optional) : Parameter
-            Alternatively to pymc_objects, a single parameter can be passed.
+            Alternatively to variables, a single parameter can be passed.
     
     - epoch (optional) : integer
             After epoch values are stored in the internal
@@ -665,7 +665,7 @@ class JointMetropolis(SamplingMethod):
     
     Externally-accessible attributes:
         
-        pymc_objects:   A sequence of pymc objects to handle using
+        variables:   A sequence of pymc objects to handle using
                         this SamplingMethod.
         
         epoch:          After epoch values are stored in the internal
@@ -700,13 +700,13 @@ class JointMetropolis(SamplingMethod):
     Also: when the covariance is nonsquare,
     
     """
-    def __init__(self, pymc_objects=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
+    def __init__(self, variables=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
         
         self.verbose = verbose
         
         if parameter is not None:
-            pymc_objects = [parameter]
-        SamplingMethod.__init__(self, pymc_objects, verbose=verbose)
+            variables = [parameter]
+        SamplingMethod.__init__(self, variables, verbose=verbose)
         
         self.epoch = epoch
         self.memory = memory

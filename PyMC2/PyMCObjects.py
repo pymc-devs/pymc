@@ -1,8 +1,12 @@
 __docformat__='reStructuredText'
 
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
-from PyMCBase import PyMCBase, ParentDict, ZeroProbability
+from PyMCBase import PyMCBase, ParentDict, ZeroProbability, Variable
+
+
 
 d_neg_inf = float(-1.79E308)
 
@@ -16,7 +20,6 @@ except:
     from LazyFunction import LazyFunction
     print 'Using pure lazy functions'
 # return LazyFunction
-
 
 class Potential(PyMCBase):
     """
@@ -108,7 +111,7 @@ class Potential(PyMCBase):
 
 
         
-class Node(PyMCBase):
+class Node(Variable):
     """
     A variable whose value is determined by the values of its parents.
 
@@ -192,7 +195,7 @@ class Node(PyMCBase):
     value = property(fget = get_value, fset=set_value)
     
 
-class Parameter(PyMCBase):
+class Parameter(Variable):
     
     """
     A variable whose value is not determined by the values of its parents.

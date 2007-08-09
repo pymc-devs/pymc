@@ -69,7 +69,7 @@ class Database(base.Database):
         """Dump traces using cPickle."""
         container={}
         try:
-            for o in self.model._pymc_objects_to_tally:
+            for o in self.model._variables_to_tally:
                 container[o.__name__] = o.trace._trace
             container['_state_'] = self._state_
         

@@ -20,7 +20,7 @@ class Trace(base.Trace):
             self._trace = value
         
         if obj is not None:
-            if isinstance(obj, PyMC2.PyMCBase):
+            if isinstance(obj, PyMC2.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj

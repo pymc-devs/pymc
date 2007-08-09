@@ -1,3 +1,5 @@
+c Author: Anand Patil, anand.prabhakar.patil@gmail.com
+
       SUBROUTINE chol_mvnorm(x, mu, sig, n, like, info)
 
 cf2py double precision dimension(n), intent(copy) :: x

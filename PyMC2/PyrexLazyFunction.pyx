@@ -6,8 +6,10 @@
 
 __docformat__='reStructuredText'
 
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 from numpy import array, zeros, ones, arange, resize
-from PyMC2 import PyMCBase, ContainerBase
+from PyMC2 import PyMCBase, ContainerBase, Variable
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
@@ -69,7 +71,7 @@ cdef class LazyFunction:
     """
     
     cdef public object arguments, fun, argument_values
-    cdef public object pymc_object_args, other_args
+    cdef public object variable_args, other_args
     cdef int cache_depth, N_args, 
     cdef public object ultimate_args, ultimate_keys, ultimate_arg_values
     cdef void **ultimate_arg_p, **ultimate_keys_p, **ultimate_arg_value_p
@@ -88,7 +90,7 @@ cdef class LazyFunction:
         
         # A dictionary containing the arguments that are parameters and nodes, with the same keys
         # as arguments.
-        self.pymc_object_args = {}
+        self.variable_args = {}
         # dictionary containing the other arguments.
         self.other_args = {}
         
@@ -115,14 +117,14 @@ cdef class LazyFunction:
                 self.ultimate_args.append(arg)
                 self.ultimate_keys.append(arg)                
                 
-                for obj in arg.pymc_objects:
+                for obj in arg.variables:
                     self.ultimate_args.append(obj)
                     self.ultimate_keys.append(None)
             
             # If arg is a parameter or node, it goes into
-            # pymc_object_args and ultimate_args.    
-            elif isinstance(arg, PyMCBase):
-                self.pymc_object_args[name] = arg
+            # variable_args and ultimate_args.    
+            elif isinstance(arg, Variable):
+                self.variable_args[name] = arg
                 self.ultimate_args.append(arg)
                 self.ultimate_keys.append(name)
                 self.argument_values[name] = arg.value

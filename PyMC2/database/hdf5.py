@@ -23,7 +23,7 @@ class Trace(base.Trace):
         """Assign an initial value and an internal PyMC object."""
         self._trace = value
         if obj is not None:
-            if isinstance(obj, PyMC2.PyMCBase):
+            if isinstance(obj, PyMC2.Variable):
                 self._obj = obj
                 self.name = self._obj.__name__
             else:
@@ -164,7 +164,7 @@ class Database(pickle.Database):
         
         self._table = self._h5file.createTable(self._group, 'PyMCsamples', self.description(), 'PyMC samples from chain %d'%i, filters=self.filter)
         self._row = self._table.row
-        for object in self.model._pymc_objects_to_tally:
+        for object in self.model._variables_to_tally:
             object.trace._initialize(length)
         
         # Store data objects
@@ -173,7 +173,7 @@ class Database(pickle.Database):
                 setattr(self._table.attrs, object.__name__, object.value)
     
     def tally(self, index):
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             o.trace.tally()
         self._row.append()
         self._table.flush()
@@ -187,7 +187,7 @@ class Database(pickle.Database):
     def description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             arr = asarray(o.value)
             #if len(s) == 0: 
             #    D[o.__name__] = tables.Col.from_scdtype(arr.dtype)

@@ -18,7 +18,7 @@ class Trace(object):
     def __init__(self, obj=None):
         """Assign an initial value and an internal PyMC object."""       
         if obj is not None:
-            if isinstance(obj, PyMC2.PyMCBase):
+            if isinstance(obj, PyMC2.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj
@@ -101,7 +101,7 @@ class Database(pickle.Database):
     
     def _initialize(self,length):
         """Tell the traces to initialize themselves."""
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             o.trace._initialize()
         
     def connect(self, sampler):

@@ -5,7 +5,9 @@
 
 __docformat__='reStructuredText'
 
-from PyMCObjects import Parameter
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
+from PyMCObjects import Parameter, Potential
 from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log
 from numpy.random import normal
@@ -120,7 +122,7 @@ class MAP(Model):
         
     :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize
     """
-    def __init__(self, input, db='ram', eps=.000001, method = 'fmin'):
+    def __init__(self, input, db='ram', eps=.000001, tol=.00001, method = 'fmin', verbose=False):
         Model.__init__(self, input, db)
 
         # Allocate memory for internal traces and get parameter slices
@@ -170,10 +172,12 @@ class MAP(Model):
         self._mu = None
         
         self.mu = NormApproxMu(self)
-        self.fit()
+        self.verbose = verbose
+        self.tol = tol
+        # self.fit(tol=self.tol)
 
     def _get_logp(self):
-        return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data])
+        return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data]) + sum([p.logp for p in self.potentials])
 
     logp = property(_get_logp)
 
@@ -189,16 +193,48 @@ class MAP(Model):
             if not scipy_imported:
                 raise ImportError, 'Scipy is required for any method other than Newton in MAP and NormalApproximation'
 
+        if self.verbose:
+            def callback(p):
+                print 'Current log-probability :', self.logp
+        else:
+            def callback(p):
+                pass
+
         if self.method == 'fmin_ncg':
-            p=fmin_ncg(f = self.func, x0 = p, fprime = self.gradfunc, fhess = self.hessfunc, epsilon=self.eps)
+            p=fmin_ncg( f = self.func, 
+                        x0 = p, 
+                        fprime = self.gradfunc, 
+                        fhess = self.hessfunc, 
+                        epsilon=self.eps, 
+                        callback=callback, 
+                        ftol=tol)
+
         elif self.method == 'fmin':
-            p=fmin(func = self.func, x0=p)
+            p=fmin( func = self.func, 
+                    x0=p, 
+                    callback=callback, 
+                    ftol=tol)
+
         elif self.method == 'fmin_powell':
-            p=fmin_powell(func = self.func, x0=p)
+            p=fmin_powell(  func = self.func, 
+                            x0=p, 
+                            callback=callback, 
+                            ftol=tol)
+
         elif self.method == 'fmin_cg':
-            p=fmin_cg(f = self.func, x0 = p, fprime = self.gradfunc, epsilon=self.eps)
+            p=fmin_cg(  f = self.func, x0 = p, 
+                        fprime = self.gradfunc, 
+                        epsilon=self.eps, 
+                        callback=callback, 
+                        ftol=tol)
+
         elif self.method == 'fmin_l_bfgs_b':
-            p=fmin_l_bfgs_b(func = self.func, x0 = p, fprime = self.gradfunc, epsilon = self.eps)[0]
+            p=fmin_l_bfgs_b(func = self.func, 
+                            x0 = p, 
+                            fprime = self.gradfunc, 
+                            epsilon = self.eps, 
+                            callback=callback, 
+                            ftol=tol)[0]
 
         elif self.method == 'newton':
             last_logp = self.logp

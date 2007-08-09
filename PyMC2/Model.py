@@ -10,7 +10,7 @@ from numpy import zeros, floor
 from SamplingMethods import SamplingMethod, assign_method
 from Matplot import Plotter, show
 import database
-from PyMCObjects import Parameter, Node, PyMCBase
+from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
 from Container import Container
 from utils import extend_children
 import gc, sys,os
@@ -72,7 +72,9 @@ class Model(object):
         self.nodes = set()
         self.parameters = set()
         self.data = set()
+        self.potentials = set()
         self.containers = set()
+        self.variables = set()
         self.extended_children = None
         self.verbose = verbose
         # Instantiate hidden attributes
@@ -110,13 +112,14 @@ class Model(object):
                 or isinstance(item, SamplingMethod) \
                 or isinstance(item, Container):
                 self.__dict__[name] = item
-
+                
             # Allocate to appropriate set
             self._fileitem(item)
-
+            
         # Union of PyMC objects
-        self.pymc_objects = self.nodes | self.parameters | self.data
-
+        self.variables = self.nodes | self.parameters | self.data
+        self.pymc_objects = self.variables | self.potentials
+        
     def _fileitem(self, item):
         """
         Store an item into the proper set:
@@ -143,6 +146,9 @@ class Model(object):
                 if item.isdata:
                     self.data.add(item)
                 else:  self.parameters.add(item)
+                
+            elif isinstance(item, Potential):
+                self.potentials.add(item)
 
         elif isinstance(item, SamplingMethod):
             self.nodes.update(item.nodes)
@@ -154,11 +160,11 @@ class Model(object):
         Makes a dictionary of self's PyMC objects' 'extended children.'
         """
         self.extended_children = {}
-        dummy = PyMCBase('', '', {}, 0, None)
-        for pymc_object in self.pymc_objects:
-            dummy.children = copy(pymc_object.children)
+        dummy = Variable('', '', {}, 0, None)
+        for variable in self.variables:
+            dummy.children = copy(variable.children)
             extend_children(dummy)
-            self.extended_children[pymc_object] = dummy.children
+            self.extended_children[variable] = dummy.children
 
     def _parse_generations(self):
         """
@@ -216,7 +222,7 @@ class Model(object):
                     for parameter in generation:
                         parameter.random()
 
-                for datum in self.data:
+                for datum in self.data | self.potentials:
                     loglikes[i] += datum.logp
 
         except KeyboardInterrupt:
@@ -269,14 +275,6 @@ class Model(object):
 
         for container in self.containers:
             pydot_nodes[container] = pydot.Node(name=container.__name__, shape='house')
-
-        # # Create subgraphs from pymc sampling methods
-        # for sampling_method in self.sampling_methods:
-        #     if not isinstance(sampling_method, OneAtATimeMetropolis):
-        #         pydot_subgraphs[sampling_method] = pydot.Subgraph(graph_name = sampling_method.__class__.__name__)
-        #         for pymc_object in sampling_method.pymc_objects:
-        #             pydot_subgraphs[sampling_method].add_node(pydot_nodes[pymc_object])
-        #         self.dot_object.add_subgraph(pydot_subgraphs[sampling_method])
 
 
         # Create edges from parent-child relationships
@@ -376,8 +374,8 @@ class Model(object):
         if trace_index is None:
             trace_index = randint(self.cur_trace_index)
 
-        for pymc_object in self._pymc_objects_to_tally:
-            pymc_object.value = pymc_object.trace()[trace_index]
+        for variable in self._variables_to_tally:
+            variable.value = variable.trace()[trace_index]
 
 
     def save_traces(self, path='', fname=None):
@@ -390,7 +388,7 @@ class Model(object):
                 fname = 'Model.pymc'
 
         trace_dict = {}
-        for obj in self._pymc_objects_to_tally:
+        for obj in self._variables_to_tally:
             trace_new = copy(obj.trace)
             trace_new.__delattr__('db')
             trace_new.__delattr__('obj')
@@ -457,10 +455,10 @@ class Sampler(Model):
         # Objects that are not to be tallied are assigned a no_trace.Trace
         # Tallyable objects are listed in the _pymc_objects_to_tally set. 
         no_trace = getattr(database, 'no_trace')
-        self._pymc_objects_to_tally = set()
+        self._variables_to_tally = set()
         for object in self.parameters | self.nodes :
             if object.trace:
-                self._pymc_objects_to_tally.add(object)
+                self._variables_to_tally.add(object)
             else:
                 object.trace = no_trace.Trace()
 
@@ -598,8 +596,8 @@ class Sampler(Model):
         except KeyboardInterrupt:
             self.status='halted'
             print '\n Iteration ', i, ' of ', iter
-            for pymc_object in self._pymc_objects_to_tally:
-               pymc_object.trace.truncate(self._cur_trace_index)
+            for variable in self._variables_to_tally:
+               variable.trace.truncate(self._cur_trace_index)
             self.save_traces()
 
 
@@ -701,10 +699,9 @@ class Sampler(Model):
         """
         
         # Loop over PyMC objects
-        for pymc_object in self._pymc_objects_to_tally:
-            
+        for variable in self._variables_to_tally:            
             # Plot object
-            self._plotter.plot(pymc_object)
+            self._plotter.plot(variable)
             
         show()
             

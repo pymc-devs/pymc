@@ -46,7 +46,7 @@ class Database(no_trace.Database):
                     i += 1
             self.dir = name
         
-        for object in self.model._pymc_objects_to_tally:
+        for object in self.model._variables_to_tally:
             object.trace._initialize(length)
             
     

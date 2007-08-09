@@ -7,7 +7,7 @@
 import numpy as np
 import sys, inspect
 from copy import copy
-from PyMCObjects import Parameter, Node, PyMCBase
+from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
 import flib
 
 from numpy.linalg.linalg import LinAlgError

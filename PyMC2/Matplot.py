@@ -83,18 +83,18 @@ def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
 
     return quants, alphas
 
-def func_envelopes(pymc_object, HPD=[.25, .5, .95]):
+def func_envelopes(pymc_object, PPI=[.25, .5, .95]):
     """
-    func_envelopes(pymc_object, HPD = [.25, .5, .95])
+    func_envelopes(pymc_object, PPI = [.25, .5, .95])
 
     Returns a list of centered_envelope objects for func_stacks,
-    each one corresponding to an element of HPD, and one 
+    each one corresponding to an element of PPI, and one 
     corresponding to mass 0 (the median).
 
     :Arguments:
         func_stacks: The samples of the function. func_stacks[i,:] 
             gives sample i.
-        HPD: A list or array containing the probability masses
+        PPI: A list or array containing the probability masses
             the envelopes should enclose.
 
     :Note: The return list of envelopes is sorted from high to low
@@ -110,7 +110,7 @@ def func_envelopes(pymc_object, HPD=[.25, .5, .95]):
     func_stacks.sort(axis=0)
 
     envelopes = []
-    qsort = sort(HPD)
+    qsort = sort(PPI)
 
     for i in range(len(qsort)):
         envelopes.append(centered_envelope(func_stacks, qsort[len(qsort)-i-1]))
@@ -197,7 +197,7 @@ class centered_envelope(object):
     """
     E = centered_envelope(sorted_func_stack, mass)
 
-    An object corresponding to the centered HPD envelope 
+    An object corresponding to the centered PPI envelope 
     of a function enclosing a particular probability mass.
 
     :Arguments:
@@ -205,7 +205,7 @@ class centered_envelope(object):
             if func_stacks[i,:] gives sample i, then 
             sorted_func_stack is sort(func_stacks,0).
 
-        mass: The probability mass enclosed by the HPD envelope.
+        mass: The probability mass enclosed by the PPI envelope.
 
     :SeeAlso: func_envelopes
     """
@@ -229,7 +229,7 @@ class centered_envelope(object):
 
         :Arguments: xaxis, alpha
 
-        Plots the HPD region on the current figure, with respect to
+        Plots the PPI region on the current figure, with respect to
         xaxis, at opacity alpha.
 
         :Note: The fill color of the envelope will be self.mass
@@ -241,7 +241,7 @@ class centered_envelope(object):
             if self.mass>0.:
                 x = concatenate((xaxis,xaxis[::-1]))
                 y = concatenate((self.lo, self.hi[::-1]))
-                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered HPD ' + pformat(self.mass)))
+                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered PPI ' + pformat(self.mass)))
             else:
                 plot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
         else:

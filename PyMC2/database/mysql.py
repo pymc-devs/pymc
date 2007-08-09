@@ -123,7 +123,7 @@ class Database(object):
             # If already exists, switch to database
             self.cur.execute('USE %s' % self.model.__name__)
     
-        for object in self.model._pymc_objects_to_tally:
+        for object in self.model._variables_to_tally:
             object.trace._initialize()
             
     def _finalize(self, *args, **kwds):

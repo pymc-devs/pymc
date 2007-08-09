@@ -101,11 +101,11 @@ class Database(object):
         One step is mandatory however, calling the Traces `_initialize` method. 
         """
         self.model = model
-        for object in model._pymc_objects_to_tally:
+        for object in model._variables_to_tally:
             object.trace._initialize()
 
     def _finalize(self):
         """Do whatever is needed at the end of sampling run. 
         One step is mandatory: call the Traces `_finalize` method."""
-        for object in model._pymc_objects_to_tally:
+        for object in model._variables_to_tally:
             object.trace._initialize()

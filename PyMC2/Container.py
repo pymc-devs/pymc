@@ -1,5 +1,5 @@
-from PyMCObjects import Parameter, Node
-from PyMCBase import PyMCBase, ContainerBase
+from PyMCObjects import Parameter, Node, Potential
+from PyMCBase import PyMCBase, ContainerBase, Variable
 from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray
@@ -10,7 +10,7 @@ class Container(ContainerBase):
         """
         Takes any iterable in its constructor. On instantiation, it
         recursively 'unpacks' the iterable and adds all PyMC objects
-        it finds to its set 'pymc_objects.' It also adds sampling
+        it finds to its set 'variables.' It also adds sampling
         methods to its set 'sampling_methods'.
 
         When Model's constructor finds a Container, it should
@@ -20,7 +20,7 @@ class Container(ContainerBase):
         a Container, it's retained as a parent.
 
         However, the parent_pointers array will contain the members of the
-        set pymc_objects, and all the members of that set will have the
+        set variables, and all the members of that set will have the
         parameter/ node added as a child.
 
         Ultimately, the 'value' attribute should return a copy of the input
@@ -73,9 +73,10 @@ class Container(ContainerBase):
             raise ValueError, 'PyMC object containers can only be made from iterables.'
         self.value = ValueContainer(iterable)
         self.all_objects = set()
-        self.pymc_objects = set()
+        self.variables = set()
         self.nodes = set()
         self.parameters = set()
+        self.potentials = set()
         self.data = set()
         self.sampling_methods = set()
         self.__name__ = name
@@ -88,16 +89,17 @@ class Container(ContainerBase):
                 new_container = Container(item)
                 self.value[i] = new_container
 
-                self.pymc_objects.update(new_container.pymc_objects)
+                self.variables.update(new_container.variables)
                 self.parameters.update(new_container.parameters)
+                self.potentials.update(new_container.potentials)
                 self.nodes.update(new_container.nodes)
                 self.data.update(new_container.data)
                 self.all_objects.update(new_container.all_objects)
                 self.sampling_methods.update(new_container.sampling_methods)
             else:
                 self.all_objects.add(item)
-                if isinstance(item, PyMCBase):
-                    self.pymc_objects.add(item)
+                if isinstance(item, Variable):
+                    self.variables.add(item)
                     if isinstance(item, Parameter):
                         if item.isdata:
                             self.data.add(item)
@@ -105,6 +107,8 @@ class Container(ContainerBase):
                             self.parameters.add(item)
                     elif isinstance(item, Node):
                         self.nodes.add(item)
+                elif isinstance(item, Potential):
+                    self.potentials.add(item)
                 elif isinstance(item, SamplingMethod):
                     self.sampling_methods.add(item)
             
@@ -125,7 +129,7 @@ class ValueContainer(object):
 
     def __getitem__(self,index):
         item = self._value[index]
-        if isinstance(item, PyMCBase) or isinstance(item, Container):
+        if isinstance(item, Variable) or isinstance(item, Container):
             return item.value
         else:
             return item
@@ -164,8 +168,9 @@ class ArraySubclassContainer(Container, ndarray):
         C._ravelledvalue = C._value.ravel()
         C._ravelledfinder = C._pymc_finder.ravel()
         
-        C.pymc_objects = set()
+        C.variables = set()
         C.parameters = set()
+        C.potentials = set()
         C.nodes = set()
         C.data = set()
         C.sampling_methods = set()
@@ -174,10 +179,10 @@ class ArraySubclassContainer(Container, ndarray):
 
         for i in C.iterrange:
             item = C._ravelleddata[i]
-            if isinstance(item, PyMCBase):
+            if isinstance(item, Variable):
     
                 C._ravelledfinder[i] = True   
-                C.pymc_objects.add(item)
+                C.variables.add(item)
 
                 if isinstance(item, Parameter):
                     if item.isdata:
@@ -186,6 +191,9 @@ class ArraySubclassContainer(Container, ndarray):
                         C.parameters.add(item)
                 elif isinstance(item, Node):
                     C.nodes.add(item)
+
+            elif isinstance(item, Potential):
+                C.potentials.add(item)
                     
             elif isinstance(item, SamplingMethod):
                 C.sampling_methods.add(item)

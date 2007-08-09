@@ -14,7 +14,7 @@ class Trace(object):
         """Assign an initial value and an internal PyMC object."""
         self._trace = value
         if obj is not None:
-            if isinstance(obj, PyMC2.PyMCBase):
+            if isinstance(obj, PyMC2.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj
@@ -61,12 +61,12 @@ class Database(object):
         
     def _initialize(self, length):
         """Tell the traces to initialize themselves."""
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             o.trace._initialize(length)
         
     def tally(self, index):
         """Dummy method. Subclass if necessary."""
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             o.trace.tally(index)
             
     def connect(self, sampler):
@@ -83,20 +83,20 @@ class Database(object):
                 
         if hasattr(self, '_state_'): 
             # Restore the state of the Sampler.
-            for o in sampler._pymc_objects_to_tally:
+            for o in sampler._variables_to_tally:
                 o.trace = getattr(self, o.__name__)
                 o.trace._obj = o
         else: 
             # Set a fresh new state
-            for o in sampler._pymc_objects_to_tally:
+            for o in sampler._variables_to_tally:
                 o.trace = self.Trace(obj=o)
         
-        for o in sampler._pymc_objects_to_tally:
+        for o in sampler._variables_to_tally:
             o.trace.db = self
     
     def _finalize(self):
         """Tell the traces to finalize themselves."""
-        for o in self.model._pymc_objects_to_tally:
+        for o in self.model._variables_to_tally:
             o.trace._finalize()
     
     def close(self):
