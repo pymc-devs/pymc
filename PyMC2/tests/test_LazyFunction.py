@@ -2,7 +2,7 @@ from numpy.testing import *
 import numpy as np
 from numpy.random import random
 from PyMC2.PyrexLazyFunction import LazyFunction
-from PyMC2 import parameter, data, node, Normal
+from PyMC2 import parameter, data, node, Normal, potential
 
 @data
 def mu(value=5.):
@@ -18,6 +18,10 @@ p = Normal('p', value=5., mu=mu, tau=tau)
 def DumbNode(p=p):
     return random()*p
 
+@potential
+def MyPotential(p=p,d=DumbNode):
+    return -(p-d)**2
+
 def f(p, d):
     return p**2 / d
 
@@ -25,7 +29,7 @@ class test_cache(NumpyTestCase):
 
     def check_simple(self):
         L = LazyFunction(f, {'p':p,'d':DumbNode}, 2)
-        for i in range(10000):    
+        for i in range(1000):    
             last_dumbnode_value = DumbNode.value        
             p.random()
             

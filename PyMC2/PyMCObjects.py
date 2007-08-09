@@ -4,6 +4,7 @@ from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
 from PyMCBase import PyMCBase, ParentDict, ZeroProbability
 
+d_neg_inf = float(-1.79E308)
 
 # def import_LazyFunction():
 #     try:
@@ -15,6 +16,97 @@ except:
     from LazyFunction import LazyFunction
     print 'Using pure lazy functions'
 # return LazyFunction
+
+
+class Potential(PyMCBase):
+    """
+    Not a variable; just an arbitrary log-probability term to multiply into the 
+    joint distribution. Useful for expressing models that aren't DAG's.
+
+    Decorator instantiation:
+
+    @potential(trace=True)
+    def A(x = B, y = C):
+        return -.5 * (x-y)**2 / 3.
+
+    Direct instantiation:
+
+    :Arguments:
+
+        -logp:  The function that computes the potential's value from the values 
+                of its parents.
+
+        -doc:    The docstring for this potential.
+
+        -name:   The name of this potential.
+
+        -parents: A dictionary containing the parents of this node.
+
+        -cache_depth (optional):    An integer indicating how many of this potential's
+                                    value computations should be 'memoized'.
+                                    
+        - verbose (optional) : integer
+              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+
+                            
+    Externally-accessible attribute:
+
+        -logp: Returns the node's value given its parents' values. Skips
+                computation if possible.
+            
+    No methods.
+    
+    :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
+    """
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
+
+        # self.LazyFunction = import_LazyFunction()
+        self.LazyFunction = LazyFunction
+
+        # This function gets used to evaluate self's value.
+        self._logp_fun = logp
+        
+        PyMCBase.__init__(self, 
+                            doc=doc, 
+                            name=name, 
+                            parents=parents, 
+                            cache_depth = cache_depth, 
+                            trace=False,
+                            verbose=verbose)
+
+        self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
+
+        self._logp.force_compute()
+
+        # Check initial value
+        if not isinstance(self.logp, float):
+            raise ValueError, "Potential " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+
+        
+    def gen_lazy_function(self):
+        # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
+        self._logp = LazyFunction(fun = self._logp_fun, arguments = self.parents, cache_depth = self._cache_depth)        
+
+    def get_logp(self):
+        if self.verbose > 2:
+            print '\t' + self.__name__ + ': log-probability accessed.'
+        _logp = self._logp.get()
+        if self.verbose > 2:
+            print '\t' + self.__name__ + ': Returning log-probability ', _logp
+
+        # Check if the value is smaller than a double precision infinity:
+        if _logp <= d_neg_inf:
+            raise ZeroProbability, self.zero_logp_error_msg
+
+        return _logp
+
+        
+    def set_logp(self,value):      
+        raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
+
+    logp = property(fget = get_logp, fset=set_logp)
+
+
         
 class Node(PyMCBase):
     """
@@ -219,8 +311,6 @@ class Parameter(PyMCBase):
         # taken from the constructor.
         self.rseed = rseed
         
-        self.d_neg_inf = float(-1.79E308)    
-        
         # Initialize value, either from value provided or from random function.
         self._value = value
         if value is None:
@@ -303,7 +393,7 @@ class Parameter(PyMCBase):
             print '\t' + self.__name__ + ': Returning log-probability ', logp
         
         # Check if the value is smaller than a double precision infinity:
-        if logp <= self.d_neg_inf:
+        if logp <= d_neg_inf:
             raise ZeroProbability, self.zero_logp_error_msg
     
         return logp

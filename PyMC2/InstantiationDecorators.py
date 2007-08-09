@@ -1,6 +1,6 @@
 import sys, inspect
 from imp import load_dynamic
-from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter
+from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter, Potential
 from utils import extend_children, _push
 from PyMCBase import ZeroProbability
 import numpy as np
@@ -138,6 +138,33 @@ def binary_parameter(__func__=None, **kwds):
     Same usage as parameter.
     """
     return parameter(__func__=__func__, __class__ = BinaryParameter, **kwds)
+
+
+def potential(__func__ = None, **kwds):
+    """
+    Decorator function instantiating potentials. Usage:
+
+    @potential
+    def B(parent_name = ., ...)
+        return baz(parent_name, ...)
+
+    where baz returns the node B's value conditional
+    on its parents.
+
+    :SeeAlso: Node, Parameter, Potential, parameter, data, Model, Container
+    """
+    def instantiate_pot(__func__):
+        junk, parents = _extract(__func__, kwds, keys)
+        return Potential(parents=parents, **kwds)
+
+    keys = ['logp']
+
+    instantiate_pot.kwds = kwds
+
+    if __func__:
+        return instantiate_pot(__func__)
+
+    return instantiate_pot
 
 
 def node(__func__ = None, **kwds):
