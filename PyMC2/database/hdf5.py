@@ -203,19 +203,22 @@ class Database(pickle.Database):
     def close(self):
         self._h5file.close()
 
-    def add_attr(self, name, object, description=None, chain=-1):
+    def add_attr(self, name, object, description='', chain=-1, array=False):
         """Add an attribute to the chain.
         
         description may not be supported for every date type. 
+        if array is true, create an Array object. 
         """
         if not np.isscalar(chain):
             raise TypeError, "chain must be a scalar integer."
         table = self._gettable(chain)[0]
-        try:
+        if array is False:
             table.setAttr(name, object)
             obj = getattr(table.attrs, name)
-        except TypeError:
+        else:
             # Create an array in the group
+            if description == '':
+                description = name
             group = table._g_getparent()
             self._h5file.createArray(group, name, object, description)
             obj = getattr(group, name)

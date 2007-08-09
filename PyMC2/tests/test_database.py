@@ -137,10 +137,10 @@ if hasattr(database, 'hdf5'):
             db = database.hdf5.load('DisasterModel.hdf5', 'a')
             db.add_attr('some_list', [1,2,3])
             db.add_attr('some_dict', {'a':5})
-            db.add_attr('some_array', arr)
+            db.add_attr('some_array', arr, array=True)
             assert_array_equal(db.some_list, [1,2,3])
             assert_equal(db.some_dict['a'], 5)
-            assert_array_equal(db.some_array, arr)
+            assert_array_equal(db.some_array.read(), arr)
             db.close()
             del db
             db = database.hdf5.load('DisasterModel.hdf5', 'a')

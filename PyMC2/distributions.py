@@ -19,7 +19,6 @@ mv_distributions = ['dirichlet','multivariate_hypergeometric','multivariate_norm
 availabledistributions = univ_distributions+mv_distributions
 import flib
 import PyMC2
-import PyMC2.TimeSeries
 import numpy as np
 from PyMCBase import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
