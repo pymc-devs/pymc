@@ -7,7 +7,10 @@
 # Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
 
+# TODO: add a command to save attributes (chain attributes, group attributes)
 
+
+import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
 import PyMC2
 from PyMC2.database import base, pickle
@@ -59,7 +62,7 @@ class Trace(base.Trace):
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
             
-        tables = self._gettable(chain)
+        tables = self.db._gettable(chain)
         
         for i,table in enumerate(tables):
             if slicing is None:
@@ -71,29 +74,7 @@ class Trace(base.Trace):
                 data = hstack((data, col))
         
         return data
-                      
-    def _gettable(self, chain):
-        """Return a sequence of hdf5 tables storing the chain. 
-        
-        chain : scalar or sequence.
-        """
-        
-        groups = self.db._h5file.listNodes("/")
-        nchains = len(groups)    
-        if chain == -1:
-            chains = [nchains-1]    # Index of last group
-        elif chain is None:
-            chains = range(nchains)
-        elif size(chain) == 1:
-           chains = [chain]
-        
-        table = []
-        for i,c in enumerate(chains):
-            gr = groups[c]
-            table.append(getattr(gr, 'PyMCsamples'))
-
-        return table
-        
+                            
                       
     def _finalize(self):
         """Nothing done here."""
@@ -104,7 +85,7 @@ class Trace(base.Trace):
     def length(self, chain=-1):
         """Return the sample length of given chain. If chain is None,
         return the total length of all chains."""
-        tables = self._gettable(chain)
+        tables = self.db._gettable(chain)
         n = asarray([table.nrows for table in tables])
         return n.sum()
 
@@ -162,7 +143,7 @@ class Database(pickle.Database):
         i = len(self._h5file.listNodes('/'))+1
         self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
-        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self.description(), 'PyMC samples from chain %d'%i, filters=self.filter)
+        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter)
         self._row = self._table.row
         for object in self.model._variables_to_tally:
             object.trace._initialize(length)
@@ -184,7 +165,7 @@ class Database(pickle.Database):
         # add attributes. Computation time.
         self._table.flush()
         
-    def description(self):
+    def _description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}
         for o in self.model._variables_to_tally:
@@ -195,9 +176,51 @@ class Database(pickle.Database):
             D[o.__name__] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
         return D
 
+
+    def _gettable(self, chain=-1):
+        """Return the hdf5 table corresponding to chain. 
+        
+        chain : scalar or sequence.
+        """
+        
+        groups = self._h5file.listNodes("/")
+        nchains = len(groups)    
+        if chain == -1:
+            chains = [nchains-1]    # Index of last group
+        elif chain is None:
+            chains = range(nchains)
+        elif size(chain) == 1:
+           chains = [chain]
+        
+        table = []
+        for i,c in enumerate(chains):
+            gr = groups[c]
+            table.append(getattr(gr, 'PyMCsamples'))
+
+        return table
+
+
     def close(self):
         self._h5file.close()
 
+    def add_attr(self, name, object, description=None, chain=-1):
+        """Add an attribute to the chain.
+        
+        description may not be supported for every date type. 
+        """
+        if not np.isscalar(chain):
+            raise TypeError, "chain must be a scalar integer."
+        table = self._gettable(chain)[0]
+        try:
+            table.setAttr(name, object)
+            obj = getattr(table.attrs, name)
+        except TypeError:
+            # Create an array in the group
+            group = table._g_getparent()
+            self._h5file.createArray(group, name, object, description)
+            obj = getattr(group, name)
+        setattr(self, name, obj)
+        
 
 def load(filename, mode='a'):
     """Load an existing hdf5 database.
@@ -206,10 +229,7 @@ def load(filename, mode='a'):
     """ 
     db = Database(filename)
     db._h5file = tables.openFile(filename, mode)
-    groups = db._h5file.root._g_listGroup()[0]
-    groups.sort()
-    last_chain = '/'+groups[-1]
-    db._table = db._h5file.getNode(last_chain, 'PyMCsamples')
+    db._table = db._gettable(-1)[0]
     db._group = db._table._g_getparent()
     for k in db._table.colnames:
         if k == '_state_':
@@ -220,5 +240,13 @@ def load(filename, mode='a'):
             setattr(o, 'db', db)
     for k in db._table.attrs._v_attrnamesuser:
         setattr(db, k, getattr(db._table.attrs, k))
+    for k in db._group._f_listNodes():
+        if k.__class__ is not tables.table.Table:
+            setattr(db, k.name, k)
     return db
         
+##    groups = db._h5file.root._g_listGroup()[0]
+##    groups.sort()
+##    last_chain = '/'+groups[-1]
+##    db._table = db._h5file.getNode(last_chain, 'PyMCsamples')
+

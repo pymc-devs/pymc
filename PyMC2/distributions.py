@@ -218,10 +218,12 @@ def rarlognorm(a, sigma, rho, size=1):
     f = PyMC2.utils.ar1
     if np.isscalar(a):
         r = f(rho, 0, sigma, size)
-        return a*np.exp(r)
     else:
         n = len(a)
-        return a*np.exp([f(rho, 0, sigma, n) for i in range(size)])
+        r = [f(rho, 0, sigma, n) for i in range(size)]
+        if size == 1:
+            r = r[0]
+    return a*np.exp(r)
             
 
 def arlognorm_like(x, a, sigma, rho):

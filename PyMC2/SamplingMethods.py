@@ -369,7 +369,7 @@ class Metropolis(SamplingMethod):
             # If self's extended children is the empty set (eg, if
             # self's parameter is a posterior predictive quantity of
             # interest), proposing from the prior is best.
-            if self.children:
+            if len(self.children)==0:
                 try:
                     self.parameter.random()
                     self._dist = "Prior"

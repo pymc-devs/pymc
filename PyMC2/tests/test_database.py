@@ -4,6 +4,7 @@ from numpy.testing import *
 from PyMC2 import Sampler, database
 from PyMC2.examples import DisasterModel
 import os,sys
+import numpy as np
 
 class test_no_trace(NumpyTestCase):
     def check(self):
@@ -115,7 +116,9 @@ if hasattr(database, 'hdf5'):
             S.sample(100,0,1)
             assert_array_equal(S.e.trace(chain=None).shape, (300,))
             assert_equal(S.e.trace.length(None), 300)
+            db.close() # For some reason, the hdf5 file remains open.
             S.db.close()
+            
             
         def check_compression(self):
             try: 
@@ -127,6 +130,23 @@ if hasattr(database, 'hdf5'):
             S.sample(450,100,1)
             assert_array_equal(S.e.trace().shape, (350,))
             S.db.close()
+            db.close()
+            
+        def check_attribute_assignement(self):
+            arr = np.array([[1,2],[3,4]])
+            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            db.add_attr('some_list', [1,2,3])
+            db.add_attr('some_dict', {'a':5})
+            db.add_attr('some_array', arr)
+            assert_array_equal(db.some_list, [1,2,3])
+            assert_equal(db.some_dict['a'], 5)
+            assert_array_equal(db.some_array, arr)
+            db.close()
+            del db
+            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            assert_array_equal(db.some_list, [1,2,3])
+            assert_equal(db.some_dict['a'], 5)
+            assert_array_equal(db.some_array, arr)
             db.close()
         
 if __name__ == '__main__':
