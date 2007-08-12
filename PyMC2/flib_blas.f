@@ -182,13 +182,12 @@ cf2py double precision intent(out) :: like
 c Wishart log-likelihood function.
 
 cf2py double precision dimension(k,k),intent(copy) :: X,V
-cf2py double precision intent(in) :: n
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
 
-      INTEGER i,k
+      INTEGER i,k,n
       DOUBLE PRECISION X(k,k),V(k,k),bx(k,k)
-      DOUBLE PRECISION dx,n,db,tbx,a,g,like
+      DOUBLE PRECISION dx,db,tbx,a,g,like
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
@@ -259,13 +258,12 @@ c Wishart log-likelihood function.
 c Doesn't vectorize the determinants, just the matrix multiplication.
 
 cf2py double precision dimension(k,k),intent(copy) :: V,X
-cf2py double precision intent(in) :: n
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
 
-      INTEGER i,k,info
+      INTEGER i,k,info, n
       DOUBLE PRECISION X(k,k),V(k,k),bx(k,k)
-      DOUBLE PRECISION dx,n,db,tbx,a,g,like
+      DOUBLE PRECISION dx,db,tbx,a,g,like
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 c
@@ -328,7 +326,7 @@ c
 
       subroutine dchdc_wrap(a,lda,p,work,piv,job,info)
 
-cf2py double precision intent(inplace), dimension(p,p) :: a
+cf2py double precision intent(inplace), dimension(lda,p) :: a
 cf2py integer intent(hide), depend(p):: lda=p
 cf2py integer intent(hide), depend(a):: p=shape(a,0)
 cf2py double precision intent(hide) :: work       

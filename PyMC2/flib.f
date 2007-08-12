@@ -1474,7 +1474,7 @@ cf2py integer, intent(hide), depend(x):: n=shape(x,1)
 cf2py integer, intent(hide), depend(mu):: nmu=shape(mu,1)
 
       INTEGER i,j,k,n,nmu
-      DOUBLE PRECISION x(k,n), mu(k,n), tau(k,k),mut(k)
+      DOUBLE PRECISION x(k,n), mu(k,nmu), tau(k,k),mut(k)
       DOUBLE PRECISION dt(n,k),dtau(n,k),d(k,n), s(n)
       DOUBLE PRECISION like,det
       LOGICAL mu_not_1d
