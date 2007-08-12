@@ -8,7 +8,7 @@ verbose = False
 
 @parameter
 def A(value=1.):
-   return -10.*value
+    return -10.*value
 
 # If normcoef is positive, there will be an uncaught ZeroProbability
 normcoef = 1.
@@ -16,22 +16,24 @@ normcoef = 1.
 # B's value is a random function of A.
 @node(verbose=verbose)
 def B(A=A):
-   return A + normcoef * normal()
+    # print 'B computing' 
+    return A + normcoef * normal()
 
 # Guarantee that initial state is OK
 while B.value<0.:
-   @node(verbose=verbose)
-   def B(A=A):
-       return A + normcoef * normal()
+    @node(verbose=verbose)
+    def B(A=A):
+        # print 'B computing'
+        return A + normcoef * normal()
 
 @data
 @parameter(verbose=verbose)
 def C(value = 0., B=B):
-   if B<0.:
-       return -np.Inf
-   else:
-       return 0.
-       
+    if B<0.:
+         return -np.Inf
+    else:
+         return 0.
+         
 L = C._logp
 C.logp
 acc = True
@@ -48,35 +50,53 @@ for i in range(1000):
     
     # Check the argument values
     L.refresh_argument_values()    
-    assert_equal(L.argument_values['B'], B.value)
-    assert_equal(L.ultimate_arg_values[0], B.value)
+    assert(L.argument_values['B'] is B.value)
+    assert(L.ultimate_arg_values[0] is B.value)
     
     # Accept or reject value
     acc = True
     try:
         C.logp
-        print 'Accepting'
-    except ZeroProbability:
-        print 'Rejecting'
-        acc = False
-        A.value = A.last_value
-        print [A.value, A.last_value], B._value.cached_args
-        print [B.value, last_B_value], B._value.cached_values 
-        assert_equal(B.value, last_B_value)
         
-    # print L.get()
+        # Make sure A's value and last value occupy correct places in B's
+        # cached arguments
+        cur_frame = B._value.frame_queue[1]
+        assert(B._value.cached_args[cur_frame] is A.value)
+        assert(B._value.cached_args[1-cur_frame] is A.last_value)
+        assert(B._value.ultimate_arg_values[0] is A.value)
+
+    except ZeroProbability:
+    
+        acc = False
+        
+        # Reject jump
+        A.value = A.last_value
+        
+        # Make sure A's value and last value occupy correct places in B's
+        # cached arguments        
+        cur_frame = B._value.frame_queue[1]
+        assert(B._value.cached_args[1-cur_frame] is A.value)
+        assert(B._value.cached_args[cur_frame] is A.last_value)        
+        assert(B._value.ultimate_arg_values[0] is A.last_value)
+        assert(B.value is last_B_value)
+    
+    
+    # Check C's cache
+    cur_frame = L.frame_queue[1]
     
     # If jump was accepted:
     if acc:
-        # Check the head of the cache
-        assert_equal(L.cached_args[0], B.value)
-        assert_equal(L.cached_values[0], C.logp)
+        # B's value should be at the head of C's cache
+        assert(L.cached_args[cur_frame*2] is B.value)
+        assert(L.cached_values[cur_frame] is C.logp)
         
     # If jump was rejected:        
     else:
         
-        # Should currently be using the second entry in the cache
-        assert_equal(L.cached_args[2], B.value)
-        assert_equal(L.cached_values[1], C.logp)
+        # B's value should be at the back of C's cache.
+        assert(L.cached_args[(1-cur_frame)*2] is B.value)
+        assert(L.cached_values[1-cur_frame] is C.logp)
+        
+    assert(L.ultimate_arg_values[0] is B.value)
         
 

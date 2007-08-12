@@ -78,6 +78,8 @@ cdef class LazyFunction:
     cdef public object cached_args, cached_values
     cdef void **cached_arg_p
     
+    cdef public object frame_queue
+    
     def __init__(self, fun, arguments, cache_depth):
         
         cdef object arg, name
@@ -93,6 +95,10 @@ cdef class LazyFunction:
         self.variable_args = {}
         # dictionary containing the other arguments.
         self.other_args = {}
+        
+        self.frame_queue = []
+        for i in xrange(self.cache_depth):
+            self.frame_queue.append(i)
         
         # The ultimate arguments are the arguments, plus the contents of.
         # any argument that is a container.
@@ -186,6 +192,7 @@ cdef class LazyFunction:
         """
         cdef int i, j, mismatch
         
+        
         if self.cache_depth > 0:
             
             for i from 0 <= i < self.cache_depth:
@@ -201,6 +208,13 @@ cdef class LazyFunction:
                         break
                     
                 if mismatch == 0:
+                    # Find i in the frame queue and move it to the end, so the current
+                    # value gets overwritten late.
+                    for j from 0 <= j < self.cache_depth:
+                        if self.frame_queue[j] == i:
+                            break
+                    self.frame_queue.pop(j)
+                    self.frame_queue.append(i)
                     return i        
 
         return -1;
@@ -237,23 +251,32 @@ cdef class LazyFunction:
         Stick self's value in the cache, and also the values of all self's
         ultimate arguments for future caching.
         """
-        cdef int i, j
+        cdef int i, j, cur_frame
+        
+        # print 'cache called'
         
         if self.cache_depth > 0:
             
-            self.cached_values.pop()
-            self.cached_values.insert(0,value)
-        
-            # Push back
-            for i from 0 <= i < self.cache_depth - 1:
-                for j from 0 <= j < self.N_args:
-                    # It SHOULD be safe to pointerize this... try it eventually.
-                    # self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
-                    self.cached_args[(i+1) * self.N_args + j] = self.cached_args[i * self.N_args + j]
+            cur_frame = self.frame_queue.pop(0)
+            # print cur_frame
+            # print self.frame_queue
+            self.frame_queue.append(cur_frame)
+            # print self.frame_queue
+            
+            # self.cached_values.pop()
+            # self.cached_values.insert(0,value)
+            #         
+            # # Push back
+            # for i from 0 <= i < self.cache_depth - 1:
+            #     for j from 0 <= j < self.N_args:
+            #         # It SHOULD be safe to pointerize this... try it eventually.
+            #         # self.cached_arg_p[(i+1) * self.N_args + j] = self.cached_arg_p[i * self.N_args + j]
+            #         self.cached_args[(i+1) * self.N_args + j] = self.cached_args[i * self.N_args + j]
         
             # Store new
+            self.cached_values[cur_frame] = value
             for j from 0 <= j < self.N_args:
-                self.cached_args[j] = self.ultimate_arg_values[j]
+                self.cached_args[cur_frame * self.N_args + j] = self.ultimate_arg_values[j]
     
     def force_compute(self):
         """
@@ -271,6 +294,7 @@ cdef class LazyFunction:
         value.
         """
         cdef int match_index
+        # print 'get called'
         
         self.refresh_argument_values()
         match_index = self.check_argument_caches()
