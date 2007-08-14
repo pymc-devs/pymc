@@ -5,7 +5,7 @@ from utils import extend_children, _push
 from PyMCBase import ZeroProbability
 import numpy as np
 
-def _extract(__func__, kwds, keys): 
+def _extract(__func__, kwds, keys, classname): 
     """
     Used by decorators parameter and node to inspect declarations
     """
@@ -17,6 +17,8 @@ def _extract(__func__, kwds, keys):
     parents = {}
     
     # Define global tracing function (I assume this is for debugging??)
+    # No, it's to inspect the arguments the function is expecting. This way
+    # we don't have to parse.
     def probeFunc(frame, event, arg):
         if event == 'return':
             locals = frame.f_locals
@@ -26,7 +28,7 @@ def _extract(__func__, kwds, keys):
 
     sys.settrace(probeFunc)
     
-    # Get the __func__tions logp and random (complete interface).
+    # Get the functions logp and random (complete interface).
     try:
         __func__()
     except:
@@ -46,6 +48,19 @@ def _extract(__func__, kwds, keys):
 
     # Build parents dictionary by parsing the __func__tion's arguments.
     (args, varargs, varkw, defaults) = inspect.getargspec(__func__)
+    
+    if defaults is None:
+        defaults = ()
+        
+    arg_deficit = (len(args) - ('value' in args)) - len(defaults)
+    if arg_deficit > 0:
+        err_str =  classname + ' ' + __func__.__name__ + ': no parent provided for the following labels:'
+        for i in range(arg_deficit):
+            err_str +=  " " + args[i + ('value' in args)]
+            if i < arg_deficit-1:
+                err_str += ','
+        raise ValueError, err_str
+    
     try:
         parents.update(dict(zip(args[-len(defaults):], defaults)))
 
@@ -57,7 +72,7 @@ def _extract(__func__, kwds, keys):
         value = parents.pop('value')
     else:
         value = None
-        
+                
     return (value, parents)
 
 def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, **kwds):
@@ -109,7 +124,7 @@ def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, 
         __class__ = DiscreteParameter
     
     def instantiate_p(__func__):
-        value, parents = _extract(__func__, kwds, keys)
+        value, parents = _extract(__func__, kwds, keys, 'Parameter')
         return __class__(value=value, parents=parents, **kwds)  
             
     keys = ['logp','random','rseed']
@@ -154,7 +169,7 @@ def potential(__func__ = None, **kwds):
     :SeeAlso: Node, Parameter, Potential, parameter, data, Model, Container
     """
     def instantiate_pot(__func__):
-        junk, parents = _extract(__func__, kwds, keys)
+        junk, parents = _extract(__func__, kwds, keys, 'Potential')
         return Potential(parents=parents, **kwds)
 
     keys = ['logp']
@@ -185,7 +200,7 @@ def node(__func__ = None, **kwds):
     :SeeAlso: Node, Parameter, parameter, data, Model, Container
     """
     def instantiate_n(__func__):
-        junk, parents = _extract(__func__, kwds, keys)
+        junk, parents = _extract(__func__, kwds, keys, 'Node')
         return Node(parents=parents, **kwds)
         
     keys = ['eval']

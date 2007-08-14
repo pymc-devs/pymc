@@ -102,7 +102,6 @@ class Potential(PyMCBase):
             raise ZeroProbability, self.zero_logp_error_msg
 
         return _logp
-
         
     def set_logp(self,value):      
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
@@ -331,7 +330,7 @@ class Parameter(Variable):
                 
             # Otherwise leave initial value at None and warn.
             else:
-                print 'Warning, parameter ' + name + "'s value initialized to None; no initial value or random method provided."
+                raise ValueError, 'Parameter ' + name + "'s value initialized to None; no initial value or random method provided."
 
         PyMCBase.__init__(  self, 
                             doc=doc, 
