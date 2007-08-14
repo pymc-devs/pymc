@@ -121,7 +121,7 @@ cdef class LazyFunction:
                 
                 self.argument_values[name] = arg.value
                 self.ultimate_args.append(arg)
-                self.ultimate_keys.append(arg)                
+                self.ultimate_keys.append(name)                
                 
                 for obj in arg.variables:
                     self.ultimate_args.append(obj)

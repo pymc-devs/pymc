@@ -71,7 +71,7 @@ class Container(ContainerBase):
         """
         if not hasattr(iterable,'__iter__'):
             raise ValueError, 'PyMC object containers can only be made from iterables.'
-        self.value = ValueContainer(iterable)
+        self._value = ValueContainer(iterable)
         self.all_objects = set()
         self.variables = set()
         self.nodes = set()
@@ -87,7 +87,7 @@ class Container(ContainerBase):
             if hasattr(item,'__getitem__'):
 
                 new_container = Container(item)
-                self.value[i] = new_container
+                self._value[i] = new_container
 
                 self.variables.update(new_container.variables)
                 self.parameters.update(new_container.parameters)
@@ -111,10 +111,22 @@ class Container(ContainerBase):
                     self.potentials.add(item)
                 elif isinstance(item, SamplingMethod):
                     self.sampling_methods.add(item)
+                    
+        self.pymc_objects = self.potentials | self.variables
             
 
-        def get_value(self):
-            return self.value
+    def get_value(self):
+        return self._value
+        
+    def __getitem__(self,index):
+        return self._value._value[index]
+
+    # Do we want to give containers a setitem? Note this requires some bookkeeping.
+    # def __setitem__(self, index, value):
+    #     self._value.__setitem__(index, value)
+        
+    value = property(fget = get_value)
+
 
 
 """
@@ -134,21 +146,23 @@ class ValueContainer(object):
         else:
             return item
 
-    def __setitem__(self, index, value):
-        self._value.__setitem__(index, value)
+    # Do we want to make containers' value attributes settable?
+    # def __setitem__(self, index, value):
+    #     self._value.__setitem__(index, value)
+
 
     # These aren't working yet.
-    def __getslice__(self, slice):
-        val = []
-        j=0
-        for i in xrange(i.start, i.stop, i.step):
-            val[j] = self.__getitem__(i)
-            j += 1 
-
-        return val
-
-    def __setslice__(self, slice, value):
-        return self._value.__setslice__(slice, value)
+    # def __getslice__(self, slice):
+    #     val = []
+    #     j=0
+    #     for i in xrange(i.start, i.stop, i.step):
+    #         val[j] = self.__getitem__(i)
+    #         j += 1 
+    # 
+    #     return val
+    # 
+    # def __setslice__(self, slice, value):
+    #     return self._value.__setslice__(slice, value)
 
 
 class ArraySubclassContainer(Container, ndarray):
