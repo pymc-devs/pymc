@@ -5,6 +5,8 @@ import PyMC2.database
 try:
     import pygtk
     pygtk.require("2.0")
+    # Note for OS X: You can get pygtk from the MacPort py-gtk (Python 2.4) or py25-gtk (Python 2.5)...
+    # but the MacPorts py-gobject is buggy. I reported it on their trac page.
 except:
     pass
 try:
