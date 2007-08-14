@@ -11,7 +11,7 @@ from SamplingMethods import SamplingMethod, assign_method
 from Matplot import Plotter, show
 import database
 from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
-from Container import Container
+from Container import ContainerBase
 from utils import extend_children
 import gc, sys,os
 from copy import copy
@@ -110,7 +110,7 @@ class Model(object):
         for name, item in self.input_dict.iteritems():
             if  isinstance(item, PyMCBase) \
                 or isinstance(item, SamplingMethod) \
-                or isinstance(item, Container):
+                or isinstance(item, ContainerBase):
                 self.__dict__[name] = item
                 
             # Allocate to appropriate set
@@ -129,7 +129,7 @@ class Model(object):
           - containers
         """
         # If a dictionary is passed in, open it up.
-        if isinstance(item, Container):
+        if isinstance(item, ContainerBase):
             self.containers.add(item)
             self.parameters.update(item.parameters)
             self.data.update(item.data)
@@ -301,7 +301,7 @@ class Model(object):
             if consts:
                 for pymc_object in subgraph.pymc_objects:
                     for key in pymc_object.parents.iterkeys():
-                        if not isinstance(pymc_object.parents[key], Variable) and not isinstance(pymc_object.parents[key], Container):
+                        if not isinstance(pymc_object.parents[key], Variable) and not isinstance(pymc_object.parents[key], ContainerBase):
                             parent_name = pymc_object.parents[key].__str__()
                             subgraph.dot_object.add_node(pydot.Node(name = parent_name, shape = 'box', style='filled'))
                             new_edge = pydot.Edge(  src = parent_name, 
@@ -345,7 +345,7 @@ class Model(object):
                 # If a parent is a container, unpack it.
                 # Draw edges between child and all elements of container (if consts=True)
                 # or all variables in container (if consts = False).
-                if isinstance(pymc_object.parents[key], Container):
+                if isinstance(pymc_object.parents[key], ContainerBase):
                     for obj in pymc_object.parents[key].all_objects:
                         add_edge = True
                         if isinstance(obj, Variable):
@@ -497,7 +497,7 @@ class Sampler(Model):
         self.sampling_methods = set()
 
         for item in self.input_dict.iteritems():
-            if isinstance(item[1], Container):
+            if isinstance(item[1], ContainerBase):
                 self.__dict__[item[0]] = item[1]
                 self.sampling_methods.update(item[1].sampling_methods)
 

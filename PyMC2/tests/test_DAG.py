@@ -1,4 +1,6 @@
 from PyMC2 import *
+from numpy.testing import *
+
 
 def mymodel():
     
@@ -56,7 +58,11 @@ def mymodel():
         return 0.
     
     return locals()
-    
-A = Model(mymodel())
 
-A.DAG(format='pdf', prog='dot', consts = True, legend=True)
+class test_DAG(NumpyTestCase):
+    def check(self):
+        A = Model(mymodel())
+        A.DAG(format='raw', prog='dot', consts = True, legend=True)
+        
+if __name__ == '__main__':
+    NumpyTest().run()

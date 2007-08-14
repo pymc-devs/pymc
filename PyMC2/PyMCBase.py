@@ -156,9 +156,18 @@ class Variable(PyMCBase):
     pass
 
 class ContainerBase(object):
+
     """
     The abstract base class from which Container inherits.
     
     :SeeAlso: Container
     """
-    pass
+    def __init__(self):
+        self.all_objects = set()
+        self.variables = set()
+        self.nodes = set()
+        self.parameters = set()
+        self.potentials = set()
+        self.data = set()
+        self.sampling_methods = set()
+    
