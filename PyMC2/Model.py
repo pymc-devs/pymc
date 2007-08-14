@@ -232,7 +232,7 @@ class Model(object):
         return loglikes
 
 
-    def DAG(self, format='raw', prog='dot', path=None, consts=True):
+    def DAG(self, format='raw', prog='dot', path=None, consts=True, legend=True):
         """
         DAG(format='raw', path=None, consts=True)
 
@@ -375,6 +375,16 @@ class Model(object):
         
                     self.dot_object.add_edge(new_edge)                            
         
+        # Add legend if requested
+        if legend:
+            legend = pydot.Cluster(graph_name = 'Legend', label = 'Legend')
+            legend.add_node(pydot.Node(name='data', style='filled'))
+            legend.add_node(pydot.Node(name='parameters'))
+            legend.add_node(pydot.Node(name='nodes', shape='invtriangle'))
+            legend.add_node(pydot.Node(name='potentials', shape='tripleoctagon'))
+            if consts:
+                legend.add_node(pydot.Node(name='constants', style='filled', shape='box'))
+            self.dot_object.add_subgraph(legend)
 
         # Draw the graph
         if not path == None:

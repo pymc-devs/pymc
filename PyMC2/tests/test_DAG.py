@@ -59,4 +59,4 @@ def mymodel():
     
 A = Model(mymodel())
 
-A.DAG(format='pdf', prog='dot', consts = True)
+A.DAG(format='pdf', prog='dot', consts = True, legend=True)
