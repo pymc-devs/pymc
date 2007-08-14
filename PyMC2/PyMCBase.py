@@ -158,9 +158,9 @@ class Variable(PyMCBase):
 class ContainerBase(object):
 
     """
-    The abstract base class from which Container inherits.
+    The abstract base class from which containers inherit.
     
-    :SeeAlso: Container
+    :SeeAlso: Container, ArrayContainer, ListDictContainer, SetContainer
     """
     def __init__(self):
         self.all_objects = set()
