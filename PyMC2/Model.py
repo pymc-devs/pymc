@@ -12,7 +12,7 @@ from Matplot import Plotter, show
 import database
 from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
 from Container import ContainerBase
-from utils import extend_children
+from utils import extend_children, extend_parents
 import gc, sys,os
 from copy import copy
 from threading import Thread
@@ -232,9 +232,17 @@ class Model(object):
         return loglikes
 
 
-    def DAG(self, format='raw', prog='dot', path=None, consts=True, legend=True):
+    def DAG(self, format='raw', prog='dot', path=None, consts=False, legend=True, 
+            collapse_nodes = False, collapse_potentials = False, collapse_containers = False):
         """
-        DAG(format='raw', path=None, consts=True)
+        M.DAG(  format='raw', 
+                prog='dot', 
+                path=None, 
+                consts=False, 
+                legend=True, 
+                collapse_nodes = False, 
+                collapse_potentials = False, 
+                collapse_containers = False)
 
         Draw the directed acyclic graph for this model and writes it to path.
         If self.__name__ is defined and path is None, the output file is
@@ -256,6 +264,7 @@ class Model(object):
         import pydot
 
         # self.dot_object = pydot.Dot()
+        # TODO: implement collapse_containers.
 
         pydot_nodes = {}
         pydot_subgraphs = {}
@@ -288,13 +297,17 @@ class Model(object):
 
             # Nodes are downward-pointing triangles
             for node in subgraph.nodes:
-                pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
-                subgraph.dot_object.add_node(pydot_nodes[node])
+                if not collapse_nodes:
+                    pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
+                    subgraph.dot_object.add_node(pydot_nodes[node])
+                else:
+                    pass
                 
             # Potentials are octagons outlined three times
             for potential in subgraph.potentials:
-                pydot_nodes[node] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
-                subgraph.dot_object.add_node(pydot_nodes[node])
+                if not collapse_potentials:
+                    pydot_nodes[node] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
+                    subgraph.dot_object.add_node(pydot_nodes[node])
 
             # Create nodes for constant parents if applicable and connect them.
             # Constants are filled boxes.
@@ -337,16 +350,53 @@ class Model(object):
             
         self.dot_object = U.dot_object
         
+        # If the user has requested potentials be collapsed, draw in the undirected edges.
+        # TODO: Unpack container parents here.
+        if collapse_potentials:
+            
+            for pot in self.potentials:
+                pot_parents = pot.parents.values()
+                
+                for i in xrange(len(pot_parents)-1):
+                    p1 = pot_parents[i]
+                    # print p1, p1.__name__
+                    if isinstance(p1, Variable):
+                        
+                        for j in xrange(i+1,len(pot_parents)):
+                            # print p2, p2.__name__
+                            p2 = pot_parents[j]
+                            if isinstance(p2, Variable) and not p2 is p1:
+                                # print p1.__name__, p2.__name__
+                                new_edge = pydot.Edge(src = p2.__name__, dst = p1.__name__, label=pot.__name__, arrowhead='none')
+                                self.dot_object.add_edge(new_edge)
                 
         # Create edges from parent-child relationships between PyMC objects.
-        for pymc_object in self.pymc_objects:
-            for key in pymc_object.parents.iterkeys():
+        
+        full_iterset = self.pymc_objects
+        if collapse_potentials:
+            full_iterset -= self.potentials
+        if collapse_nodes:
+            full_iterset -= self.nodes
+        
+        for pymc_object in full_iterset:
+            
+            parent_dict = pymc_object.parents
+            # If collapse_nodes is true, augment the parents 
+            # with the parents of node parents.
+            # TODO: Implement this properly.
+            if collapse_nodes:
+                A = dummy()
+                A.parents = pymc_object.parents
+                extend_parents(A)
+                parent_dict = A.parents
+            
+            for key in parent_dict.iterkeys():
                 
                 # If a parent is a container, unpack it.
                 # Draw edges between child and all elements of container (if consts=True)
                 # or all variables in container (if consts = False).
-                if isinstance(pymc_object.parents[key], ContainerBase):
-                    for obj in pymc_object.parents[key].all_objects:
+                if isinstance(parent_dict[key], ContainerBase):
+                    for obj in parent_dict[key].all_objects:
                         add_edge = True
                         if isinstance(obj, Variable):
                             parent_name = obj.__name__
@@ -367,12 +417,12 @@ class Model(object):
                 
                 # If a parent is a variable, draw edge to it.
                 # Note constant parents already are connected.
-                elif isinstance(pymc_object.parents[key], Variable):
+                elif isinstance(parent_dict[key], Variable):
                     parent_name = pymc_object.parents[key].__name__
                     new_edge = pydot.Edge(  src = parent_name, 
                                             dst = pymc_object.__name__, 
                                             label = key)
-        
+    
                     self.dot_object.add_edge(new_edge)                            
         
         # Add legend if requested

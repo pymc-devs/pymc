@@ -11,8 +11,6 @@ from PyMCBase import ZeroProbability, PyMCBase, Variable
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
 
-# TODO: Actually use _asf
-
 __all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'SamplingMethod', 'assign_method', 
 'pick_best_methods']
 

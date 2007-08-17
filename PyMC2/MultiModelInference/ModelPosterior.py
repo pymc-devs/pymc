@@ -18,9 +18,8 @@ def weight(models, iter, priors = None):
     weight(models = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
 
     Returns a dictionary keyed by model of the model posterior probabilities.
-
-    Need to attach an MCSE value to the return values!
     """
+    # TODO: Need to attach an MCSE value to the return values!
     loglikes = {}
     i=0
     for model in models:

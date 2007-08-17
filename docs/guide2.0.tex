@@ -1,4 +1,3 @@
-% TODO: Use Python's documentation tools?
 %
 %  PyMC User's Guide
 %
@@ -14,6 +13,7 @@
 \usepackage{fullpage}
 \usepackage{amsmath}
 \usepackage{epsfig}
+\usepackage{pdfsync} 
 
 % Flexible citation syntax
 \usepackage{natbib}
@@ -58,15 +58,26 @@ Installation and tutorial}
 \tableofcontents
 
 \chapter{Introduction} %(fold)
+\label{chap:intro} 
 \input{README}
 
 \chapter{Installation} %(fold)
+\label{chap:install} 
 \input{INSTALL}
 
 \chapter{Markov chain Monte Carlo} %(fold)
+\label{chap:MCMC} 
 \input{theory}
 
-\chapter{Saving and managing sampling results}
+\chapter{Model building in PyMC} %(fold)
+\label{chap:modelbuilding} 
+\input{modelbuilding}
+
+\chapter{Model fitting in PyMC} %(fold)
+\label{chap:modelfitting} 
+
+\chapter{Saving and managing sampling results} %(fold)
+\label{chap:database} 
 \input{database}
 
 \bibliographystyle{plainnat}

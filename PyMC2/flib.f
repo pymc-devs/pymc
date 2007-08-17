@@ -1463,7 +1463,6 @@ c multiply dtau by d
 
 c Vectorized multivariate normal log-likelihood function 
 c CREATED 12/06 DH.     
-c TODO: link BLAS/LAPACK, eliminate explicit transposition
 
 cf2py double precision dimension(k,n),intent(in) :: x
 cf2py double precision dimension(k,nmu),intent(in) :: mu
