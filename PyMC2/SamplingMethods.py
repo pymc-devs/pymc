@@ -10,6 +10,8 @@ from PyMCBase import ZeroProbability, PyMCBase, Variable
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
+# TODO: Make the competences attributes of the sampling methods, the code will be cleaner.
+# TODO: Test cases for binary and discrete Metropolises.
 
 __all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'SamplingMethod', 'assign_method', 
 'pick_best_methods']
@@ -484,7 +486,7 @@ def MetroCompetence(parameter):
             return 0
 
 SamplingMethodRegistry[Metropolis] = MetroCompetence
-            
+
 
 class DiscreteMetropolis(Metropolis):
     """
@@ -619,6 +621,8 @@ SamplingMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
 
 class JointMetropolis(SamplingMethod):
     """
+    JointMetropolis will be superseded by AdaptiveMetropolis.
+    
     S = Joint(variables, epoch=1000, memory=10, delay=1000)
     
     Applies the Metropolis-Hastings algorithm to several parameters
@@ -686,11 +690,7 @@ class JointMetropolis(SamplingMethod):
                         Metropolis algorithm.
         
         tune():         sets _asf according to a heuristic.
-    
-    TODO: Make this round DiscreteParameters' values and assign Discrete
-    individual sampling methods to them, figure out what to do about binary
-    parameters.
-    
+        
     Also: don't start joint sampling until all parameters have mixed at
     least a little. Warn if another epoch of one-at-a-time sampling is
     required.

@@ -2,6 +2,8 @@
 Test interactive sampler
 """
 
+# TODO: Make real test case.
+
 from PyMC2 import Sampler
 from PyMC2.examples import DisasterModel
 

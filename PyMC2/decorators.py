@@ -1,9 +1,6 @@
 #-------------------------------------------------------------
 # Decorators
 #-------------------------------------------------------------
-# TODO: Replace flat's with ravel's, and if possible avoid resize-ing (try to
-# avoid any memory allocation, in fact).
-# TODO: Write a random decorator accepting keyword arguments.
 
 import numpy as np
 from numpy import inf, random, sqrt

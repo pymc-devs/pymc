@@ -16,8 +16,9 @@ from utils import extend_children, extend_parents
 import gc, sys,os
 from copy import copy
 from threading import Thread
+from thread import interrupt_main
 
-GuiInterrupt = 'Computation halted'
+GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
 class Model(object):
@@ -264,7 +265,7 @@ class Model(object):
         import pydot
 
         # self.dot_object = pydot.Dot()
-        # TODO: implement collapse_containers.
+        # TODO: implement collapse_containers, collapse_nodes and collapse_potentials.
 
         pydot_nodes = {}
         pydot_subgraphs = {}
@@ -383,7 +384,6 @@ class Model(object):
             parent_dict = pymc_object.parents
             # If collapse_nodes is true, augment the parents 
             # with the parents of node parents.
-            # TODO: Implement this properly.
             if collapse_nodes:
                 A = dummy()
                 A.parents = pymc_object.parents
@@ -451,18 +451,18 @@ class Model(object):
 
     def status():
         doc = \
-        """Status of model. May be one of running, paused, halted or ready.
+        """Status of model. May be one of running, paused, halt or ready.
           - `running` : The model is currently sampling.
           - `paused` : The model has been interrupted during sampling. It is
             ready to be restarted by `continuesample`.
-          - `halted` : The model has been interrupted. It cannot be restarted.
+          - `halt` : The model has been interrupted. It cannot be restarted.
             If sample is called again, a new chain will be initiated.
           - `ready` : The model is ready to sample.
         """
         def fget(self):
             return self.__status
         def fset(self, value):
-            if value in ['running', 'paused', 'halted', 'ready']:
+            if value in ['running', 'paused', 'halt', 'ready']:
                 self.__status=value
             else:
                 raise AttributeError, value
@@ -534,7 +534,6 @@ class Model(object):
         F = file(fname, 'w')
         cPickle.dump(trace_dict, F)
         F.close()
-
 
 
 class Sampler(Model):
@@ -615,6 +614,27 @@ class Sampler(Model):
         # Assign Trace instances to tallyable objects. 
         self.db.connect(self)
         
+    def _assign_samplingmethod(self):
+        """
+        Make sure every parameter has a sampling method. If not, 
+        assign a sampling method from the registry.
+        """
+
+        for parameter in self.parameters:
+
+            # Is it a member of any SamplingMethod?
+            homeless = True
+            for sampling_method in self.sampling_methods:
+                if parameter in sampling_method.parameters:
+                    homeless = False
+                    break
+
+            # If not, make it a new SamplingMethod using the registry
+            if homeless:
+                new_method = assign_method(parameter)
+                setattr(new_method, '_model', self)
+                self.sampling_methods.add(new_method)
+    
         
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
@@ -646,125 +666,114 @@ class Sampler(Model):
         # Loop
         self._current_iter = 0
         self._loop()
-
-    def interactive_sample(self, *args, **kwds):
-        # LikelihoodErrors seem to be ending up in the listener
-        # thread somehow. I seem to remember something weird about that in the threading
-        # documentation? -AP
-        self._thread = Thread(target=self.sample, args=args, kwargs=kwds)
-        self._thread.start()
-        self.interactive_prompt()
-
-    def interactive_continue(self):
-        # Restarts thread in interactive mode
         
-        self._thread = Thread(target=self._loop)
-        self._thread.start()
+    def _loop(self):
+        # Set status flag
+        self.status='running'
+
+        try:
+            while self._current_iter < self._iter and not self.status == 'halt':
+                if self.status == 'paused':
+                    print 'Paused'
+                    return None
+
+                i = self._current_iter
+
+                if i == self._burn and self.verbose>0: 
+                    print 'Burn-in interval complete'
+
+                # Tune at interval
+                if i and not (i % self._tune_interval) and self._tuning:
+                    self.tune()
+
+                # Tell all the sampling methods to take a step
+                for sampling_method in self.sampling_methods:
+
+                    # Step the sampling method
+                    sampling_method.step()
+
+                if not i % self._thin and i >= self._burn:
+                    self.tally()
+
+                if not i % 10000 and self.verbose > 0:
+                    print 'Iteration ', i, ' of ', self._iter
+                    # Uncommenting this causes errors in some models.
+                    # gc.collect()
+
+                self._current_iter += 1
+
+        except KeyboardInterrupt:
+            self.status='halt'
+            
+        if self.status == 'halt':
+            print 'Halting at \n Iteration ', i, ' of ', iter
+            self.halt_sampling()
+            
+        # Finalize
+        print 'Sampling finished normally.'
+        self.status = 'ready'
+        self.save_state()
+        self.db._finalize()
+        try:
+            # TODO: This should interrupt the main thread immediately, but it waits until 
+            # TODO: return is pressed before doing its thing. Bug report filed at python.org.
+            interrupt_main()
+        except KeyboardInterrupt:
+            pass
+
+    def halt_sampling(self):
+        for variable in self._variables_to_tally:
+           variable.trace.truncate(self._cur_trace_index)
         
     def tune(self):
-        
+        """
+        Tell all sampling methods to tune themselves.
+        """
+
         # Only tune during burn-in
         if self._current_iter > self._burn:
             self._tuning = False
             return
-            
+
         if self.verbose > 1:
             print '\tTuning at iteration', self._current_iter
-        
+
         # Initialize counter for number of tuning parameters
         tuning_count = 0
-        
+
         for sampling_method in self.sampling_methods:
             # Tune sampling methods
             tuning_count += sampling_method.tune(verbose=self.verbose)
-        
+
         if not tuning_count:
             # If no sampling methods needed tuning, increment count
             self._tuned_count += 1
         else:
             # Otherwise re-initialize count
             self._tuned_count = 0
-        
+
         # 5 consecutive clean intervals removed tuning
         if self._tuned_count == 5:
             if self.verbose > 0: print 'Finished tuning'
             self._tuning = False
 
-    def _loop(self):
-        
-        # Set status flag
-        self.status='running'
-        
-        try:
-            while self._current_iter < self._iter:
-                if self.status == 'paused':
-                    raise Paused
 
-                i = self._current_iter
-                
-                if i == self._burn and self.verbose>0: 
-                    print 'Burn-in interval complete'
-                    
-                # Tune at interval
-                if i and not (i % self._tune_interval) and self._tuning:
-                    self.tune()
-                    
-                # Tell all the sampling methods to take a step
-                for sampling_method in self.sampling_methods:
-                        
-                    # Step the sampling method
-                    sampling_method.step()
-
-                if not i % self._thin and i >= self._burn:
-                    self.tally()
-                
-                if not i % 10000 and self.verbose > 0:
-                    print 'Iteration ', i, ' of ', self._iter
-                    # Uncommenting this causes errors in some models.
-                    # gc.collect()
-                    
-                self._current_iter += 1
-
-
-               #self.save_traces() Made obsolete by the pickle database.Right?
-        except Paused:
-           return None
-
-        except KeyboardInterrupt:
-            self.status='halted'
-            print '\n Iteration ', i, ' of ', iter
-            for variable in self._variables_to_tally:
-               variable.trace.truncate(self._cur_trace_index)
-            self.save_traces()
-
-
-        # Finalize
-        self.status='ready'
-        self.save_state()
-        self.db._finalize()
-        
-
-    def _assign_samplingmethod(self):
+    def interactive_sample(self, *args, **kwds):
         """
-        Make sure every parameter has a SamplingMethod. If not, 
-        assign the default SM.
+        Samples in interactive mode. Main thread of control stays in this function.
         """
+        self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
+        self._sampling_thread.start()
+        self.interactive_prompt()
 
-        for parameter in self.parameters:
-
-            # Is it a member of any SamplingMethod?
-            homeless = True
-            for sampling_method in self.sampling_methods:
-                if parameter in sampling_method.parameters:
-                    homeless = False
-                    break
-
-            # If not, make it a new SamplingMethod using the registry
-            if homeless:
-                new_method = assign_method(parameter)
-                setattr(new_method, '_model', self)
-                self.sampling_methods.add(new_method)
-
+    def interactive_continue(self):
+        """
+        Restarts thread in interactive mode
+        """
+        self._sampling_thread = Thread(target=self._loop)
+        self._sampling_thread.start()
+        self.interactive_prompt()
+        
     def interactive_prompt(self):
         """
         Drive the sampler from the prompt.
@@ -772,35 +781,38 @@ class Sampler(Model):
         Commands:
           i -- print current iteration index
           p -- pause
-          c -- continue
           q -- quit
         """
         print self.interactive_prompt.__doc__, '\n'
-        while True:
-            try:
-                sys.stdout.write('PyMC> ')
-                cmd = raw_input()
-                if cmd == 'i':
-                    print 'Current iteration: ', self._current_iter
-                elif cmd == 'p':
-                    self.status = 'paused'
-                    print self.status
-                elif cmd == 'c':
-                    self.interactive_continue()
-                    print 'Restarted'
-                elif cmd == 'q':
-                    print 'Exiting interactive prompt...'
-                    break
-                else:
-                    print 'Unknown command'
-                    print self.interactive_prompt.__doc__
-            except KeyboardInterrupt:
-                print 'Exiting interactive prompt...'
-                break
+        try:
+            while self.status in ['running', 'paused']:
+                    # sys.stdout.write('PyMC> ')
+                    cmd = raw_input('PyMC> ')
+                    if cmd == 'i':
+                        print 'Current iteration: ', self._current_iter
+                    elif cmd == 'p':
+                        self.status = 'paused'
+                        break
+                    elif cmd == 'q':
+                        self.status = 'halt'
+                        break
+                    else:
+                        print 'Unknown command'
+                        print self.interactive_prompt.__doc__
+        except KeyboardInterrupt:
+            print 'Exception caught'
+            if not self.status == 'ready':
+                self.status = 'halt'              
+
+        print 'Exiting interactive prompt...'
+        if self.status == 'paused':
+            print 'Call interactive_continue method to continue, or call halt_sampling method to truncate traces and stop.'
 
     def get_state(self):
-        """Return the sampler and sampling methods current state in order to
-        restart sampling at a later time."""
+        """
+        Return the sampler and sampling methods current state in order to
+        restart sampling at a later time.
+        """
         state = dict(sampler={}, sampling_methods={})
         # The state of the sampler itself.
         for s in self._state:
@@ -817,11 +829,14 @@ class Sampler(Model):
         return state
 
     def save_state(self):
-        """Tell the database to save the current state of the sampler."""
+        """
+        Tell the database to save the current state of the sampler.
+        """
         self.db.savestate(self.get_state())
 
     def restore_state(self):
-        """Restore the state of the sampler and of the sampling methods to
+        """
+        Restore the state of the sampler and of the sampling methods to
         the state stored in the database.
         """
         state = self.db.getstate()

@@ -175,6 +175,8 @@ class AdaptativeMetropolis(SamplingMethod):
                 
         # 4. Update each parameter individually.
         # TODO: test inplace jump, ie parameter.value += jump
+        # This won't work - in-place parameter value updates aren't allowed.
+
         for parameter in self.parameters:
             jump = reshape(arrayjump[self._slices[parameter]],shape(parameter.value))
             if self.isdiscrete[parameter]:

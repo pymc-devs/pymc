@@ -28,12 +28,12 @@ class test_model_ave(NumpyTestCase):
         # Exponentially varying rate model
         M3 = Model(model_3)
         
-        print 'Docstring of model 1:'
-        print model_1.__doc__
-        print 'Docstring of model 2:'
-        print model_2.__doc__
-        print 'Docstring of model 3:'
-        print model_3.__doc__
+        # print 'Docstring of model 1:'
+        # print model_1.__doc__
+        # print 'Docstring of model 2:'
+        # print model_2.__doc__
+        # print 'Docstring of model 3:'
+        # print model_3.__doc__
         
         
         posterior = weight([M1,M2,M3],10000)

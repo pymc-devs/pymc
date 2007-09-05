@@ -7,9 +7,9 @@ __modules__ = [ 'test_Sampler',
                 'test_database',
                 'test_distributions',
                 'test_container',
-                'test_utils',
-                'test_normal_approximation',
-                'test_instantiation'
+                'test_instantiation',
+                'test_LazyFunction',
+                'test_DAG'
                 #'test_interactive'
                 ]
 
