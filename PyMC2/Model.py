@@ -17,6 +17,7 @@ import gc, sys,os
 from copy import copy
 from threading import Thread
 from thread import interrupt_main
+from time import sleep
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -674,7 +675,7 @@ class Sampler(Model):
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
-                    print 'Paused'
+                    print 'Pausing at iteration ', self._current_iter, ' of ', self._iter
                     return None
 
                 i = self._current_iter
@@ -706,7 +707,6 @@ class Sampler(Model):
             self.status='halt'
             
         if self.status == 'halt':
-            print 'Halting at \n Iteration ', i, ' of ', iter
             self.halt_sampling()
             
         # Finalize
@@ -714,14 +714,12 @@ class Sampler(Model):
         self.status = 'ready'
         self.save_state()
         self.db._finalize()
-        try:
-            # TODO: This should interrupt the main thread immediately, but it waits until 
-            # TODO: return is pressed before doing its thing. Bug report filed at python.org.
-            interrupt_main()
-        except KeyboardInterrupt:
-            pass
+        # TODO: This should interrupt the main thread immediately, but it waits until 
+        # TODO: return is pressed before doing its thing. Bug report filed at python.org.
+        interrupt_main()
 
     def halt_sampling(self):
+        print 'Halting at iteration ', self._current_iter, ' of ', self._iter
         for variable in self._variables_to_tally:
            variable.trace.truncate(self._cur_trace_index)
         
@@ -800,13 +798,20 @@ class Sampler(Model):
                         print 'Unknown command'
                         print self.interactive_prompt.__doc__
         except KeyboardInterrupt:
-            print 'Exception caught'
             if not self.status == 'ready':
-                self.status = 'halt'              
+                self.status = 'halt'      
+                
+        if not self.status == 'ready':        
+            print 'Waiting for current iteration to finish...'
+            try:
+                while self._sampling_thread.isAlive():
+                    sleep(.1)
+            except:
+                pass
 
-        print 'Exiting interactive prompt...'
-        if self.status == 'paused':
-            print 'Call interactive_continue method to continue, or call halt_sampling method to truncate traces and stop.'
+            print 'Exiting interactive prompt...'
+            if self.status == 'paused':
+                print 'Call interactive_continue method to continue, or call halt_sampling method to truncate traces and stop.'
 
     def get_state(self):
         """
