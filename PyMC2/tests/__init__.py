@@ -9,7 +9,7 @@ __modules__ = [ 'test_Sampler',
                 'test_container',
                 'test_instantiation',
                 'test_LazyFunction',
-                'test_DAG'
+                'test_graph'
                 #'test_interactive'
                 ]
 

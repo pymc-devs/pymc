@@ -234,10 +234,10 @@ class Model(object):
         return loglikes
 
 
-    def DAG(self, format='raw', prog='dot', path=None, consts=False, legend=True, 
+    def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False, 
             collapse_nodes = False, collapse_potentials = False, collapse_containers = False):
         """
-        M.DAG(  format='raw', 
+        M.graph(format='raw', 
                 prog='dot', 
                 path=None, 
                 consts=False, 
@@ -259,8 +259,17 @@ class Model(object):
         
         If consts is True, constant parents are included in the graph; 
         otherwise they're not.
+        
+        If collapse_nodes is True, Nodes (variables that are determined by their
+        parents) are made implicit.
+        
+        If collapse_containers is True, containers are shown as single graph nodes.
+        
+        If collapse_potentials is True, potentials are displayed as undirected edges.
 
         Returns the pydot 'dot' object for further user manipulation.
+        
+        NOTE: Will endow all containers with an innocuous 'parents' attribute.
         """
 
         import pydot
@@ -270,6 +279,8 @@ class Model(object):
 
         pydot_nodes = {}
         pydot_subgraphs = {}
+        obj_substitute_names = {}
+        shown_objects = set([])
         
         # Get ready to separate self's PyMC objects that are contained in containers.
         uncontained_params = self.parameters.copy()
@@ -277,62 +288,56 @@ class Model(object):
         uncontained_nodes = self.nodes.copy()
         uncontained_potentials = self.potentials.copy()
         
-        # Use this to make a graphviz cluster corresponding to each container, and to
-        # draw the model outside of any container.
-        def create_graph(subgraph):
-            
-            if not hasattr(subgraph, 'dot_object'):
-                subgraph.dot_object = pydot.Cluster(graph_name = subgraph.__name__, label = subgraph.__name__)
-                # subgraph.dot_object.graph_name = subgraph.dot_object.graph_name[8:]
-            
-            # Create the pydot nodes from pymc objects.
-            
-            # Data are filled ellipses
-            for datum in subgraph.data:
-                pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
-                subgraph.dot_object.add_node(pydot_nodes[datum])
-
-            # Parameters are open ellipses
-            for parameter in subgraph.parameters:
-                pydot_nodes[parameter] = pydot.Node(name=parameter.__name__)
-                subgraph.dot_object.add_node(pydot_nodes[parameter])
-
-            # Nodes are downward-pointing triangles
-            for node in subgraph.nodes:
-                if not collapse_nodes:
-                    pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
-                    subgraph.dot_object.add_node(pydot_nodes[node])
-                else:
-                    pass
-                
-            # Potentials are octagons outlined three times
-            for potential in subgraph.potentials:
-                if not collapse_potentials:
-                    pydot_nodes[node] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
-                    subgraph.dot_object.add_node(pydot_nodes[node])
-
-            # Create nodes for constant parents if applicable and connect them.
-            # Constants are filled boxes.
-            if consts:
-                for pymc_object in subgraph.pymc_objects:
-                    for key in pymc_object.parents.iterkeys():
-                        if not isinstance(pymc_object.parents[key], Variable) and not isinstance(pymc_object.parents[key], ContainerBase):
-                            parent_name = pymc_object.parents[key].__str__()
-                            subgraph.dot_object.add_node(pydot.Node(name = parent_name, shape = 'box', style='filled'))
-                            new_edge = pydot.Edge(  src = parent_name, 
-                                                    dst = pymc_object.__name__, 
-                                                    label = key)
-                            subgraph.dot_object.add_edge(new_edge)
-
-        # Create a grahpviz cluster for each container.
         for container in self.containers:
+            container.dot_object = pydot.Cluster(graph_name = container.__name__, label = container.__name__)
             uncontained_params -= container.parameters
             uncontained_nodes -= container.nodes
             uncontained_data -= container.data
             uncontained_potentials -= container.potentials
             
-            create_graph(container)
-        
+        # Use this to make a graphviz cluster corresponding to each container, and to
+        # draw the model outside of any container.
+        def create_graph(subgraph):
+            
+            # Data are filled ellipses
+            for datum in subgraph.data:
+                pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
+                subgraph.dot_object.add_node(pydot_nodes[datum])
+                shown_objects.add(datum)
+                obj_substitute_names[datum] = [datum.__name__]
+
+            # Parameters are open ellipses
+            for parameter in subgraph.parameters:
+                pydot_nodes[parameter] = pydot.Node(name=parameter.__name__)
+                subgraph.dot_object.add_node(pydot_nodes[parameter])
+                shown_objects.add(parameter)
+                obj_substitute_names[parameter] = [parameter.__name__]
+
+            # Nodes are downward-pointing triangles
+            for node in subgraph.nodes:
+
+                if not collapse_nodes:
+                    pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
+                    subgraph.dot_object.add_node(pydot_nodes[node])
+                    shown_objects.add(node)
+                    obj_substitute_names[node] = [node.__name__]
+
+                else:
+                    obj_substitute_names[node] = []
+                    for parent in node.parents.values():
+                        if isinstance(parent, Variable):
+                            obj_substitute_names[node].append(parent.__name__)
+                        elif consts:
+                            subgraph.dot_object.add_node(pydot.Node(name=parent.__str__(), style='filled'))
+                            obj_substitute_names[node].append(parent.__str__())
+                
+            # Potentials are octagons outlined three times
+            for potential in subgraph.potentials:
+                if not collapse_potentials:
+                    pydot_nodes[potential] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
+                    subgraph.dot_object.add_node(pydot_nodes[potential])
+                    shown_objects.add(potential)
+
         # A dummy class to hold the uncontained PyMC objects    
         class uncontained(object):
             def __init__(self):
@@ -342,90 +347,71 @@ class Model(object):
                 self.data = uncontained_data
                 self.potentials = uncontained_potentials
                 self.pymc_objects = self.parameters | self.nodes | self.data | self.potentials
-        
+
         # Make nodes for the uncontained objects
         U = uncontained()
         create_graph(U)
         
-        for container in self.containers:
-            U.dot_object.add_subgraph(container.dot_object)
+        
+        for container in self.containers: 
+
+            # Get containers ready to be graph nodes.
+            if collapse_containers:
+                shown_objects.add(container)
+                obj_substitute_names[container] = [container.__name__]
+                U.dot_object.add_node(pydot.Node(name=container.__name__,shape='box'))
+                for variable in container.variables:
+                    obj_substitute_names[variable] = [container.__name__]
+                container.parents = {}
+                for pymc_object in container.pymc_objects:
+                    for key in pymc_object.parents.keys():
+                        if not pymc_object.parents[key] in self.pymc_objects:
+                            container.parents[pymc_object.__name__ + '_' + key] = pymc_object.parents[key]
+
+            # Create a grahpviz cluster for each container.
+            else:
+                create_graph(container)
+                U.dot_object.add_subgraph(container.dot_object)
+                obj_substitute_names[container] = set()
+                for variable in container.variables:
+                    obj_substitute_names[container] |= set(obj_substitute_names[variable])
             
         self.dot_object = U.dot_object
         
         # If the user has requested potentials be collapsed, draw in the undirected edges.
         # TODO: Unpack container parents here.
         if collapse_potentials:
-            
             for pot in self.potentials:
-                pot_parents = pot.parents.values()
-                
-                for i in xrange(len(pot_parents)-1):
-                    p1 = pot_parents[i]
-                    # print p1, p1.__name__
-                    if isinstance(p1, Variable):
-                        
-                        for j in xrange(i+1,len(pot_parents)):
-                            # print p2, p2.__name__
-                            p2 = pot_parents[j]
-                            if isinstance(p2, Variable) and not p2 is p1:
-                                # print p1.__name__, p2.__name__
-                                new_edge = pydot.Edge(src = p2.__name__, dst = p1.__name__, label=pot.__name__, arrowhead='none')
-                                self.dot_object.add_edge(new_edge)
+                pot_parents = set()
+                for parent in pot.parents.values():
+                    if isinstance(parent, Variable):
+                        pot_parents |= set(obj_substitute_names[parent])
+                remaining_parents = copy(pot_parents)
+                for p1 in pot_parents:
+                    remaining_parents.discard(p1)
+                    for p2 in remaining_parents:
+                        new_edge = pydot.Edge(src = p2, dst = p1, label=pot.__name__, arrowhead='none')
+                        self.dot_object.add_edge(new_edge)
                 
         # Create edges from parent-child relationships between PyMC objects.
         
-        full_iterset = self.pymc_objects
-        if collapse_potentials:
-            full_iterset -= self.potentials
-        if collapse_nodes:
-            full_iterset -= self.nodes
-        
-        for pymc_object in full_iterset:
+        for pymc_object in self.pymc_objects | self.containers:
             
-            parent_dict = pymc_object.parents
-            # If collapse_nodes is true, augment the parents 
-            # with the parents of node parents.
-            if collapse_nodes:
-                A = dummy()
-                A.parents = pymc_object.parents
-                extend_parents(A)
-                parent_dict = A.parents
+            if pymc_object in shown_objects:
+                parent_dict = pymc_object.parents
             
-            for key in parent_dict.iterkeys():
+                for key in parent_dict.iterkeys():
                 
-                # If a parent is a container, unpack it.
-                # Draw edges between child and all elements of container (if consts=True)
-                # or all variables in container (if consts = False).
-                if isinstance(parent_dict[key], ContainerBase):
-                    for obj in parent_dict[key].all_objects:
-                        add_edge = True
-                        if isinstance(obj, Variable):
-                            parent_name = obj.__name__
-                        elif consts:
-                            parent_name = obj.__str__()
-                            container.dot_object.add_node(pydot.Node(name = parent_name, shape = 'box', style='filled'))
-                        else:
-                            add_edge = False
-                        
-                        if add_edge:                            
-                            
-                            new_edge = pydot.Edge(  src = parent_name, 
-                                                    dst = pymc_object.__name__, 
-                                                    label = key)
-                                                
-                            self.dot_object.add_edge(new_edge)
+                    # If a parent is a container, unpack it.
+                    # Draw edges between child and all elements of container (if consts=True)
+                    # or all variables in container (if consts = False).
+                    if isinstance(parent_dict[key], ContainerBase) or isinstance(parent_dict[key], Variable):
+                        for name in obj_substitute_names[parent_dict[key]]:
+                            self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
+                    elif consts:
+                        U.dot_object.add_node(pydot.Node(name=parent_dict[key].__str__(), style='filled'))
+                        self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=pymc_object.__name__, label=key))                        
                 
-                
-                # If a parent is a variable, draw edge to it.
-                # Note constant parents already are connected.
-                elif isinstance(parent_dict[key], Variable):
-                    parent_name = pymc_object.parents[key].__name__
-                    new_edge = pydot.Edge(  src = parent_name, 
-                                            dst = pymc_object.__name__, 
-                                            label = key)
-    
-                    self.dot_object.add_edge(new_edge)                            
-        
         # Add legend if requested
         if legend:
             legend = pydot.Cluster(graph_name = 'Legend', label = 'Legend')
