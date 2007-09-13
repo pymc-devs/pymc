@@ -1,4 +1,5 @@
 
+
       DOUBLE PRECISION FUNCTION combinationln(n,k)
 
 c Ln of the number of different combinations of n different things, taken k at a time. 
@@ -2232,36 +2233,40 @@ cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
       return
       END
       
-      
-      SUBROUTINE invlogit(x, ilx)
-
-c Returns the inverse-logit transform of x
-
-cf2py real intent(in) :: x
-cf2py real intent(out) :: ilx
-
-      REAL x, ilx
-      
-      ilx = 1.0 / (1.0 + exp(-1.0 * x))
-        
-      return
+c
+      subroutine logit(theta,n,ltheta)
+c Truncates theta to between 0 and 1.
+cf2py intent(hide) n
+cf2py intent(out) ltheta
+      DOUBLE PRECISION theta(n), ltheta(n)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      INTEGER n, i
+      do i=1,n
+          if (theta(i).LE.0) then
+              ltheta(i) = -inf
+          else if (theta(i).GE.1) then
+              ltheta(i) = inf
+          else
+              ltheta(i) = dlog(theta(i) / (1.0D0-theta(i)))
+          endif
+      end do
+      RETURN
       END
-      
-      
-      SUBROUTINE logit(x, lx)
-
-c Returns the logit transform of x
-
-cf2py real intent(in) :: x
-cf2py real intent(out) :: lx
-
-      REAL x, lx
-      
-      lx = log( x / (1.0 - x) ) 
-        
-      return
-      END
-
+c
+      subroutine invlogit(ltheta,n,theta)
+c Truncates theta to between 0 and 1.
+cf2py intent(hide) n
+cf2py intent(out) theta
+      DOUBLE PRECISION theta(n), ltheta(n)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      INTEGER n, i
+      do i=1,n
+          theta(i) = 1.0D0 / (1.0D0 + dexp(-ltheta(i)))
+      end do
+      RETURN
+      END      
 c
 
       subroutine dchdc_wrap(a,p,work,piv,info)

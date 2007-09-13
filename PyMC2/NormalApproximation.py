@@ -10,7 +10,7 @@ from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type, round_array
+from utils import msqrt, check_type, round_array, extend_children
 from copy import copy
 
 try:
@@ -142,16 +142,25 @@ class MAP(Model):
         self.param_indices = []
         self.param_types = []
         self.param_type_dict = {}
+        self.extended_children = {}
+        class dummy(object):
+            pass
+        d = dummy()    
         
         for i in xrange(len(self.param_list)):
 
             parameter = self.param_list[i]
             
+            # Extend children of parameter
+            d.children = copy(parameter.children)
+            extend_children(d)
+            self.extended_children[parameter] = d.children
+            
             # Check types of all parameters.
             type_now = check_type(parameter)[0]
             self.param_type_dict[parameter] = type_now
             
-            if not type_now is float or type_now is int:
+            if not type_now is float:
                 raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be numerical with " + \
                                     "floating-point dtype for NormalApproximation or MAP to be applied."
             
@@ -164,13 +173,13 @@ class MAP(Model):
             self.len += self.param_len[parameter]
             
             # Record indices that correspond to each parameter.
-            for j in range(len(parameter.value.ravel())):
+            for j in range(len(ravel(parameter.value))):
                 self.param_indices.append((parameter, j))
                 self.param_types.append(type_now)
                 
         self.data_len = 0
         for datum in self.data:
-            self.data_len += len(datum.value.ravel())
+            self.data_len += len(ravel(datum.value))
             
         self.eps = eps
         self.verbose = verbose
@@ -185,11 +194,11 @@ class MAP(Model):
         
         # Initialize NormApproxMu object.
         self.mu = NormApproxMu(self)
-
+        
     def printp(self, p):
         print p, self.logp
 
-    def fit(self, method = 'fmin', iterlim=1000, tol=.00001):
+    def fit(self, method = 'fmin', iterlim=1000, tol=.0001):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
         
@@ -340,7 +349,7 @@ class MAP(Model):
     def i_logp(self, index):
         p,i = self.param_indices[index]
         try:
-            return p.logp + sum([child.logp for child in p.children])
+            return p.logp + sum([child.logp for child in self.extended_children[p]])
         except ZeroProbability:
             return -Inf
     
@@ -460,13 +469,13 @@ class NormalApproximation(MAP):
     :SeeAlso: Model, MAP, Sampler, scipy.optimize
     """
 
-    def __init__(self, input, db='ram', eps=.000001, verbose=False):
+    def __init__(self, input, db='ram', eps=.01, verbose=False):
         MAP.__init__(self, input, db, eps, verbose)
         self.C = NormApproxC(self)
         
     def draw(self):
-        devs = normal(size=self.len)
-        p = inner(devs,self._sig)
+        devs = normal(size=self._sig.shape[1])
+        p = inner(self._sig,devs)
         self._set_parameters(p)
     
     def fit(self, method='fmin', iterlim=1000, tol=.00001):

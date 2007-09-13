@@ -1,3 +1,4 @@
+from numpy.testing import *
 from RJMCMC import *
 import transd_model
 

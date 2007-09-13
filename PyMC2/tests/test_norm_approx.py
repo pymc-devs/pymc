@@ -1,12 +1,11 @@
 from PyMC2 import NormalApproximation, msqrt
-from PyMC2.examples import model_3
-from PyMC2.examples import model_for_joint
+from PyMC2.examples import gelman_bioassay
 from pylab import *
 from numpy import *
 from numpy.testing import * 
 from numpy.linalg import cholesky
 
-model = model_for_joint
+model = gelman_bioassay
 N = NormalApproximation(model)
 
 class test_norm_approx(NumpyTestCase):
@@ -38,14 +37,11 @@ class test_norm_approx(NumpyTestCase):
         draws = []
         for i in range(1000):
             N.draw()
-            draws.append(hstack((N.A.value, N.B.value)))
+            draws.append(hstack((N.alpha.value, N.beta.value)))
         draws = array(draws)
-
-        empirical_cov = cov(draws.T)
-        empirical_mean = mean(draws,axis=0)
-        
-        assert((abs(empirical_mean)<.25).all())
-        assert((abs(empirical_cov - N._C)<.25).all())
+        plot(draws[:,0],draws[:,1],'k.')
+        xlabel(r'$\alpha$')
+        ylabel(r'$\beta$')
         
 if __name__=='__main__':
     NumpyTest().run()
