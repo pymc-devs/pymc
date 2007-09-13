@@ -521,6 +521,14 @@ class Model(object):
         F = file(fname, 'w')
         cPickle.dump(trace_dict, F)
         F.close()
+        
+    def _get_logp(self):
+        """
+        Current joint probability of model.
+        """
+        return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data]) + sum([p.logp for p in self.potentials])
+
+    logp = property(_get_logp)
 
 
 class Sampler(Model):
@@ -702,7 +710,10 @@ class Sampler(Model):
         self.db._finalize()
         # TODO: This should interrupt the main thread immediately, but it waits until 
         # TODO: return is pressed before doing its thing. Bug report filed at python.org.
-        interrupt_main()
+        try:
+            interrupt_main()
+        except KeyboardInterrupt:
+            pass
 
     def halt_sampling(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter

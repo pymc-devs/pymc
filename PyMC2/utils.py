@@ -120,7 +120,7 @@ def round_array(array_in):
         return int(array_in)
 
 try:
-    from flib_blas import dchdc_wrap
+    from flib import dchdc_wrap
     def msqrt(C):
         """
         U=incomplete_chol(C)

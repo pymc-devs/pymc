@@ -60,7 +60,7 @@ def mymodel():
     return locals()
 
 class test_graph(NumpyTestCase):
-    def check(self):
+    def check_raw(self):
         A = Model(mymodel())
         A.graph(path='full.dot', format='pdf', prog='dot', consts = True)
         A.graph(path='container.dot', format='pdf', prog='dot', collapse_containers=True, consts = True)
@@ -70,7 +70,8 @@ class test_graph(NumpyTestCase):
         A.graph(path='node_cont.dot', format='pdf', prog='dot', collapse_nodes=True, collapse_containers=True, consts = True)
         A.graph(path='cont_pot.dot', format='pdf', prog='dot', collapse_potentials=True, collapse_containers=True, consts = True)
         A.graph(path='node_cont_pot.dot', format='pdf', prog='dot', collapse_nodes=True, collapse_containers=True, collapse_potentials=True, consts = True)                
-        
+    def check_pdf(self):
+        A = Model(mymodel())    
         A.graph(path='full.dot', format='pdf', prog='dot', consts = True)
         A.graph(path='container.dot', format='pdf', prog='dot', collapse_containers=True, consts = True)
         A.graph(path='node.dot', format='pdf', prog='dot', collapse_nodes=True, consts = True)
@@ -79,6 +80,7 @@ class test_graph(NumpyTestCase):
         A.graph(path='node_cont.dot', format='pdf', prog='dot', collapse_nodes=True, collapse_containers=True, consts = True)
         A.graph(path='cont_pot.dot', format='pdf', prog='dot', collapse_potentials=True, collapse_containers=True, consts = True)
         A.graph(path='node_cont_pot.dot', format='pdf', prog='dot', collapse_nodes=True, collapse_containers=True, collapse_potentials=True, consts = True)                        
+
 if __name__ == '__main__':
     os.chdir('../test_results')
     NumpyTest().run()

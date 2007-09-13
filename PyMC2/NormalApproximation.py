@@ -1,15 +1,13 @@
 # TODO: Smarter derivatives.
-# TODO: Handle likelihood errors.
-# TODO: Explicitly consider only probabilities of relevant parameters' Markov blankets
-# TODO: to reduce roundoff errors.
 
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from PyMCObjects import Parameter, Potential
+from PyMCBase import ZeroProbability
 from Model import Model
-from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log
+from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
 from utils import msqrt, check_type, round_array
@@ -24,6 +22,14 @@ except ImportError:
 class NormApproxMu(object):
     """
     Returns the mean vector of some parameters.
+    
+    Usage: If p1 and p2 are array-valued parameters and N is a 
+    NormalApproximation or MAP object,
+    
+    N.mu(p1,p2)
+    
+    will give the approximate posterior mean of the ravelled, concatenated
+    values of p1 and p2.
     """
     def __init__(self, owner):
         self.owner = owner
@@ -54,6 +60,14 @@ class NormApproxMu(object):
 class NormApproxC(object):
     """
     Returns the covariance matrix of some parameters.
+    
+    Usage: If p1 and p2 are array-valued parameters and N is a
+    NormalApproximation or MAP object,
+    
+    N.C(p1,p2)
+    
+    will give the approximate covariance matrix of the ravelled, concatenated 
+    values of p1 and p2
     """
     def __init__(self, owner):
         self.owner = owner
@@ -89,7 +103,7 @@ class NormApproxC(object):
         
 class MAP(Model):
     """
-    M = MAP(input, db='ram', eps=.001, method = 'fmin')
+    M = MAP(input, db='ram', eps=.001, verbose=False)
     
     On instantiation, sets all parameters in the model to their maximal a-posteriori
     values.
@@ -112,24 +126,16 @@ class MAP(Model):
     input: A dictionary or module, as for Model
     db: A database backend
     eps: 'h' for computing numerical derivatives.
-    method: May be one of the following, from the scipy.optimize package:
-        -fmin_l_bfgs_b
-        -fmin_ncg
-        -fmin_cg
-        -fmin_powell
-        -fmin
-        -or newton, which is a simple implementation of Newton's method.
         
     :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize
     """
-    def __init__(self, input, db='ram', eps=.000001, tol=.00001, method = 'fmin', verbose=False):
+    def __init__(self, input, db='ram', eps=.000001, verbose=False):
         Model.__init__(self, input, db)
 
         # Allocate memory for internal traces and get parameter slices
         self._slices = {}
         self.len = 0
         self.param_len = {}
-        self.method = method
         
         self.param_list = list(self.parameters)
         self.N_params = len(self.param_list)
@@ -141,13 +147,15 @@ class MAP(Model):
 
             parameter = self.param_list[i]
             
+            # Check types of all parameters.
             type_now = check_type(parameter)[0]
             self.param_type_dict[parameter] = type_now
             
             if not type_now is float or type_now is int:
-                raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be numerical or ndarray with " + \
-                                    "numerical dtype for NormalApproximation or MAP to be applied."
+                raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be numerical with " + \
+                                    "floating-point dtype for NormalApproximation or MAP to be applied."
             
+            # Inspect shapes of all parameters and create parameter slices.
             if isinstance(parameter.value, ndarray):
                 self.param_len[parameter] = len(ravel(parameter.value))
             else:
@@ -155,36 +163,49 @@ class MAP(Model):
             self._slices[parameter] = slice(self.len, self.len + self.param_len[parameter])
             self.len += self.param_len[parameter]
             
-            for j in range(len(ravel(parameter.value))):
+            # Record indices that correspond to each parameter.
+            for j in range(len(parameter.value.ravel())):
                 self.param_indices.append((parameter, j))
                 self.param_types.append(type_now)
                 
         self.data_len = 0
         for datum in self.data:
-            self.data_len += len(ravel(datum.value))
+            self.data_len += len(datum.value.ravel())
             
         self.eps = eps
+        self.verbose = verbose
         
         self._len_range = arange(self.len)
+        
+        # Initialize gradient and Hessian matrix.
         self.grad = zeros(self.len, dtype=float)
         self.hess = asmatrix(zeros((self.len, self.len), dtype=float))
         
         self._mu = None
         
+        # Initialize NormApproxMu object.
         self.mu = NormApproxMu(self)
-        self.verbose = verbose
-        self.tol = tol
-        # self.fit(tol=self.tol)
-
-    def _get_logp(self):
-        return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data]) + sum([p.logp for p in self.potentials])
-
-    logp = property(_get_logp)
 
     def printp(self, p):
         print p, self.logp
 
-    def fit(self, iterlim=1000, tol=.00001):
+    def fit(self, method = 'fmin', iterlim=1000, tol=.00001):
+        """
+        N.fit(method='fmin', iterlim=1000, tol=.001):
+        
+        Causes the normal approximation object to fit itself.
+        
+        method: May be one of the following, from the scipy.optimize package:
+            -fmin_l_bfgs_b
+            -fmin_ncg
+            -fmin_cg
+            -fmin_powell
+            -fmin
+            -or newton, which is a simple implementation of Newton's method.
+        """
+        self.tol = tol
+        self.method = method
+        print method
         p = zeros(self.len,dtype=float)
         for parameter in self.parameters:
             p[self._slices[parameter]] = ravel(parameter.value)
@@ -207,7 +228,7 @@ class MAP(Model):
                         fhess = self.hessfunc, 
                         epsilon=self.eps, 
                         callback=callback, 
-                        ftol=tol)
+                        avextol=tol)
 
         elif self.method == 'fmin':
             p=fmin( func = self.func, 
@@ -226,15 +247,15 @@ class MAP(Model):
                         fprime = self.gradfunc, 
                         epsilon=self.eps, 
                         callback=callback, 
-                        ftol=tol)
+                        gtol=tol)
 
         elif self.method == 'fmin_l_bfgs_b':
             p=fmin_l_bfgs_b(func = self.func, 
                             x0 = p, 
                             fprime = self.gradfunc, 
                             epsilon = self.eps, 
-                            callback=callback, 
-                            ftol=tol)[0]
+                            # callback=callback, 
+                            pgtol=tol)[0]
 
         elif self.method == 'newton':
             last_logp = self.logp
@@ -268,13 +289,19 @@ class MAP(Model):
         self._set_parameters(p) 
         self.grad_and_hess()
         self._mu = p
-        self.logp_at_max = self.logp
+        try:
+            self.logp_at_max = self.logp
+        except:
+            raise RuntimeError, 'Posterior probability optimization converged to value with zero probability.'
         self.AIC = 2. * (self.len - self.logp_at_max) # 2k - 2 ln(L)
         self.BIC = self.len * log(self.data_len) - 2. * self.logp_at_max # k ln(n) - 2 ln(L)
 
     def func(self, p):
         self._set_parameters(p)
-        return -1. * self.logp
+        try:
+            return -1. * self.logp
+        except ZeroProbability:
+            return Inf
 
     def gradfunc(self, p):
         self._set_parameters(p)
@@ -309,9 +336,16 @@ class MAP(Model):
         #     h = self.eps
         # return h
         return self.eps
-
+    
+    def i_logp(self, index):
+        p,i = self.param_indices[index]
+        try:
+            return p.logp + sum([child.logp for child in p.children])
+        except ZeroProbability:
+            return -Inf
+    
     def diff(self, index):
-        base = self.logp
+        base = self.i_logp(index)
 
         oldval = copy(self[index])
         if self.param_types[index] is int:
@@ -320,7 +354,7 @@ class MAP(Model):
             h=self.set_h(oldval)
 
         self[index] = oldval + h
-        up = self.logp
+        up = self.i_logp(index)
         self[index] = oldval
 
         return (up - base) / h
@@ -341,7 +375,7 @@ class MAP(Model):
         return (up - base) / h
 
     def diff2_diag(self, index):
-        base = self.logp
+        base = self.i_logp(index)
 
         oldval = copy(self[index])
         if self.param_types[index] is int:
@@ -350,10 +384,10 @@ class MAP(Model):
             h=self.set_h(oldval)
 
         self[index] = oldval + h
-        up = self.logp
+        up = self.i_logp(index)
 
         self[index] = oldval - h
-        down = self.logp
+        down = self.i_logp(index)
 
         self[index] = oldval
 
@@ -422,33 +456,20 @@ class NormalApproximation(MAP):
     input: A dictionary or module, as for Model
     db: A database backend
     eps: 'h' for computing numerical derivatives.
-    method: May be one of the following, from the scipy.optimize package:
-        -fmin_l_bfgs_b
-        -fmin_ncg
-        -fmin_cg
-        -fmin_powell
-        -fmin
-        -or newton, which is a simple implementation of Newton's method.
         
     :SeeAlso: Model, MAP, Sampler, scipy.optimize
     """
 
-    def __init__(self, input, db='ram', eps=.000001, method = 'fmin'):
-        MAP.__init__(self, input, db, eps, method)
-
-        self._C = None
-        self._sig = None
-        
+    def __init__(self, input, db='ram', eps=.000001, verbose=False):
+        MAP.__init__(self, input, db, eps, verbose)
         self.C = NormApproxC(self)
-        self.fit()
         
     def draw(self):
         devs = normal(size=self.len)
-        p = inner(devs, self.sig)
+        p = inner(devs,self._sig)
         self._set_parameters(p)
     
-    def fit(self, iterlim=1000, tol=.00001):
-        MAP.fit(self, iterlim, tol)
-        
+    def fit(self, method='fmin', iterlim=1000, tol=.00001):
+        MAP.fit(self, method, iterlim, tol)
         self._C = -1. * self.hess.I
-        self.sig = msqrt(self._C).T
+        self._sig = msqrt(self._C).T
