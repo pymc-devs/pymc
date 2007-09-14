@@ -544,7 +544,7 @@ class Plotter:
                 savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
                 #close()
     
-
+    # TODO: make sure pair_posterior works.
     def pair_posterior(self, pymc_objects, mask=None, trueval=None, fontsize=8, suffix='', new=True):
         """
         pair_posterior(pymc_objects, clear=True, mask=None, trueval=None)

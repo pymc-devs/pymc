@@ -24,9 +24,6 @@ class test_norm_approx(NumpyTestCase):
     def check_fmin_powell(self):
         N = NormalApproximation(model)
         N.fit('fmin_powell')
-    def check_newton(self):
-        N = NormalApproximation(model)
-        N.fit('newton')
     def check_sig(self):
         N = NormalApproximation(model)
         N.fit('fmin')
@@ -34,12 +31,9 @@ class test_norm_approx(NumpyTestCase):
     def check_draws(self):
         N = NormalApproximation(model)
         N.fit('fmin')
-        draws = []
-        for i in range(1000):
-            N.draw()
-            draws.append(hstack((N.alpha.value, N.beta.value)))
-        draws = array(draws)
-        plot(draws[:,0],draws[:,1],'k.')
+        N.sample(1000)
+
+        plot(N.alpha.trace(),N.beta.trace(),'k.')
         xlabel(r'$\alpha$')
         ylabel(r'$\beta$')
         

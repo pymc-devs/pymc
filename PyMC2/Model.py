@@ -56,7 +56,7 @@ class Model(object):
 
     :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
     """
-    def __init__(self, input, db='ram', verbose=0):
+    def __init__(self, input, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
@@ -121,6 +121,19 @@ class Model(object):
         # Union of PyMC objects
         self.variables = self.nodes | self.parameters | self.data
         self.pymc_objects = self.variables | self.potentials
+        
+        
+        # Moved this stuff here so I can use it from NormalApproximation. -AP
+        # Specify database backend
+        self._assign_database_backend(db)
+        
+        # Instantiate plotter 
+        # Hardcoding the matplotlib backend raises error in
+        # interactive use. DH
+        try:
+            self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
+        except:
+            self._plotter = 'Could not be instantiated.'
         
     def _fileitem(self, item):
         """
@@ -273,9 +286,6 @@ class Model(object):
         """
 
         import pydot
-
-        # self.dot_object = pydot.Dot()
-        # TODO: implement collapse_containers, collapse_nodes and collapse_potentials.
 
         pydot_nodes = {}
         pydot_subgraphs = {}
@@ -467,23 +477,7 @@ class Model(object):
             except:
                 pass
 
-    #
-    # Tally
-    #
-    def tally(self):
-        """
-        tally()
 
-        Records the value of all tracing pymc_objects.
-        """
-        if self.verbose > 2:
-            print self.__name__ + ' tallying.'
-        if self._cur_trace_index < self.max_trace_length:
-            self.db.tally(self._cur_trace_index)
-
-        self._cur_trace_index += 1
-        if self.verbose > 2:
-            print self.__name__ + ' done tallying.'
 
     #
     # Return to a sampled state
@@ -529,43 +523,10 @@ class Model(object):
         return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data]) + sum([p.logp for p in self.potentials])
 
     logp = property(_get_logp)
-
-
-class Sampler(Model):
-    def __init__(self, input, db='ram', output_path=None, verbose=0):
-        
-        # Instantiate superclass
-        Model.__init__(self, input, db, verbose)
-        
-        # Instantiate and populate sampling methods set
-        self.sampling_methods = set()
-
-        for item in self.input_dict.iteritems():
-            if isinstance(item[1], ContainerBase):
-                self.__dict__[item[0]] = item[1]
-                self.sampling_methods.update(item[1].sampling_methods)
-
-            if isinstance(item[1], SamplingMethod):
-                self.__dict__[item[0]] = item[1]
-                self.sampling_methods.add(item[1])
-                setattr(item[1], '_model', self)
-
-        # Default SamplingMethod
-        self._assign_samplingmethod()
-
-        self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
-            
-        # Specify database backend
-        self._assign_database_backend(db)
-            
-        # Instantiate plotter 
-        # Hardcoding the matplotlib backend raises error in
-        # interactive use. DH
-        try:
-            self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
-        except:
-            self._plotter = 'Could not be instantiated.'
-
+    
+    def tally(self, index):
+        self.db.tally(index)
+    
     def _assign_database_backend(self, db):
         """Assign Trace instance to parameters and nodes and Database instance
         to self.
@@ -585,6 +546,8 @@ class Sampler(Model):
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace
         # Tallyable objects are listed in the _pymc_objects_to_tally set. 
+        
+        # Moved this to Model so I can use it in NormalApproximation. -AP
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.parameters | self.nodes :
@@ -608,6 +571,45 @@ class Sampler(Model):
         
         # Assign Trace instances to tallyable objects. 
         self.db.connect(self)
+        
+    def plot(self):
+        """
+        Plots traces and histograms for nodes and parameters.
+        """
+
+        # Loop over PyMC objects
+        for variable in self._variables_to_tally:            
+            # Plot object
+            self._plotter.plot(variable)
+
+        show()
+    
+    
+
+
+class Sampler(Model):
+    def __init__(self, input, db='ram', output_path=None, verbose=0):
+        
+        # Instantiate superclass
+        Model.__init__(self, input, db, output_path, verbose)
+        
+        # Instantiate and populate sampling methods set
+        self.sampling_methods = set()
+
+        for item in self.input_dict.iteritems():
+            if isinstance(item[1], ContainerBase):
+                self.__dict__[item[0]] = item[1]
+                self.sampling_methods.update(item[1].sampling_methods)
+
+            if isinstance(item[1], SamplingMethod):
+                self.__dict__[item[0]] = item[1]
+                self.sampling_methods.add(item[1])
+                setattr(item[1], '_model', self)
+
+        # Default SamplingMethod
+        self._assign_samplingmethod()
+
+        self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
         
     def _assign_samplingmethod(self):
         """
@@ -719,6 +721,24 @@ class Sampler(Model):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
         for variable in self._variables_to_tally:
            variable.trace.truncate(self._cur_trace_index)
+    
+    #
+    # Tally
+    #
+    def tally(self):
+       """
+       tally()
+
+       Records the value of all tracing pymc_objects.
+       """
+       if self.verbose > 2:
+           print self.__name__ + ' tallying.'
+       if self._cur_trace_index < self.max_trace_length:
+           self.db.tally(self._cur_trace_index)
+
+       self._cur_trace_index += 1
+       if self.verbose > 2:
+           print self.__name__ + ' done tallying.'
         
     def tune(self):
         """
@@ -846,19 +866,7 @@ class Sampler(Model):
         for sm in self.sampling_methods:
             tmp = state.get('sampling_methods', {})
             sm.__dict__.update(tmp.get(sm._id, {}))
-            
-    def plot(self):
-        """
-        Plots traces and histograms for nodes and parameters.
-        """
-        
-        # Loop over PyMC objects
-        for variable in self._variables_to_tally:            
-            # Plot object
-            self._plotter.plot(variable)
-            
-        show()
-            
+                        
     def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
         """
         Calculates Goodness-Of-Fit according to Brooks et al. 1998

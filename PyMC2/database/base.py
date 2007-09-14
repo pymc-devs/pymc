@@ -69,29 +69,30 @@ class Database(object):
         for o in self.model._variables_to_tally:
             o.trace.tally(index)
             
-    def connect(self, sampler):
-        """Link the Database to the Sampler instance. 
+    def connect(self, model):
+        """Link the Database to the Model instance. 
         
         If database is loaded from a file, restore the objects trace 
         to their stored value, if a new database is created, instantiate
         a Trace for the PyMC objects to tally.
         """
-        if isinstance(sampler, PyMC2.Sampler):
-            self.model = sampler
+        # Changed this to allow non-Model models. -AP
+        if isinstance(model, PyMC2.Model):
+            self.model = model
         else:
-            raise AttributeError, 'Not a Sampler instance.'
+            raise AttributeError, 'Not a Model instance.'
                 
         if hasattr(self, '_state_'): 
-            # Restore the state of the Sampler.
-            for o in sampler._variables_to_tally:
+            # Restore the state of the Model.
+            for o in model._variables_to_tally:
                 o.trace = getattr(self, o.__name__)
                 o.trace._obj = o
         else: 
             # Set a fresh new state
-            for o in sampler._variables_to_tally:
+            for o in model._variables_to_tally:
                 o.trace = self.Trace(obj=o)
         
-        for o in sampler._variables_to_tally:
+        for o in model._variables_to_tally:
             o.trace.db = self
     
     def _finalize(self):
@@ -104,12 +105,12 @@ class Database(object):
         pass
         
     def savestate(self, state):
-        """Store a dictionnary containing the state of the Sampler and its 
+        """Store a dictionnary containing the state of the Model and its 
         SamplingMethods."""
         self._state_ = state
         
     def getstate(self):
-        """Return a dictionary containing the state of the Sampler and its 
+        """Return a dictionary containing the state of the Model and its 
         SamplingMethods."""
         return getattr(self, '_state_', {})
         
