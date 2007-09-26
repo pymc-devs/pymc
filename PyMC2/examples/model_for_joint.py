@@ -1,4 +1,4 @@
-from PyMC2 import parameter, data, JointMetropolis
+from PyMC2 import parameter, data, JointMetropolis, Sampler
 from numpy import array, eye, ones
 from PyMC2.distributions import multivariate_normal_like
 
@@ -13,4 +13,8 @@ tau_B = eye(2) * 100.
 def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
     return multivariate_normal_like(value,mu,tau)
 
-S = JointMetropolis([A,B],epoch=100, memory=10, delay = 0)
+#S = JointMetropolis([A,B],epoch=100, memory=10, delay = 0)
+if __name__=='__main__':
+    S = Sampler(locals(), 'ram')
+    S.sample(2e6,1e6,10, verbose=True)
+    

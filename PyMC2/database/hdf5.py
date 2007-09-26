@@ -143,7 +143,7 @@ class Database(pickle.Database):
         i = len(self._h5file.listNodes('/'))+1
         self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
-        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter)
+        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter, expectedrows=length)
         self._row = self._table.row
         for object in self.model._variables_to_tally:
             object.trace._initialize(length)

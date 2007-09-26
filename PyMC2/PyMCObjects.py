@@ -139,7 +139,7 @@ class Node(Variable):
                             should be traced (in MCMC).
 
         -cache_depth (optional):    An integer indicating how many of this node's
-                                    value computations should be 'memoized'.
+                                    value computations should be 'memorized'.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high

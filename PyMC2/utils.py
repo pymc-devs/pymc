@@ -448,10 +448,13 @@ def _optimize_binning(x, range, method='Freedman'):
 logit = vectorize(flib.logit)
 invlogit = vectorize(flib.invlogit)
 
-@vectorize
+import scipy
+#@vectorize
 def normcdf(x):
     """Normal cumulative density function."""
-    return .5*(1+flib.derf(x/sqrt(2)))
+    x = np.atleast_1d(x)
+    return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+    #return .5*(1+scipy.special.erf(x/sqrt(2)))
     
 @vectorize
 def invcdf(x):
@@ -502,6 +505,15 @@ def ar1(rho, mu, sigma, size=1):
         size : integer
     """
     return np.array([x for x in ar1_gen(rho, mu, sigma, size)])
+
+def autocorr(x, lag=1):
+    """Sample autocorrelation at specified lag.
+    The autocorrelation is the correlation of x_i with x_{i+lag}.
+    """
+    x = np.squeeze(asarray(x))
+    mu = x.mean()
+    v = x.var()
+    return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
 
 def trace_generator(trace, start=0, stop=None, step=1):
     """Return a generator returning values from the object's trace.

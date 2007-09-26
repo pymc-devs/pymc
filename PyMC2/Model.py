@@ -709,10 +709,10 @@ class Sampler(Model):
         Prepare pymc_objects, initialize traces, run MCMC loop.
         """
         
-        self._iter = iter
-        self._burn = burn
-        self._thin = thin
-        self._tune_interval = tune_interval
+        self._iter = int(iter)
+        self._burn = int(burn)
+        self._thin = int(thin)
+        self._tune_interval = int(tune_interval)
         self._cur_trace_index = 0
         length = (iter-burn)/thin
         self.max_trace_length = length

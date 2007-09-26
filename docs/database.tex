@@ -48,7 +48,7 @@ sqlite
  & 
 Store samples in a sqlite database.
  & 
-pysqlite2
+sqlite3
  \\
 \hline
 
@@ -103,6 +103,7 @@ S~=~Sampler(DisasterSampler,~db=DB)
 \hypertarget{use-of-trace-methods}{}
 \pdfbookmark[0]{Use of trace methods}{use-of-trace-methods}
 \section*{Use of trace methods}
+\label{use-of-trace-methods}
 
 From the user perpective, the only method that really matters is the gettrace()
 method (equivalent to trace.{\_}{\_}call{\_}{\_}). This method returns the values tallied during sampling. So for
@@ -124,6 +125,7 @@ S.e.trace(burn=5000)
 \hypertarget{backend-requirements}{}
 \pdfbookmark[0]{Backend requirements}{backend-requirements}
 \section*{Backend requirements}
+\label{backend-requirements}
 
 Each backend must define minimally two classes: Database and Trace. The Database
 class is responsible for opening files, connecting to databases, assigning

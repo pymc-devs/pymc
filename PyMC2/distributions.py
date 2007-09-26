@@ -1131,12 +1131,7 @@ def multivariate_normal_like(x, mu, tau):
     tau positive definite
     """
 
-    if len(tau) < 50 or not flib_blas_OK:
-        return flib.vec_mvnorm(x, mu, tau)
-    else:
-        # This version is faster for large matrices, but oddly enough
-        # it's slower for small matrices. Stupid BLAS.
-        return flib.blas_mvnorm(x,mu,tau)
+    return flib.blas_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
 def rmultivariate_normal_cov(mu, C):
@@ -1206,7 +1201,7 @@ def multivariate_normal_like_chol(x, mu, sig):
     sigma lower triangular
     """
 
-    return flib_blas.chol_mvnorm(x,mu,sig)
+    return flib.chol_mvnorm(x,mu,sig)
 
 
 # Negative binomial----------------------------------------
@@ -1387,14 +1382,16 @@ def truncnorm_like(x, mu, sigma, a, b):
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
     sigma = np.atleast_1d(sigma)
-    
     if (x < a).any() or (x>b).any():
         return -np.inf
     else:
         n = len(x)
         phi = normal_like(x, mu, 1./sigma**2)
         Phia = PyMC2.utils.normcdf((a-mu)/sigma)
-        Phib = PyMC2.utils.normcdf((b-mu)/sigma)
+        if b == np.inf:
+            Phib = 1.0
+        else:
+            Phib = PyMC2.utils.normcdf((b-mu)/sigma)
         d = log(Phib-Phia)
         if len(d) == n:
             Phi = d.sum()
