@@ -142,8 +142,11 @@ class PyMCBase(object):
         
     parents = property(fget=_get_parents, fset=_set_parents, fdel=_del_parents)
     
-    # def __str__(self):
-    #     return self.value.__str__()
+    def __str__(self):
+        return self.__repr__()
+        
+    def __repr__(self):
+        return object.__repr__(self).replace('object', self.__name__)
                 
     def gen_lazy_function(self):
         pass                

@@ -1,9 +1,3 @@
-# Note, there was an intermittent problem with caching and cache checking
-# when round_array rounded scalars instead of casting them to int. Forbidden
-# values were getting cached with positive associated probability, leading to
-# uncaught ZeroProbabilitys in OneAtATimeMetropolis. I'm not sure what the 
-# deal was. The problem went away when round changed to int.
-
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'

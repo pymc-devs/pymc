@@ -1,3 +1,5 @@
+# TODO: It would be nice to have this done by the 2.0 release, as it showcases how Python's dynamic typing gives us flexibility.
+
 """
 Dirichlet process classes:
 

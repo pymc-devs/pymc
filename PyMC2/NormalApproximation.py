@@ -1,3 +1,11 @@
+# TODO: Allow each parameter to get its own eps argument.
+# TODO: Allow integers in MAP and NormalApproximation if the fitting method doesn't use gradients.
+# TODO: In NormalApproximation, for integer-valued parameters eps must be equal to 1.
+# TODO: Check Markov blankets ahead of time, record which parameters will have mixed partials = 0 to skip some computation.
+# TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
+# TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just SamplingMethods.
+# TODO: When an error results from fit() not having been called, it should say so.
+
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
@@ -198,7 +206,6 @@ class MAP(Model):
         # Initialize NormApproxMu object.
         self.mu = NormApproxMu(self)
         
-        
     def fit(self, method = 'fmin', iterlim=1000, tol=.0001):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
@@ -327,18 +334,6 @@ class MAP(Model):
         p, i = self.param_indices[index]
         val = ravel(p.value)
         return val[i]
-        
-    def set_h(self, oldval):
-        """
-        Computes h, the derivative step size, from the size of the 
-        parameter's value and self.eps. Currently not used.
-        """
-        # if not oldval == 0.:
-        #     h = self.eps * oldval
-        # else:
-        #     h = self.eps
-        # return h
-        return self.eps
     
     def i_logp(self, index):
         """
@@ -371,10 +366,7 @@ class MAP(Model):
         """
         # TODO: Figure out ahead of time which parameters won't have
         # any cross-derivative with each other by checking whether 
-        # one is in the other's Markov blanket. Note: this means the
-        # normal approximation will call parameters a posteriori 
-        # independent if they are not in each other's Markov blankets. 
-        # Huh.
+        # one is in the other's Markov blanket.
         old_val = copy(self[j])
 
         def diff_for_diff(val):

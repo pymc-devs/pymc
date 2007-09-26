@@ -22,39 +22,51 @@ from time import sleep
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
+# TODO: Should Model be a subclass of Container, to eliminate item-filing code duplication?
+# TODO: Yes.
 class Model(object):
     """
-    Model manages MCMC loops. It is initialized with:
+    Model is initialized with:
 
       >>> A = Model(prob_def, dbase=None)
 
     :Arguments:
-        prob_def : class, module, dictionary
-          Contains PyMC objects and SamplingMethods
-        dbase : module name
+        input : class, module, dictionary
+          Contains variables, potentials and containers.
+        db : module name
           Database backend used to tally the samples.
-          Implemented backends: None, hdf5, txt.
+          Implemented backends: 'ram', 'no_trace', 'hdf5', 'txt', 'mysql', 'pickle', 'sqlite'.
 
     Externally-accessible attributes:
-      - nodes : All extant Nodes.
-      - parameters : All extant Parameters with isdata = False.
-      - data : All extant Parameters with isdata = True.
-      - pymc_objects : All extant Parameters and Nodes.
-      - sampling_methods : All extant SamplingMethods.
+      - nodes
+      - parameters (with isdata=False)
+      - data (parameters with isdata=True)
+      - variables
+      - potentials
+      - containers
+      - pymc_objects
+      - status: Not useful for the Model base class, but may be used by subclasses.
+      
+    The following attributes only exist after the appropriate method is called:
+      - moral_edges: The edges of the moralized graph. A dictionary, keyed by parameter,
+        whose values are sets of parameters. Edges exist between the key parameter and all parameters
+        in the value. Created by method _moralize.
+      - extended_children: The extended children of self's parameters. See the docstring of
+        extend_children. This is a dictionary keyed by parameters. Created by method _extend_children.
+      - generations: A list of sets of parameters. The members of each element only have parents in 
+        previous elements. Created by method _parse_generations.
 
     Externally-accessible methods:
-       - sample(iter) : At each MCMC iteration, calls each sampling_method's step() method.
-         Tallies Parameters and Nodes as appropriate.
-       - trace(parameter, burn, thin, slice) : Return the trace of parameter, 
-         sliced according to slice or burn and thin arguments.
+       - tally(index): Write all variables' current values to trace, at location index.
+       - sample_model_likelihood(iter): Generate and return iter samples of p(data and potentials|model).
+         Can be used to generate Bayes' factors.
+       - save_traces(): Pickle and save traces to disk. XXX Do we still need this method?
+       - graph(...): Draw graphical representation of model. See docstring.
+       - seed() XXX I don't know what this does...
+       - plot(): Visualize traces for all variables
        - remember(trace_index) : Return the entire model to the tallied state indexed by trace_index.
-       - DAG : Draw the model as a directed acyclic graph.
 
-    :Note:
-        All the plotting functions can probably go on the base namespace and take Parameters as
-        arguments.
-
-    :SeeAlso: Sampler, PyMCBase, Parameter, Node, and weight.
+    :SeeAlso: Sampler, MAP, NormalApproximation, weight.
     """
     def __init__(self, input, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
@@ -63,9 +75,11 @@ class Model(object):
           - input : module
               A module containing the model definition, in terms of Parameters, 
               and Nodes.
-          - dbase : string
+          - db : string
               The name of the database backend that will store the values
               of the parameters and nodes sampled during the MCMC loop.
+          - output_path : string
+              The place where any output files should be put.
           - verbose : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
@@ -80,14 +94,14 @@ class Model(object):
         self.extended_children = None
         self.verbose = verbose
         # Instantiate hidden attributes
-        self._generations = []
+        self.generations = []
         self.__name__ = None
         
         # Flag for model state
         self.status = 'ready'
 
         # Check for input name
-        if hasattr(input, '__name__'):
+        if hasattr(input, '__file__'):
             _filename = os.path.split(input.__file__)[-1]
             self.__name__ = os.path.splitext(_filename)[0]
         else:
@@ -142,6 +156,7 @@ class Model(object):
           - nodes
           - data
           - containers
+          - potentials
         """
         # If a dictionary is passed in, open it up.
         if isinstance(item, ContainerBase):
@@ -149,6 +164,7 @@ class Model(object):
             self.parameters.update(item.parameters)
             self.data.update(item.data)
             self.nodes.update(item.nodes)
+            self.potentials.update(item.potentials)
 
         # File away the PyMC objects
         elif isinstance(item, PyMCBase):
@@ -169,7 +185,61 @@ class Model(object):
             self.nodes.update(item.nodes)
             self.parameters.update(item.parameters)
             self.data.update(item.data)
+    
+    def _moralize(self):
+        """
+        Creates moral adjacency matrix for self.
         
+        self.moral_edges[parameter] returns a list of the parameters with whom
+        parameter shares an edge in the moral graph.
+        """
+        # Extend children
+        self._extend_children()
+        
+        # Initialize moral edges dictionary.
+        self.moral_edges = {}
+        for parameter in self.parameters | self.data:
+            self.moral_edges[parameter] = set([])
+        
+        # Fill in.
+        remaining_params = copy(self.parameters | self.data)
+        for parameter in self.parameters:
+            self_and_children = set([parameter]) | self.extended_children[parameter]
+            remaining_params.remove(parameter)
+            for other_parameter in remaining_params:
+                other_self_and_children = set([other_parameter]) | self.extended_children[other_parameter]
+                if len(self_and_children.intersection(other_self_and_children))>0:
+                    self.moral_edges[parameter].add(other_parameter)
+                    self.moral_edges[other_parameter].add(parameter)
+
+                    
+    def _get_maximal_cliques(self):
+        """
+        Creates list of maximal cliques for self. Each has an attribute called
+        logp, which gives the log-potential associated with the clique.
+        """
+        
+        # Moralize self
+        self._moralize()
+    
+        # Find maximal cliques
+        self.maximal_cliques = []
+        remaining_params = copy(self.parameters | self.data)
+        while len(remaining_params)>0:
+            parameter = remaining_params.pop()
+            this_clique = set([parameter])
+            self.maximal_cliques.append(this_clique)
+            
+            for other_parameter in remaining_params:
+                if all([other_parameter in self.moral_edges[clique_parameter] for clique_parameter in this_clique]):
+                    this_clique.add(other_parameter)
+            for clique_parameter in this_clique:
+                remaining_params.discard(clique_parameter)
+                
+        # TODO: Find edges between maximal cliques, potentials associated with them.
+        # TODO: Make clique a subclass of Container -> make Container able to wrap sets!
+        # TODO: Make mapping from parameter to maximal clique containing it.
+                
     def _extend_children(self):
         """
         Makes a dictionary of self's PyMC objects' 'extended children.'
@@ -185,15 +255,14 @@ class Model(object):
         """
         Parse up the _generations for model averaging.
         """
-        if not self.extended_children:
-            self._extend_children()
+        self._extend_children()
 
         # Find root generation
-        self._generations.append(set())
+        self.generations.append(set())
         all_children = set()
         for parameter in self.parameters:
             all_children.update(self.extended_children[parameter] & self.parameters)
-        self._generations[0] = self.parameters - all_children
+        self.generations[0] = self.parameters - all_children
 
         # Find subsequent _generations
         children_remaining = True
@@ -203,16 +272,16 @@ class Model(object):
 
 
             # Find children of last generation
-            self._generations.append(set())
-            for parameter in self._generations[gen_num-1]:
-                self._generations[gen_num].update(self.extended_children[parameter] & self.parameters)
+            self.generations.append(set())
+            for parameter in self.generations[gen_num-1]:
+                self.generations[gen_num].update(self.extended_children[parameter] & self.parameters)
 
 
             # Take away parameters that have parents in the current generation.
             thisgen_children = set()
-            for parameter in self._generations[gen_num]:
+            for parameter in self.generations[gen_num]:
                 thisgen_children.update(self.extended_children[parameter] & self.parameters)
-            self._generations[gen_num] -= thisgen_children
+            self.generations[gen_num] -= thisgen_children
 
 
             # Stop when no subsequent _generations remain
@@ -223,9 +292,10 @@ class Model(object):
         """
         Returns iter samples of (log p(data|this_model_params, this_model) | data, this_model)
         """
+        # TODO: Restructure this using the actor model in stackless branch: if all my extended parents have sampled their value, then I can also.
         loglikes = zeros(iter)
 
-        if len(self._generations) == 0:
+        if len(self.generations) == 0:
             self._parse_generations()
 
         try:
@@ -233,7 +303,7 @@ class Model(object):
                 if i % 10000 == 0:
                     print 'Sample ', i, ' of ', iter
 
-                for generation in self._generations:
+                for generation in self.generations:
                     for parameter in generation:
                         parameter.random()
 
@@ -477,8 +547,6 @@ class Model(object):
             except:
                 pass
 
-
-
     #
     # Return to a sampled state
     #
@@ -582,12 +650,13 @@ class Model(object):
             # Plot object
             self._plotter.plot(variable)
 
-        show()
+        # show()
     
     
 
 
 class Sampler(Model):
+    # TODO: Docstring!!
     def __init__(self, input, db='ram', output_path=None, verbose=0):
         
         # Instantiate superclass

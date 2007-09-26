@@ -4,6 +4,7 @@ from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange
 
+# TODO: Eliminate item-filing code duplication.
 def Container(iterable, name = 'container'):
     """
     C = Container(iterable[, name])
