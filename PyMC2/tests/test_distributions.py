@@ -22,6 +22,7 @@ from numpy.testing import *
 from PyMC2 import flib, utils
 import numpy as np
 from numpy import exp, array, cov, prod, matrix
+from numpy.linalg import cholesky
 import os
 PLOT=True
 if PLOT is True:
@@ -585,14 +586,23 @@ class test_multivariate_normal(NumpyTestCase):
         C = matrix([[1, .5],[.5,1]])
 
         r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
+        rC = rmultivariate_normal_cov(mu,C,1000)
+        rchol = rmultivariate_normal_chol(mu,cholesky(C),1000)
+        
         assert_array_almost_equal(mu, r.mean(0), 1)
         assert_array_almost_equal(C, np.cov(r.T), 1)
+        
+        assert_array_almost_equal(mu, rC.mean(0), 1)
+        assert_array_almost_equal(C, np.cov(rC.T), 1)
+        
+        assert_array_almost_equal(mu, rchol.mean(0), 1)
+        assert_array_almost_equal(C, np.cov(rchol.T), 1)
             
     def check_likelihood(self):
         mu = array([3,4])
         C = matrix([[1, .5],[.5,1]])
         
-        from numpy.linalg import cholesky
+
         tau = np.linalg.inv(C)
         r = rmultivariate_normal(mu, tau, 2)
 

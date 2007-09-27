@@ -1134,14 +1134,14 @@ def multivariate_normal_like(x, mu, tau):
     return flib.prec_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
-def rmultivariate_normal_cov(mu, C):
+def rmultivariate_normal_cov(mu, C, size=1):
     """
     rmultivariate_normal_cov(mu, C)
 
     Random multivariate normal variates.
     """
 
-    return random.multivariate_normal(mu, C)
+    return random.multivariate_normal(mu, C, size)
 
 def multivariate_normal_cov_expval(mu, C):
     """
@@ -1169,14 +1169,21 @@ def multivariate_normal_cov_like(x, mu, C):
     return flib.cov_mvnorm(x,mu,C)        
 
 # Multivariate normal, parametrized with Cholesky factorization.----------
-def rmultivariate_normal_chol(mu, sig):
+def rmultivariate_normal_chol(mu, sig, size=1):
     """
     rmultivariate_normal(mu, tau)
 
     Random multivariate normal variates.
     """
-
-    return (asmatrix(sig) * random.normal(size=mu.ravel().shape)).reshape(mu.shape)
+    mu_size = mu.ravel().shape
+    mu_shape = mu.shape
+    if size==1:
+        return mu+np.dot(sig , random.normal(size=mu_size)).reshape(mu_shape)
+    else:
+        out = np.zeros((size,) + mu_size, dtype=float)
+        for i in xrange(size):
+            out[i,:] = mu+np.dot(sig , random.normal(size=mu_size)).reshape(mu_shape)
+        return out
 
 def multivariate_normal_expval_chol(mu, sig):
     """
