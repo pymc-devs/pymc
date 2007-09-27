@@ -1131,7 +1131,7 @@ def multivariate_normal_like(x, mu, tau):
     tau positive definite
     """
 
-    return flib.blas_mvnorm(x,mu,tau)
+    return flib.prec_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
 def rmultivariate_normal_cov(mu, C):

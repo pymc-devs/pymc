@@ -21,7 +21,7 @@ import unittest
 from numpy.testing import *
 from PyMC2 import flib, utils
 import numpy as np
-from numpy import exp, array, cov, prod
+from numpy import exp, array, cov, prod, matrix
 import os
 PLOT=True
 if PLOT is True:
@@ -85,10 +85,11 @@ def multivariate_normal(x, mu, C):
     x = np.asmatrix(x)
     mu = np.asmatrix(mu)
     C = np.asmatrix(C)
-    
-    I = (2*pi)**(N/2.) * sqrt(np.linalg.det(C))
+
+    I = (N/2.)*log(2.*pi) + .5*log(np.linalg.det(C))
     z = (x-mu)
-    return (1./I * exp(-.5 * z * np.linalg.inv(C) * z.T)).A[0][0]
+
+    return -(I +.5 * z * np.linalg.inv(C) * z.T).A[0][0]
 
 def multivariate_lognormal(x, mu, C):
     N = len(x)
@@ -578,27 +579,35 @@ class test_multivariate_hypergeometric(NumpyTestCase):
 
 
 class test_multivariate_normal(NumpyTestCase):
+    
     def check_random(self):
-        mu = [3,4]
-        C = [[1, .5],[.5,1]]
+        mu = array([3,4])
+        C = matrix([[1, .5],[.5,1]])
+
         r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
         assert_array_almost_equal(mu, r.mean(0), 1)
-        # This segfaults under Ubuntu Edgy
-        #assert_array_almost_equal(C, cov(r), 1)
-    
+        assert_array_almost_equal(C, np.cov(r.T), 1)
+            
     def check_likelihood(self):
-        mu = [3,4]
-        C = [[1, .5],[.5,1]]
+        mu = array([3,4])
+        C = matrix([[1, .5],[.5,1]])
+        
+        from numpy.linalg import cholesky
         tau = np.linalg.inv(C)
         r = rmultivariate_normal(mu, tau, 2)
-        a = sum([multivariate_normal_like(x, mu, C) for x in r])
+
+        # multivariate_normal_like is expecting tau as its last argument
+        a = sum([multivariate_normal_like(x, mu, tau) for x in r])
         b = sum([multivariate_normal_cov_like(x, mu, C) for x in r])
-        c = sum([multivariate_normal_like_chol(x,mu,tau) for x in r])
-        d = prod([multivariate_normal(x, mu, C) for x in r])
-        assert_almost_equal(a, log(d))
+
+        # multivariate_normal_like_chol is expecting a Cholesky factor as the last argument.
+        c = sum([multivariate_normal_like_chol(x,mu,cholesky(C)) for x in r])
+        d = sum([multivariate_normal(x, mu, C) for x in r])
+
+        assert_almost_equal(a, d)
         assert_almost_equal(a,b)
         assert_almost_equal(b,c)
-        
+
     
 class test_normal(NumpyTestCase):
     def check_consistency(self):

@@ -27,7 +27,7 @@ cf2py integer intent(hide) :: info
       
 !     x <- (x-mu)      
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
-      
+
 !       mu <- x
       call DCOPY(n,x,1,mu,1)
       
@@ -117,12 +117,12 @@ cf2py integer intent(hide) :: info
       return
       END
 
-      SUBROUTINE blas_mvnorm(x, mu, tau, n, like)
+      SUBROUTINE prec_mvnorm(x, mu, tau, n, like)
 
 cf2py double precision dimension(n), intent(copy) :: x
 cf2py double precision dimension(n), intent(copy) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py double precision dimension(n,n), intent(in) :: tau
+cf2py double precision dimension(n,n), intent(copy) :: tau
 cf2py double precision intent(out) :: like
 
       DOUBLE PRECISION tau(n,n), x(n), mu(n), like
@@ -136,7 +136,7 @@ cf2py double precision intent(out) :: like
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
       EXTERNAL DSYMV
-! Symmetric matrix-vector multiply
+! DSYMV(UPLO,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY) Symmetric matrix-vector multiply
       EXTERNAL DAXPY
 ! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
       EXTERNAL DCOPY
@@ -147,14 +147,15 @@ cf2py double precision intent(out) :: like
 
 !     x <- (x-mu)      
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
-
+      
 !       mu <- x
       call DCOPY(n,x,1,mu,1)
-
-!     x <- tau * x
+      
+!     mu <- tau * x
       call DSYMV('L',n,1.0D0,tau,n,x,1,0.0D0,mu,1)
 
-!     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
+
+!     like <- -.5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
       like = -0.5D0 * DDOT(n, x, 1, mu, 1)
 
 !      Cholesky factorize tau for the determinant.      
