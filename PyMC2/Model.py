@@ -22,8 +22,9 @@ from time import sleep
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-# TODO: Should Model be a subclass of Container, to eliminate item-filing code duplication?
-# TODO: Yes.
+# TODO: Model should be a subclass of Container, to eliminate item-filing code duplication.
+# TODO: Move any methods of Model that Container can use into Container.
+# TODO: Make separate Sampler.py.
 class Model(object):
     """
     Model is initialized with:
