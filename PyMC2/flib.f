@@ -1287,6 +1287,15 @@ cf2py double precision intent(out) :: like
       SUBROUTINE mvhyperg(x,color,k,like)
 
 c Multivariate hypergeometric log-likelihood function
+c Using the analogy of an urn filled with balls of different colors, 
+c the mv hypergeometric distribution describes the probability of 
+c drawing x(i) balls of a given color. 
+c
+c x : (array) Number of draws for each color.
+c color : (array) Number of balls of each color.
+
+c Total number of draws = sum(x)
+c Total number of balls in the urn = sum(color)
 
 cf2py integer dimension(k),intent(in) :: x,color
 cf2py integer intent(hide),depend(x) :: k=len(x)

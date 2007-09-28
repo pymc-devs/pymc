@@ -231,10 +231,10 @@ def arlognorm_like(x, a, sigma, rho):
     Autoregressive normal log-likelihood.
     
     .. math::
-        x_i = a_i \exp(e_i)
-        e_i = \rho e_{i-1} + \epsilon_i
+        x_i & = a_i \exp(e_i) \\
+        e_i & = \rho e_{i-1} + \epsilon_i
     
-    where :math:`\epsilon_u \sim N(0,\sigma)`.
+    where :math:`\epsilon_i \sim N(0,\sigma)`.
     """
     return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
     
@@ -744,7 +744,7 @@ def gev_like(x, xi, mu=0, sigma=1):
         \sigma & > 0,\\
         x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
         x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
-        x & \in [-\Infty,\Infty] \text{ if } \xi = 0
+        x & \in [-\infty,\infty] \text{ if } \xi = 0
 
     """
 
@@ -823,7 +823,7 @@ def half_normal_like(x, tau):
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
-    to the domain :math:`x \in [0, \Infty)`.
+    to the domain :math:`x \in [0, \infty)`.
 
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
@@ -1053,44 +1053,59 @@ def multinomial_like(x, n, p):
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
-# Hum, this is weird. multivariate_hypergeometric_like takes one parameters m
-# and rmultivariate_hypergeometric has two. n= sum(x) ???
-def rmultivariate_hypergeometric(draws, colors, n=None):
+def rmultivariate_hypergeometric(n, m, size=None):
     """
-    Returns n multivariate hypergeometric draws of size 'draws'
+    Random multivariate hypergeometric variates.
+    
+    n : Number of draws.
+    m : Number of items in each category.
     """
 
+    N = len(m)
+    urn = np.repeat(np.arange(N), m)
+    
+    if size:
+        draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]] for j in range(size)])
 
-    urn = concatenate([[i]*count for i,count in enumerate(colors)])
-
-    if n:
-        draw = [[urn[i] for i in permutation(len(urn))[:draws]] for j in range(n)]
-
-        return [[sum(draw[j]==i) for i in range(len(colors))] for j in range(n)]
+        r = [[sum(draw[j]==i) for i in range(len(m))] for j in range(size)]
     else:
-        draw = [urn[i] for i in permutation(len(urn))[:draws]]
+        draw = np.array([urn[i] for i in np.random.permutation(len(urn))[:n]])
 
-        return [sum(draw==i) for i in range(len(colors))]
+        r = [sum(draw==i) for i in range(len(m))]
+    return np.asarray(r)
 
-def multivariate_hypergeometric_expval(m):
+def multivariate_hypergeometric_expval(n, m):
     """
-    multivariate_hypergeometric_expval(m)
+    multivariate_hypergeometric_expval(n, m)
 
     Expected value of multivariate hypergeometric distribution.
+    
+    n : number of items drawn.
+    m : number of items in each category.
     """
-    return n * (asarray(m) / sum(m))
+    m= np.asarray(m, float)
+    return n * (m / m.sum())
 
 
 def multivariate_hypergeometric_like(x, m):
     r"""
     multivariate_hypergeometric_like(x, m)
 
-    Multivariate hypergeometric log-likelihood
+    The multivariate hypergeometric describes the probability of drawing x[i] 
+    elements of the ith category, when the number of items in each category is
+    given by m. 
+    
 
     .. math::
-        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        \frac{\prod_i \binom{m_i}{c_i}}{\binom{N}{n]}
 
-    x < m
+    where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
+    
+    :Parameters:
+        x : int sequence
+            Number of draws from each category, :math:`< m`
+        m : int sequence
+            Number of items in each categoy. 
     """
     # try:
     #     constrain(x, upper=m)

@@ -74,8 +74,23 @@ def dirichlet(x, theta):
 def geometric(x, p):
     return p*(1.-p)**(x-1)
 
-def hypergeometric(x, d, S, N):
-    return comb(N-S, x) * comb(S, d-x) / comb(N,d)
+def hypergeometric(x, d, s, N):
+    """
+    x : number of successes drawn
+    d : number of draws
+    s : number of successes in total
+    n : nuccesses + failures in total.
+    """
+    return comb(n-s, x) * comb(s, d-x) / comb(n,d)
+
+def mv_hypergeometric(x,m):
+    """
+    x : number of draws for each category.
+    m : size of each category.
+    """
+    x = np.asarray(x)
+    m = np.asarray(m)
+    return log(comb(m,x).prod()/comb(m.sum(), x.sum()))
 
 def multinomial(x,n,p):
     x = np.atleast_2d(x)
@@ -575,8 +590,19 @@ class test_multinomial(NumpyTestCase):
         assert_equal(a,b)
 
 class test_multivariate_hypergeometric(NumpyTestCase):
-    def check(self):
-        assert_equal(0,1)
+    def check_random(self):
+        m = [10,15]
+        N = 200
+        n = 6
+        r = rmultivariate_hypergeometric(n, m, N)
+        assert_array_almost_equal(r.mean(0), multivariate_hypergeometric_expval(n,m),1)
+        
+    def check_likelihood(self):
+        m = [10,15]
+        x = [3,4]
+        a = multivariate_hypergeometric_like(x, m)
+        b = mv_hypergeometric(x, m)
+        assert_almost_equal(a,b,4)
 
 
 class test_multivariate_normal(NumpyTestCase):
@@ -614,9 +640,9 @@ class test_multivariate_normal(NumpyTestCase):
         c = sum([multivariate_normal_like_chol(x,mu,cholesky(C)) for x in r])
         d = sum([multivariate_normal(x, mu, C) for x in r])
 
-        assert_almost_equal(a, d)
-        assert_almost_equal(a,b)
-        assert_almost_equal(b,c)
+        assert_almost_equal(a, d,6)
+        assert_almost_equal(a,b,6)
+        assert_almost_equal(b,c,6)
 
     
 class test_normal(NumpyTestCase):
