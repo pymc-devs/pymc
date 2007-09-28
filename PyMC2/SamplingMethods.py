@@ -219,12 +219,13 @@ class SamplingMethod(object):
         if verbose > 1 or self.verbose > 1:
             print '\t%s tuning:' % self._id
         
+        # Flag for tuning state
+        tuning = True        
+        
         # Calculate recent acceptance rate
-        if not (self._accepted + self._rejected): return
+        if not (self._accepted + self._rejected): return tuning
         acc_rate = self._accepted / (self._accepted + self._rejected)
         
-        # Flag for tuning state
-        tuning = True
         
         # Switch statement
         if acc_rate<0.001:

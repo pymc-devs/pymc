@@ -28,6 +28,7 @@ from numpy import csingle, complex_, clongfloat
 
 # TODO : Wrap the nd histogramming fortran function. 
 
+# TODO: make this return a value so you can stop using dummy objects.
 # Find PyMC object's random children.
 def extend_children(pymc_object):
     """

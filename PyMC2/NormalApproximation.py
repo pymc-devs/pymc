@@ -5,7 +5,7 @@
 # TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
 # TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just SamplingMethods.
 # TODO: When an error results from fit() not having been called, it should say so.
-# TODO: LMS vs. blocked option for all optimization algorithms.
+# TODO: one-at-a-time vs. blocked option for all optimization algorithms.
 
 __docformat__='reStructuredText'
 

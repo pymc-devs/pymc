@@ -6,6 +6,8 @@ from numpy import ndarray, array, zeros, shape, arange
 
 # TODO: Eliminate item-filing code duplication.
 # TODO: Can you just subclass the iterables and ContainerBase? Probably.
+# TODO: Use the iterables' __init__ methods first on the arguments, then use ContainerBase.__init__
+# TODO: to file away the elements in self.
 def Container(iterable, name = 'container'):
     """
     C = Container(iterable[, name])
