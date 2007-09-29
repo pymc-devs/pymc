@@ -72,7 +72,7 @@ def Container(iterable = None, name = 'container', **args):
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
     
-    :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer
+    :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer 
     """
     
     # Wrap classes and modules
