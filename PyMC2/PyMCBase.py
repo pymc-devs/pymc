@@ -165,12 +165,6 @@ class ContainerBase(object):
     
     :SeeAlso: Container, ArrayContainer, ListDictContainer, SetContainer
     """
-    def __init__(self):
-        self.all_objects = set()
-        self.variables = set()
-        self.nodes = set()
-        self.parameters = set()
-        self.potentials = set()
-        self.data = set()
-        self.sampling_methods = set()
+    pass
+        
     

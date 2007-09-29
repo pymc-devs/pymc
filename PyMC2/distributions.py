@@ -1145,10 +1145,7 @@ def mvnormal_like(x, mu, tau):
     tau: (k,k)
     tau positive definite
     """
-    if flib_blas_OK:
-        return flib.prec_mvnorm(x,mu,tau)
-    else:
-        return 
+    return flib.prec_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
 def rmvnormal_cov(mu, C, size=1):
@@ -1182,7 +1179,6 @@ def mvnormal_cov_like(x, mu, C):
     C: (k,k)
     C positive definite
     """
-
     return flib.cov_mvnorm(x,mu,C)        
 
 # Multivariate normal, parametrized with Cholesky factorization.----------

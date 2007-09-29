@@ -10,6 +10,7 @@ from numpy.distutils.system_info import get_info
 config = Configuration('PyMC2',parent_package=None,top_path=None)
 
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
+# TODO: Use numpy's lapack_lite if optimized BLAS are not present.
 try:
     lapack_info = get_info('lapack_opt',1)
     config.add_extension(name='flib',sources=['PyMC2/flib.f',
