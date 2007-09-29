@@ -20,10 +20,8 @@ except:
     
     
 # Try to compile the Pyrex version of LazyFunction
-try:
-    config.add_extension(name='PyrexLazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
-except:
-    pass
+config.add_extension(name='PyrexLazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
+config.add_extension(name='Container_values', sources='PyMC2/Container_values.c')
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup

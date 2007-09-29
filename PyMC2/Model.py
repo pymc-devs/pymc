@@ -105,7 +105,7 @@ class Model(ContainerBase):
             except: 
                 self.__name__ = 'PyMC_Model'
                 
-        self.model_def = Container(input, self.__name__)
+        self.model_def = Container(input)
         self.variables = self.model_def.variables
         self.nodes = self.model_def.nodes
         self.parameters = self.model_def.parameters

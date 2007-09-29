@@ -6,7 +6,7 @@ from PyMC2 import Container
 class test_Container(NumpyTestCase):
     def check(self):
 
-        # Test set container:
+# Test set container:
 
         S = set([DM.e, DM.s, DM.l])
         R = Container(S)
@@ -45,6 +45,7 @@ class test_Container(NumpyTestCase):
         B[1,:] = 1.
         B[2,:] = A
         D = Container(B)
+
 
         for i in range(2):
             assert(D[0,i] is DM.e)

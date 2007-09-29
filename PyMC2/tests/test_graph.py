@@ -42,7 +42,7 @@ def mymodel():
     
     F.append(5)
     
-    F = Container(F, name = 'F')
+    F = Container(F)
     
     del q
     del x_0

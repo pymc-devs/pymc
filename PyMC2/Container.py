@@ -3,10 +3,14 @@ from PyMCBase import PyMCBase, ContainerBase, Variable
 from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
+from Container_values import LTCValue, DCValue, ACValue
 
 # TODO: Bring docs for Container and Model up to date.
+# TODO: Try to make Container take *args. Add a name post-hoc.
+# TODO: Consider making parents a Container, using part of the LazyFunction code to speed up finding the value attribute.
+# TODO: That will make Container.value fast.
 
-def Container(iterable, name = 'container'):
+def Container(*args):
     """
     C = Container(iterable[, name])
     
@@ -80,31 +84,36 @@ def Container(iterable, name = 'container'):
     
     :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer 
     """
-        
+    
+    if len(args)==1:
+        iterable = args[0]
+    else:
+        iterable = args
+    
     # Wrap sets
     if isinstance(iterable, set):
-        return SetContainer(iterable, name)
+        return SetContainer(iterable)
     
     # # Wrap lists and tuples
     elif isinstance(iterable, tuple) or isinstance(iterable, list):
-        return ListTupleContainer(iterable, name)
+        return ListTupleContainer(iterable)
 
     elif isinstance(iterable, dict):
-        return DictContainer(iterable, name)
+        return DictContainer(iterable)
         
     elif isinstance(iterable, ndarray):
-        return ArrayContainer(iterable, name) 
+        return ArrayContainer(iterable) 
     
     # Wrap classes and modules
     elif hasattr(iterable, '__dict__'):
-        if name == 'container' and hasattr(iterable, '__name__'):
+        if hasattr(iterable, '__name__'):
             name = iterable.__name__
         filtered_dict = {}
         for item in iterable.__dict__.iteritems():
-            if isinstance(item[1], Variable) or isinstance(item[1], ContainerBase):
+            if isinstance(item[1], PyMCBase):
                 filtered_dict[item[0]] = item[1]
 
-        return DictContainer(filtered_dict, name)
+        return DictContainer(filtered_dict)
         
     # Otherwise raise an error.
     else:
@@ -114,6 +123,9 @@ def Container_init(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
     """
+    container._value = copy(iterable)
+    container.__name__ = container.__class__.__name__
+    
     container.pymc_objects = set()
     container.variables = set()
     container.nodes = set()
@@ -196,6 +208,14 @@ class SetContainer(ContainerBase, set):
     """
     def __init__(self, iterable, name='container'):
         set.__init__(self, iterable)
+        for item in iterable:
+            if isinstance(item, Variable) or isinstance(item, ContainerBase):
+                try:
+                    hash(item.value)
+                except TypeError:
+                    raise TypeError, 'Only objects with hashable values may be included in SetContainers.\n'\
+                                    + item.__repr__() + ' has value of type ' +  item.value.__class__.__name__\
+                                     + '\nwhich is not hashable.'
         Container_init(self, iterable)
         
     def replace(self, item, new_container, i):
@@ -213,6 +233,7 @@ class SetContainer(ContainerBase, set):
 
     value = property(fget = get_value)
         
+
 class ListTupleContainer(ContainerBase, list):
     """
     ListContainers are containers that wrap lists and tuples. 
@@ -220,24 +241,31 @@ class ListTupleContainer(ContainerBase, list):
     
     :SeeAlso: Container, ListTupleContainer, DictContainer, ArrayContainer
     """
-    def __init__(self, iterable, name='container'):
+    def __init__(self, iterable):
         list.__init__(self, iterable)
         Container_init(self, iterable)
-        self.__name__ = name
+        self._value = list(self._value)
         
+        self.val_ind = []   
+        self.nonval_ind = []
+        for i in xrange(len(self)):
+            if isinstance(self[i], Variable) or isinstance(self[i], ContainerBase):
+                self.val_ind.append(i)
+            else:
+                self.nonval_ind.append(i)
+                
+        self.n_val = len(self.val_ind)
+        self.n_nonval = len(self) - self.n_val
+
     def replace(self, item, new_container, i):
         self[i] = new_container
         
     def get_value(self):
-        _value = copy(self)
-        for i in xrange(len(_value)):
-            item = _value[i]
-            if isinstance(item, Variable) or isinstance(item, ContainerBase):
-                _value[i] = item.value
-
-        return _value
+        LTCValue(self)
+        return self._value
 
     value = property(fget = get_value)
+
 
 class DictContainer(ContainerBase, dict):
     """
@@ -245,22 +273,27 @@ class DictContainer(ContainerBase, dict):
     
     :SeeAlso: Container, ListTupleContainer, SetContainer, ArrayContainer
     """
-    def __init__(self, iterable, name='container'):
+    def __init__(self, iterable):
         dict.__init__(self, iterable)
         Container_init(self, iterable)
-        self.__name__ = name
+        
+        self.val_keys = []   
+        self.nonval_keys = []
+        for key in self.keys():
+            if isinstance(self[key], Variable) or isinstance(self[key], ContainerBase):
+                self.val_keys.append(key)
+            else:
+                self.nonval_keys.append(key)
+                
+        self.n_val = len(self.val_keys)
+        self.n_nonval = len(self) - self.n_val
         
     def replace(self, item, new_container, i):
         self[self.keys()[i]] = new_container
         
     def get_value(self):
-        _value = copy(self)
-        for key in _value.iterkeys():
-            item = _value[key]
-            if isinstance(item, Variable) or isinstance(item, ContainerBase):
-                _value[key] = item.value
-
-        return _value
+        DCValue(self)
+        return self._value
 
     value = property(fget = get_value)        
 
@@ -283,21 +316,32 @@ class ArrayContainer(ContainerBase, ndarray):
         
         ContainerBase.__init__(C)
         
-        C._value = array_in.copy()
         C.__name__ = name
         
         # Ravelled versions of self, self.value, and self._pymc_finder.
         C._ravelleddata = C.ravel()
+        
+        # Sort out contents and wrap internal containers.
+        Container_init(C, C._ravelleddata)
+        C._value = array_in.copy()        
         C._ravelledvalue = C._value.ravel()
         
         # An array range to keep around.        
         C.iterrange = arange(len(C.ravel()))
         
-        C._pymc_finder = ()
+        C.val_ind = []
+        C.nonval_ind = []
         for i in xrange(len(C._ravelleddata)):
-            if isinstance(C._ravelleddata[i], Variable):
-                C._pymc_finder += (i,)
-        Container_init(C, C._ravelleddata)
+            if isinstance(C._ravelleddata[i], Variable) or isinstance(C._ravelleddata[i], ContainerBase):
+                C.val_ind.append(i)
+            else:
+                C.nonval_ind.append(i)
+        
+        C.val_ind = array(C.val_ind)
+        C.nonval_ind = array(C.nonval_ind)
+        
+        C.n_val = len(C.val_ind)
+        C.n_nonval = len(C.nonval_ind)
 
         C.flags['W'] = False
         
@@ -305,12 +349,10 @@ class ArrayContainer(ContainerBase, ndarray):
 
     def replace(self, item, new_container, i):
         self._ravelleddata[i] = new_container
-        self._pymc_finder += (i,)
 
     # This method converts self to self.value.
     def get_value(self):
-        for index in self._pymc_finder:
-            self._ravelledvalue[index] = self._ravelleddata[index].value
+        ACValue(self)
         return self._value
                 
     value = property(fget = get_value)
