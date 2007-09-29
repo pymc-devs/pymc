@@ -96,7 +96,7 @@ def multinomial(x,n,p):
     x = np.atleast_2d(x)
     return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
 
-def multivariate_normal(x, mu, C):
+def mvnormal(x, mu, C):
     N = len(x)
     x = np.asmatrix(x)
     mu = np.asmatrix(mu)
@@ -605,15 +605,15 @@ class test_multivariate_hypergeometric(NumpyTestCase):
         assert_almost_equal(a,b,4)
 
 
-class test_multivariate_normal(NumpyTestCase):
+class test_mvnormal(NumpyTestCase):
     
     def check_random(self):
         mu = array([3,4])
         C = matrix([[1, .5],[.5,1]])
 
-        r = rmultivariate_normal(mu, np.linalg.inv(C), 1000)
-        rC = rmultivariate_normal_cov(mu,C,1000)
-        rchol = rmultivariate_normal_chol(mu,cholesky(C),1000)
+        r = rmvnormal(mu, np.linalg.inv(C), 1000)
+        rC = rmvnormal_cov(mu,C,1000)
+        rchol = rmvnormal_chol(mu,cholesky(C),1000)
         
         assert_array_almost_equal(mu, r.mean(0), 1)
         assert_array_almost_equal(C, np.cov(r.T), 1)
@@ -630,15 +630,15 @@ class test_multivariate_normal(NumpyTestCase):
         
 
         tau = np.linalg.inv(C)
-        r = rmultivariate_normal(mu, tau, 2)
+        r = rmvnormal(mu, tau, 2)
 
-        # multivariate_normal_like is expecting tau as its last argument
-        a = sum([multivariate_normal_like(x, mu, tau) for x in r])
-        b = sum([multivariate_normal_cov_like(x, mu, C) for x in r])
+        # mvnormal_like is expecting tau as its last argument
+        a = sum([mvnormal_like(x, mu, tau) for x in r])
+        b = sum([mvnormal_cov_like(x, mu, C) for x in r])
 
-        # multivariate_normal_like_chol is expecting a Cholesky factor as the last argument.
-        c = sum([multivariate_normal_like_chol(x,mu,cholesky(C)) for x in r])
-        d = sum([multivariate_normal(x, mu, C) for x in r])
+        # mvnormal_like_chol is expecting a Cholesky factor as the last argument.
+        c = sum([mvnormal_chol_like(x,mu,cholesky(C)) for x in r])
+        d = sum([mvnormal(x, mu, C) for x in r])
 
         assert_almost_equal(a, d,6)
         assert_almost_equal(a,b,6)

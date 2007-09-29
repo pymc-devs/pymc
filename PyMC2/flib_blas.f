@@ -84,35 +84,8 @@ cf2py integer intent(hide) :: info
       call DPOTRF( 'L', n, C, n, info )
 !       print *, C
       
-!     Puke if C not positive definite
-      if (info .GT. 0) then
-        like=-infinity
-        RETURN
-      endif
-
-!     x <- (x-mu)      
-      call DAXPY(n, -1.0D0, mu, 1, x, 1)
-      
-!       mu <- x
-      call DCOPY(n,x,1,mu,1)
-      
-!     x <- C ^-1 * x
-      call DPOTRS('L',n,1,C,n,x,n,info)
-      
-!     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
-      like = -0.5D0 * DDOT(n, x, 1, mu, 1)
-!       print *, like
-      
-      twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
-!       print *, twopi_N
-      
-      log_detC = 0.0D0
-      do i=1,n
-        log_detC = log_detC + log(C(i,i))
-      enddo
-!       print *, log_detC
-      
-      like = like - twopi_N - log_detC
+!     Call to chol_mvnorm
+      call chol_mvnorm(x,mu,C,n,like,info)
       
       return
       END

@@ -14,7 +14,7 @@ univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
  'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull', 'wishart']
 
-mv_distributions = ['dirichlet','multivariate_hypergeometric','multivariate_normal']
+mv_distributions = ['dirichlet','multivariate_hypergeometric','mvnormal']
 
 availabledistributions = univ_distributions+mv_distributions
 import flib
@@ -1114,26 +1114,26 @@ def multivariate_hypergeometric_like(x, m):
     return flib.mvhyperg(x, m)
 
 # Multivariate normal--------------------------------------
-def rmultivariate_normal(mu, tau, size=1):
+def rmvnormal(mu, tau, size=1):
     """
-    rmultivariate_normal(mu, tau, size=1)
+    rmvnormal(mu, tau, size=1)
 
     Random multivariate normal variates.
     """
-
+    # TODO: Implement this without inverting tau.
     return random.multivariate_normal(mu, inverse(tau), size)
 
-def multivariate_normal_expval(mu, tau):
+def mvnormal_expval(mu, tau):
     """
-    multivariate_normal_expval(mu, tau)
+    mvnormal_expval(mu, tau)
 
     Expected value of multivariate normal distribution.
     """
     return mu
 
-def multivariate_normal_like(x, mu, tau):
+def mvnormal_like(x, mu, tau):
     r"""
-    multivariate_normal_like(x, mu, tau)
+    mvnormal_like(x, mu, tau)
 
     Multivariate normal log-likelihood
 
@@ -1145,30 +1145,32 @@ def multivariate_normal_like(x, mu, tau):
     tau: (k,k)
     tau positive definite
     """
-
-    return flib.prec_mvnorm(x,mu,tau)
+    if flib_blas_OK:
+        return flib.prec_mvnorm(x,mu,tau)
+    else:
+        return 
         
 # Multivariate normal, parametrized with covariance---------------------------
-def rmultivariate_normal_cov(mu, C, size=1):
+def rmvnormal_cov(mu, C, size=1):
     """
-    rmultivariate_normal_cov(mu, C)
+    rmvnormal_cov(mu, C)
 
     Random multivariate normal variates.
     """
 
     return random.multivariate_normal(mu, C, size)
 
-def multivariate_normal_cov_expval(mu, C):
+def mvnormal_cov_expval(mu, C):
     """
-    multivariate_normal_cov_expval(mu, C)
+    mvnormal_cov_expval(mu, C)
 
     Expected value of multivariate normal distribution.
     """
     return mu
 
-def multivariate_normal_cov_like(x, mu, C):
+def mvnormal_cov_like(x, mu, C):
     r"""
-    multivariate_normal_cov_like(x, mu, C)
+    mvnormal_cov_like(x, mu, C)
 
     Multivariate normal log-likelihood
 
@@ -1184,9 +1186,9 @@ def multivariate_normal_cov_like(x, mu, C):
     return flib.cov_mvnorm(x,mu,C)        
 
 # Multivariate normal, parametrized with Cholesky factorization.----------
-def rmultivariate_normal_chol(mu, sig, size=1):
+def rmvnormal_chol(mu, sig, size=1):
     """
-    rmultivariate_normal(mu, tau)
+    rmvnormal(mu, sig)
 
     Random multivariate normal variates.
     """
@@ -1200,17 +1202,17 @@ def rmultivariate_normal_chol(mu, sig, size=1):
             out[i,:] = mu+np.dot(sig , random.normal(size=mu_size)).reshape(mu_shape)
         return out
 
-def multivariate_normal_expval_chol(mu, sig):
+def mvnormal_chol_expval(mu, sig):
     """
-    multivariate_normal_expval(mu, tau)
+    mvnormal_expval(mu, sig)
 
     Expected value of multivariate normal distribution.
     """
     return mu
 
-def multivariate_normal_like_chol(x, mu, sig):
+def mvnormal_chol_like(x, mu, sig):
     r"""
-    multivariate_normal_like(x, mu, tau)
+    mvnormal_like(x, mu, tau)
 
     Multivariate normal log-likelihood
 
