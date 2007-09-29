@@ -11,7 +11,7 @@ from SamplingMethods import SamplingMethod, assign_method
 from Matplot import Plotter, show
 import database
 from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
-from Container import ContainerBase
+from Container import ContainerBase, Container
 from utils import extend_children, extend_parents
 import gc, sys,os
 from copy import copy
@@ -22,14 +22,16 @@ from time import sleep
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-# TODO: Model should be a subclass of Container, to eliminate item-filing code duplication.
-# TODO: Move any methods of Model that Container can use into Container.
-# TODO: Make separate Sampler.py.
-class Model(object):
+# TODO: Move to Container:
+# _moralize, _get_maximal_cliques, _extend_children, _parse_generations, graph, _get_logp.
+# Note: Will need a stem class to put them in that inherits from ContainerBase, they need to know Parameter from Node.
+# TODO: Is Model.remember still needed?
+
+class Model(ContainerBase):
     """
     Model is initialized with:
 
-      >>> A = Model(prob_def, dbase=None)
+      >>> A = Model(input, dbase=None)
 
     :Arguments:
         input : class, module, dictionary
@@ -67,15 +69,14 @@ class Model(object):
        - plot(): Visualize traces for all variables
        - remember(trace_index) : Return the entire model to the tallied state indexed by trace_index.
 
-    :SeeAlso: Sampler, MAP, NormalApproximation, weight.
+    :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container.
     """
     def __init__(self, input, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
-          - input : module
-              A module containing the model definition, in terms of Parameters, 
-              and Nodes.
+          - input : module, list, tuple, dictionary, set or class.
+              Model definition, in terms of Parameters, Nodes, Potentials and Containers.
           - db : string
               The name of the database backend that will store the values
               of the parameters and nodes sampled during the MCMC loop.
@@ -86,13 +87,6 @@ class Model(object):
         """
 
         # Instantiate public attributes
-        self.nodes = set()
-        self.parameters = set()
-        self.data = set()
-        self.potentials = set()
-        self.containers = set()
-        self.variables = set()
-        self.extended_children = None
         self.verbose = verbose
         # Instantiate hidden attributes
         self.generations = []
@@ -110,34 +104,20 @@ class Model(object):
                 self.__name__ = input['__name__']
             except: 
                 self.__name__ = 'PyMC_Model'
-
-        # Change input into a dictionary
-        if isinstance(input, dict):
-            self.input_dict = input.copy()
-        else:
-            try:
-                # If input is a module, reload it to make a fresh copy.
-                reload(input)
-            except TypeError:
-                pass
-
-            self.input_dict = input.__dict__.copy()
-
-        # Look for PyMC objects
-        for name, item in self.input_dict.iteritems():
-            if  isinstance(item, PyMCBase) \
-                or isinstance(item, SamplingMethod) \
-                or isinstance(item, ContainerBase):
-                self.__dict__[name] = item
                 
-            # Allocate to appropriate set
-            self._fileitem(item)
-            
-        # Union of PyMC objects
-        self.variables = self.nodes | self.parameters | self.data
-        self.pymc_objects = self.variables | self.potentials
+        self.model_def = Container(input, self.__name__)
+        self.variables = self.model_def.variables
+        self.nodes = self.model_def.nodes
+        self.parameters = self.model_def.parameters
+        self.potentials = self.model_def.potentials
+        self.data = self.model_def.data
+        self.sampling_methods = self.model_def.sampling_methods
+        self.container_refs = self.model_def.container_refs
+        self.pymc_objects = self.model_def.pymc_objects
         
-        
+        for obj in self.pymc_objects:
+            self.__dict__[obj.__name__] = obj
+
         # Moved this stuff here so I can use it from NormalApproximation. -AP
         # Specify database backend
         self._assign_database_backend(db)
@@ -148,44 +128,10 @@ class Model(object):
         try:
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
         except:
-            self._plotter = 'Could not be instantiated.'
-        
-    def _fileitem(self, item):
-        """
-        Store an item into the proper set:
-          - parameters
-          - nodes
-          - data
-          - containers
-          - potentials
-        """
-        # If a dictionary is passed in, open it up.
-        if isinstance(item, ContainerBase):
-            self.containers.add(item)
-            self.parameters.update(item.parameters)
-            self.data.update(item.data)
-            self.nodes.update(item.nodes)
-            self.potentials.update(item.potentials)
-
-        # File away the PyMC objects
-        elif isinstance(item, PyMCBase):
-            # Add an attribute to the object referencing the model instance.
-
-            if isinstance(item, Node):
-                self.nodes.add(item)
-
-            elif isinstance(item, Parameter):
-                if item.isdata:
-                    self.data.add(item)
-                else:  self.parameters.add(item)
-                
-            elif isinstance(item, Potential):
-                self.potentials.add(item)
-
-        elif isinstance(item, SamplingMethod):
-            self.nodes.update(item.nodes)
-            self.parameters.update(item.parameters)
-            self.data.update(item.data)
+            self._plotter = 'Could not be instantiated.'        
+    
+    def _get_value(self):
+        return self.model_def.value
     
     def _moralize(self):
         """
@@ -369,7 +315,8 @@ class Model(object):
         uncontained_nodes = self.nodes.copy()
         uncontained_potentials = self.potentials.copy()
         
-        for container in self.containers:
+        for reference in self.container_refs:
+            container = reference.owner
             container.dot_object = pydot.Cluster(graph_name = container.__name__, label = container.__name__)
             uncontained_params -= container.parameters
             uncontained_nodes -= container.nodes
@@ -434,28 +381,23 @@ class Model(object):
         create_graph(U)
         
         
-        for container in self.containers: 
-
+        for reference in self.container_refs: 
+            container = reference.owner
             # Get containers ready to be graph nodes.
             if collapse_containers:
-                shown_objects.add(container)
-                obj_substitute_names[container] = [container.__name__]
+                shown_objects.add(reference)
+                obj_substitute_names[reference] = [container.__name__]
                 U.dot_object.add_node(pydot.Node(name=container.__name__,shape='box'))
                 for variable in container.variables:
                     obj_substitute_names[variable] = [container.__name__]
-                container.parents = {}
-                for pymc_object in container.pymc_objects:
-                    for key in pymc_object.parents.keys():
-                        if not pymc_object.parents[key] in self.pymc_objects:
-                            container.parents[pymc_object.__name__ + '_' + key] = pymc_object.parents[key]
 
             # Create a grahpviz cluster for each container.
             else:
                 create_graph(container)
                 U.dot_object.add_subgraph(container.dot_object)
-                obj_substitute_names[container] = set()
+                obj_substitute_names[reference] = set()
                 for variable in container.variables:
-                    obj_substitute_names[container] |= set(obj_substitute_names[variable])
+                    obj_substitute_names[reference] |= set(obj_substitute_names[variable])
             
         self.dot_object = U.dot_object
         
@@ -475,10 +417,11 @@ class Model(object):
                         self.dot_object.add_edge(new_edge)
                 
         # Create edges from parent-child relationships between PyMC objects.
-        
-        for pymc_object in self.pymc_objects | self.containers:
+        for pymc_object in self.pymc_objects | self.container_refs:
             
             if pymc_object in shown_objects:
+                if hasattr(pymc_object,'owner'):
+                    pymc_object = pymc_object.owner
                 parent_dict = pymc_object.parents
             
                 for key in parent_dict.iterkeys():
@@ -487,8 +430,14 @@ class Model(object):
                     # Draw edges between child and all elements of container (if consts=True)
                     # or all variables in container (if consts = False).
                     if isinstance(parent_dict[key], ContainerBase) or isinstance(parent_dict[key], Variable):
-                        for name in obj_substitute_names[parent_dict[key]]:
-                            self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
+                        key_val = parent_dict[key]
+                        if isinstance(key_val, ContainerBase):
+                            key_val = key_val.reference
+                            
+                            # TODO: Fix bug here.
+                            for name in obj_substitute_names[key_val]:
+                                self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
+                        
                     elif consts:
                         U.dot_object.add_node(pydot.Node(name=parent_dict[key].__str__(), style='filled'))
                         self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=pymc_object.__name__, label=key))                        
@@ -663,19 +612,6 @@ class Sampler(Model):
         # Instantiate superclass
         Model.__init__(self, input, db, output_path, verbose)
         
-        # Instantiate and populate sampling methods set
-        self.sampling_methods = set()
-
-        for item in self.input_dict.iteritems():
-            if isinstance(item[1], ContainerBase):
-                self.__dict__[item[0]] = item[1]
-                self.sampling_methods.update(item[1].sampling_methods)
-
-            if isinstance(item[1], SamplingMethod):
-                self.__dict__[item[0]] = item[1]
-                self.sampling_methods.add(item[1])
-                setattr(item[1], '_model', self)
-
         # Default SamplingMethod
         self._assign_samplingmethod()
 

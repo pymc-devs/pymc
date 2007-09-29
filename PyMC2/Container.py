@@ -4,12 +4,18 @@ from SamplingMethods import SamplingMethod
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
 
-def Container(iterable = None, name = 'container', **args):
+# TODO: Bring docs for Container and Model up to date.
+
+def Container(iterable, name = 'container'):
     """
     C = Container(iterable[, name])
     
     Wraps an iterable object (currently a list, set, tuple, dictionary 
     or ndarray) in a subclass of ContainerBase and returns it.
+    
+    If the iterable is not recognized, a dictionary container will be made
+    from its __dict__ attribute.
+    
     
     Subclasses of ContainerBase strive to emulate the iterables they wrap,
     with two important differences:
@@ -74,23 +80,9 @@ def Container(iterable = None, name = 'container', **args):
     
     :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer 
     """
-    
-    # Wrap classes and modules
-    if len(args)>0:
-        return ListTupleContainer(args,name)
-    
-    elif hasattr(iterable, '__dict__'):
-        if name == 'container' and hasattr(iterable, '__name__'):
-            name = iterable.__name__
-        filtered_dict = {}
-        for item in iterable.__dict__.iteritems():
-            if isinstance(item[1], Variable) or isinstance(item[1], ContainerBase):
-                filtered_dict[item[0]] = item[1]
-                
-        return DictContainer(filtered_dict, name)
         
     # Wrap sets
-    elif isinstance(iterable, set):
+    if isinstance(iterable, set):
         return SetContainer(iterable, name)
     
     # # Wrap lists and tuples
@@ -102,6 +94,17 @@ def Container(iterable = None, name = 'container', **args):
         
     elif isinstance(iterable, ndarray):
         return ArrayContainer(iterable, name) 
+    
+    # Wrap classes and modules
+    elif hasattr(iterable, '__dict__'):
+        if name == 'container' and hasattr(iterable, '__name__'):
+            name = iterable.__name__
+        filtered_dict = {}
+        for item in iterable.__dict__.iteritems():
+            if isinstance(item[1], Variable) or isinstance(item[1], ContainerBase):
+                filtered_dict[item[0]] = item[1]
+
+        return DictContainer(filtered_dict, name)
         
     # Otherwise raise an error.
     else:
@@ -111,13 +114,19 @@ def Container_init(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
     """
-    container.all_objects = set()
+    container.pymc_objects = set()
     container.variables = set()
     container.nodes = set()
     container.parameters = set()
     container.potentials = set()
     container.data = set()
     container.sampling_methods = set()
+    container.container_refs = set()
+    
+    class ContainerReference(object):
+        def __init__(self, container):
+            self.owner = container
+    container.reference = ContainerReference(container)
     
     i=0
     
@@ -136,18 +145,17 @@ def Container_init(container, iterable):
 
             # Update all of container's variables, potentials, etc. with the new wrapped
             # iterable's. This process recursively unpacks nested iterables.
+            container.container_refs.add(new_container.reference)
             container.variables.update(new_container.variables)
             container.parameters.update(new_container.parameters)
             container.potentials.update(new_container.potentials)
             container.nodes.update(new_container.nodes)
             container.data.update(new_container.data)
-            container.all_objects.update(new_container.all_objects)
             container.sampling_methods.update(new_container.sampling_methods)
 
         else:
             
             # If the item isn't iterable, file it away.
-            container.all_objects.add(item)
             if isinstance(item, Variable):
                 container.variables.add(item)
                 if isinstance(item, Parameter):
@@ -164,6 +172,20 @@ def Container_init(container, iterable):
         i += 1
 
     container.pymc_objects = container.potentials | container.variables
+    
+    container.parents = {}
+    for pymc_object in container.pymc_objects:
+        for key in pymc_object.parents.keys():
+            if isinstance(pymc_object.parents[key],Variable):
+                if not pymc_object.parents[key] in container.pymc_objects:
+                    container.parents[pymc_object.__name__ + '_' + key] = pymc_object.parents[key]
+                
+    container.children = set()
+    for variable in container.variables:
+        for child in variable.children:
+            if not child in container.pymc_objects:
+                container.children.add(child)
+    
     
 
 class SetContainer(ContainerBase, set):
@@ -201,6 +223,7 @@ class ListTupleContainer(ContainerBase, list):
     def __init__(self, iterable, name='container'):
         list.__init__(self, iterable)
         Container_init(self, iterable)
+        self.__name__ = name
         
     def replace(self, item, new_container, i):
         self[i] = new_container
@@ -225,6 +248,7 @@ class DictContainer(ContainerBase, dict):
     def __init__(self, iterable, name='container'):
         dict.__init__(self, iterable)
         Container_init(self, iterable)
+        self.__name__ = name
         
     def replace(self, item, new_container, i):
         self[self.keys()[i]] = new_container
@@ -260,7 +284,7 @@ class ArrayContainer(ContainerBase, ndarray):
         ContainerBase.__init__(C)
         
         C._value = array_in.copy()
-        C.name = name
+        C.__name__ = name
         
         # Ravelled versions of self, self.value, and self._pymc_finder.
         C._ravelleddata = C.ravel()

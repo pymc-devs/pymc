@@ -2,9 +2,12 @@ import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter, Potential
 from utils import extend_children, _push
-from PyMCBase import ZeroProbability
+from PyMCBase import ZeroProbability, ContainerBase
+from Container import Container
 import numpy as np
 
+# TODO: Possibly allow value-less instantiation.
+# TODO: Test implicit container creation.
 def _extract(__func__, kwds, keys, classname): 
     """
     Used by decorators parameter and node to inspect declarations
@@ -72,6 +75,16 @@ def _extract(__func__, kwds, keys, classname):
         value = parents.pop('value')
     else:
         value = None
+        
+    for key in parents.keys():
+        parent = parents[key]
+        if (isinstance(parent, list) \
+            or isinstance(parent, dict) \
+            or isinstance(parent, tuple) \
+            or isinstance(parent, set) \
+            or isinstance(parent, np.ndarray))\
+            and not isinstance(parent, ContainerBase):
+            parents[key] = Container(parents[key])
                 
     return (value, parents)
 
