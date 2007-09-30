@@ -4,24 +4,69 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
-from PyMCBase import PyMCBase, ParentDict, ZeroProbability, Variable
-
-
+from PyMCBase import PyMCBase, ZeroProbability, Variable, ContainerBase, PotentialBase, ParameterBase, NodeBase
+from Container import DictContainer
 
 d_neg_inf = float(-1.79E308)
 
-# def import_LazyFunction():
-#     try:
-#         LazyFunction
-#     except NameError:
-try:
-    from PyrexLazyFunction import LazyFunction
-except:
-    from LazyFunction import LazyFunction
-    print 'Using pure lazy functions'
-# return LazyFunction
+# from PyrexLazyFunction import LazyFunction
+from LazyFunction import LazyFunction
 
-class Potential(PyMCBase):
+class ParentDict(DictContainer):
+    """
+    A special subclass of DictContainer which makes it safe to change parameters'
+    and nodes' parents. When __setitem__ is called, a ParentDict instance
+    removes its owner from the old parent's children set (if appropriate)
+    and adds its owner to the new parent's children set. It then asks
+    its owner to generate a new LazyFunction instance using its new
+    parents.
+
+    NB: SamplingMethod and Model are expecting parameters' and nodes'
+    children to be static. If you want to change indedependence structure
+    over the course of an MCMC loop, please do so with indicator variables.
+    
+    :SeeAlso: DictContainer
+    """
+    def __init__(self, regular_dict, owner):
+        DictContainer.__init__(self, regular_dict)
+        self.owner = owner
+
+    def __setitem__(self, key, new_parent):
+
+        old_parent = self[key]
+
+        # Possibly remove me from old parent's children set.
+        dict.__setitem__(self, key, new_parent)
+        
+        if isinstance(old_parent, Variable) or isinstance(old_parent, ContainerBase):
+            self.val_keys.remove(key)
+            self.nonval_keys.append(key)
+        
+        if isinstance(old_parent, PyMCBase):
+            only_reference = True
+            if isinstance(new_parent, Variable) or isinstance(new_parent, ContainerBase):
+                self.val_keys.append(key)
+                self.nonval_keys.remove(key)
+            
+
+            # See if I only claim the old parent via this key.
+            for item in self.iteritems():
+                if item[0] is old_parent and not item[1] == key:
+                    only_reference = False
+                    break
+
+            # If so, remove me from the old parent's children set.
+            if only_reference:
+                old_parent.children.remove(self.owner)
+
+        # If the new parent is a PyMC object, add me to its children set.
+        if isinstance(new_parent, PyMCBase):
+            new_parent.children.add(self.owner)
+
+        # Tell my owner it needs a new lazy function.
+        self.owner.gen_lazy_function()
+
+class Potential(PotentialBase):
     """
     Not a variable; just an arbitrary log-probability term to multiply into the 
     joint distribution. Useful for expressing models that aren't DAG's.
@@ -62,9 +107,8 @@ class Potential(PyMCBase):
     :SeeAlso: Parameter, PyMCBase, LazyFunction, parameter, node, data, Model, Container
     """
     def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
-
-        # self.LazyFunction = import_LazyFunction()
-        self.LazyFunction = LazyFunction
+        
+        self._parents = ParentDict(regular_dict = parents, owner = self)
 
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
@@ -110,7 +154,7 @@ class Potential(PyMCBase):
 
 
         
-class Node(Variable):
+class Node(NodeBase):
     """
     A variable whose value is determined by the values of its parents.
 
@@ -156,8 +200,7 @@ class Node(Variable):
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=0):
 
-        # self.LazyFunction = import_LazyFunction()
-        self.LazyFunction = LazyFunction
+        self._parents = ParentDict(regular_dict = parents, owner = self)
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
@@ -194,7 +237,7 @@ class Node(Variable):
     value = property(fget = get_value, fset=set_value)
     
 
-class Parameter(Variable):
+class Parameter(ParameterBase):
     
     """
     A variable whose value is not determined by the values of its parents.
@@ -298,7 +341,7 @@ class Parameter(Variable):
                     cache_depth=2,
                     verbose = 0):                    
 
-        # self.LazyFunction = import_LazyFunction()    
+        self._parents = ParentDict(regular_dict = parents, owner = self)
 
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
@@ -319,19 +362,12 @@ class Parameter(Variable):
             
             # Use random function if provided
             if random is not None:
-                value_dict = {}
-                for key in parents.keys():
-                    if isinstance(parents[key], PyMCBase) or isinstance(parents[key], Container):
-                        value_dict[key] = parents[key].value
-                    else:
-                        value_dict[key] = parents[key]
-
-                self._value = random(**value_dict)
+                self._value = random(**self._parents.value)
                 
             # Otherwise leave initial value at None and warn.
             else:
                 raise ValueError, 'Parameter ' + name + "'s value initialized to None; no initial value or random method provided."
-
+        
         PyMCBase.__init__(  self, 
                             doc=doc, 
                             name=name, 
@@ -339,7 +375,7 @@ class Parameter(Variable):
                             cache_depth=cache_depth, 
                             trace=trace,
                             verbose=verbose)
-                            
+        self._logp.force_compute()                   
         self.zero_logp_error_msg = "Parameter " + self.__name__ + "'s value is outside its support."
 
         # Check initial value
@@ -351,9 +387,11 @@ class Parameter(Variable):
         """
         Will be called by PyMCBase at instantiation.
         """
-        arguments = self.parents.copy()
+        arguments = {}
+        arguments.update(self.parents)
         arguments['value'] = self
-
+        arguments = ParentDict(arguments, owner=self)
+        
         # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
         self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)                
     

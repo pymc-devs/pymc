@@ -1,6 +1,5 @@
-from PyMCObjects import Parameter, Node, Potential
-from PyMCBase import PyMCBase, ContainerBase, Variable
-from SamplingMethods import SamplingMethod
+# from PyMCObjects import ParameterBase, NodeBase, PotentialBase
+from PyMCBase import PyMCBase, ContainerBase, Variable, ParameterBase, NodeBase, PotentialBase, SamplingMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
 from Container_values import LTCValue, DCValue, ACValue
@@ -78,7 +77,7 @@ def Container(*args):
             return normal_like(value, mean_sum, tau)
         
     x.value will be passed into y's log-probability function as argument mu, 
-    so mu[i] will return x.value[i] = x_i.value = x[i].value. Parameter y
+    so mu[i] will return x.value[i] = x_i.value = x[i].value. ParameterBase y
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
     
@@ -104,7 +103,7 @@ def Container(*args):
     elif isinstance(iterable, ndarray):
         return ArrayContainer(iterable) 
     
-    # Wrap classes and modules
+    # Wrap modules
     elif hasattr(iterable, '__dict__'):
         if hasattr(iterable, '__name__'):
             name = iterable.__name__
@@ -119,13 +118,15 @@ def Container(*args):
     else:
         raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + 'see Container.py for examples on how to write one.'
 
-def Container_init(container, iterable):
+def file_items(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
     """
     container._value = copy(iterable)
     container.__name__ = container.__class__.__name__
     
+    # all_objects needs to be a list because some may be unhashable.
+    container.all_objects = []
     container.pymc_objects = set()
     container.variables = set()
     container.nodes = set()
@@ -142,11 +143,15 @@ def Container_init(container, iterable):
     
     i=0
     
+
     for item in iterable:
+    
         
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
             item = iterable[item]
+            
+        container.all_objects.append(item)
 
         if hasattr(item,'__iter__'):
             
@@ -170,16 +175,16 @@ def Container_init(container, iterable):
             # If the item isn't iterable, file it away.
             if isinstance(item, Variable):
                 container.variables.add(item)
-                if isinstance(item, Parameter):
+                if isinstance(item, ParameterBase):
                     if item.isdata:
                         container.data.add(item)
                     else:
                         container.parameters.add(item)
-                elif isinstance(item, Node):
+                elif isinstance(item, NodeBase):
                     container.nodes.add(item)
-            elif isinstance(item, Potential):
+            elif isinstance(item, PotentialBase):
                 container.potentials.add(item)
-            elif isinstance(item, SamplingMethod):
+            elif isinstance(item, SamplingMethodBase):
                 container.sampling_methods.add(item)
         i += 1
 
@@ -216,7 +221,7 @@ class SetContainer(ContainerBase, set):
                     raise TypeError, 'Only objects with hashable values may be included in SetContainers.\n'\
                                     + item.__repr__() + ' has value of type ' +  item.value.__class__.__name__\
                                      + '\nwhich is not hashable.'
-        Container_init(self, iterable)
+        file_items(self, iterable)
         
     def replace(self, item, new_container, i):
         self.discard(item)
@@ -226,8 +231,8 @@ class SetContainer(ContainerBase, set):
         _value = copy(self)
         for item in _value:
             if isinstance(item, Variable) or isinstance(item, ContainerBase):
-                _value.discard(item)
-                _value.add(item.value)
+                set.discard(_value, item)
+                set.add(_value, item.value)
                 
         return _value
 
@@ -243,7 +248,7 @@ class ListTupleContainer(ContainerBase, list):
     """
     def __init__(self, iterable):
         list.__init__(self, iterable)
-        Container_init(self, iterable)
+        file_items(self, iterable)
         self._value = list(self._value)
         
         self.val_ind = []   
@@ -258,7 +263,7 @@ class ListTupleContainer(ContainerBase, list):
         self.n_nonval = len(self) - self.n_val
 
     def replace(self, item, new_container, i):
-        self[i] = new_container
+        list.__setitem__(self, i, new_container)
         
     def get_value(self):
         LTCValue(self)
@@ -275,7 +280,7 @@ class DictContainer(ContainerBase, dict):
     """
     def __init__(self, iterable):
         dict.__init__(self, iterable)
-        Container_init(self, iterable)
+        file_items(self, iterable)
         
         self.val_keys = []   
         self.nonval_keys = []
@@ -289,7 +294,7 @@ class DictContainer(ContainerBase, dict):
         self.n_nonval = len(self) - self.n_val
         
     def replace(self, item, new_container, i):
-        self[self.keys()[i]] = new_container
+        dict.__setitem__(self, self.keys()[i], new_container)
         
     def get_value(self):
         DCValue(self)
@@ -322,7 +327,7 @@ class ArrayContainer(ContainerBase, ndarray):
         C._ravelleddata = C.ravel()
         
         # Sort out contents and wrap internal containers.
-        Container_init(C, C._ravelleddata)
+        file_items(C, C._ravelleddata)
         C._value = array_in.copy()        
         C._ravelledvalue = C._value.ravel()
         
@@ -348,7 +353,7 @@ class ArrayContainer(ContainerBase, ndarray):
         return C
 
     def replace(self, item, new_container, i):
-        self._ravelleddata[i] = new_container
+        ndarray.__setitem__(self._ravelleddata,i, new_container)
 
     # This method converts self to self.value.
     def get_value(self):

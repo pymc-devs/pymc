@@ -6,8 +6,6 @@ from PyMCBase import ZeroProbability, ContainerBase
 from Container import Container
 import numpy as np
 
-# TODO: Possibly allow value-less instantiation.
-# TODO: Test implicit container creation.
 def _extract(__func__, kwds, keys, classname): 
     """
     Used by decorators parameter and node to inspect declarations

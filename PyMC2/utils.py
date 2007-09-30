@@ -28,44 +28,39 @@ from numpy import csingle, complex_, clongfloat
 
 # TODO : Wrap the nd histogramming fortran function. 
 
-# TODO: make this return a value so you can stop using dummy objects.
-# Find PyMC object's random children.
-def extend_children(pymc_object):
+
+def extend_children(children):
     """
-    extend_children(object)
+    extend_children(children)
     
-    Replaces object's children set with a set containing
-    object's nearest stochastic (Parameter, not Node) descendants.
+    Returns a set containing
+    nearest conditionally stochastic (Parameter, not Node) descendants.
     """
-    if not isinstance(pymc_object.children, set):
-        raise TypeError, "Input object's 'children' attribute must be a set."
-    new_children = copy(pymc_object.children)
+    new_children = copy(children)
     need_recursion = False
     node_children = set()
-    for child in pymc_object.children:
+    for child in children:
         if isinstance(child,Node):
             new_children |= child.children
             node_children.add(child)
             need_recursion = True
-    pymc_object.children = new_children - node_children
+    new_children -= node_children
     if need_recursion:
-        extend_children(pymc_object)
-    return
+        new_children = extend_children(new_children)
+    return new_children
     
-def extend_parents(pymc_object):
+def extend_parents(parents):
     """
-    extend_parents(object)
+    extend_parents(parents)
     
-    Replaces object's parents set with a set containing object's
-    nearest stochastic (Parameter, not Node) ancestors.
+    Returns a set containing
+    nearest conditionally stochastic (Parameter, not Node) ancestors.
     """
-    if not isinstance(pymc_object.parents, set):
-        raise TypeError, "Input object's 'parents' attribute must be a set."
-    new_parents = copy(pymc_object.parents)
+    new_parents = copy(parents)
     need_recursion = False
     node_parents = set()
     
-    for parent in pymc_object.parents:
+    for parent in parents:
         if isinstance(parent, Node):
             node_parents.add(parent)
             need_recursion = True
@@ -73,10 +68,10 @@ def extend_parents(pymc_object):
                 if isinstance(grandparent, PyMCBase):
                     new_parents.add(grandparent)
                     
-    pymc_object.parents = new_parents - node_parents
+    new_parents -= node_parents
     if need_recursion:
-        extend_parents(pymc_object)
-    return
+        new_parents = extend_parents(new_parents)
+    return new_parents
         
     
 def check_type(parameter):

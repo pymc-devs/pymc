@@ -18,6 +18,7 @@ from copy import copy
 from threading import Thread
 from thread import interrupt_main
 from time import sleep
+from PyMCBase import ContainerBase
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -192,11 +193,9 @@ class Model(ContainerBase):
         Makes a dictionary of self's PyMC objects' 'extended children.'
         """
         self.extended_children = {}
-        dummy = Variable('', '', {}, 0, None)
+        
         for variable in self.variables:
-            dummy.children = copy(variable.children)
-            extend_children(dummy)
-            self.extended_children[variable] = dummy.children
+            self.extended_children[variable] = extend_children(variable.children)
 
     def _parse_generations(self):
         """

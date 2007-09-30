@@ -6,7 +6,7 @@ from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter, Potential
-from PyMCBase import ZeroProbability, PyMCBase, Variable
+from PyMCBase import ZeroProbability, PyMCBase, Variable, SamplingMethodBase
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
@@ -103,7 +103,7 @@ def assign_method(parameter, scale=None):
     
     return method(parameter = parameter)
 
-class SamplingMethod(object):
+class SamplingMethod(SamplingMethodBase):
     """
     This object knows how to make Parameters take single MCMC steps.
     It's sample() method will be called by Model at every MCMC iteration.
@@ -175,9 +175,9 @@ class SamplingMethod(object):
                     self.parents.add(parent)
         
         # Find nearest descendent Parameters
-        extend_children(self)
+        self.children = extend_children(self.children)
         # Find nearest parent Parameters
-        extend_parents(self)
+        self.parents = extend_parents(self.parents)
         
         # Remove own PyMCObjects from set of children
         self.children -= self.nodes

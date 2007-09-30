@@ -154,18 +154,13 @@ class MAP(Model):
         self.param_types = []
         self.param_type_dict = {}
         self.extended_children = {}
-        class dummy(object):
-            pass
-        d = dummy()    
         
         for i in xrange(len(self.param_list)):
 
             parameter = self.param_list[i]
             
             # Extend children of parameter
-            d.children = copy(parameter.children)
-            extend_children(d)
-            self.extended_children[parameter] = d.children
+            self.extended_children[parameter] = extend_children(parameter.children)
             
             # Check types of all parameters.
             type_now = check_type(parameter)[0]
