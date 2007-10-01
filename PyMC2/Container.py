@@ -5,9 +5,7 @@ from numpy import ndarray, array, zeros, shape, arange, where
 from Container_values import LTCValue, DCValue, ACValue
 
 # TODO: Bring docs for Container and Model up to date.
-# TODO: Try to make Container take *args. Add a name post-hoc.
-# TODO: Consider making parents a Container, using part of the LazyFunction code to speed up finding the value attribute.
-# TODO: That will make Container.value fast.
+# TODO: Pass modules to DictContainer specially, and make an ObjectContainer whose value attribute makes a shallow copy.
 
 def Container(*args):
     """
@@ -118,6 +116,7 @@ def Container(*args):
     else:
         raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + 'see Container.py for examples on how to write one.'
 
+ #TODO Consider changing containers to list so it can hold nonhashables
 def file_items(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.

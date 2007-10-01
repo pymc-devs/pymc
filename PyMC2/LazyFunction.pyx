@@ -94,7 +94,8 @@ cdef class LazyFunction:
             
             # This object is arg.
             arg = arguments[name]
-
+            
+        # TODO: Consider changing this from all_objects to variables.
         self.ultimate_args = ArrayContainer(array(list(arguments.all_objects), dtype=object))
         self.N_args = len(self.ultimate_args)
 

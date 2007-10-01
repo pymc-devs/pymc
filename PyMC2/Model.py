@@ -23,11 +23,8 @@ from PyMCBase import ContainerBase
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-# TODO: Move to Container:
-# _moralize, _get_maximal_cliques, _extend_children, _parse_generations, graph, _get_logp.
-# Note: Will need a stem class to put them in that inherits from ContainerBase, they need to know Parameter from Node.
-# TODO: Is Model.remember still needed?
-
+# TODO: Don't use model_def, use Container.file_items on self, passing in input.
+# TODO: If no input is supplied, use __main__ without reloading.
 class Model(ContainerBase):
     """
     Model is initialized with:
