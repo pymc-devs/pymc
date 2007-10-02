@@ -341,8 +341,8 @@ class ArrayContainer(ContainerBase, ndarray):
             else:
                 C.nonval_ind.append(i)
         
-        C.val_ind = array(C.val_ind)
-        C.nonval_ind = array(C.nonval_ind)
+        C.val_ind = array(C.val_ind, copy=True, dtype=int)
+        C.nonval_ind = array(C.nonval_ind, copy=True, dtype=int)
         
         C.n_val = len(C.val_ind)
         C.n_nonval = len(C.nonval_ind)
