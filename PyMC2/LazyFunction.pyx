@@ -126,6 +126,7 @@ cdef class LazyFunction:
         void** because Pyrex doesn't let you work with object* pointers.
         """
         self.ultimate_arg_p = <void**> PyArray_DATA(self.ultimate_args)
+        self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
         self.cached_arg_p = <void**> PyArray_DATA(self.cached_args)
             
     
@@ -187,6 +188,7 @@ cdef class LazyFunction:
         For debugging purposes. Skip cache checking and compute a value.
         """
         value = self.fun(**self.arguments.value)
+        self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
         self.cache(value)
         
 
@@ -206,9 +208,9 @@ cdef class LazyFunction:
 
             #Recompute
             value = self.fun(**self.arguments.value)
-
             self.cache(value)
         
-        else: value = <object> self.cached_values[match_index]
+        else:
+            value = <object> self.cached_values[match_index]
 
         return value

@@ -20,8 +20,8 @@ except:
     
     
 # Try to compile the Pyrex version of LazyFunction
-config.add_extension(name='LazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
-# config.add_extension(name='LazyFunction',sources=['PyMC2/LazyFunction.c'])
+# config.add_extension(name='LazyFunction',sources=['PyMC2/PyrexLazyFunction.c'])
+config.add_extension(name='LazyFunction',sources=['PyMC2/LazyFunction.c'])
 config.add_extension(name='Container_values', sources='PyMC2/Container_values.c')
 
 if __name__ == '__main__':
