@@ -138,6 +138,7 @@ cdef class LazyFunction:
         """
         cdef int i, j, mismatch
         
+        # Refresh ultimate args' values
         self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
         
         if self.cache_depth > 0:
@@ -187,8 +188,13 @@ cdef class LazyFunction:
         """
         For debugging purposes. Skip cache checking and compute a value.
         """
+        # Refresh parents' values
         value = self.fun(**self.arguments.value)
+
+        # Refresh ultimate args' values
         self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
+
+        # Cache
         self.cache(value)
         
 

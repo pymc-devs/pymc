@@ -1,7 +1,7 @@
 from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
-from PyMC2.PyrexLazyFunction import LazyFunction
+from PyMC2.LazyFunction import LazyFunction
 from PyMC2 import parameter, data, node, Normal, potential, ZeroProbability
 
 verbose = False
