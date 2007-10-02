@@ -41,24 +41,23 @@ def ACValue(object container):
     ACValue_under(container)
     
 cdef void ACValue_under(object container):
-    cdef int i, *p_val_ind, *p_nonval_ind, ind
+    cdef int i
+    cdef long *p_val_ind, *p_nonval_ind, ind
     cdef void **p_ravelledvalue, **p_ravelleddata
     cdef object val_now
     
     p_ravelledvalue = <void**> PyArray_DATA(container._ravelledvalue)
     p_ravelleddata = <void**> PyArray_DATA(container._ravelleddata)    
     
-    # p_val_ind = <int*> PyArray_DATA(container.val_ind)
-    # p_nonval_ind = <int*> PyArray_DATA(container.nonval_ind)
+    p_val_ind = <long*> PyArray_DATA(container.val_ind)
+    p_nonval_ind = <long*> PyArray_DATA(container.nonval_ind)
     
     for i from 0 <= i < container.n_val:
-        ind = container.val_ind[i]
-        # ind = p_val_ind[i]
-        # print i, ind, container.val_ind[i]
+        ind = p_val_ind[i]
         val_now = (<object> p_ravelleddata[ind]).value
         p_ravelledvalue[ind] = <void*> val_now
+
     for i from 0 <= i < container.n_nonval:
-        ind = container.nonval_ind[i]
-        # ind = p_nonval_ind[i]
+        ind = p_nonval_ind[i]
         p_ravelledvalue[ind] = p_ravelleddata[ind]
     
