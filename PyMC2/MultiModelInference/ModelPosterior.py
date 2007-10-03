@@ -24,7 +24,7 @@ def weight(models, iter, priors = None):
     i=0
     for model in models:
         print 'Model ', i
-        loglikes[model] = model.sample_model_likelihood(iter)
+        loglikes[model] = model.sample_likelihood(iter)
         i+=1
 
     # Find max log-likelihood for regularization purposes
