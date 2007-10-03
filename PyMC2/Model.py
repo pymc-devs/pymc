@@ -19,13 +19,14 @@ from threading import Thread
 from thread import interrupt_main
 from time import sleep
 from PyMCBase import ContainerBase
+from Container import ObjectContainer
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
 # TODO: Don't use model_def, use Container.file_items on self, passing in input.
 # TODO: If no input is supplied, use __main__ without reloading.
-class Model(ContainerBase):
+class Model(ObjectContainer):
     """
     Model is initialized with:
 
@@ -53,9 +54,9 @@ class Model(ContainerBase):
         whose values are sets of parameters. Edges exist between the key parameter and all parameters
         in the value. Created by method _moralize.
       - extended_children: The extended children of self's parameters. See the docstring of
-        extend_children. This is a dictionary keyed by parameters. Created by method _extend_children.
+        extend_children. This is a dictionary keyed by parameters. Created by method extend_children.
       - generations: A list of sets of parameters. The members of each element only have parents in 
-        previous elements. Created by method _parse_generations.
+        previous elements. Created by method parse_generations.
 
     Externally-accessible methods:
        - tally(index): Write all variables' current values to trace, at location index.
@@ -84,37 +85,14 @@ class Model(ContainerBase):
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
 
-        # Instantiate public attributes
-        self.verbose = verbose
-        # Instantiate hidden attributes
         self.generations = []
-        self.__name__ = None
+        self.verbose = verbose
         
         # Flag for model state
         self.status = 'ready'
-
-        # Check for input name
-        if hasattr(input, '__file__'):
-            _filename = os.path.split(input.__file__)[-1]
-            self.__name__ = os.path.splitext(_filename)[0]
-        else:
-            try:
-                self.__name__ = input['__name__']
-            except: 
-                self.__name__ = 'PyMC_Model'
-                
-        self.model_def = Container(input)
-        self.variables = self.model_def.variables
-        self.nodes = self.model_def.nodes
-        self.parameters = self.model_def.parameters
-        self.potentials = self.model_def.potentials
-        self.data = self.model_def.data
-        self.sampling_methods = self.model_def.sampling_methods
-        self.container_refs = self.model_def.container_refs
-        self.pymc_objects = self.model_def.pymc_objects
         
-        for obj in self.pymc_objects:
-            self.__dict__[obj.__name__] = obj
+        # Get parameters, nodes, etc.        
+        ObjectContainer.__init__(self, input)
 
         # Moved this stuff here so I can use it from NormalApproximation. -AP
         # Specify database backend
@@ -128,10 +106,7 @@ class Model(ContainerBase):
         except:
             self._plotter = 'Could not be instantiated.'        
     
-    def _get_value(self):
-        return self.model_def.value
-    
-    def _moralize(self):
+    def moralize(self):
         """
         Creates moral adjacency matrix for self.
         
@@ -139,7 +114,7 @@ class Model(ContainerBase):
         parameter shares an edge in the moral graph.
         """
         # Extend children
-        self._extend_children()
+        self.extend_children()
         
         # Initialize moral edges dictionary.
         self.moral_edges = {}
@@ -158,34 +133,34 @@ class Model(ContainerBase):
                     self.moral_edges[other_parameter].add(parameter)
 
                     
-    def _get_maximal_cliques(self):
+    def get_maximal_cliques(self):
         """
         Creates list of maximal cliques for self. Each has an attribute called
         logp, which gives the log-potential associated with the clique.
         """
         
         # Moralize self
-        self._moralize()
+        self.moralize()
     
         # Find maximal cliques
         self.maximal_cliques = []
-        remaining_params = copy(self.parameters | self.data)
+        self.param_to_mc = {}
+        remaining_params = self.parameters | self.data
         while len(remaining_params)>0:
             parameter = remaining_params.pop()
             this_clique = set([parameter])
-            self.maximal_cliques.append(this_clique)
             
             for other_parameter in remaining_params:
                 if all([other_parameter in self.moral_edges[clique_parameter] for clique_parameter in this_clique]):
                     this_clique.add(other_parameter)
+            this_clique = SetContainer(this_clique)
             for clique_parameter in this_clique:
                 remaining_params.discard(clique_parameter)
+                self.param_to_mc[clique_parameter] = this_clique
+            self.maximal_cliques.append(this_clique)
                 
-        # TODO: Find edges between maximal cliques, potentials associated with them.
-        # TODO: Make clique a subclass of Container -> make Container able to wrap sets!
-        # TODO: Make mapping from parameter to maximal clique containing it.
                 
-    def _extend_children(self):
+    def extend_children(self):
         """
         Makes a dictionary of self's PyMC objects' 'extended children.'
         """
@@ -194,11 +169,12 @@ class Model(ContainerBase):
         for variable in self.variables:
             self.extended_children[variable] = extend_children(variable.children)
 
-    def _parse_generations(self):
+    def parse_generations(self):
         """
         Parse up the _generations for model averaging.
         """
-        self._extend_children()
+        self.generations = []
+        self.extend_children()
 
         # Find root generation
         self.generations.append(set())
@@ -239,7 +215,7 @@ class Model(ContainerBase):
         loglikes = zeros(iter)
 
         if len(self.generations) == 0:
-            self._parse_generations()
+            self.parse_generations()
 
         try:
             for i in xrange(iter):
@@ -311,8 +287,7 @@ class Model(ContainerBase):
         uncontained_nodes = self.nodes.copy()
         uncontained_potentials = self.potentials.copy()
         
-        for reference in self.container_refs:
-            container = reference.owner
+        for container in self.containers:
             container.dot_object = pydot.Cluster(graph_name = container.__name__, label = container.__name__)
             uncontained_params -= container.parameters
             uncontained_nodes -= container.nodes
@@ -377,12 +352,11 @@ class Model(ContainerBase):
         create_graph(U)
         
         
-        for reference in self.container_refs: 
-            container = reference.owner
+        for container in self.containers: 
             # Get containers ready to be graph nodes.
             if collapse_containers:
-                shown_objects.add(reference)
-                obj_substitute_names[reference] = [container.__name__]
+                shown_objects.add(container)
+                obj_substitute_names[container] = [container.__name__]
                 U.dot_object.add_node(pydot.Node(name=container.__name__,shape='box'))
                 for variable in container.variables:
                     obj_substitute_names[variable] = [container.__name__]
@@ -391,9 +365,9 @@ class Model(ContainerBase):
             else:
                 create_graph(container)
                 U.dot_object.add_subgraph(container.dot_object)
-                obj_substitute_names[reference] = set()
+                obj_substitute_names[container] = set()
                 for variable in container.variables:
-                    obj_substitute_names[reference] |= set(obj_substitute_names[variable])
+                    obj_substitute_names[container] |= set(obj_substitute_names[variable])
             
         self.dot_object = U.dot_object
         
@@ -413,7 +387,7 @@ class Model(ContainerBase):
                         self.dot_object.add_edge(new_edge)
                 
         # Create edges from parent-child relationships between PyMC objects.
-        for pymc_object in self.pymc_objects | self.container_refs:
+        for pymc_object in self.containers.extend(self.pymc_objects):
             
             if pymc_object in shown_objects:
                 if hasattr(pymc_object,'owner'):
@@ -428,7 +402,7 @@ class Model(ContainerBase):
                     if isinstance(parent_dict[key], ContainerBase) or isinstance(parent_dict[key], Variable):
                         key_val = parent_dict[key]
                         if isinstance(key_val, ContainerBase):
-                            key_val = key_val.reference
+                            key_val = key_val.container
                             
                             # TODO: Fix bug here.
                             for name in obj_substitute_names[key_val]:
@@ -529,14 +503,6 @@ class Model(ContainerBase):
         F = file(fname, 'w')
         cPickle.dump(trace_dict, F)
         F.close()
-        
-    def _get_logp(self):
-        """
-        Current joint probability of model.
-        """
-        return sum([p.logp for p in self.parameters]) + sum([p.logp for p in self.data]) + sum([p.logp for p in self.potentials])
-
-    logp = property(_get_logp)
     
     def tally(self, index):
         self.db.tally(index)

@@ -2,10 +2,17 @@
 from PyMCBase import PyMCBase, ContainerBase, Variable, ParameterBase, NodeBase, PotentialBase, SamplingMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
-from Container_values import LTCValue, DCValue, ACValue
+from Container_values import LTCValue, DCValue, ACValue, OCValue
+from types import ModuleType
 
 # TODO: Bring docs for Container and Model up to date.
-# TODO: Pass modules to DictContainer specially, and make an ObjectContainer whose value attribute makes a shallow copy.
+
+def filter_dict(obj):
+    filtered_dict = {}
+    for item in obj.__dict__.iteritems():
+        if isinstance(item[1], PyMCBase) or isinstance(item[1], ContainerBase):
+            filtered_dict[item[0]] = item[1]
+    return filtered_dict
 
 def Container(*args):
     """
@@ -102,19 +109,19 @@ def Container(*args):
         return ArrayContainer(iterable) 
     
     # Wrap modules
-    elif hasattr(iterable, '__dict__'):
+    elif isinstance(iterable, ModuleType):
         if hasattr(iterable, '__name__'):
             name = iterable.__name__
-        filtered_dict = {}
-        for item in iterable.__dict__.iteritems():
-            if isinstance(item[1], PyMCBase):
-                filtered_dict[item[0]] = item[1]
 
-        return DictContainer(filtered_dict)
+        return DictContainer(filter_dict(iterable))
+        
+    # Wrap mutable objects
+    elif hasattr(iterable, '__dict__'):
+        return ObjectContainer(iterable)
         
     # Otherwise raise an error.
     else:
-        raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + 'see Container.py for examples on how to write one.'
+        raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
 
  #TODO Consider changing containers to list so it can hold nonhashables
 def file_items(container, iterable):
@@ -133,18 +140,11 @@ def file_items(container, iterable):
     container.potentials = set()
     container.data = set()
     container.sampling_methods = set()
-    container.container_refs = set()
-    
-    class ContainerReference(object):
-        def __init__(self, container):
-            self.owner = container
-    container.reference = ContainerReference(container)
+    container.containers = []
     
     i=0
     
-
     for item in iterable:
-    
         
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
@@ -161,7 +161,7 @@ def file_items(container, iterable):
 
             # Update all of container's variables, potentials, etc. with the new wrapped
             # iterable's. This process recursively unpacks nested iterables.
-            container.container_refs.add(new_container.reference)
+            container.containers.append(new_container)
             container.variables.update(new_container.variables)
             container.parameters.update(new_container.parameters)
             container.potentials.update(new_container.potentials)
@@ -212,6 +212,7 @@ class SetContainer(ContainerBase, set):
     """
     def __init__(self, iterable, name='container'):
         set.__init__(self, iterable)
+        ContainerBase.__init__(self, iterable)
         for item in iterable:
             if isinstance(item, Variable) or isinstance(item, ContainerBase):
                 try:
@@ -247,6 +248,7 @@ class ListTupleContainer(ContainerBase, list):
     """
     def __init__(self, iterable):
         list.__init__(self, iterable)
+        ContainerBase.__init__(self, iterable)        
         file_items(self, iterable)
         self._value = list(self._value)
         
@@ -270,7 +272,6 @@ class ListTupleContainer(ContainerBase, list):
 
     value = property(fget = get_value)
 
-
 class DictContainer(ContainerBase, dict):
     """
     DictContainers are containers that wrap dictionaries. 
@@ -279,6 +280,7 @@ class DictContainer(ContainerBase, dict):
     """
     def __init__(self, iterable):
         dict.__init__(self, iterable)
+        ContainerBase.__init__(self, iterable)        
         file_items(self, iterable)
         
         self.val_keys = []   
@@ -299,7 +301,39 @@ class DictContainer(ContainerBase, dict):
         DCValue(self)
         return self._value
 
-    value = property(fget = get_value)        
+    value = property(fget = get_value)
+
+class ObjectContainer(ContainerBase):
+    """
+    ObjectContainers wrap non-iterable objects.
+    
+    Contents of the input iterable, or attributes of the input object, are exposed as attributes of
+    the object.
+    """
+    def __init__(self, input):
+        if isinstance(input, dict):
+            self.__dict__.update(input)
+        elif hasattr(input,'__iter__'):
+            for item in iter:
+                if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
+                    self.__dict__[item.__name__] = item
+        else:
+            input_dict = filter_dict(input)
+            self.__dict__.update(input_dict)
+
+        self._dict_container = DictContainer(self.__dict__)            
+        if isinstance(input, dict) or hasattr(input,'__iter__'):
+            file_items(self, input)
+        else:
+            file_items(self,input_dict)
+        
+        self._value = copy(self)
+        ContainerBase.__init__(self, input)
+
+    def _get_value(self):
+        OCValue(self)
+        return self._value
+    value = property(fget = _get_value)
 
 class ArrayContainer(ContainerBase, ndarray):
     """
@@ -312,16 +346,13 @@ class ArrayContainer(ContainerBase, ndarray):
     
     data=set()
     
-    def __new__(subtype, array_in, name='container'):
+    def __new__(subtype, array_in):
 
         C = array(array_in, copy=True)
         
         C = C.view(subtype)
-        
-        ContainerBase.__init__(C)
-        
-        C.__name__ = name
-        
+        ContainerBase.__init__(C, array_in)
+                
         # Ravelled versions of self, self.value, and self._pymc_finder.
         C._ravelleddata = C.ravel()
         

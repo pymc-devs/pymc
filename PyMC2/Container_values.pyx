@@ -21,7 +21,7 @@ def LTCValue(container):
         ind = nonval_ind[i]
         _value[ind] = container[ind]
 
-def DCValue(object container):
+def DCValue(container):
     cdef int i
     cdef object _value, val_keys, nonval_keys, key
     
@@ -35,9 +35,25 @@ def DCValue(object container):
     for i from 0 <= i < container.n_nonval:
         key = nonval_keys[i]
         _value[key] = container[key]
+
+def OCValue(container):
+    cdef int i
+    cdef object _value, val_keys, nonval_keys, key, _dict_container
+    
+    _dict_container = container._dict_container
+    val_keys = _dict_container.val_keys
+    nonval_keys = _dict_container.nonval_keys
+    _value = container._value.__dict__
     
     
-def ACValue(object container):
+    for i from 0 <= i < _dict_container.n_val:
+        key = val_keys[i]
+        _value[key] = _dict_container[key].value
+    for i from 0 <= i < _dict_container.n_nonval:
+        key = nonval_keys[i]
+        _value[key] = _dict_container[key]
+    
+def ACValue(container):
     ACValue_under(container)
     
 cdef void ACValue_under(object container):

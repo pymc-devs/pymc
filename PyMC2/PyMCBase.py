@@ -4,6 +4,8 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 """Exceptions"""
 
+import os
+
 class ZeroProbability(ValueError):
     "Log-likelihood is invalid or negative informationnite"
     pass
@@ -115,13 +117,28 @@ class Variable(PyMCBase):
     pass
 
 class ContainerBase(object):
-
     """
     The abstract base class from which containers inherit.
     
     :SeeAlso: Container, ArrayContainer, ListDictContainer, SetContainer
     """
-    pass
+    __name__ = 'container'
+    
+    def __init__(self, input):
+        if hasattr(input, '__file__'):
+            _filename = os.path.split(input.__file__)[-1]
+            self.__name__ = os.path.splitext(_filename)[0]
+        elif hasattr(input, '__name__'):
+            self.__name__ = input.__name__
+        else:
+            try:
+                self.__name__ = input['__name__']
+            except: 
+                self.__name__ = 'container'
+    
+    def _get_logp(self):
+        return sum(obj.logp for obj in self.parameters | self.potentials | self.data)
+    logp = property(_get_logp)
         
 class ParameterBase(Variable):
     pass

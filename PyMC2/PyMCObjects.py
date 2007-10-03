@@ -4,8 +4,8 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
-from PyMCBase import PyMCBase, ZeroProbability, Variable, ContainerBase, PotentialBase, ParameterBase, NodeBase
-from Container import DictContainer
+from PyMCBase import PyMCBase, ZeroProbability, Variable, PotentialBase, ParameterBase, NodeBase
+from Container import DictContainer, ContainerBase
 
 d_neg_inf = float(-1.79E308)
 
@@ -455,10 +455,7 @@ class Parameter(ParameterBase):
         
         if self._random:
             # Get current values of parents for use as arguments for _random()
-            self._logp.refresh_argument_values()
-            args = self._logp.argument_values.copy()
-            args.pop('value')
-            r = self._random(**args)
+            r = self._random(**self.parents.value)
         else:
             raise AttributeError, 'Parameter '+self.__name__+' does not know how to draw its value, see documentation'
         

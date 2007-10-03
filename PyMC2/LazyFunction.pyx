@@ -5,6 +5,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 from numpy import array, zeros, ones, arange, resize
 from PyMC2 import PyMCBase, ContainerBase, Variable
 from Container import ArrayContainer
+from Container_values import ACValue
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
@@ -139,7 +140,7 @@ cdef class LazyFunction:
         cdef int i, j, mismatch
         
         # Refresh ultimate args' values
-        self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
+        ACValue(self.ultimate_args)
         
         if self.cache_depth > 0:
             
@@ -192,7 +193,7 @@ cdef class LazyFunction:
         value = self.fun(**self.arguments.value)
 
         # Refresh ultimate args' values
-        self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
+        ACValue(self.ultimate_args)
 
         # Cache
         self.cache(value)

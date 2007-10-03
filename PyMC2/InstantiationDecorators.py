@@ -2,7 +2,7 @@ import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter, Potential
 from utils import extend_children, _push
-from PyMCBase import ZeroProbability, ContainerBase
+from PyMCBase import ZeroProbability, ContainerBase, PyMCBase
 from Container import Container
 import numpy as np
 
@@ -73,15 +73,13 @@ def _extract(__func__, kwds, keys, classname):
         value = parents.pop('value')
     else:
         value = None
-        
+    
+    # Wrap parents that are neither immutable nor variables in Containers.
     for key in parents.keys():
         parent = parents[key]
-        if (isinstance(parent, list) \
-            or isinstance(parent, dict) \
-            or isinstance(parent, tuple) \
-            or isinstance(parent, set) \
-            or isinstance(parent, np.ndarray))\
-            and not isinstance(parent, ContainerBase):
+        if (hasattr(parent,'__iter__')\
+            or hasattr(parent,'__dict__'))\
+            and not (isinstance(parent, ContainerBase) or isinstance(parent, PyMCBase)):
             parents[key] = Container(parents[key])
                 
     return (value, parents)
