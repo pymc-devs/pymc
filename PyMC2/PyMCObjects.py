@@ -69,11 +69,12 @@ class ParentDict(DictContainer):
 class Potential(PotentialBase):
     """
     Not a variable; just an arbitrary log-probability term to multiply into the 
-    joint distribution. Useful for expressing models that aren't DAG's.
+    joint distribution. Useful for expressing models that aren't directed, such as
+    Markov random fields.
 
     Decorator instantiation:
 
-    @potential(trace=True)
+    @potential(trace = True)
     def A(x = B, y = C):
         return -.5 * (x-y)**2 / 3.
 
@@ -81,17 +82,22 @@ class Potential(PotentialBase):
 
     :Arguments:
 
-        -logp:  The function that computes the potential's value from the values 
-                of its parents.
+        -logp: function
+              The function that computes the potential's value from the values 
+              of its parents.
 
-        -doc:    The docstring for this potential.
+        -doc: string
+              The docstring for this potential.
 
-        -name:   The name of this potential.
+        -name: string
+              The name of this potential.
 
-        -parents: A dictionary containing the parents of this node.
+        -parents: dictionary
+              A dictionary containing the parents of this node.
 
-        -cache_depth (optional):    An integer indicating how many of this potential's
-                                    value computations should be 'memoized'.
+        -cache_depth (optional): integer
+              An integer indicating how many of this potential's value computations 
+              should be 'memoized'.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -99,8 +105,9 @@ class Potential(PotentialBase):
                             
     Externally-accessible attribute:
 
-        -logp: Returns the node's value given its parents' values. Skips
-                computation if possible.
+        -logp: float
+              Returns the node's value given its parents' values. Skips
+              computation if possible.
             
     No methods.
     
@@ -129,9 +136,7 @@ class Potential(PotentialBase):
         if not isinstance(self.logp, float):
             raise ValueError, "Potential " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
-        
     def gen_lazy_function(self):
-        # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
         self._logp = LazyFunction(fun = self._logp_fun, arguments = self.parents, cache_depth = self._cache_depth)        
 
     def get_logp(self):
@@ -164,26 +169,31 @@ class Node(NodeBase):
     @node(trace=True)
     def A(x = B, y = C):
         return sqrt(x ** 2 + y ** 2)
-
     
     Direct instantiation:
 
     :Arguments:
 
-        -eval:  The function that computes the node's value from the values 
-                of its parents.
+        -eval: function
+              The function that computes the node's value from the values 
+              of its parents.
 
-        -doc:    The docstring for this node.
+        -doc: string
+              The docstring for this node.
 
-        -name:   The name of this node.
+        -name: string
+              The name of this node.
 
-        -parents: A dictionary containing the parents of this node.
+        -parents: dictionary
+              A dictionary containing the parents of this node.
 
-        -trace (optional):  A boolean indicating whether this node's value 
-                            should be traced (in MCMC).
+        -trace (optional): boolean
+              A boolean indicating whether this node's value 
+              should be traced (in MCMC).
 
-        -cache_depth (optional):    An integer indicating how many of this node's
-                                    value computations should be 'memorized'.
+        -cache_depth (optional): integer  
+              An integer indicating how many of this node's
+              value computations should be 'memorized'.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -191,8 +201,9 @@ class Node(NodeBase):
                             
     Externally-accessible attribute:
 
-        -value: Returns the node's value given its parents' values. Skips
-                computation if possible.
+        -value: any class
+              Returns the node's value given its parents' values. Skips
+              computation if possible.
             
     No methods.
     
@@ -307,13 +318,16 @@ class Parameter(ParameterBase):
                             
     Externally-accessible attribute:
 
-    value:  Returns this parameter's current value.
+    - value: any class
+          Returns this parameter's current value.
 
-    logp:   Returns the parameter's log-probability given its value and its 
-            parents' values. Skips computation if possible.
+    - logp: float
+          Returns the parameter's log-probability given its value and its 
+          parents' values. Skips computation if possible.
             
-    last_value: Returns this parameter's last value. Useful for rejecting
-                Metropolis-Hastings jumps. See touch() and the warning below.
+    last_value: any class
+          Returns this parameter's last value. Useful for rejecting
+          Metropolis-Hastings jumps. See touch() and the warning below.
             
     Externally-accessible methods:
     

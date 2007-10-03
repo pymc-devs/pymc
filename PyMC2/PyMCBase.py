@@ -2,8 +2,6 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-"""Exceptions"""
-
 import os
 
 class ZeroProbability(ValueError):
@@ -13,10 +11,8 @@ class ZeroProbability(ValueError):
 
 class PyMCBase(object):
     """
-    The base class from which Parameter and Node inherit.
+    The base class from which Parameter, Node and Potential inherit.
     Shouldn't need to be instantiated directly.
-    
-    See source code in PyMCBase.py if you want to subclass it.
     
     :Parameters:
           -doc : string
@@ -111,16 +107,13 @@ class PyMCBase(object):
 
 class Variable(PyMCBase):
     """
-    The base class for Parameters and Nodes;
-    represents variables that actually participate in the probability model.
+    The base class for Parameters and Nodes.
     """
     pass
 
 class ContainerBase(object):
     """
-    The abstract base class from which containers inherit.
-    
-    :SeeAlso: Container, ArrayContainer, ListDictContainer, SetContainer
+    The base class from which containers inherit.
     """
     __name__ = 'container'
     
@@ -141,13 +134,25 @@ class ContainerBase(object):
     logp = property(_get_logp)
         
 class ParameterBase(Variable):
+    """
+    The base class for parameters.
+    """
     pass
     
 class NodeBase(Variable):
+    """
+    The base class for nodes.
+    """
     pass
     
 class PotentialBase(PyMCBase):
+    """
+    The base class for potentials.
+    """
     pass
     
 class SamplingMethodBase(object):
+    """
+    The base class for sampling methods.
+    """
     pass    

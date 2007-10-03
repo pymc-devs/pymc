@@ -124,7 +124,7 @@ def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, 
     generates a random value from A's distribution conditional on
     its parents' values.
     
-    :SeeAlso: Parameter, Node, node, data, Model, Container
+    :SeeAlso: Parameter, Node, node, data, Potential, potential, Model, Container
     """
     
     if binary:
@@ -175,7 +175,7 @@ def potential(__func__ = None, **kwds):
     where baz returns the node B's value conditional
     on its parents.
 
-    :SeeAlso: Node, Parameter, Potential, parameter, data, Model, Container
+    :SeeAlso: Node, node, Parameter, Potential, parameter, data, Model, Container
     """
     def instantiate_pot(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Potential')
@@ -206,7 +206,7 @@ def node(__func__ = None, **kwds):
     where baz returns the node B's value conditional
     on its parents.
     
-    :SeeAlso: Node, Parameter, parameter, data, Model, Container
+    :SeeAlso: Node, node, Parameter, parameter, data, Model, Container
     """
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Node')
@@ -220,11 +220,6 @@ def node(__func__ = None, **kwds):
         return instantiate_n(__func__)
 
     return instantiate_n
-
-# @data(discrete=True): obj-> None,   kwds-> {'discrete':True}
-# data(parameter)     : obj-> <PyMC2 Parameter>, kwds->{}
-# @data
-# def ...             : obj-> <function>,  kwds-> {}
 
 
 def data(obj=None, **kwds):
@@ -246,7 +241,7 @@ def data(obj=None, **kwds):
         return foo(value, parent_name, ...)
         
     
-    :SeeAlso: parameter, Parameter, node, Node, Model, Container
+    :SeeAlso: parameter, Parameter, node, Node, potential, Potential, Model, Container
     """
     if obj is not None:
         if isinstance(obj, Parameter):

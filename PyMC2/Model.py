@@ -24,22 +24,25 @@ from Container import ObjectContainer
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-# TODO: Don't use model_def, use Container.file_items on self, passing in input.
-# TODO: If no input is supplied, use __main__ without reloading.
 class Model(ObjectContainer):
     """
     Model is initialized with:
 
-      >>> A = Model(input, dbase=None)
+      >>> A = Model(input, db='ram', output_path=None, verbose=0)
 
-    :Arguments:
-        input : class, module, dictionary
-          Contains variables, potentials and containers.
-        db : module name
-          Database backend used to tally the samples.
-          Implemented backends: 'ram', 'no_trace', 'hdf5', 'txt', 'mysql', 'pickle', 'sqlite'.
+      :Parameters:
+        - input : module, list, tuple, dictionary, set, object or nothing.
+            Model definition, in terms of Parameters, Nodes, Potentials and Containers.
+            If nothing, all PyMC objects are collected from the base namespace.
+        - db : string
+            The name of the database backend that will store the values
+            of the parameters and nodes sampled during the MCMC loop.
+        - output_path : string
+            The place where any output files should be put.
+        - verbose : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
-    Externally-accessible attributes:
+    Attributes:
       - nodes
       - parameters (with isdata=False)
       - data (parameters with isdata=True)
@@ -47,6 +50,7 @@ class Model(ObjectContainer):
       - potentials
       - containers
       - pymc_objects
+      - all_objects
       - status: Not useful for the Model base class, but may be used by subclasses.
       
     The following attributes only exist after the appropriate method is called:
@@ -54,11 +58,14 @@ class Model(ObjectContainer):
         whose values are sets of parameters. Edges exist between the key parameter and all parameters
         in the value. Created by method _moralize.
       - extended_children: The extended children of self's parameters. See the docstring of
-        extend_children. This is a dictionary keyed by parameters. Created by method extend_children.
+        extend_children. This is a dictionary keyed by parameters.
       - generations: A list of sets of parameters. The members of each element only have parents in 
         previous elements. Created by method parse_generations.
 
-    Externally-accessible methods:
+    Methods:
+       - moralize(): Find edges of moral graph.
+       - extend_children(): Find 'extended children' of each object.
+       - parse_generations(): Find generations.
        - tally(index): Write all variables' current values to trace, at location index.
        - sample_model_likelihood(iter): Generate and return iter samples of p(data and potentials|model).
          Can be used to generate Bayes' factors.
@@ -70,12 +77,13 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container.
     """
-    def __init__(self, input, db='ram', output_path=None, verbose=0):
+    def __init__(self, input=None, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
-          - input : module, list, tuple, dictionary, set or class.
+          - input : module, list, tuple, dictionary, set, object or nothing.
               Model definition, in terms of Parameters, Nodes, Potentials and Containers.
+              If nothing, all PyMC objects are collected from the base namespace.
           - db : string
               The name of the database backend that will store the values
               of the parameters and nodes sampled during the MCMC loop.
@@ -91,10 +99,13 @@ class Model(ObjectContainer):
         # Flag for model state
         self.status = 'ready'
         
-        # Get parameters, nodes, etc.        
+        # Get parameters, nodes, etc.
+        if input is None:
+            import __main__
+            input = __main__
+            
         ObjectContainer.__init__(self, input)
 
-        # Moved this stuff here so I can use it from NormalApproximation. -AP
         # Specify database backend
         self._assign_database_backend(db)
         
@@ -111,7 +122,9 @@ class Model(ObjectContainer):
         Creates moral adjacency matrix for self.
         
         self.moral_edges[parameter] returns a list of the parameters with whom
-        parameter shares an edge in the moral graph.
+        parameter shares an edge in the 'moral graph', which is formed by connecting
+        parents to children and then connecting co-parents to each other. 
+        See documentation.
         """
         # Extend children
         self.extend_children()
@@ -135,8 +148,9 @@ class Model(ObjectContainer):
                     
     def get_maximal_cliques(self):
         """
-        Creates list of maximal cliques for self. Each has an attribute called
-        logp, which gives the log-potential associated with the clique.
+        Creates list of maximal cliques for self's moral graph. Each has 
+        an attribute called logp, which gives the log-potential associated 
+        with the clique.
         """
         
         # Moralize self
@@ -163,6 +177,8 @@ class Model(ObjectContainer):
     def extend_children(self):
         """
         Makes a dictionary of self's PyMC objects' 'extended children.'
+        The extended children of p are the parameters that depend on p
+        either directly or via an unbroken sequence of nodes.
         """
         self.extended_children = {}
         
@@ -171,7 +187,8 @@ class Model(ObjectContainer):
 
     def parse_generations(self):
         """
-        Parse up the _generations for model averaging.
+        Parse up the generations for model averaging. A generation is the
+        set of parameters that only has parents in previous generations.
         """
         self.generations = []
         self.extend_children()
@@ -207,11 +224,13 @@ class Model(ObjectContainer):
             if len(thisgen_children) == 0:
                 children_remaining = False
 
-    def sample_model_likelihood(self, iter):
+    def sample_likelihood(self, iter):
         """
-        Returns iter samples of (log p(data|this_model_params, this_model) | data, this_model)
+        Returns iter samples of (log p(data|self.parameters, self) | self).
+        
+        Exponentiating and averaging gives an estimate of the model likelihood,
+        p(data|self).
         """
-        # TODO: Restructure this using the actor model in stackless branch: if all my extended parents have sampled their value, then I can also.
         loglikes = zeros(iter)
 
         if len(self.generations) == 0:
@@ -234,207 +253,6 @@ class Model(ObjectContainer):
             raise KeyboardInterrupt
 
         return loglikes
-
-
-    def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False, 
-            collapse_nodes = False, collapse_potentials = False, collapse_containers = False):
-        """
-        M.graph(format='raw', 
-                prog='dot', 
-                path=None, 
-                consts=False, 
-                legend=True, 
-                collapse_nodes = False, 
-                collapse_potentials = False, 
-                collapse_containers = False)
-
-        Draw the directed acyclic graph for this model and writes it to path.
-        If self.__name__ is defined and path is None, the output file is
-        ./'name'.'format'.
-
-        Format is a string. Options are:
-        'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
-        'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
-        'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
-
-        format='raw' outputs a GraphViz dot file.
-        
-        If consts is True, constant parents are included in the graph; 
-        otherwise they're not.
-        
-        If collapse_nodes is True, Nodes (variables that are determined by their
-        parents) are made implicit.
-        
-        If collapse_containers is True, containers are shown as single graph nodes.
-        
-        If collapse_potentials is True, potentials are displayed as undirected edges.
-
-        Returns the pydot 'dot' object for further user manipulation.
-        
-        NOTE: Will endow all containers with an innocuous 'parents' attribute.
-        """
-
-        import pydot
-
-        pydot_nodes = {}
-        pydot_subgraphs = {}
-        obj_substitute_names = {}
-        shown_objects = set([])
-        
-        # Get ready to separate self's PyMC objects that are contained in containers.
-        uncontained_params = self.parameters.copy()
-        uncontained_data = self.data.copy()
-        uncontained_nodes = self.nodes.copy()
-        uncontained_potentials = self.potentials.copy()
-        
-        for container in self.containers:
-            container.dot_object = pydot.Cluster(graph_name = container.__name__, label = container.__name__)
-            uncontained_params -= container.parameters
-            uncontained_nodes -= container.nodes
-            uncontained_data -= container.data
-            uncontained_potentials -= container.potentials
-            
-        # Use this to make a graphviz cluster corresponding to each container, and to
-        # draw the model outside of any container.
-        def create_graph(subgraph):
-            
-            # Data are filled ellipses
-            for datum in subgraph.data:
-                pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
-                subgraph.dot_object.add_node(pydot_nodes[datum])
-                shown_objects.add(datum)
-                obj_substitute_names[datum] = [datum.__name__]
-
-            # Parameters are open ellipses
-            for parameter in subgraph.parameters:
-                pydot_nodes[parameter] = pydot.Node(name=parameter.__name__)
-                subgraph.dot_object.add_node(pydot_nodes[parameter])
-                shown_objects.add(parameter)
-                obj_substitute_names[parameter] = [parameter.__name__]
-
-            # Nodes are downward-pointing triangles
-            for node in subgraph.nodes:
-
-                if not collapse_nodes:
-                    pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
-                    subgraph.dot_object.add_node(pydot_nodes[node])
-                    shown_objects.add(node)
-                    obj_substitute_names[node] = [node.__name__]
-
-                else:
-                    obj_substitute_names[node] = []
-                    for parent in node.parents.values():
-                        if isinstance(parent, Variable):
-                            obj_substitute_names[node].append(parent.__name__)
-                        elif consts:
-                            subgraph.dot_object.add_node(pydot.Node(name=parent.__str__(), style='filled'))
-                            obj_substitute_names[node].append(parent.__str__())
-                
-            # Potentials are octagons outlined three times
-            for potential in subgraph.potentials:
-                if not collapse_potentials:
-                    pydot_nodes[potential] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
-                    subgraph.dot_object.add_node(pydot_nodes[potential])
-                    shown_objects.add(potential)
-
-        # A dummy class to hold the uncontained PyMC objects    
-        class uncontained(object):
-            def __init__(self):
-                self.dot_object = pydot.Dot()
-                self.parameters = uncontained_params
-                self.nodes = uncontained_nodes
-                self.data = uncontained_data
-                self.potentials = uncontained_potentials
-                self.pymc_objects = self.parameters | self.nodes | self.data | self.potentials
-
-        # Make nodes for the uncontained objects
-        U = uncontained()
-        create_graph(U)
-        
-        
-        for container in self.containers: 
-            # Get containers ready to be graph nodes.
-            if collapse_containers:
-                shown_objects.add(container)
-                obj_substitute_names[container] = [container.__name__]
-                U.dot_object.add_node(pydot.Node(name=container.__name__,shape='box'))
-                for variable in container.variables:
-                    obj_substitute_names[variable] = [container.__name__]
-
-            # Create a grahpviz cluster for each container.
-            else:
-                create_graph(container)
-                U.dot_object.add_subgraph(container.dot_object)
-                obj_substitute_names[container] = set()
-                for variable in container.variables:
-                    obj_substitute_names[container] |= set(obj_substitute_names[variable])
-            
-        self.dot_object = U.dot_object
-        
-        # If the user has requested potentials be collapsed, draw in the undirected edges.
-        # TODO: Unpack container parents here.
-        if collapse_potentials:
-            for pot in self.potentials:
-                pot_parents = set()
-                for parent in pot.parents.values():
-                    if isinstance(parent, Variable):
-                        pot_parents |= set(obj_substitute_names[parent])
-                remaining_parents = copy(pot_parents)
-                for p1 in pot_parents:
-                    remaining_parents.discard(p1)
-                    for p2 in remaining_parents:
-                        new_edge = pydot.Edge(src = p2, dst = p1, label=pot.__name__, arrowhead='none')
-                        self.dot_object.add_edge(new_edge)
-                
-        # Create edges from parent-child relationships between PyMC objects.
-        for pymc_object in self.containers.extend(self.pymc_objects):
-            
-            if pymc_object in shown_objects:
-                if hasattr(pymc_object,'owner'):
-                    pymc_object = pymc_object.owner
-                parent_dict = pymc_object.parents
-            
-                for key in parent_dict.iterkeys():
-                
-                    # If a parent is a container, unpack it.
-                    # Draw edges between child and all elements of container (if consts=True)
-                    # or all variables in container (if consts = False).
-                    if isinstance(parent_dict[key], ContainerBase) or isinstance(parent_dict[key], Variable):
-                        key_val = parent_dict[key]
-                        if isinstance(key_val, ContainerBase):
-                            key_val = key_val.container
-                            
-                            # TODO: Fix bug here.
-                            for name in obj_substitute_names[key_val]:
-                                self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
-                        
-                    elif consts:
-                        U.dot_object.add_node(pydot.Node(name=parent_dict[key].__str__(), style='filled'))
-                        self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=pymc_object.__name__, label=key))                        
-                
-        # Add legend if requested
-        if legend:
-            legend = pydot.Cluster(graph_name = 'Legend', label = 'Legend')
-            legend.add_node(pydot.Node(name='data', style='filled'))
-            legend.add_node(pydot.Node(name='parameters'))
-            legend.add_node(pydot.Node(name='nodes', shape='invtriangle'))
-            legend.add_node(pydot.Node(name='potentials', shape='tripleoctagon'))
-            if consts:
-                legend.add_node(pydot.Node(name='constants', style='filled', shape='box'))
-            self.dot_object.add_subgraph(legend)
-
-        # Draw the graph
-        if not path == None:
-            self.dot_object.write(path=path, format=format, prog=prog)
-        else:
-            ext=format
-            if format=='raw':
-                ext='dot'
-            self.dot_object.write(path='./' + self.__name__ + '.' + ext, format=format, prog=prog)
-            # print self.dot_object.create(format=format, prog=prog)
-
-        return self.dot_object
-
 
     def status():
         doc = \
@@ -466,43 +284,6 @@ class Model(ObjectContainer):
                     value = parameters.random(**parameters.parent_values)
             except:
                 pass
-
-    #
-    # Return to a sampled state
-    #
-    def remember(self, trace_index = None):
-        """
-        remember(trace_index = randint(trace length to date))
-
-        Sets the value of all tracing pymc_objects to a value recorded in
-        their traces.
-        """
-        if trace_index is None:
-            trace_index = randint(self.cur_trace_index)
-
-        for variable in self._variables_to_tally:
-            variable.value = variable.trace()[trace_index]
-
-
-    def save_traces(self, path='', fname=None):
-        import cPickle
-
-        if fname is None:
-            try:
-                fname = self.__name__ + '.pymc'
-            except:
-                fname = 'Model.pymc'
-
-        trace_dict = {}
-        for obj in self._variables_to_tally:
-            trace_new = copy(obj.trace)
-            trace_new.__delattr__('db')
-            trace_new.__delattr__('obj')
-            trace_dict[obj.__name__] = trace_new
-
-        F = file(fname, 'w')
-        cPickle.dump(trace_dict, F)
-        F.close()
     
     def tally(self, index):
         self.db.tally(index)
@@ -526,8 +307,7 @@ class Model(ObjectContainer):
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace
         # Tallyable objects are listed in the _pymc_objects_to_tally set. 
-        
-        # Moved this to Model so I can use it in NormalApproximation. -AP
+
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.parameters | self.nodes :
@@ -547,7 +327,6 @@ class Model(ObjectContainer):
         else:
             module = db.__module__
             self.db = db
-        
         
         # Assign Trace instances to tallyable objects. 
         self.db.connect(self)
@@ -569,7 +348,7 @@ class Model(ObjectContainer):
 
 class Sampler(Model):
     # TODO: Docstring!!
-    def __init__(self, input, db='ram', output_path=None, verbose=0):
+    def __init__(self, input=None, db='ram', output_path=None, verbose=0):
         
         # Instantiate superclass
         Model.__init__(self, input, db, output_path, verbose)
@@ -662,8 +441,6 @@ class Sampler(Model):
 
                 if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
-                    # Uncommenting this causes errors in some models.
-                    # gc.collect()
 
                 self._current_iter += 1
 
@@ -680,6 +457,7 @@ class Sampler(Model):
         self.db._finalize()
         # TODO: This should interrupt the main thread immediately, but it waits until 
         # TODO: return is pressed before doing its thing. Bug report filed at python.org.
+        # TODO: Doesn't seem fixable without a funky patch...
         try:
             interrupt_main()
         except KeyboardInterrupt:
@@ -798,6 +576,7 @@ class Sampler(Model):
             if self.status == 'paused':
                 print 'Call interactive_continue method to continue, or call halt_sampling method to truncate traces and stop.'
 
+    # Should get_state, save_state, restore_state and remember be moved up to Model?
     def get_state(self):
         """
         Return the sampler and sampling methods current state in order to
@@ -834,6 +613,19 @@ class Sampler(Model):
         for sm in self.sampling_methods:
             tmp = state.get('sampling_methods', {})
             sm.__dict__.update(tmp.get(sm._id, {}))
+            
+    def remember(self, trace_index = None):
+        """
+        remember(trace_index = randint(trace length to date))
+
+        Sets the value of all tracing variables to a value recorded in
+        their traces.
+        """
+        if trace_index is None:
+            trace_index = randint(self.cur_trace_index)
+
+        for variable in self._variables_to_tally:
+            variable.value = variable.trace()[trace_index]
                         
     def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
         """

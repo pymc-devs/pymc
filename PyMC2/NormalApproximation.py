@@ -137,7 +137,7 @@ class MAP(Model):
         
     :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize, scipy.derivative
     """
-    def __init__(self, input, db='ram', eps=.001, diff_order = 5, verbose=False):
+    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, verbose=False):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormalApproximation and MAP.'
         
@@ -453,7 +453,7 @@ class NormalApproximation(MAP):
     :SeeAlso: Model, MAP, Sampler, scipy.optimize
     """
 
-    def __init__(self, input, db='ram', eps=.01, diff_order = 5, verbose=False):
+    def __init__(self, input=None, db='ram', eps=.01, diff_order = 5, verbose=False):
         MAP.__init__(self, input, db, eps, diff_order, verbose)
         self.C = NormApproxC(self)
     

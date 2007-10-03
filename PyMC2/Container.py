@@ -5,8 +5,6 @@ from numpy import ndarray, array, zeros, shape, arange, where
 from Container_values import LTCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
-# TODO: Bring docs for Container and Model up to date.
-
 def filter_dict(obj):
     filtered_dict = {}
     for item in obj.__dict__.iteritems():
@@ -16,20 +14,18 @@ def filter_dict(obj):
 
 def Container(*args):
     """
-    C = Container(iterable[, name])
+    C = Container(iterable)
+    C = Container(module)
+    C = Container(object)
+    C = Container(obj_1, obj_2, obj_3, ...)
     
     Wraps an iterable object (currently a list, set, tuple, dictionary 
-    or ndarray) in a subclass of ContainerBase and returns it.
-    
-    If the iterable is not recognized, a dictionary container will be made
-    from its __dict__ attribute.
+    or ndarray), or a module or other object, or just a sequence of objects, 
+    in a subclass of ContainerBase and returns it.
     
     
-    Subclasses of ContainerBase strive to emulate the iterables they wrap,
-    with two important differences:
-        - They are read-only
-        - They have a value attribute.
-        
+    Iterable subclasses of ContainerBase strive to emulate the iterables they 
+    wrap, with one important difference: They have a value attribute.        
     A container's value attribute behaves like the container itself, but
     it replaces every PyMC variable it contains with that variable's value.
     
@@ -44,7 +40,7 @@ def Container(*args):
         will yield the following:
         C[0] = A
         C.value[0] = A.value
-        C[1] = C.value[1] = A
+        C[1] = C.value[1] = 15.2
     
     
     The primary reason containers exist is to allow parameters to have large
@@ -65,12 +61,10 @@ def Container(*args):
             def x_now(value=0, mu = last_x, tau=2):
                 return normal_like(value, mu, tau)
                 
-            x_now.__name__ = 'x\_%i' % i
+            x_now.__name__ = 'x[%i]' % i
             last_x = x_now
         
             x.append(x_now)
-        
-        x = Container(x, name = 'x')
         
         @parameter
         def y(value=0, mu = x, tau = 100):
@@ -82,11 +76,11 @@ def Container(*args):
             return normal_like(value, mean_sum, tau)
         
     x.value will be passed into y's log-probability function as argument mu, 
-    so mu[i] will return x.value[i] = x_i.value = x[i].value. ParameterBase y
+    so mu[i] will return x.value[i] = x[i].value. Parameter y
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
     
-    :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer 
+    :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer, ObjectContainer
     """
     
     if len(args)==1:
@@ -110,9 +104,6 @@ def Container(*args):
     
     # Wrap modules
     elif isinstance(iterable, ModuleType):
-        if hasattr(iterable, '__name__'):
-            name = iterable.__name__
-
         return DictContainer(filter_dict(iterable))
         
     # Wrap mutable objects
@@ -123,7 +114,6 @@ def Container(*args):
     else:
         raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
 
- #TODO Consider changing containers to list so it can hold nonhashables
 def file_items(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
@@ -140,6 +130,7 @@ def file_items(container, iterable):
     container.potentials = set()
     container.data = set()
     container.sampling_methods = set()
+    # containers needs to be a list too.
     container.containers = []
     
     i=0
@@ -274,7 +265,9 @@ class ListTupleContainer(ContainerBase, list):
 
 class DictContainer(ContainerBase, dict):
     """
-    DictContainers are containers that wrap dictionaries. 
+    DictContainers are containers that wrap dictionaries.
+    Modules are converted into DictContainers, and variables' and potentials'
+    Parents objects are DictContainers also. 
     
     :SeeAlso: Container, ListTupleContainer, SetContainer, ArrayContainer
     """
@@ -307,8 +300,8 @@ class ObjectContainer(ContainerBase):
     """
     ObjectContainers wrap non-iterable objects.
     
-    Contents of the input iterable, or attributes of the input object, are exposed as attributes of
-    the object.
+    Contents of the input iterable, or attributes of the input object, 
+    are exposed as attributes of the object.
     """
     def __init__(self, input):
         if isinstance(input, dict):

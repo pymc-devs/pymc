@@ -6,7 +6,11 @@ cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
 
 def LTCValue(container):
-
+    """
+    Fills in a list/tuple container's value.
+    
+    :SeeAlso: ListTupleContainer
+    """
     cdef int i, ind
     cdef object _value, val_ind, nonval_ind
     
@@ -22,6 +26,11 @@ def LTCValue(container):
         _value[ind] = container[ind]
 
 def DCValue(container):
+    """
+    Fills in a dictionary container's value.
+    
+    :SeeAlso: DictContainer
+    """
     cdef int i
     cdef object _value, val_keys, nonval_keys, key
     
@@ -37,6 +46,11 @@ def DCValue(container):
         _value[key] = container[key]
 
 def OCValue(container):
+    """
+    Fills in an object container's value.
+    
+    :SeeAlso: ObjectContainer
+    """
     cdef int i
     cdef object _value, val_keys, nonval_keys, key, _dict_container
     
@@ -54,6 +68,11 @@ def OCValue(container):
         _value[key] = _dict_container[key]
     
 def ACValue(container):
+    """
+    Fills in an array container's value.
+    
+    :SeeAlso: ArrayContainer
+    """
     ACValue_under(container)
     
 cdef void ACValue_under(object container):
