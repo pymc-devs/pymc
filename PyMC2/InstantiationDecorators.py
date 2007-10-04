@@ -52,7 +52,8 @@ def _extract(__func__, kwds, keys, classname):
     
     if defaults is None:
         defaults = ()
-        
+    
+    # Make sure all parents were defined
     arg_deficit = (len(args) - ('value' in args)) - len(defaults)
     if arg_deficit > 0:
         err_str =  classname + ' ' + __func__.__name__ + ': no parent provided for the following labels:'
@@ -62,10 +63,9 @@ def _extract(__func__, kwds, keys, classname):
                 err_str += ','
         raise ValueError, err_str
     
+    # Fill in parent dictionary
     try:
-        parents.update(dict(zip(args[-len(defaults):], defaults)))
-
-    # No parents at all     
+        parents.update(dict(zip(args[-len(defaults):], defaults)))    
     except TypeError: 
         pass
         
@@ -73,15 +73,7 @@ def _extract(__func__, kwds, keys, classname):
         value = parents.pop('value')
     else:
         value = None
-    
-    # Wrap parents that are neither immutable nor variables in Containers.
-    for key in parents.keys():
-        parent = parents[key]
-        if (hasattr(parent,'__iter__')\
-            or hasattr(parent,'__dict__'))\
-            and not (isinstance(parent, ContainerBase) or isinstance(parent, PyMCBase)):
-            parents[key] = Container(parents[key])
-                
+                    
     return (value, parents)
 
 def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, **kwds):
