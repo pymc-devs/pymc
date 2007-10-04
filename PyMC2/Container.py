@@ -315,13 +315,13 @@ class ObjectContainer(ContainerBase):
             self.__dict__.update(input_dict)
 
         self._dict_container = DictContainer(self.__dict__)            
-        if isinstance(input, dict) or hasattr(input,'__iter__'):
-            file_items(self, input)
-        else:
-            file_items(self,input_dict)
+        file_items(self, self._dict_container)
         
         self._value = copy(self)
         ContainerBase.__init__(self, input)
+        
+    def replace(self, item, new_container, i):
+        self.__dict__[self._dict_container.keys()[i]] = new_container
 
     def _get_value(self):
         OCValue(self)
