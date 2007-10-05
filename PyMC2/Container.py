@@ -307,7 +307,7 @@ class ObjectContainer(ContainerBase):
         if isinstance(input, dict):
             self.__dict__.update(input)
         elif hasattr(input,'__iter__'):
-            for item in iter:
+            for item in input:
                 if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
                     self.__dict__[item.__name__] = item
         else:
