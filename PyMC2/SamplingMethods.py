@@ -6,7 +6,7 @@ from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter, Potential
-from PyMCBase import ZeroProbability, PyMCBase, Variable, SamplingMethodBase
+from PyMCBase import ZeroProbability, PyMCBase, Variable, SamplingMethodBase, ParameterBase
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
@@ -368,7 +368,7 @@ class Metropolis(SamplingMethod):
             self._dist = "Normal"
             
             # If self's extended children has no parameters, proposing from the prior is best.
-            if sum([isinstance(child, parameter) for child in self.children]) == 0:
+            if sum([isinstance(child, ParameterBase) for child in self.children]) == 0:
                 try:
                     self.parameter.random()
                     self._dist = "Prior"
