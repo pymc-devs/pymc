@@ -37,7 +37,8 @@ def l(value=.1, rate = 1.):
     """Rate parameter of poisson distribution."""
     return exponential_like(value, rate)
         
-@data(discrete=True)
+@data
+@discrete_parameter
 def D(  value = D_array,
         s = s,
         e = e,

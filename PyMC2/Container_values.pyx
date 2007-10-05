@@ -73,25 +73,21 @@ def ACValue(container):
     
     :SeeAlso: ArrayContainer
     """
-    ACValue_under(container)
-    
-cdef void ACValue_under(object container):
+
     cdef int i
-    cdef long *p_val_ind, *p_nonval_ind, ind
-    cdef object val_now
-    cdef object ravelledvalue, ravelleddata
+    cdef long ind
     
-    p_val_ind = <long*> PyArray_DATA(container.val_ind)
-    p_nonval_ind = <long*> PyArray_DATA(container.nonval_ind)
+    val_ind = container.val_ind
+    nonval_ind = container.nonval_ind
     
     ravelledvalue = container._ravelledvalue
     ravelleddata = container._ravelleddata
     
     for i from 0 <= i < container.n_val:
-        ind = p_val_ind[i]
+        ind = val_ind[i]
         ravelledvalue[ind] = ravelleddata[ind].value
 
     for i from 0 <= i < container.n_nonval:
-        ind = p_nonval_ind[i]
+        ind = nonval_ind[i]
         ravelledvalue[ind] = ravelleddata[ind]
     

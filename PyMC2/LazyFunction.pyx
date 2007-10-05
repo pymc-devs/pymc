@@ -209,7 +209,6 @@ cdef class LazyFunction:
         # print 'get called'
         
         match_index = self.check_argument_caches()
-        # match_index = -1
 
         if match_index < 0:
 
