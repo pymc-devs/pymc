@@ -367,10 +367,8 @@ class Metropolis(SamplingMethod):
             # Pick Gaussian, just because
             self._dist = "Normal"
             
-            # If self's extended children is the empty set (eg, if
-            # self's parameter is a posterior predictive quantity of
-            # interest), proposing from the prior is best.
-            if len(self.children)==0:
+            # If self's extended children has no parameters, proposing from the prior is best.
+            if sum([isinstance(child, parameter) for child in self.children]) == 0:
                 try:
                     self.parameter.random()
                     self._dist = "Prior"
@@ -898,10 +896,9 @@ def JointMetroCompetence(parameter):
     The competence function for Metropolis
     """
     
-    if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
+    if isinstance(parameter, DiscreteParameter) or isinstance(parameter, BinaryParameter):
         # If the parameter's binary or discrete, I can't do it.
         return 0
-    
     elif isinstance(parameter.value, ndarray):
         return 2
     else:
