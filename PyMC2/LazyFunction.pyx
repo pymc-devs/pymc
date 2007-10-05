@@ -190,8 +190,6 @@ cdef class LazyFunction:
         For debugging purposes. Skip cache checking and compute a value.
         """
         # Refresh parents' values
-        # Note on memory leak: it only happens if you pass the dict into the function.
-        # Doesn't happen if you just query arguments.value.
         value = self.fun(**self.arguments._value)
 
         # Refresh ultimate args' values
@@ -210,7 +208,6 @@ cdef class LazyFunction:
         value.
         """
         cdef int match_index
-        # print 'get called'
         
         match_index = self.check_argument_caches()
 
