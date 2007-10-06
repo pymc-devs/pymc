@@ -151,12 +151,12 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
                     self.dot_object.add_edge(new_edge)
             
     # Create edges from parent-child relationships between nodes.
-    for pymc_object in self.containers.extend(self.nodes):
+    for node in self.containers.extend(self.nodes):
         
-        if pymc_object in shown_objects:
-            if hasattr(pymc_object,'owner'):
-                pymc_object = pymc_object.owner
-            parent_dict = pymc_object.parents
+        if node in shown_objects:
+            if hasattr(node,'owner'):
+                node = node.owner
+            parent_dict = node.parents
         
             for key in parent_dict.iterkeys():
             
@@ -170,11 +170,11 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
                         
                         # TODO: Fix bug here.
                         for name in obj_substitute_names[key_val]:
-                            self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
+                            self.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=key))
                     
                 elif consts:
                     U.dot_object.add_functl(pydot.Functional(name=parent_dict[key].__str__(), style='filled'))
-                    self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=pymc_object.__name__, label=key))                        
+                    self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=node.__name__, label=key))                        
             
     # Add legend if requested
     if legend:

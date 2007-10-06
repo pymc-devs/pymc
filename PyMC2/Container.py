@@ -181,11 +181,11 @@ def file_items(container, iterable):
     container.nodes = container.potentials | container.variables
     
     container.parents = {}
-    for pymc_object in container.nodes:
-        for key in pymc_object.parents.keys():
-            if isinstance(pymc_object.parents[key],Variable):
-                if not pymc_object.parents[key] in container.nodes:
-                    container.parents[pymc_object.__name__ + '_' + key] = pymc_object.parents[key]
+    for node in container.nodes:
+        for key in node.parents.keys():
+            if isinstance(node.parents[key],Variable):
+                if not node.parents[key] in container.nodes:
+                    container.parents[node.__name__ + '_' + key] = node.parents[key]
                 
     container.children = set()
     for variable in container.variables:

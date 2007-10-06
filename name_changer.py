@@ -1,21 +1,24 @@
 import os
+
+dir_to_change = '/Users/anand/renearch/PyMC'
     
 name_replacements = [
-('Stochastic', 'Stochastic'),
-('@stochastic', '@stochastic'),
-('stoch', 'stoch'),
-('stoch', 'stoch'),
-('Functional', 'Functional'), 
-('@functional', '@functional'),
-('functl', 'functl'),
-('Node', 'Functional'),
-('nodes', 'functls'),
-('nodes', 'functls'),
-('StepMethod', 'StepMethod'),
-('step_method', 'step_method'),
-('step method', 'step method')]
+('Parameter', 'Stochastic'),
+('@parameter', '@stochastic'),
+('parameter', 'stoch'),
+('param', 'stoch'),
+('Node', 'Functional'), 
+('@node', '@functional'),
+('node', 'functl'),
+('PyMCBase', 'Node'),
+('pymc_object', 'node'),
+('pymc object', 'node'),
+('SamplingMethod', 'StepMethod'),
+('sampling_method', 'step_method'),
+('sampling method', 'step method')]
+
     
-for dirname, dirs, fnames in os.walk('/Users/anand/renearch/PyMC'):
+for dirname, dirs, fnames in os.walk(dir_to_change):
     
     os.chdir(dirname)
 

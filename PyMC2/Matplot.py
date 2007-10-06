@@ -47,7 +47,7 @@ def get_index_list(shape, j):
 
     return index_list
 
-def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
+def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
     """
     Returns an array whose ith row is the q[i]th quantile of the 
     function.
@@ -63,7 +63,7 @@ def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
     # For very large objects, this will be rather long. 
     # Too get the length of the table, use obj.trace.length()
     
-    func_stacks = pymc_object.trace()
+    func_stacks = node.trace()
 
     if any(qlist<0.) or any(qlist>1.):
         raise TypeError, 'The elements of qlist must be between 0 and 1'
@@ -83,9 +83,9 @@ def func_quantiles(pymc_object, qlist=[.025, .25, .5, .75, .975]):
 
     return quants, alphas
 
-def func_envelopes(pymc_object, PPI=[.25, .5, .95]):
+def func_envelopes(node, PPI=[.25, .5, .95]):
     """
-    func_envelopes(pymc_object, PPI = [.25, .5, .95])
+    func_envelopes(node, PPI = [.25, .5, .95])
 
     Returns a list of centered_envelope objects for func_stacks,
     each one corresponding to an element of PPI, and one 
@@ -104,7 +104,7 @@ def func_envelopes(pymc_object, PPI=[.25, .5, .95]):
     :SeeAlso: centered_envelope, func_quantiles, func_hist, weightplot
     """
 
-    func_stacks = pymc_object.trace()
+    func_stacks = node.trace()
 
     func_stacks = func_stacks.copy()
     func_stacks.sort(axis=0)
@@ -128,10 +128,10 @@ class func_sd_envelope(object):
     the one or two-dimensional function whose trace
     """
 
-    def __init__(self, pymc_object, format='pdf', plotpath='', suffix=''):
+    def __init__(self, node, format='pdf', plotpath='', suffix=''):
 
-        func_stacks = pymc_object.trace()
-        self.name = pymc_object.__name__
+        func_stacks = node.trace()
+        self.name = node.__name__
         self._format=format
         self._plotpath=plotpath
         self.suffix=suffix
@@ -283,12 +283,12 @@ class Plotter:
         # Store fontmap
         self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     
-    def plot(self, pymc_object, suffix=''):
+    def plot(self, node, suffix=''):
         """ 
         Plots summary of stoch/functl trace, including trace and histogram.
         
         :Arguments:
-            pymc_object: PyMCObject
+            node: PyMCObject
                 An entity that is plottable (i.e. has a trace from an MCMC sample).
             
             suffix (optional): string
@@ -312,8 +312,8 @@ class Plotter:
                 The number of the current plot within the composite plot.
         """
 
-        data = pymc_object.trace()
-        name = pymc_object.__name__
+        data = node.trace()
+        name = node.__name__
         
         # Call plotting logic method
         self._plot(data, name, suffix=suffix)
@@ -435,10 +435,10 @@ class Plotter:
             savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
             #close()
     
-    def geweke_plot(self, pymc_object, suffix='-diagnostic'):
+    def geweke_plot(self, node, suffix='-diagnostic'):
 
-        data = pymc_object.trace()
-        name = pymc_object.__name__
+        data = node.trace()
+        name = node.__name__
         
         # Generate Geweke (1992) diagnostic plots
         
@@ -467,10 +467,10 @@ class Plotter:
         savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
         #close()
     
-    def gof_plot(self, pymc_object, suffix='-gof'):
+    def gof_plot(self, node, suffix='-gof'):
         # Generate goodness-of-fit scatter plot
-        data = pymc_object.trace()
-        name = pymc_object.__name__
+        data = node.trace()
+        name = node.__name__
 
         print 'Plotting', name+suffix
         
