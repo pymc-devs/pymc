@@ -25,7 +25,10 @@ config.add_extension(name='LazyFunction',sources=['PyMC2/LazyFunction.c'])
 config.add_extension(name='Container_values', sources='PyMC2/Container_values.c')
 
 config_dict = config.todict()
-config_dict.pop('packages')
+try:
+    config_dict.pop('packages')
+except:
+    pass
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
