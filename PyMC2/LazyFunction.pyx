@@ -190,15 +190,13 @@ cdef class LazyFunction:
         For debugging purposes. Skip cache checking and compute a value.
         """
         # Refresh parents' values
-        value = self.fun(**self.arguments._value)
+        value = self.fun(**self.arguments.value)
 
         # Refresh ultimate args' values
         ACValue(self.ultimate_args)
 
         # Cache
         self.cache(value)
-        
-        return value
         
 
     def get(self):
@@ -208,6 +206,7 @@ cdef class LazyFunction:
         value.
         """
         cdef int match_index
+        # print 'get called'
         
         match_index = self.check_argument_caches()
 
