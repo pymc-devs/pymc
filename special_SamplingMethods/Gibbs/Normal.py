@@ -1,38 +1,38 @@
-from PyMC2 import SamplingMethod, Parameter, Node, Container
+from PyMC2 import StepMethod, Stochastic, Functional, Container
 from PyMC2.utils import msqrt
 from numpy import asarray
 from numpy.random import normal
 
-class NormalGibbs(SamplingMethod):
+class NormalGibbs(StepMethod):
     """
-    Applies to m in following submodel, where i indexes Parameter/ Node objects:
+    Applies to m in following submodel, where i indexes Stochastic/ Functional objects:
     
     d_i ~ind N(A_i m + b_i, d_tau_i)
     m ~ N(mu, tau)
     
     S = NormalGibbs(m, mu, tau, d, A, b, d_tau)
     
-    The argument m must be a Parameter.
+    The argument m must be a Stochastic.
     
     The arguments mu and tau may be:
     - Arrays
     - Scalars
-    - Parameters
-    - Nodes
+    - Stochastics
+    - Functionals
     
     The argument may be:
-    - A Parameter
-    - A Container or other iterable containing Parameters.
+    - A Stochastic
+    - A Container or other iterable containing Stochastics.
     
     The arguments A, b, and d_tau may be:
     - Arrays
-    - Parameters
-    - Nodes
+    - Stochastics
+    - Functionals
     - Containers or other iterables
     
     """
     def __init__(self, m, mu, tau, d, A, b, d_tau):
-        SamplingMethod.__init(self, [m])
+        StepMethod.__init(self, [m])
         
         self.mu = mu
         self.tau = tau
@@ -40,15 +40,15 @@ class NormalGibbs(SamplingMethod):
         length = len(self.m.value.ravel())
         self.length = length
         
-        variable_length_params = {'d': d, 'A': A, 'b': b, 'd_tau': d_tau}
+        variable_length_stochs = {'d': d, 'A': A, 'b': b, 'd_tau': d_tau}
         
-        for p in variable_length_params:
+        for p in variable_length_stochs:
             if len(p[1]) > 1:
                 self.__dict__[p[0]] = Container(p[1])
             else:
                 self.__dict__[p[0]] = p[1]
                 
-        @node
+        @functional
         def M_and_sig(  base_mean = self.mu, 
                         base_tau = self.tau, 
                         obs_vals = self.d,

@@ -1,9 +1,9 @@
-# TODO: Allow each parameter to get its own eps argument.
+# TODO: Allow each stoch to get its own eps argument.
 # TODO: Allow integers in MAP and NormalApproximation if the fitting method doesn't use gradients.
-# TODO: In NormalApproximation, for integer-valued parameters eps must be equal to 1.
-# TODO: Check Markov blankets ahead of time, record which parameters will have mixed partials = 0 to skip some computation.
+# TODO: In NormalApproximation, for integer-valued stochs eps must be equal to 1.
+# TODO: Check Markov blankets ahead of time, record which stochs will have mixed partials = 0 to skip some computation.
 # TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
-# TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just SamplingMethods.
+# TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just StepMethods.
 # TODO: When an error results from fit() not having been called, it should say so.
 # TODO: one-at-a-time vs. blocked option for all optimization algorithms.
 
@@ -11,8 +11,8 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-from PyMCObjects import Parameter, Potential
-from PyMCBase import ZeroProbability
+from PyMCObjects import Stochastic, Potential
+from Node import ZeroProbability
 from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
@@ -29,9 +29,9 @@ except ImportError:
 
 class NormApproxMu(object):
     """
-    Returns the mean vector of some parameters.
+    Returns the mean vector of some stochs.
     
-    Usage: If p1 and p2 are array-valued parameters and N is a 
+    Usage: If p1 and p2 are array-valued stochs and N is a 
     NormalApproximation or MAP object,
     
     N.mu(p1,p2)
@@ -42,34 +42,34 @@ class NormApproxMu(object):
     def __init__(self, owner):
         self.owner = owner
     
-    def __getitem__(self, *params):
+    def __getitem__(self, *stochs):
         tot_len = 0
         
         try:
-            for p in params[0]:
+            for p in stochs[0]:
                 pass
-            param_tuple = params[0]
+            stoch_tuple = stochs[0]
         except:
-            param_tuple = params
+            stoch_tuple = stochs
         
-        for p in param_tuple:
-            tot_len += self.owner.param_len[p]
+        for p in stoch_tuple:
+            tot_len += self.owner.stoch_len[p]
             
         mu = zeros(tot_len, dtype=float)
         
         start_index = 0
-        for p in param_tuple:
-            mu[start_index:(start_index + self.owner.param_len[p])] = self.owner._mu[self.owner._slices[p]]
-            start_index += self.owner.param_len[p]
+        for p in stoch_tuple:
+            mu[start_index:(start_index + self.owner.stoch_len[p])] = self.owner._mu[self.owner._slices[p]]
+            start_index += self.owner.stoch_len[p]
             
         return mu
         
 
 class NormApproxC(object):
     """
-    Returns the covariance matrix of some parameters.
+    Returns the covariance matrix of some stochs.
     
-    Usage: If p1 and p2 are array-valued parameters and N is a
+    Usage: If p1 and p2 are array-valued stochs and N is a
     NormalApproximation or MAP object,
     
     N.C(p1,p2)
@@ -80,32 +80,32 @@ class NormApproxC(object):
     def __init__(self, owner):
         self.owner = owner
             
-    def __getitem__(self, *params):
+    def __getitem__(self, *stochs):
         tot_len = 0
         
         try:
-            for p in params[0]:
+            for p in stochs[0]:
                 pass
-            param_tuple = params[0]
+            stoch_tuple = stochs[0]
         except:
-            param_tuple = params
+            stoch_tuple = stochs
         
-        for p in param_tuple:
-            tot_len += self.owner.param_len[p]
+        for p in stoch_tuple:
+            tot_len += self.owner.stoch_len[p]
 
         C = asmatrix(zeros((tot_len, tot_len)), dtype=float)
             
         start_index1 = 0
-        for p1 in param_tuple:
+        for p1 in stoch_tuple:
             start_index2 = 0
-            for p2 in param_tuple:                
-                C[start_index1:(start_index1 + self.owner.param_len[p1]), \
-                start_index2:(start_index2 + self.owner.param_len[p2])] = \
+            for p2 in stoch_tuple:                
+                C[start_index1:(start_index1 + self.owner.stoch_len[p1]), \
+                start_index2:(start_index2 + self.owner.stoch_len[p2])] = \
                 self.owner._C[self.owner._slices[p1],self.owner._slices[p2]]
                 
-                start_index2 += self.owner.param_len[p2]
+                start_index2 += self.owner.stoch_len[p2]
                 
-            start_index1 += self.owner.param_len[p1]
+            start_index1 += self.owner.stoch_len[p1]
             
         return C
         
@@ -113,18 +113,18 @@ class MAP(Model):
     """
     M = MAP(input, db='ram', eps=.001, diff_order=5, verbose=False)
     
-    On instantiation, sets all parameters in the model to their maximal a-posteriori
+    On instantiation, sets all stochs in the model to their maximal a-posteriori
     values.
     
     Useful methods:
-    revert_to_max: Sets all parameters to mean value under normal approximation
+    revert_to_max: Sets all stochs to mean value under normal approximation
     fit:            Finds the MAP estimate.
     
     Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of parameters p1, p2, ...
+    mu[p1, p2, ...]:    Returns the posterior mean vector of stochs p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
-    len:                The number of free parameters in the model ('k' in AIC and BIC)
+    len:                The number of free stochs in the model ('k' in AIC and BIC)
     data_len:           The number of datapoints used ('n' in BIC)
     AIC:                Akaike's Information Criterion for the model
     BIC:                Bayesian Information Criterion for the model
@@ -143,45 +143,45 @@ class MAP(Model):
         
         Model.__init__(self, input, db)
 
-        # Allocate memory for internal traces and get parameter slices
+        # Allocate memory for internal traces and get stoch slices
         self._slices = {}
         self.len = 0
-        self.param_len = {}
+        self.stoch_len = {}
         
-        self.param_list = list(self.parameters)
-        self.N_params = len(self.param_list)
-        self.param_indices = []
-        self.param_types = []
-        self.param_type_dict = {}
+        self.stoch_list = list(self.stochs)
+        self.N_stochs = len(self.stoch_list)
+        self.stoch_indices = []
+        self.stoch_types = []
+        self.stoch_type_dict = {}
         self.extended_children = {}
         
-        for i in xrange(len(self.param_list)):
+        for i in xrange(len(self.stoch_list)):
 
-            parameter = self.param_list[i]
+            stoch = self.stoch_list[i]
             
-            # Extend children of parameter
-            self.extended_children[parameter] = extend_children(parameter.children)
+            # Extend children of stoch
+            self.extended_children[stoch] = extend_children(stoch.children)
             
-            # Check types of all parameters.
-            type_now = check_type(parameter)[0]
-            self.param_type_dict[parameter] = type_now
+            # Check types of all stochs.
+            type_now = check_type(stoch)[0]
+            self.stoch_type_dict[stoch] = type_now
             
             if not type_now is float:
-                raise TypeError,    "Parameter " + parameter.__name__ + "'s value must be numerical with " + \
+                raise TypeError,    "Stochastic " + stoch.__name__ + "'s value must be numerical with " + \
                                     "floating-point dtype for NormalApproximation or MAP to be applied."
             
-            # Inspect shapes of all parameters and create parameter slices.
-            if isinstance(parameter.value, ndarray):
-                self.param_len[parameter] = len(ravel(parameter.value))
+            # Inspect shapes of all stochs and create stoch slices.
+            if isinstance(stoch.value, ndarray):
+                self.stoch_len[stoch] = len(ravel(stoch.value))
             else:
-                self.param_len[parameter] = 1
-            self._slices[parameter] = slice(self.len, self.len + self.param_len[parameter])
-            self.len += self.param_len[parameter]
+                self.stoch_len[stoch] = 1
+            self._slices[stoch] = slice(self.len, self.len + self.stoch_len[stoch])
+            self.len += self.stoch_len[stoch]
             
-            # Record indices that correspond to each parameter.
-            for j in range(len(ravel(parameter.value))):
-                self.param_indices.append((parameter, j))
-                self.param_types.append(type_now)
+            # Record indices that correspond to each stoch.
+            for j in range(len(ravel(stoch.value))):
+                self.stoch_indices.append((stoch, j))
+                self.stoch_types.append(type_now)
                 
         self.data_len = 0
         for datum in self.data:
@@ -219,8 +219,8 @@ class MAP(Model):
         self.method = method
         print method
         p = zeros(self.len,dtype=float)
-        for parameter in self.parameters:
-            p[self._slices[parameter]] = ravel(parameter.value)
+        for stoch in self.stochs:
+            p[self._slices[stoch]] = ravel(stoch.value)
 
         if not self.method == 'newton':
             if not scipy_imported:
@@ -281,7 +281,7 @@ class MAP(Model):
         else:
             raise ValueError, 'Method unknown.'
 
-        self._set_parameters(p) 
+        self._set_stochs(p) 
         self.grad_and_hess()
         self._mu = p
         try:
@@ -295,7 +295,7 @@ class MAP(Model):
         """
         The function that gets passed to the optimizers.
         """
-        self._set_parameters(p)
+        self._set_stochs(p)
         try:
             return -1. * self.logp
         except ZeroProbability:
@@ -306,38 +306,38 @@ class MAP(Model):
         The gradient-computing function that gets passed to the optimizers, 
         if needed.
         """
-        self._set_parameters(p)
+        self._set_stochs(p)
         for i in xrange(self.len):
             self.grad[i] = self.diff(i)            
 
         return -1 * self.grad
 
 
-    def _set_parameters(self, p):
-        for parameter in self.parameters:
-            if self.param_type_dict[parameter] is int:
-                parameter.value = round_array(reshape(ravel(p)[self._slices[parameter]],shape(parameter.value)))
+    def _set_stochs(self, p):
+        for stoch in self.stochs:
+            if self.stoch_type_dict[stoch] is int:
+                stoch.value = round_array(reshape(ravel(p)[self._slices[stoch]],shape(stoch.value)))
             else:
-                parameter.value = reshape(ravel(p)[self._slices[parameter]],shape(parameter.value))
+                stoch.value = reshape(ravel(p)[self._slices[stoch]],shape(stoch.value))
 
     def __setitem__(self, index, value):
-        p, i = self.param_indices[index]
+        p, i = self.stoch_indices[index]
         val = ravel(p.value).copy()
         val[i] = value
         p.value = reshape(val, shape(p.value))
 
     def __getitem__(self, index):
-        p, i = self.param_indices[index]
+        p, i = self.stoch_indices[index]
         val = ravel(p.value)
         return val[i]
     
     def i_logp(self, index):
         """
         Evaluates the log-probability of the Markov blanket of
-        a parameter owning a particular index.
+        a stoch owning a particular index.
         """
-        all_relevant_params = set()
-        p,i = self.param_indices[index]
+        all_relevant_stochs = set()
+        p,i = self.stoch_indices[index]
         try:
             return p.logp + sum([child.logp for child in self.extended_children[p]])
         except ZeroProbability:
@@ -360,7 +360,7 @@ class MAP(Model):
         
         Mixed second derivative. Differentiates wrt both indices.
         """
-        # TODO: Figure out ahead of time which parameters won't have
+        # TODO: Figure out ahead of time which stochs won't have
         # any cross-derivative with each other by checking whether 
         # one is in the other's Markov blanket.
         old_val = copy(self[j])
@@ -398,7 +398,7 @@ class MAP(Model):
         The Hessian function that will be passed to the optimizer,
         if needed.
         """
-        self._set_parameters(p)
+        self._set_stochs(p)
         for i in xrange(self.len):
 
             di = self.diff(i)            
@@ -418,9 +418,9 @@ class MAP(Model):
         """
         N.revert_to_max()
         
-        Sets all N's parameters to their MAP values.
+        Sets all N's stochs to their MAP values.
         """
-        self._set_parameters(self.mu)
+        self._set_stochs(self.mu)
         
 
 class NormalApproximation(MAP):
@@ -430,16 +430,16 @@ class NormalApproximation(MAP):
     Normal approximation to the posterior of a model. Fits self on instantiation.
     
     Useful methods:
-    draw:           Draws values for all parameters using normal approximation
-    revert_to_max: Sets all parameters to mean value under normal approximation
+    draw:           Draws values for all stochs using normal approximation
+    revert_to_max: Sets all stochs to mean value under normal approximation
     fit:            Finds the normal approximation.
     
     Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of parameters p1, p2, ...
-    C[p1, p2, ...]:     Returns the posterior covariance of parameters p1, p2, ...
+    mu[p1, p2, ...]:    Returns the posterior mean vector of stochs p1, p2, ...
+    C[p1, p2, ...]:     Returns the posterior covariance of stochs p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
-    len:                The number of free parameters in the model ('k' in AIC and BIC)
+    len:                The number of free stochs in the model ('k' in AIC and BIC)
     data_len:           The number of datapoints used ('n' in BIC)
     AIC:                Akaike's Information Criterion for the model
     BIC:                Bayesian Information Criterion for the model
@@ -473,12 +473,12 @@ class NormalApproximation(MAP):
         """
         N.draw()
         
-        Sets all N's parameters to random values drawn from
+        Sets all N's stochs to random values drawn from
         the normal approximation to the posterior.
         """
         devs = normal(size=self._sig.shape[1])
         p = inner(self._sig,devs)
-        self._set_parameters(p)
+        self._set_stochs(p)
     
     def fit(self, method='fmin', iterlim=1000, tol=.00001):
         """

@@ -1,14 +1,14 @@
 import sys, inspect
 from imp import load_dynamic
-from PyMCObjects import Parameter, Node, DiscreteParameter, BinaryParameter, Potential
+from PyMCObjects import Stochastic, Functional, DiscreteStochastic, BinaryStochastic, Potential
 from utils import extend_children, _push
-from PyMCBase import ZeroProbability, ContainerBase, PyMCBase
+from Node import ZeroProbability, ContainerBase, Node
 from Container import Container
 import numpy as np
 
 def _extract(__func__, kwds, keys, classname): 
     """
-    Used by decorators parameter and node to inspect declarations
+    Used by decorators stoch and functl to inspect declarations
     """
     
     # Add docs and name
@@ -76,23 +76,23 @@ def _extract(__func__, kwds, keys, classname):
                     
     return (value, parents)
 
-def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, **kwds):
+def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
     """
-    Decorator function for instantiating parameters. Usages:
+    Decorator function for instantiating stochs. Usages:
     
     Medium:
     
-        @parameter
+        @stochastic
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
         
-        @parameter(trace=trace_object)
+        @stochastic(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
             
     Long:
 
-        @parameter
+        @stochastic
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -102,7 +102,7 @@ def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, 
                 return bar(parent_name, ...)
                 
     
-        @parameter(trace=trace_object)
+        @stochastic(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -111,21 +111,21 @@ def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, 
             def random(parent_name, ...):
                 return bar(parent_name, ...)
                 
-    where foo() computes the log-probability of the parameter A
+    where foo() computes the log-probability of the stoch A
     conditional on its value and its parents' values, and bar()
     generates a random value from A's distribution conditional on
     its parents' values.
     
-    :SeeAlso: Parameter, Node, node, data, Potential, potential, Model, Container
+    :SeeAlso: Stochastic, Functional, functl, data, Potential, potential, Model, Container
     """
     
     if binary:
-        __class__ = BinaryParameter
+        __class__ = BinaryStochastic
     elif discrete:
-        __class__ = DiscreteParameter
+        __class__ = DiscreteStochastic
     
     def instantiate_p(__func__):
-        value, parents = _extract(__func__, kwds, keys, 'Parameter')
+        value, parents = _extract(__func__, kwds, keys, 'Stochastic')
         return __class__(value=value, parents=parents, **kwds)  
             
     keys = ['logp','random','rseed']
@@ -137,23 +137,23 @@ def parameter(__func__=None, __class__=Parameter, binary=False, discrete=False, 
         
     return instantiate_p
     
-def discrete_parameter(__func__=None, **kwds):
+def discrete_stoch(__func__=None, **kwds):
     """
-    Instantiates a DiscreteParameter instance, which takes only
+    Instantiates a DiscreteStochastic instance, which takes only
     integer values.
     
-    Same usage as parameter.
+    Same usage as stoch.
     """
-    return parameter(__func__=__func__, __class__ = DiscreteParameter, **kwds)
+    return stochastic(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
     
-def binary_parameter(__func__=None, **kwds):
+def binary_stoch(__func__=None, **kwds):
     """
-    Instantiates a BinaryParameter instance, which takes only boolean
+    Instantiates a BinaryStochastic instance, which takes only boolean
     values.
     
-    Same usage as parameter.
+    Same usage as stoch.
     """
-    return parameter(__func__=__func__, __class__ = BinaryParameter, **kwds)
+    return stochastic(__func__=__func__, __class__ = BinaryStochastic, **kwds)
 
 
 def potential(__func__ = None, **kwds):
@@ -164,10 +164,10 @@ def potential(__func__ = None, **kwds):
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
 
-    where baz returns the node B's value conditional
+    where baz returns the functl B's value conditional
     on its parents.
 
-    :SeeAlso: Node, node, Parameter, Potential, parameter, data, Model, Container
+    :SeeAlso: Functional, functl, Stochastic, Potential, stoch, data, Model, Container
     """
     def instantiate_pot(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Potential')
@@ -183,26 +183,26 @@ def potential(__func__ = None, **kwds):
     return instantiate_pot
 
 
-def node(__func__ = None, **kwds):
+def functional(__func__ = None, **kwds):
     """
-    Decorator function instantiating nodes. Usage:
+    Decorator function instantiating functls. Usage:
     
-    @node
+    @functional
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
         
-    @node(trace = trace_object)
+    @functional(trace = trace_object)
     def B(parent_name = ., ...)
         return baz(parent_name, ...)        
         
-    where baz returns the node B's value conditional
+    where baz returns the functl B's value conditional
     on its parents.
     
-    :SeeAlso: Node, node, Parameter, parameter, data, Model, Container
+    :SeeAlso: Functional, functl, Stochastic, stoch, data, Model, Container
     """
     def instantiate_n(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Node')
-        return Node(parents=parents, **kwds)
+        junk, parents = _extract(__func__, kwds, keys, 'Functional')
+        return Functional(parents=parents, **kwds)
         
     keys = ['eval']
     
@@ -217,7 +217,7 @@ def node(__func__ = None, **kwds):
 def data(obj=None, **kwds):
     """
     Decorator function to instantiate data objects.     
-    If given a Parameter, sets a the isdata flag to True.
+    If given a Stochastic, sets a the isdata flag to True.
     
     Can be used as
     
@@ -228,24 +228,24 @@ def data(obj=None, **kwds):
     or as
     
     @data
-    @parameter
+    @stochastic
     def A(value = ., parent_name = .,  ...):
         return foo(value, parent_name, ...)
         
     
-    :SeeAlso: parameter, Parameter, node, Node, potential, Potential, Model, Container
+    :SeeAlso: stoch, Stochastic, functl, Functional, potential, Potential, Model, Container
     """
     if obj is not None:
-        if isinstance(obj, Parameter):
+        if isinstance(obj, Stochastic):
             obj.isdata=True
             return obj
         else:
-            p = parameter(__func__=obj, isdata=True, **kwds)
+            p = stochastic(__func__=obj, isdata=True, **kwds)
             return p
     
     kwds['isdata']=True
     def instantiate_data(func):
-        return parameter(func, **kwds)
+        return stochastic(func, **kwds)
         
     return instantiate_data
 

@@ -1,19 +1,19 @@
 from PyMC2 import *
 
 def disaster_no_r():
-    @discrete_parameter
+    @discrete_stoch
     def s(value=50, length=110):
-        """Change time for rate parameter."""
+        """Change time for rate stoch."""
         return 0.
 
-    @parameter
+    @stochastic
     def e(value=1., rate=1.):
-        """Rate parameter of poisson distribution."""
+        """Rate stoch of poisson distribution."""
         return 0.
 
-    @parameter
+    @stochastic
     def l(value=.1, rate = 1.):
-        """Rate parameter of poisson distribution."""
+        """Rate stoch of poisson distribution."""
         return 0.
         
     @data(discrete=True)
@@ -30,22 +30,22 @@ M = Model(disaster_no_r())
 M.DAG(consts=False, path='DisasterModel.dot', format='raw', legend=False)
 
 def disaster_yes_r():
-    @discrete_parameter
+    @discrete_stoch
     def s(value=50, length=110):
-        """Change time for rate parameter."""
+        """Change time for rate stoch."""
         return 0.
 
-    @parameter
+    @stochastic
     def e(value=1., rate=1.):
-        """Rate parameter of poisson distribution."""
+        """Rate stoch of poisson distribution."""
         return 0.
 
-    @parameter
+    @stochastic
     def l(value=.1, rate = 1.):
-        """Rate parameter of poisson distribution."""
+        """Rate stoch of poisson distribution."""
         return 0.
     
-    @node
+    @functional
     def r(switchpoint = s,
         early_rate = e,
         late_rate = l):
@@ -63,84 +63,84 @@ def disaster_yes_r():
 M = Model(disaster_yes_r())
 M.DAG(consts=False, path='DisasterModel2.dot', format='raw', legend=False)
 
-def node_pre():
-    @parameter
+def functl_pre():
+    @stochastic
     def A(value=0):
         return 0.
         
-    @parameter
+    @stochastic
     def B(value=0):
         return 0.
         
-    @node
+    @functional
     def C(p1=A, p2=B):
         return 0.
         
-    @parameter
+    @stochastic
     def D(value=0, C = C):
         return 0.
         
-    @parameter
+    @stochastic
     def E(value=0, C=C):
         return 0.
         
     return locals()
     
-M = Model(node_pre())
-M.DAG(consts=False, path='NodePreInheritance.dot', format='raw', legend=False)    
+M = Model(functl_pre())
+M.DAG(consts=False, path='FunctionalPreInheritance.dot', format='raw', legend=False)    
     
-def node_post():
-    @parameter
+def functl_post():
+    @stochastic
     def A(value=0):
         return 0.
         
-    @parameter
+    @stochastic
     def B(value=0):
         return 0.
         
-    @parameter
+    @stochastic
     def D(value=0, C_p1 = A, C_p2=B):
         return 0.
         
-    @parameter
+    @stochastic
     def E(value=0, C_p1=A, C_p2 = B):
         return 0.
         
     return locals()
     
-M = Model(node_post())
-M.DAG(consts=False, path='NodePostInheritance.dot', format='raw', legend=False)    
+M = Model(functl_post())
+M.DAG(consts=False, path='FunctionalPostInheritance.dot', format='raw', legend=False)    
     
     
 def survival():
-    @parameter
+    @stochastic
     def beta(value=0):
         return 0.
         
     @data
-    @parameter
+    @stochastic
     def x(value=0):
         return 0.
         
-    @node
+    @functional
     def S(covariates = x, coefs = beta):
         return 0.
         
     @data
-    @parameter
+    @stochastic
     def t(value=0, survival = S):
         return 0.
         
-    @parameter
+    @stochastic
     def a(value=0):
         return 0.
         
-    @parameter
+    @stochastic
     def b(value=0):
         return 0.
     
     @potential
-    def gamma(survival = S, param1=a, param2=b):
+    def gamma(survival = S, stoch1=a, stoch2=b):
         return 0.
     
     return locals()

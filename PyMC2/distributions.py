@@ -20,7 +20,7 @@ availabledistributions = univ_distributions+mv_distributions
 import flib
 import PyMC2
 import numpy as np
-from PyMCBase import ZeroProbability
+from Node import ZeroProbability
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
 
 if hasattr(flib, 'cov_mvnorm'):
@@ -51,15 +51,15 @@ def randomwrap(func):
     """
     Decorator for random value generators
 
-    Allows passing of sequence of parameters, as well as a size argument.
+    Allows passing of sequence of stochs, as well as a size argument.
 
     Convention:
 
-      - If size=1 and the parameters are all scalars, return a scalar.
+      - If size=1 and the stochs are all scalars, return a scalar.
       - If size=1, the random variates are 1D.
-      - If the parameters are scalars and size > 1, the random variates are 1D.
-      - If size > 1 and the parameters are sequences, the random variates are
-        aligned as (size, max(length)), where length is the parameters size.
+      - If the stochs are scalars and size > 1, the random variates are 1D.
+      - If size > 1 and the stochs are sequences, the random variates are
+        aligned as (size, max(length)), where length is the stochs size.
 
 
     :Example:
@@ -124,16 +124,16 @@ def randomwrap(func):
             r.append(func(*arg))
 
         size = arg[-1]
-        vec_params = len(r)>1
+        vec_stochs = len(r)>1
         if mv:
             if nr == 1 and N==1:
                 return r[0]
             else:
                 return np.vstack(r)
         else:
-            if size > 1 and vec_params:
+            if size > 1 and vec_stochs:
                 return np.atleast_2d(r).transpose()
-            elif vec_params or size > 1:
+            elif vec_stochs or size > 1:
                 return np.concatenate(r)
             else: # Scalar case
                 return r[0][0]
@@ -148,7 +148,7 @@ def randomwrap(func):
 
 def constrain(value, lower=-Inf, upper=Inf, allow_equal=False):
     """
-    Apply interval constraint on parameter value.
+    Apply interval constraint on stoch value.
     """
 
     ok = flib.constrain(value, lower, upper, allow_equal)
@@ -272,7 +272,7 @@ def bernoulli_like(x, p):
     .. math::
         f(x \mid p) = p^{x- 1} (1-p)^{1-x}
 
-    :Parameters:
+    :Stochastics:
       - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
       - `p`: Probability of success. :math:`0 < p < 1`
 
@@ -323,7 +323,7 @@ def beta_like(x, alpha, beta):
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
 
-    :Parameters:
+    :Stochastics:
       - `x`: 0 < x < 1
       - `alpha`: > 0
       - `beta`: > 0
@@ -376,7 +376,7 @@ def binomial_like(x, n, p):
     .. math::
         f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
 
-    :Parameters:
+    :Stochastics:
       x : float
         Number of successes, > 0.
       n : int
@@ -454,9 +454,9 @@ def cauchy_like(x, alpha, beta):
     .. math::
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
-    :Parameters:
-      - `alpha` : Location parameter.
-      - `beta`: Scale parameter > 0.
+    :Stochastics:
+      - `alpha` : Location stoch.
+      - `beta`: Scale stoch > 0.
 
     :Note:
       - Mode and median are at alpha.
@@ -496,7 +496,7 @@ def chi2_like(x, k):
     .. math::
         f(x \mid k) = \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}}
 
-    :Parameters:
+    :Stochastics:
       x : float
         :math:`\ge 0`
       k : int
@@ -550,7 +550,7 @@ def dirichlet_like(x, theta):
     .. math::
         f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
-    :Parameters:
+    :Stochastics:
       x : (n,k) array
         Where `n` is the number of samples and `k` the dimension.
         :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^k x_i = 1`
@@ -602,11 +602,11 @@ def exponential_like(x, beta):
     .. math::
         f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
 
-    :Parameters:
+    :Stochastics:
       x : float
         :math:`x \ge 0`
       beta : float
-        Survival parameter :math:`\beta > 0`
+        Survival stoch :math:`\beta > 0`
 
     :Note:
       - :math:`E(X) = \beta`
@@ -647,12 +647,12 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
         f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
         z & = \frac{x-loc}{scale}
 
-    :Parameters:
+    :Stochastics:
       - `x` : > 0
-      - `alpha` : Shape parameter
+      - `alpha` : Shape stoch
       - `k` : > 0
-      - `loc` : Location parameter
-      - `scale` : Scale parameter > 0.
+      - `loc` : Location stoch
+      - `scale` : Scale stoch > 0.
 
     """
 
@@ -689,13 +689,13 @@ def gamma_like(x, alpha, beta):
     .. math::
         f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x\beta}}{\Gamma(\alpha) \beta^{\alpha}}
 
-    :Parameters:
+    :Stochastics:
       x : float
         :math:`x \ge 0`
       alpha : float
-        Shape parameter :math:`\alpha > 0`.
+        Shape stoch :math:`\alpha > 0`.
       beta : float
-        Scale parameter :math:`\beta > 0`.
+        Scale stoch :math:`\beta > 0`.
 
     """
     # try:
@@ -708,7 +708,7 @@ def gamma_like(x, alpha, beta):
 
 
 # GEV Generalized Extreme Value ------------------------
-# Modify parameterization -> Hosking (kappa, xi, alpha)
+# Modify stochization -> Hosking (kappa, xi, alpha)
 @randomwrap
 def rgev(xi, mu=0, sigma=1, size=1):
     """
@@ -780,7 +780,7 @@ def geometric_like(x, p):
     .. math::
         f(x \mid p) = p(1-p)^{x-1}
 
-    :Parameters:
+    :Stochastics:
       x : int
         Number of trials before first success, > 0.
       p : float
@@ -828,7 +828,7 @@ def half_normal_like(x, tau):
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
-    :Parameters:
+    :Stochastics:
       x : float
         :math:`x \ge 0`
       tau : float
@@ -871,7 +871,7 @@ def hypergeometric_like(x, draws, success, failure):
     .. math::
         f(x \mid draws, successes, failures)
 
-    :Parameters:
+    :Stochastics:
       x : int
         Number of successes in a sample drawn from a population.
         :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
@@ -893,7 +893,7 @@ def hypergeometric_like(x, draws, success, failure):
 
 # Inverse gamma----------------------------------------------
 # This one doesn't look kosher. Check it up.
-# Again, Gelman's parametrization isn't the same
+# Again, Gelman's stochetrization isn't the same
 # as numpy's. Matlab agrees with numpy, R agrees with Gelman.
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
@@ -923,13 +923,13 @@ def inverse_gamma_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} \exp\{-\frac{1}{\beta x}\}}
         {\Gamma(\alpha)\beta^{\alpha}}
 
-    :Parameters:
+    :Stochastics:
       x : float
         x > 0
       alpha : float
-        Shape parameter, :math:`\alpha > 0`.
+        Shape stoch, :math:`\alpha > 0`.
       beta : float
-        Scale parameter, :math:`\beta > 0`.
+        Scale stoch, :math:`\beta > 0`.
 
     :Note:
       :math:`E(X)=\frac{1}{\beta(\alpha-1)}` for :math:`\alpha > 1`.
@@ -974,13 +974,13 @@ def lognormal_like(x, mu, tau):
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
         \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
-    :Parameters:
+    :Stochastics:
       x : float
         x > 0
       mu : float
-        Location parameter.
+        Location stoch.
       tau : float
-        Scale parameter, > 0.
+        Scale stoch, > 0.
 
     :Note:
       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
@@ -1024,7 +1024,7 @@ def multinomial_like(x, n, p):
     .. math::
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
-    :Parameters:
+    :Stochastics:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
         :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
@@ -1101,7 +1101,7 @@ def multivariate_hypergeometric_like(x, m):
 
     where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
     
-    :Parameters:
+    :Stochastics:
         x : int sequence
             Number of draws from each category, :math:`< m`
         m : int sequence
@@ -1147,7 +1147,7 @@ def mvnormal_like(x, mu, tau):
     """
     return flib.prec_mvnorm(x,mu,tau)
         
-# Multivariate normal, parametrized with covariance---------------------------
+# Multivariate normal, stochetrized with covariance---------------------------
 def rmvnormal_cov(mu, C, size=1):
     """
     rmvnormal_cov(mu, C)
@@ -1181,7 +1181,7 @@ def mvnormal_cov_like(x, mu, C):
     """
     return flib.cov_mvnorm(x,mu,C)        
 
-# Multivariate normal, parametrized with Cholesky factorization.----------
+# Multivariate normal, stochetrized with Cholesky factorization.----------
 def rmvnormal_chol(mu, sig, size=1):
     """
     rmvnormal(mu, sig)
@@ -1292,7 +1292,7 @@ def normal_like(x, mu, tau):
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
 
-    :Parameters:
+    :Stochastics:
       x : float
         Input data.
       mu : float
@@ -1346,7 +1346,7 @@ def poisson_like(x,mu):
     .. math::
         f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
-    :Parameters:
+    :Stochastics:
       x : int
         :math:`x \in {0,1,2,...}`
       mu : float
@@ -1446,7 +1446,7 @@ def uniform_like(x,lower, upper):
     .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
 
-    :Parameters:
+    :Stochastics:
       x : float
        :math:`lower \geq x \geq upper`
       lower : float
@@ -1481,7 +1481,7 @@ def weibull_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
         \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
-    :Parameters:
+    :Stochastics:
       x : float
         :math:`x \ge 0`
       alpha : float
@@ -1538,7 +1538,7 @@ def wishart_like(X, n, Tau):
     
     where :math:`k` is the rank of X.
     
-    :Parameters:
+    :Stochastics:
       X : matrix
         Symmetric, positive definite.
       n : int
@@ -1560,7 +1560,7 @@ def wishart_like(X, n, Tau):
 # -----------------------------------------------------------
 def create_distribution_instantiator(name, logp=None, random=None, module=locals()):
     """
-    Return a function to instantiate a parameter from a particular distribution.
+    Return a function to instantiate a stoch from a particular distribution.
 
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')
@@ -1596,10 +1596,10 @@ def create_distribution_instantiator(name, logp=None, random=None, module=locals
 
 
     def instantiator(name, value=None, trace=True, rseed=False, 
-        doc='PyMC parameter', **kwds):
+        doc='PyMC stoch', **kwds):
         """
 
-        Instantiate a Parameter instance with a %s prior.
+        Instantiate a Stochastic instance with a %s prior.
         """
 
         # Deal with keywords
@@ -1616,10 +1616,10 @@ def create_distribution_instantiator(name, logp=None, random=None, module=locals
             rseed = True
             value = random(**parents)
 
-        return PyMC2.Parameter(value=value, name=name, parents=parents, logp=valuewrapper(logp), random=random, \
+        return PyMC2.Stochastic(value=value, name=name, parents=parents, logp=valuewrapper(logp), random=random, \
         trace=trace, rseed=rseed, isdata=False, doc=doc)
 
-    #instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
+    #instantiator.__doc__="Instantiate a Stochastic instance with a %s prior."%name
     return instantiator
 
 def valuewrapper(f):
@@ -1642,9 +1642,9 @@ def fortranlike(f, snapshot, mv=False):
 
     Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
 
-    Assume args = (x, param1, param2, ...)
+    Assume args = (x, stoch1, stoch2, ...)
     Before passing the arguments to the function, the wrapper makes sure that
-    the parameters have the same shape as x.
+    the stochs have the same shape as x.
 
     mv: multivariate (True/False)
 
@@ -1749,7 +1749,7 @@ def local_decorated_likelihoods(obj):
 
 
 
-# Create parameter instantiators
+# Create stoch instantiators
 
 for dist in availabledistributions:
     locals()[dist.capitalize()]= create_distribution_instantiator(dist, module=locals())

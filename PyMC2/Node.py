@@ -9,33 +9,33 @@ class ZeroProbability(ValueError):
     pass
 
 
-class PyMCBase(object):
+class Node(object):
     """
-    The base class from which Parameter, Node and Potential inherit.
+    The base class from which Stochastic, Functional and Potential inherit.
     Shouldn't need to be instantiated directly.
     
-    :Parameters:
+    :Stochastics:
           -doc : string
-              The docstring for this node.
+              The docstring for this functl.
 
           -name : string
-              The name of this node.
+              The name of this functl.
 
           -parents : dictionary
-              A dictionary containing the parents of this node.
+              A dictionary containing the parents of this functl.
 
           -trace : boolean
-              A boolean indicating whether this node's value 
+              A boolean indicating whether this functl's value 
               should be traced (in MCMC).
 
           -cache_depth : integer   
-              An integer indicating how many of this node's
+              An integer indicating how many of this functl's
               value computations should be 'memorized'.
               
           - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
-    :SeeAlso: Parameter, Node
+    :SeeAlso: Stochastic, Functional
     """
     def __init__(self, doc, name, parents, cache_depth, trace, verbose=0):
 
@@ -58,7 +58,7 @@ class PyMCBase(object):
         
         # Add self as child of parents
         for object in self._parents.itervalues():
-            if isinstance(object, PyMCBase):
+            if isinstance(object, Node):
                 object.children.add(self)
         
         # New lazy function
@@ -73,7 +73,7 @@ class PyMCBase(object):
         
         # Iterate over items in ParentDict
         for parent in self._parents.itervalues():
-            if isinstance(parent, PyMCBase):
+            if isinstance(parent, Node):
                 # Remove self as child
                 parent.children.discard(self)
                 
@@ -88,7 +88,7 @@ class PyMCBase(object):
         
         # Remove as child from parents
         for parent in self._parents.itervalues():
-            if isinstance(parent, PyMCBase):
+            if isinstance(parent, Node):
                 parent.children.discard(self)
                 
         # Delete parents
@@ -105,9 +105,9 @@ class PyMCBase(object):
     def gen_lazy_function(self):
         pass                
 
-class Variable(PyMCBase):
+class Variable(Node):
     """
-    The base class for Parameters and Nodes.
+    The base class for Stochastics and Functionals.
     """
     pass
 
@@ -130,29 +130,29 @@ class ContainerBase(object):
                 self.__name__ = 'container'
     
     def _get_logp(self):
-        return sum(obj.logp for obj in self.parameters | self.potentials | self.data)
+        return sum(obj.logp for obj in self.stochs | self.potentials | self.data)
     logp = property(_get_logp)
         
-class ParameterBase(Variable):
+class StochasticBase(Variable):
     """
-    The base class for parameters.
-    """
-    pass
-    
-class NodeBase(Variable):
-    """
-    The base class for nodes.
+    The base class for stochs.
     """
     pass
     
-class PotentialBase(PyMCBase):
+class FunctionalBase(Variable):
+    """
+    The base class for functls.
+    """
+    pass
+    
+class PotentialBase(Node):
     """
     The base class for potentials.
     """
     pass
     
-class SamplingMethodBase(object):
+class StepMethodBase(object):
     """
-    The base class for sampling methods.
+    The base class for step methods.
     """
     pass    

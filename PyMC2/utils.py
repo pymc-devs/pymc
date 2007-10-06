@@ -7,7 +7,7 @@
 import numpy as np
 import sys, inspect
 from copy import copy
-from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
+from PyMCObjects import Stochastic, Functional, Node, Variable, Potential
 import flib
 
 from numpy.linalg.linalg import LinAlgError
@@ -34,17 +34,17 @@ def extend_children(children):
     extend_children(children)
     
     Returns a set containing
-    nearest conditionally stochastic (Parameter, not Node) descendants.
+    nearest conditionally stochastic (Stochastic, not Functional) descendants.
     """
     new_children = copy(children)
     need_recursion = False
-    node_children = set()
+    functl_children = set()
     for child in children:
-        if isinstance(child,Node):
+        if isinstance(child,Functional):
             new_children |= child.children
-            node_children.add(child)
+            functl_children.add(child)
             need_recursion = True
-    new_children -= node_children
+    new_children -= functl_children
     if need_recursion:
         new_children = extend_children(new_children)
     return new_children
@@ -54,36 +54,36 @@ def extend_parents(parents):
     extend_parents(parents)
     
     Returns a set containing
-    nearest conditionally stochastic (Parameter, not Node) ancestors.
+    nearest conditionally stochastic (Stochastic, not Functional) ancestors.
     """
     new_parents = copy(parents)
     need_recursion = False
-    node_parents = set()
+    functl_parents = set()
     
     for parent in parents:
-        if isinstance(parent, Node):
-            node_parents.add(parent)
+        if isinstance(parent, Functional):
+            functl_parents.add(parent)
             need_recursion = True
             for grandparent in parent.parents.itervalues():
-                if isinstance(grandparent, PyMCBase):
+                if isinstance(grandparent, Node):
                     new_parents.add(grandparent)
                     
-    new_parents -= node_parents
+    new_parents -= functl_parents
     if need_recursion:
         new_parents = extend_parents(new_parents)
     return new_parents
         
     
-def check_type(parameter):
+def check_type(stoch):
     """
-    type, shape = check_type(parameter)
+    type, shape = check_type(stoch)
     
-    Checks the type of a parameter's value. Output value 'type' may be
+    Checks the type of a stoch's value. Output value 'type' may be
     bool, int, float, or complex. Nonnative numpy dtypes are lumped into
-    these categories. Output value 'shape' is () if the parameter's value 
+    these categories. Output value 'shape' is () if the stoch's value 
     is scalar, or a nontrivial tuple otherwise.
     """
-    val = parameter.value
+    val = stoch.value
     if val.__class__ is bool:
         return bool, ()
     elif val.__class__ in [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
@@ -182,7 +182,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
     
     Return the distribution of sample.
     
-    :Parameters:
+    :Stochastics:
       - `a` : Array sample.
       - `bins` : Number of bins, or an array of bin edges, in which case the 
                 range is not used. If 'Scott' or 'Freeman' is passed, then 
@@ -269,7 +269,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
         if strategy == 'binsize' and not even:
             raise 'This binsize strategy cannot be used for uneven bins.'
         
-    # Parameters for the fixed_binsize functions.
+    # Stochastics for the fixed_binsize functions.
     start = float(edges[0])
     binwidth = float(dedges[0])
        
@@ -329,7 +329,7 @@ def _histogram_fixed_binsize(a, start, width, n):
     outliers and the last bin the number of upper outliers. Works only with 
     fixed width bins. 
     
-    :Parameters:
+    :Stochastics:
       a : array
         Array of samples.
       start : float
@@ -356,7 +356,7 @@ def _histogram_binsize_weighted(a, w, start, width, n):
     outliers and the last bin the number of upper outliers. Works only with 
     fixed width bins. 
     
-    :Parameters:
+    :Stochastics:
       a : array
         Array of samples.
       w : array
@@ -466,7 +466,7 @@ def ar1_gen(rho, mu, sigma, size=1):
     If mu is a sequence and size > len(mu), the algorithm loops through 
     mu. 
     
-    :Parameters:
+    :Stochastics:
         rho : scalar in [0,1]
         mu : scalar or sequence
         sigma : scalar > 0
@@ -494,7 +494,7 @@ def ar1(rho, mu, sigma, size=1):
     If mu is a sequence and size > len(mu), the algorithm loops through 
     mu. 
     
-    :Parameters:
+    :Stochastics:
         rho : scalar in [0,1]
         mu : scalar or sequence
         sigma : scalar > 0

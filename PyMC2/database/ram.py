@@ -27,7 +27,7 @@ class Trace(base.Trace):
 
     def _initialize(self, length):
         """Create an array of zeros with shape (length, shape(obj)), where 
-        obj is the internal PyMC Parameter or Node.
+        obj is the internal PyMC Stochastic or Functional.
         """
         try:
             self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.value.dtype) )
@@ -51,7 +51,7 @@ class Trace(base.Trace):
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
-        :Parameters:
+        :Stochastics:
           - burn (int): The number of transient steps to skip.
           - thin (int): Keep one in thin.
           - chain (int): The index of the chain to fetch. If None, return all chains.

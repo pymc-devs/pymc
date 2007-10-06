@@ -9,11 +9,11 @@ Pre-requisite modules: numpy, matplotlib
 Required external components: TclTk
 
 """
-__modules__ = [ 'PyMCBase',
+__modules__ = [ 'Node',
                 'distributions',
                 'utils',
                 'PyMCObjects',
-                'SamplingMethods',
+                'StepMethods',
                 'Container',
                 'Model',
                 'graph',

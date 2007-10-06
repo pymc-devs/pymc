@@ -5,36 +5,36 @@
 # Reference: Haario, H., E. Saksman and J. Tamminen, An adaptative Metropolis algorithm, Bernouilli, vol. 7 (2), pp. 223-242, 2001.
 ###
 from PyMC2.utils import msqrt, extend_children, check_type, round_array, extend_parents
-from PyMC2 import SamplingMethod
+from PyMC2 import StepMethod
 from PyMC2.flib import fill_stdnormal
 from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
     reshape, shape, log, asarray, dot
 from numpy.random import randint, random
-from PyMC2.PyMCBase import ZeroProbability
+from PyMC2.Node import ZeroProbability
 
-class AdaptativeMetropolis(SamplingMethod):
+class AdaptativeMetropolis(StepMethod):
     """
-    S = AdaptativeMetropolis(pymc_objects, delay=1000, rate=1, scale={})
+    S = AdaptativeMetropolis(nodes, delay=1000, rate=1, scale={})
 
-    Applies the Metropolis-Hastings algorithm to several parameters
+    Applies the Metropolis-Hastings algorithm to several stochs
     together. Jumping density is a multivariate normal distribution
     with mean zero and covariance equal to the empirical covariance
-    of the parameters.
+    of the stochs.
     
-    :Parameters:
+    :Stochastics:
       - delay : int
           Number of iterations before the empirical covariance is computed. 
       - rate : int
           Interval between covariance updates.
       - scale : dict
-          Dictionary containing the scale for each parameter keyed by name.
+          Dictionary containing the scale for each stoch keyed by name.
           The scales are used to define an initial covariance matrix used 
           until delay is reached.  
 
     """
-    def __init__(self, pymc_objects=None, delay=1000, rate=1, scales={}):
+    def __init__(self, nodes=None, delay=1000, rate=1, scales={}):
         
-        SamplingMethod.__init__(self,pymc_objects)
+        StepMethod.__init__(self,nodes)
         self.check_type()
         self.delay = delay
         self.rate = rate
@@ -43,7 +43,7 @@ class AdaptativeMetropolis(SamplingMethod):
         self.scales(scales)    
         self.C_0 = eye(self.dim)*self._init_scale
         self._sig = msqrt(self.C_0)
-        self.scaling_parameter = (2.4)**2/self.dim # Gelman et al. 1996.
+        self.scaling_stoch = (2.4)**2/self.dim # Gelman et al. 1996.
         
         self._last_trace_index = 0
         self._proposal_deviate = zeros(self.dim)
@@ -52,51 +52,51 @@ class AdaptativeMetropolis(SamplingMethod):
         self._trace = []
         
         # State variables used to restore the state in a latter session. 
-        self._id = 'AdaptativeMetropolis_'+'_'.join([p.__name__ for p in self.parameters])
+        self._id = 'AdaptativeMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
         self._state += ['last_trace_index', '_cov', '_sig',
         '_proposal_deviate', '_trace']
 
                
     def check_type(self):
-        """Make sure each parameter has a correct type, and identify discrete parameters."""
+        """Make sure each stoch has a correct type, and identify discrete stochs."""
         self.isdiscrete = {}
-        for parameter in self.parameters:
-            type_now = check_type(parameter)[0]
+        for stoch in self.stochs:
+            type_now = check_type(stoch)[0]
             if not type_now is float and not type_now is int:
-                raise TypeError,    'Parameter ' + parameter.__name__ + "'s value must be numeric"+\
+                raise TypeError,    'Stochastic ' + stoch.__name__ + "'s value must be numeric"+\
                                     'or ndarray with numeric dtype for JointMetropolis to be applied.'
             elif type_now is int:
-                self.isdiscrete[parameter] = True
+                self.isdiscrete[stoch] = True
             else:
-                self.isdiscrete[parameter] = False
+                self.isdiscrete[stoch] = False
                 
                 
     def dimension(self):
         """Compute the dimension of the sampling space and identify the slices
-        belonging to each parameter.
+        belonging to each stoch.
         """
         self.dim = 0
         self._slices = {}
-        for parameter in self.parameters:
-            if isinstance(parameter.value, ndarray):
-                p_len = len(parameter.value.ravel())
+        for stoch in self.stochs:
+            if isinstance(stoch.value, ndarray):
+                p_len = len(stoch.value.ravel())
             else:
                 p_len = 1
-            self._slices[parameter] = slice(self.dim, self.dim + p_len)
+            self._slices[stoch] = slice(self.dim, self.dim + p_len)
             self.dim += p_len
             
             
     def scales(self, init_scales):
         """Define an array of scales to build the initial covariance.
         If init_scales is None, the scale is taken to be the initial value of 
-        the parameters.
+        the stochs.
         """
         s = []
-        for parameter in self.parameters:
+        for stoch in self.stochs:
             try:
-                s.append(init_scales[parameter])
+                s.append(init_scales[stoch])
             except KeyError:
-                s.append(parameter.value.ravel())
+                s.append(stoch.value.ravel())
                 
         self._init_scale = concatenate(s)
         if squeeze(self._init_scale.shape) != self.dim:
@@ -125,7 +125,7 @@ class AdaptativeMetropolis(SamplingMethod):
         epsilon = 1.0e-6
         i0 = self._last_trace_index
         i = self._model._cur_trace_index
-        s_d = self.scaling_parameter
+        s_d = self.scaling_stoch
         n = i - i0
         chain = asarray(self._trace)
         
@@ -146,15 +146,15 @@ class AdaptativeMetropolis(SamplingMethod):
         ( self._last_trace_index * self.chain_mean + chain.sum(0))
         
     def trace2array(i0,i1):
-        """Return an array with the trace of all parameters from index i0 to i1."""
+        """Return an array with the trace of all stochs from index i0 to i1."""
         chain = []
-        for parameter in self.parameters:
-            chain.append(ravel(parameter.trace.gettrace(slicing=slice(i0,i1))))
+        for stoch in self.stochs:
+            chain.append(ravel(stoch.trace.gettrace(slicing=slice(i0,i1))))
         return concatenate(chain)
 
     def propose(self):
         """
-        This method proposes values for self's parameters based on the empirical
+        This method proposes values for self's stochs based on the empirical
         covariance :math:`\Sigma`.
         
         The proposal jumps X are drawn from a multivariate normal distribution
@@ -173,16 +173,16 @@ class AdaptativeMetropolis(SamplingMethod):
         # 3. Compute multivariate jump.
         arrayjump = inner(self._proposal_deviate, self._sig)
                 
-        # 4. Update each parameter individually.
-        # TODO: test inplace jump, ie parameter.value += jump
-        # This won't work - in-place parameter value updates aren't allowed.
+        # 4. Update each stoch individually.
+        # TODO: test inplace jump, ie stoch.value += jump
+        # This won't work - in-place stoch value updates aren't allowed.
 
-        for parameter in self.parameters:
-            jump = reshape(arrayjump[self._slices[parameter]],shape(parameter.value))
-            if self.isdiscrete[parameter]:
-                parameter.value = parameter.value + round_array(jump)
+        for stoch in self.stochs:
+            jump = reshape(arrayjump[self._slices[stoch]],shape(stoch.value))
+            if self.isdiscrete[stoch]:
+                stoch.value = stoch.value + round_array(jump)
             else:
-                parameter.value = parameter.value + jump
+                stoch.value = stoch.value + jump
                 
         # 5. Store the trace internally. 
         self._arrayjump = arrayjump
@@ -191,22 +191,22 @@ class AdaptativeMetropolis(SamplingMethod):
         """
         If the empirical covariance hasn't been computed yet, the step() call
         is passed along to the OneAtATimeMetropolis instances that handle self's
-        parameters before the end of the first epoch.
+        stochs before the end of the first epoch.
         
-        If the empirical covariance has been computed, values for self's parameters
+        If the empirical covariance has been computed, values for self's stochs
         are proposed and tested simultaneously.
         """
 
-        # Probability and likelihood for parameter's current value:
-        logp = sum([parameter.logp for parameter in self.parameters])
+        # Probability and likelihood for stoch's current value:
+        logp = sum([stoch.logp for stoch in self.stochs])
         loglike = self.loglike
 
         # Sample a candidate value
         self.propose()
         
         try:
-            # Probability and likelihood for parameter's proposed value:
-            logp_p = sum([parameter.logp for parameter in self.parameters])
+            # Probability and likelihood for stoch's proposed value:
+            logp_p = sum([stoch.logp for stoch in self.stochs])
             loglike_p = self.loglike
             
             # Test
@@ -222,8 +222,8 @@ class AdaptativeMetropolis(SamplingMethod):
             if self._model._current_iter > self.delay: 
                 self._trace.append(self._arrayjump)
                 
-            for parameter in self.parameters:
-                parameter.value = parameter.last_value
+            for stoch in self.stochs:
+                stoch.value = stoch.last_value
             return
 
         if self._model._current_iter>self.delay and \
@@ -235,18 +235,18 @@ class AdaptativeMetropolis(SamplingMethod):
 if __name__=='__main__':
     from numpy.testing import *
     from PyMC2 import Sampler, JointMetropolis
-    from PyMC2 import parameter, data, JointMetropolis
+    from PyMC2 import stoch, data, JointMetropolis
     from numpy import array, eye, ones
     from PyMC2.distributions import multivariate_normal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = eye(2)
-        @parameter
+        @stochastic
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
             return multivariate_normal_like(value,mu,tau)
         
         tau_B = eye(2) * 100.          
-        @parameter
+        @stochastic
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
             return multivariate_normal_like(value,mu,tau)
     

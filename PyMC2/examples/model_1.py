@@ -8,7 +8,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC2 import parameter, data, discrete_parameter
+from PyMC2 import stochastic, data, discrete_stoch
 from numpy import array, log, sum, random
 from numpy.random import randint
 from PyMC2 import uniform_like, exponential_like, poisson_like
@@ -22,11 +22,11 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Define data and parameters
+# Define data and stochs
 
-@discrete_parameter
+@discrete_stoch
 def switchpoint(value=50, length=110):
-    """Change time for rate parameter."""
+    """Change time for rate stoch."""
 
     def logp(value, length):
         return uniform_like(value, 0, length)
@@ -37,9 +37,9 @@ def switchpoint(value=50, length=110):
     rseed = 1.
 
 
-@parameter
+@stochastic
 def early_mean(value=1., rate=1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
 
     def logp(value, rate):
         return exponential_like(value, rate)
@@ -50,9 +50,9 @@ def early_mean(value=1., rate=1.):
     rseed = 1.
 
 
-@parameter
+@stochastic
 def late_mean(value=.1, rate = 1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
 
     def logp(value, rate):
         return exponential_like(value, rate)
@@ -64,7 +64,7 @@ def late_mean(value=.1, rate = 1.):
 
     
 @data
-@discrete_parameter
+@discrete_stoch
 def disasters(  value = disasters_array, 
                 early_mean = early_mean, 
                 late_mean = late_mean, 

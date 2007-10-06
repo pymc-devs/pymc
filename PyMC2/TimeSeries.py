@@ -70,17 +70,17 @@ def partial_autocorr(series, lag):
     return phi[lag - 1, lag - 1]
     
 """
-def ar_process(length, params=[1.], mu=0., dist='normal', scale=1):
-    # Generate AR(p) process of given length, where p=len(params).
+def ar_process(length, stochs=[1.], mu=0., dist='normal', scale=1):
+    # Generate AR(p) process of given length, where p=len(stochs).
     
     # Initialize series with mean value
     series = resize(float(mu), length)
     
-    # Enforce array type for parameters
-    params = atleast_1d(params)
+    # Enforce array type for stochs
+    stochs = atleast_1d(stochs)
     
     # Degree of process
-    p = len(params)
+    p = len(stochs)
     
     # Specify error distribution
     if dist is 'normal':
@@ -95,20 +95,20 @@ def ar_process(length, params=[1.], mu=0., dist='normal', scale=1):
     
     # Generate autoregressive series
     for t in range(1, length):
-        series[t] = dot(params[max(p-t, 0):], series[t - min(t, p):t] - mu) + a[t] + mu
+        series[t] = dot(stochs[max(p-t, 0):], series[t - min(t, p):t] - mu) + a[t] + mu
         
     return series
     
-def ma_process(length, params=[1.], mu=0., dist='normal', scale=1):
-    # Generate MA(q) process of given length, where q=len(params).
+def ma_process(length, stochs=[1.], mu=0., dist='normal', scale=1):
+    # Generate MA(q) process of given length, where q=len(stochs).
     
-    # Enforce array type for parameters
-    params = concatenate(([1], -1 * atleast_1d(params))).tolist()
-    # Reverse order of parameters for calculations below
-    params.reverse()
+    # Enforce array type for stochs
+    stochs = concatenate(([1], -1 * atleast_1d(stochs))).tolist()
+    # Reverse order of stochs for calculations below
+    stochs.reverse()
     
     # Degree of process
-    q = len(params) - 1
+    q = len(stochs) - 1
     
     # Specify error distribution
     if dist is 'normal':
@@ -122,25 +122,25 @@ def ma_process(length, params=[1.], mu=0., dist='normal', scale=1):
         return
     
     # Generate moving average series
-    series = array([mu + dot(params[max(q - t + 1, 0):], a[t - min(t, q + 1):t]) for t in range(1, length)])
+    series = array([mu + dot(stochs[max(q - t + 1, 0):], a[t - min(t, q + 1):t]) for t in range(1, length)])
     
     return series
 """
     
-def arma_process(length, ar_params=[1.], ma_params=[1.], mu=0., dist='normal', scale=1):
-    """ Generate ARMA(p,q) process of given length, where p=len(ar_params) and q=len(ma_params)."""
+def arma_process(length, ar_stochs=[1.], ma_stochs=[1.], mu=0., dist='normal', scale=1):
+    """ Generate ARMA(p,q) process of given length, where p=len(ar_stochs) and q=len(ma_stochs)."""
     
     # Initialize series with mean value
     series = resize(float(mu), length)
     
-    # Enforce array type for parameters
-    ar_params = atleast_1d(ar_params)
-    ma_params = concatenate(([1], -1 * atleast_1d(ma_params))).tolist()
-    # Reverse order of parameters for calculations below
-    ma_params.reverse()
+    # Enforce array type for stochs
+    ar_stochs = atleast_1d(ar_stochs)
+    ma_stochs = concatenate(([1], -1 * atleast_1d(ma_stochs))).tolist()
+    # Reverse order of stochs for calculations below
+    ma_stochs.reverse()
     
     # Degree of process
-    p, q = len(ar_params), len(ma_params) - 1
+    p, q = len(ar_stochs), len(ma_stochs) - 1
     
     # Specify error distribution
     if dist is 'normal':
@@ -157,22 +157,22 @@ def arma_process(length, ar_params=[1.], ma_params=[1.], mu=0., dist='normal', s
     for t in range(1, length):
         
         # Autoregressive piece
-        series[t] += dot(ar_params[max(p-t, 0):], series[t - min(t, p):t] - mu)
+        series[t] += dot(ar_stochs[max(p-t, 0):], series[t - min(t, p):t] - mu)
         
         # Moving average piece
-        series[t] += dot(ma_params[max(q - t + 1, 0):], a[t - min(t, q + 1):t])
+        series[t] += dot(ma_stochs[max(q - t + 1, 0):], a[t - min(t, q + 1):t])
         
     return series
     
-def ar_process(length, params=[1.], mu=0., dist='normal', scale=1):
-    """Generate AR(p) process of given length, where p=len(params)."""
+def ar_process(length, stochs=[1.], mu=0., dist='normal', scale=1):
+    """Generate AR(p) process of given length, where p=len(stochs)."""
     
-    return arma_process(length, ar_params=params, ma_params=[], mu=mu, dist=dist, scale=scale)
+    return arma_process(length, ar_stochs=stochs, ma_stochs=[], mu=mu, dist=dist, scale=scale)
     
-def ma_process(length, params=[1.], mu=0., dist='normal', scale=1):
-    """Generate MA(q) process of given length, where q=len(params)."""
+def ma_process(length, stochs=[1.], mu=0., dist='normal', scale=1):
+    """Generate MA(q) process of given length, where q=len(stochs)."""
 
-    return arma_process(length, ar_params=[], ma_params=params, mu=mu, dist=dist, scale=scale)
+    return arma_process(length, ar_stochs=[], ma_stochs=stochs, mu=mu, dist=dist, scale=scale)
 
 
 class TimeSeriesTests(unittest.TestCase):

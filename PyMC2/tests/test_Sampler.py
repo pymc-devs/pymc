@@ -17,8 +17,8 @@ class test_Sampler(NumpyTestCase):
         # Instantiate samplers
         M = Sampler(DisasterModel)
         
-        # Check parameter arrays
-        assert_equal(len(M.parameters), 3)
+        # Check stoch arrays
+        assert_equal(len(M.stochs), 3)
         assert_equal(len(M.data),1)
         assert_array_equal(M.D.value, DisasterModel.D_array)
         

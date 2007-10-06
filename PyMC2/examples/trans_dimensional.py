@@ -1,4 +1,4 @@
-from PyMC2 import parameter, data, discrete_parameter
+from PyMC2 import stochastic, data, discrete_stoch
 from numpy import arange, ones, eye, sum, zeros, exp, concatenate
 from numpy.random import normal
 from PyMC2 import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
@@ -29,19 +29,19 @@ tau_x_init = 1.
 K_min = 0
 K_max = 15
 
-@discrete_parameter
+@discrete_stoch
 def K(value=5, min = K_min, max = K_max):
     """K ~ uniform(min, max)"""
     return uniform_like(value, min, max)
 
 A_init = zeros(K_max,dtype=float)
 A_init[:K_true] = A_true
-@parameter
+@stochastic
 def A(value=A_init, mu=-1.*ones(K_max,dtype=float), tau=ones(K_max,dtype=float)):
     """A ~ normal(mu, tau)"""
     return normal_like(value, mu, tau)
     
-@parameter(trace=False)
+@stochastic(trace=False)
 def X(value=X_true, K=K, A=A, mu = mu_x_init, tau = tau_x_init):
     """Autoregression"""
 
@@ -60,7 +60,7 @@ def X_obs(value=X_obs_vals, mu=X, tau=1.):
     return normal_like(value, mu[::obs_interval], tau)
 
 
-# JointMetropolis sampling method to handle X and A
+# JointMetropolis step method to handle X and A
 oneatatime_scales = {X: .2, A: .2}
 J = JointMetropolis([X, A], oneatatime_scales = oneatatime_scales)
 # S = DiscreteOneAtATimeMetropolis(K, scale=.01)

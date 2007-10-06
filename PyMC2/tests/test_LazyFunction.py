@@ -2,11 +2,11 @@ from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
 from PyMC2.LazyFunction import LazyFunction
-from PyMC2 import parameter, data, node, Normal, potential, ZeroProbability
+from PyMC2 import stochastic, data, functional, Normal, potential, ZeroProbability
 
 verbose = False
 
-@parameter
+@stochastic
 def A(value=1.):
     return -10.*value
 
@@ -14,20 +14,20 @@ def A(value=1.):
 normcoef = 1.
 
 # B's value is a random function of A.
-@node(verbose=verbose)
+@functional(verbose=verbose)
 def B(A=A):
     # print 'B computing' 
     return A + normcoef * normal()
 
 # Guarantee that initial state is OK
 while B.value<0.:
-    @node(verbose=verbose)
+    @functional(verbose=verbose)
     def B(A=A):
         # print 'B computing'
         return A + normcoef * normal()
 
 @data
-@parameter(verbose=verbose)
+@stochastic(verbose=verbose)
 def C(value = 0., B=[A,B]):
     if B[0]<0.:
          return -np.Inf

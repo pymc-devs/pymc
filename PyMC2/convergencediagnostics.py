@@ -8,7 +8,7 @@ def geweke_zscores(x, first=.1, last=.5, intervals=20):
     series. x is divided into a number of segments for which this difference is
     computed. 
 
-    :Parameters:
+    :Stochastics:
       `x` : series of data,
       `first` : first fraction of series,
       `last` : last fraction of series to compare with first,

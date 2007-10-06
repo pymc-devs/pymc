@@ -1,5 +1,5 @@
 # Changeset history
-# 22/03/2007 -DH- Added methods to query the SamplingMethod's state and pass it to database.
+# 22/03/2007 -DH- Added methods to query the StepMethod's state and pass it to database.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
 
 __docformat__='reStructuredText'
@@ -7,10 +7,10 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from SamplingMethods import SamplingMethod, assign_method
+from StepMethods import StepMethod, assign_method
 from Matplot import Plotter, show
 import database
-from PyMCObjects import Parameter, Node, PyMCBase, Variable, Potential
+from PyMCObjects import Stochastic, Functional, Node, Variable, Potential
 from Container import ContainerBase, Container
 from utils import extend_children, extend_parents
 import gc, sys,os
@@ -18,7 +18,7 @@ from copy import copy
 from threading import Thread
 from thread import interrupt_main
 from time import sleep
-from PyMCBase import ContainerBase
+from Node import ContainerBase
 from Container import ObjectContainer
 
 GuiInterrupt = 'Computation halt'
@@ -30,36 +30,36 @@ class Model(ObjectContainer):
 
       >>> A = Model(input, db='ram', output_path=None, verbose=0)
 
-      :Parameters:
+      :Stochastics:
         - input : module, list, tuple, dictionary, set, object or nothing.
-            Model definition, in terms of Parameters, Nodes, Potentials and Containers.
-            If nothing, all PyMC objects are collected from the base namespace.
+            Model definition, in terms of Stochastics, Functionals, Potentials and Containers.
+            If nothing, all nodes are collected from the base namespace.
         - db : string
             The name of the database backend that will store the values
-            of the parameters and nodes sampled during the MCMC loop.
+            of the stochs and functls sampled during the MCMC loop.
         - output_path : string
             The place where any output files should be put.
         - verbose : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Attributes:
-      - nodes
-      - parameters (with isdata=False)
-      - data (parameters with isdata=True)
+      - functls
+      - stochs (with isdata=False)
+      - data (stochs with isdata=True)
       - variables
       - potentials
       - containers
-      - pymc_objects
+      - nodes
       - all_objects
       - status: Not useful for the Model base class, but may be used by subclasses.
       
     The following attributes only exist after the appropriate method is called:
-      - moral_edges: The edges of the moralized graph. A dictionary, keyed by parameter,
-        whose values are sets of parameters. Edges exist between the key parameter and all parameters
+      - moral_edges: The edges of the moralized graph. A dictionary, keyed by stoch,
+        whose values are sets of stochs. Edges exist between the key stoch and all stochs
         in the value. Created by method _moralize.
-      - extended_children: The extended children of self's parameters. See the docstring of
-        extend_children. This is a dictionary keyed by parameters.
-      - generations: A list of sets of parameters. The members of each element only have parents in 
+      - extended_children: The extended children of self's stochs. See the docstring of
+        extend_children. This is a dictionary keyed by stochs.
+      - generations: A list of sets of stochs. The members of each element only have parents in 
         previous elements. Created by method parse_generations.
 
     Methods:
@@ -80,13 +80,13 @@ class Model(ObjectContainer):
     def __init__(self, input=None, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
 
-        :Parameters:
+        :Stochastics:
           - input : module, list, tuple, dictionary, set, object or nothing.
-              Model definition, in terms of Parameters, Nodes, Potentials and Containers.
-              If nothing, all PyMC objects are collected from the base namespace.
+              Model definition, in terms of Stochastics, Functionals, Potentials and Containers.
+              If nothing, all nodes are collected from the base namespace.
           - db : string
               The name of the database backend that will store the values
-              of the parameters and nodes sampled during the MCMC loop.
+              of the stochs and functls sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
           - verbose : integer
@@ -99,7 +99,7 @@ class Model(ObjectContainer):
         # Flag for model state
         self.status = 'ready'
         
-        # Get parameters, nodes, etc.
+        # Get stochs, functls, etc.
         if input is None:
             import __main__
             input = __main__
@@ -121,8 +121,8 @@ class Model(ObjectContainer):
         """
         Creates moral adjacency matrix for self.
         
-        self.moral_edges[parameter] returns a list of the parameters with whom
-        parameter shares an edge in the 'moral graph', which is formed by connecting
+        self.moral_edges[stoch] returns a list of the stochs with whom
+        stoch shares an edge in the 'moral graph', which is formed by connecting
         parents to children and then connecting co-parents to each other. 
         See documentation.
         """
@@ -131,19 +131,19 @@ class Model(ObjectContainer):
         
         # Initialize moral edges dictionary.
         self.moral_edges = {}
-        for parameter in self.parameters | self.data:
-            self.moral_edges[parameter] = set([])
+        for stoch in self.stochs | self.data:
+            self.moral_edges[stoch] = set([])
         
         # Fill in.
-        remaining_params = copy(self.parameters | self.data)
-        for parameter in self.parameters:
-            self_and_children = set([parameter]) | self.extended_children[parameter]
-            remaining_params.remove(parameter)
-            for other_parameter in remaining_params:
-                other_self_and_children = set([other_parameter]) | self.extended_children[other_parameter]
+        remaining_stochs = copy(self.stochs | self.data)
+        for stoch in self.stochs:
+            self_and_children = set([stoch]) | self.extended_children[stoch]
+            remaining_stochs.remove(stoch)
+            for other_stoch in remaining_stochs:
+                other_self_and_children = set([other_stoch]) | self.extended_children[other_stoch]
                 if len(self_and_children.intersection(other_self_and_children))>0:
-                    self.moral_edges[parameter].add(other_parameter)
-                    self.moral_edges[other_parameter].add(parameter)
+                    self.moral_edges[stoch].add(other_stoch)
+                    self.moral_edges[other_stoch].add(stoch)
 
                     
     def get_maximal_cliques(self):
@@ -158,27 +158,27 @@ class Model(ObjectContainer):
     
         # Find maximal cliques
         self.maximal_cliques = []
-        self.param_to_mc = {}
-        remaining_params = self.parameters | self.data
-        while len(remaining_params)>0:
-            parameter = remaining_params.pop()
-            this_clique = set([parameter])
+        self.stoch_to_mc = {}
+        remaining_stochs = self.stochs | self.data
+        while len(remaining_stochs)>0:
+            stoch = remaining_stochs.pop()
+            this_clique = set([stoch])
             
-            for other_parameter in remaining_params:
-                if all([other_parameter in self.moral_edges[clique_parameter] for clique_parameter in this_clique]):
-                    this_clique.add(other_parameter)
+            for other_stoch in remaining_stochs:
+                if all([other_stoch in self.moral_edges[clique_stoch] for clique_stoch in this_clique]):
+                    this_clique.add(other_stoch)
             this_clique = SetContainer(this_clique)
-            for clique_parameter in this_clique:
-                remaining_params.discard(clique_parameter)
-                self.param_to_mc[clique_parameter] = this_clique
+            for clique_stoch in this_clique:
+                remaining_stochs.discard(clique_stoch)
+                self.stoch_to_mc[clique_stoch] = this_clique
             self.maximal_cliques.append(this_clique)
                 
                 
     def extend_children(self):
         """
-        Makes a dictionary of self's PyMC objects' 'extended children.'
-        The extended children of p are the parameters that depend on p
-        either directly or via an unbroken sequence of nodes.
+        Makes a dictionary of self's nodes' 'extended children.'
+        The extended children of p are the stochs that depend on p
+        either directly or via an unbroken sequence of functls.
         """
         self.extended_children = {}
         
@@ -188,7 +188,7 @@ class Model(ObjectContainer):
     def parse_generations(self):
         """
         Parse up the generations for model averaging. A generation is the
-        set of parameters that only has parents in previous generations.
+        set of stochs that only has parents in previous generations.
         """
         self.generations = []
         self.extend_children()
@@ -196,9 +196,9 @@ class Model(ObjectContainer):
         # Find root generation
         self.generations.append(set())
         all_children = set()
-        for parameter in self.parameters:
-            all_children.update(self.extended_children[parameter] & self.parameters)
-        self.generations[0] = self.parameters - all_children
+        for stoch in self.stochs:
+            all_children.update(self.extended_children[stoch] & self.stochs)
+        self.generations[0] = self.stochs - all_children
 
         # Find subsequent _generations
         children_remaining = True
@@ -209,14 +209,14 @@ class Model(ObjectContainer):
 
             # Find children of last generation
             self.generations.append(set())
-            for parameter in self.generations[gen_num-1]:
-                self.generations[gen_num].update(self.extended_children[parameter] & self.parameters)
+            for stoch in self.generations[gen_num-1]:
+                self.generations[gen_num].update(self.extended_children[stoch] & self.stochs)
 
 
-            # Take away parameters that have parents in the current generation.
+            # Take away stochs that have parents in the current generation.
             thisgen_children = set()
-            for parameter in self.generations[gen_num]:
-                thisgen_children.update(self.extended_children[parameter] & self.parameters)
+            for stoch in self.generations[gen_num]:
+                thisgen_children.update(self.extended_children[stoch] & self.stochs)
             self.generations[gen_num] -= thisgen_children
 
 
@@ -226,7 +226,7 @@ class Model(ObjectContainer):
 
     def sample_likelihood(self, iter):
         """
-        Returns iter samples of (log p(data|self.parameters, self) | self).
+        Returns iter samples of (log p(data|self.stochs, self) | self).
         
         Exponentiating and averaging gives an estimate of the model likelihood,
         p(data|self).
@@ -242,8 +242,8 @@ class Model(ObjectContainer):
                     print 'Sample ', i, ' of ', iter
 
                 for generation in self.generations:
-                    for parameter in generation:
-                        parameter.random()
+                    for stoch in generation:
+                        stoch.random()
 
                 for datum in self.data | self.potentials:
                     loglikes[i] += datum.logp
@@ -276,12 +276,12 @@ class Model(ObjectContainer):
 
     def seed(self):
         """
-        Seed new initial values for the parameters.
+        Seed new initial values for the stochs.
         """
-        for parameters in self.parameters:
+        for stochs in self.stochs:
             try:
-                if parameters.rseed is not None:
-                    value = parameters.random(**parameters.parent_values)
+                if stochs.rseed is not None:
+                    value = stochs.random(**stochs.parent_values)
             except:
                 pass
     
@@ -289,10 +289,10 @@ class Model(ObjectContainer):
         self.db.tally(index)
     
     def _assign_database_backend(self, db):
-        """Assign Trace instance to parameters and nodes and Database instance
+        """Assign Trace instance to stochs and functls and Database instance
         to self.
 
-        :Parameters:
+        :Stochastics:
           - `db` : string, Database instance
             The name of the database module (see below), or a Database instance.
 
@@ -306,11 +306,11 @@ class Model(ObjectContainer):
           - `hdf5` : Traces stored in an HDF5 file.
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace
-        # Tallyable objects are listed in the _pymc_objects_to_tally set. 
+        # Tallyable objects are listed in the _nodes_to_tally set. 
 
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
-        for object in self.parameters | self.nodes :
+        for object in self.stochs | self.functls :
             if object.trace:
                 self._variables_to_tally.add(object)
             else:
@@ -333,10 +333,10 @@ class Model(ObjectContainer):
         
     def plot(self):
         """
-        Plots traces and histograms for nodes and parameters.
+        Plots traces and histograms for functls and stochs.
         """
 
-        # Loop over PyMC objects
+        # Loop over nodes
         for variable in self._variables_to_tally:            
             # Plot object
             self._plotter.plot(variable)
@@ -353,38 +353,38 @@ class Sampler(Model):
         # Instantiate superclass
         Model.__init__(self, input, db, output_path, verbose)
         
-        # Default SamplingMethod
+        # Default StepMethod
         self._assign_samplingmethod()
 
         self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
         
     def _assign_samplingmethod(self):
         """
-        Make sure every parameter has a sampling method. If not, 
-        assign a sampling method from the registry.
+        Make sure every stoch has a step method. If not, 
+        assign a step method from the registry.
         """
 
-        for parameter in self.parameters:
+        for stoch in self.stochs:
 
-            # Is it a member of any SamplingMethod?
+            # Is it a member of any StepMethod?
             homeless = True
-            for sampling_method in self.sampling_methods:
-                if parameter in sampling_method.parameters:
+            for step_method in self.step_methods:
+                if stoch in step_method.stochs:
                     homeless = False
                     break
 
-            # If not, make it a new SamplingMethod using the registry
+            # If not, make it a new StepMethod using the registry
             if homeless:
-                new_method = assign_method(parameter)
+                new_method = assign_method(stoch)
                 setattr(new_method, '_model', self)
-                self.sampling_methods.add(new_method)
+                self.step_methods.add(new_method)
     
         
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
         sample(iter, burn, thin, tune_interval)
 
-        Prepare pymc_objects, initialize traces, run MCMC loop.
+        Prepare nodes, initialize traces, run MCMC loop.
         """
         
         self._iter = int(iter)
@@ -430,11 +430,11 @@ class Sampler(Model):
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
 
-                # Tell all the sampling methods to take a step
-                for sampling_method in self.sampling_methods:
+                # Tell all the step methods to take a step
+                for step_method in self.step_methods:
 
-                    # Step the sampling method
-                    sampling_method.step()
+                    # Step the step method
+                    step_method.step()
 
                 if not i % self._thin and i >= self._burn:
                     self.tally()
@@ -475,7 +475,7 @@ class Sampler(Model):
        """
        tally()
 
-       Records the value of all tracing pymc_objects.
+       Records the value of all tracing nodes.
        """
        if self.verbose > 2:
            print self.__name__ + ' tallying.'
@@ -488,7 +488,7 @@ class Sampler(Model):
         
     def tune(self):
         """
-        Tell all sampling methods to tune themselves.
+        Tell all step methods to tune themselves.
         """
 
         # Only tune during burn-in
@@ -499,15 +499,15 @@ class Sampler(Model):
         if self.verbose > 1:
             print '\tTuning at iteration', self._current_iter
 
-        # Initialize counter for number of tuning parameters
+        # Initialize counter for number of tuning stochs
         tuning_count = 0
 
-        for sampling_method in self.sampling_methods:
-            # Tune sampling methods
-            tuning_count += sampling_method.tune(verbose=self.verbose)
+        for step_method in self.step_methods:
+            # Tune step methods
+            tuning_count += step_method.tune(verbose=self.verbose)
 
         if not tuning_count:
-            # If no sampling methods needed tuning, increment count
+            # If no step methods needed tuning, increment count
             self._tuned_count += 1
         else:
             # Otherwise re-initialize count
@@ -574,26 +574,26 @@ class Sampler(Model):
 
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
-                print 'Call interactive_continue method to continue, or call halt_sampling method to truncate traces and stop.'
+                print 'Call interactive_continue method to continue, or call halt_step method to truncate traces and stop.'
 
     # Should get_state, save_state, restore_state and remember be moved up to Model?
     def get_state(self):
         """
-        Return the sampler and sampling methods current state in order to
+        Return the sampler and step methods current state in order to
         restart sampling at a later time.
         """
-        state = dict(sampler={}, sampling_methods={})
+        state = dict(sampler={}, step_methods={})
         # The state of the sampler itself.
         for s in self._state:
             state['sampler'][s] = getattr(self, s)
 
-        # The state of each SamplingMethod.
-        for sm in self.sampling_methods:
+        # The state of each StepMethod.
+        for sm in self.step_methods:
             smstate = {}
             for s in sm._state:
                 if hasattr(sm, s):
                     smstate[s] = getattr(sm, s)
-            state['sampling_methods'][sm._id] = smstate.copy()
+            state['step_methods'][sm._id] = smstate.copy()
 
         return state
 
@@ -605,13 +605,13 @@ class Sampler(Model):
 
     def restore_state(self):
         """
-        Restore the state of the sampler and of the sampling methods to
+        Restore the state of the sampler and of the step methods to
         the state stored in the database.
         """
         state = self.db.getstate()
         self.__dict__.update(state.get('sampler', {}))
-        for sm in self.sampling_methods:
-            tmp = state.get('sampling_methods', {})
+        for sm in self.step_methods:
+            tmp = state.get('step_methods', {})
             sm.__dict__.update(tmp.get(sm._id, {}))
             
     def remember(self, trace_index = None):
@@ -692,22 +692,22 @@ class Sampler(Model):
                 # Initializealize list of GOF error loss values
                 self._gof_loss = []
                 
-                # Loop over parameters
-                for name in self.parameters:
+                # Loop over stochs
+                for name in self.stochs:
                     
-                    # Look up parameter
-                    parameter = self.parameters[name]
+                    # Look up stoch
+                    stoch = self.stochs[name]
                     
                     # Retrieve copy of trace
-                    trace = parameter.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
+                    trace = stoch.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
                     
                     # Sample value from trace
                     sample = trace[random_integers(len(trace)) - 1]
                     
                     # Set current value to sampled value
-                    parameter.set_value(sample)
+                    stoch.set_value(sample)
                 
-                # Run calculate likelihood with sampled parameters
+                # Run calculate likelihood with sampled stochs
                 try:
                     self()
                 except (LikelihoodError, OverflowError, ZeroDivisionError):

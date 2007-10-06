@@ -1,22 +1,22 @@
 """
 A simple model to test the GUI.
-Sample the parameters of a Generalized Extreme Value (GEV) distribution.
+Sample the stochs of a Generalized Extreme Value (GEV) distribution.
 """
 
-from PyMC2 import data, parameter, Uniform, Beta, gev_like
+from PyMC2 import data, stoch, Uniform, Beta, gev_like
 from numpy import array
 
 # Define the priors for the location (xi), scale (alpha) and shape (kappa) 
-# parameters. 
+# stochs. 
 
-xi = Uniform('xi', rseed=True, lower=0, upper=60, doc='Location parameter')
+xi = Uniform('xi', rseed=True, lower=0, upper=60, doc='Location stoch')
 
-@parameter
+@stochastic
 def alpha(value=5):
-    """Scale parameter"""
+    """Scale stoch"""
     return 1./value
 
-kappa = Beta('kappa', rseed=True, alpha=5., beta=6., doc='Shape parameter')
+kappa = Beta('kappa', rseed=True, alpha=5., beta=6., doc='Shape stoch')
 
 annual_maxima = array([ 23.6,  11.9,  18.8,  13. ,  19.8,  19.8,  24.9,  21.6,  39.6,
         17.5,  17. ,  17.8,  30.5,  26.7,  17.8,  27.7,  27.2,  18.3,

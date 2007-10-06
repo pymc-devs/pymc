@@ -1,4 +1,4 @@
-from PyMCBase import Variable, ContainerBase
+from Node import Variable, ContainerBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
 

@@ -11,7 +11,7 @@ Dirichlet process classes:
     Methods:
     - __call__(m): A function returning m random values from the distribution.
     
-DPParameter: A parameter valued as a DP realization. Is this necessary?
+DPStochastic: A stoch valued as a DP realization. Is this necessary?
 
 Need to write rdiscrete and discrete_like.
 
@@ -33,22 +33,22 @@ class DP(object):
     
     Arguments:
         -   basemeas: The base measure. Must be a function which, when called with argument n, returns a value.
-        -   nu: The whatever parameter.
+        -   nu: The whatever stoch.
         -   n, atoms (optional): Can be initialized conditional on previous draws. 
             Useful for Gibbs sampling, maybe MH too.
-        -   basemeas_params: The parameters of the base measure.        
+        -   basemeas_stochs: The stochs of the base measure.        
     """
 
 
-    def __init__(self, basemeas, nu, atoms = [], n = [], **basemeas_params):
+    def __init__(self, basemeas, nu, atoms = [], n = [], **basemeas_stochs):
         
         super(DP, self).__init__()
         
-        # The base measure and its parameters.
+        # The base measure and its stochs.
         self.basemeas = basemeas
-        self.basemeas_params = basemeas_params
+        self.basemeas_stochs = basemeas_stochs
 
-        # The whatever parameter.
+        # The whatever stoch.
         self.nu = float(nu)
 
         # The number of draws from each atom.
@@ -89,7 +89,7 @@ class DP(object):
             
             # Maybe draw a new atom
             if uniform() > float_sumn / (float_sumn+self.nu):
-                new_val = self.basemeas(**self.basemeas_params)
+                new_val = self.basemeas(**self.basemeas_stochs)
                 self.atoms.append(new_val)
                 self.n.append(1)
                 N = N + 1
@@ -116,22 +116,22 @@ class DP(object):
         else:
             return val[0]
         
-class DPParameter(object):
+class DPStochastic(object):
     """
     value: A DP object.
     
-    Parents: 'alpha': concentration parameter, 'base': base probability distribution.
+    Parents: 'alpha': concentration stoch, 'base': base probability distribution.
     Base parent must have random() and logp() methods (must be an actual distribution object).
     
     No logp (error raised).
     """
     pass
     
-class DPMetropolis(SamplingMethod):
+class DPMetropolis(StepMethod):
     """
-    Give DPParameter a new value conditional on parents and children. Always Gibbs.
-    Easy. The actual DPParameter is only being traced for future convenience,
-    it doesn't really get used by the sampling methods.
+    Give DPStochastic a new value conditional on parents and children. Always Gibbs.
+    Easy. The actual DPStochastic is only being traced for future convenience,
+    it doesn't really get used by the step methods.
     
     You may want to leave this out of the model for simplicity, and tell
     users how to get draws for the DP given the trace.
@@ -141,9 +141,9 @@ class DPMetropolis(SamplingMethod):
     """
     pass
     
-class DPParentMetropolis(SamplingMethod):
+class DPParentMetropolis(StepMethod):
     """
-    Updates parameters of base distribution and concentration parameter.
+    Updates stochs of base distribution and concentration stoch.
     
     Very easy: likelihood is DPDraws' logp,
     propose a new DP to match.
@@ -155,23 +155,23 @@ class DPDraws(object):
     value: An array of values, need to figure out dtype.
     N: length of value.
     
-    May want to hide these in the sampling method, 
-    but many sampling methods need them so it's probably better to keep them here:
+    May want to hide these in the step method, 
+    but many step methods need them so it's probably better to keep them here:
     N_clusters: number of clusters.
     clusters: values of clusters, length-N list.
     cluster_multiplicities: multiplicities of clusters.
     
-    Note may want to make these things their own Parameters, in case people want to have
-    Nodes etc. depending on them or to trace them.
+    Note may want to make these things their own Stochastics, in case people want to have
+    Functionals etc. depending on them or to trace them.
     
-    Parent: 'dist': a DPParameter.
+    Parent: 'dist': a DPStochastic.
     
     logp: product of base logp evaluated on each cluster (each cluster appears only once
     regardless of multiplicity) plus some function of alpha and the number of clusters.
     """
     pass
     
-class DPDrawMetropolis(SamplingMethod):
+class DPDrawMetropolis(StepMethod):
     """
     Updates DP draws.
     """
@@ -182,12 +182,12 @@ class DPDrawMetropolis(SamplingMethod):
 Note: If you could get a distribution for the multiplicities of the currently-
 found clusters in a DP, could you give its children a logp attribute?
 
-Then you could do something like with the GP: give the DPParameter an intrinsic
+Then you could do something like with the GP: give the DPStochastic an intrinsic
 set of clusters unrelated to its children, assess its logp using only its intrinsic
 clusters, etc.
 
 Yes, you can easily do this. Give the DP object its intrinsic clusters, and let the
-sampling methods treat those as the things that are really participating in the model
+step methods treat those as the things that are really participating in the model
 even though from the user's perspective the entire DP is participating.
 
 DUDE you can even figure out the DP object's logp attribute as you go along using the stick-breaking representation.

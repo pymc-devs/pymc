@@ -1,15 +1,15 @@
-from PyMC2 import parameter, data, JointMetropolis, Sampler
+from PyMC2 import stochastic, data, JointMetropolis, Sampler
 from numpy import array, eye, ones
 from PyMC2.distributions import mvnormal_like
 
 mu_A = array([0.,0.])
 tau_A = eye(2)
-@parameter
+@stochastic
 def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
     return mvnormal_like(value,mu,tau)
 
 tau_B = eye(2) * 100.          
-@parameter
+@stochastic
 def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
     return mvnormal_like(value,mu,tau)
 

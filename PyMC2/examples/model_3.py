@@ -6,7 +6,7 @@ amp_of_mean ~ Exp(3)
 disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 """
 
-from PyMC2 import parameter, data, Metropolis, discrete_parameter
+from PyMC2 import stochastic, data, Metropolis, discrete_stoch
 from numpy import array, log, sum, zeros, arange
 from PyMC2 import poisson_like, normal_like, exponential_like
 from PyMC2 import rnormal, rexponential, constrain
@@ -21,13 +21,13 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Define data and parameters
+# Define data and stochs
 
-@parameter
-def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
+@stochastic
+def stochs_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     """
-    Intercept and slope of rate parameter of poisson distribution
-    Rate parameter must be positive for t in [0,T]
+    Intercept and slope of rate stoch of poisson distribution
+    Rate stoch must be positive for t in [0,T]
     
     p(intercept, slope|tau,rate) = 
     N(slope|0,tau) Exp(intercept|rate) 1(intercept>0) 1(intercept + slope * T>0)
@@ -51,8 +51,8 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     rseed = .1
     
 @data      
-def disasters(value = disasters_array, params_of_mean = params_of_mean):
+def disasters(value = disasters_array, stochs_of_mean = stochs_of_mean):
     """Annual occurences of coal mining disasters."""
-    val = params_of_mean[1] + params_of_mean[0] * arange(111)
+    val = stochs_of_mean[1] + stochs_of_mean[0] * arange(111)
     return poisson_like(value,val)
 

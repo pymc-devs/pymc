@@ -22,8 +22,8 @@ class Parallel:
 
     Arguments
     
-        prob_def: class, module or dictionary containing PyMC objects and 
-        SamplingMethods)
+        prob_def: class, module or dictionary containing nodes and 
+        StepMethods)
         
         dbase: Database backend used to tally the samples. 
         Implemented backends: None, hdf5.
@@ -32,32 +32,32 @@ class Parallel:
         
     Externally-accessible attributes:
 
-        nodes:          All extant Nodes.
+        functls:          All extant Functionals.
 
-        parameters:         All extant Parameters with isdata = False.
+        stochs:         All extant Stochastics with isdata = False.
 
-        data:               All extant Parameters with isdata = True.
+        data:               All extant Stochastics with isdata = True.
 
-        pymc_objects:               All extant Parameters and Nodes.
+        nodes:               All extant Stochastics and Functionals.
 
-        sampling_methods:   All extant SamplingMethods.
+        step_methods:   All extant StepMethods.
 
     Externally-accessible methods:
 
-        sample(iter,burn,thin): At each MCMC iteration, calls each sampling_method's step() method.
-                                Tallies Parameters and Nodes as appropriate.
+        sample(iter,burn,thin): At each MCMC iteration, calls each step_method's step() method.
+                                Tallies Stochastics and Functionals as appropriate.
 
-        trace(parameter, burn, thin, slice): Return the trace of parameter, 
+        trace(stoch, burn, thin, slice): Return the trace of stoch, 
         sliced according to slice or burn and thin arguments.
 
         remember(trace_index): Return the entire model to the tallied state indexed by trace_index.
 
         DAG: Draw the model as a directed acyclic graph.
 
-        All the plotting functions can probably go on the base namespace and take Parameters as
+        All the plotting functions can probably go on the base namespace and take Stochastics as
         arguments.
 
-    See also SamplingMethod, OneAtATimeMetropolis, PyMCBase, Parameter, Node, and weight.
+    See also StepMethod, OneAtATimeMetropolis, Node, Stochastic, Functional, and weight.
     """
     def __init__(self, input, dbase='ram', proc=2):
         try:

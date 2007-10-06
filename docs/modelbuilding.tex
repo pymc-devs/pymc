@@ -1,24 +1,24 @@
 %!TEX root = guide2.0.tex
 
 % \section{Summary}\label{sec:PyMCObjects}
-Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: \texttt{Parameter}, \texttt{Node} and \texttt{Potential}. 
+Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: \texttt{Stochastic}, \texttt{Functional} and \texttt{Potential}. 
 
-A parameter object represents a variable whose value is not completely determined by its parents, and a node object represents a variable that is determined by its parents. \texttt{Parameter} and \texttt{Node} are subclasses of \texttt{Variable}.
+A stoch object represents a variable whose value is not completely determined by its parents, and a functl object represents a variable that is determined by its parents. \texttt{Stochastic} and \texttt{Functional} are subclasses of \texttt{Variable}.
 
-The third basic class, representing `factor potentials' (\cite{dawidmarkov,jordangraphical}), represents an arbitrary log-probability term. This object lends PyMC a great deal of flexibility, but it should be used sparingly if possible. It is most useful in situations where the dependence relationships between variables are not specified, such as Markov random fields. \texttt{Potential} and \texttt{Variable} are subclasses of \texttt{PyMCBase}.
+The third basic class, representing `factor potentials' (\cite{dawidmarkov,jordangraphical}), represents an arbitrary log-probability term. This object lends PyMC a great deal of flexibility, but it should be used sparingly if possible. It is most useful in situations where the dependence relationships between variables are not specified, such as Markov random fields. \texttt{Potential} and \texttt{Variable} are subclasses of \texttt{Node}.
 
-PyMC also provides container classes for parameters and nodes to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
+PyMC also provides container classes for stochs and functls to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
-These objects are meant to perform a small set of behaviors efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop conditional on the rest of the model. PyMC leaves this parameter updating functionality to the \texttt{SamplingMethod} class and model-level MCMC supervision to the \texttt{Sampler} class. These objects are described in chapter \ref{chap:modelfitting}. 
+These objects are meant to perform a small set of behaviors efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop conditional on the rest of the model. PyMC leaves this stoch updating functionality to the \texttt{StepMethod} class and model-level MCMC supervision to the \texttt{Sampler} class. These objects are described in chapter \ref{chap:modelfitting}. 
 
 Declared probability models can be wrapped in the \texttt{Model} class, which is able to perform model-level tasks such as drawing directed acyclic graphs (\cite{dawidmarkov,jordangraphical}) and computing Bayes factors (\cite{gelman}) but has no fitting functionality. Objects responsible for fitting probability models, such as \texttt{Sampler}, are subclasses of \texttt{Model}.
 
-\section{The \texttt{Variable} classes: \texttt{Parameter} and \texttt{Node}}
+\section{The \texttt{Variable} classes: \texttt{Stochastic} and \texttt{Functional}}
 Consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962.
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
 \end{center}
-Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
+Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate stoch in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 \begin{equation}
@@ -35,48 +35,48 @@ We represent our conceptual model formally as a statistical model:
 The symbols have the following meanings:
 \begin{description}
     \item[$D_t$:] The number of disasters in year $t$.
-    \item[$r_t$:] The rate parameter of the Poisson distribution of disasters in year $t$.
-    \item[$s$:] The year in which the rate parameter changes.
-    \item[$e$:] The rate parameter before the switchpoint $s$.
-    \item[$l$:] The rate parameter after the switchpoint.
+    \item[$r_t$:] The rate stoch of the Poisson distribution of disasters in year $t$.
+    \item[$s$:] The year in which the rate stoch changes.
+    \item[$e$:] The rate stoch before the switchpoint $s$.
+    \item[$l$:] The rate stoch after the switchpoint.
 \end{description}
 Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter three are known as the \emph{parents} of $D$. $D$ is called the \emph{child} of $s$, $e$ and $l$. Similarly, parents of $s$ are $t_l$ and $t_h$, and $s$ is the child of $t_l$ and $t_h$.
 
-At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random variables}. Under the Bayesian interpretation of probability, `random' variables are not necessarily believed to have arisen from a physical random process. `Random' only means that we are unsure of their values. Random variables are represented in PyMC by class \texttt{Variable}, which has subclasses \texttt{Parameter} and \texttt{Node}.
+At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random variables}. Under the Bayesian interpretation of probability, `random' variables are not necessarily believed to have arisen from a physical random process. `Random' only means that we are unsure of their values. Random variables are represented in PyMC by class \texttt{Variable}, which has subclasses \texttt{Stochastic} and \texttt{Functional}.
 
 There is a difference between $r$ and the other variables: if we knew the values of $r$'s parents, we could compute the value of $r$ with no uncertainty. This variable is defined by a mathematical function which returns its value given values for its parents. 
 
 On the other hand, even given values for the parents of $s$ we would still be uncertain of $s$'s value, and similarly for $D$, $e$ and $l$. These variables are defined by probability distributions that express how plausible their candidate values are given values for their parents.
  
 
-\section{The \texttt{Parameter} class}
+\section{The \texttt{Stochastic} class}
 
-In PyMC, variables of the latter type are represented by the \texttt{Parameter} class and subclasses. A parameter has the following major attributes: 
+In PyMC, variables of the latter type are represented by the \texttt{Stochastic} class and subclasses. A stoch has the following major attributes: 
 \begin{description}
-    \item[\texttt{value}:] Gives the parameter's current value.
-    \item[\texttt{logp}:] Gives the log-probability of the parameter's current value given the values of its parents.
+    \item[\texttt{value}:] Gives the stoch's current value.
+    \item[\texttt{logp}:] Gives the log-probability of the stoch's current value given the values of its parents.
 \end{description}
-A parameter can optionally be endowed with a method called \texttt{\bfseries random}, which draws a value for the parameter given the values of its parents. Note that the \texttt{random} method does not provide a Gibbs sample unless the parameter has no children.
+A stoch can optionally be endowed with a method called \texttt{\bfseries random}, which draws a value for the stoch given the values of its parents. Note that the \texttt{random} method does not provide a Gibbs sample unless the stoch has no children.
 
-Parameters expose the following additional attributes:
+Stochastics expose the following additional attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing the parameter's parents. The keys of the dictionary correspond to the names assigned to the parameter's parents by the parameter, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary would be \texttt{'t\_l'} and \texttt{'t\_h'}. Since PyMC inherits Python's dynamic typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing the parameter's children. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{isdata}:] A boolean indicating whether the parameter's value has been observed (is fixed).
-    \item[\texttt{trace}:] The trace object assigned to the parameter, see chapter \ref{chap:database}.
-    \item[\texttt{\_\_name\_\_}:] The name of the parameter, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the parameter.
+    \item[\texttt{parents}:] A dictionary containing the stoch's parents. The keys of the dictionary correspond to the names assigned to the stoch's parents by the stoch, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary would be \texttt{'t\_l'} and \texttt{'t\_h'}. Since PyMC inherits Python's dynamic typing, parents may be of any class or type.
+    \item[\texttt{children}:] A set containing the stoch's children. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{isdata}:] A boolean indicating whether the stoch's value has been observed (is fixed).
+    \item[\texttt{trace}:] The trace object assigned to the stoch, see chapter \ref{chap:database}.
+    \item[\texttt{\_\_name\_\_}:] The name of the stoch, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the stoch.
 \end{description}
 
-Subclasses of \texttt{Parameter} include the \texttt{DiscreteParameter} class, which represents integer-valued variables, and the \texttt{BinaryParameter} class, which represents Bernoulli or indicator variables. 
+Subclasses of \texttt{Stochastic} include the \texttt{DiscreteStochastic} class, which represents integer-valued variables, and the \texttt{BinaryStochastic} class, which represents Bernoulli or indicator variables. 
 
-\subsection{Instantiation of parameters}
-PyMC provides four ways to instantiate parameters, called the `short', `medium', `long' and `direct' interfaces.
+\subsection{Instantiation of stochs}
+PyMC provides four ways to instantiate stochs, called the `short', `medium', `long' and `direct' interfaces.
 \begin{description}
     \item[Short] \textbf{XXX}
-    \item[Medium] Uniformly-distributed parameter $s$ could be instantiated using the medium interface as follows:
+    \item[Medium] Uniformly-distributed stoch $s$ could be instantiated using the medium interface as follows:
     \begin{verbatim}
-@parameter
+@stochastic
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
@@ -84,15 +84,15 @@ def s(value=1900, t_l=1851, t_h=1962):
     else:
         return -log(t_h - t_l) 
     \end{verbatim}
-    The decorator \texttt{parameter} wraps the function \texttt{s} in a parameter object. This object will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The names of the function's other arguments become the keys of the parameter's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{s}) becomes the \texttt{\_\_name\_\_} of the parameter, and the docstring of the function is passed on to the parameter as well.
+    The decorator \texttt{stoch} wraps the function \texttt{s} in a stoch object. This object will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The names of the function's other arguments become the keys of the stoch's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{s}) becomes the \texttt{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the stoch as well.
 
-The parameter may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that PyMC, scientific Python and numerical Python all provide fast implementations of several standard probability distributions that can be wrapped in parameter objects.
+The stoch may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that PyMC, scientific Python and numerical Python all provide fast implementations of several standard probability distributions that can be wrapped in stoch objects.
 
-    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for the parameter: \texttt{@parameter(trace = False)} would turn tracing off.
+    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for the stoch: \texttt{@stochastic(trace = False)} would turn tracing off.
 
-    \item[Long] The long interface extends the medium interface by allowing the user to specify a \texttt{random} method for sampling the parameter's value conditional only on its parents.
+    \item[Long] The long interface extends the medium interface by allowing the user to specify a \texttt{random} method for sampling the stoch's value conditional only on its parents.
     \begin{verbatim}
-@parameter
+@stochastic
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
 
@@ -107,9 +107,9 @@ def s(value=1900, t_l=1851, t_h=1962):
 
     rseed = 1.
     \end{verbatim}
-The parameter again gets its name, docstring and parents from function \texttt{s}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function will be used when \texttt{s.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX David explain rseed} \texttt{rseed} provides a seed for the RNG. The \texttt{value} argument is optional if a \texttt{random} method is provided; if no initial value is provided, it will be drawn using the \texttt{random} method.
+The stoch again gets its name, docstring and parents from function \texttt{s}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function will be used when \texttt{s.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX David explain rseed} \texttt{rseed} provides a seed for the RNG. The \texttt{value} argument is optional if a \texttt{random} method is provided; if no initial value is provided, it will be drawn using the \texttt{random} method.
 
-    \item[Direct] Some users may prefer not to use the \texttt{@parameter} decorator, but to instantiate \texttt{Parameter} directly:
+    \item[Direct] Some users may prefer not to use the \texttt{@stochastic} decorator, but to instantiate \texttt{Stochastic} directly:
 \begin{verbatim}
 def s_logp(value, t_l, t_h):
     if value > t_h or value < t_l:
@@ -120,7 +120,7 @@ def s_logp(value, t_l, t_h):
 def s_rand(t_l, t_h):
     return round( (t_l - t_h) * random() ) + t_l
 
-s = Parameter(logp = s_logp, 
+s = Stochastic(logp = s_logp, 
 name = 's', 
 value = 1900,
 parents = {'t_l': 1851, 't_h': 1962},
@@ -133,9 +133,9 @@ cache_depth = 2)
 \end{verbatim}
 \end{description}
 
-\subsection{Don't update parameters' values in-place}\label{sub:warning}
+\subsection{Don't update stochs' values in-place}\label{sub:warning}
 
-\texttt{Parameter} objects' values should not be updated in-place. This would confuse PyMC's caching scheme and destroy the `last value' attribute of the parameter, which is used for rejecting jumps. The only way a parameter's value should be updated is using statements of the following form:
+\texttt{Stochastic} objects' values should not be updated in-place. This would confuse PyMC's caching scheme and destroy the `last value' attribute of the stoch, which is used for rejecting jumps. The only way a stoch's value should be updated is using statements of the following form:
 \begin{verbatim}
     A.value = new_value
 \end{verbatim}
@@ -146,14 +146,14 @@ where \texttt{new\_value} is an object that has just been created for this purpo
     \item \texttt{A.value.attribute = new_attribute_value}. This is an in-place update regardless of what type of object \texttt{A.value} is.
 \end{itemize}
 
-This restriction is not that bad. In Metropolis-Hastings-type sampling methods, the `current' and `proposed' values of a parameter must be stored simultaneously when evaluating a jump; if you were to update a parameter's value in-place in your own MCMC code, you would need to make a copy of its value beforehand. It does become onerous if a sampling method proposes values for the elements of an array-valued parameter separately. In this case, it may be preferable to divide the array-valued parameter into several parameters. See section \ref{sub:container}. 
+This restriction is not that bad. In Metropolis-Hastings-type step methods, the `current' and `proposed' values of a stoch must be stored simultaneously when evaluating a jump; if you were to update a stoch's value in-place in your own MCMC code, you would need to make a copy of its value beforehand. It does become onerous if a step method proposes values for the elements of an array-valued stoch separately. In this case, it may be preferable to divide the array-valued stoch into several stochs. See section \ref{sub:container}. 
 
 \section{Data}
 
-Although the data $D$ was a random variable at the model-specification stage, we subsequently fixed its value by observing it. In PyMC such variables are represented by \texttt{Parameter} objects whose \texttt{isdata} attribute is set to \texttt{True}. If a parameter's \texttt{isdata} flag is \texttt{True}, its value cannot be changed.
+Although the data $D$ was a random variable at the model-specification stage, we subsequently fixed its value by observing it. In PyMC such variables are represented by \texttt{Stochastic} objects whose \texttt{isdata} attribute is set to \texttt{True}. If a stoch's \texttt{isdata} flag is \texttt{True}, its value cannot be changed.
 
-\subsection{Why are data and unknown parameters represented by the same object?}
-Since it's represented by a \texttt{Parameter}, $D$ formally depends on $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between unobserved random variables (parameters) and observed random variables (data). This point can be counterintuitive at first, as most scientists' instinct is to regard data as fixed a priori and unknown parameters' values as dependent on the data. The value of data is fixed, after all, so how could it depend on anything?
+\subsection{Why are data and unknown stochs represented by the same object?}
+Since it's represented by a \texttt{Stochastic}, $D$ formally depends on $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between unobserved random variables (stochs) and observed random variables (data). This point can be counterintuitive at first, as most scientists' instinct is to regard data as fixed a priori and unknown stochs' values as dependent on the data. The value of data is fixed, after all, so how could it depend on anything?
 
 One way to understand this issue is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have easily sampled from its prior predictive distribution $p(D)$ as follows:
 \begin{enumerate}
@@ -171,18 +171,18 @@ To look at the issue another way, we could in principle have written a model equ
     D=D_*
 \end{eqnarray*}
 
-This would have felt more natural in some ways, because we would have the unknown parameters depending on the data. However, if we could write down that model using standard distributions we could trivially compute and sample from the posterior,
+This would have felt more natural in some ways, because we would have the unknown stochs depending on the data. However, if we could write down that model using standard distributions we could trivially compute and sample from the posterior,
 \begin{eqnarray*}
     p(s,e,l|D) = p(s|e, l, D) p(e|l, D) p(l|D),
 \end{eqnarray*}
-and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's more natural to model the data as depending on the unknown parameters than vice versa.
+and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's more natural to model the data as depending on the unknown stochs than vice versa.
 
-\subsection{Declaring parameters to be data}
+\subsection{Declaring stochs to be data}
 
-In the medium and long interfaces, a \texttt{Parameter} object's \texttt{isdata} flag can be set to true by stacking a \texttt{@data} decorator on top of the \texttt{@parameter} decorator:
+In the medium and long interfaces, a \texttt{Stochastic} object's \texttt{isdata} flag can be set to true by stacking a \texttt{@data} decorator on top of the \texttt{@stochastic} decorator:
 \begin{verbatim}
 @data
-@parameter
+@stochastic
 def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
     """The observed annual disaster counts."""
     logp = sum(-value[:switchpoint]) + early_rate * log(value[:switchpoint]) \
@@ -194,9 +194,9 @@ def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
 In the direct interface, the \texttt{isdata} argument can be simply set to \texttt{True}.
 
 
-\section{The \texttt{Node} class}\label{node}
+\section{The \texttt{Functional} class}\label{functl}
 
-Nodes represent variables whose values are fully determined by the values of their parents. The variables on which a node's value depends are called the parents of the node, as with parameters. In model (\ref{disastermodel}), $r$ can be represented as a node. Recall that $r$ was defined by
+Functionals represent variables whose values are fully determined by the values of their parents. The variables on which a functl's value depends are called the parents of the functl, as with stochs. In model (\ref{disastermodel}), $r$ can be represented as a functl. Recall that $r$ was defined by
 \begin{eqnarray*}
     r_t=\left\{\begin{array}{ll}
         e & t\le s\\ l & t>s
@@ -204,41 +204,41 @@ Nodes represent variables whose values are fully determined by the values of the
 \end{eqnarray*}
 so $r$'s value can be computed from the values of its parents $e$, $l$ and $s$.
 
-A node's most important attribute is \texttt{\bfseries value}, which gives the current value of the node given the values of its parents. Like \texttt{Parameter}'s \texttt{logp} attribute, this attribute is computed on-demand and cached for efficiency.
+A functl's most important attribute is \texttt{\bfseries value}, which gives the current value of the functl given the values of its parents. Like \texttt{Stochastic}'s \texttt{logp} attribute, this attribute is computed on-demand and cached for efficiency.
 
-Nodes expose the following additional attributes:
+Functionals expose the following additional attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing the node's parents. The keys of the dictionary correspond to the names assigned to the node's parents by the node, and the values correspond to the actual parents. Since PyMC inherits Python's dynamic typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing the node's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{trace}:] The trace object assigned to the node, see chapter \ref{chap:database}.
-    \item[\texttt{\_\_name\_\_}:] The name of the node, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the node.
+    \item[\texttt{parents}:] A dictionary containing the functl's parents. The keys of the dictionary correspond to the names assigned to the functl's parents by the functl, and the values correspond to the actual parents. Since PyMC inherits Python's dynamic typing, parents may be of any class or type.
+    \item[\texttt{children}:] A set containing the functl's children, which must be stochs or functls. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{trace}:] The trace object assigned to the functl, see chapter \ref{chap:database}.
+    \item[\texttt{\_\_name\_\_}:] The name of the functl, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the functl.
 \end{description}
-Nodes have no methods.
+Functionals have no methods.
 
-\subsection{Nodes are optional}
-If we make a node out of $r$, we'll want to rewrite $D$ as follows:
+\subsection{Functionals are optional}
+If we make a functl out of $r$, we'll want to rewrite $D$ as follows:
 \begin{verbatim}
 @data
-@parameter
+@stochastic
 def D(value=count_array, rate=r):
     """The observed annual disaster counts."""
     return sum(-value + rate * log(value) - gammaln(rate))
 \end{verbatim}
-It's up to us whether to use $r$ or to leave it out of the model: use of the node class is always optional. However, nodes can be nice for the following reasons:
+It's up to us whether to use $r$ or to leave it out of the model: use of the functl class is always optional. However, functls can be nice for the following reasons:
 \begin{itemize}
     \item They can save code duplication,    
     \item they can be computationally efficient (because they save code duplication), and
-    \item sometimes it's convenient to produce a dynamic trace of the value of a function of parameters.
+    \item sometimes it's convenient to produce a dynamic trace of the value of a function of stochs.
 \end{itemize}
 
 
-\subsection{Instantiation of nodes}
-Nodes are less complicated than parameters, and PyMC provides only two ways to instantiate them:
+\subsection{Instantiation of functls}
+Functionals are less complicated than stochs, and PyMC provides only two ways to instantiate them:
 \begin{description}
-    \item[Decorator] A node can be instantiated via a decorator in a way very similar to parameter's medium interface:
+    \item[Decorator] A functl can be instantiated via a decorator in a way very similar to stoch's medium interface:
 \begin{verbatim}
-@node
+@functional
 def r(switchpoint = s, early_rate = e, late_rate = l):
     """The rate of disaster occurrence."""
     value = zeros(N)
@@ -246,8 +246,8 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-The function supplied should return a new value (which may be any object) for the node. Arguments' keys and values are converted into a parent dictionary as with parameter's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the node.
-    \item[Direct] The same node could be instantiated directly as follows:
+The function supplied should return a new value (which may be any object) for the functl. Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the functl.
+    \item[Direct] The same functl could be instantiated directly as follows:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
     value = zeros(N)
@@ -255,29 +255,29 @@ def r_eval(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 
-r = Node(eval = r_eval, 
+r = Functional(eval = r_eval, 
 name = 'r',
 parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l}),
 doc = 'The rate of disaster occurrence.',
 trace = True,
 cache_depth = 2)
 \end{verbatim}
-The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.
+The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with stoch.
 \end{description}
 
-Note that nodes have no \texttt{isdata} flag. If a node's value were known, its parents would be restricted to the inverse image of that value under the node's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \texttt{SamplingMethod} level.
+Note that functls have no \texttt{isdata} flag. If a functl's value were known, its parents would be restricted to the inverse image of that value under the functl's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
 \section{Using \texttt{Variables} as parents of \texttt{Variables}}
 
 Let's take a closer look at our most recent definition of $D$:
 \begin{verbatim}
 @data
-@parameter
+@stochastic
 def D(value=count_array, rate=r):
     """The observed annual disaster counts."""
     return sum(-value + rate * log(value) - gammaln(rate))
 \end{verbatim}
-The value of argument \texttt{rate} is a \texttt{Node} object, not a number. Why aren't errors raised when we attempt to multiply \texttt{rate} by an array?
+The value of argument \texttt{rate} is a \texttt{Functional} object, not a number. Why aren't errors raised when we attempt to multiply \texttt{rate} by an array?
 
 Whenever a variable is used as a parent for a child variable, it is replaced with its \texttt{value} attribute when the child's value or log-probability is computed. When $D$'s log-probability is recomputed, \texttt{r.value} is passed to the function as argument \texttt{rate}. 
 
@@ -292,7 +292,7 @@ $y$ depends on every element of the Markov chain $x$, but we wouldn't want to ma
 
 This situation can be handled using the \texttt{Container} function as follows:
 \begin{verbatim}
-@parameter
+@stochastic
 def x_0(value=0, mu = 0, tau = 1):
     return normal_like(value, mu, tau)
 
@@ -300,7 +300,7 @@ x_list = [x_0]
 last_x = x_0
 
 for i in range(1,N):          
-    @parameter
+    @stochastic
     def x_now(value=0, mu = last_x, tau = 1):
         return normal_like(value, mu, tau)
     x_now.__name__ = 'x\_%i' % i
@@ -311,7 +311,7 @@ for i in range(1,N):
 x = Container(x_list, name = 'x')
 
 @data
-@parameter
+@stochastic
 def y(value = 1, mu = x, tau = 100):
     mu_sum = 0
     for i in range(N):
@@ -320,10 +320,10 @@ def y(value = 1, mu = x, tau = 100):
 \end{verbatim}
 The \texttt{Container} function wraps \texttt{x\_list} in an appropriate PyMC container class and returns it.
 
-Containers, like parameters and nodes, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each instance of a parameter or node inside replaced with \emph{its} value. Note that simply writing
+Containers, like stochs and functls, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each instance of a stoch or functl inside replaced with \emph{its} value. Note that simply writing
 \begin{verbatim}
 @data
-@parameter
+@stochastic
 def y(value = 1, mu = x_list, tau = 100):
     mu_sum = 0
     for i in range(N):
@@ -337,12 +337,12 @@ PyMC containers can currently be constructed from any object that has a \texttt{
 Containers have the following useful attributes in addition to \texttt{value}:
 \begin{itemize}
     \item\texttt{variables}
-    \item\texttt{parameters}
+    \item\texttt{stochs}
     \item\texttt{potentials}
-    \item\texttt{nodes}
+    \item\texttt{functls}
     \item\texttt{data}
     \item\texttt{all_objects}
-    \item\texttt{sampling_methods}.
+    \item\texttt{step_methods}.
 \end{itemize}
 Each of these attributes is a set containing all the objects of each type in a container, and within any containers in the container.
 
@@ -353,7 +353,7 @@ The joint density corresponding to model (\ref{disastermodel}) can be written as
 \begin{eqnarray*}
     p(D,s,l,e) = p(D|s,l,e) p(s) p(l) p(e).
 \end{eqnarray*}
-Each factor in the joint distribution is a proper, normalized probability distribution for one of the variables conditional on its parents. Such factors are contributed by \texttt{Parameter} objects.
+Each factor in the joint distribution is a proper, normalized probability distribution for one of the variables conditional on its parents. Such factors are contributed by \texttt{Stochastic} objects.
 
 In some cases, it's nice to be able to modify the joint density by incorporating terms that don't correspond to probabilities of variables conditional on parents, for example:
 \begin{eqnarray*}
@@ -407,14 +407,14 @@ Potentials have no methods. They have no \texttt{trace} attribute, because they 
 \subsection{Instantiation of potentials}
 PyMC provides two ways to instantiate potentials:
 \begin{description}
-    \item[Decorator] A potential can be instantiated via a decorator in a way very similar to parameter's medium interface and node's decorator interface:
+    \item[Decorator] A potential can be instantiated via a decorator in a way very similar to stoch's medium interface and functl's decorator interface:
 \begin{verbatim}
 @potential
 def gamma(surv_rate = S, a = a, b = b):
     """Some random potential."""
     return beta_like(surv_rate, a, b)
 \end{verbatim}
-The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with parameter's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the potential.
+The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the potential.
     \item[Direct] The same potential could be instantiated directly as follows:
 \begin{verbatim}
 def gamma_logp    (surv_rate = S, a = a, b = b):
@@ -431,23 +431,23 @@ cache_depth = 2)
 \section{Graphical models (optional)}
 \label{sec:graphical}
 
-It's often helpful to view probability models graphically; graphical representations harmonize very well with object-oriented programming, so most Bayesian statistics packages (including PyMC) are at least somewhat graphically inspired. PyMC's \texttt{Model} object provides a method called \texttt{graph} which converts PyMC models to graphical models using GraphViz. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider nodes.
+It's often helpful to view probability models graphically; graphical representations harmonize very well with object-oriented programming, so most Bayesian statistics packages (including PyMC) are at least somewhat graphically inspired. PyMC's \texttt{Model} object provides a method called \texttt{graph} which converts PyMC models to graphical models using GraphViz. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider functls.
 
-PyMC's symbol for parameters is the ellipse. Parent-child relationships are indicated by arrows. These arrows always point from parent to child, and PyMC labels them with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
+PyMC's symbol for stochs is the ellipse. Parent-child relationships are indicated by arrows. These arrows always point from parent to child, and PyMC labels them with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
     \epsfig{file=DisasterModel.pdf, width=6cm} 
 \end{center} 
 $D$ is shaded because it is flagged as data.
 
-PyMC's symbol for nodes is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} with $r$ explicit follows:
+PyMC's symbol for functls is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} with $r$ explicit follows:
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=6cm} 
 \end{center}
-Note that if a node has more than one child, its parents each inherit all of its children when it is made implicit:
+Note that if a functl has more than one child, its parents each inherit all of its children when it is made implicit:
 \begin{center}
-    \epsfig{file=NodePreInheritance.pdf, width=3.5cm} \textbf{XXX How can I move this arrow up?} $\Rightarrow$ \epsfig{file=NodePostInheritance.pdf, width=5cm}
+    \epsfig{file=FunctionalPreInheritance.pdf, width=3.5cm} \textbf{XXX How can I move this arrow up?} $\Rightarrow$ \epsfig{file=FunctionalPostInheritance.pdf, width=5cm}
 \end{center}
-Incidentally, these inherited children can be found using the function \texttt{extend\_children} provided by PyMC. Sampling method objects use this function to evaluate the log-likelihoods of the parameters they handle.
+Incidentally, these inherited children can be found using the function \texttt{extend\_children} provided by PyMC. Sampling method objects use this function to evaluate the log-likelihoods of the stochs they handle.
 
 PyMC's symbol for potentials is a triple-outlined octagon:
 \begin{center}
@@ -459,11 +459,11 @@ Potentials are usually associated with \emph{undirected} grahical models. In und
 \end{center}
 Mixing undirected and directed edges in the same model can be confusing, but fortunately the technique of \emph{moralization} can convert directed edges to undirected.
 
-\cite{dawidmarkov} and \cite{jordangraphical} give several results on conditional independence and dependence that can be obtained just from looking at the structure of a graphical model, without knowing the forms of the probability distributions involved at all. A particularly important concept is $d$-separation, which determines when a group of parameters $A$ will be independent of another group $B$ given a third group $S$.
+\cite{dawidmarkov} and \cite{jordangraphical} give several results on conditional independence and dependence that can be obtained just from looking at the structure of a graphical model, without knowing the forms of the probability distributions involved at all. A particularly important concept is $d$-separation, which determines when a group of stochs $A$ will be independent of another group $B$ given a third group $S$.
 
 \section{Class \texttt{LazyFunction} and caching (optional)}
 
-The \texttt{logp} attributes of parameters and potentials and the \texttt{value} attributes of nodes are wrappers for instances of class \texttt{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \texttt{L} could be instantiated from a function \texttt{fun} as follows:
+The \texttt{logp} attributes of stochs and potentials and the \texttt{value} attributes of functls are wrappers for instances of class \texttt{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \texttt{L} could be instantiated from a function \texttt{fun} as follows:
 \begin{verbatim}
 L = LazyFunction(fun, arguments)
 \end{verbatim}
@@ -473,7 +473,7 @@ fun(**argument_values)
 \end{verbatim}
 where the dictionary \texttt{argument\_values} is a copy of \texttt{arguments} in which each variable or container has been replaced by its \texttt{value} attribute. Note that no arguments need to be passed to \texttt{L.get}; lazy functions memorize their arguments.
 
-Before calling \texttt{fun}, \texttt{L} will check the \texttt{argument\_values} dictionary against an internal cache. This comparison is done \emph{by reference}, not by value, and this is the reason why parameters' values cannot be updated in-place. If any of \texttt{argument\_values} is a container, the values of all the enclosed variables are checked against the internal cache. If each element of \texttt{argument\_values} matches a frame of the cache, the corresponding value is returned and \texttt{fun} is not called. If a call to \texttt{fun} is needed, \texttt{argument\_values} and the return value are added to the cache. The oldest frame in the cache is removed. The depth of the cache can be set using the optimal constructor argument \texttt{cache\_depth}, which defaults to 2.
+Before calling \texttt{fun}, \texttt{L} will check the \texttt{argument\_values} dictionary against an internal cache. This comparison is done \emph{by reference}, not by value, and this is the reason why stochs' values cannot be updated in-place. If any of \texttt{argument\_values} is a container, the values of all the enclosed variables are checked against the internal cache. If each element of \texttt{argument\_values} matches a frame of the cache, the corresponding value is returned and \texttt{fun} is not called. If a call to \texttt{fun} is needed, \texttt{argument\_values} and the return value are added to the cache. The oldest frame in the cache is removed. The depth of the cache can be set using the optimal constructor argument \texttt{cache\_depth}, which defaults to 2.
 
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parent configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected. To see why this is, write out an MCMC iteration for model (\ref{disastermodel}) using the Metropolis-Hastings algorithm, paying attention to the values of $D$'s parents when its log-probability is queried.
 
@@ -483,10 +483,10 @@ Lazy functions are implemented in C via Pyrex, and have been carefully optimized
 \section{The \texttt{Model} class} \label{sec:Model}
 This class serves as a container for probability models and as a base class for the classes responsible for model fitting, like \texttt{Sampler}. Methods implemented:
 \begin{description}
-    \item[\texttt{sample\_model\_likelihood(\texttt{iter})}:] Returns \texttt{iter} samples from $\log p(d_M|\theta_M, M)$, the log-probability or log-density of all the data $d_M$ in model $M$ given all the parameters $\theta_M$. This is called by the function \texttt{weight()}, which finds the Bayes factors for a set of models.
+    \item[\texttt{sample\_model\_likelihood(\texttt{iter})}:] Returns \texttt{iter} samples from $\log p(d_M|\theta_M, M)$, the log-probability or log-density of all the data $d_M$ in model $M$ given all the stochs $\theta_M$. This is called by the function \texttt{weight()}, which finds the Bayes factors for a set of models.
     \item[\texttt{graph()}:] \textbf{XXX}
-    \item[\texttt{tally()}:] Tells all parameters and nodes to record their current values in their traces.
-    \item[\texttt{remember(trace\_index)}:] Tells all parameters to revert to a certain index from their traces.
+    \item[\texttt{tally()}:] Tells all stochs and functls to record their current values in their traces.
+    \item[\texttt{remember(trace\_index)}:] Tells all stochs to revert to a certain index from their traces.
     \item[\texttt{status():}] \textbf{XXX}
     \item[\texttt{save\_traces(path, fname)}:] \textbf{XXX}
     \item[\texttt{seed()}:] \textbf{XXX}
@@ -495,8 +495,8 @@ This class serves as a container for probability models and as a base class for 
 Useful set attributes:
 \begin{enumerate}
     \item \texttt{containers}
-    \item \texttt{parameters}
-    \item \texttt{nodes}
+    \item \texttt{stochs}
+    \item \texttt{functls}
     \item \texttt{variables}
     \item \texttt{potentials}
     \item \texttt{data}
@@ -507,20 +507,20 @@ Useful set attributes:
 \subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disasterdag}:
 \begin{verbatim}
-@parameter
+@stochastic
 def s(value=50, length=110):
-    """Change time for rate parameter."""
+    """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@parameter
+@stochastic
 def e(value=1., rate=1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@parameter
+@stochastic
 def l(value=.1, rate = 1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
 @data
@@ -533,23 +533,23 @@ def D(  value = D_array,
 \end{verbatim}
 To make $r$ explicit as in the right pane of figure \ref{fig:disasterdag}, we would write:
 \begin{verbatim}
-@parameter
+@stochastic
 def s(value=50, length=110):
-    """Change time for rate parameter."""
+    """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@parameter
+@stochastic
 def e(value=1., rate=1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@parameter
+@stochastic
 def l(value=.1, rate = 1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@node
+@functional
 def r(l=l,e=e,s=s):
     """r = function(l,e,s)"""
     ret_val =  ones(111,dtype=float)
@@ -562,4 +562,4 @@ def D(  value = D_array, rate=r):
     """Annual occurences of coal mining D."""
     return poisson_like(value,rate)
 \end{verbatim}
-In general, it's better to make heavyweight functions into their own nodes, because nodes' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
+In general, it's better to make heavyweight functions into their own functls, because functls' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.

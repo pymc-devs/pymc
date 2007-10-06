@@ -1,14 +1,14 @@
 from Model import *
 
 def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False, 
-        collapse_nodes = False, collapse_potentials = False, collapse_containers = False):
+        collapse_functls = False, collapse_potentials = False, collapse_containers = False):
     """
     M.graph(format='raw', 
             prog='dot', 
             path=None, 
             consts=False, 
             legend=True, 
-            collapse_nodes = False, 
+            collapse_functls = False, 
             collapse_potentials = False, 
             collapse_containers = False)
 
@@ -26,10 +26,10 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
     If consts is True, constant parents are included in the graph; 
     otherwise they're not.
     
-    If collapse_nodes is True, Nodes (variables that are determined by their
+    If collapse_functls is True, Functionals (variables that are determined by their
     parents) are made implicit.
     
-    If collapse_containers is True, containers are shown as single graph nodes.
+    If collapse_containers is True, containers are shown as single graph functls.
     
     If collapse_potentials is True, potentials are displayed as undirected edges.
 
@@ -40,21 +40,21 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
 
     import pydot
 
-    pydot_nodes = {}
+    pydot_functls = {}
     pydot_subgraphs = {}
     obj_substitute_names = {}
     shown_objects = set([])
     
-    # Get ready to separate self's PyMC objects that are contained in containers.
-    uncontained_params = self.parameters.copy()
+    # Get ready to separate self's nodes that are contained in containers.
+    uncontained_stochs = self.stochs.copy()
     uncontained_data = self.data.copy()
-    uncontained_nodes = self.nodes.copy()
+    uncontained_functls = self.functls.copy()
     uncontained_potentials = self.potentials.copy()
     
     for container in self.containers:
         container.dot_object = pydot.Cluster(graph_name = container.__name__, label = container.__name__)
-        uncontained_params -= container.parameters
-        uncontained_nodes -= container.nodes
+        uncontained_stochs -= container.stochs
+        uncontained_functls -= container.functls
         uncontained_data -= container.data
         uncontained_potentials -= container.potentials
         
@@ -64,64 +64,64 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
         
         # Data are filled ellipses
         for datum in subgraph.data:
-            pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
-            subgraph.dot_object.add_node(pydot_nodes[datum])
+            pydot_functls[datum] = pydot.Functional(name=datum.__name__, style='filled')
+            subgraph.dot_object.add_functl(pydot_functls[datum])
             shown_objects.add(datum)
             obj_substitute_names[datum] = [datum.__name__]
 
-        # Parameters are open ellipses
-        for parameter in subgraph.parameters:
-            pydot_nodes[parameter] = pydot.Node(name=parameter.__name__)
-            subgraph.dot_object.add_node(pydot_nodes[parameter])
-            shown_objects.add(parameter)
-            obj_substitute_names[parameter] = [parameter.__name__]
+        # Stochastics are open ellipses
+        for stoch in subgraph.stochs:
+            pydot_functls[stoch] = pydot.Functional(name=stoch.__name__)
+            subgraph.dot_object.add_functl(pydot_functls[stoch])
+            shown_objects.add(stoch)
+            obj_substitute_names[stoch] = [stoch.__name__]
 
-        # Nodes are downward-pointing triangles
-        for node in subgraph.nodes:
+        # Functionals are downward-pointing triangles
+        for functl in subgraph.functls:
 
-            if not collapse_nodes:
-                pydot_nodes[node] = pydot.Node(name=node.__name__, shape='invtriangle')
-                subgraph.dot_object.add_node(pydot_nodes[node])
-                shown_objects.add(node)
-                obj_substitute_names[node] = [node.__name__]
+            if not collapse_functls:
+                pydot_functls[functl] = pydot.Functional(name=functl.__name__, shape='invtriangle')
+                subgraph.dot_object.add_functl(pydot_functls[functl])
+                shown_objects.add(functl)
+                obj_substitute_names[functl] = [functl.__name__]
 
             else:
-                obj_substitute_names[node] = []
-                for parent in node.parents.values():
+                obj_substitute_names[functl] = []
+                for parent in functl.parents.values():
                     if isinstance(parent, Variable):
-                        obj_substitute_names[node].append(parent.__name__)
+                        obj_substitute_names[functl].append(parent.__name__)
                     elif consts:
-                        subgraph.dot_object.add_node(pydot.Node(name=parent.__str__(), style='filled'))
-                        obj_substitute_names[node].append(parent.__str__())
+                        subgraph.dot_object.add_functl(pydot.Functional(name=parent.__str__(), style='filled'))
+                        obj_substitute_names[functl].append(parent.__str__())
             
         # Potentials are octagons outlined three times
         for potential in subgraph.potentials:
             if not collapse_potentials:
-                pydot_nodes[potential] = pydot.Node(name=potential.__name__, shape='tripleoctagon')
-                subgraph.dot_object.add_node(pydot_nodes[potential])
+                pydot_functls[potential] = pydot.Functional(name=potential.__name__, shape='tripleoctagon')
+                subgraph.dot_object.add_functl(pydot_functls[potential])
                 shown_objects.add(potential)
 
-    # A dummy class to hold the uncontained PyMC objects    
+    # A dummy class to hold the uncontained nodes    
     class uncontained(object):
         def __init__(self):
             self.dot_object = pydot.Dot()
-            self.parameters = uncontained_params
-            self.nodes = uncontained_nodes
+            self.stochs = uncontained_stochs
+            self.functls = uncontained_functls
             self.data = uncontained_data
             self.potentials = uncontained_potentials
-            self.pymc_objects = self.parameters | self.nodes | self.data | self.potentials
+            self.nodes = self.stochs | self.functls | self.data | self.potentials
 
-    # Make nodes for the uncontained objects
+    # Make functls for the uncontained objects
     U = uncontained()
     create_graph(U)
     
     
     for container in self.containers: 
-        # Get containers ready to be graph nodes.
+        # Get containers ready to be graph functls.
         if collapse_containers:
             shown_objects.add(container)
             obj_substitute_names[container] = [container.__name__]
-            U.dot_object.add_node(pydot.Node(name=container.__name__,shape='box'))
+            U.dot_object.add_functl(pydot.Functional(name=container.__name__,shape='box'))
             for variable in container.variables:
                 obj_substitute_names[variable] = [container.__name__]
 
@@ -150,8 +150,8 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
                     new_edge = pydot.Edge(src = p2, dst = p1, label=pot.__name__, arrowhead='none')
                     self.dot_object.add_edge(new_edge)
             
-    # Create edges from parent-child relationships between PyMC objects.
-    for pymc_object in self.containers.extend(self.pymc_objects):
+    # Create edges from parent-child relationships between nodes.
+    for pymc_object in self.containers.extend(self.nodes):
         
         if pymc_object in shown_objects:
             if hasattr(pymc_object,'owner'):
@@ -173,18 +173,18 @@ def graph(self, format='raw', prog='dot', path=None, consts=False, legend=False,
                             self.dot_object.add_edge(pydot.Edge(src=name, dst=pymc_object.__name__, label=key))
                     
                 elif consts:
-                    U.dot_object.add_node(pydot.Node(name=parent_dict[key].__str__(), style='filled'))
+                    U.dot_object.add_functl(pydot.Functional(name=parent_dict[key].__str__(), style='filled'))
                     self.dot_object.add_edge(pydot.Edge(src=parent_dict[key].__str__(), dst=pymc_object.__name__, label=key))                        
             
     # Add legend if requested
     if legend:
         legend = pydot.Cluster(graph_name = 'Legend', label = 'Legend')
-        legend.add_node(pydot.Node(name='data', style='filled'))
-        legend.add_node(pydot.Node(name='parameters'))
-        legend.add_node(pydot.Node(name='nodes', shape='invtriangle'))
-        legend.add_node(pydot.Node(name='potentials', shape='tripleoctagon'))
+        legend.add_functl(pydot.Functional(name='data', style='filled'))
+        legend.add_functl(pydot.Functional(name='stochs'))
+        legend.add_functl(pydot.Functional(name='functls', shape='invtriangle'))
+        legend.add_functl(pydot.Functional(name='potentials', shape='tripleoctagon'))
         if consts:
-            legend.add_node(pydot.Node(name='constants', style='filled', shape='box'))
+            legend.add_functl(pydot.Functional(name='constants', style='filled', shape='box'))
         self.dot_object.add_subgraph(legend)
 
     # Draw the graph

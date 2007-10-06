@@ -180,7 +180,7 @@ Simulation error can be measured and controlled:
 \[Var(\hat{I}[a,b]) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(x_i)-\hat{I}[a,b])^2\]
 \end{itemize}
 
-Why is this relevant to Bayesian analysis? If we replace $f(x)$ with a posterior, $\pi(\theta|x)$ and make $h(x)$ an interesting function of the unknown parameter, the resulting expectation is that of the posterior of $h(\theta)$:
+Why is this relevant to Bayesian analysis? If we replace $f(x)$ with a posterior, $\pi(\theta|x)$ and make $h(x)$ an interesting function of the unknown stoch, the resulting expectation is that of the posterior of $h(\theta)$:
 
 \[
 E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
@@ -188,7 +188,7 @@ E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i
 
 \subsection{Rejection Sampling}
 
-Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
+Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known stochetric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
 \begin{figure}[ht]
         \begin{center}
@@ -267,7 +267,7 @@ Before we move on, it is important to define some general properties of Markov c
 
 \section{Why MCMC Works: Reversible Markov Chains}
 
-Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the parameters of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
+Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the stochs of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
 \[
 \int_x Pr(y \mid x) \pi(x) dx = \pi(y),
 \]
@@ -306,14 +306,14 @@ Hence, if $\pi$ is of interest, we need only find the reversible Markov chain fo
 
 \section{Gibbs Sampling}
 
-The Gibbs sampler is the simplest and most prevalent MCMC algorithm. It uses samples from conditionally independent distributions to generate a sample from the fully conditional Bayesian posterior. For example, if a posterior has $k$ parameters to be estimated, we may condition each parameter on current values of the other $k-1$ parameters, and sample from the resultant distributional form (usually easier), and repeat this operation on the other parameters in turn. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
+The Gibbs sampler is the simplest and most prevalent MCMC algorithm. It uses samples from conditionally independent distributions to generate a sample from the fully conditional Bayesian posterior. For example, if a posterior has $k$ stochs to be estimated, we may condition each stoch on current values of the other $k-1$ stochs, and sample from the resultant distributional form (usually easier), and repeat this operation on the other stochs in turn. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
 
 Here is a stereotypical Gibbs sampling algorithm:
 
 \newcounter{lcount}
 \begin{list}{\arabic{lcount}}
 {\usecounter{lcount}}
-\item Choose starting values for states (parameters): ${\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]$
+\item Choose starting values for states (stochs): ${\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]$
 \item Initialize counter $j=1$
 \item Draw the following values from each of the $k$ conditional distributions:
 \begin{eqnarray*}
@@ -329,7 +329,7 @@ Here is a stereotypical Gibbs sampling algorithm:
 
 As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
-Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
+Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single stoch; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each stoch:
 \vspace{1cm}
 \begin{verbatim}
 # Import random number generators
@@ -340,7 +340,7 @@ binomial = random.binomial
 # Number of iterations
 k=1000
 
-# Prior parameter values
+# Prior stoch values
 n=20
 a=1
 b=2
@@ -380,7 +380,7 @@ print pmed, ymed
 
 The key to success in applying the Gibbs sampler to the estimation of Bayesian posteriors is being able to specify the form of the complete conditionals of ${\bf \theta}$. In fact, the algorithm cannot be implemented without them. Of course, the posterior conditionals cannot always be neatly specified. The Metropolis-Hastings algorithm, which is implemented by PyMC, rather than generating values from the full set of conditionals, generates candidate state transitions from an alternate distribution, and accepts or rejects each candidate probabilistically according to a specified acceptance ratio.
 
-Let us first consider a simple Metropolis-Hastings algorithm for a single parameter, $\theta$. If necessary, we can transform $\theta$ so that its distribution $\pi(\theta)$ has support over the real line, $\theta:S_{\theta} = (-\infty,\infty)\}$, facilitating the use of convenient random variables such as the normal. This sampling distribution will be used to produce candidate variables, and is therefore referred to as the \emph{proposal distribution}, $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
+Let us first consider a simple Metropolis-Hastings algorithm for a single stoch, $\theta$. If necessary, we can transform $\theta$ so that its distribution $\pi(\theta)$ has support over the real line, $\theta:S_{\theta} = (-\infty,\infty)\}$, facilitating the use of convenient random variables such as the normal. This sampling distribution will be used to produce candidate variables, and is therefore referred to as the \emph{proposal distribution}, $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
 
 \[
 a(\theta^{\prime},\theta) = \frac{q_t(\theta^{\prime} | \theta) \pi(\theta^{\prime})}{q_t(\theta | \theta^{\prime}) \pi(\theta)}
@@ -429,11 +429,11 @@ a(\theta^{\prime},\theta) = \frac{\pi(\theta^{\prime})}{\pi(\theta)}
 
 The choice of the random walk distribution for $\epsilon_t$ is frequently a normal or Student's $t$ density, but it may be any distribution that generates an irreducible proposal chain.
 
-An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation.
+An important consideration is the specification of the scale stoch for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current stoch value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation.
 
 \section{MCMC Simulation Output}
 
-Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each parameter in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the parameters of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals).
+Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each stoch in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the stochs of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals).
 
 \begin{figure}[ht]
         \begin{center}
@@ -443,9 +443,9 @@ Stochastic simulation using any MCMC algorithm generates a set of $n$ samples fo
     \label{fig:sample_output}
 \end{figure}
 
-Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown parameters are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm.
+Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown stochs are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm.
 
-Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in parameter space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
+Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in stoch space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 \chapter{Building Models with PyMC}
 
@@ -456,7 +456,7 @@ PyMC attempts to automate as much of the MCMC analysis as possible. In fact, the
 
     \item Data access and manipulation
 
-    \item Parameter and node initialization
+    \item Stochastic and functl initialization
 
     \item Likelihood specification
 
@@ -516,9 +516,9 @@ cur.execute(query)
 resultset = cur.fetchall()
 \end{verbatim}
 
-\section{Parameter Specification}\label{sec:parameter_specification}
+\section{Stochastic Specification}\label{sec:stoch_specification}
 
-Specifying the model parameters and the model likelihood are done by creating a subclass of the main MCMC sampler class in the PyMC module, \verb=MetropolisHastings=. As the name implies, this class is an implementation of a Metropolis-Hastings algorithm, in this case, the random walk algorithm described in the previous section. Subclassing \verb=MetropolisHastings= is simply a matter of specifying two methods (recall that a method is just a function that belongs to a class) within a new class: \verb=__init__= and \verb=calculate_likelihood=. A blank sampler class would look like:
+Specifying the model stochs and the model likelihood are done by creating a subclass of the main MCMC sampler class in the PyMC module, \verb=MetropolisHastings=. As the name implies, this class is an implementation of a Metropolis-Hastings algorithm, in this case, the random walk algorithm described in the previous section. Subclassing \verb=MetropolisHastings= is simply a matter of specifying two methods (recall that a method is just a function that belongs to a class) within a new class: \verb=__init__= and \verb=calculate_likelihood=. A blank sampler class would look like:
 
 \begin{verbatim}
 class MySampler(MetropolisHastings):
@@ -530,7 +530,7 @@ class MySampler(MetropolisHastings):
         # Initialize superclass by calling its __init__ method
         MetropolisHastings.__init__(self)
 
-        # Next, you would specify parameters and nodes
+        # Next, you would specify stochs and functls
 
     def calculate_likelihood(self):
         # Specify the joint log-likelihood here
@@ -540,37 +540,37 @@ class MySampler(MetropolisHastings):
 
 \end{verbatim}
 
-The \verb=__init__= method is present in all Python classes, whether specified explicitly or not, and is merely a convention for initializing the class. In the case of \verb=MetropolisHastings=, it is used both to initialize parameters and sometimes to import data. Parameters are specified using the \verb=parameter= method.
+The \verb=__init__= method is present in all Python classes, whether specified explicitly or not, and is merely a convention for initializing the class. In the case of \verb=MetropolisHastings=, it is used both to initialize stochs and sometimes to import data. Stochastics are specified using the \verb=stoch= method.
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-sampler.parameter(name, init_val, discrete=False, dist='normal',
+sampler.stoch(name, init_val, discrete=False, dist='normal',
 scale=None, random=False, plot=True)
 \end{verbatim}
 
 \begin{itemize}
 
-\item \verb=name=: A string containing the name of the parameter.
-\item \verb=init_val=: The initial value of the parameter. This may be a scalar- or vector-valued quantity.
-\item \verb=discrete= (optional): Flag for specifying parameter as a discrete variable. Valid values include: True, False.
+\item \verb=name=: A string containing the name of the stoch.
+\item \verb=init_val=: The initial value of the stoch. This may be a scalar- or vector-valued quantity.
+\item \verb=discrete= (optional): Flag for specifying stoch as a discrete variable. Valid values include: True, False.
 \item \verb=dist= (optional): The proposal distribution for the random walk variate. If not specified, it assumes a normal density.
-\item \verb=scale= (optional): A scale parameter associated with the proposal distribution. A larger value confers a larger variance for sampled values. This value will be changed by the algorithm, according to the performance of the sampler.
-\item \verb=random= (optional): Specifies parameter as a random effect, and is therefore not counted in AIC calculations. Defaults to False.
-\item \verb=plot= (optional): Flags parameter for plotting at the end of the MCMC algorithm. Defaults to True, but one may not always want to plot high-dimension parameters.
+\item \verb=scale= (optional): A scale stoch associated with the proposal distribution. A larger value confers a larger variance for sampled values. This value will be changed by the algorithm, according to the performance of the sampler.
+\item \verb=random= (optional): Specifies stoch as a random effect, and is therefore not counted in AIC calculations. Defaults to False.
+\item \verb=plot= (optional): Flags stoch for plotting at the end of the MCMC algorithm. Defaults to True, but one may not always want to plot high-dimension stochs.
 \end{itemize}
 For example, an array of three recapture probabilities might be initialized by the following method call:
 \begin{verbatim}
-self.parameter(name='capture', init_val=[0.5,0.5,0.5])
+self.stoch(name='capture', init_val=[0.5,0.5,0.5])
 \end{verbatim}
 
-Similarly, nodes, which are variables that are calculated rather than sampled, are declared with a much simpler \verb=node= method, taking only a name as an argument:
+Similarly, functls, which are variables that are calculated rather than sampled, are declared with a much simpler \verb=functl= method, taking only a name as an argument:
 \begin{verbatim}
-self.node(name='log_capture')
+self.functl(name='log_capture')
 \end{verbatim}
 
 \section{Likelihood Specification}\label{sec:likelihood_specification}
 
-The \verb=calculate_likelihood= method uses the initialized variables and nodes to evaluate a conditional posterior likelihood used to evaluate the current model parameter values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time.
+The \verb=calculate_likelihood= method uses the initialized variables and functls to evaluate a conditional posterior likelihood used to evaluate the current model stoch values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time.
 
 These suite of available log-likelihood densities include:
 \begin{itemize}
@@ -600,13 +600,13 @@ These suite of available log-likelihood densities include:
 \end{itemize}
 These methods are available to free the user from having to specify common likelihood functions themselves, and more will be added in the future. They are implemented in FORTRAN, and compiled as Python functions in PyMC using f2py, making them very fast. The formulations of each of these likelihoods is shown in Appendix \ref{chap:statistical_likelihoods}.
 
-By default, \verb=MetropolisHastings= implicitly applies uninformative (i.e. uniform) priors to all parameters. Recall the form of the acceptance ratio:
+By default, \verb=MetropolisHastings= implicitly applies uninformative (i.e. uniform) priors to all stochs. Recall the form of the acceptance ratio:
 \[
 a(\theta^{\prime},\theta) = \frac{q_t(\theta^{\prime} | \theta) \pi(\theta^{\prime})}{q_t(\theta | \theta^{\prime}) \pi(\theta)}
 \]
 Note that when $\pi(\theta^{\prime}) = \pi(\theta)$, as is the case for a uniform prior, the acceptance probability reduces to the ratio of the likelihoods.
 
-Users can specify informative priors using any of the available prior methods. For each of the likelihoods outlined above, there is an associated prior. For example, a diffuse gamma prior on some parameter $\theta$ may be specified by:
+Users can specify informative priors using any of the available prior methods. For each of the likelihoods outlined above, there is an associated prior. For example, a diffuse gamma prior on some stoch $\theta$ may be specified by:
 \begin{verbatim}
 self.gamma_prior($\theta$, 0.5, 50)
 \end{verbatim}
@@ -617,7 +617,7 @@ As an example, lets construct a simple hierarchical regression model in PyMC. Co
     y_t &\sim& \mbox{Bin}(N_t, \pi_t) \\
     \mbox{logit}(\pi_t) &=& \beta_0 + \beta_1 x_t
 \end{eqnarray*}
-The first step in PyMC is to specify the parameters of the model in the \verb=__init__= method:
+The first step in PyMC is to specify the stochs of the model in the \verb=__init__= method:
 \begin{verbatim}
 
 class LogisticSampler(MetropolisHastings):
@@ -630,15 +630,15 @@ class LogisticSampler(MetropolisHastings):
         MetropolisHastings.__init__(self)
 
         # Intercept
-        self.parameter('beta0', init_val=0.0)
+        self.stoch('beta0', init_val=0.0)
 
         # Slope
-        self.parameter('beta1', init_val=0.0)
+        self.stoch('beta1', init_val=0.0)
 \end{verbatim}
 Next, code the likelihood in \verb=calculate_likelihood=
 \begin{verbatim}
     def calculate_likelihood(self):
-        # Calculate likelihood, given current parameter values
+        # Calculate likelihood, given current stoch values
 
         # Initialize the likelihood
         like = 0.0
@@ -670,13 +670,13 @@ Notice that the \verb=binomial_like= method contains a name argument, which iden
 \end{verbatim}
 This is a simple 3 $\times$ 10 array, containing the values for $x$, $y$ and $N$.
 
-Once the data has been made available, the parameters initialized, and the likelihood specified, PyMC takes care of the rest. The model may then be loaded and run:
+Once the data has been made available, the stochs initialized, and the likelihood specified, PyMC takes care of the rest. The model may then be loaded and run:
 \begin{verbatim}
 >>> import mymodel
 >>> sampler = mymodel.LogisticSampler()
 >>> sampler.sample(iterations=100000,burn=50000)
 \end{verbatim}
-This creates an instance of the sampler (here called \verb=sampler=) with a burn-in period of 50000, and runs for 100000 iterations. PyMC will not only give parameter estimates with associated variance and quantile values, but will also plot traces and histograms of each parameter and node. There are a number of optional arguments for \verb=sample=.
+This creates an instance of the sampler (here called \verb=sampler=) with a burn-in period of 50000, and runs for 100000 iterations. PyMC will not only give stoch estimates with associated variance and quantile values, but will also plot traces and histograms of each stoch and functl. There are a number of optional arguments for \verb=sample=.
 
 \subsubsection{Method Usage}
 \begin{verbatim}
@@ -706,7 +706,7 @@ divergence_threshold=1e10, verbose=True, plot=True, debug=False):
 
 \section{Sample Code: Coal mining disasters change point model}
 
-Here is an example using real data. The dataset is a time series of recorded coal mining disasters in the UK from 1851 and 1962. Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations. This can be implemented as follows:
+Here is an example using real data. The dataset is a time series of recorded coal mining disasters in the UK from 1851 and 1962. Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate stoch in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations. This can be implemented as follows:
 
 \begin{verbatim}
     class DisasterSampler(MetropolisHastings):
@@ -725,38 +725,38 @@ Here is an example using real data. The dataset is a time series of recorded coa
                 3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1)
 
-            # Switchpoint is specified as a parameter to be estimated
-            self.parameter(name='k', init_val=50, discrete=True)
+            # Switchpoint is specified as a stoch to be estimated
+            self.stoch(name='k', init_val=50, discrete=True)
 
-            # Rate parameters of poisson distributions
-            self.parameter(name='theta', init_val=array([1.0, 1.0]))
+            # Rate stochs of poisson distributions
+            self.stoch(name='theta', init_val=array([1.0, 1.0]))
 
         def calculate_likelihood(self):
             """Likelihood function"""
 
-            # Obtain current values of parameters as local variables
+            # Obtain current values of stochs as local variables
             theta0, theta1 = self.theta
             k = self.k
 
             # Constrain k
             self.constrain(k, 1, len(self.data)-2)
 
-            # Joint likelihood of parameters based on 2 assumed Poisson densities
+            # Joint likelihood of stochs based on 2 assumed Poisson densities
             like += self.poisson_like(self.data[:k], theta0, name='early_mean')
             like += self.poisson_like(self.data[k:], theta1, name='late_mean')
 
             return like
 \end{verbatim}
-Notice that in this example, unlike the parameters in the logistic regression example earlier, the $theta$ parameters are specified together as an array of length 2. This results in block updating for these parameters, whereby new values for both are proposed and evaluated together. Though either parameterization would be effective in this example, block updating can accelerate convergence for parameters that are thought to be highly correlated. Also notice the use of the $constrain$ method in the likelihood. This prevents parameters from assuming values outside of the specified range. In this case, $k$ is constrained to be within the 2nd (index 1) and penultimate elements in the list; this avoids evaluating either likelihood with no observations.
+Notice that in this example, unlike the stochs in the logistic regression example earlier, the $theta$ stochs are specified together as an array of length 2. This results in block updating for these stochs, whereby new values for both are proposed and evaluated together. Though either stochization would be effective in this example, block updating can accelerate convergence for stochs that are thought to be highly correlated. Also notice the use of the $constrain$ method in the likelihood. This prevents stochs from assuming values outside of the specified range. In this case, $k$ is constrained to be within the 2nd (index 1) and penultimate elements in the list; this avoids evaluating either likelihood with no observations.
 
 \section{Model Selection and Random Effects}
 
-PyMC generates two model selection statistics for \verb=MetropolisHastings= models: the Deviance Information Criterion \citep[DIC][]{Spiegelhalter:2002ma} and Akaike’s Information Criterion \citep[AIC][]{Burnham:2002ic}. Both measures use information-theory to give a relative information distance measure from some theoretical, unknown “true” model. Thus, those models with smaller criterion values are thought to be more appropriate models than those with larger values. These criteria balance minimization of model deviance against minimization of the number of parameters included in the model. DIC estimates the “effective” number of parameters, while AIC requires an exact parameter count. For some models (fixed effects), counting parameters is easy, but for models incorporating random effects, it is less clear. One argument simply assumes that individual random effects are not parameters at all, but rather, random draws from populations with their own set of parameters (\emph{i.e.} hyperparameters). To this end, the parameter method allows for a random argument (True or False) that specifies whether the parameter is to be counted as a fixed effect, or not counted, as a random effect.
+PyMC generates two model selection statistics for \verb=MetropolisHastings= models: the Deviance Information Criterion \citep[DIC][]{Spiegelhalter:2002ma} and Akaike’s Information Criterion \citep[AIC][]{Burnham:2002ic}. Both measures use information-theory to give a relative information distance measure from some theoretical, unknown “true” model. Thus, those models with smaller criterion values are thought to be more appropriate models than those with larger values. These criteria balance minimization of model deviance against minimization of the number of stochs included in the model. DIC estimates the “effective” number of stochs, while AIC requires an exact stoch count. For some models (fixed effects), counting stochs is easy, but for models incorporating random effects, it is less clear. One argument simply assumes that individual random effects are not stochs at all, but rather, random draws from populations with their own set of stochs (\emph{i.e.} hyperstochs). To this end, the stoch method allows for a random argument (True or False) that specifies whether the stoch is to be counted as a fixed effect, or not counted, as a random effect.
 \begin{verbatim}
-self.parameter(name='epsilon', init_val=resize([0.0],100), random=True)
+self.stoch(name='epsilon', init_val=resize([0.0],100), random=True)
 \end{verbatim}
 
-In this example, a 100-element random effect is specified. In turn, this random effect will be modeled as following some distribution (say, normal) with its own location and scale parameters. Thus, AIC will be calculated based on 2 parameters, not 102.
+In this example, a 100-element random effect is specified. In turn, this random effect will be modeled as following some distribution (say, normal) with its own location and scale stochs. Thus, AIC will be calculated based on 2 stochs, not 102.
 
 \section{Exporting Output Statistics}
 
@@ -781,7 +781,7 @@ Valid inferences from sequences of MCMC samples are based on the assumption that
 
 One approach to analyzing convergence is analytical, whereby the variance of the sample at different sections of the chain are compared to that of the limiting distribution. These methods use distance metrics to analyze convergence, or place theoretical bounds on the sample variance, and though they are promising, they are generally difficult to use and are not prominent in the MCMC literature. More common is a statistical approach to assessing convergence. With this approach, rather than considering the properties of the theoretical target distribution, only the statistical properties of the observed chain are analyzed. Reliance on the sample alone restricts such convergence criteria to heuristics; that is, convergence cannot be guaranteed. Although evidence for lack of convergence using statistical convergence diagnostics will correctly imply lack of convergence in the chain, the absence of such evidence will not \emph{guarantee} convergence in the chain. Nevertheless, negative results for one or more criteria will provide some measure of assurance to most users that their sample will provide valid inferences.
 
-For most simple models, convergence will occur quickly, sometimes within a the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor mixing (Figure \ref{fig:mix}). Recall that \emph{mixing} refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated parameters.
+For most simple models, convergence will occur quickly, sometimes within a the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor mixing (Figure \ref{fig:mix}). Recall that \emph{mixing} refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated stochs.
 
 \begin{figure}[ht]
 \begin{center}
@@ -793,19 +793,19 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 \section*{Informal Methods}
 
-The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the parameters exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$; if the histograms are not visibly different among the sample intervals, this is reasonable evidence for convergence. Note that such diagnostics should be carried out for each parameter estimated by the MCMC algorithm, because convergent behaviour by one parameter does not imply evidence for convergence for other parameters in the analysis. An extension of this approach can me taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
+The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the stochs exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$; if the histograms are not visibly different among the sample intervals, this is reasonable evidence for convergence. Note that such diagnostics should be carried out for each stoch estimated by the MCMC algorithm, because convergent behaviour by one stoch does not imply evidence for convergence for other stochs in the analysis. An extension of this approach can me taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[height=3in]{metastable.png}
-\caption{An example of metastability in a two-dimensional parameter space. The chain appears to be stable in one region of the parameter space for an extended period, then unpredictably jumps to another region of the space.}
+\caption{An example of metastability in a two-dimensional stoch space. The chain appears to be stable in one region of the stoch space for an extended period, then unpredictably jumps to another region of the space.}
 \label{fig:metas}
 \end{center}
 \end{figure}
 
 Another \emph{ad hoc} method for detecting convergence is to examine the traces of several MCMC chains initialized with different starting values. Overlaying these traces on the same set of axes should (if convergence has occurred) show each chain tending toward the same equilibrium value, with approximately the same variance. Recall that the tendency for some Markov chains to converge to the true (unknown) value from diverse initial values is called \emph{ergodicity}. This property is guaranteed by the reversible chains constructed using MCMC, and should be observable using this technique. Again, however, this approach is only a heuristic method, and cannot always detect lack of convergence, even though chains may appear ergodic.
 
-A principle reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the parameter space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
+A principle reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the stoch space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
 
 \section*{Formal Methods}
 
@@ -815,7 +815,7 @@ PyMC includes one formal convergence diagnostic method, first proposed by \citet
 \begin{equation}
 z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 \end{equation}
-where $a$ is the early interval and $b$ the late interval. If the z-scores of these two segments are similar, it can provide evidence for convergence. PyMC plots the z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. Calling the convergence method results in a diagnostic plot for each model parameter.
+where $a$ is the early interval and $b$ the late interval. If the z-scores of these two segments are similar, it can provide evidence for convergence. PyMC plots the z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. Calling the convergence method results in a diagnostic plot for each model stoch.
 
 \subsubsection{Method Usage}
 \begin{verbatim}
@@ -856,7 +856,7 @@ Calling \verb=coda_output= yields a \verb=.out= file containing raw trace values
 
 \section{Goodness-of-Fit}
 
-PyMC provides a flexible method for assessing goodness-of-fit (GOF) of models following MCMC estimation. Following \citet{Gelman:1996gp}, the \verb=goodness= method from the \verb=MetropolisHastings= sampler assesses GOF using a simple discrepancy measure for each component of the likelihood. This measure compares the deviance of the data from the expected parameter values to deviance of simulated data from the expected parameter values. Data are simulated based on samples from the trace of all the parameters. These observed and simulated deviances are plotted against one another to yield GOF plots:
+PyMC provides a flexible method for assessing goodness-of-fit (GOF) of models following MCMC estimation. Following \citet{Gelman:1996gp}, the \verb=goodness= method from the \verb=MetropolisHastings= sampler assesses GOF using a simple discrepancy measure for each component of the likelihood. This measure compares the deviance of the data from the expected stoch values to deviance of simulated data from the expected stoch values. Data are simulated based on samples from the trace of all the stochs. These observed and simulated deviances are plotted against one another to yield GOF plots:
 
 Evidence for lack of fit is apparent when points do not fall on either side of the diagonal in approximately the same numbers; the example above shows very good fit. One plot is generated for every component of the likelihood bearing the same name. Additionally, PyMC reports a GOF statistic (which some authors regrettably call the Bayesian $p$-value), which is simply the proportion of points where the simulated deviance is greater than the observed deviance. This value should be close to 0.5 for a well-fit model.
 
@@ -890,13 +890,13 @@ Samples from MCMC algorithms are ususally autocorrelated, due partly to the inhe
     \rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
             &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
-The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each parameter in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
+The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each stoch in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
 
 \begin{figure}[htbp]
         \begin{center}
         \includegraphics[scale=0.4]{autocorr.png}
     \end{center}
-    \caption{Sample autocorrelation plots for two Poisson parameters from coal mining disasters example model.}
+    \caption{Sample autocorrelation plots for two Poisson stochs from coal mining disasters example model.}
     \label{fig:autocorr}
 \end{figure}
 

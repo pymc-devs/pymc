@@ -74,7 +74,7 @@ class Database(object):
         
         If database is loaded from a file, restore the objects trace 
         to their stored value, if a new database is created, instantiate
-        a Trace for the PyMC objects to tally.
+        a Trace for the nodes to tally.
         """
         # Changed this to allow non-Model models. -AP
         if isinstance(model, PyMC2.Model):
@@ -106,11 +106,11 @@ class Database(object):
         
     def savestate(self, state):
         """Store a dictionnary containing the state of the Model and its 
-        SamplingMethods."""
+        StepMethods."""
         self._state_ = state
         
     def getstate(self):
         """Return a dictionary containing the state of the Model and its 
-        SamplingMethods."""
+        StepMethods."""
         return getattr(self, '_state_', {})
         

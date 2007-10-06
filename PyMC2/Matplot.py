@@ -259,7 +259,7 @@ class centered_envelope(object):
 
 class Plotter:
     """
-    Class with methods for generating all summary plots for PyMC objects.
+    Class with methods for generating all summary plots for nodes.
     
     :Arguments:
         format: Graphic output format (defaults to png).
@@ -285,7 +285,7 @@ class Plotter:
     
     def plot(self, pymc_object, suffix=''):
         """ 
-        Plots summary of parameter/node trace, including trace and histogram.
+        Plots summary of stoch/functl trace, including trace and histogram.
         
         :Arguments:
             pymc_object: PyMCObject
@@ -545,39 +545,39 @@ class Plotter:
                 #close()
     
     # TODO: make sure pair_posterior works.
-    def pair_posterior(self, pymc_objects, mask=None, trueval=None, fontsize=8, suffix='', new=True):
+    def pair_posterior(self, nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True):
         """
-        pair_posterior(pymc_objects, clear=True, mask=None, trueval=None)
+        pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
         :Arguments:
-        pymc_objects:       An iterable containing parameter objects with traces.
-        mask:       A dictionary, indexed by parameter, of boolean-valued
-                    arrays. If mask[p][index]=False, parameter p's value
+        nodes:       An iterable containing stoch objects with traces.
+        mask:       A dictionary, indexed by stoch, of boolean-valued
+                    arrays. If mask[p][index]=False, stoch p's value
                     at that index will be included in the plot.
-        trueval:    The true values of parameters (useful for summarizing
+        trueval:    The true values of stochs (useful for summarizing
                     performance with simulated data).
 
         Produces a matrix of plots. On the diagonals are the marginal
-        posteriors of the parameters, subject to the masks. On the
+        posteriors of the stochs, subject to the masks. On the
         off-diagonals are the marginal pairwise posteriors of the
-        parameters, subject to the masks.
+        stochs, subject to the masks.
         """
 
-        pymc_objects = list(pymc_objects)
+        nodes = list(nodes)
 
         if mask is not None:
             mask={}
-            for p in pymc_objects:
+            for p in nodes:
                 mask[p] = None
 
         if trueval is not None:
             trueval={}
-            for p in pymc_objects:
+            for p in nodes:
                 trueval[p] = None
 
-        np=len(pymc_objects)
+        np=len(nodes)
         ns = {}
-        for p in pymc_objects:
+        for p in nodes:
             if not p.value.shape:
                 ns[p] = 1
             else:
@@ -591,7 +591,7 @@ class Plotter:
         cum_indices={}
 
 
-        for p in pymc_objects:
+        for p in nodes:
 
             tracelen[p] = p.trace().shape[0]
             ravelledtrace[p] = p.trace().reshape((tracelen[p],-1))
@@ -624,7 +624,7 @@ class Plotter:
             figure(figsize = (10,10))
 
         n = index_now+1
-        for p in pymc_objects:
+        for p in nodes:
             for j in range(len(indices[p])):
                 # Marginals
                 ax=subplot(n,n,(cum_indices[p][j])*(n+1)+1)
@@ -634,13 +634,13 @@ class Plotter:
                 xlabel(titles[p][j],size=fontsize)
 
         # Bivariates
-        for i in range(len(pymc_objects)-1):
-            p0 = pymc_objects[i]
+        for i in range(len(nodes)-1):
+            p0 = nodes[i]
             for j in range(len(indices[p0])):
                 p0_i = indices[p0][j]
                 p0_ci = cum_indices[p0][j]
-                for k in range(i,len(pymc_objects)):
-                    p1=pymc_objects[k]
+                for k in range(i,len(nodes)):
+                    p1=nodes[k]
                     if i==k:
                         l_range = range(j+1,len(indices[p0]))
                     else:
@@ -665,7 +665,7 @@ class Plotter:
                         ylabel(titles[p0][j],size=fontsize)
 
         plotname = ''
-        for obj in pymc_objects:
+        for obj in nodes:
             plotname += obj.__name__ + ''
         if not os.path.exists(self._plotpath):
             os.mkdir(self._plotpath)

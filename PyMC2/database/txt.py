@@ -15,7 +15,7 @@ class Trace(ram.Trace):
         path = os.path.join(self.db.dir, self.obj.__name__+'.txt')
         arr = self.gettrace()
         f = open(path, 'w')
-        print >> f, '# Parameter %s' % self.obj.__name__
+        print >> f, '# Stochastic %s' % self.obj.__name__
         print >> f, '# Burned: %d, thinned= %d' % \
             (self.db.model._burn, self.db.model._thin)
         print >> f, '# Sample shape: %s' % str(arr.shape)

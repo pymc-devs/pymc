@@ -60,7 +60,7 @@ class Database(base.Database):
         
         If database is loaded from a file, restore the objects trace 
         to their stored value, if a new database is created, instantiate
-        a Trace for the PyMC objects to tally.
+        a Trace for the nodes to tally.
         """
         base.Database.connect(self, sampler)
         self.choose_name(extension='pickle')

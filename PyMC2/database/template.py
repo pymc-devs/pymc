@@ -14,10 +14,10 @@ class Trace(object):
       - _finalize(self)
       
     This class is initialized when a Model is instantiated ; a Trace instance 
-    is attributed to each traceable Node and Parameter:
+    is attributed to each traceable Functional and Stochastic:
     
     .. python::
-        for object in self.parameters | self.nodes :
+        for object in self.stochs | self.functls :
             if object.trace:
                 object.trace = module.Trace(object, self.db)
     
@@ -32,8 +32,8 @@ class Trace(object):
         """This is called at Model instantiation time by method 
         `_assign_database_backend`.
         
-        :Parameters:
-          - `object` : PyMC object (Node or Parameter) instance to be tallied.
+        :Stochastics:
+          - `object` : PyMC object (Functional or Stochastic) instance to be tallied.
           - `database` : The Model's Database instance. 
         """
         pass
@@ -57,7 +57,7 @@ class Trace(object):
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace. 
         
-        :Parameters:
+        :Stochastics:
           - burn (int): The number of transient steps to skip.
           - thin (int): Keep one in thin.
           - chain (int): The index of the chain to fetch. If None, return all chains.

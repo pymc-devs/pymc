@@ -1,5 +1,5 @@
-# from PyMCObjects import ParameterBase, NodeBase, PotentialBase
-from PyMCBase import PyMCBase, ContainerBase, Variable, ParameterBase, NodeBase, PotentialBase, SamplingMethodBase
+# from PyMCObjects import StochasticBase, FunctionalBase, PotentialBase
+from Node import Node, ContainerBase, Variable, StochasticBase, FunctionalBase, PotentialBase, StepMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
 from Container_values import LTCValue, DCValue, ACValue, OCValue
@@ -8,7 +8,7 @@ from types import ModuleType
 def filter_dict(obj):
     filtered_dict = {}
     for item in obj.__dict__.iteritems():
-        if isinstance(item[1], PyMCBase) or isinstance(item[1], ContainerBase):
+        if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
 
@@ -31,7 +31,7 @@ def Container(*args):
     
     Example:
     
-        @parameter
+        @stochastic
         def A(value=0., mu=3, tau=2):
             return normal_like(value, mu, tau)
         
@@ -43,13 +43,13 @@ def Container(*args):
         C[1] = C.value[1] = 15.2
     
     
-    The primary reason containers exist is to allow parameters to have large
+    The primary reason containers exist is to allow stochs to have large
     sets of parents without the need to refer to each of the parents by name.
     Example:
     
         x = []
     
-        @parameter
+        @stochastic
         def x_0(value=0, mu=0, tau=2):
             return normal_like(value, mu, tau)
     
@@ -57,7 +57,7 @@ def Container(*args):
         last_x = x_0
     
         for i in range(1,N):          
-            @parameter
+            @stochastic
             def x_now(value=0, mu = last_x, tau=2):
                 return normal_like(value, mu, tau)
                 
@@ -66,7 +66,7 @@ def Container(*args):
         
             x.append(x_now)
         
-        @parameter
+        @stochastic
         def y(value=0, mu = x, tau = 100):
 
             mean_sum = 0
@@ -76,7 +76,7 @@ def Container(*args):
             return normal_like(value, mean_sum, tau)
         
     x.value will be passed into y's log-probability function as argument mu, 
-    so mu[i] will return x.value[i] = x[i].value. Parameter y
+    so mu[i] will return x.value[i] = x[i].value. Stochastic y
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
     
@@ -123,13 +123,13 @@ def file_items(container, iterable):
     
     # all_objects needs to be a list because some may be unhashable.
     container.all_objects = []
-    container.pymc_objects = set()
-    container.variables = set()
     container.nodes = set()
-    container.parameters = set()
+    container.variables = set()
+    container.functls = set()
+    container.stochs = set()
     container.potentials = set()
     container.data = set()
-    container.sampling_methods = set()
+    container.step_methods = set()
     # containers needs to be a list too.
     container.containers = []
     
@@ -154,43 +154,43 @@ def file_items(container, iterable):
             # iterable's. This process recursively unpacks nested iterables.
             container.containers.append(new_container)
             container.variables.update(new_container.variables)
-            container.parameters.update(new_container.parameters)
+            container.stochs.update(new_container.stochs)
             container.potentials.update(new_container.potentials)
-            container.nodes.update(new_container.nodes)
+            container.functls.update(new_container.functls)
             container.data.update(new_container.data)
-            container.sampling_methods.update(new_container.sampling_methods)
+            container.step_methods.update(new_container.step_methods)
 
         else:
             
             # If the item isn't iterable, file it away.
             if isinstance(item, Variable):
                 container.variables.add(item)
-                if isinstance(item, ParameterBase):
+                if isinstance(item, StochasticBase):
                     if item.isdata:
                         container.data.add(item)
                     else:
-                        container.parameters.add(item)
-                elif isinstance(item, NodeBase):
-                    container.nodes.add(item)
+                        container.stochs.add(item)
+                elif isinstance(item, FunctionalBase):
+                    container.functls.add(item)
             elif isinstance(item, PotentialBase):
                 container.potentials.add(item)
-            elif isinstance(item, SamplingMethodBase):
-                container.sampling_methods.add(item)
+            elif isinstance(item, StepMethodBase):
+                container.step_methods.add(item)
         i += 1
 
-    container.pymc_objects = container.potentials | container.variables
+    container.nodes = container.potentials | container.variables
     
     container.parents = {}
-    for pymc_object in container.pymc_objects:
+    for pymc_object in container.nodes:
         for key in pymc_object.parents.keys():
             if isinstance(pymc_object.parents[key],Variable):
-                if not pymc_object.parents[key] in container.pymc_objects:
+                if not pymc_object.parents[key] in container.nodes:
                     container.parents[pymc_object.__name__ + '_' + key] = pymc_object.parents[key]
                 
     container.children = set()
     for variable in container.variables:
         for child in variable.children:
-            if not child in container.pymc_objects:
+            if not child in container.nodes:
                 container.children.add(child)
     
     
@@ -308,7 +308,7 @@ class ObjectContainer(ContainerBase):
             self.__dict__.update(input)
         elif hasattr(input,'__iter__'):
             for item in input:
-                if isinstance(item, PyMCBase) or isinstance(item, ContainerBase):
+                if isinstance(item, Node) or isinstance(item, ContainerBase):
                     self.__dict__[item.__name__] = item
         else:
             input_dict = filter_dict(input)

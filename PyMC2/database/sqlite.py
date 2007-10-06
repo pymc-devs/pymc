@@ -109,7 +109,7 @@ class Database(pickle.Database):
         
         If database is loaded from a file, restore the objects trace 
         to their stored value, if a new database is created, instantiate
-        a Trace for the PyMC objects to tally.
+        a Trace for the nodes to tally.
         """
         base.Database.connect(self, sampler)
         self.choose_name('sqlite')
@@ -122,13 +122,13 @@ class Database(pickle.Database):
         self.DB.close()
 
 # TODO: Code savestate and getstate to enable storing of the model's state.
-# state is a dictionary with two keys: sampler and sampling_methods.
+# state is a dictionary with two keys: sampler and step_methods.
 # state['sampler'] is another dictionary containing information about
 # the sampler's state (_current_iter, _iter, _burn, etc.)
-# state['sampling_methods'] is a dictionary with keys refering to ids for
+# state['step_methods'] is a dictionary with keys refering to ids for
 # each samplingmethod defined in sampler. 
 # Each id refers to another dictionary containing the state of the 
-# sampling method. 
+# step method. 
 # To do this efficiently, we would need functions that stores and retrieves 
 # a dictionary to and from a sqlite database. Unfortunately, I'm not familiar with 
 # SQL enough to do that without having to read too much SQL documentation 
@@ -136,12 +136,12 @@ class Database(pickle.Database):
 
     def savestate(self, state):
         """Store a dictionnary containing the state of the Sampler and its 
-        SamplingMethods."""
+        StepMethods."""
         pass
                 
     def getstate(self):
         """Return a dictionary containing the state of the Sampler and its 
-        SamplingMethods."""
+        StepMethods."""
         return {}
 
 def load(filename):

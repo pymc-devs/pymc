@@ -56,7 +56,7 @@ Faster distributions by an optimization of the Fortran functions,
 Added a Joint Metropolis and a Gibbs sampler,
 
 \item {} 
-Define your problem in a separate file using the Node, Data and Parameter
+Define your problem in a separate file using the Functional, Data and Stochastic
 classes. Use decorators to improve code readability.
 
 \item {} 
@@ -90,8 +90,8 @@ S~=~PyMC.Sampler(problem{\_}definition,~db='pickle')~\\
 S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 
-where problem{\_}definition is a module or a dictionary containing Node, Data and
-Parameter instances defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
+where problem{\_}definition is a module or a dictionary containing Functional, Data and
+Stochastic instances defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
 complete description of the package, classes and some examples to get started.
 
 

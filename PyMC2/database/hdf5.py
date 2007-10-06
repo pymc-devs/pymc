@@ -93,13 +93,13 @@ class Database(pickle.Database):
     """HDF5 database
 
     Create an HDF5 file <model>.h5. Each chain is stored in a group, and the
-    parameters and nodes are stored as arrays in each group.
+    stochs and functls are stored as arrays in each group.
 
     """
     def __init__(self, filename=None, complevel=0, complib='zlib'):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
-        :Parameters:
+        :Stochastics:
           filename : string
             Specify the name of the file the results are stored in. 
           complevel : integer (0-9)
@@ -124,7 +124,7 @@ class Database(pickle.Database):
         
         If database is loaded from a file, restore the objects trace 
         to their stored value, if a new database is created, instantiate
-        a Trace for the PyMC objects to tally.
+        a Trace for the nodes to tally.
         """
         base.Database.connect(self, sampler)
         self.choose_name('hdf5')
@@ -135,12 +135,12 @@ class Database(pickle.Database):
         root = self._h5file.root
         #try:
         #    self.main = self.h5file.createGroup(root, "main")
-        #except tables.exceptions.NodeError:
+        #except tables.exceptions.FunctionalError:
         #    pass
         
     def _initialize(self, length):
         """Create group for the current chain."""
-        i = len(self._h5file.listNodes('/'))+1
+        i = len(self._h5file.listFunctionals('/'))+1
         self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
         self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter, expectedrows=length)
@@ -183,7 +183,7 @@ class Database(pickle.Database):
         chain : scalar or sequence.
         """
         
-        groups = self._h5file.listNodes("/")
+        groups = self._h5file.listFunctionals("/")
         nchains = len(groups)    
         if chain == -1:
             chains = [nchains-1]    # Index of last group
@@ -243,7 +243,7 @@ def load(filename, mode='a'):
             setattr(o, 'db', db)
     for k in db._table.attrs._v_attrnamesuser:
         setattr(db, k, getattr(db._table.attrs, k))
-    for k in db._group._f_listNodes():
+    for k in db._group._f_listFunctionals():
         if k.__class__ is not tables.table.Table:
             setattr(db, k.name, k)
     return db
@@ -251,5 +251,5 @@ def load(filename, mode='a'):
 ##    groups = db._h5file.root._g_listGroup()[0]
 ##    groups.sort()
 ##    last_chain = '/'+groups[-1]
-##    db._table = db._h5file.getNode(last_chain, 'PyMCsamples')
+##    db._table = db._h5file.getFunctional(last_chain, 'PyMCsamples')
 

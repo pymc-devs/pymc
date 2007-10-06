@@ -5,73 +5,73 @@ from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from PyMCObjects import Parameter, Node, PyMCBase, DiscreteParameter, BinaryParameter, Potential
-from PyMCBase import ZeroProbability, PyMCBase, Variable, SamplingMethodBase, ParameterBase
+from PyMCObjects import Stochastic, Functional, Node, DiscreteStochastic, BinaryStochastic, Potential
+from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
 
 # Changeset history
-# 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the sampling method, and a method to return that state in a dict. Added an id.
-# TODO: Make the competences attributes of the sampling methods, the code will be cleaner.
+# 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
+# TODO: Make the competences attributes of the step methods, the code will be cleaner.
 # TODO: Test cases for binary and discrete Metropolises.
 
-__all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'SamplingMethod', 'assign_method', 
+__all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method', 
 'pick_best_methods']
 
 class DictWithDoc(dict):
     """
-    The sampling method registry is a dictionary mapping each
-    sampling method to its competence function. Competence
+    The step method registry is a dictionary mapping each
+    step method to its competence function. Competence
     functions must be of the form
     
-    c = competence(parameter),
+    c = competence(stoch),
     
-    where parameter is a Parameter object. c should be a competence
+    where stoch is a Stochastic object. c should be a competence
     score from 0 to 3, assigned as follows:
     
-    0:  I can't handle that parameter.
-    1:  I can handle that parameter, but I'm a generalist and
+    0:  I can't handle that stoch.
+    1:  I can handle that stoch, but I'm a generalist and
         probably shouldn't be your top choice (Metropolis
         and friends fall into this category).
     2:  I'm designed for this type of situation, but I could be
         more specialized.
-    3:  I was made for this situation, let me handle the parameter.
+    3:  I was made for this situation, let me handle the stoch.
     
     In order to be eligible for inclusion in the registry, a sampling
     method's init method must work with just a single argument, a
-    Parameter object.
+    Stochastic object.
     
     :SeeAlso: blacklist, pick_best_methods, assign_method
     """
     pass
 
-SamplingMethodRegistry = DictWithDoc()
+StepMethodRegistry = DictWithDoc()
 
-def blacklist(parameter):
+def blacklist(stoch):
     """
-    If you want to exclude a particular sampling method from
-    consideration for handling a parameter, do this:
+    If you want to exclude a particular step method from
+    consideration for handling a stoch, do this:
     
-    from PyMC2 import SamplingMethodRegistry
-    SamplingMethodRegistry[bad_sampling_method] = blacklist
+    from PyMC2 import StepMethodRegistry
+    StepMethodRegistry[bad_step_method] = blacklist
     """
     return 0
 
-def pick_best_methods(parameter):
+def pick_best_methods(stoch):
     """
-    Picks the SamplingMethods best suited to handle
-    a parameter.
+    Picks the StepMethods best suited to handle
+    a stoch.
     """
     
     # Keep track of most competent methohd
     max_competence = 0
-    # Empty set of appropriate SamplingMethods
+    # Empty set of appropriate StepMethods
     best_candidates = set([])
     
-    # Loop over SamplingMethodRegistry
-    for item in SamplingMethodRegistry.iteritems():
+    # Loop over StepMethodRegistry
+    for item in StepMethodRegistry.iteritems():
         
         # Parse method and its associated competence
         method = item[0]
-        competence = item[1](parameter)
+        competence = item[1](stoch)
         
         # If better than current best method, promote it
         if competence > max_competence:
@@ -82,33 +82,33 @@ def pick_best_methods(parameter):
         elif competence == max_competence:
             best_candidates.add(method)
     
-    # print parameter.__name__ + ': ', best_candidates, ' ', max_competence
+    # print stoch.__name__ + ': ', best_candidates, ' ', max_competence
     return best_candidates
 
-def assign_method(parameter, scale=None):
+def assign_method(stoch, scale=None):
     """
-    Returns a sampling method instance to handle a
-    parameter. If several methods have the same competence,
+    Returns a step method instance to handle a
+    stoch. If several methods have the same competence,
     it picks one arbitrarily (using set.pop()).
     """
     
     # Retrieve set of best candidates
-    best_candidates = pick_best_methods(parameter)
+    best_candidates = pick_best_methods(stoch)
     
     # Randomly grab and appropriate method
     method = best_candidates.pop()
     
     if scale:
-        return method(parameter = parameter, scale = scale)
+        return method(stoch = stoch, scale = scale)
     
-    return method(parameter = parameter)
+    return method(stoch = stoch)
 
-class SamplingMethod(SamplingMethodBase):
+class StepMethod(StepMethodBase):
     """
-    This object knows how to make Parameters take single MCMC steps.
+    This object knows how to make Stochastics take single MCMC steps.
     It's sample() method will be called by Model at every MCMC iteration.
     
-    :Parameters:
+    :Stochastics:
           -variables : list, array or set
             Collection of PyMCObjects
           
@@ -116,34 +116,34 @@ class SamplingMethod(SamplingMethodBase):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     Externally-accessible attributes:
-      nodes: The Nodes over which self has jurisdiction.
-      parameters: The Parameters over which self has jurisdiction which have isdata = False.
-      data: The Parameters over which self has jurisdiction which have isdata = True.
-      variables: The Nodes and Parameters over which self has jurisdiction.
-      children: The combined children of all PyMCBases over which self has jurisdiction.
-      parents: The combined parents of all PyMCBases over which self has jurisdiction, as a set.
-      loglike: The summed log-probability of self's children conditional on all of self's PyMCBases' current values. These will be recomputed only as necessary. This descriptor should eventually be written in C.
+      functls: The Functionals over which self has jurisdiction.
+      stochs: The Stochastics over which self has jurisdiction which have isdata = False.
+      data: The Stochastics over which self has jurisdiction which have isdata = True.
+      variables: The Functionals and Stochastics over which self has jurisdiction.
+      children: The combined children of all Nodes over which self has jurisdiction.
+      parents: The combined parents of all Nodes over which self has jurisdiction, as a set.
+      loglike: The summed log-probability of self's children conditional on all of self's Nodes' current values. These will be recomputed only as necessary. This descriptor should eventually be written in C.
     
     Externally accesible methods:
-      sample(): A single MCMC step for all the Parameters over which self has jurisdiction. Must be overridden in subclasses.
-      tune(): Tunes proposal distribution widths for all self's Parameters.
+      sample(): A single MCMC step for all the Stochastics over which self has jurisdiction. Must be overridden in subclasses.
+      tune(): Tunes proposal distribution widths for all self's Stochastics.
 
     
-    To instantiate a SamplingMethod called S with jurisdiction over a
-    sequence/set N of PyMCBases:
+    To instantiate a StepMethod called S with jurisdiction over a
+    sequence/set N of Nodes:
       
-      >>> S = SamplingMethod(N)
+      >>> S = StepMethod(N)
     
     :SeeAlso: Metropolis, Sampler.
     """
     
     def __init__(self, variables, verbose=0):
-        # SamplingMethod initialization
+        # StepMethod initialization
         
         # Initialize public attributes
         self.variables = set(variables)
-        self.nodes = set()
-        self.parameters = set()
+        self.functls = set()
+        self.stochs = set()
         self.data = set()
         self.children = set()
         self.parents = set()
@@ -159,13 +159,13 @@ class SamplingMethod(SamplingMethodBase):
         for variable in self.variables:
             
             # Sort.
-            if isinstance(variable,Node):
-                self.nodes.add(variable)
-            elif isinstance(variable,Parameter):
+            if isinstance(variable,Functional):
+                self.functls.add(variable)
+            elif isinstance(variable,Stochastic):
                 if variable.isdata:
                     self.data.add(variable)
                 else:
-                    self.parameters.add(variable)
+                    self.stochs.add(variable)
         
         # Find children, no need to find parents; each variable takes care of those.
         for variable in self.variables:
@@ -174,14 +174,14 @@ class SamplingMethod(SamplingMethodBase):
                 if isinstance(parent, Variable):
                     self.parents.add(parent)
         
-        # Find nearest descendent Parameters
+        # Find nearest descendent Stochastics
         self.children = extend_children(self.children)
-        # Find nearest parent Parameters
+        # Find nearest parent Stochastics
         self.parents = extend_parents(self.parents)
         
         # Remove own PyMCObjects from set of children
-        self.children -= self.nodes
-        self.children -= self.parameters
+        self.children -= self.functls
+        self.children -= self.stochs
         self.children -= self.data
         
         # ID string for verbose feedback
@@ -189,7 +189,7 @@ class SamplingMethod(SamplingMethodBase):
     
     def step(self):
         """
-        Specifies single step of sampling method.
+        Specifies single step of step method.
         Must be overridden in subclasses.
         """
         pass
@@ -197,7 +197,7 @@ class SamplingMethod(SamplingMethodBase):
     
     def tune(self, divergence_threshold=1e10, verbose=0):
         """
-        Tunes the scaling hyperparameter for the proposal distribution
+        Tunes the scaling hyperstoch for the proposal distribution
         according to the acceptance rate of the last k proposals:
         
         Rate    Variance adaptation
@@ -263,7 +263,7 @@ class SamplingMethod(SamplingMethodBase):
         
         # More verbose feedback, if requested
         if verbose > 1 or self.verbose > 1:
-            print '\t\tvalue:', self.parameter.value
+            print '\t\tvalue:', self.stoch.value
             print '\t\tacceptance rate:', acc_rate
             print '\t\tadaptive scale factor:', self._asf
             print
@@ -298,29 +298,29 @@ class SamplingMethod(SamplingMethodBase):
     
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
-        the state of the sampling method."""
+        the state of the step method."""
         state = {}
         for s in self._state:
             state[s] = getattr(self, s)
         return state
 
-# The default SamplingMethod, which Model uses to handle singleton parameters.
-class Metropolis(SamplingMethod):
+# The default StepMethod, which Model uses to handle singleton stochs.
+class Metropolis(StepMethod):
     """
-    The default SamplingMethod, which Model uses to handle singleton, continuous parameters.
+    The default StepMethod, which Model uses to handle singleton, continuous stochs.
     
-    Applies the one-at-a-time Metropolis-Hastings algorithm to the Parameter over which self has jurisdiction.
+    Applies the one-at-a-time Metropolis-Hastings algorithm to the Stochastic over which self has jurisdiction.
     
-    To instantiate a Metropolis called M with jurisdiction over a Parameter P:
+    To instantiate a Metropolis called M with jurisdiction over a Stochastic P:
       
       >>> M = Metropolis(P, scale=1, dist=None)
     
     :Arguments:
-    - parameter : Parameter
-            The parameter over which self has jurisdiction.
+    - stoch : Stochastic
+            The stoch over which self has jurisdiction.
     
     - scale (optional) : number
-            The proposal jump width is set to scale * parameter.value.
+            The proposal jump width is set to scale * stoch.value.
     
     - dist (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
@@ -330,34 +330,34 @@ class Metropolis(SamplingMethod):
     - verbose (optional) : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
-    :SeeAlso: SamplingMethod, Sampler.
+    :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, parameter, scale=1., dist=None, verbose=0):
+    def __init__(self, stoch, scale=1., dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
-        SamplingMethod.__init__(self, [parameter], verbose=verbose)
+        StepMethod.__init__(self, [stoch], verbose=verbose)
         
         # Set public attributes
-        self.parameter = parameter
+        self.stoch = stoch
         self.verbose = verbose
         
         # Avoid zeros when setting proposal variance
-        if all(self.parameter.value != 0.):
-            self.proposal_sig = ones(shape(self.parameter.value)) * abs(self.parameter.value) * scale
+        if all(self.stoch.value != 0.):
+            self.proposal_sig = ones(shape(self.stoch.value)) * abs(self.stoch.value) * scale
         else:
-            self.proposal_sig = ones(shape(self.parameter.value)) * scale
+            self.proposal_sig = ones(shape(self.stoch.value)) * scale
         
         # Initialize proposal deviate with array of zeros
-        self.proposal_deviate = zeros(shape(self.parameter.value), dtype=float)
+        self.proposal_deviate = zeros(shape(self.stoch.value), dtype=float)
         
         # Initialize verbose feedback string
-        self._id = parameter.__name__
+        self._id = stoch.__name__
         
-        # Determine size of parameter
-        if isinstance(self.parameter.value, ndarray):
-            self._len = len(self.parameter.value.ravel())
+        # Determine size of stoch
+        if isinstance(self.stoch.value, ndarray):
+            self._len = len(self.stoch.value.ravel())
         else:
             self._len = 1
         
@@ -367,10 +367,10 @@ class Metropolis(SamplingMethod):
             # Pick Gaussian, just because
             self._dist = "Normal"
             
-            # If self's extended children has no parameters, proposing from the prior is best.
-            if sum([isinstance(child, ParameterBase) for child in self.children]) == 0:
+            # If self's extended children has no stochs, proposing from the prior is best.
+            if sum([isinstance(child, StochasticBase) for child in self.children]) == 0:
                 try:
-                    self.parameter.random()
+                    self.stoch.random()
                     self._dist = "Prior"
                 except:
                     pass
@@ -380,11 +380,11 @@ class Metropolis(SamplingMethod):
     
     def step(self):
         """
-        The default step method applies if the parameter is floating-point
+        The default step method applies if the stoch is floating-point
         valued, and is not being proposed from its prior.
         """
         
-        # Probability and likelihood for parameter's current value:
+        # Probability and likelihood for stoch's current value:
         
         if self.verbose > 2:
             print
@@ -394,7 +394,7 @@ class Metropolis(SamplingMethod):
             # No children
             logp = 0.
         else:
-            logp = self.parameter.logp
+            logp = self.stoch.logp
         
         if self.verbose > 2:
             print self._id + ' getting initial likelihood.'
@@ -405,16 +405,16 @@ class Metropolis(SamplingMethod):
         
         # Sample a candidate value
         if "Prior" in self._dist:
-            self.parameter.random()
+            self.stoch.random()
         else:
             self.propose()
         
-        # Probability and likelihood for parameter's proposed value:
+        # Probability and likelihood for stoch's proposed value:
         try:
             if "Prior" in self._dist:
                 logp_p = 0.
             else:
-                logp_p = self.parameter.logp
+                logp_p = self.stoch.logp
             loglike_p = self.loglike
         
         except ZeroProbability:
@@ -438,7 +438,7 @@ class Metropolis(SamplingMethod):
         # Evaluate acceptance ratio
         if log(random()) > logp_p + loglike_p - logp - loglike:
             
-            # Revert parameter if fail
+            # Revert stoch if fail
             self.reject()
             
             # Increment rejected count
@@ -455,8 +455,8 @@ class Metropolis(SamplingMethod):
             print self._id + ' returning.'
     
     def reject(self):
-        # Sets current parameter value to the last accepted value
-        self.parameter.value = self.parameter.last_value
+        # Sets current stoch value to the last accepted value
+        self.stoch.value = self.stoch.last_value
     
     def propose(self):
         """
@@ -464,98 +464,98 @@ class Metropolis(SamplingMethod):
         if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.parameter.value = rnormal(self.parameter.value, self._asf * self.proposal_sig)
+            self.stoch.value = rnormal(self.stoch.value, self._asf * self.proposal_sig)
 
-def MetroCompetence(parameter):
+def MetroCompetence(stoch):
     """
     The competence function for Metropolis
     """
     
-    if isinstance(parameter, DiscreteParameter) or isinstance(parameter,BinaryParameter):
-        # If the parameter's binary or discrete, I can't do it.
+    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch,BinaryStochastic):
+        # If the stoch's binary or discrete, I can't do it.
         return 0
     
     else:
-        # If the parameter's value is an ndarray or a number, I can do it,
+        # If the stoch's value is an ndarray or a number, I can do it,
         # but not necessarily particularly well.
-        _type = check_type(parameter)[0]
+        _type = check_type(stoch)[0]
         if _type in [float, int]:
             return 1
         else:
             return 0
 
-SamplingMethodRegistry[Metropolis] = MetroCompetence
+StepMethodRegistry[Metropolis] = MetroCompetence
 
 
 class DiscreteMetropolis(Metropolis):
     """
-    Just like Metropolis, but rounds the parameter's value.
-    Good for DiscreteParameters.
+    Just like Metropolis, but rounds the stoch's value.
+    Good for DiscreteStochastics.
     """
     
-    def __init__(self, parameter, scale=1., dist=None):
+    def __init__(self, stoch, scale=1., dist=None):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, parameter, scale=scale, dist=dist)
+        Metropolis.__init__(self, stoch, scale=scale, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = parameter.__name__
+        self._id = stoch.__name__
     
     def propose(self):
-        # Propose new parameter values using normal distribution
+        # Propose new stoch values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.parameter.value,self._asf * self.proposal_sig)
+            new_val = rnormal(self.stoch.value,self._asf * self.proposal_sig)
             
-            self.parameter.value = round_array(new_val)
+            self.stoch.value = round_array(new_val)
 
-def DiscreteMetroCompetence(parameter):
+def DiscreteMetroCompetence(stoch):
     """
     The competence function for DiscreteMetropolis.
     """
-    if isinstance(parameter, DiscreteParameter):
+    if isinstance(stoch, DiscreteStochastic):
         return 1
     else:
         return 0
 
-SamplingMethodRegistry[DiscreteMetropolis] = DiscreteMetroCompetence
+StepMethodRegistry[DiscreteMetropolis] = DiscreteMetroCompetence
 
 
 class BinaryMetropolis(Metropolis):
     """
     Like Metropolis, but with a modified step() method.
-    Good for binary parameters.
+    Good for binary stochs.
     
     NOTE this is not compliant with the Metropolis standard
     yet because it lacks a reject() method.
     (??? But, it is a subclass of Metropolis, which has a reject() method)
     """
     
-    def __init__(self, parameter, dist=None):
+    def __init__(self, stoch, dist=None):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, parameter, dist=dist)
+        Metropolis.__init__(self, stoch, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = parameter.__name__
+        self._id = stoch.__name__
     
-    def set_param_val(self, i, val, to_value):
+    def set_stoch_val(self, i, val, to_value):
         """
-        Utility method for setting a particular element of a parameter's value.
+        Utility method for setting a particular element of a stoch's value.
         """
         
         if self._len>1:
-            # Vector-valued parameters
+            # Vector-valued stochs
             
             val[i] = to_value
-            self.parameter.value = reshape(val, self._type[1])
+            self.stoch.value = reshape(val, self._type[1])
         
         else:
-            # Scalar parameters
+            # Scalar stochs
             
-            self.parameter.value = to_value
+            self.stoch.value = to_value
     
     def step(self):
         """
@@ -565,34 +565,34 @@ class BinaryMetropolis(Metropolis):
         
         if "Prior" in self._dist:
             # If no children, just sample new value
-            self.parameter.random()
+            self.stoch.random()
         
         else:
             
             # Make local variable for value
             if self._len > 1:
-                val = self.parameter.value.ravel()
+                val = self.stoch.value.ravel()
             else:
-                val = self.parameter.value
+                val = self.stoch.value
             
             for i in xrange(self._len):
                 
-                self.set_param_val(i, val, True)
+                self.set_stoch_val(i, val, True)
                 
                 try:
-                    logp_true = self.parameter.logp
+                    logp_true = self.stoch.logp
                     loglike_true = self.loglike
                 except ZeroProbability:
-                    self.set_param_val(i, val, False)
+                    self.set_stoch_val(i, val, False)
                     continue
                 
-                self.set_param_val(i, val, False)
+                self.set_stoch_val(i, val, False)
                 
                 try:
-                    logp_false = self.parameter.logp
+                    logp_false = self.stoch.logp
                     loglike_false = self.loglike
                 except ZeroProbability:
-                    self.set_param_val(i,val,True)
+                    self.set_stoch_val(i,val,True)
                     continue
                 
                 p_true = exp(logp_true + loglike_true)
@@ -601,41 +601,41 @@ class BinaryMetropolis(Metropolis):
                 # Stochastically set value according to relative
                 # probabilities of True and False
                 if log(random()) > p_true / (p_true + p_false):
-                    self.set_param_val(i,val,True)
+                    self.set_stoch_val(i,val,True)
             
             # Increment accepted count
             self._accepted += 1
 
-def BinaryMetroCompetence(parameter):
+def BinaryMetroCompetence(stoch):
     """
     The competence function for Binary One-At-A-Time Metropolis
     """
-    if isinstance(parameter, BinaryParameter):
+    if isinstance(stoch, BinaryStochastic):
         return 1
     else:
         return 0
 
-SamplingMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
+StepMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
 
 
-class JointMetropolis(SamplingMethod):
+class JointMetropolis(StepMethod):
     """
     JointMetropolis will be superseded by AdaptiveMetropolis.
     
     S = Joint(variables, epoch=1000, memory=10, delay=1000)
     
-    Applies the Metropolis-Hastings algorithm to several parameters
+    Applies the Metropolis-Hastings algorithm to several stochs
     together. Jumping density is a multivariate normal distribution
     with mean zero and covariance equal to the empirical covariance
-    of the parameters, times _asf ** 2.
+    of the stochs, times _asf ** 2.
     
     :Arguments:
     - variables (optional) : list or array
             A sequence of pymc objects to handle using
-            this SamplingMethod.
+            this StepMethod.
     
-    - parameter (optional) : Parameter
-            Alternatively to variables, a single parameter can be passed.
+    - stoch (optional) : Stochastic
+            Alternatively to variables, a single stoch can be passed.
     
     - epoch (optional) : integer
             After epoch values are stored in the internal
@@ -656,7 +656,7 @@ class JointMetropolis(SamplingMethod):
             chosen by examining P.value's type.
     
     - scale (optional) : float
-            Scale parameter.
+            Scale stoch.
     
     - oneatatime_scales (optional) : dict
             Dictionary of scales for one-at-a-time iterations.
@@ -667,7 +667,7 @@ class JointMetropolis(SamplingMethod):
     Externally-accessible attributes:
         
         variables:   A sequence of pymc objects to handle using
-                        this SamplingMethod.
+                        this StepMethod.
         
         epoch:          After epoch values are stored in the internal
                         traces, the covariance is recomputed.
@@ -690,25 +690,25 @@ class JointMetropolis(SamplingMethod):
         
         tune():         sets _asf according to a heuristic.
         
-    Also: don't start joint sampling until all parameters have mixed at
+    Also: don't start joint sampling until all stochs have mixed at
     least a little. Warn if another epoch of one-at-a-time sampling is
     required.
     
     Also: when the covariance is nonsquare,
     
     """
-    def __init__(self, variables=None, parameter=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
+    def __init__(self, variables=None, stoch=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
         
         self.verbose = verbose
         
-        if parameter is not None:
-            variables = [parameter]
-        SamplingMethod.__init__(self, variables, verbose=verbose)
+        if stoch is not None:
+            variables = [stoch]
+        StepMethod.__init__(self, variables, verbose=verbose)
         
         self.epoch = epoch
         self.memory = memory
         self.delay = delay
-        self._id = ''.join([p.__name__ for p in self.parameters])
+        self._id = ''.join([p.__name__ for p in self.stochs])
         self.isdiscrete = {}
         self.scale = scale
         
@@ -722,37 +722,37 @@ class JointMetropolis(SamplingMethod):
         # Use Metropolis instances to handle independent jumps
         # before first epoch is complete
         if self.verbose > 2:
-            print self._id + ': Assigning single-parameter handlers.'
-        self._single_param_handlers = set()
+            print self._id + ': Assigning single-stoch handlers.'
+        self._single_stoch_handlers = set()
         
-        SamplingMethodRegistry[JointMetropolis] = blacklist
-        for parameter in self.parameters:
+        StepMethodRegistry[JointMetropolis] = blacklist
+        for stoch in self.stochs:
             if oneatatime_scales is not None:
-                scale_now = oneatatime_scales[parameter]
+                scale_now = oneatatime_scales[stoch]
             else:
                 scale_now = None
             
-            new_method = assign_method(parameter, scale_now)
-            self._single_param_handlers.add(new_method)
-        SamplingMethodRegistry[JointMetropolis] = JointMetroCompetence
+            new_method = assign_method(stoch, scale_now)
+            self._single_stoch_handlers.add(new_method)
+        StepMethodRegistry[JointMetropolis] = JointMetroCompetence
 
         
-        # Allocate memory for internal traces and get parameter slices
+        # Allocate memory for internal traces and get stoch slices
         self._slices = {}
         self._len = 0
-        for parameter in self.parameters:
-            if isinstance(parameter.value, ndarray):
-                param_len = len(parameter.value.ravel())
+        for stoch in self.stochs:
+            if isinstance(stoch.value, ndarray):
+                stoch_len = len(stoch.value.ravel())
             else:
-                param_len = 1
-            self._slices[parameter] = slice(self._len, self._len + param_len)
-            self._len += param_len
+                stoch_len = 1
+            self._slices[stoch] = slice(self._len, self._len + stoch_len)
+            self._len += stoch_len
         
         self._proposal_deviate = zeros(self._len,dtype=float)
         
         self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)
         
-        # __init__ should also check that each parameter's value is an ndarray or
+        # __init__ should also check that each stoch's value is an ndarray or
         # a numerical type.
         
         self._state += ['last_trace_index', '_cov', '_sig',
@@ -766,7 +766,7 @@ class JointMetropolis(SamplingMethod):
         """
         
         if self.verbose > 1:
-            print 'Joint SamplingMethod ' + self._id + ' computing covariance.'
+            print 'Joint StepMethod ' + self._id + ' computing covariance.'
         
         # Figure out which slice of the traces to use
         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
@@ -778,18 +778,18 @@ class JointMetropolis(SamplingMethod):
             trace_len = (self._model._cur_trace_index - self.delay)
 
         
-        # Store all the parameters' traces in self._trace
-        for parameter in self.parameters:
-            param_trace = parameter.trace(slicing=trace_slice)
+        # Store all the stochs' traces in self._trace
+        for stoch in self.stochs:
+            stoch_trace = stoch.trace(slicing=trace_slice)
             
-            # If parameter is an array, ravel each tallied value
-            if isinstance(parameter.value, ndarray):
+            # If stoch is an array, ravel each tallied value
+            if isinstance(stoch.value, ndarray):
                 for i in range(trace_len):
-                    self._trace[self._slices[parameter], i] = param_trace[i,:].ravel()
+                    self._trace[self._slices[stoch], i] = stoch_trace[i,:].ravel()
             
-            # If parameter is a scalar, there's no need.
+            # If stoch is a scalar, there's no need.
             else:
-                self._trace[self._slices[parameter], :trace_len] = param_trace
+                self._trace[self._slices[stoch], :trace_len] = stoch_trace
         
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
@@ -803,7 +803,7 @@ class JointMetropolis(SamplingMethod):
         """
         If the empirical covariance hasn't been computed yet (the first
         epoch isn't over), this method passes the tune() call along to the
-        Metropolis instances handling self's parameters. If the
+        Metropolis instances handling self's stochs. If the
         empirical covariance has been computed, the Metropolis
         instances aren't in use anymore so this method does nothing.
         
@@ -811,14 +811,14 @@ class JointMetropolis(SamplingMethod):
         """
         
         if not self._accepted > 0 or self._rejected > 0:
-            for handler in self._single_param_handlers:
+            for handler in self._single_stoch_handlers:
                 handler.tune(divergence_threshold, verbose)
         # This has to return something... please check this. DH
         return False 
     
     def propose(self):
         """
-        This method proposes values for self's parameters based on the empirical
+        This method proposes values for self's stochs based on the empirical
         covariance.
         """
         fill_stdnormal(self._proposal_deviate)
@@ -827,40 +827,40 @@ class JointMetropolis(SamplingMethod):
         
         proposed_vals = inner(self._proposal_deviate[:N], self._asf * self._sig)
         
-        for parameter in self.parameters:
+        for stoch in self.stochs:
             
-            jump = reshape(proposed_vals[self._slices[parameter]],shape(parameter.value))
+            jump = reshape(proposed_vals[self._slices[stoch]],shape(stoch.value))
             
-            parameter.value = parameter.value + jump
+            stoch.value = stoch.value + jump
     
     def reject(self):
         """Reject a jump."""
-        for parameter in self.parameters:
-            parameter.value = parameter.last_value
+        for stoch in self.stochs:
+            stoch.value = stoch.last_value
     
     def step(self):
         """
         If the empirical covariance hasn't been computed yet, the step() call
         is passed along to the Metropolis instances that handle self's
-        parameters before the end of the first epoch.
+        stochs before the end of the first epoch.
         
-        If the empirical covariance has been computed, values for self's parameters
+        If the empirical covariance has been computed, values for self's stochs
         are proposed and tested simultaneously.
         """
         if not self._ready:
-            for handler in self._single_param_handlers:
+            for handler in self._single_stoch_handlers:
                 handler.step()
         else:
-            # Probability and likelihood for parameter's current value:
-            logp = sum([parameter.logp for parameter in self.parameters])
+            # Probability and likelihood for stoch's current value:
+            logp = sum([stoch.logp for stoch in self.stochs])
             loglike = self.loglike
             
             # Sample a candidate value
             self.propose()
             
-            # Probability and likelihood for parameter's proposed value:
+            # Probability and likelihood for stoch's proposed value:
             try:
-                logp_p = sum([parameter.logp for parameter in self.parameters])
+                logp_p = sum([stoch.logp for stoch in self.stochs])
             except ZeroProbability:
                 self._rejected += 1
                 self.reject()
@@ -870,7 +870,7 @@ class JointMetropolis(SamplingMethod):
             
             # Test
             if log(random()) > logp_p + loglike_p - logp - loglike:
-                # Revert parameter if fail
+                # Revert stoch if fail
                 self._rejected += 1
                 self.reject()
             else:
@@ -883,25 +883,25 @@ class JointMetropolis(SamplingMethod):
             
             # Make sure all the one-at-a-time handlers mixed.
             if not self._ready:
-                for handler in self._single_param_handlers:
+                for handler in self._single_stoch_handlers:
                     if handler._accepted == 0:
-                        print self._id+ ": Warnining, parameter " + handler.parameter.__name__ + " did not mix, continuing one-at-a-time sampling"
+                        print self._id+ ": Warnining, stoch " + handler.stoch.__name__ + " did not mix, continuing one-at-a-time sampling"
                 
                 self.compute_sig()
                 self.last_trace_index = self._model._cur_trace_index
 
 
-def JointMetroCompetence(parameter):
+def JointMetroCompetence(stoch):
     """
     The competence function for Metropolis
     """
     
-    if isinstance(parameter, DiscreteParameter) or isinstance(parameter, BinaryParameter):
-        # If the parameter's binary or discrete, I can't do it.
+    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
+        # If the stoch's binary or discrete, I can't do it.
         return 0
-    elif isinstance(parameter.value, ndarray):
+    elif isinstance(stoch.value, ndarray):
         return 2
     else:
         return 0
 
-SamplingMethodRegistry[JointMetropolis] = JointMetroCompetence
+StepMethodRegistry[JointMetropolis] = JointMetroCompetence

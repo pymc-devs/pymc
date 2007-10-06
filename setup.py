@@ -24,12 +24,15 @@ except:
 config.add_extension(name='LazyFunction',sources=['PyMC2/LazyFunction.c'])
 config.add_extension(name='Container_values', sources='PyMC2/Container_values.c')
 
+config_dict = config.todict()
+config_dict.pop('packages')
+
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(  version="2.0",
             description = "PyMC version 2.0",
             license="Academic Free License",
-            packages=["PyMC2", "PyMC2.database", "PyMC2.examples", "PyMC2.MultiModelInference", "PyMC2/tests"],
+            packages=["PyMC2", "PyMC2/database", "PyMC2/examples", "PyMC2/MultiModelInference", "PyMC2/tests"],
             url="trichech.us",
-            **(config.todict()))
+            **(config_dict))
 

@@ -1,67 +1,67 @@
 #from GibbsSampler import Gibbs
-from PyMC2.SamplingMethods import SamplingMethod
+from PyMC2.StepMethods import StepMethod
 
-class MVNormalChildren(SamplingMethod):
+class MVNormalChildren(StepMethod):
     """
-    If a parameter p's children are all normally distributed:
+    If a stoch p's children are all normally distributed:
     
-    child.ravel() ~ N(F * parameter + a, tau)
+    child.ravel() ~ N(F * stoch + a, tau)
     
     where F is a matrix (which can be different for each child), 
-    a is an array, and tau is a matrix, then this sampling method 
+    a is an array, and tau is a matrix, then this step method 
     can be used to sample p.
     
-    If parameter's prior is itself normal, cNormalWithNormalChildren
+    If stoch's prior is itself normal, cNormalWithNormalChildren
     is preferable.
 
-    NormalWithNormalChildren(parameter, F_dict, a_dict, tau_dict)
+    NormalWithNormalChildren(stoch, F_dict, a_dict, tau_dict)
 
     :Arguments:
-    parameter: p
+    stoch: p
     F_dict: a child-keyed dictionary. F_dict[child], where child is
-        a normally-distributed parameter, is a node whose value is the Fbda
-        matrix associated with that parameter.
+        a normally-distributed stoch, is a functl whose value is the Fbda
+        matrix associated with that stoch.
     a_dict: a child-keyed dictionary. a_dict[child], where child is
-            a normally-distributed parameter, is a node whose value is the a
-            array associated with that parameter.
+            a normally-distributed stoch, is a functl whose value is the a
+            array associated with that stoch.
 
     :SeeAlso: cMVNormalWithMVNormalChildren, for fully conjugate sampling,
         Normal.tex for more detailed documentation.
     """
-    def __init__(self, parameter, F_dict, a_dict, tau_dict):
+    def __init__(self, stoch, F_dict, a_dict, tau_dict):
         
-        self.parameter = parameter
+        self.stoch = stoch
         self.F_dict = F_dict
         self.a_dict = a_dict
         self.tau_dict = tau_dict
         
         for F in self.F_dict.values() + self.tau_dict.values():
-            if not isinstance(F, Node) or not isinstance(F.value, matrix):
-                raise taualueError, 'All elements of F_dict and tau_dict must be matrix-valued nodes'
+            if not isinstance(F, Functional) or not isinstance(F.value, matrix):
+                raise taualueError, 'All elements of F_dict and tau_dict must be matrix-valued functls'
                 
         for a in self.a_dict.values():
-            if not isinstance(a, Node) or not isinstance(a.value, ndarray):
-                raise taualueError, 'All elements of a_dict must be array-valued nodes'
+            if not isinstance(a, Functional) or not isinstance(a.value, ndarray):
+                raise taualueError, 'All elements of a_dict must be array-valued functls'
         
 
-        SamplingMethod.__init__(self,[parameter] + F_dict.values() + a_dict.values())
+        StepMethod.__init__(self,[stoch] + F_dict.values() + a_dict.values())
 
         #Mallocs
-        if not shape(self.parameter.value):
+        if not shape(self.stoch.value):
             self.N=1
             self.shape=()
         else:
-            self.N = len(self.parameter.value.ravel())
-            self.shape = self.parameter.value.shape
+            self.N = len(self.stoch.value.ravel())
+            self.shape = self.stoch.value.shape
             
         self.tau = asmatrix(zeros((self.N,self.N)),dtype=float)
         self.mu = zeros(self.N,dtype=float)         
         
-        self.default = OneAtATimeMetropolis([parameter])
+        self.default = OneAtATimeMetropolis([stoch])
 
     def step(self):
 
-        logp = self.parameter.logp
+        logp = self.stoch.logp
 
         self.tau *= 0.
         self.mu *= 0.
@@ -75,18 +75,18 @@ class MVNormalChildren(SamplingMethod):
     
         sig = msqrt(V)
 
-        self.parameter.value = asarray(self.mu + (normal(size=self.N) * sig).T).reshape(self.shape)
+        self.stoch.value = asarray(self.mu + (normal(size=self.N) * sig).T).reshape(self.shape)
 
         try:    
-            logp_p = self.parameter.logp
+            logp_p = self.stoch.logp
         except LikelihoodError:
-            self.parameter.revert()
+            self.stoch.revert()
             self._rejected += 1
             return
 
         if log(random()) > logp_p - logp:
             self._rejected += 1
-            self.parameter.revert()
+            self.stoch.revert()
             self._rejected += 1
             return
 
@@ -94,38 +94,38 @@ class MVNormalChildren(SamplingMethod):
 
 class cMVNormalChildren(MVNormalChildren):
     """
-    If a parameter p's children are all normally distributed:
+    If a stoch p's children are all normally distributed:
     
-    child.ravel() ~ N(F * parameter + a, tau)
+    child.ravel() ~ N(F * stoch + a, tau)
     
     where F is a matrix (which can be different for each child), 
     a is an array, and tau is a matrix, and p has a
-    normal prior, then this sampling method can be used to sample p.
+    normal prior, then this step method can be used to sample p.
 
-    NormalWithNormalChildren(parameter, F_dict, a_dict, tau_dict)
+    NormalWithNormalChildren(stoch, F_dict, a_dict, tau_dict)
 
     :Arguments:
-    parameter: p
+    stoch: p
     F_dict: a child-keyed dictionary. F_dict[child], where child is
-        a normally-distributed parameter, is a node whose value is the F
-        matrix associated with that parameter.
-    a_dict: a child-keyed dictionary. a_dict[child], is a node whose value 
-        is the a array associated with that parameter.
-    tau_dict: a child-keyed dictionary. tau_dict[child] is a node
-        whose value is the tau matrix associated with that parameter.
-    prior_mu, prior_tau: nodes whose values are the prior mean and
+        a normally-distributed stoch, is a functl whose value is the F
+        matrix associated with that stoch.
+    a_dict: a child-keyed dictionary. a_dict[child], is a functl whose value 
+        is the a array associated with that stoch.
+    tau_dict: a child-keyed dictionary. tau_dict[child] is a functl
+        whose value is the tau matrix associated with that stoch.
+    prior_mu, prior_tau: functls whose values are the prior mean and
         precision of p.
 
     :SeeAlso: MVNormalWithMVNormalChildren, for nonconjugate sampling,
         Normal.tex for more detailed documentation.
     """ 
-    def __init__(self, parameter, F_dict, a_dict, tau_dict, prior_mu, prior_tau):
+    def __init__(self, stoch, F_dict, a_dict, tau_dict, prior_mu, prior_tau):
         self.prior_mu = prior_mu
         self.prior_tau = prior_tau
-        MVNormalWithNormalChildren.__init__(self, parameter, F_dict, a_dict, tau_dict)
+        MVNormalWithNormalChildren.__init__(self, stoch, F_dict, a_dict, tau_dict)
     def step(self):
 
-        logp = self.parameter.logp
+        logp = self.stoch.logp
 
         self.tau = self.prior_tau.value
         self.mu = self.prior_tau.value * self.prior_mu.value
@@ -140,6 +140,6 @@ class cMVNormalChildren(MVNormalChildren):
     
         sig = msqrt(V)
 
-        self.parameter.value = asarray(self.mu + (normal(size=self.N) * sig).T).reshape(self.shape)
+        self.stoch.value = asarray(self.mu + (normal(size=self.N) * sig).T).reshape(self.shape)
 
         self._accepted += 1

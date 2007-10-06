@@ -1,6 +1,6 @@
 
 
-A typical MCMC run will generate thousands of samples, and some application requires well over 100000 iterations. Keeping all this information in memory can badly strain the performances of PyMC, and users will find their other applications slowing down. Moreover, we generally wish to store all or part of the sampled data for future use. However, there are dozens of different solutions to store data, and each user has his own preference based on previous experience, performance, compatibility, etc. To cover as many user cases as possible, PyMC proposes a database backend. That is, instead of hardcoding data management in the Sampler or Node class, we ask that each parameter is provided with a set of methods taking care of tallying values, and eventually, returning them. PyMC provides a couple of backends for popular data management tools , but users have the possibility to code their own custom made backend, and let Sampler use it seamlessly.
+A typical MCMC run will generate thousands of samples, and some application requires well over 100000 iterations. Keeping all this information in memory can badly strain the performances of PyMC, and users will find their other applications slowing down. Moreover, we generally wish to store all or part of the sampled data for future use. However, there are dozens of different solutions to store data, and each user has his own preference based on previous experience, performance, compatibility, etc. To cover as many user cases as possible, PyMC proposes a database backend. That is, instead of hardcoding data management in the Sampler or Functional class, we ask that each stoch is provided with a set of methods taking care of tallying values, and eventually, returning them. PyMC provides a couple of backends for popular data management tools , but users have the possibility to code their own custom made backend, and let Sampler use it seamlessly.
 
 
 %FIXME This table runs over the page.
@@ -114,7 +114,7 @@ S.sample(30000,10000,2)
 }\end{quote}
 
 Will tally in memory every other sample, creating arrays of 15000 elements. To
-fetch the last 10000 values of parameter \titlereference{e} say, we would type:
+fetch the last 10000 values of stoch \titlereference{e} say, we would type:
 \begin{quote}{\ttfamily \raggedright \noindent
 S.e.trace(burn=5000)
 }\end{quote}
@@ -129,11 +129,11 @@ S.e.trace(burn=5000)
 
 Each backend must define minimally two classes: Database and Trace. The Database
 class is responsible for opening files, connecting to databases, assigning
-tallyable PyMC objects a Trace instance and calling its methods. Optionnaly,
+tallyable nodes a Trace instance and calling its methods. Optionnaly,
 the Database class can provide methods to save and return the state of the
 sampler. This is useful for very long computations liable to be stopped then
 restarted at a later time.
-The Trace class defines several methods to tally and return the trace of PyMC objects.
+The Trace class defines several methods to tally and return the trace of nodes.
 
 The basic framework of those classes is displayed in \href{PyMC2/database/base.py}{database/base.py}. Each
 backend subclasses the base clases.

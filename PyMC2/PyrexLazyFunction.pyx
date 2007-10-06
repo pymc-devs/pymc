@@ -3,7 +3,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from numpy import array, zeros, ones, arange, resize
-from PyMC2 import PyMCBase, ContainerBase, Variable
+from PyMC2 import Node, ContainerBase, Variable
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
@@ -28,8 +28,8 @@ cdef class LazyFunction:
                 values.
                 
     arguments:  A dictionary of arguments that the LazyFunction passes
-                to its function. If any of the arguments is a Parameter,
-                Node, or Container, that argument's 'value' attribute
+                to its function. If any of the arguments is a Stochastic,
+                Functional, or Container, that argument's 'value' attribute
                 will be substituted for it when passed to fun.
                 
     cache_depth:    The number of prior computations to 'memoize' in
@@ -40,7 +40,7 @@ cdef class LazyFunction:
     Externally-accessible methods:
     
     refresh_argument_values():  Iterates over LazyFunction's parents that are 
-                                Parameters, Nodes, or Containers and records their 
+                                Stochastics, Functionals, or Containers and records their 
                                 current values for passing to self's internal 
                                 function.
     
@@ -56,12 +56,12 @@ cdef class LazyFunction:
     fun:        Self's internal function.
     
     argument_values:    A dictionary containing self's arguments, in which
-                        Parameters, Nodes, and Containers have been
+                        Stochastics, Functionals, and Containers have been
                         replaced by their 'value' attributes.
     
                 
     
-    :SeeAlso: Parameter, Node, Container
+    :SeeAlso: Stochastic, Functional, Container
     """
     
     cdef public object arguments, fun, argument_values
@@ -79,12 +79,12 @@ cdef class LazyFunction:
         cdef object arg, name
         cdef int i
         
-        # arguments will be parents and value for parameters, just parents for nodes.
+        # arguments will be parents and value for stochs, just parents for functls.
         self.arguments = arguments
         
         self.cache_depth = cache_depth
         
-        # A dictionary containing the arguments that are parameters and nodes, with the same keys
+        # A dictionary containing the arguments that are stochs and functls, with the same keys
         # as arguments.
         self.variable_args = {}
         # dictionary containing the other arguments.
@@ -121,7 +121,7 @@ cdef class LazyFunction:
                     self.ultimate_args.append(obj)
                     self.ultimate_keys.append(None)
             
-            # If arg is a parameter or node, it goes into
+            # If arg is a stoch or functl, it goes into
             # variable_args and ultimate_args.    
             elif isinstance(arg, Variable):
                 self.variable_args[name] = arg
@@ -129,7 +129,7 @@ cdef class LazyFunction:
                 self.ultimate_keys.append(name)
                 self.argument_values[name] = arg.value
             
-            # If arg is neither parameter, node, nor container, it goes
+            # If arg is neither stoch, functl, nor container, it goes
             # into other_args.    
             else:
                 self.other_args[name] = arg
@@ -216,8 +216,8 @@ cdef class LazyFunction:
 
     def refresh_argument_values(self):
         """
-        Iterates over LazyFunction's parents that are Parameters,
-        Nodes, or Containers and records their current values
+        Iterates over LazyFunction's parents that are Stochastics,
+        Functionals, or Containers and records their current values
         for passing to self's internal function.
         """
 

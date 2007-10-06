@@ -10,13 +10,13 @@ from numpy import zeros, shape, squeeze, transpose
 import MySQLdb
 
 class Trace(object):
-    """ Define the methods that will be assigned to each parameter in the
+    """ Define the methods that will be assigned to each stoch in the
     Model instance."""
     def __init__(self, obj, db):
         """Initialize the instance.
-        :Parameters:
+        :Stochastics:
           obj : PyMC object
-            Node or Parameter instance.
+            Functional or Stochastic instance.
           db : database instance
           update_interval: how often database is updated from trace
         """

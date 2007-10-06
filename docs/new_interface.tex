@@ -87,11 +87,11 @@ It is straightforward to code a simple MCMC sampler, using either the Gibbs or M
 \bigskip
 PyMC is not an application per se. It consists of:
 \begin{itemize}
-    \item Two Python types, \texttt{Parameter} and \texttt{Node}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
+    \item Two Python types, \texttt{Stochastic} and \texttt{Functional}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
     \item The \texttt{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
     \item Fast, user-friendly and well-documented implementations of 24 common probability distributions.
     \item \textbf{XXX} Whatever we end up with with parallelization.
-    \item The \texttt{SamplingMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
+    \item The \texttt{StepMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
 \end{itemize}
 
 PyMC aims to fully support newcomers to MCMC while providing the performance and flexibility statistical researchers need to develop new methods. As a Python package, it allows users to interface their MCMC algorithms with a wide range of other applications and analysis tools.
@@ -193,7 +193,7 @@ Bayesian statistical inference begins with specification of a probability model 
 \begin{center}
 \epsfig{file=disaster_ts.pdf, width=15cm}
 \end{center}
-Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
+Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate stoch in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 \begin{eqnarray*}
@@ -207,17 +207,17 @@ l\sim \textup{Exp}(1)
 The symbols have the following meanings:
 \begin{description}
     \item[$D_t$:] The number of disasters in year $t$.
-    \item[$r_t$:] The rate parameter of the Poisson distribution of disasters in year $t$.
-    \item[$s$:] The year in which the rate parameter changes.
-    \item[$e$:] The rate parameter before the switchpoint $s$.
-    \item[$l$:] The rate parameter after the switchpoint.
+    \item[$r_t$:] The rate stoch of the Poisson distribution of disasters in year $t$.
+    \item[$s$:] The year in which the rate stoch changes.
+    \item[$e$:] The rate stoch before the switchpoint $s$.
+    \item[$l$:] The rate stoch after the switchpoint.
 \end{description}
 
 The product
 \begin{eqnarray*}
 \prod_t p(D_t|s,e,l) p(s)p(e)p(l)
 \end{eqnarray*}
-gives the joint distribution $p(D,s,e,l)$ of the data and unknown parameters. This is proportional to the posterior distribution $p(s,e,l|D)$ (where $D$ collects $D_t$ for $t$ from 1851 to 1962).
+gives the joint distribution $p(D,s,e,l)$ of the data and unknown stochs. This is proportional to the posterior distribution $p(s,e,l|D)$ (where $D$ collects $D_t$ for $t$ from 1851 to 1962).
 
 In the term $p(D_t|s,e,l)$, $D_t$ is called the \emph{consequent} and $s$, $e$ and $l$ are called the \emph{antecedents}. The antecedents are sometimes called the \emph{parents} of a consequent, and the set of variables that claim a particular variable as a parent are called that variables \emph{children}. This terminology is used in PyMC.
 
@@ -227,7 +227,7 @@ The dependence structure of a statistical model can be represented by a \emph{di
 \begin{center}
 \epsfig{file=DisasterModel.pdf,width=7cm}
 \epsfig{file=DisasterModel2.pdf,width=7cm}
-\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the parameters of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the parameter names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' parameter.
+\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the stochs of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the stoch names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' stoch.
 }
 \label{fig:disaster_dag}
 \end{center}
@@ -239,65 +239,65 @@ p(s|D,l,e)\prod_tp(D_t|l,e,D_{1851\ldots t-1})p(l)p(e),
 \end{eqnarray*}
 and drawn a new DAG representation of the dependence structure. However, that would have been extremely uncomfortable. Our intuition tells us that $e$, $l$ and $s$ influence $D_t$, not that $D_t$, $e$ and $l$ influence $s$. In other words, the statement
 \begin{quote}
-Given the rate parameter before the switchpoint, the rate parameter after the switchpoint, and the switchpoint itself, the distribution of disasters in year $t$ is $d$.
+Given the rate stoch before the switchpoint, the rate stoch after the switchpoint, and the switchpoint itself, the distribution of disasters in year $t$ is $d$.
 \end{quote}
 is much more natural than the statement
 \begin{quote}
-Given the rate parameter befare the switchpoint, the rate parameter after the switchpoint, and annual disasters up to year $t-1$, the distribution of disasters in year $t$ is $d^*$. Further, given all the data on annual disasters the distribution of the switchpoint is $d^{**}$.
+Given the rate stoch befare the switchpoint, the rate stoch after the switchpoint, and annual disasters up to year $t-1$, the distribution of disasters in year $t$ is $d^*$. Further, given all the data on annual disasters the distribution of the switchpoint is $d^{**}$.
 \end{quote}
 
-Bayesian methods, and statistics in general, are usually needed \emph{because} it's natural to think of the data as consequences of the inferential targets. This point can be counterintuitive at first, as most scientists' instinct is to regard data as fixed a priori and unknown parameters' values as dependent on the data. However, it's important to understand for effective model-building in PyMC.
+Bayesian methods, and statistics in general, are usually needed \emph{because} it's natural to think of the data as consequences of the inferential targets. This point can be counterintuitive at first, as most scientists' instinct is to regard data as fixed a priori and unknown stochs' values as dependent on the data. However, it's important to understand for effective model-building in PyMC.
 
 
 
-\section{\texttt{Parameter} and \texttt{Node}}\label{sec:PyMCObjects}
-PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A parameter object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all parameters, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A node object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a node.
+\section{\texttt{Stochastic} and \texttt{Functional}}\label{sec:PyMCObjects}
+PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A stoch object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A functl object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a functl.
 
-These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves parameter updating functionality to the \texttt{SamplingMethod} class (sec \ref{sec:SamplingMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
+These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves stoch updating functionality to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
 
-PyMC also provides a special container class for parameters and nodes to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
+PyMC also provides a special container class for stochs and functls to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
-\subsection{\texttt{Parameter}}\label{sub:parameter}
+\subsection{\texttt{Stochastic}}\label{sub:stoch}
 
-Parameters expose the following attributes:
+Stochastics expose the following attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed parameter's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed stoch's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
+    \item[\texttt{children}:] A set containing self's children, which must be stochs or functls. This set is produced automatically; the user doesn't need to worry about filling it.
     \item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
     \item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
-    \item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Parameter} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
-    \item[\texttt{\_\_name\_\_}:] The name of the parameter, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the parameter.
+    \item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Stochastic} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
+    \item[\texttt{\_\_name\_\_}:] The name of the stoch, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the stoch.
 \end{description}
 
-Parameters have the following methods:
+Stochastics have the following methods:
 \begin{description}
-	\item[\texttt{touch()}:] PyMC parameters and nodes cache the last few values of their arguments. If a parameter's log-probability or a node's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that parameters' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a parameter's value in-place, be sure to call this method afterward. It simply replaces the parameter's value with a shallow copy of itself.
+	\item[\texttt{touch()}:] PyMC stochs and functls cache the last few values of their arguments. If a stoch's log-probability or a functl's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
     \item[\texttt{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
 \end{description}
 
 \subsubsection{Instantiation}
-In order to make specification of standard probability models easy while making room for specification of even the most exotic probability model, PyMC provides four ways to instantiate parameters.
+In order to make specification of standard probability models easy while making room for specification of even the most exotic probability model, PyMC provides four ways to instantiate stochs.
 \begin{description}
     \item[Short] \textbf{XXX}
-    \item[Medium] A normally-distributed parameter called \texttt{A} could be instantiated using the medium interface as follows:
+    \item[Medium] A normally-distributed stoch called \texttt{A} could be instantiated using the medium interface as follows:
     \begin{verbatim}
-@parameter
+@stochastic
 def A(value=3., mu=B, tau=C):
-    """Parameter A is normally distributed."""
+    """Stochastic A is normally distributed."""
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
     \end{verbatim}
-    The decorator \texttt{parameter} turns the function \texttt{A} into a parameter which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the parameter. The names of the function's other arguments become the keys of the parameter's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the parameter, and the docstring of the function is passed on to the parameter as well.
+    The decorator \texttt{stoch} turns the function \texttt{A} into a stoch which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the stoch. The names of the function's other arguments become the keys of the stoch's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the stoch as well.
 
-    The parameter may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
+    The stoch may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
 
-    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this parameter: \texttt{@parameter(trace = False)}.
-    \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the parameter's value conditional only on its parents.
+    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this stoch: \texttt{@stochastic(trace = False)}.
+    \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the stoch's value conditional only on its parents.
     \begin{verbatim}
-@parameter
+@stochastic
 def A(value=3., mu=B, tau=C):
-    """Parameter A is normally distributed."""
+    """Stochastic A is normally distributed."""
 
     def logp(value, mu, tau):
         return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
@@ -307,16 +307,16 @@ def A(value=3., mu=B, tau=C):
 
     rseed = 1.
     \end{verbatim}
-The parameter again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Parameter.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
+The stoch again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Stochastic.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
 
-    \item[Direct] Some users may prefer not to use the \texttt{parameter} decorator, but to instantiate \texttt{Parameter} directly:
+    \item[Direct] Some users may prefer not to use the \texttt{stoch} decorator, but to instantiate \texttt{Stochastic} directly:
 \begin{verbatim}
 def A_logp(value, mu, tau):
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
 
-A = Parameter(logp = A_logp, name = 'A', value = 3.,
+A = Stochastic(logp = A_logp, name = 'A', value = 3.,
 parents = {'mu': B, 'tau': C}[,
-doc = 'Parameter A is normally distributed',
+doc = 'Stochastic A is normally distributed',
 random = rnormal, trace = True, rseed = 1., isdata = False,
 cache_depth = 2])
 \end{verbatim}
@@ -325,49 +325,49 @@ cache_depth = 2])
 
 
 \subsection{The \texttt{data} decorator}\label{sub:@data}
-In the medium and long interfaces, the parameter's \texttt{isdata} flag can be set to true by replacing \texttt{@parameter} with \texttt{@data}.
+In the medium and long interfaces, the stoch's \texttt{isdata} flag can be set to true by replacing \texttt{@stochastic} with \texttt{@data}.
 
 
-\subsection{\texttt{Node}}\label{sub:node}
+\subsection{\texttt{Functional}}\label{sub:functl}
 
-Nodes expose the following attributes:
+Functionals expose the following attributes:
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be parameters or nodes. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{value}:] Self's current value. Unlike parameter, self's value depends on its parents. As with parameter's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Nodes cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
+    \item[\texttt{children}:] A set containing self's children, which must be stochs or functls. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{value}:] Self's current value. Unlike stoch, self's value depends on its parents. As with stoch's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Functionals cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
-    \item[\texttt{\_\_name\_\_}:] The name of the node, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the node.
+    \item[\texttt{\_\_name\_\_}:] The name of the functl, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the functl.
 \end{description}
-Nodes have no methods.
+Functionals have no methods.
 
 \subsubsection{Instantiation}
-Nodes are less complicated than parameters, and PyMC provides only two ways to instantiate them:
+Functionals are less complicated than stochs, and PyMC provides only two ways to instantiate them:
 \begin{description}
-    \item[Decorator] A node can be instantiated via a decorator in a way very similar to parameter's medium interface:
+    \item[Decorator] A functl can be instantiated via a decorator in a way very similar to stoch's medium interface:
 \begin{verbatim}
-@node
+@functional
 def D(arg_1 = E, arg_2 = F)
-    """The D node"""
+    """The D functl"""
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 \end{verbatim}
-The function supplied should return a new value for the node (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with parameter's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the node.
-    \item[Direct] The same node could be instantiated directly as follows:
+The function supplied should return a new value for the functl (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the functl.
+    \item[Direct] The same functl could be instantiated directly as follows:
 \begin{verbatim}
 def D_eval(arg_1, arg_2):
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 
-D = Node(eval = D_eval, name = 'D',
+D = Functional(eval = D_eval, name = 'D',
 parents = \{'arg_1': E, 'arg_2': F\})[],
-doc = 'The D node',
+doc = 'The D functl',
 trace = True),
 cache_depth = 2]
 \end{verbatim}
-The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with parameter.
+The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with stoch.
 \end{description}
-Note that nodes have no \texttt{isdata} flag. If a node's value were known, its parents would be restricted to the inverse image of that value under the node's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{SamplingMethod} level.
+Note that functls have no \texttt{isdata} flag. If a functl's value were known, its parents would be restricted to the inverse image of that value under the functl's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
-\subsection{The \texttt{PyMCObjectContainer} class for arrays of parameters and nodes}\label{sub:container}
+\subsection{The \texttt{PyMCObjectContainer} class for arrays of stochs and functls}\label{sub:container}
 In the following hypothetical situation, it would be inconvenient to assign a unique label to each parent of $B$:
 \begin{eqnarray*}
 	A_0 \sim \textup N(0,V)\\
@@ -377,14 +377,14 @@ In the following hypothetical situation, it would be inconvenient to assign a un
 
 This situation can be handled using the \texttt{PyMCObjectContainer} class as follows:
 \begin{verbatim}
-@parameter
+@stochastic
 def A(value=0., mu=0., V=V):
     """The initial value"""
     return normal_like(value, mu, V)
 Alist = [A]
 
 for i in range(1,N):
-    @parameter
+    @stochastic
     def A(value=0., mu=Alist[i-1], V=V):
         """value %i""" % i
         return normal_like(value, mu, V)
@@ -397,7 +397,7 @@ def B(value=0., mu=A, V=W):
     """The sum of the Markov chain"""
     return normal_like(value, sum(mu), V)   
 \end{verbatim}
-This works because PyMC object containers, like parameters and nodes, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a parameter or node replaced with \emph{its} value. Note that simply writing
+This works because PyMC object containers, like stochs and functls, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a stoch or functl replaced with \emph{its} value. Note that simply writing
 \begin{verbatim}
 @data
 def B(value=0., mu=Alist, V=W):
@@ -409,20 +409,20 @@ would not have worked, because \texttt{list} does not expose an attribute called
 \subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disaster_dag}:
 \begin{verbatim}
-@parameter
+@stochastic
 def s(value=50, length=110):
-    """Change time for rate parameter."""
+    """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@parameter
+@stochastic
 def e(value=1., rate=1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@parameter
+@stochastic
 def l(value=.1, rate = 1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
 @data
@@ -435,23 +435,23 @@ def D(  value = D_array,
 \end{verbatim}
 To make $r$ explicit as in the right pane of figure \ref{fig:disaster_dag}, we would write:
 \begin{verbatim}
-@parameter
+@stochastic
 def s(value=50, length=110):
-    """Change time for rate parameter."""
+    """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@parameter
+@stochastic
 def e(value=1., rate=1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@parameter
+@stochastic
 def l(value=.1, rate = 1.):
-    """Rate parameter of poisson distribution."""
+    """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@node
+@functional
 def r(l=l,e=e,s=s):
     """r = function(l,e,s)"""
     ret_val =  ones(111,dtype=float)
@@ -464,25 +464,25 @@ def D(  value = D_array, rate=r):
     """Annual occurences of coal mining D."""
     return poisson_like(value,rate)
 \end{verbatim}
-In general, it's better to make heavyweight functions into their own nodes, because nodes' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
+In general, it's better to make heavyweight functions into their own functls, because functls' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
 
 \section{The \texttt{Model} class} \label{sec:Model} 
 This class serves as a container for probability models and as a stem class for other `model-level' classes like \texttt{Sampler}. Methods implemented:
 \begin{description}
 	\item[\texttt{sample\_model\_likelihood()}:] Returns an estimate of $\log p(d|M)$, the unconditional log-probability or log-density of all the data objects in model $M$. This is called by the function \texttt{weight()}, which finds the posterior probabilities of a set of models.
 	\item[\texttt{DAG()}:] Outputs a graphical representation of the model.
-	\item[\texttt{tally()}:] Tells all parameters and nodes to record their current values in their traces.
-	\item[\texttt{remember()}:] Tells all parameters and nodes to set their values to a certain element of their traces.
+	\item[\texttt{tally()}:] Tells all stochs and functls to record their current values in their traces.
+	\item[\texttt{remember()}:] Tells all stochs and functls to set their values to a certain element of their traces.
 	\item[\texttt{save\_state()}:] Under construction.
 	\item[\texttt{save\_traces()}:] Under construction.
-	\item[\texttt{seed()}:] All parameters with an \texttt{rseed} value draw a new value from their distributions.
+	\item[\texttt{seed()}:] All stochs with an \texttt{rseed} value draw a new value from their distributions.
 \end{description}
 
 Useful attributes:
 \begin{description}
 	\item[\texttt{containers}:] A set of self's PyMC object containers.
-	\item[\texttt{parameters}:] A set of self's parameters.
-	\item[\texttt{nodes}:] A set of self's nodes.
+	\item[\texttt{stochs}:] A set of self's stochs.
+	\item[\texttt{functls}:] A set of self's functls.
 	\item[\texttt{data}:] A set of self's data objects.
 \end{description}
 
@@ -493,7 +493,7 @@ Useful attributes:
 
 \section{Monte Carlo Methods in Bayesian Analysis}
 
-Bayesian model specification often results in posterior forms that are difficult to manipulate analytically. Expand- when data are children of other parameters, it's not natural to simulate directly. However, it is often possible to generate simulated values that share the distributional properties of the specified posterior. Such simulations may be summarized in such a way that describes the posterior density. For example, consider the expected value of some integral quantity:
+Bayesian model specification often results in posterior forms that are difficult to manipulate analytically. Expand- when data are children of other stochs, it's not natural to simulate directly. However, it is often possible to generate simulated values that share the distributional properties of the specified posterior. Such simulations may be summarized in such a way that describes the posterior density. For example, consider the expected value of some integral quantity:
 
 \[
 E[{\bf x}] = \int_{-\infty}^{\infty} {\bf x} f({\bf x}) d{\bf x}, \qquad
@@ -523,7 +523,7 @@ Simulation error can be measured and controlled:
 \[Var(\hat{I}[a,b]) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(x_i)-\hat{I}[a,b])^2\]
 \end{itemize}
 
-Why is this relevant to Bayesian analysis? If we replace $f(x)$ with a posterior, $\pi(\theta|x)$ and make $h(x)$ an interesting function of the unknown parameter, the resulting expectation is that of the posterior of $h(\theta)$:
+Why is this relevant to Bayesian analysis? If we replace $f(x)$ with a posterior, $\pi(\theta|x)$ and make $h(x)$ an interesting function of the unknown stoch, the resulting expectation is that of the posterior of $h(\theta)$:
 
 \[
 E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
@@ -531,7 +531,7 @@ E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i
 
 \subsection{Rejection Sampling}
 
-Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
+Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known stochetric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
 \begin{figure}[ht]
         \begin{center}
@@ -610,7 +610,7 @@ Before we move on, it is important to define some general properties of Markov c
 
 \section{Why MCMC Works: Reversible Markov Chains}
 
-Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the parameters of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
+Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the stochs of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
 \[
 \int_x Pr(y \mid x) \pi(x) dx = \pi(y),
 \]
@@ -649,14 +649,14 @@ Hence, if $\pi$ is of interest, we need only find the reversible Markov chain fo
 
 \section{Gibbs Sampling}
 
-The Gibbs sampler is the simplest and most prevalent MCMC algorithm. It uses samples from conditionally independent distributions to generate a sample from the fully conditional Bayesian posterior. For example, if a posterior has $k$ parameters to be estimated, we may condition each parameter on current values of the other $k-1$ parameters, and sample from the resultant distributional form (usually easier), and repeat this operation on the other parameters in turn. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
+The Gibbs sampler is the simplest and most prevalent MCMC algorithm. It uses samples from conditionally independent distributions to generate a sample from the fully conditional Bayesian posterior. For example, if a posterior has $k$ stochs to be estimated, we may condition each stoch on current values of the other $k-1$ stochs, and sample from the resultant distributional form (usually easier), and repeat this operation on the other stochs in turn. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
 
 Here is a stereotypical Gibbs sampling algorithm:
 
 \newcounter{lcount}
 \begin{list}{\arabic{lcount}}
 {\usecounter{lcount}}
-\item Choose starting values for states (parameters): ${\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]$
+\item Choose starting values for states (stochs): ${\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]$
 \item Initialize counter $j=1$
 \item Draw the following values from each of the $k$ conditional distributions:
 \begin{eqnarray*}
@@ -672,7 +672,7 @@ Here is a stereotypical Gibbs sampling algorithm:
 
 As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
-Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
+Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single stoch; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each stoch:
 \vspace{1cm}
 \begin{verbatim}
 # Import random number generators
@@ -683,7 +683,7 @@ binomial = random.binomial
 # Number of iterations
 k=1000
 
-# Prior parameter values
+# Prior stoch values
 n=20
 a=1
 b=2
@@ -723,7 +723,7 @@ print pmed, ymed
 
 The key to success in applying the Gibbs sampler to the estimation of Bayesian posteriors is being able to specify the form of the complete conditionals of ${\bf \theta}$. In fact, the algorithm cannot be implemented without them. Of course, the posterior conditionals cannot always be neatly specified. The Metropolis-Hastings algorithm, which is implemented by PyMC, rather than generating values from the full set of conditionals, generates candidate state transitions from an alternate distribution, and accepts or rejects each candidate probabilistically according to a specified acceptance ratio.
 
-Let us first consider a simple Metropolis-Hastings algorithm for a single parameter, $\theta$. If necessary, we can transform $\theta$ so that its distribution $\pi(\theta)$ has support over the real line, $\theta:S_{\theta} = (-\infty,\infty)\}$, facilitating the use of convenient random variables such as the normal. This sampling distribution will be used to produce candidate variables, and is therefore referred to as the \emph{proposal distribution}, $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
+Let us first consider a simple Metropolis-Hastings algorithm for a single stoch, $\theta$. If necessary, we can transform $\theta$ so that its distribution $\pi(\theta)$ has support over the real line, $\theta:S_{\theta} = (-\infty,\infty)\}$, facilitating the use of convenient random variables such as the normal. This sampling distribution will be used to produce candidate variables, and is therefore referred to as the \emph{proposal distribution}, $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
 
 \[
 a(\theta^{\prime},\theta) = \frac{q_t(\theta^{\prime} | \theta) \pi(\theta^{\prime})}{q_t(\theta | \theta^{\prime}) \pi(\theta)}
@@ -772,11 +772,11 @@ a(\theta^{\prime},\theta) = \frac{\pi(\theta^{\prime})}{\pi(\theta)}
 
 The choice of the random walk distribution for $\epsilon_t$ is frequently a normal or Student's $t$ density, but it may be any distribution that generates an irreducible proposal chain.
 
-An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation.
+An important consideration is the specification of the scale stoch for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current stoch value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation.
 
 \section{MCMC Simulation Output}
 
-Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each parameter in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the parameters of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals).
+Stochastic simulation using any MCMC algorithm generates a set of $n$ samples for each stoch in the joint target distribution, where $n$ is the number of MCMC iterations chosen by the user. This sample is used for inference on the stochs of interest, by calculating sample statistics (\emph{e.g.}, mean, mode, variance, quantiles, credible intervals).
 
 \begin{figure}[ht]
         \begin{center}
@@ -786,69 +786,69 @@ Stochastic simulation using any MCMC algorithm generates a set of $n$ samples fo
     \label{fig:sample_output}
 \end{figure}
 
-Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown parameters are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm.
+Valid inference relies on the assumption that sample values are random (but not necessarily independent) draws from the limiting distribution of the Markov chain. Typically, since unknown stochs are initialized arbitrarily, it is unlikely that the entire sample satisfies this assumption. It is usual, therefore, to discard the first portion of the sample, up to some specified proportion. The appropriate size of this ``burn-in" period is usually determined  \emph{a priori}, sometimes with the assistance of a variety of convergence diagnostics (discussed later). The number of iterations required for convergence varies strongly with the nature of the target posterior distribution and the efficiency of the chosen MCMC algorithm.
 
-Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in parameter space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
+Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in stoch space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 
-\section{The \texttt{SamplingMethod} class}\label{sec:SamplingMethod}
-Sampling methods are responsible for making parameters or groups of parameters take single MCMC steps. PyMC provides several standard sampling methods, including \texttt{OneAtATimeMetropolis}, but \texttt{SamplingMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own sampling methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of sampling methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
+\section{The \texttt{StepMethod} class}\label{sec:StepMethod}
+Sampling methods are responsible for making stochs or groups of stochs take single MCMC steps. PyMC provides several standard step methods, including \texttt{OneAtATimeMetropolis}, but \texttt{StepMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own step methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of step methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
 
 \begin{figure}[hhhhhhhhh]
     \centering
     \epsfig{file=sampmethod_children.pdf,width=6cm}
-    \caption{The children of a sampling method. The parameters under the sampling method's jurisdiction are shown on a plate. The children of the sampling method are the parameters (regardless of \texttt{isdata}) which depend on the sampling method's parameters either directly or via an unbroken sequence of nodes, and which aren't in the sampling method's parameters.}
+    \caption{The children of a step method. The stochs under the step method's jurisdiction are shown on a plate. The children of the step method are the stochs (regardless of \texttt{isdata}) which depend on the step method's stochs either directly or via an unbroken sequence of functls, and which aren't in the step method's stochs.}
     \label{fig:sampmethod_children}
 \end{figure}
 
-All sampling methods must be subclasses of \texttt{SamplingMethod}, which exposes the following attributes:
+All step methods must be subclasses of \texttt{StepMethod}, which exposes the following attributes:
 \begin{description}
-    \item[\texttt{nodes}:] A set containing the nodes over which self has jurisdiction. Although sampling methods are primarily responsible for making parameters take Metropolis steps, it can be nice to assign nodes to them for organizational reasons.
-    \item[\texttt{parameters}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these parameters take single MCMC steps.
-    \item[\texttt{data}:] A set containing the parameters over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
-    \item[\texttt{pymc\_objects}:] The union of \texttt{nodes}, \texttt{parameters}, and \texttt{data}.
-    \item[\texttt{children}:] The union of all the nearest descendants of self's parameters that are themselves parameters, differenced with the set of self's parameters. See figure \ref{fig:sampmethod_children}.
-    \item[\texttt{loglike}:] The log-probability of self's children given self's parameters' current values. The sum of self's parameters' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's parameters, up to superfluous constants. This attribute will be needed by most embeddable sampling methods. Loglike is recomputed every time it's accessed.
-    \item[\texttt{\_asf}]: A catchall name for tunable sampling parameters.
+    \item[\texttt{functls}:] A set containing the functls over which self has jurisdiction. Although step methods are primarily responsible for making stochs take Metropolis steps, it can be nice to assign functls to them for organizational reasons.
+    \item[\texttt{stochs}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these stochs take single MCMC steps.
+    \item[\texttt{data}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
+    \item[\texttt{pymc\_objects}:] The union of \texttt{functls}, \texttt{stochs}, and \texttt{data}.
+    \item[\texttt{children}:] The union of all the nearest descendants of self's stochs that are themselves stochs, differenced with the set of self's stochs. See figure \ref{fig:sampmethod_children}.
+    \item[\texttt{loglike}:] The log-probability of self's children given self's stochs' current values. The sum of self's stochs' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's stochs, up to superfluous constants. This attribute will be needed by most embeddable step methods. Loglike is recomputed every time it's accessed.
+    \item[\texttt{\_asf}]: A catchall name for tunable sampling stochs.
 \end{description}
 
-\texttt{SamplingMethod} has the following methods, which aren't implemented in the base class:
+\texttt{StepMethod} has the following methods, which aren't implemented in the base class:
 \begin{description}
-    \item[\texttt{sample()}:] \texttt{Model} will call this method for each sampling method. When it is called, self must cause each of its parameters to take an MCMC step. All subclasses must implement this method.
-    \item[\texttt{tune()}:] \texttt{Model} will also call this method for each sampling method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \texttt{\_asf}.
+    \item[\texttt{sample()}:] \texttt{Model} will call this method for each step method. When it is called, self must cause each of its stochs to take an MCMC step. All subclasses must implement this method.
+    \item[\texttt{tune()}:] \texttt{Model} will also call this method for each step method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \texttt{\_asf}.
 \end{description}
 
 
 \subsection{\texttt{OneAtATimeMetropolis}}\label{sub:OAATM}
-This is PyMC's basic sampling method. If \texttt{Model}, on instantiation, finds that a parameter is not handled by any sampling method, it will create an instance of \texttt{OneAtATimeMetropolis} to handle that parameter. The easiest way to explain this simple object is just to display its source code: \textbf{XXX replace when tune() and more \_dist's are implemented}
+This is PyMC's basic step method. If \texttt{Model}, on instantiation, finds that a stoch is not handled by any step method, it will create an instance of \texttt{OneAtATimeMetropolis} to handle that stoch. The easiest way to explain this simple object is just to display its source code: \textbf{XXX replace when tune() and more \_dist's are implemented}
 \begin{verbatim}
-class OneAtATimeMetropolis(SamplingMethod):
+class OneAtATimeMetropolis(StepMethod):
 
-    def __init__(self, parameter, scale=1, dist='Normal'):
-        SamplingMethod.__init__(self,[parameter])
-        self.parameter = parameter
-        self.proposal_sig = ones(shape(self.parameter.value)) * \
-                            abs(self.parameter.value) * scale
-        self.proposal_deviate = zeros(shape(self.parameter.value),dtype=float)
+    def __init__(self, stoch, scale=1, dist='Normal'):
+        StepMethod.__init__(self,[stoch])
+        self.stoch = stoch
+        self.proposal_sig = ones(shape(self.stoch.value)) * \
+                            abs(self.stoch.value) * scale
+        self.proposal_deviate = zeros(shape(self.stoch.value),dtype=float)
         self._dist = dist
 
     def step(self):
 
-        # Probability and likelihood for parameter's current value:
+        # Probability and likelihood for stoch's current value:
 
-        logp = self.parameter.logp
+        logp = self.stoch.logp
         loglike = self.loglike
 
         # Sample a candidate value
         self.propose()
 
-        # Probability and likelihood for parameter's proposed value:
+        # Probability and likelihood for stoch's proposed value:
         try:
-            logp_p = self.parameter.logp
+            logp_p = self.stoch.logp
 
         # Reject jumps to illegal values
         except LikelihoodError:
-            self.parameter.revert()
+            self.stoch.revert()
             self._rejected += 1
             return
 
@@ -856,8 +856,8 @@ class OneAtATimeMetropolis(SamplingMethod):
 
         # Test
         if log(random()) > logp_p + loglike_p - logp - loglike:
-            # Revert parameter (reject) if fail
-            self.parameter.revert()
+            # Revert stoch (reject) if fail
+            self.stoch.revert()
 
             self._rejected += 1
         else:
@@ -867,10 +867,10 @@ class OneAtATimeMetropolis(SamplingMethod):
     def propose(self):
 
         if self._dist == 'RoundedNormal':
-            self.parameter.value = round(rnormal(self.parameter.value,self.proposal_sig))
+            self.stoch.value = round(rnormal(self.stoch.value,self.proposal_sig))
         # Default to normal random-walk proposal
         else:
-            self.parameter.value = rnormal(self.parameter.value,self.proposal_sig)
+            self.stoch.value = rnormal(self.stoch.value,self.proposal_sig)
 
     def tune(self):
         #
@@ -879,10 +879,10 @@ class OneAtATimeMetropolis(SamplingMethod):
         pass
 \end{verbatim}
 
-Note that a proposal is made by actually updating the parameter's value, and jumps are rejected by calling the parameter's \texttt{revert()} method. This procedure lets parameters and nodes make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
+Note that a proposal is made by actually updating the stoch's value, and jumps are rejected by calling the stoch's \texttt{revert()} method. This procedure lets stochs and functls make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
 
 
-\subsection{Other sampling methods provided with the distribution}\label{sub:other_sm}
+\subsection{Other step methods provided with the distribution}\label{sub:other_sm}
 \textbf{XXX} JointMetropolis, OpenCapture, ClosedCapture, whatever else.
 
 
@@ -910,7 +910,7 @@ Valid inferences from sequences of MCMC samples are based on the assumption that
 
 One approach to analyzing convergence is analytical, whereby the variance of the sample at different sections of the chain are compared to that of the limiting distribution. These methods use distance metrics to analyze convergence, or place theoretical bounds on the sample variance, and though they are promising, they are generally difficult to use and are not prominent in the MCMC literature. More common is a statistical approach to assessing convergence. With this approach, rather than considering the properties of the theoretical target distribution, only the statistical properties of the observed chain are analyzed. Reliance on the sample alone restricts such convergence criteria to heuristics; that is, convergence cannot be guaranteed. Although evidence for lack of convergence using statistical convergence diagnostics will correctly imply lack of convergence in the chain, the absence of such evidence will not \emph{guarantee} convergence in the chain. Nevertheless, negative results for one or more criteria will provide some measure of assurance to most users that their sample will provide valid inferences.
 
-For most simple models, convergence will occur quickly, sometimes within a the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor mixing (Figure \ref{fig:mix}). Recall that \emph{mixing} refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated parameters.
+For most simple models, convergence will occur quickly, sometimes within a the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor mixing (Figure \ref{fig:mix}). Recall that \emph{mixing} refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated stochs.
 
 \begin{figure}[ht]
 \begin{center}
@@ -922,19 +922,19 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 \section*{Informal Methods}
 
-The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the parameters exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$; if the histograms are not visibly different among the sample intervals, this is reasonable evidence for convergence. Note that such diagnostics should be carried out for each parameter estimated by the MCMC algorithm, because convergent behaviour by one parameter does not imply evidence for convergence for other parameters in the analysis. An extension of this approach can me taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
+The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the stochs exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$; if the histograms are not visibly different among the sample intervals, this is reasonable evidence for convergence. Note that such diagnostics should be carried out for each stoch estimated by the MCMC algorithm, because convergent behaviour by one stoch does not imply evidence for convergence for other stochs in the analysis. An extension of this approach can me taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[height=3in]{metastable.png}
-\caption{An example of metastability in a two-dimensional parameter space. The chain appears to be stable in one region of the parameter space for an extended period, then unpredictably jumps to another region of the space.}
+\caption{An example of metastability in a two-dimensional stoch space. The chain appears to be stable in one region of the stoch space for an extended period, then unpredictably jumps to another region of the space.}
 \label{fig:metas}
 \end{center}
 \end{figure}
 
 Another \emph{ad hoc} method for detecting convergence is to examine the traces of several MCMC chains initialized with different starting values. Overlaying these traces on the same set of axes should (if convergence has occurred) show each chain tending toward the same equilibrium value, with approximately the same variance. Recall that the tendency for some Markov chains to converge to the true (unknown) value from diverse initial values is called \emph{ergodicity}. This property is guaranteed by the reversible chains constructed using MCMC, and should be observable using this technique. Again, however, this approach is only a heuristic method, and cannot always detect lack of convergence, even though chains may appear ergodic.
 
-A principle reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the parameter space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
+A principle reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the stoch space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
 
 \section*{Formal Methods}
 
@@ -944,7 +944,7 @@ PyMC includes one formal convergence diagnostic method, first proposed by \citet
 \begin{equation}
 z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 \end{equation}
-where $a$ is the early interval and $b$ the late interval. If the z-scores of these two segments are similar, it can provide evidence for convergence. PyMC plots the z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. Calling the convergence method results in a diagnostic plot for each model parameter.
+where $a$ is the early interval and $b$ the late interval. If the z-scores of these two segments are similar, it can provide evidence for convergence. PyMC plots the z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. Calling the convergence method results in a diagnostic plot for each model stoch.
 
 \subsubsection{Method Usage}
 \begin{verbatim}
@@ -985,7 +985,7 @@ Calling \verb=coda_output= yields a \verb=.out= file containing raw trace values
 
 \section{Goodness-of-Fit}
 
-PyMC provides a flexible method for assessing goodness-of-fit (GOF) of models following MCMC estimation. Following \citet{Gelman:1996gp}, the \verb=goodness= method from the \verb=MetropolisHastings= sampler assesses GOF using a simple discrepancy measure for each component of the likelihood. This measure compares the deviance of the data from the expected parameter values to deviance of simulated data from the expected parameter values. Data are simulated based on samples from the trace of all the parameters. These observed and simulated deviances are plotted against one another to yield GOF plots:
+PyMC provides a flexible method for assessing goodness-of-fit (GOF) of models following MCMC estimation. Following \citet{Gelman:1996gp}, the \verb=goodness= method from the \verb=MetropolisHastings= sampler assesses GOF using a simple discrepancy measure for each component of the likelihood. This measure compares the deviance of the data from the expected stoch values to deviance of simulated data from the expected stoch values. Data are simulated based on samples from the trace of all the stochs. These observed and simulated deviances are plotted against one another to yield GOF plots:
 
 Evidence for lack of fit is apparent when points do not fall on either side of the diagonal in approximately the same numbers; the example above shows very good fit. One plot is generated for every component of the likelihood bearing the same name. Additionally, PyMC reports a GOF statistic (which some authors regrettably call the Bayesian $p$-value), which is simply the proportion of points where the simulated deviance is greater than the observed deviance. This value should be close to 0.5 for a well-fit model.
 
@@ -1019,13 +1019,13 @@ Samples from MCMC algorithms are ususally autocorrelated, due partly to the inhe
     \rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
             &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
-The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each parameter in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
+The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each stoch in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
 
 \begin{figure}[htbp]
         \begin{center}
         \includegraphics[scale=0.4]{autocorr.png}
     \end{center}
-    \caption{Sample autocorrelation plots for two Poisson parameters from coal mining disasters example model.}
+    \caption{Sample autocorrelation plots for two Poisson stochs from coal mining disasters example model.}
     \label{fig:autocorr}
 \end{figure}
 

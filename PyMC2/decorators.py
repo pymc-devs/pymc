@@ -8,10 +8,10 @@ import string
 import inspect
 import types, copy
 import distributions
-from PyMCBase import ZeroProbability
+from Node import ZeroProbability
 
-def node_to_NDarray(arg):
-    if isinstance(arg,proposition5.Node):
+def functl_to_NDarray(arg):
+    if isinstance(arg,proposition5.Functional):
         return arg.value
     else:
         return arg
@@ -28,9 +28,9 @@ def fortranlike_method(f, snapshot, mv=False):
     snapshot: Snapshot of the distributions local dictionary.
     mv: multivariate (True/False)
     
-    Assume args = (self, x, param1, param2, ...)
+    Assume args = (self, x, stoch1, stoch2, ...)
     Before passing the arguments to the function, the wrapper makes sure that 
-    the parameters have the same shape as x.
+    the stochs have the same shape as x.
 
 
     Add compatibility with Sampler class
@@ -212,7 +212,7 @@ def local_decorated_likelihoods(obj):
 
 
 def create_distribution_instantiator(name, logp=None, random=None, module=distributions):
-    """Return a function to instantiate a parameter from a particular distribution.
+    """Return a function to instantiate a stoch from a particular distribution.
      
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')
@@ -255,9 +255,9 @@ def create_distribution_instantiator(name, logp=None, random=None, module=distri
         for k in kwds.keys():
             if k in parents:
                 parents[k] = kwds.pop(k)
-        return Parameter(value=value, parents=parent, **kwds)
+        return Stochastic(value=value, parents=parent, **kwds)
 
-    instantiator.__doc__="Instantiate a Parameter instance with a %s prior."%name
+    instantiator.__doc__="Instantiate a Stochastic instance with a %s prior."%name
     return instantiator
     
     
