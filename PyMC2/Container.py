@@ -130,13 +130,16 @@ def file_items(container, iterable):
     # containers needs to be a list too.
     container.containers = []
     
-    i=0
+    i=-1
     
     for item in iterable:
         
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
+	    i = item
             item = iterable[item]
+	else:
+	    i += 1
 
         if hasattr(item,'__iter__'):
             
@@ -171,7 +174,7 @@ def file_items(container, iterable):
                 container.potentials.add(item)
             elif isinstance(item, StepMethodBase):
                 container.step_methods.add(item)
-        i += 1
+
 
     container.nodes = container.potentials | container.variables
     
@@ -282,8 +285,8 @@ class DictContainer(ContainerBase, dict):
         self.n_val = len(self.val_keys)
         self.n_nonval = len(self) - self.n_val
         
-    def replace(self, item, new_container, i):
-        dict.__setitem__(self, self.keys()[i], new_container)
+    def replace(self, item, new_container, key):
+        dict.__setitem__(self, key, new_container)
         
     def get_value(self):
         DCValue(self)
@@ -299,8 +302,10 @@ class ObjectContainer(ContainerBase):
     are exposed as attributes of the object.
     """
     def __init__(self, input):
+
         if isinstance(input, dict):
             self.__dict__.update(input)
+
         elif hasattr(input,'__iter__'):
             for item in input:
                 if isinstance(item, Node) or isinstance(item, ContainerBase):
@@ -309,14 +314,17 @@ class ObjectContainer(ContainerBase):
             input_dict = filter_dict(input)
             self.__dict__.update(input_dict)
 
-        self._dict_container = DictContainer(self.__dict__)            
+
+        self._dict_container = DictContainer(self.__dict__)  
         file_items(self, self._dict_container)
+
         
         self._value = copy(self)
         ContainerBase.__init__(self, input)
+	
         
-    def replace(self, item, new_container, i):
-        self.__dict__[self._dict_container.keys()[i]] = new_container
+    def replace(self, item, new_container, key):
+        dict.__setitem__(self.__dict__, key, new_container)
 
     def _get_value(self):
         OCValue(self)

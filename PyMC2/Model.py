@@ -101,11 +101,13 @@ class Model(ObjectContainer):
         # Flag for model state
         self.status = 'ready'
         
+
+
         # Get stochs, dtrms, etc.
         if input is None:
             import __main__
             input = __main__
-            
+          
         ObjectContainer.__init__(self, input)
 
         # Specify database backend
