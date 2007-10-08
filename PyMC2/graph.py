@@ -1,5 +1,11 @@
 from Model import *
 
+try:
+    import pydot
+    pydot_imported = True
+except:
+    pydot_imported = False
+
 def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False, 
         collapse_dtrms = False, collapse_potentials = False):
     """
@@ -33,7 +39,8 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     Returns the pydot 'dot' object for further user manipulation.
     """
 
-    import pydot
+    if not pydot_imported:
+        raise ImportError, 'PyDot must be installed to use the graph function.'
 
     pydot_nodes = {}
     pydot_subgraphs = {}
