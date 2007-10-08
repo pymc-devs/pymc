@@ -4,12 +4,10 @@ dir_to_change = '/Users/anand/renearch/PyMC'
     
 name_replacements = [
 ('Parameter', 'Stochastic'),
-('@parameter', '@stochastic'),
 ('parameter', 'stoch'),
 ('param', 'stoch'),
-('Node', 'Functional'), 
-('@node', '@functional'),
-('node', 'functl'),
+('Node', 'Deterministic'), 
+('node', 'dtrm'),
 ('PyMCBase', 'Node'),
 ('pymc_object', 'node'),
 ('pymc object', 'node'),

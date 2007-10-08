@@ -32,20 +32,20 @@ class Parallel:
         
     Externally-accessible attributes:
 
-        functls:          All extant Functionals.
+        dtrms:          All extant Deterministics.
 
         stochs:         All extant Stochastics with isdata = False.
 
         data:               All extant Stochastics with isdata = True.
 
-        nodes:               All extant Stochastics and Functionals.
+        nodes:               All extant Stochastics and Deterministics.
 
         step_methods:   All extant StepMethods.
 
     Externally-accessible methods:
 
         sample(iter,burn,thin): At each MCMC iteration, calls each step_method's step() method.
-                                Tallies Stochastics and Functionals as appropriate.
+                                Tallies Stochastics and Deterministics as appropriate.
 
         trace(stoch, burn, thin, slice): Return the trace of stoch, 
         sliced according to slice or burn and thin arguments.
@@ -57,7 +57,7 @@ class Parallel:
         All the plotting functions can probably go on the base namespace and take Stochastics as
         arguments.
 
-    See also StepMethod, OneAtATimeMetropolis, Node, Stochastic, Functional, and weight.
+    See also StepMethod, OneAtATimeMetropolis, Node, Stochastic, Deterministic, and weight.
     """
     def __init__(self, input, dbase='ram', proc=2):
         try:

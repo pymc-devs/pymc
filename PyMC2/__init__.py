@@ -10,11 +10,11 @@ Required external components: TclTk
 
 """
 __modules__ = [ 'Node',
-                'distributions',
-                'utils',
-                'PyMCObjects',
-                'StepMethods',
                 'Container',
+                'distributions',
+                'PyMCObjects',                
+                'utils',
+                'StepMethods',
                 'Model',
                 'graph',
                 'MultiModelInference',
@@ -37,7 +37,7 @@ for mod in __modules__:
 ##try:
 ##   import parallel
 ##except ImportError:
-##   print 'For parallel-processing functionality install IPython1.'
+##   print 'For parallel-processing dtrmity install IPython1.'
 
 del mod
 

@@ -456,7 +456,7 @@ PyMC attempts to automate as much of the MCMC analysis as possible. In fact, the
 
     \item Data access and manipulation
 
-    \item Stochastic and functl initialization
+    \item Stochastic and dtrm initialization
 
     \item Likelihood specification
 
@@ -530,7 +530,7 @@ class MySampler(MetropolisHastings):
         # Initialize superclass by calling its __init__ method
         MetropolisHastings.__init__(self)
 
-        # Next, you would specify stochs and functls
+        # Next, you would specify stochs and dtrms
 
     def calculate_likelihood(self):
         # Specify the joint log-likelihood here
@@ -563,14 +563,14 @@ For example, an array of three recapture probabilities might be initialized by t
 self.stoch(name='capture', init_val=[0.5,0.5,0.5])
 \end{verbatim}
 
-Similarly, functls, which are variables that are calculated rather than sampled, are declared with a much simpler \verb=functl= method, taking only a name as an argument:
+Similarly, dtrms, which are variables that are calculated rather than sampled, are declared with a much simpler \verb=dtrm= method, taking only a name as an argument:
 \begin{verbatim}
-self.functl(name='log_capture')
+self.dtrm(name='log_capture')
 \end{verbatim}
 
 \section{Likelihood Specification}\label{sec:likelihood_specification}
 
-The \verb=calculate_likelihood= method uses the initialized variables and functls to evaluate a conditional posterior likelihood used to evaluate the current model stoch values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time.
+The \verb=calculate_likelihood= method uses the initialized variables and dtrms to evaluate a conditional posterior likelihood used to evaluate the current model stoch values. This method employs one or more built-in log-likelihood methods in the \verb=MetropolisHastings= class. The logarithmic form is used in order to allow likelihoods to be added, rather than multiplied; this avoids some numerical problems that pop up from time to time.
 
 These suite of available log-likelihood densities include:
 \begin{itemize}
@@ -676,7 +676,7 @@ Once the data has been made available, the stochs initialized, and the likelihoo
 >>> sampler = mymodel.LogisticSampler()
 >>> sampler.sample(iterations=100000,burn=50000)
 \end{verbatim}
-This creates an instance of the sampler (here called \verb=sampler=) with a burn-in period of 50000, and runs for 100000 iterations. PyMC will not only give stoch estimates with associated variance and quantile values, but will also plot traces and histograms of each stoch and functl. There are a number of optional arguments for \verb=sample=.
+This creates an instance of the sampler (here called \verb=sampler=) with a burn-in period of 50000, and runs for 100000 iterations. PyMC will not only give stoch estimates with associated variance and quantile values, but will also plot traces and histograms of each stoch and dtrm. There are a number of optional arguments for \verb=sample=.
 
 \subsubsection{Method Usage}
 \begin{verbatim}

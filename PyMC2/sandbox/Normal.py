@@ -19,10 +19,10 @@ class MVNormalChildren(StepMethod):
     :Arguments:
     stoch: p
     F_dict: a child-keyed dictionary. F_dict[child], where child is
-        a normally-distributed stoch, is a functl whose value is the Fbda
+        a normally-distributed stoch, is a dtrm whose value is the Fbda
         matrix associated with that stoch.
     a_dict: a child-keyed dictionary. a_dict[child], where child is
-            a normally-distributed stoch, is a functl whose value is the a
+            a normally-distributed stoch, is a dtrm whose value is the a
             array associated with that stoch.
 
     :SeeAlso: cMVNormalWithMVNormalChildren, for fully conjugate sampling,
@@ -36,12 +36,12 @@ class MVNormalChildren(StepMethod):
         self.tau_dict = tau_dict
         
         for F in self.F_dict.values() + self.tau_dict.values():
-            if not isinstance(F, Functional) or not isinstance(F.value, matrix):
-                raise taualueError, 'All elements of F_dict and tau_dict must be matrix-valued functls'
+            if not isinstance(F, Deterministic) or not isinstance(F.value, matrix):
+                raise taualueError, 'All elements of F_dict and tau_dict must be matrix-valued dtrms'
                 
         for a in self.a_dict.values():
-            if not isinstance(a, Functional) or not isinstance(a.value, ndarray):
-                raise taualueError, 'All elements of a_dict must be array-valued functls'
+            if not isinstance(a, Deterministic) or not isinstance(a.value, ndarray):
+                raise taualueError, 'All elements of a_dict must be array-valued dtrms'
         
 
         StepMethod.__init__(self,[stoch] + F_dict.values() + a_dict.values())
@@ -107,13 +107,13 @@ class cMVNormalChildren(MVNormalChildren):
     :Arguments:
     stoch: p
     F_dict: a child-keyed dictionary. F_dict[child], where child is
-        a normally-distributed stoch, is a functl whose value is the F
+        a normally-distributed stoch, is a dtrm whose value is the F
         matrix associated with that stoch.
-    a_dict: a child-keyed dictionary. a_dict[child], is a functl whose value 
+    a_dict: a child-keyed dictionary. a_dict[child], is a dtrm whose value 
         is the a array associated with that stoch.
-    tau_dict: a child-keyed dictionary. tau_dict[child] is a functl
+    tau_dict: a child-keyed dictionary. tau_dict[child] is a dtrm
         whose value is the tau matrix associated with that stoch.
-    prior_mu, prior_tau: functls whose values are the prior mean and
+    prior_mu, prior_tau: dtrms whose values are the prior mean and
         precision of p.
 
     :SeeAlso: MVNormalWithMVNormalChildren, for nonconjugate sampling,

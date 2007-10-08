@@ -1,6 +1,6 @@
 import sys, inspect
 from imp import load_dynamic
-from PyMCObjects import Stochastic, Functional, DiscreteStochastic, BinaryStochastic, Potential
+from PyMCObjects import Stochastic, Deterministic, DiscreteStochastic, BinaryStochastic, Potential
 from utils import extend_children, _push
 from Node import ZeroProbability, ContainerBase, Node
 from Container import Container
@@ -8,7 +8,7 @@ import numpy as np
 
 def _extract(__func__, kwds, keys, classname): 
     """
-    Used by decorators stoch and functl to inspect declarations
+    Used by decorators stoch and dtrm to inspect declarations
     """
     
     # Add docs and name
@@ -76,23 +76,23 @@ def _extract(__func__, kwds, keys, classname):
                     
     return (value, parents)
 
-def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
+def stoch(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
     """
-    Decorator function for instantiating stochs. Usages:
+    Decorator function for instantiating stochastic variables. Usages:
     
     Medium:
     
-        @stochastic
+        @stoch
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
         
-        @stochastic(trace=trace_object)
+        @stoch(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
             
     Long:
 
-        @stochastic
+        @stoch
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -102,7 +102,7 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
                 return bar(parent_name, ...)
                 
     
-        @stochastic(trace=trace_object)
+        @stoch(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -111,12 +111,12 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
             def random(parent_name, ...):
                 return bar(parent_name, ...)
                 
-    where foo() computes the log-probability of the stoch A
+    where foo() computes the log-probability of the variable A
     conditional on its value and its parents' values, and bar()
     generates a random value from A's distribution conditional on
     its parents' values.
     
-    :SeeAlso: Stochastic, Functional, functl, data, Potential, potential, Model, Container
+    :SeeAlso: Stochastic, Deterministic, dtrm, data, Potential, potential, Model, Container
     """
     
     if binary:
@@ -144,7 +144,7 @@ def discrete_stoch(__func__=None, **kwds):
     
     Same usage as stoch.
     """
-    return stochastic(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
+    return stoch(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
     
 def binary_stoch(__func__=None, **kwds):
     """
@@ -153,7 +153,7 @@ def binary_stoch(__func__=None, **kwds):
     
     Same usage as stoch.
     """
-    return stochastic(__func__=__func__, __class__ = BinaryStochastic, **kwds)
+    return stoch(__func__=__func__, __class__ = BinaryStochastic, **kwds)
 
 
 def potential(__func__ = None, **kwds):
@@ -164,10 +164,10 @@ def potential(__func__ = None, **kwds):
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
 
-    where baz returns the functl B's value conditional
+    where baz returns the dtrm B's value conditional
     on its parents.
 
-    :SeeAlso: Functional, functl, Stochastic, Potential, stoch, data, Model, Container
+    :SeeAlso: Deterministic, dtrm, Stochastic, Potential, stoch, data, Model, Container
     """
     def instantiate_pot(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Potential')
@@ -183,26 +183,26 @@ def potential(__func__ = None, **kwds):
     return instantiate_pot
 
 
-def functional(__func__ = None, **kwds):
+def dtrm(__func__ = None, **kwds):
     """
-    Decorator function instantiating functls. Usage:
+    Decorator function instantiating deterministic variables. Usage:
     
-    @functional
+    @dtrm
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
         
-    @functional(trace = trace_object)
+    @dtrm(trace = trace_object)
     def B(parent_name = ., ...)
         return baz(parent_name, ...)        
         
-    where baz returns the functl B's value conditional
+    where baz returns the variable B's value conditional
     on its parents.
     
-    :SeeAlso: Functional, functl, Stochastic, stoch, data, Model, Container
+    :SeeAlso: Deterministic, potential, Stochastic, stoch, data, Model, Container
     """
     def instantiate_n(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Functional')
-        return Functional(parents=parents, **kwds)
+        junk, parents = _extract(__func__, kwds, keys, 'Deterministic')
+        return Deterministic(parents=parents, **kwds)
         
     keys = ['eval']
     
@@ -228,24 +228,24 @@ def data(obj=None, **kwds):
     or as
     
     @data
-    @stochastic
+    @stoch
     def A(value = ., parent_name = .,  ...):
         return foo(value, parent_name, ...)
         
     
-    :SeeAlso: stoch, Stochastic, functl, Functional, potential, Potential, Model, Container
+    :SeeAlso: stoch, Stochastic, dtrm, Deterministic, potential, Potential, Model, Container
     """
     if obj is not None:
         if isinstance(obj, Stochastic):
             obj.isdata=True
             return obj
         else:
-            p = stochastic(__func__=obj, isdata=True, **kwds)
+            p = stoch(__func__=obj, isdata=True, **kwds)
             return p
     
     kwds['isdata']=True
     def instantiate_data(func):
-        return stochastic(func, **kwds)
+        return stoch(func, **kwds)
         
     return instantiate_data
 

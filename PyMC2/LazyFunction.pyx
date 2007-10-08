@@ -31,7 +31,7 @@ cdef class LazyFunction:
                 
     arguments:  A dictionary of arguments that the LazyFunction passes
                 to its function. If any of the arguments is a Stochastic,
-                Functional, or Container, that argument's 'value' attribute
+                Deterministic, or Container, that argument's 'value' attribute
                 will be substituted for it when passed to fun.
                 
     cache_depth:    The number of prior computations to 'memoize' in
@@ -42,9 +42,9 @@ cdef class LazyFunction:
     Externally-accessible methods:
     
     refresh_argument_values():  Iterates over LazyFunction's parents that are 
-                                Stochastics, Functionals, or Containers and records their 
-                                current values for passing to self's internal 
-                                function.
+                                Stochastics, Deterministics, or Containers and 
+                                records their current values for passing to self's 
+                                internal function.
     
     get():  Refreshes argument values, checks cache, calls internal function if
             necessary, returns value.
@@ -58,12 +58,12 @@ cdef class LazyFunction:
     fun:        Self's internal function.
     
     argument_values:    A dictionary containing self's arguments, in which
-                        Stochastics, Functionals, and Containers have been
+                        Stochastics, Deterministics, and Containers have been
                         replaced by their 'value' attributes.
     
                 
     
-    :SeeAlso: Stochastic, Functional, Container
+    :SeeAlso: Stochastic, Deterministic, Container
     """
     
     cdef public object arguments, fun, argument_values
@@ -80,7 +80,7 @@ cdef class LazyFunction:
         cdef object arg, name
         cdef int i
         
-        # arguments will be parents and value for stochs, just parents for functls.
+        # arguments will be parents and value for stochs, just parents for dtrms.
         self.arguments = arguments
         
         self.cache_depth = cache_depth
@@ -96,10 +96,8 @@ cdef class LazyFunction:
             # This object is arg.
             arg = arguments[name]
             
-        # TODO: Consider changing this from all_objects to variables.
-        self.ultimate_args = ArrayContainer(array(list(arguments.all_objects), dtype=object))
+        self.ultimate_args = ArrayContainer(array(list(arguments.variables), dtype=object))
         self.N_args = len(self.ultimate_args)
-
         
         # Initialize caches
         self.cached_args = zeros(self.cache_depth * self.N_args, dtype=object)

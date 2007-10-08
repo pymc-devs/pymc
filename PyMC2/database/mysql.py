@@ -16,7 +16,7 @@ class Trace(object):
         """Initialize the instance.
         :Stochastics:
           obj : PyMC object
-            Functional or Stochastic instance.
+            Deterministic or Stochastic instance.
           db : database instance
           update_interval: how often database is updated from trace
         """

@@ -4,7 +4,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf
-from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, FunctionalBase
+from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 
 d_neg_inf = float(-1.79E308)
@@ -14,14 +14,14 @@ from LazyFunction import LazyFunction
 
 class ParentDict(DictContainer):
     """
-    A special subclass of DictContainer which makes it safe to change stochs'
-    and functls' parents. When __setitem__ is called, a ParentDict instance
+    A special subclass of DictContainer which makes it safe to change 
+    varibales' parents. When __setitem__ is called, a ParentDict instance
     removes its owner from the old parent's children set (if appropriate)
     and adds its owner to the new parent's children set. It then asks
     its owner to generate a new LazyFunction instance using its new
     parents.
 
-    NB: StepMethod and Model are expecting stochs' and functls'
+    NB: StepMethod and Model are expecting variables'
     children to be static. If you want to change indedependence structure
     over the course of an MCMC loop, please do so with indicator variables.
     
@@ -93,7 +93,7 @@ class Potential(PotentialBase):
               The name of this potential.
 
         -parents: dictionary
-              A dictionary containing the parents of this functl.
+              A dictionary containing the parents of this potential.
 
         -cache_depth (optional): integer
               An integer indicating how many of this potential's value computations 
@@ -106,12 +106,12 @@ class Potential(PotentialBase):
     Externally-accessible attribute:
 
         -logp: float
-              Returns the functl's value given its parents' values. Skips
+              Returns the potential's log-probability given its parents' values. Skips
               computation if possible.
             
     No methods.
     
-    :SeeAlso: Stochastic, Node, LazyFunction, stoch, functl, data, Model, Container
+    :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
     def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
         
@@ -159,14 +159,14 @@ class Potential(PotentialBase):
 
 
         
-class Functional(FunctionalBase):
+class Deterministic(DeterministicBase):
     """
     A variable whose value is determined by the values of its parents.
 
     
     Decorator instantiation:
 
-    @functional(trace=True)
+    @dtrm(trace=True)
     def A(x = B, y = C):
         return sqrt(x ** 2 + y ** 2)
     
@@ -175,25 +175,25 @@ class Functional(FunctionalBase):
     :Arguments:
 
         -eval: function
-              The function that computes the functl's value from the values 
+              The function that computes the variable's value from the values 
               of its parents.
 
         -doc: string
-              The docstring for this functl.
+              The docstring for this variable.
 
         -name: string
-              The name of this functl.
+              The name of this variable.
 
         -parents: dictionary
-              A dictionary containing the parents of this functl.
+              A dictionary containing the parents of this variable.
 
         -trace (optional): boolean
-              A boolean indicating whether this functl's value 
+              A boolean indicating whether this variable's value 
               should be traced (in MCMC).
 
         -cache_depth (optional): integer  
-              An integer indicating how many of this functl's
-              value computations should be 'memorized'.
+              An integer indicating how many of this variable's
+              value computations should be 'memoized'.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -202,12 +202,12 @@ class Functional(FunctionalBase):
     Externally-accessible attribute:
 
         -value: any class
-              Returns the functl's value given its parents' values. Skips
+              Returns the variable's value given its parents' values. Skips
               computation if possible.
             
     No methods.
     
-    :SeeAlso: Stochastic, Node, LazyFunction, stoch, functl, data, Model, Container
+    :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=0):
 
@@ -226,7 +226,7 @@ class Functional(FunctionalBase):
         
         self._value.force_compute()
         if self.value is None:
-            print  "WARNING: Functional " + self.__name__ + "'s initial value is None"
+            print  "WARNING: Deterministic " + self.__name__ + "'s initial value is None"
         
     def gen_lazy_function(self):
         # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
@@ -243,7 +243,7 @@ class Functional(FunctionalBase):
         return _value
         
     def set_value(self,value):      
-        raise AttributeError, 'Functional '+self.__name__+'\'s value cannot be set.'
+        raise AttributeError, 'Deterministic '+self.__name__+'\'s value cannot be set.'
 
     value = property(fget = get_value, fset=set_value)
     
@@ -256,11 +256,11 @@ class Stochastic(StochasticBase):
     
     Decorator instantiation:
 
-    @stochastic(trace=True)
+    @stoch(trace=True)
     def X(value = 0., mu = B, tau = C):
         return Normal_like(value, mu, tau)
         
-    @stochastic(trace=True)
+    @stoch(trace=True)
     def X(value=0., mu=B, tau=C):
 
         def logp(value, mu, tau):
@@ -277,39 +277,39 @@ class Stochastic(StochasticBase):
     :Arguments:
 
     - logp : function   
-            The function that computes the stoch's log-probability from
+            The function that computes the variable's log-probability from
             its value and the values of its parents.
 
     - doc : string    
-            The docstring for this stoch.
+            The docstring for this variable.
 
     - name : string   
-            The name of this stoch.
+            The name of this variable.
 
     - parents: dict
-            A dictionary containing the parents of this stoch.
+            A dictionary containing the parents of this variable.
     
     - random (optional) : function 
             A function that draws a new value for this
-            stoch given its parents' values.
+            variable given its parents' values.
 
     - trace (optional) : boolean   
-            A boolean indicating whether this functl's value 
+            A boolean indicating whether this variable's value 
             should be traced (in MCMC).
                         
     - value (optional) : number or array  
-            An initial value for this stoch
+            An initial value for this variable
     
     - rseed (optional) : integer or rseed
-            A seed for this stoch's rng. Either value or rseed must
+            A seed for this variable's rng. Either value or rseed must
             be given.
                         
     - isdata (optional) :  boolean
-            A flag indicating whether this stoch is data; whether
+            A flag indicating whether this variable is data; whether
             its value is known.
 
     - cache_depth (optional) : integer
-            An integer indicating how many of this stoch's
+            An integer indicating how many of this variable's
             log-probability computations should be 'memoized'.
                             
     - verbose (optional) : integer
@@ -319,27 +319,22 @@ class Stochastic(StochasticBase):
     Externally-accessible attribute:
 
     - value: any class
-          Returns this stoch's current value.
+          Returns this variable's current value.
 
     - logp: float
-          Returns the stoch's log-probability given its value and its 
+          Returns the variable's log-probability given its value and its 
           parents' values. Skips computation if possible.
             
     last_value: any class
-          Returns this stoch's last value. Useful for rejecting
+          Returns this variable's last value. Useful for rejecting
           Metropolis-Hastings jumps. See touch() and the warning below.
             
     Externally-accessible methods:
     
-    random():   Draws a new value for this stoch from its distribution and
+    random():   Draws a new value for this variable from its distribution and
                 returns it.
                 
-    touch():    If a stoch's value is changed in-place, the cache-checker will
-                get confused. In addition, in MCMC, there won't be a way to reject
-                the jump. If you update a stoch's value in-place, call touch()
-                immediately afterward.
-                    
-    :SeeAlso: Functional, Node, LazyFunction, stoch, functl, data, Model, Container
+    :SeeAlso: Deterministic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
     
     def __init__(   self, 

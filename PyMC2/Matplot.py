@@ -285,7 +285,7 @@ class Plotter:
     
     def plot(self, node, suffix=''):
         """ 
-        Plots summary of stoch/functl trace, including trace and histogram.
+        Plots summary of stoch/dtrm trace, including trace and histogram.
         
         :Arguments:
             node: PyMCObject

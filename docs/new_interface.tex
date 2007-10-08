@@ -87,7 +87,7 @@ It is straightforward to code a simple MCMC sampler, using either the Gibbs or M
 \bigskip
 PyMC is not an application per se. It consists of:
 \begin{itemize}
-    \item Two Python types, \texttt{Stochastic} and \texttt{Functional}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
+    \item Two Python types, \texttt{Stochastic} and \texttt{Deterministic}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
     \item The \texttt{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
     \item Fast, user-friendly and well-documented implementations of 24 common probability distributions.
     \item \textbf{XXX} Whatever we end up with with parallelization.
@@ -250,19 +250,19 @@ Bayesian methods, and statistics in general, are usually needed \emph{because} i
 
 
 
-\section{\texttt{Stochastic} and \texttt{Functional}}\label{sec:PyMCObjects}
-PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A stoch object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A functl object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a functl.
+\section{\texttt{Stochastic} and \texttt{Deterministic}}\label{sec:PyMCObjects}
+PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A stoch object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A dtrm object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a dtrm.
 
-These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves stoch updating functionality to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level functionality to the \texttt{Model} class (sec \ref{sec:Model})
+These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves stoch updating dtrmity to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level dtrmity to the \texttt{Model} class (sec \ref{sec:Model})
 
-PyMC also provides a special container class for stochs and functls to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
+PyMC also provides a special container class for stochs and dtrms to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
 \subsection{\texttt{Stochastic}}\label{sub:stoch}
 
 Stochastics expose the following attributes:
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed stoch's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be stochs or functls. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
     \item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
     \item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
@@ -273,7 +273,7 @@ Stochastics expose the following attributes:
 
 Stochastics have the following methods:
 \begin{description}
-	\item[\texttt{touch()}:] PyMC stochs and functls cache the last few values of their arguments. If a stoch's log-probability or a functl's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
+	\item[\texttt{touch()}:] PyMC stochs and dtrms cache the last few values of their arguments. If a stoch's log-probability or a dtrm's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
     \item[\texttt{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
 \end{description}
 
@@ -283,7 +283,7 @@ In order to make specification of standard probability models easy while making 
     \item[Short] \textbf{XXX}
     \item[Medium] A normally-distributed stoch called \texttt{A} could be instantiated using the medium interface as follows:
     \begin{verbatim}
-@stochastic
+@stoch
 def A(value=3., mu=B, tau=C):
     """Stochastic A is normally distributed."""
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
@@ -292,10 +292,10 @@ def A(value=3., mu=B, tau=C):
 
     The stoch may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
 
-    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this stoch: \texttt{@stochastic(trace = False)}.
+    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this stoch: \texttt{@stoch(trace = False)}.
     \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the stoch's value conditional only on its parents.
     \begin{verbatim}
-@stochastic
+@stoch
 def A(value=3., mu=B, tau=C):
     """Stochastic A is normally distributed."""
 
@@ -325,49 +325,49 @@ cache_depth = 2])
 
 
 \subsection{The \texttt{data} decorator}\label{sub:@data}
-In the medium and long interfaces, the stoch's \texttt{isdata} flag can be set to true by replacing \texttt{@stochastic} with \texttt{@data}.
+In the medium and long interfaces, the stoch's \texttt{isdata} flag can be set to true by replacing \texttt{@stoch} with \texttt{@data}.
 
 
-\subsection{\texttt{Functional}}\label{sub:functl}
+\subsection{\texttt{Deterministic}}\label{sub:dtrm}
 
-Functionals expose the following attributes:
+Deterministics expose the following attributes:
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be stochs or functls. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{value}:] Self's current value. Unlike stoch, self's value depends on its parents. As with stoch's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Functionals cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
+    \item[\texttt{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{value}:] Self's current value. Unlike stoch, self's value depends on its parents. As with stoch's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Deterministics cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
     \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
-    \item[\texttt{\_\_name\_\_}:] The name of the functl, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the functl.
+    \item[\texttt{\_\_name\_\_}:] The name of the dtrm, should be unique.
+    \item[\texttt{\_\_doc\_\_}:] The docstring of the dtrm.
 \end{description}
-Functionals have no methods.
+Deterministics have no methods.
 
 \subsubsection{Instantiation}
-Functionals are less complicated than stochs, and PyMC provides only two ways to instantiate them:
+Deterministics are less complicated than stochs, and PyMC provides only two ways to instantiate them:
 \begin{description}
-    \item[Decorator] A functl can be instantiated via a decorator in a way very similar to stoch's medium interface:
+    \item[Decorator] A dtrm can be instantiated via a decorator in a way very similar to stoch's medium interface:
 \begin{verbatim}
-@functional
+@dtrm
 def D(arg_1 = E, arg_2 = F)
-    """The D functl"""
+    """The D dtrm"""
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 \end{verbatim}
-The function supplied should return a new value for the functl (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the functl.
-    \item[Direct] The same functl could be instantiated directly as follows:
+The function supplied should return a new value for the dtrm (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the dtrm.
+    \item[Direct] The same dtrm could be instantiated directly as follows:
 \begin{verbatim}
 def D_eval(arg_1, arg_2):
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 
-D = Functional(eval = D_eval, name = 'D',
+D = Deterministic(eval = D_eval, name = 'D',
 parents = \{'arg_1': E, 'arg_2': F\})[],
-doc = 'The D functl',
+doc = 'The D dtrm',
 trace = True),
 cache_depth = 2]
 \end{verbatim}
 The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with stoch.
 \end{description}
-Note that functls have no \texttt{isdata} flag. If a functl's value were known, its parents would be restricted to the inverse image of that value under the functl's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{StepMethod} level.
+Note that dtrms have no \texttt{isdata} flag. If a dtrm's value were known, its parents would be restricted to the inverse image of that value under the dtrm's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
-\subsection{The \texttt{PyMCObjectContainer} class for arrays of stochs and functls}\label{sub:container}
+\subsection{The \texttt{PyMCObjectContainer} class for arrays of stochs and dtrms}\label{sub:container}
 In the following hypothetical situation, it would be inconvenient to assign a unique label to each parent of $B$:
 \begin{eqnarray*}
 	A_0 \sim \textup N(0,V)\\
@@ -377,14 +377,14 @@ In the following hypothetical situation, it would be inconvenient to assign a un
 
 This situation can be handled using the \texttt{PyMCObjectContainer} class as follows:
 \begin{verbatim}
-@stochastic
+@stoch
 def A(value=0., mu=0., V=V):
     """The initial value"""
     return normal_like(value, mu, V)
 Alist = [A]
 
 for i in range(1,N):
-    @stochastic
+    @stoch
     def A(value=0., mu=Alist[i-1], V=V):
         """value %i""" % i
         return normal_like(value, mu, V)
@@ -397,7 +397,7 @@ def B(value=0., mu=A, V=W):
     """The sum of the Markov chain"""
     return normal_like(value, sum(mu), V)   
 \end{verbatim}
-This works because PyMC object containers, like stochs and functls, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a stoch or functl replaced with \emph{its} value. Note that simply writing
+This works because PyMC object containers, like stochs and dtrms, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a stoch or dtrm replaced with \emph{its} value. Note that simply writing
 \begin{verbatim}
 @data
 def B(value=0., mu=Alist, V=W):
@@ -409,18 +409,18 @@ would not have worked, because \texttt{list} does not expose an attribute called
 \subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disaster_dag}:
 \begin{verbatim}
-@stochastic
+@stoch
 def s(value=50, length=110):
     """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@stochastic
+@stoch
 def e(value=1., rate=1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@stochastic
+@stoch
 def l(value=.1, rate = 1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
@@ -435,23 +435,23 @@ def D(  value = D_array,
 \end{verbatim}
 To make $r$ explicit as in the right pane of figure \ref{fig:disaster_dag}, we would write:
 \begin{verbatim}
-@stochastic
+@stoch
 def s(value=50, length=110):
     """Change time for rate stoch."""
     constrain(value, 0, length)
     return 0.
 
-@stochastic
+@stoch
 def e(value=1., rate=1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@stochastic
+@stoch
 def l(value=.1, rate = 1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@functional
+@dtrm
 def r(l=l,e=e,s=s):
     """r = function(l,e,s)"""
     ret_val =  ones(111,dtype=float)
@@ -464,15 +464,15 @@ def D(  value = D_array, rate=r):
     """Annual occurences of coal mining D."""
     return poisson_like(value,rate)
 \end{verbatim}
-In general, it's better to make heavyweight functions into their own functls, because functls' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
+In general, it's better to make heavyweight functions into their own dtrms, because dtrms' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
 
 \section{The \texttt{Model} class} \label{sec:Model} 
 This class serves as a container for probability models and as a stem class for other `model-level' classes like \texttt{Sampler}. Methods implemented:
 \begin{description}
 	\item[\texttt{sample\_model\_likelihood()}:] Returns an estimate of $\log p(d|M)$, the unconditional log-probability or log-density of all the data objects in model $M$. This is called by the function \texttt{weight()}, which finds the posterior probabilities of a set of models.
 	\item[\texttt{DAG()}:] Outputs a graphical representation of the model.
-	\item[\texttt{tally()}:] Tells all stochs and functls to record their current values in their traces.
-	\item[\texttt{remember()}:] Tells all stochs and functls to set their values to a certain element of their traces.
+	\item[\texttt{tally()}:] Tells all stochs and dtrms to record their current values in their traces.
+	\item[\texttt{remember()}:] Tells all stochs and dtrms to set their values to a certain element of their traces.
 	\item[\texttt{save\_state()}:] Under construction.
 	\item[\texttt{save\_traces()}:] Under construction.
 	\item[\texttt{seed()}:] All stochs with an \texttt{rseed} value draw a new value from their distributions.
@@ -482,7 +482,7 @@ Useful attributes:
 \begin{description}
 	\item[\texttt{containers}:] A set of self's PyMC object containers.
 	\item[\texttt{stochs}:] A set of self's stochs.
-	\item[\texttt{functls}:] A set of self's functls.
+	\item[\texttt{dtrms}:] A set of self's dtrms.
 	\item[\texttt{data}:] A set of self's data objects.
 \end{description}
 
@@ -797,16 +797,16 @@ Sampling methods are responsible for making stochs or groups of stochs take sing
 \begin{figure}[hhhhhhhhh]
     \centering
     \epsfig{file=sampmethod_children.pdf,width=6cm}
-    \caption{The children of a step method. The stochs under the step method's jurisdiction are shown on a plate. The children of the step method are the stochs (regardless of \texttt{isdata}) which depend on the step method's stochs either directly or via an unbroken sequence of functls, and which aren't in the step method's stochs.}
+    \caption{The children of a step method. The stochs under the step method's jurisdiction are shown on a plate. The children of the step method are the stochs (regardless of \texttt{isdata}) which depend on the step method's stochs either directly or via an unbroken sequence of dtrms, and which aren't in the step method's stochs.}
     \label{fig:sampmethod_children}
 \end{figure}
 
 All step methods must be subclasses of \texttt{StepMethod}, which exposes the following attributes:
 \begin{description}
-    \item[\texttt{functls}:] A set containing the functls over which self has jurisdiction. Although step methods are primarily responsible for making stochs take Metropolis steps, it can be nice to assign functls to them for organizational reasons.
+    \item[\texttt{dtrms}:] A set containing the dtrms over which self has jurisdiction. Although step methods are primarily responsible for making stochs take Metropolis steps, it can be nice to assign dtrms to them for organizational reasons.
     \item[\texttt{stochs}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these stochs take single MCMC steps.
     \item[\texttt{data}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
-    \item[\texttt{pymc\_objects}:] The union of \texttt{functls}, \texttt{stochs}, and \texttt{data}.
+    \item[\texttt{pymc\_objects}:] The union of \texttt{dtrms}, \texttt{stochs}, and \texttt{data}.
     \item[\texttt{children}:] The union of all the nearest descendants of self's stochs that are themselves stochs, differenced with the set of self's stochs. See figure \ref{fig:sampmethod_children}.
     \item[\texttt{loglike}:] The log-probability of self's children given self's stochs' current values. The sum of self's stochs' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's stochs, up to superfluous constants. This attribute will be needed by most embeddable step methods. Loglike is recomputed every time it's accessed.
     \item[\texttt{\_asf}]: A catchall name for tunable sampling stochs.
@@ -879,7 +879,7 @@ class OneAtATimeMetropolis(StepMethod):
         pass
 \end{verbatim}
 
-Note that a proposal is made by actually updating the stoch's value, and jumps are rejected by calling the stoch's \texttt{revert()} method. This procedure lets stochs and functls make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
+Note that a proposal is made by actually updating the stoch's value, and jumps are rejected by calling the stoch's \texttt{revert()} method. This procedure lets stochs and dtrms make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
 
 
 \subsection{Other step methods provided with the distribution}\label{sub:other_sm}

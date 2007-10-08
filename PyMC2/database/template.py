@@ -14,10 +14,10 @@ class Trace(object):
       - _finalize(self)
       
     This class is initialized when a Model is instantiated ; a Trace instance 
-    is attributed to each traceable Functional and Stochastic:
+    is attributed to each traceable Deterministic and Stochastic:
     
     .. python::
-        for object in self.stochs | self.functls :
+        for object in self.stochs | self.dtrms :
             if object.trace:
                 object.trace = module.Trace(object, self.db)
     
@@ -33,7 +33,7 @@ class Trace(object):
         `_assign_database_backend`.
         
         :Stochastics:
-          - `object` : PyMC object (Functional or Stochastic) instance to be tallied.
+          - `object` : PyMC object (Deterministic or Stochastic) instance to be tallied.
           - `database` : The Model's Database instance. 
         """
         pass

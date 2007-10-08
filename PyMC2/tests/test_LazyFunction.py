@@ -2,11 +2,11 @@ from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
 from PyMC2.LazyFunction import LazyFunction
-from PyMC2 import stochastic, data, functional, Normal, potential, ZeroProbability
+from PyMC2 import stoch, data, dtrm, Normal, potential, ZeroProbability
 
 verbose = False
 
-@stochastic
+@stoch
 def A(value=1.):
     return -10.*value
 
@@ -14,20 +14,20 @@ def A(value=1.):
 normcoef = 1.
 
 # B's value is a random function of A.
-@functional(verbose=verbose)
+@dtrm(verbose=verbose)
 def B(A=A):
     # print 'B computing' 
     return A + normcoef * normal()
 
 # Guarantee that initial state is OK
 while B.value<0.:
-    @functional(verbose=verbose)
+    @dtrm(verbose=verbose)
     def B(A=A):
         # print 'B computing'
         return A + normcoef * normal()
 
 @data
-@stochastic(verbose=verbose)
+@stoch(verbose=verbose)
 def C(value = 0., B=[A,B]):
     if B[0]<0.:
          return -np.Inf
@@ -52,7 +52,7 @@ class test_LazyFunction(NumpyTestCase):
             # Check the argument values
             # L.refresh_argument_values()    
             # assert(L.argument_values['B'] is B.value)
-            assert(L.ultimate_args.value[0][1] is B.value)
+            assert(L.ultimate_args.value[1] is B.value)
     
             # Accept or reject values
             acc = True
@@ -78,7 +78,7 @@ class test_LazyFunction(NumpyTestCase):
                 cur_frame = B._value.frame_queue[1]
                 assert(B._value.cached_args[1-cur_frame] is A.value)
                 assert(B._value.cached_args[cur_frame] is A.last_value)
-                assert(B._value.ultimate_args.value[0] is A.last_value)
+                assert(B._value.ultimate_args.value[0] is A.value)
                 assert(B.value is last_B_value)
     
     
@@ -88,17 +88,17 @@ class test_LazyFunction(NumpyTestCase):
             # If jump was accepted:
             if acc:
                 # B's value should be at the head of C's cache
-                assert(L.cached_args[cur_frame*2][1] is B.value)
+                assert(L.cached_args[cur_frame*3+1] is B.value)
                 assert(L.cached_values[cur_frame] is C.logp)
         
             # If jump was rejected:        
             else:
         
                 # B's value should be at the back of C's cache.
-                assert(L.cached_args[(1-cur_frame)*2][1] is B.value)
+                assert(L.cached_args[(1-cur_frame)*3+1] is B.value)
                 assert(L.cached_values[1-cur_frame] is C.logp)
         
-            assert(L.ultimate_args.value[0][1] is B.value)
+            assert(L.ultimate_args.value[1] is B.value)
         
 
 if __name__ == '__main__':

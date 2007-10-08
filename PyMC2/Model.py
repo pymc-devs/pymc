@@ -10,7 +10,7 @@ from numpy import zeros, floor
 from StepMethods import StepMethod, assign_method
 from Matplot import Plotter, show
 import database
-from PyMCObjects import Stochastic, Functional, Node, Variable, Potential
+from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import ContainerBase, Container
 from utils import extend_children, extend_parents
 import gc, sys,os
@@ -24,28 +24,30 @@ from Container import ObjectContainer
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
+# TODO: Make extended_parents, extended_children, moral_neighbors, maximal_clique local to Stochastic.
+
 class Model(ObjectContainer):
     """
     Model is initialized with:
 
       >>> A = Model(input, db='ram', output_path=None, verbose=0)
 
-      :Stochastics:
+      :Parameters:
         - input : module, list, tuple, dictionary, set, object or nothing.
-            Model definition, in terms of Stochastics, Functionals, Potentials and Containers.
+            Model definition, in terms of Stochastics, Deterministics, Potentials and Containers.
             If nothing, all nodes are collected from the base namespace.
         - db : string
             The name of the database backend that will store the values
-            of the stochs and functls sampled during the MCMC loop.
+            of the stochs and dtrms sampled during the MCMC loop.
         - output_path : string
             The place where any output files should be put.
         - verbose : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Attributes:
-      - functls
+      - dtrms
       - stochs (with isdata=False)
-      - data (stochs with isdata=True)
+      - data (stochastic variables with isdata=True)
       - variables
       - potentials
       - containers
@@ -54,18 +56,18 @@ class Model(ObjectContainer):
       - status: Not useful for the Model base class, but may be used by subclasses.
       
     The following attributes only exist after the appropriate method is called:
-      - moral_edges: The edges of the moralized graph. A dictionary, keyed by stoch,
-        whose values are sets of stochs. Edges exist between the key stoch and all stochs
+      - moral_edges: The edges of the moralized graph. A dictionary, keyed by stochastic variable,
+        whose values are sets of stochastic variables. Edges exist between the key variable and all variables
         in the value. Created by method _moralize.
-      - extended_children: The extended children of self's stochs. See the docstring of
-        extend_children. This is a dictionary keyed by stochs.
-      - generations: A list of sets of stochs. The members of each element only have parents in 
-        previous elements. Created by method parse_generations.
+      - extended_children: The extended children of self's stochastic variables. See the docstring of
+        extend_children. This is a dictionary keyed by stochastic variable.
+      - generations: A list of sets of stochastic variables. The members of each element only have parents in 
+        previous elements. Created by method find_generations.
 
     Methods:
        - moralize(): Find edges of moral graph.
        - extend_children(): Find 'extended children' of each object.
-       - parse_generations(): Find generations.
+       - find_generations(): Find generations.
        - tally(index): Write all variables' current values to trace, at location index.
        - sample_model_likelihood(iter): Generate and return iter samples of p(data and potentials|model).
          Can be used to generate Bayes' factors.
@@ -80,13 +82,13 @@ class Model(ObjectContainer):
     def __init__(self, input=None, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
 
-        :Stochastics:
+        :Parameters:
           - input : module, list, tuple, dictionary, set, object or nothing.
-              Model definition, in terms of Stochastics, Functionals, Potentials and Containers.
+              Model definition, in terms of Stochastics, Deterministics, Potentials and Containers.
               If nothing, all nodes are collected from the base namespace.
           - db : string
               The name of the database backend that will store the values
-              of the stochs and functls sampled during the MCMC loop.
+              of the stochs and dtrms sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
           - verbose : integer
@@ -99,7 +101,7 @@ class Model(ObjectContainer):
         # Flag for model state
         self.status = 'ready'
         
-        # Get stochs, functls, etc.
+        # Get stochs, dtrms, etc.
         if input is None:
             import __main__
             input = __main__
@@ -121,7 +123,7 @@ class Model(ObjectContainer):
         """
         Creates moral adjacency matrix for self.
         
-        self.moral_edges[stoch] returns a list of the stochs with whom
+        self.moral_edges[stoch] returns a list of the stochastic variables with whom
         stoch shares an edge in the 'moral graph', which is formed by connecting
         parents to children and then connecting co-parents to each other. 
         See documentation.
@@ -177,18 +179,18 @@ class Model(ObjectContainer):
     def extend_children(self):
         """
         Makes a dictionary of self's nodes' 'extended children.'
-        The extended children of p are the stochs that depend on p
-        either directly or via an unbroken sequence of functls.
+        The extended children of p are the stochastic variables that depend on p
+        either directly or via an unbroken sequence of deterministic variables.
         """
         self.extended_children = {}
         
         for variable in self.variables:
             self.extended_children[variable] = extend_children(variable.children)
 
-    def parse_generations(self):
+    def find_generations(self):
         """
         Parse up the generations for model averaging. A generation is the
-        set of stochs that only has parents in previous generations.
+        set of stochastic variables that only has parents in previous generations.
         """
         self.generations = []
         self.extend_children()
@@ -234,7 +236,7 @@ class Model(ObjectContainer):
         loglikes = zeros(iter)
 
         if len(self.generations) == 0:
-            self.parse_generations()
+            self.find_generations()
 
         try:
             for i in xrange(iter):
@@ -289,10 +291,10 @@ class Model(ObjectContainer):
         self.db.tally(index)
     
     def _assign_database_backend(self, db):
-        """Assign Trace instance to stochs and functls and Database instance
+        """Assign Trace instance to stochs and dtrms and Database instance
         to self.
 
-        :Stochastics:
+        :Parameters:
           - `db` : string, Database instance
             The name of the database module (see below), or a Database instance.
 
@@ -310,7 +312,7 @@ class Model(ObjectContainer):
 
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
-        for object in self.stochs | self.functls :
+        for object in self.stochs | self.dtrms :
             if object.trace:
                 self._variables_to_tally.add(object)
             else:
@@ -333,7 +335,7 @@ class Model(ObjectContainer):
         
     def plot(self):
         """
-        Plots traces and histograms for functls and stochs.
+        Plots traces and histograms for variables.
         """
 
         # Loop over nodes
@@ -360,7 +362,7 @@ class Sampler(Model):
         
     def _assign_samplingmethod(self):
         """
-        Make sure every stoch has a step method. If not, 
+        Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
         """
 
@@ -384,7 +386,7 @@ class Sampler(Model):
         """
         sample(iter, burn, thin, tune_interval)
 
-        Prepare nodes, initialize traces, run MCMC loop.
+        Initialize traces, run MCMC loop.
         """
         
         self._iter = int(iter)
@@ -475,7 +477,7 @@ class Sampler(Model):
        """
        tally()
 
-       Records the value of all tracing nodes.
+       Records the value of all tracing variables.
        """
        if self.verbose > 2:
            print self.__name__ + ' tallying.'

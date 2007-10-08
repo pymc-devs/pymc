@@ -6,12 +6,12 @@ def disaster_no_r():
         """Change time for rate stoch."""
         return 0.
 
-    @stochastic
+    @stoch
     def e(value=1., rate=1.):
         """Rate stoch of poisson distribution."""
         return 0.
 
-    @stochastic
+    @stoch
     def l(value=.1, rate = 1.):
         """Rate stoch of poisson distribution."""
         return 0.
@@ -35,17 +35,17 @@ def disaster_yes_r():
         """Change time for rate stoch."""
         return 0.
 
-    @stochastic
+    @stoch
     def e(value=1., rate=1.):
         """Rate stoch of poisson distribution."""
         return 0.
 
-    @stochastic
+    @stoch
     def l(value=.1, rate = 1.):
         """Rate stoch of poisson distribution."""
         return 0.
     
-    @functional
+    @dtrm
     def r(switchpoint = s,
         early_rate = e,
         late_rate = l):
@@ -63,79 +63,79 @@ def disaster_yes_r():
 M = Model(disaster_yes_r())
 M.DAG(consts=False, path='DisasterModel2.dot', format='raw', legend=False)
 
-def functl_pre():
-    @stochastic
+def dtrm_pre():
+    @stoch
     def A(value=0):
         return 0.
         
-    @stochastic
+    @stoch
     def B(value=0):
         return 0.
         
-    @functional
+    @dtrm
     def C(p1=A, p2=B):
         return 0.
         
-    @stochastic
+    @stoch
     def D(value=0, C = C):
         return 0.
         
-    @stochastic
+    @stoch
     def E(value=0, C=C):
         return 0.
         
     return locals()
     
-M = Model(functl_pre())
-M.DAG(consts=False, path='FunctionalPreInheritance.dot', format='raw', legend=False)    
+M = Model(dtrm_pre())
+M.DAG(consts=False, path='DeterministicPreInheritance.dot', format='raw', legend=False)    
     
-def functl_post():
-    @stochastic
+def dtrm_post():
+    @stoch
     def A(value=0):
         return 0.
         
-    @stochastic
+    @stoch
     def B(value=0):
         return 0.
         
-    @stochastic
+    @stoch
     def D(value=0, C_p1 = A, C_p2=B):
         return 0.
         
-    @stochastic
+    @stoch
     def E(value=0, C_p1=A, C_p2 = B):
         return 0.
         
     return locals()
     
-M = Model(functl_post())
-M.DAG(consts=False, path='FunctionalPostInheritance.dot', format='raw', legend=False)    
+M = Model(dtrm_post())
+M.DAG(consts=False, path='DeterministicPostInheritance.dot', format='raw', legend=False)    
     
     
 def survival():
-    @stochastic
+    @stoch
     def beta(value=0):
         return 0.
         
     @data
-    @stochastic
+    @stoch
     def x(value=0):
         return 0.
         
-    @functional
+    @dtrm
     def S(covariates = x, coefs = beta):
         return 0.
         
     @data
-    @stochastic
+    @stoch
     def t(value=0, survival = S):
         return 0.
         
-    @stochastic
+    @stoch
     def a(value=0):
         return 0.
         
-    @stochastic
+    @stoch
     def b(value=0):
         return 0.
     

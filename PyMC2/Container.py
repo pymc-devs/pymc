@@ -1,5 +1,5 @@
-# from PyMCObjects import StochasticBase, FunctionalBase, PotentialBase
-from Node import Node, ContainerBase, Variable, StochasticBase, FunctionalBase, PotentialBase, StepMethodBase
+# from PyMCObjects import StochasticBase, DeterministicBase, PotentialBase
+from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, StepMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
 from Container_values import LTCValue, DCValue, ACValue, OCValue
@@ -31,7 +31,7 @@ def Container(*args):
     
     Example:
     
-        @stochastic
+        @stoch
         def A(value=0., mu=3, tau=2):
             return normal_like(value, mu, tau)
         
@@ -43,13 +43,13 @@ def Container(*args):
         C[1] = C.value[1] = 15.2
     
     
-    The primary reason containers exist is to allow stochs to have large
+    The primary reason containers exist is to allow nodes to have large
     sets of parents without the need to refer to each of the parents by name.
     Example:
     
         x = []
     
-        @stochastic
+        @stoch
         def x_0(value=0, mu=0, tau=2):
             return normal_like(value, mu, tau)
     
@@ -57,7 +57,7 @@ def Container(*args):
         last_x = x_0
     
         for i in range(1,N):          
-            @stochastic
+            @stoch
             def x_now(value=0, mu = last_x, tau=2):
                 return normal_like(value, mu, tau)
                 
@@ -66,7 +66,7 @@ def Container(*args):
         
             x.append(x_now)
         
-        @stochastic
+        @stoch
         def y(value=0, mu = x, tau = 100):
 
             mean_sum = 0
@@ -119,13 +119,10 @@ def file_items(container, iterable):
     Files away objects into the appropriate attributes of the container.
     """
     container._value = copy(iterable)
-    container.__name__ = container.__class__.__name__
     
-    # all_objects needs to be a list because some may be unhashable.
-    container.all_objects = []
     container.nodes = set()
     container.variables = set()
-    container.functls = set()
+    container.dtrms = set()
     container.stochs = set()
     container.potentials = set()
     container.data = set()
@@ -140,8 +137,6 @@ def file_items(container, iterable):
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
             item = iterable[item]
-            
-        container.all_objects.append(item)
 
         if hasattr(item,'__iter__'):
             
@@ -156,7 +151,7 @@ def file_items(container, iterable):
             container.variables.update(new_container.variables)
             container.stochs.update(new_container.stochs)
             container.potentials.update(new_container.potentials)
-            container.functls.update(new_container.functls)
+            container.dtrms.update(new_container.dtrms)
             container.data.update(new_container.data)
             container.step_methods.update(new_container.step_methods)
 
@@ -170,8 +165,8 @@ def file_items(container, iterable):
                         container.data.add(item)
                     else:
                         container.stochs.add(item)
-                elif isinstance(item, FunctionalBase):
-                    container.functls.add(item)
+                elif isinstance(item, DeterministicBase):
+                    container.dtrms.add(item)
             elif isinstance(item, PotentialBase):
                 container.potentials.add(item)
             elif isinstance(item, StepMethodBase):
@@ -332,7 +327,7 @@ class ArrayContainer(ContainerBase, ndarray):
     """
     ArrayContainers wrap Numerical Python ndarrays. These are full 
     ndarray subclasses, and should support all of ndarrays' 
-    functionality.
+    dtrmity.
     
     :SeeAlso: Container, SetContainer, ListDictContainer
     """

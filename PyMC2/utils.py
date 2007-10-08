@@ -7,7 +7,7 @@
 import numpy as np
 import sys, inspect
 from copy import copy
-from PyMCObjects import Stochastic, Functional, Node, Variable, Potential
+from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
 
 from numpy.linalg.linalg import LinAlgError
@@ -34,17 +34,17 @@ def extend_children(children):
     extend_children(children)
     
     Returns a set containing
-    nearest conditionally stochastic (Stochastic, not Functional) descendants.
+    nearest conditionally stochastic (Stochastic, not Deterministic) descendants.
     """
     new_children = copy(children)
     need_recursion = False
-    functl_children = set()
+    dtrm_children = set()
     for child in children:
-        if isinstance(child,Functional):
+        if isinstance(child,Deterministic):
             new_children |= child.children
-            functl_children.add(child)
+            dtrm_children.add(child)
             need_recursion = True
-    new_children -= functl_children
+    new_children -= dtrm_children
     if need_recursion:
         new_children = extend_children(new_children)
     return new_children
@@ -54,21 +54,21 @@ def extend_parents(parents):
     extend_parents(parents)
     
     Returns a set containing
-    nearest conditionally stochastic (Stochastic, not Functional) ancestors.
+    nearest conditionally stochastic (Stochastic, not Deterministic) ancestors.
     """
     new_parents = copy(parents)
     need_recursion = False
-    functl_parents = set()
+    dtrm_parents = set()
     
     for parent in parents:
-        if isinstance(parent, Functional):
-            functl_parents.add(parent)
+        if isinstance(parent, Deterministic):
+            dtrm_parents.add(parent)
             need_recursion = True
             for grandparent in parent.parents.itervalues():
                 if isinstance(grandparent, Node):
                     new_parents.add(grandparent)
                     
-    new_parents -= functl_parents
+    new_parents -= dtrm_parents
     if need_recursion:
         new_parents = extend_parents(new_parents)
     return new_parents

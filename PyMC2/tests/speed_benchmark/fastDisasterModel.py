@@ -30,7 +30,7 @@ def switchpoint(value=50, length=110):
     return 0.
 
 
-@stochastic
+@stoch
 def early_mean(value=1., rate=1.):
     """Rate stoch of poisson distribution."""
     if value<0:
@@ -39,7 +39,7 @@ def early_mean(value=1., rate=1.):
 
 
 
-@stochastic
+@stoch
 def late_mean(value=.1, rate = 1.):
     """Rate stoch of poisson distribution."""
     if value<0:

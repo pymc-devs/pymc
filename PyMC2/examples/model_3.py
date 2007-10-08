@@ -6,7 +6,7 @@ amp_of_mean ~ Exp(3)
 disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 """
 
-from PyMC2 import stochastic, data, Metropolis, discrete_stoch
+from PyMC2 import stoch, data, Metropolis, discrete_stoch
 from numpy import array, log, sum, zeros, arange
 from PyMC2 import poisson_like, normal_like, exponential_like
 from PyMC2 import rnormal, rexponential, constrain
@@ -23,7 +23,7 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and stochs
 
-@stochastic
+@stoch
 def stochs_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     """
     Intercept and slope of rate stoch of poisson distribution

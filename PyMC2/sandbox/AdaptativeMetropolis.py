@@ -241,12 +241,12 @@ if __name__=='__main__':
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = eye(2)
-        @stochastic
+        @stoch
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
             return multivariate_normal_like(value,mu,tau)
         
         tau_B = eye(2) * 100.          
-        @stochastic
+        @stoch
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
             return multivariate_normal_like(value,mu,tau)
     

@@ -5,7 +5,7 @@ from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from PyMCObjects import Stochastic, Functional, Node, DiscreteStochastic, BinaryStochastic, Potential
+from PyMCObjects import Stochastic, Deterministic, Node, DiscreteStochastic, BinaryStochastic, Potential
 from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
 
 # Changeset history
@@ -27,13 +27,13 @@ class DictWithDoc(dict):
     where stoch is a Stochastic object. c should be a competence
     score from 0 to 3, assigned as follows:
     
-    0:  I can't handle that stoch.
-    1:  I can handle that stoch, but I'm a generalist and
+    0:  I can't handle that variable.
+    1:  I can handle that variable, but I'm a generalist and
         probably shouldn't be your top choice (Metropolis
         and friends fall into this category).
     2:  I'm designed for this type of situation, but I could be
         more specialized.
-    3:  I was made for this situation, let me handle the stoch.
+    3:  I was made for this situation, let me handle the variable.
     
     In order to be eligible for inclusion in the registry, a sampling
     method's init method must work with just a single argument, a
@@ -48,7 +48,7 @@ StepMethodRegistry = DictWithDoc()
 def blacklist(stoch):
     """
     If you want to exclude a particular step method from
-    consideration for handling a stoch, do this:
+    consideration for handling a variable, do this:
     
     from PyMC2 import StepMethodRegistry
     StepMethodRegistry[bad_step_method] = blacklist
@@ -58,7 +58,7 @@ def blacklist(stoch):
 def pick_best_methods(stoch):
     """
     Picks the StepMethods best suited to handle
-    a stoch.
+    a variable.
     """
     
     # Keep track of most competent methohd
@@ -88,7 +88,7 @@ def pick_best_methods(stoch):
 def assign_method(stoch, scale=None):
     """
     Returns a step method instance to handle a
-    stoch. If several methods have the same competence,
+    variable. If several methods have the same competence,
     it picks one arbitrarily (using set.pop()).
     """
     
@@ -116,13 +116,15 @@ class StepMethod(StepMethodBase):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     Externally-accessible attributes:
-      functls: The Functionals over which self has jurisdiction.
-      stochs: The Stochastics over which self has jurisdiction which have isdata = False.
-      data: The Stochastics over which self has jurisdiction which have isdata = True.
-      variables: The Functionals and Stochastics over which self has jurisdiction.
-      children: The combined children of all Nodes over which self has jurisdiction.
-      parents: The combined parents of all Nodes over which self has jurisdiction, as a set.
-      loglike: The summed log-probability of self's children conditional on all of self's Nodes' current values. These will be recomputed only as necessary. This descriptor should eventually be written in C.
+      dtrms:    The Deterministics over which self has jurisdiction.
+      stochs:   The Stochastics over which self has jurisdiction which have isdata = False.
+      data:     The Stochastics over which self has jurisdiction which have isdata = True.
+      variables:The Deterministics and Stochastics over which self has jurisdiction.
+      children: The combined children of all Variables over which self has jurisdiction.
+      parents:  The combined parents of all Nodes over which self has jurisdiction, as a set.
+      loglike:  The summed log-probability of self's children conditional on all of self's 
+                    Variables' current values. These will be recomputed only as necessary. 
+                    This descriptor should eventually be written in C.
     
     Externally accesible methods:
       sample(): A single MCMC step for all the Stochastics over which self has jurisdiction. Must be overridden in subclasses.
@@ -142,7 +144,7 @@ class StepMethod(StepMethodBase):
         
         # Initialize public attributes
         self.variables = set(variables)
-        self.functls = set()
+        self.dtrms = set()
         self.stochs = set()
         self.data = set()
         self.children = set()
@@ -159,8 +161,8 @@ class StepMethod(StepMethodBase):
         for variable in self.variables:
             
             # Sort.
-            if isinstance(variable,Functional):
-                self.functls.add(variable)
+            if isinstance(variable,Deterministic):
+                self.dtrms.add(variable)
             elif isinstance(variable,Stochastic):
                 if variable.isdata:
                     self.data.add(variable)
@@ -180,7 +182,7 @@ class StepMethod(StepMethodBase):
         self.parents = extend_parents(self.parents)
         
         # Remove own PyMCObjects from set of children
-        self.children -= self.functls
+        self.children -= self.dtrms
         self.children -= self.stochs
         self.children -= self.data
         
@@ -307,7 +309,7 @@ class StepMethod(StepMethodBase):
 # The default StepMethod, which Model uses to handle singleton stochs.
 class Metropolis(StepMethod):
     """
-    The default StepMethod, which Model uses to handle singleton, continuous stochs.
+    The default StepMethod, which Model uses to handle singleton, continuous variables.
     
     Applies the one-at-a-time Metropolis-Hastings algorithm to the Stochastic over which self has jurisdiction.
     
@@ -317,10 +319,10 @@ class Metropolis(StepMethod):
     
     :Arguments:
     - stoch : Stochastic
-            The stoch over which self has jurisdiction.
+            The variable over which self has jurisdiction.
     
     - scale (optional) : number
-            The proposal jump width is set to scale * stoch.value.
+            The proposal jump width is set to scale * variable.value.
     
     - dist (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
@@ -380,7 +382,7 @@ class Metropolis(StepMethod):
     
     def step(self):
         """
-        The default step method applies if the stoch is floating-point
+        The default step method applies if the variable is floating-point
         valued, and is not being proposed from its prior.
         """
         
@@ -471,7 +473,7 @@ def MetroCompetence(stoch):
     The competence function for Metropolis
     """
     
-    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch,BinaryStochastic):
+    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
         # If the stoch's binary or discrete, I can't do it.
         return 0
     
@@ -489,7 +491,7 @@ StepMethodRegistry[Metropolis] = MetroCompetence
 
 class DiscreteMetropolis(Metropolis):
     """
-    Just like Metropolis, but rounds the stoch's value.
+    Just like Metropolis, but rounds the variable's value.
     Good for DiscreteStochastics.
     """
     
@@ -525,11 +527,13 @@ StepMethodRegistry[DiscreteMetropolis] = DiscreteMetroCompetence
 class BinaryMetropolis(Metropolis):
     """
     Like Metropolis, but with a modified step() method.
-    Good for binary stochs.
+    Good for binary variables.
     
     NOTE this is not compliant with the Metropolis standard
     yet because it lacks a reject() method.
     (??? But, it is a subclass of Metropolis, which has a reject() method)
+    True... but it's never called, this is really a Gibbs sampler since there
+    are only 2 states available.
     """
     
     def __init__(self, stoch, dist=None):
@@ -624,10 +628,10 @@ class JointMetropolis(StepMethod):
     
     S = Joint(variables, epoch=1000, memory=10, delay=1000)
     
-    Applies the Metropolis-Hastings algorithm to several stochs
+    Applies the Metropolis-Hastings algorithm to several variables
     together. Jumping density is a multivariate normal distribution
     with mean zero and covariance equal to the empirical covariance
-    of the stochs, times _asf ** 2.
+    of the variables, times _asf ** 2.
     
     :Arguments:
     - variables (optional) : list or array
@@ -635,7 +639,7 @@ class JointMetropolis(StepMethod):
             this StepMethod.
     
     - stoch (optional) : Stochastic
-            Alternatively to variables, a single stoch can be passed.
+            Alternatively to variables, a single variable can be passed.
     
     - epoch (optional) : integer
             After epoch values are stored in the internal
@@ -656,7 +660,7 @@ class JointMetropolis(StepMethod):
             chosen by examining P.value's type.
     
     - scale (optional) : float
-            Scale stoch.
+            Scale proposal distribution.
     
     - oneatatime_scales (optional) : dict
             Dictionary of scales for one-at-a-time iterations.
@@ -666,7 +670,7 @@ class JointMetropolis(StepMethod):
     
     Externally-accessible attributes:
         
-        variables:   A sequence of pymc objects to handle using
+        variables:      A sequence of stochastic variables to handle using
                         this StepMethod.
         
         epoch:          After epoch values are stored in the internal
@@ -690,7 +694,7 @@ class JointMetropolis(StepMethod):
         
         tune():         sets _asf according to a heuristic.
         
-    Also: don't start joint sampling until all stochs have mixed at
+    Also: don't start joint sampling until all variables have mixed at
     least a little. Warn if another epoch of one-at-a-time sampling is
     required.
     
@@ -803,7 +807,7 @@ class JointMetropolis(StepMethod):
         """
         If the empirical covariance hasn't been computed yet (the first
         epoch isn't over), this method passes the tune() call along to the
-        Metropolis instances handling self's stochs. If the
+        Metropolis instances handling self's variables. If the
         empirical covariance has been computed, the Metropolis
         instances aren't in use anymore so this method does nothing.
         
@@ -818,7 +822,7 @@ class JointMetropolis(StepMethod):
     
     def propose(self):
         """
-        This method proposes values for self's stochs based on the empirical
+        This method proposes values for self's variables based on the empirical
         covariance.
         """
         fill_stdnormal(self._proposal_deviate)
@@ -842,9 +846,9 @@ class JointMetropolis(StepMethod):
         """
         If the empirical covariance hasn't been computed yet, the step() call
         is passed along to the Metropolis instances that handle self's
-        stochs before the end of the first epoch.
+        variables before the end of the first epoch.
         
-        If the empirical covariance has been computed, values for self's stochs
+        If the empirical covariance has been computed, values for self's variables
         are proposed and tested simultaneously.
         """
         if not self._ready:

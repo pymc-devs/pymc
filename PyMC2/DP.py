@@ -162,7 +162,7 @@ class DPDraws(object):
     cluster_multiplicities: multiplicities of clusters.
     
     Note may want to make these things their own Stochastics, in case people want to have
-    Functionals etc. depending on them or to trace them.
+    Deterministics etc. depending on them or to trace them.
     
     Parent: 'dist': a DPStochastic.
     

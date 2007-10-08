@@ -10,8 +10,8 @@ import types, copy
 import distributions
 from Node import ZeroProbability
 
-def functl_to_NDarray(arg):
-    if isinstance(arg,proposition5.Functional):
+def dtrm_to_NDarray(arg):
+    if isinstance(arg,proposition5.Deterministic):
         return arg.value
     else:
         return arg

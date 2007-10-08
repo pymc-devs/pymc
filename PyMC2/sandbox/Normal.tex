@@ -34,10 +34,10 @@ which after completing the square yields
 This step method's constructor arguments are:
 \begin{itemize}
 	\item \texttt{stoch}: The stoch representing $x$. 
-	\item \texttt{F\_dict}: A dictionary, indexed by child objects, whose values are functls whose values are the $F$ matrices. 
-	\item \texttt{a\_dict}: Same as \texttt{F\_dict}, but the values of the functls are the $a$ arrays.
+	\item \texttt{F\_dict}: A dictionary, indexed by child objects, whose values are dtrms whose values are the $F$ matrices. 
+	\item \texttt{a\_dict}: Same as \texttt{F\_dict}, but the values of the dtrms are the $a$ arrays.
 	\item \texttt{tau\_dict}: The obvious.
-	\item \texttt{prior\_mu}: A functl whose value is the prior mean of $x$.
+	\item \texttt{prior\_mu}: A dtrm whose value is the prior mean of $x$.
 	\item \texttt{prior\_tau}: Same as \texttt{prior\_mu}, but with the precision matrix.    
 \end{itemize}
 
@@ -63,8 +63,8 @@ A Metropolis-Hastings step algorithm for this distribution which tends to be eff
 This step method's constructor arguments are simply:
 \begin{itemize}
 	\item \texttt{stoch}: The stoch representing $x$. 
-	\item \texttt{F\_dict}: A dictionary, indexed by child objects, whose values are functls whose values are the $F$ matrices. 
-	\item \texttt{a\_dict}: Same as \texttt{F\_dict}, but the values of the functls are the $a$ arrays.
+	\item \texttt{F\_dict}: A dictionary, indexed by child objects, whose values are dtrms whose values are the $F$ matrices. 
+	\item \texttt{a\_dict}: Same as \texttt{F\_dict}, but the values of the dtrms are the $a$ arrays.
 	\item \texttt{tau\_dict}: The obvious.
 \end{itemize}
 
@@ -72,8 +72,8 @@ This step method's constructor arguments are simply:
 I started a class called Gibbs in \texttt{PyMC2/special\_StepMethods/GibbsSampler.py}, but couldn't figure out how to make it work well. It would be nice if:  
 \begin{itemize}
 	\item We come up with some consistent class factory for making conjugate/ nonconjugate pairs of Gibbs samplers, maybe similar to what we're doing in distributions.py.	
-	\item The accessory dictionaries that get passed in to the constructor should be allowed to contain stochs, functls, or simple ndarrays. The nodes should have their values extracted automatically somehow.
-	\item Are we willing to insist on consistent parent keying schemes, to avoid having to pass in the accessory dictionaries? If so, we need to standardize across all Gibbs samplers and distributions.py. Compatibility for weird models will require heavy use of utility functls.
+	\item The accessory dictionaries that get passed in to the constructor should be allowed to contain stochs, dtrms, or simple ndarrays. The nodes should have their values extracted automatically somehow.
+	\item Are we willing to insist on consistent parent keying schemes, to avoid having to pass in the accessory dictionaries? If so, we need to standardize across all Gibbs samplers and distributions.py. Compatibility for weird models will require heavy use of utility dtrms.
 	\item Each Gibbs sampler holds a OneAtATimeMetropolis instance called `default' or something which it uses if a Gibbs step fails.
 \end{itemize} 
 \end{document}

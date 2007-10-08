@@ -8,7 +8,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC2 import stochastic, data, discrete_stoch
+from PyMC2 import stoch, data, discrete_stoch
 from numpy import array, log, sum, random
 from numpy.random import randint
 from PyMC2 import uniform_like, exponential_like, poisson_like
@@ -37,7 +37,7 @@ def switchpoint(value=50, length=110):
     rseed = 1.
 
 
-@stochastic
+@stoch
 def early_mean(value=1., rate=1.):
     """Rate stoch of poisson distribution."""
 
@@ -50,7 +50,7 @@ def early_mean(value=1., rate=1.):
     rseed = 1.
 
 
-@stochastic
+@stoch
 def late_mean(value=.1, rate = 1.):
     """Rate stoch of poisson distribution."""
 

@@ -29,9 +29,9 @@ except ImportError:
 
 class NormApproxMu(object):
     """
-    Returns the mean vector of some stochs.
+    Returns the mean vector of some variables.
     
-    Usage: If p1 and p2 are array-valued stochs and N is a 
+    Usage: If p1 and p2 are array-valued stochastic variables and N is a 
     NormalApproximation or MAP object,
     
     N.mu(p1,p2)
@@ -67,9 +67,9 @@ class NormApproxMu(object):
 
 class NormApproxC(object):
     """
-    Returns the covariance matrix of some stochs.
+    Returns the covariance matrix of some variables.
     
-    Usage: If p1 and p2 are array-valued stochs and N is a
+    Usage: If p1 and p2 are array-valued stochastic variables and N is a
     NormalApproximation or MAP object,
     
     N.C(p1,p2)
@@ -113,24 +113,24 @@ class MAP(Model):
     """
     M = MAP(input, db='ram', eps=.001, diff_order=5, verbose=False)
     
-    On instantiation, sets all stochs in the model to their maximal a-posteriori
-    values.
+    Sets all stochastic variables in the model to their maximal a-posteriori
+    values when fit() method is called.
     
     Useful methods:
-    revert_to_max: Sets all stochs to mean value under normal approximation
+    revert_to_max:  Sets all stochastic variables to MAP estimate after fit() is called.
     fit:            Finds the MAP estimate.
     
     Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of stochs p1, p2, ...
+    mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
-    len:                The number of free stochs in the model ('k' in AIC and BIC)
+    len:                The number of free stochastic variables in the model ('k' in AIC and BIC)
     data_len:           The number of datapoints used ('n' in BIC)
     AIC:                Akaike's Information Criterion for the model
     BIC:                Bayesian Information Criterion for the model
     
     :Arguments:
-    input: A dictionary or module, as for Model
+    input: As for Model
     db: A database backend
     eps: 'h' for computing numerical derivatives.
     diff_order: The order of the approximation used to compute derivatives.
@@ -427,25 +427,25 @@ class NormalApproximation(MAP):
     """
     N = NormalApproximation(input, db='ram', eps=.001, diff_order = 5, method = 'fmin')
     
-    Normal approximation to the posterior of a model. Fits self on instantiation.
+    Normal approximation to the posterior of a model.
     
     Useful methods:
-    draw:           Draws values for all stochs using normal approximation
-    revert_to_max: Sets all stochs to mean value under normal approximation
+    draw:           Draws values for all stochastic variables using normal approximation
+    revert_to_max:  Sets all stochastic variables to mean value under normal approximation
     fit:            Finds the normal approximation.
     
     Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of stochs p1, p2, ...
-    C[p1, p2, ...]:     Returns the posterior covariance of stochs p1, p2, ...
+    mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
+    C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
-    len:                The number of free stochs in the model ('k' in AIC and BIC)
+    len:                The number of free stochastic variables in the model ('k' in AIC and BIC)
     data_len:           The number of datapoints used ('n' in BIC)
     AIC:                Akaike's Information Criterion for the model
     BIC:                Bayesian Information Criterion for the model
     
     :Arguments:
-    input: A dictionary or module, as for Model
+    input: As for Model
     db: A database backend
     eps: 'h' for computing numerical derivatives.
     diff_order: The order of the approximation used to compute derivatives.

@@ -27,7 +27,7 @@ class Trace(base.Trace):
 
     def _initialize(self, length):
         """Create an array of zeros with shape (length, shape(obj)), where 
-        obj is the internal PyMC Stochastic or Functional.
+        obj is the internal PyMC Stochastic or Deterministic.
         """
         try:
             self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.value.dtype) )

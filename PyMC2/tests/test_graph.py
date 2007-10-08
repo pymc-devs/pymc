@@ -4,28 +4,28 @@ from numpy.testing import *
 
 def mymodel():
     
-    @stochastic
+    @stoch
     def A(value=0):
         return 0.
         
-    @functional
+    @dtrm
     def B(mom = 3, dad=A):
         return 0.
         
-    @stochastic
+    @stoch
     def C(value=0, mom = A, dad = B):
         return 0.
     
     F = []
     
-    @stochastic
+    @stoch
     def x_0(value=0, mod = C):
         return 0.
     F.append(x_0)
     last_x = x_0
     
     for i in range(1,3):          
-        @stochastic
+        @stoch
         def x(value=0, last = last_x, mod = C):
             return 0.
         x.__name__ = r'x_%i' % i
@@ -35,7 +35,7 @@ def mymodel():
         
         del x
     
-    @functional
+    @dtrm
     def q(pop = A):
         return (0)
     F.append(q)
@@ -49,7 +49,7 @@ def mymodel():
     
     
     @data
-    @stochastic
+    @stoch
     def D(value=0, mom = C, dad = F):
         return 0.
     
@@ -59,28 +59,20 @@ def mymodel():
     
     return locals()
 
-class test_graph(NumpyTestCase):
-    def check_raw(self):
-        A = Model(mymodel())
-        graph(A, path='full.dot', format='pdf', prog='dot', consts = True)
-        graph(A, path='container.dot', format='pdf', prog='dot', collapse_containers=True, consts = True)
-        graph(A, path='functl.dot', format='pdf', prog='dot', collapse_functls=True, consts = True)
-        graph(A, path='pot.dot', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='functl_pot.dot', format='pdf', prog='dot', collapse_functls=True, collapse_potentials=True, consts = True)
-        graph(A, path='functl_cont.dot', format='pdf', prog='dot', collapse_functls=True, collapse_containers=True, consts = True)
-        graph(A, path='cont_pot.dot', format='pdf', prog='dot', collapse_potentials=True, collapse_containers=True, consts = True)
-        graph(A, path='functl_cont_pot.dot', format='pdf', prog='dot', collapse_functls=True, collapse_containers=True, collapse_potentials=True, consts = True)                
-    def check_pdf(self):
-        A = Model(mymodel())    
-        graph(A, path='full.dot', format='pdf', prog='dot', consts = True)
-        graph(A, path='container.dot', format='pdf', prog='dot', collapse_containers=True, consts = True)
-        graph(A, path='functl.dot', format='pdf', prog='dot', collapse_functls=True, consts = True)
-        graph(A, path='pot.dot', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='functl_pot.dot', format='pdf', prog='dot', collapse_functls=True, collapse_potentials=True, consts = True)
-        graph(A, path='functl_cont.dot', format='pdf', prog='dot', collapse_functls=True, collapse_containers=True, consts = True)
-        graph(A, path='cont_pot.dot', format='pdf', prog='dot', collapse_potentials=True, collapse_containers=True, consts = True)
-        graph(A, path='functl_cont_pot.dot', format='pdf', prog='dot', collapse_functls=True, collapse_containers=True, collapse_potentials=True, consts = True)                        
+# class test_graph(NumpyTestCase):
+#     def check_raw(self):
+A = Model(mymodel())
+graph(A, path='../test_results/full.dot', format='pdf', prog='dot', consts = True)
+graph(A, path='../test_results/dtrm.dot', format='pdf', prog='dot', collapse_dtrms=True, consts = True)
+graph(A, path='../test_results/pot.dot', format='pdf', prog='dot', collapse_potentials=True, consts = True)
+graph(A, path='../test_results/dtrm_pot.dot', format='pdf', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
+# def check_pdf(self):
+A = Model(mymodel())    
+graph(A, path='../test_results/full.pdf', format='pdf', prog='dot', consts = True)
+graph(A, path='../test_results/dtrm.pdf', format='pdf', prog='dot', collapse_dtrms=True, consts = True)
+graph(A, path='../test_results/pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
+graph(A, path='../test_results/dtrm_pot.pdf', format='pdf', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
 
-if __name__ == '__main__':
-    os.chdir('../test_results')
-    NumpyTest().run()
+# if __name__ == '__main__':
+#     os.chdir('../test_results')
+#     NumpyTest().run()

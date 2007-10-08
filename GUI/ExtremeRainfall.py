@@ -11,7 +11,7 @@ from numpy import array
 
 xi = Uniform('xi', rseed=True, lower=0, upper=60, doc='Location stoch')
 
-@stochastic
+@stoch
 def alpha(value=5):
     """Scale stoch"""
     return 1./value

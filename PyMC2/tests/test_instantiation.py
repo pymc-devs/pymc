@@ -7,15 +7,15 @@
 ###
 # TODO
 # ----
-# Add test for functl
+# Add test for dtrm
 # Check discrete and binary stochs
 # Test the distribution instantiators.
 ###
 
 from numpy.testing import *
 import PyMC2
-from PyMC2 import Sampler, data, stochastic, functional, discrete_stoch, \
-    Stochastic,Functional
+from PyMC2 import Sampler, data, stoch, dtrm, discrete_stoch, \
+    Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
 from PyMC2 import uniform_like, exponential_like, poisson_like
 
@@ -35,12 +35,12 @@ def s(value=50, length=110):
     """Change time for rate stoch."""
     return uniform_like(value, 0, length)
 
-@stochastic
+@stoch
 def e(value=1., rate=1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
 
-@stochastic
+@stoch
 def l(value=.1, rate = 1.):
     """Rate stoch of poisson distribution."""
     return exponential_like(value, rate)
@@ -64,7 +64,7 @@ def F(value = D_array*.5,
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
         
 @data
-@stochastic
+@stoch
 def G(value = D_array*.5,
         s = s,
         e = e,

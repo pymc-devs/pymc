@@ -47,28 +47,33 @@ Run convergence diagnostics.
 \label{what-s-new-in-2-0}
 \begin{itemize}
 \item {} 
-Faster internal logic by coding the bottlenecks with Pyrex,
+Faster internal logic by coding the bottlenecks with Pyrex.
+
+\item {}
+More efficient computations by taking advantage of Markov properties of models.
 
 \item {} 
-Faster distributions by an optimization of the Fortran functions,
+Faster distributions by an optimization of the Fortran functions.
 
 \item {} 
-Added a Joint Metropolis and a Gibbs sampler,
+Modular and extensible MCMC system, with several new Metropolis methods provided.
+
+\item {}
+Maximum-a-posteriori estimators and normal approximations for approximate model-fitting.
 
 \item {} 
-Define your problem in a separate file using the Functional, Data and Stochastic
-classes. Use decorators to improve code readability.
+Define your problem in many ways, possibly in a separate file, using classes representing deterministic and stochastic variables and factor potentials. Use decorators to improve code readability. Incorporate arbitrary distributions easily.
 
 \item {} 
 Save your samples directly to a database. Select one from sqlite, MySQL, HDF5,
 pickle files, text files or write a custom database backend from a template.
 
 \item {} 
-Run interactive convergence diagnostics,
+Run interactive convergence diagnostics.
 
 \item {} 
-Stop a sampling run in the middle, save it's state and restart the sampler
-later,
+Stop a sampling run in the middle, save its state and restart the sampler
+later.
 
 \item {} 
 Seed multiple chains on different processors.
@@ -90,9 +95,8 @@ S~=~PyMC.Sampler(problem{\_}definition,~db='pickle')~\\
 S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 
-where problem{\_}definition is a module or a dictionary containing Functional, Data and
-Stochastic instances defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
-complete description of the package, classes and some examples to get started.
+where problem{\_}definition is a module, dictionary, set, tuple, or list containing Deterministic, Data,
+Stochastic and Potential instances defining your problem. If problem{\_}definition is None, these objects will be gathered from the base namespace.
 
 
 %___________________________________________________________________________

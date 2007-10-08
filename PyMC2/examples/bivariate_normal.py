@@ -13,7 +13,7 @@ p(\theta_2 \mid \theta_1, y) = \mathrm{N}(y_2 + \rho(\theta_1 -y_1), 1-\rho^2)
 """
 from PyMC2 import stoch, data, rnormal, normal_like, Uniform, GibbsSampler
 
-@stochastic
+@stoch
 def theta1(value, theta2, y, rho):
     """Conditional probability p(theta1|theta2, y, rho)"""
     def logp(value, theta2, y, rho):
@@ -25,7 +25,7 @@ def theta1(value, theta2, y, rho):
         var = 1.-rho^2
         return rnormal(value, mean, 1./var)
 
-@stochastic
+@stoch
 def theta2(value, theta1, y, rho):
     """Conditional probability p(theta2|theta1, y, rho)"""
     def logp(value, theta2, y, rho):

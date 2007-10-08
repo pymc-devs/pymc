@@ -1,4 +1,4 @@
-from PyMC2 import stochastic, data, discrete_stoch
+from PyMC2 import stoch, data, discrete_stoch
 from numpy import arange, ones, eye, sum, zeros, exp, concatenate
 from numpy.random import normal
 from PyMC2 import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
@@ -36,12 +36,12 @@ def K(value=5, min = K_min, max = K_max):
 
 A_init = zeros(K_max,dtype=float)
 A_init[:K_true] = A_true
-@stochastic
+@stoch
 def A(value=A_init, mu=-1.*ones(K_max,dtype=float), tau=ones(K_max,dtype=float)):
     """A ~ normal(mu, tau)"""
     return normal_like(value, mu, tau)
     
-@stochastic(trace=False)
+@stoch(trace=False)
 def X(value=X_true, K=K, A=A, mu = mu_x_init, tau = tau_x_init):
     """Autoregression"""
 

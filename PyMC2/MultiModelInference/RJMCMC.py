@@ -1,4 +1,4 @@
-from PyMC2 import Stochastic, Functional, Node, StepMethod
+from PyMC2 import Stochastic, Deterministic, Node, StepMethod
 from numpy import ma, random, where
 from numpy.random import random
 from copy import deepcopy
@@ -17,7 +17,7 @@ class OneAtATimeRJ(StepMethod):
     The prior for the indicatored-array-valued stoch may depend explicitly on the
     indicator.
     
-    The functional arguments are, in notation similar to that of Waagepetersen et al.,
+    The dtrm arguments are, in notation similar to that of Waagepetersen et al.,
     
         def rp(indicator):
             Draws a new value for the indicator.

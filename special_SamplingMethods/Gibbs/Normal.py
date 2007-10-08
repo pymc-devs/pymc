@@ -1,11 +1,11 @@
-from PyMC2 import StepMethod, Stochastic, Functional, Container
+from PyMC2 import StepMethod, Stochastic, Deterministic, Container
 from PyMC2.utils import msqrt
 from numpy import asarray
 from numpy.random import normal
 
 class NormalGibbs(StepMethod):
     """
-    Applies to m in following submodel, where i indexes Stochastic/ Functional objects:
+    Applies to m in following submodel, where i indexes Stochastic/ Deterministic objects:
     
     d_i ~ind N(A_i m + b_i, d_tau_i)
     m ~ N(mu, tau)
@@ -18,7 +18,7 @@ class NormalGibbs(StepMethod):
     - Arrays
     - Scalars
     - Stochastics
-    - Functionals
+    - Deterministics
     
     The argument may be:
     - A Stochastic
@@ -27,7 +27,7 @@ class NormalGibbs(StepMethod):
     The arguments A, b, and d_tau may be:
     - Arrays
     - Stochastics
-    - Functionals
+    - Deterministics
     - Containers or other iterables
     
     """
@@ -48,7 +48,7 @@ class NormalGibbs(StepMethod):
             else:
                 self.__dict__[p[0]] = p[1]
                 
-        @functional
+        @dtrm
         def M_and_sig(  base_mean = self.mu, 
                         base_tau = self.tau, 
                         obs_vals = self.d,

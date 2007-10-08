@@ -11,31 +11,31 @@ class ZeroProbability(ValueError):
 
 class Node(object):
     """
-    The base class from which Stochastic, Functional and Potential inherit.
+    The base class from which Stochastic, Deterministic and Potential inherit.
     Shouldn't need to be instantiated directly.
     
-    :Stochastics:
+    :Parameters:
           -doc : string
-              The docstring for this functl.
+              The docstring for this dtrm.
 
           -name : string
-              The name of this functl.
+              The name of this dtrm.
 
           -parents : dictionary
-              A dictionary containing the parents of this functl.
+              A dictionary containing the parents of this dtrm.
 
           -trace : boolean
-              A boolean indicating whether this functl's value 
+              A boolean indicating whether this dtrm's value 
               should be traced (in MCMC).
 
           -cache_depth : integer   
-              An integer indicating how many of this functl's
+              An integer indicating how many of this dtrm's
               value computations should be 'memorized'.
               
           - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
-    :SeeAlso: Stochastic, Functional
+    :SeeAlso: Stochastic, Deterministic
     """
     def __init__(self, doc, name, parents, cache_depth, trace, verbose=0):
 
@@ -107,7 +107,7 @@ class Node(object):
 
 class Variable(Node):
     """
-    The base class for Stochastics and Functionals.
+    The base class for Stochastics and Deterministics.
     """
     pass
 
@@ -135,24 +135,24 @@ class ContainerBase(object):
         
 class StochasticBase(Variable):
     """
-    The base class for stochs.
+    Abstract base class.
     """
     pass
     
-class FunctionalBase(Variable):
+class DeterministicBase(Variable):
     """
-    The base class for functls.
+    Abstract base class.
     """
     pass
     
 class PotentialBase(Node):
     """
-    The base class for potentials.
+    Abstract base class.
     """
     pass
     
 class StepMethodBase(object):
     """
-    The base class for step methods.
+    Abstract base class.
     """
     pass    
