@@ -12,6 +12,59 @@ d_neg_inf = float(-1.79E308)
 # from PyrexLazyFunction import LazyFunction
 from LazyFunction import LazyFunction
 
+def extend_children(children):
+    """
+    extend_children(children)
+    
+    Returns a set containing
+    nearest conditionally stochastic (Stochastic, not Deterministic) descendants.
+    """
+    new_children = copy(children)
+    need_recursion = False
+    dtrm_children = set()
+    for child in children:
+        if isinstance(child,Deterministic):
+            new_children |= child.children
+            dtrm_children.add(child)
+            need_recursion = True
+    new_children -= dtrm_children
+    if need_recursion:
+        new_children = extend_children(new_children)
+    return new_children
+    
+def extend_parents(parents):
+    """
+    extend_parents(parents)
+    
+    Returns a set containing
+    nearest conditionally stochastic (Stochastic, not Deterministic) ancestors.
+    """
+    new_parents = set()
+    need_recursion = False
+    dtrm_parents = set()
+    
+    for parent in parents:
+
+        if isinstance(parent, Variable):
+            new_parents.add(parent)
+
+            if isinstance(parent, DeterministicBase):
+                dtrm_parents.add(parent)
+                need_recursion = True
+                for grandparent in parent.parents.itervalues():
+                    if isinstance(grandparent, Variable):
+                        new_parents.add(grandparent)
+        
+        elif isinstance(parent, ContainerBase):
+            need_recursion = True
+            new_parents |= parent.variables
+                    
+    new_parents -= dtrm_parents
+    if need_recursion:
+        new_parents = extend_parents(new_parents)
+    return new_parents
+
+
 class ParentDict(DictContainer):
     """
     A special subclass of DictContainer which makes it safe to change 
@@ -36,32 +89,35 @@ class ParentDict(DictContainer):
         old_parent = self[key]
 
         # Possibly remove me from old parent's children set.
-        dict.__setitem__(self, key, new_parent)
-        
         if isinstance(old_parent, Variable) or isinstance(old_parent, ContainerBase):
             self.val_keys.remove(key)
             self.nonval_keys.append(key)
         
-        if isinstance(old_parent, Node):
-            only_reference = True
-            if isinstance(new_parent, Variable) or isinstance(new_parent, ContainerBase):
-                self.val_keys.append(key)
-                self.nonval_keys.remove(key)
+            if isinstance(old_parent, Variable):                
+                # See if I only claim the old parent via this key.
+                if sum([parent is old_parent for parent in self.itervalues()]) == 1:
+                    old_parent.children.remove(self.owner)
+
+                
+            if isinstance(old_parent, ContainerBase):
+                for variable in old_parent.variables:
+                    if sum([parent is variable for parent in self.itervalues()]) == 1:
+                        variable.children.remove(self.owner)
+                    
+                
+        # If the new parent is a variable, add me to its children set.
+        if isinstance(new_parent, Variable) or isinstance(new_parent, ContainerBase):
+            self.val_keys.append(key)
+            self.nonval_keys.remove(key)
             
+            if isinstance(new_parent, Variable):
+                new_parent.children.add(self.owner)
+                
+            elif isinstance(new_parent, ContainerBase):
+                for variable in new_parent.variables:
+                    new_parent.children.add(self.owner)
 
-            # See if I only claim the old parent via this key.
-            for item in self.iteritems():
-                if item[0] is old_parent and not item[1] == key:
-                    only_reference = False
-                    break
-
-            # If so, remove me from the old parent's children set.
-            if only_reference:
-                old_parent.children.remove(self.owner)
-
-        # If the new parent is a PyMC object, add me to its children set.
-        if isinstance(new_parent, Node):
-            new_parent.children.add(self.owner)
+        dict.__setitem__(self, key, new_parent)
 
         # Tell my owner it needs a new lazy function.
         self.owner.gen_lazy_function()
@@ -115,18 +171,18 @@ class Potential(PotentialBase):
     """
     def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
         
-        self._parents = ParentDict(regular_dict = parents, owner = self)
+        self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
         
-        Node.__init__(self, 
-                            doc=doc, 
-                            name=name, 
-                            parents=parents, 
-                            cache_depth = cache_depth, 
-                            trace=False,
-                            verbose=verbose)
+        Node.__init__(  self, 
+                        doc=doc, 
+                        name=name, 
+                        parents=parents, 
+                        cache_depth = cache_depth, 
+                        trace=False,
+                        verbose=verbose)
 
         self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
 
@@ -156,6 +212,10 @@ class Potential(PotentialBase):
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
 
     logp = property(fget = get_logp, fset=set_logp)
+    
+    def _get_extended_parents(self):
+        return extend_parents(self.parents.values())
+    extended_parents = property(_get_extended_parents)
 
 
         
@@ -211,18 +271,18 @@ class Deterministic(DeterministicBase):
     """
     def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=0):
 
-        self._parents = ParentDict(regular_dict = parents, owner = self)
+        self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
         
-        Node.__init__(self, 
-                            doc=doc, 
-                            name=name, 
-                            parents=parents, 
-                            cache_depth = cache_depth, 
-                            trace=trace,
-                            verbose=verbose)
+        Node.__init__(  self, 
+                        doc=doc, 
+                        name=name, 
+                        parents=parents, 
+                        cache_depth = cache_depth, 
+                        trace=trace,
+                        verbose=verbose)
         
         self._value.force_compute()
         if self.value is None:
@@ -350,7 +410,7 @@ class Stochastic(StochasticBase):
                     cache_depth=2,
                     verbose = 0):                    
 
-        self._parents = ParentDict(regular_dict = parents, owner = self)
+        self.ParentDict = ParentDict
 
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
@@ -378,19 +438,19 @@ class Stochastic(StochasticBase):
                 raise ValueError, 'Stochastic ' + name + "'s value initialized to None; no initial value or random method provided."
         
         Node.__init__(  self, 
-                            doc=doc, 
-                            name=name, 
-                            parents=parents, 
-                            cache_depth=cache_depth, 
-                            trace=trace,
-                            verbose=verbose)
+                        doc=doc, 
+                        name=name, 
+                        parents=parents, 
+                        cache_depth=cache_depth, 
+                        trace=trace,
+                        verbose=verbose)
+                            
         self._logp.force_compute()                   
         self.zero_logp_error_msg = "Stochastic " + self.__name__ + "'s value is outside its support."
 
         # Check initial value
         if not isinstance(self.logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
-            
                 
     def gen_lazy_function(self):
         """
@@ -399,7 +459,7 @@ class Stochastic(StochasticBase):
         arguments = {}
         arguments.update(self.parents)
         arguments['value'] = self
-        arguments = ParentDict(arguments, owner=self)
+        arguments = DictContainer(arguments)
         
         # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
         self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)                
@@ -472,6 +532,32 @@ class Stochastic(StochasticBase):
         if self.isdata is False:
             self.value = r
         return r
+    
+    # TODO: Optimize these later on.
+    def _get_extended_parents(self):
+        return extend_parents(self.parents.values())
+    extended_parents = property(_get_extended_parents)
+    
+    def _get_extended_children(self):
+        return extend_children(self.children)
+    extended_children = property(_get_extended_children)
+    
+    def _get_coparents(self):
+        coparents = set()
+        for child in self.extended_children:
+            coparents |= child.extended_parents
+        coparents.discard(self)
+        return coparents
+    coparents = property(_get_coparents)
+    
+    def _get_moral_neighbors(self):
+        moral_neighbors = self.coparents | self.extended_parents | self.extended_children
+        for neighbor in copy(moral_neighbors):
+            if isinstance(neighbor, PotentialBase):
+                moral_neighbors.remove(neighbor)
+        return moral_neighbors
+    moral_neighbors = property(_get_moral_neighbors)
+    markov_blanket = property(_get_moral_neighbors)
 
 class DiscreteStochastic(Stochastic):
     """

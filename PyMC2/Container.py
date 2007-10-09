@@ -1,4 +1,3 @@
-# from PyMCObjects import StochasticBase, DeterministicBase, PotentialBase
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, StepMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where
@@ -11,6 +10,8 @@ def filter_dict(obj):
         if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
+
+# TODO: Make changeable. Or not?
 
 def Container(*args):
     """

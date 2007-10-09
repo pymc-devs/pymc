@@ -5,11 +5,64 @@ try:
     pydot_imported = True
 except:
     pydot_imported = False
+    
+def moral_graph(model, format='raw', prog='dot', path=None):
+    """
+    moral_graph(model,
+                format='raw', 
+                prog='dot', 
+                path=None)
+
+    Draws the moral graph for this model and writes it to path.
+    If model.__name__ is defined and path is None, the output file is
+    ./'name'.'format'.
+
+    Format is a string. Options are:
+    'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
+    'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
+    'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
+
+    format='raw' outputs a GraphViz dot file.
+    
+    Returns the pydot 'dot' object for further user manipulation.
+    """
+    if not pydot_imported:
+        raise ImportError, 'PyDot must be installed to use the graph function.'
+
+    model.moral_dot_object = pydot.Dot()
+        
+    # Data are filled ellipses
+    for datum in model.data:
+        model.moral_dot_object.add_node(pydot.Node(name=datum.__name__, style='filled'))
+
+    # Stochastics are open ellipses
+    for stoch in model.stochs:
+        model.moral_dot_object.add_node(pydot.Node(name=datum.__name__))
+    
+    gone_already = set()
+    for stoch in model.stochs | model.data:
+        gone_already.add(stoch)
+        for other_stoch in stoch.moral_neighbors:
+            if not other_stoch in gone_already:
+                model.moral_dot_object.add_edge(pydot.Edge(src=other_stoch.__name__, dst=stoch.__name__, arrowhead='none'))
+    
+    # Draw the graph
+    if not path == None:
+        model.moral_dot_object.write(path=path, format=format, prog=prog)
+    else:
+        ext=format
+        if format=='raw':
+            ext='dot'
+        model.moral_dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
+
+    return model.moral_dot_object
+    
 
 def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False, 
         collapse_dtrms = False, collapse_potentials = False):
     """
-    M.graph(format='raw', 
+    graph(  model,
+            format='raw', 
             prog='dot', 
             path=None, 
             consts=False, 
@@ -17,7 +70,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             collapse_dtrms = False, 
             collapse_potentials = False)
 
-    Draw the graph for this model and writes it to path.
+    Draws the graph for this model and writes it to path.
     If model.__name__ is defined and path is None, the output file is
     ./'name'.'format'.
 
@@ -88,19 +141,16 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             model.dot_object.add_node(pydot_nodes[potential])
             shown_objects.add(potential)
     
-    # If the user has requested potentials be collapsed, draw in the undirected edges.
-    # TODO: Unpack container parents here.
-    if collapse_potentials:
-        for pot in model.potentials:
-            pot_parents = set()
-            for parent in pot.parents.values():
+        else:
+            potential_parents = set()
+            for parent in potential.parents.values():
                 if isinstance(parent, Variable):
-                    pot_parents |= set(obj_substitute_names[parent])
-            remaining_parents = copy(pot_parents)
-            for p1 in pot_parents:
+                    potential_parents |= set(obj_substitute_names[parent])
+            remaining_parents = copy(potential_parents)
+            for p1 in potential_parents:
                 remaining_parents.discard(p1)
                 for p2 in remaining_parents:
-                    new_edge = pydot.Edge(src = p2, dst = p1, label=pot.__name__, arrowhead='none')
+                    new_edge = pydot.Edge(src = p2, dst = p1, label=potential.__name__, arrowhead='none')
                     model.dot_object.add_edge(new_edge)
             
     # Create edges from parent-child relationships between nodes.

@@ -27,51 +27,6 @@ from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
 # TODO : Wrap the nd histogramming fortran function. 
-
-
-def extend_children(children):
-    """
-    extend_children(children)
-    
-    Returns a set containing
-    nearest conditionally stochastic (Stochastic, not Deterministic) descendants.
-    """
-    new_children = copy(children)
-    need_recursion = False
-    dtrm_children = set()
-    for child in children:
-        if isinstance(child,Deterministic):
-            new_children |= child.children
-            dtrm_children.add(child)
-            need_recursion = True
-    new_children -= dtrm_children
-    if need_recursion:
-        new_children = extend_children(new_children)
-    return new_children
-    
-def extend_parents(parents):
-    """
-    extend_parents(parents)
-    
-    Returns a set containing
-    nearest conditionally stochastic (Stochastic, not Deterministic) ancestors.
-    """
-    new_parents = copy(parents)
-    need_recursion = False
-    dtrm_parents = set()
-    
-    for parent in parents:
-        if isinstance(parent, Deterministic):
-            dtrm_parents.add(parent)
-            need_recursion = True
-            for grandparent in parent.parents.itervalues():
-                if isinstance(grandparent, Node):
-                    new_parents.add(grandparent)
-                    
-    new_parents -= dtrm_parents
-    if need_recursion:
-        new_parents = extend_parents(new_parents)
-    return new_parents
         
     
 def check_type(stoch):

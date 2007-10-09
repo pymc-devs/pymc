@@ -39,11 +39,6 @@ class Node(object):
     """
     def __init__(self, doc, name, parents, cache_depth, trace, verbose=0):
 
-        # Initialize parents and children
-
-        # _parents has to be assigned in each subclass.
-        self.children = set()
-        
         # Name and docstrings
         self.__doc__ = doc
         self.__name__ = name
@@ -56,10 +51,8 @@ class Node(object):
 
         self._cache_depth = cache_depth
         
-        # Add self as child of parents
-        for object in self._parents.itervalues():
-            if isinstance(object, Node):
-                object.children.add(self)
+        self.children = set()
+        self.parents = parents
         
         # New lazy function
         self.gen_lazy_function()
@@ -72,29 +65,32 @@ class Node(object):
         # Define parents of this object
         
         # Iterate over items in ParentDict
-        for parent in self._parents.itervalues():
-            if isinstance(parent, Node):
-                # Remove self as child
-                parent.children.discard(self)
+        if hasattr(self,'_parents'):
+            for parent in self._parents.itervalues():
+                if isinstance(parent, Variable):
+                    parent.children.discard(self)
+                elif isinstance(parent, ContainerBase):
+                    for variable in parent.variables:
+                        variable.chidren.add(self)
                 
         # Specify new parents
-        self._parents = ParentDict(regular_dict = new_parents, owner = self)
+        self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
+
+        # Add self as child of parents
+        
+        for parent in self._parents.itervalues():
+            if isinstance(parent, Variable):
+                parent.children.add(self)
+            elif isinstance(parent, ContainerBase):
+                for variable in parent.variables:
+                    variable.children.add(self)
+                    
+            
         
         # Get new lazy function
         self.gen_lazy_function()
         
-    def _del_parents(self):
-        # Deletes all parents of current object
-        
-        # Remove as child from parents
-        for parent in self._parents.itervalues():
-            if isinstance(parent, Node):
-                parent.children.discard(self)
-                
-        # Delete parents
-        del self._parents
-        
-    parents = property(fget=_get_parents, fset=_set_parents, fdel=_del_parents)
+    parents = property(_get_parents, _set_parents)
     
     def __str__(self):
         return self.__repr__()

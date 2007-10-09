@@ -59,20 +59,22 @@ def mymodel():
     
     return locals()
 
-# class test_graph(NumpyTestCase):
-#     def check_raw(self):
-A = Model(mymodel())
-graph(A, path='../test_results/full.dot', format='pdf', prog='dot', consts = True)
-graph(A, path='../test_results/dtrm.dot', format='pdf', prog='dot', collapse_dtrms=True, consts = True)
-graph(A, path='../test_results/pot.dot', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-graph(A, path='../test_results/dtrm_pot.dot', format='pdf', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
-# def check_pdf(self):
-A = Model(mymodel())    
-graph(A, path='../test_results/full.pdf', format='pdf', prog='dot', consts = True)
-graph(A, path='../test_results/dtrm.pdf', format='pdf', prog='dot', collapse_dtrms=True, consts = True)
-graph(A, path='../test_results/pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-graph(A, path='../test_results/dtrm_pot.pdf', format='pdf', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
+class test_graph(NumpyTestCase):
+    def check_raw(self):
+        A = Model(mymodel())
+        graph(A, path='../test_results/full.dot', format='raw', prog='dot', consts = True)
+        graph(A, path='../test_results/dtrm.dot', format='raw', prog='dot', collapse_dtrms=True, consts = True)
+        graph(A, path='../test_results/pot.dot', format='raw', prog='dot', collapse_potentials=True, consts = True)
+        graph(A, path='../test_results/dtrm_pot.dot', format='raw', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
+        moral_graph(A, path='../test_results/moral.dot', format='raw', prog='dot')
+    def check_pdf(self):
+        A = Model(mymodel())    
+        graph(A, path='../test_results/full.pdf', format='pdf', prog='dot', consts = True)
+        graph(A, path='../test_results/dtrm.pdf', format='pdf', prog='dot', collapse_dtrms=True, consts = True)
+        graph(A, path='../test_results/pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
+        graph(A, path='../test_results/dtrm_pot.pdf', format='pdf', prog='dot', collapse_dtrms=True, collapse_potentials=True, consts = True)
+        moral_graph(A, path='../test_results/moral.pdf', format='pdf', prog='dot')
 
-# if __name__ == '__main__':
-#     os.chdir('../test_results')
-#     NumpyTest().run()
+if __name__ == '__main__':
+    os.chdir('../test_results')
+    NumpyTest().run()

@@ -60,6 +60,11 @@ A stochastic variable exposes the following additional attributes:
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary would be \texttt{'t\_l'} and \texttt{'t\_h'}. Since PyMC inherits Python's dynamic typing, parents may be of any class or type.
     \item[\texttt{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\texttt{extended\_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via an unbroken sequence of deterministic variables.
+    \item[\texttt{extended\_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via an unbroken sequence of deterministic variables.
+    \item[\texttt{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
+    \item[\texttt{moral\_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with potentials removed.
+    \item[\texttt{markov\_blanket}:] An alias for \texttt{moral\_neighbors}.
     \item[\texttt{isdata}:] A boolean indicating whether the variable's value has been observed (is fixed).
     \item[\texttt{trace}:] The trace object assigned to the variable, see chapter \ref{chap:database}.
     \item[\texttt{\_\_name\_\_}:] The name of the variable, should be unique.

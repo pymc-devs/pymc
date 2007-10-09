@@ -1,5 +1,5 @@
 __docformat__='reStructuredText'
-from utils import msqrt, extend_children, check_type, round_array, extend_parents
+from utils import msqrt, check_type, round_array
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
@@ -176,15 +176,15 @@ class StepMethod(StepMethodBase):
                 if isinstance(parent, Variable):
                     self.parents.add(parent)
         
-        # Find nearest descendent Stochastics
-        self.children = extend_children(self.children)
-        # Find nearest parent Stochastics
-        self.parents = extend_parents(self.parents)
+        self.children = set([])
+        self.parents = set([])
+        for stoch in self.stochs:
+            self.children |= stoch.extended_children
+            self.parents |= stoch.extended_parents
         
-        # Remove own PyMCObjects from set of children
-        self.children -= self.dtrms
+        # Remove own stochastics from children and parents.
         self.children -= self.stochs
-        self.children -= self.data
+        self.parents -= self.stochs
         
         # ID string for verbose feedback
         self._id = 'To define in subclasses'

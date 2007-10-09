@@ -12,7 +12,7 @@ from Matplot import Plotter, show
 import database
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import ContainerBase, Container
-from utils import extend_children, extend_parents
+# from utils import extend_children, extend_parents
 import gc, sys,os
 from copy import copy
 from threading import Thread
@@ -56,7 +56,7 @@ class Model(ObjectContainer):
       - status: Not useful for the Model base class, but may be used by subclasses.
       
     The following attributes only exist after the appropriate method is called:
-      - moral_edges: The edges of the moralized graph. A dictionary, keyed by stochastic variable,
+      - moral_neighbors: The edges of the moralized graph. A dictionary, keyed by stochastic variable,
         whose values are sets of stochastic variables. Edges exist between the key variable and all variables
         in the value. Created by method _moralize.
       - extended_children: The extended children of self's stochastic variables. See the docstring of
@@ -119,35 +119,41 @@ class Model(ObjectContainer):
         try:
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
         except:
-            self._plotter = 'Could not be instantiated.'        
-    
-    def moralize(self):
-        """
-        Creates moral adjacency matrix for self.
-        
-        self.moral_edges[stoch] returns a list of the stochastic variables with whom
-        stoch shares an edge in the 'moral graph', which is formed by connecting
-        parents to children and then connecting co-parents to each other. 
-        See documentation.
-        """
-        # Extend children
-        self.extend_children()
-        
-        # Initialize moral edges dictionary.
-        self.moral_edges = {}
+            self._plotter = 'Could not be instantiated.'
+            
+        self.moral_neighbors = {}
+        self.extended_children = {} 
         for stoch in self.stochs | self.data:
-            self.moral_edges[stoch] = set([])
-        
-        # Fill in.
-        remaining_stochs = copy(self.stochs | self.data)
-        for stoch in self.stochs:
-            self_and_children = set([stoch]) | self.extended_children[stoch]
-            remaining_stochs.remove(stoch)
-            for other_stoch in remaining_stochs:
-                other_self_and_children = set([other_stoch]) | self.extended_children[other_stoch]
-                if len(self_and_children.intersection(other_self_and_children))>0:
-                    self.moral_edges[stoch].add(other_stoch)
-                    self.moral_edges[other_stoch].add(stoch)
+            self.moral_neighbors[stoch] = stoch.moral_neighbors
+            self.extended_children[stoch] = stoch.extended_children
+    
+    # def moralize(self):
+    #     """
+    #     Creates moral adjacency matrix for self.
+    #     
+    #     self.moral_neighbors[stoch] returns a list of the stochastic variables with whom
+    #     stoch shares an edge in the 'moral graph', which is formed by connecting
+    #     parents to children and then connecting co-parents to each other. 
+    #     See documentation.
+    #     """
+    #     # Extend children
+    #     self.extend_children()
+    #     
+    #     # Initialize moral edges dictionary.
+    #     self.moral_neighbors = {}
+    #     for stoch in self.stochs | self.data:
+    #         self.moral_neighbors[stoch] = set([])
+    #     
+    #     # Fill in.
+    #     remaining_stochs = copy(self.stochs | self.data)
+    #     for stoch in self.stochs:
+    #         self_and_children = set([stoch]) | self.extended_children[stoch]
+    #         remaining_stochs.remove(stoch)
+    #         for other_stoch in remaining_stochs:
+    #             other_self_and_children = set([other_stoch]) | self.extended_children[other_stoch]
+    #             if len(self_and_children.intersection(other_self_and_children))>0:
+    #                 self.moral_neighbors[stoch].add(other_stoch)
+    #                 self.moral_neighbors[other_stoch].add(stoch)
 
                     
     def get_maximal_cliques(self):
@@ -156,9 +162,6 @@ class Model(ObjectContainer):
         an attribute called logp, which gives the log-potential associated 
         with the clique.
         """
-        
-        # Moralize self
-        self.moralize()
     
         # Find maximal cliques
         self.maximal_cliques = []
@@ -169,7 +172,7 @@ class Model(ObjectContainer):
             this_clique = set([stoch])
             
             for other_stoch in remaining_stochs:
-                if all([other_stoch in self.moral_edges[clique_stoch] for clique_stoch in this_clique]):
+                if all([other_stoch in self.moral_neighbors[clique_stoch] for clique_stoch in this_clique]):
                     this_clique.add(other_stoch)
             this_clique = SetContainer(this_clique)
             for clique_stoch in this_clique:
@@ -178,16 +181,16 @@ class Model(ObjectContainer):
             self.maximal_cliques.append(this_clique)
                 
                 
-    def extend_children(self):
-        """
-        Makes a dictionary of self's nodes' 'extended children.'
-        The extended children of p are the stochastic variables that depend on p
-        either directly or via an unbroken sequence of deterministic variables.
-        """
-        self.extended_children = {}
-        
-        for variable in self.variables:
-            self.extended_children[variable] = extend_children(variable.children)
+    # def extend_children(self):
+    #     """
+    #     Makes a dictionary of self's nodes' 'extended children.'
+    #     The extended children of p are the stochastic variables that depend on p
+    #     either directly or via an unbroken sequence of deterministic variables.
+    #     """
+    #     self.extended_children = {}
+    #     
+    #     for variable in self.variables:
+    #         self.extended_children[variable] = extend_children(variable.children)
 
     def find_generations(self):
         """
@@ -195,7 +198,7 @@ class Model(ObjectContainer):
         set of stochastic variables that only has parents in previous generations.
         """
         self.generations = []
-        self.extend_children()
+        # self.extend_children()
 
         # Find root generation
         self.generations.append(set())

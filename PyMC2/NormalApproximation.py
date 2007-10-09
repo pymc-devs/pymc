@@ -1,7 +1,6 @@
 # TODO: Allow each stoch to get its own eps argument.
 # TODO: Allow integers in MAP and NormalApproximation if the fitting method doesn't use gradients.
 # TODO: In NormalApproximation, for integer-valued stochs eps must be equal to 1.
-# TODO: Check Markov blankets ahead of time, record which stochs will have mixed partials = 0 to skip some computation.
 # TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
 # TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just StepMethods.
 # TODO: When an error results from fit() not having been called, it should say so.
@@ -17,7 +16,7 @@ from Model import Model
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type, round_array, extend_children
+from utils import msqrt, check_type, round_array
 from copy import copy
 
 try:
@@ -153,14 +152,10 @@ class MAP(Model):
         self.stoch_indices = []
         self.stoch_types = []
         self.stoch_type_dict = {}
-        self.extended_children = {}
         
         for i in xrange(len(self.stoch_list)):
 
             stoch = self.stoch_list[i]
-            
-            # Extend children of stoch
-            self.extended_children[stoch] = extend_children(stoch.children)
             
             # Check types of all stochs.
             type_now = check_type(stoch)[0]
@@ -360,9 +355,10 @@ class MAP(Model):
         
         Mixed second derivative. Differentiates wrt both indices.
         """
-        # TODO: Figure out ahead of time which stochs won't have
-        # any cross-derivative with each other by checking whether 
-        # one is in the other's Markov blanket.
+        
+        if not self.stoch_indices[i][0] in self.moral_neighbors[self.stoch_indices[j][0]]:
+            return 0.
+        
         old_val = copy(self[j])
 
         def diff_for_diff(val):

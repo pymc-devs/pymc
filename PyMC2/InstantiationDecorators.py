@@ -1,7 +1,6 @@
 import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Stochastic, Deterministic, DiscreteStochastic, BinaryStochastic, Potential
-from utils import extend_children, _push
 from Node import ZeroProbability, ContainerBase, Node
 from Container import Container
 import numpy as np
