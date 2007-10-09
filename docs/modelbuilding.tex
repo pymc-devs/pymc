@@ -64,7 +64,8 @@ A stochastic variable exposes the following additional attributes:
     \item[\texttt{extended\_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via an unbroken sequence of deterministic variables.
     \item[\texttt{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
     \item[\texttt{moral\_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with potentials removed.
-    \item[\texttt{markov\_blanket}:] An alias for \texttt{moral\_neighbors}.
+    \item[\texttt{markov\_blanket}:] A set containing self and self's moral neighbors.
+    \item[\texttt{maximal\_clique}:] The largest set containing self whose members are all moral neighbors.
     \item[\texttt{isdata}:] A boolean indicating whether the variable's value has been observed (is fixed).
     \item[\texttt{trace}:] The trace object assigned to the variable, see chapter \ref{chap:database}.
     \item[\texttt{\_\_name\_\_}:] The name of the variable, should be unique.
@@ -486,8 +487,6 @@ Models' useful methods are:
     \item \texttt{sample\_likelihood(iter)}: Returns \texttt{iter} samples from the unconditional distribution of $p(\mathtt{self.data, self.potentials}|\mathtt{self.parameters})$. The mean of these samples converges to the model likelihood, $p(\mathtt{self.data, self.potentials})$.
     \item \texttt{plot()}: Produces summary plots of the posterior distributions of all variables.
     \item \texttt{tally(index)}: Writes all variables' current values to their traces at position \texttt{index}.
-    \item \texttt{find\_generations()}: Creates an attribute called \texttt{generations}, which is a list whose elements are sets of parameters which only have `extended parents' in previous generations.
-    \item \texttt{find\_maximal\_cliques}: Creates a list called \texttt{maximal_cliques}, which is a list whose elements are the maximal cliques of the moral graph. Each has an attribute called \texttt{logp} which returns the corresponding clique potential.
 \end{description}
 
 The helper functions \texttt{weight} and \texttt{graph} act on models. \texttt{weight} computes Bayes' factors (posterior probabilities of model correctness) for lists of models using the \texttt{sample\_likelihood} method, and \texttt{graph} produces graphical representations; see section \ref{sec:graphical}.
@@ -502,6 +501,17 @@ Models inherit the following attributes from \texttt{ContainerBase}:
     \item \texttt{step_methods}
     \item \texttt{value}
 \end{itemize}
+
+Models have the following graph-related attributes:
+\begin{itemize}
+    \item \texttt{extended\_parents}
+    \item \texttt{extended\_children}
+    \item \texttt{moral\_neighbors}
+    \item \texttt{markov\_blanket}
+    \item \texttt{maximal\_clique}
+\end{itemize}
+each of which are dictionaries keyed by stochastic object, which give access to the corresponding attribute of that object. These dictionaries are assembled at instantiation, unlike the corresponding attributes of \texttt{Stochastic}, which are assembled de novo each time they are accessed. Models also have a list-valued attribute called \texttt{generations}. Each generation is a set of stochastic objects whose extended parents are all in previous generations.
+
 In addition, models expose each node they contain as an attribute. For instance if, model \texttt{M} were produced from model (\ref{disastermodel}) \texttt{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique \texttt{\_\_name\_\_} attribute if you want to access them this way.
 
 

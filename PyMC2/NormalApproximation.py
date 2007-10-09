@@ -4,7 +4,9 @@
 # TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
 # TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just StepMethods.
 # TODO: When an error results from fit() not having been called, it should say so.
-# TODO: one-at-a-time vs. blocked option for all optimization algorithms.
+# TODO: one-at-a-time vs. blocked option for all optimization algorithms. One-at-a-time version may be parallelizable.
+# TODO: Add precision and Cholesky attributes.
+
 
 __docformat__='reStructuredText'
 
@@ -243,6 +245,7 @@ class MAP(Model):
                         fprime = self.gradfunc, 
                         fhess = self.hessfunc, 
                         epsilon=self.eps, 
+                        maxiter=iterlim,
                         callback=callback, 
                         avextol=tol)
 
@@ -250,12 +253,14 @@ class MAP(Model):
             p=fmin( func = self.func, 
                     x0=p, 
                     callback=callback, 
+                    maxiter=iterlim,
                     ftol=tol)
 
         elif self.method == 'fmin_powell':
             p=fmin_powell(  func = self.func, 
                             x0=p, 
                             callback=callback, 
+                            maxiter=iterlim,
                             ftol=tol)
 
         elif self.method == 'fmin_cg':
@@ -263,6 +268,7 @@ class MAP(Model):
                         fprime = self.gradfunc, 
                         epsilon=self.eps, 
                         callback=callback, 
+                        maxiter=iterlim,
                         gtol=tol)
 
         elif self.method == 'fmin_l_bfgs_b':

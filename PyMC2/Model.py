@@ -65,19 +65,15 @@ class Model(ObjectContainer):
         previous elements. Created by method find_generations.
 
     Methods:
-       - moralize(): Find edges of moral graph.
-       - extend_children(): Find 'extended children' of each object.
-       - find_generations(): Find generations.
        - tally(index): Write all variables' current values to trace, at location index.
        - sample_model_likelihood(iter): Generate and return iter samples of p(data and potentials|model).
          Can be used to generate Bayes' factors.
        - save_traces(): Pickle and save traces to disk. XXX Do we still need this method?
-       - graph(...): Draw graphical representation of model. See docstring.
        - seed() XXX I don't know what this does...
        - plot(): Visualize traces for all variables
        - remember(trace_index) : Return the entire model to the tallied state indexed by trace_index.
 
-    :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container.
+    :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
     def __init__(self, input=None, db='ram', output_path=None, verbose=0):
         """Initialize a Model instance.
@@ -120,78 +116,16 @@ class Model(ObjectContainer):
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
         except:
             self._plotter = 'Could not be instantiated.'
-            
-        self.moral_neighbors = {}
-        self.extended_children = {} 
-        for stoch in self.stochs | self.data:
-            self.moral_neighbors[stoch] = stoch.moral_neighbors
-            self.extended_children[stoch] = stoch.extended_children
-    
-    # def moralize(self):
-    #     """
-    #     Creates moral adjacency matrix for self.
-    #     
-    #     self.moral_neighbors[stoch] returns a list of the stochastic variables with whom
-    #     stoch shares an edge in the 'moral graph', which is formed by connecting
-    #     parents to children and then connecting co-parents to each other. 
-    #     See documentation.
-    #     """
-    #     # Extend children
-    #     self.extend_children()
-    #     
-    #     # Initialize moral edges dictionary.
-    #     self.moral_neighbors = {}
-    #     for stoch in self.stochs | self.data:
-    #         self.moral_neighbors[stoch] = set([])
-    #     
-    #     # Fill in.
-    #     remaining_stochs = copy(self.stochs | self.data)
-    #     for stoch in self.stochs:
-    #         self_and_children = set([stoch]) | self.extended_children[stoch]
-    #         remaining_stochs.remove(stoch)
-    #         for other_stoch in remaining_stochs:
-    #             other_self_and_children = set([other_stoch]) | self.extended_children[other_stoch]
-    #             if len(self_and_children.intersection(other_self_and_children))>0:
-    #                 self.moral_neighbors[stoch].add(other_stoch)
-    #                 self.moral_neighbors[other_stoch].add(stoch)
-
-                    
-    def get_maximal_cliques(self):
-        """
-        Creates list of maximal cliques for self's moral graph. Each has 
-        an attribute called logp, which gives the log-potential associated 
-        with the clique.
-        """
-    
-        # Find maximal cliques
-        self.maximal_cliques = []
-        self.stoch_to_mc = {}
-        remaining_stochs = self.stochs | self.data
-        while len(remaining_stochs)>0:
-            stoch = remaining_stochs.pop()
-            this_clique = set([stoch])
-            
-            for other_stoch in remaining_stochs:
-                if all([other_stoch in self.moral_neighbors[clique_stoch] for clique_stoch in this_clique]):
-                    this_clique.add(other_stoch)
-            this_clique = SetContainer(this_clique)
-            for clique_stoch in this_clique:
-                remaining_stochs.discard(clique_stoch)
-                self.stoch_to_mc[clique_stoch] = this_clique
-            self.maximal_cliques.append(this_clique)
-                
-                
-    # def extend_children(self):
-    #     """
-    #     Makes a dictionary of self's nodes' 'extended children.'
-    #     The extended children of p are the stochastic variables that depend on p
-    #     either directly or via an unbroken sequence of deterministic variables.
-    #     """
-    #     self.extended_children = {}
-    #     
-    #     for variable in self.variables:
-    #         self.extended_children[variable] = extend_children(variable.children)
-
+        
+        # TODO: Make maximal_cliques and separator_sets using Containers, assign potentials to them correctly.
+        
+        for stoch_attr in ['extended_children', 'extended_parents', 'markov_blanket', 'moral_neighbors', 'maximal_clique']:
+            setattr(self, stoch_attr, {})
+            for stoch in self.stochs | self.data:
+                getattr(self, stoch_attr)[stoch] = getattr(stoch, stoch_attr)
+        
+        self.find_generations
+                        
     def find_generations(self):
         """
         Parse up the generations for model averaging. A generation is the
@@ -239,9 +173,6 @@ class Model(ObjectContainer):
         p(data|self).
         """
         loglikes = zeros(iter)
-
-        if len(self.generations) == 0:
-            self.find_generations()
 
         try:
             for i in xrange(iter):

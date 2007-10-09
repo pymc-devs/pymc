@@ -557,7 +557,18 @@ class Stochastic(StochasticBase):
                 moral_neighbors.remove(neighbor)
         return moral_neighbors
     moral_neighbors = property(_get_moral_neighbors)
-    markov_blanket = property(_get_moral_neighbors)
+    
+    def _get_markov_blanket(self):
+        return self.moral_neighbors | set([self])
+    markov_blanket = property(_get_markov_blanket)
+    
+    def _get_maximal_clique(self):
+        clique = set([self])
+        for neighbor in self.moral_neighbors:
+            if all([neighbor in clique_member.moral_neighbors for clique_member in clique]):
+                clique.add(neighbor)
+        return clique
+    maximal_clique = property(_get_maximal_clique)
 
 class DiscreteStochastic(Stochastic):
     """
