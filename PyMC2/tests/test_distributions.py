@@ -730,7 +730,7 @@ class test_wishart(NumpyTestCase):
         n=2
         r = rwishart(n, T)
         wishart_like(r, n, T)
-        
+        assert_equal(0,1)
 
 
 """

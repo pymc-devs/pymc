@@ -20,7 +20,8 @@ __modules__ = [ 'Node',
                 'MultiModelInference',
                 'InstantiationDecorators',
                 'testsuite',
-                'NormalApproximation']
+                'NormalApproximation', 
+                'convergencediagnostics']
                 
 __optmodules__ = []
 #ClosedCapture, OpenCapture   

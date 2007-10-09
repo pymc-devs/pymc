@@ -14,6 +14,8 @@ from numpy.random import randint
 from PyMC2 import uniform_like, exponential_like, poisson_like
 from PyMC2 import rexponential
 
+__all__ = ['disasters_array', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
+
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
                             2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
