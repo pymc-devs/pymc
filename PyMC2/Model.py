@@ -2,6 +2,12 @@
 # 22/03/2007 -DH- Added methods to query the StepMethod's state and pass it to database.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
 
+# TODO: Importance-resampling method. 
+# TODO: Should weight each entry in the trace according to some function, subsample 
+# TODO: new traces according to weights. Useful for particle filters, etc.
+# TODO: Then make NormalApproximation able to importance-resample self, and make a Model subclass
+# TODO: that updates traces with new data and potentials (no stochastics yet).
+
 __docformat__='reStructuredText'
 
 """ Summary"""
@@ -23,8 +29,6 @@ from Container import ObjectContainer
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
-
-# TODO: Make extended_parents, extended_children, moral_neighbors, maximal_clique local to Stochastic.
 
 class Model(ObjectContainer):
     """
@@ -96,14 +100,12 @@ class Model(ObjectContainer):
         
         # Flag for model state
         self.status = 'ready'
-        
-
 
         # Get stochs, dtrms, etc.
         if input is None:
             import __main__
             input = __main__
-          
+        
         ObjectContainer.__init__(self, input)
 
         # Specify database backend
@@ -117,9 +119,7 @@ class Model(ObjectContainer):
         except:
             self._plotter = 'Could not be instantiated.'
         
-        # TODO: Make maximal_cliques and separator_sets using Containers, assign potentials to them correctly.
-        
-        for stoch_attr in ['extended_children', 'extended_parents', 'markov_blanket', 'moral_neighbors', 'maximal_clique']:
+        for stoch_attr in ['extended_children', 'extended_parents', 'markov_blanket', 'moral_neighbors']:
             setattr(self, stoch_attr, {})
             for stoch in self.stochs | self.data:
                 getattr(self, stoch_attr)[stoch] = getattr(stoch, stoch_attr)

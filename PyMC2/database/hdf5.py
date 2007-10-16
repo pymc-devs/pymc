@@ -140,7 +140,7 @@ class Database(pickle.Database):
         
     def _initialize(self, length):
         """Create group for the current chain."""
-        i = len(self._h5file.listDeterministics('/'))+1
+        i = len(self._h5file.listNodes('/'))+1
         self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
         self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter, expectedrows=length)
@@ -183,7 +183,7 @@ class Database(pickle.Database):
         chain : scalar or sequence.
         """
         
-        groups = self._h5file.listDeterministics("/")
+        groups = self._h5file.listNodes("/")
         nchains = len(groups)    
         if chain == -1:
             chains = [nchains-1]    # Index of last group
@@ -243,7 +243,7 @@ def load(filename, mode='a'):
             setattr(o, 'db', db)
     for k in db._table.attrs._v_attrnamesuser:
         setattr(db, k, getattr(db._table.attrs, k))
-    for k in db._group._f_listDeterministics():
+    for k in db._group._f_listNodes():
         if k.__class__ is not tables.table.Table:
             setattr(db, k.name, k)
     return db

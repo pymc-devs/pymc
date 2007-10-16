@@ -533,7 +533,7 @@ class Stochastic(StochasticBase):
             self.value = r
         return r
     
-    # TODO: Optimize these later on.
+    
     def _get_extended_parents(self):
         return extend_parents(self.parents.values())
     extended_parents = property(_get_extended_parents)
@@ -561,14 +561,6 @@ class Stochastic(StochasticBase):
     def _get_markov_blanket(self):
         return self.moral_neighbors | set([self])
     markov_blanket = property(_get_markov_blanket)
-    
-    def _get_maximal_clique(self):
-        clique = set([self])
-        for neighbor in self.moral_neighbors:
-            if all([neighbor in clique_member.moral_neighbors for clique_member in clique]):
-                clique.add(neighbor)
-        return clique
-    maximal_clique = property(_get_maximal_clique)
 
 class DiscreteStochastic(Stochastic):
     """

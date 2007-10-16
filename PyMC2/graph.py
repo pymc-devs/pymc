@@ -27,7 +27,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
     Returns the pydot 'dot' object for further user manipulation.
     """
     if not pydot_imported:
-        raise ImportError, 'PyDot must be installed to use the graph function.'
+        raise ImportError, 'PyDot must be installed to use the moral_graph function.\n PyDot is available from http://dkbza.org/pydot.html'
 
     model.moral_dot_object = pydot.Dot()
         
@@ -93,7 +93,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     """
 
     if not pydot_imported:
-        raise ImportError, 'PyDot must be installed to use the graph function.'
+        raise ImportError, 'PyDot must be installed to use the graph function.\n PyDot is available from http://dkbza.org/pydot.html'
 
     pydot_nodes = {}
     pydot_subgraphs = {}

@@ -1,4 +1,3 @@
-# TODO: Allow each stoch to get its own eps argument.
 # TODO: Allow integers in MAP and NormalApproximation if the fitting method doesn't use gradients.
 # TODO: In NormalApproximation, for integer-valued stochs eps must be equal to 1.
 # TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
@@ -183,8 +182,15 @@ class MAP(Model):
         self.data_len = 0
         for datum in self.data:
             self.data_len += len(ravel(datum.value))
+        
+        # Unpack step    
+        self.eps = zeros(self.len,dtype=float)
+        if isinstance(eps,dict):        
+            for stoch in self.stochs:
+                self.eps[self._slices[stoch]] = eps[stoch]
+        else:
+            self.eps[:] = eps
             
-        self.eps = eps
         self.diff_order = diff_order
         self.verbose = verbose
         
@@ -350,8 +356,9 @@ class MAP(Model):
         
         Derivative wrt index i to given order.
         """
+        
         old_val = copy(self[i])
-        d = derivative(func=self.func_for_diff, x0=old_val, dx=self.eps, n=order, args=[i], order=self.diff_order)
+        d = derivative(func=self.func_for_diff, x0=old_val, dx=self.eps[i], n=order, args=[i], order=self.diff_order)
         self[i] = old_val
         return d
 
@@ -362,16 +369,17 @@ class MAP(Model):
         Mixed second derivative. Differentiates wrt both indices.
         """
         
+        old_val = copy(self[j])
+            
         if not self.stoch_indices[i][0] in self.moral_neighbors[self.stoch_indices[j][0]]:
             return 0.
-        
-        old_val = copy(self[j])
 
         def diff_for_diff(val):
             self[j] = val
             return self.diff(i)
 
-        d = derivative(func=diff_for_diff, x0=old_val, dx=self.eps, n=1, order=self.diff_order)
+        d = derivative(func=diff_for_diff, x0=old_val, dx=self.eps[j], n=1, order=self.diff_order)
+
         self[j] = old_val
         return d
 

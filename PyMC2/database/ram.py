@@ -4,7 +4,7 @@
 ###
 
 import PyMC2
-from numpy import zeros,shape,concatenate
+from numpy import zeros,shape,concatenate, ndarray,dtype
 import base
 
 class Trace(base.Trace):
@@ -29,10 +29,10 @@ class Trace(base.Trace):
         """Create an array of zeros with shape (length, shape(obj)), where 
         obj is the internal PyMC Stochastic or Deterministic.
         """
-        try:
+        if isinstance(self._obj.value, ndarray):
             self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.value.dtype) )
-        except AttributeError:
-            self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=object) )           
+        else:
+            self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=dtype(self._obj.value.__class__)) )           
         
     def tally(self, index, chain=-1):
         """Store current value."""
