@@ -211,7 +211,7 @@ class NormalGibbs(Metropolis):
         chol = self.chol_prec.value
         
         if len(chol.shape)>1:
-            dtrsm_wrap(chol, out, uplo='L', transa='N', alpha=1.r)
+            dtrsm_wrap(chol, out, uplo='L', transa='N', alpha=1.)
         else:
             out /= chol
 

@@ -231,7 +231,7 @@ class MAP(Model):
 
         if self.verbose:
             def callback(p):
-                print 'Current log-probability :', self.logp
+                print 'Current log-probability : %f' %self.logp
         else:
             def callback(p):
                 pass
@@ -256,6 +256,7 @@ class MAP(Model):
                         avextol=tol)
 
         elif self.method == 'fmin':
+	    print iterlim
             p=fmin( func = self.func, 
                     x0=p, 
                     callback=callback, 
