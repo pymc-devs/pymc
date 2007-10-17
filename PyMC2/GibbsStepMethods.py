@@ -3,8 +3,8 @@ from InstantiationDecorators import dtrm
 from PyMCBase import Variable
 from Container import Container
 from utils import msqrt
-from numpy import asarray, diag, dot, zeros, log
-from numpy.random import normal, random
+from numpy import asarray, diag, dot, zeros, log, shape
+from numpy.random import normal, random, gamma
 from numpy.linalg import cholesky, solve
 from flib import dpotrs_wrap, dtrsm_wrap
 
@@ -14,16 +14,96 @@ def check_list(thing, label):
             raise TypeError, 'Argument '+label+' must be a list.'
         return thing
 
+
+
 # TODO: Automatically fill in when m and all children are normal parameters from class factory.
 # TODO: Let A be diagonal.
-class NormalGibbs(Metropolis):
+# TODO: Allow sampling of scalar tau scale factor too.
+class GammaNormalGibbs(Metropolis):
     """
-    Applies to m in following submodel, where i indexes Stochastic/ Deterministic objects:
+    Applies to tau in the following submodel:
     
-    d_i ~ind N(A_i m + b_i, d_tau_i)
-    m ~ N(mu, tau)
+    d_i ~ind N(mu_i, tau * theta_i)
+    tau ~ Gamma(alpha, beta) [optional]
+    """
+    def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None):
+        
+        self.tau = tau
+        self.d = check_list(d, 'd')
+        self.mu = check_list(mu, 'mu')
+        self.theta = check_list(theta, 'theta')
+        self.alpha = check_list(alpha, 'alpha')
+        self.beta = check_list(beta, 'beta')
+        
+        Metropolis.__init__(self, tau)
+        
+        @dtrm
+        def N(d=d):
+            """The total number of observations"""
+            return sum([len(d_now) for d_now in d])
     
-    S = NormalGibbs(m, mu, tau, d, A, b, d_tau)
+        self.N = N
+        self.N_d = len(d)
+        
+        @dtrm
+        def quad_term(d=d, mu=mu, theta=theta):
+            """The quadratic term in the likelihood."""
+            for i in xrange(self.N_d):
+                if len(mu)>1:
+                    delta_now = d[i] - mu[i]
+                else:
+                    delta_now = d[i] - mu[0]
+                    
+                if theta is not None:
+                    quad_term = dot(dot(delta_now, theta), delta_now)
+                else:
+                    quad_term = dot(delta_now, delta_now)
+                    
+            return quad_term*.5
+                        
+        self.quad_term = quad_term
+        
+    def step(self):
+        if self.alpha is None:
+            logp = self.tau.logp
+        
+        self.propose()
+            
+        if self.alpha is None:
+
+            try:
+                logp_p = self.tau.logp
+            except ZeroProbability:
+                self.reject()
+                
+            if log(random()) > logp_p - logp:
+                self.reject()
+        
+    def propose(self):
+        shape = .5*self.N.value
+        if self.alpha is not None:
+            shape += self.alpha
+            scale = 1./(self.quad_term.value + 1./self.beta)
+        else:
+            shape += 1.
+            scale = 1./self.quad_term.value
+            
+        self.tau.value = gamma(shape, scale)
+        
+    def tune(self):
+        pass
+        
+        
+    
+    
+class NormalNormalGibbs(Metropolis):
+    """
+    Applies to m in following submodel:
+    
+    d_i ~ind N(A_i m - b_i, theta_i)
+    m ~ N(mu, tau) [optional]
+    
+    S = NormalGibbs(m, mu, tau, d, A, b, theta)
     
     The argument m must be a Stochastic.
     
@@ -36,21 +116,24 @@ class NormalGibbs(Metropolis):
       m's value is proposed from its likelihood and accepted based on 
       its prior.
     tau may be a matrix or vector. If a vector, it is assumed to be diagonal.
+    If mu and tau are not provided, it is assumed that the submodel is non-
+    conjugate. m's value is proposed from its likelihood and accepted
+    according to its prior.
     
     The argument d must be a list or array of Stochastics.
     
-    The arguments A, b, and d_tau must be lists of:
+    The arguments A, b, and theta must be lists of:
     - Arrays
     - Stochastics
     - Deterministics
     These arguments may be lists of length 1 or of the same length as d.
-    d_tau may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
+    theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
     
     """
-    def __init__(self, m, d, d_tau, mu=None, tau=None, A=None, b=None):
+    def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None):
         
         self.d=check_list(d,'d')
-        self.d_tau=check_list(d_tau,'d_tau')
+        self.theta=check_list(theta,'theta')
         self.A=check_list(A,'A')
         self.b=check_list(b,'b')
 
@@ -74,16 +157,16 @@ class NormalGibbs(Metropolis):
         
         # Is the full conditional distribution independent?
         @dtrm
-        def all_diag_prec(tau=tau, d_tau = d_tau, A=A):
+        def all_diag_prec(tau=tau, theta = theta, A=A):
             all_diag_prec = True
             if tau is not None:
-                if len(tau.shape)>1:
+                if len(shape(tau))>1:
                     all_diag_prec = False
             
             if A is not None:
                 all_diag_prec = False
             
-            if not all([len(d_tau_now.shape)==1 for d_tau_now in d_tau]):
+            if not all([len(shape(theta_now))<2 for theta_now in theta]):
                 all_diag_prec = False
                 
             return all_diag_prec
@@ -92,14 +175,14 @@ class NormalGibbs(Metropolis):
         
         
         @dtrm
-        def prec_and_mean(d=self.d, A=self.A, b=self.b, d_tau=self.d_tau, tau=tau, mu=mu):
+        def prec_and_mean(d=self.d, A=self.A, b=self.b, theta=self.theta, tau=tau, mu=mu):
             """The full conditional precision and mean."""
             
             
             # tau and tau * mu parts.
             if not self.all_diag_prec:
                 if tau is not None:
-                    if len(tau.shape)==2:
+                    if len(shape(tau))==2:
                         prec = tau                                  
                         mean = dot(tau, mu)
                     else:                                                   
@@ -118,13 +201,13 @@ class NormalGibbs(Metropolis):
                     mean = zeros(self.length, dtype=float)
             
             
-            # Add in A.T d_tau A and A.T d_tau (d-b) parts
+            # Add in A.T theta A and A.T theta (d-b) parts
             for i in xrange(self.N_d):                                                                        
                 
-                if len(d_tau)>1:                                        
-                    d_tau_now = d_tau[i]                                
+                if len(theta)>1:                                        
+                    theta_now = theta[i]                                
                 else:                                                   
-                    d_tau_now = d_tau[0]
+                    theta_now = theta[0]
                 
                 if b is not None:    
                     if len(b)>1:                                        
@@ -135,8 +218,8 @@ class NormalGibbs(Metropolis):
                     b_now = d[i]
                 
                 if self.all_diag_prec:
-                    prec += d_tau_now
-                    mean += d_tau_now * b_now
+                    prec += theta_now
+                    mean += theta_now * b_now
                 else:
                     if A is not None:                                  
                         if len(A)>1:                                    
@@ -145,20 +228,20 @@ class NormalGibbs(Metropolis):
                         else:                                           
                             A_now = A[0]                                        
 
-                        if len(d_tau_now.shape)==2:
-                            A_d_tau = dot(A_now.T, d_tau_now)                                 
+                        if len(shape(theta_now))==2:
+                            A_theta = dot(A_now.T, theta_now)                                 
                         else:                                                   
-                            A_d_tau = A_now.T*d_tau_now
+                            A_theta = A_now.T*theta_now
                         
-                        prec += dot(A_d_tau, A_now)
-                        mean += dot(A_d_tau, b_now)
+                        prec += dot(A_theta, A_now)
+                        mean += dot(A_theta, b_now)
                         
-                    elif len(d_tau_now.shape)==2:
-                        prec += d_tau_now
-                        mean += dot(d_tau_now, b_now)
+                    elif len(shape(theta_now))==2:
+                        prec += theta_now
+                        mean += dot(theta_now, b_now)
                     else:
-                        prec += diag(d_tau_now)
-                        mean += d_tau_now * b_now
+                        prec += diag(theta_now)
+                        mean += theta_now * b_now
             
                         
             # Divide precision into mean.
@@ -213,16 +296,13 @@ class NormalGibbs(Metropolis):
 
         chol = self.chol_prec.value
         
-        if len(chol.shape)>1:
+        if len(shape(chol))>1:
             dtrsm_wrap(chol, out, uplo='L', transa='N', alpha=1.)
         else:
             out /= chol
 
         out += self.mean.value
-        self.m.value = out        
-
-    def reject(self):
-        self.m.value = self.m.last_value
+        self.m.value = out
         
     def tune(self):
         pass
