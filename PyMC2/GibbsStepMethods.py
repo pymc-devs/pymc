@@ -79,12 +79,15 @@ class NormalGibbs(Metropolis):
             if tau is not None:
                 if len(tau.shape)>1:
                     all_diag_prec = False
-                
-            if not all([len(d_tau_now.shape)==1 for d_tau_now in d_tau]) and A is None:
-                self.all_diag_prec = False
+            
+            if A is not None:
+                all_diag_prec = False
+            
+            if not all([len(d_tau_now.shape)==1 for d_tau_now in d_tau]):
+                all_diag_prec = False
                 
             return all_diag_prec
-        
+
         self.all_diag_prec = all_diag_prec.value
         
         

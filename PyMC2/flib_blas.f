@@ -610,7 +610,7 @@ cf2py double precision intent(inplace), dimension(n,m)::b
       EXTERNAL DPOTRS
 ! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
 
-      call DPOTRS(uplo,n,m,chol_fac,n,b,s,info)
+      call DPOTRS(uplo,n,m,chol_fac,n,b,n,info)
       
       return
       END
