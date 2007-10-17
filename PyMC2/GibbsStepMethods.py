@@ -6,6 +6,7 @@ from utils import msqrt
 from numpy import asarray, diag, dot, zeros, log
 from numpy.random import normal, random
 from numpy.linalg import cholesky, solve
+from flib import dpotrs_wrap, dtrsm_wrap
 
 def check_list(thing, label):
     if thing is not None:
@@ -14,7 +15,7 @@ def check_list(thing, label):
         return thing
 
 # TODO: Automatically fill in when m and all children are normal parameters from class factory.
-# TODO: Incomplete Cholesky, triangular solvers.
+# TODO: Let A be diagonal.
 class NormalGibbs(Metropolis):
     """
     Applies to m in following submodel, where i indexes Stochastic/ Deterministic objects:
@@ -157,21 +158,21 @@ class NormalGibbs(Metropolis):
                         mean += d_tau_now * b_now
             
                         
-            # Divide precision into mean
+            # Divide precision into mean.
+            # TODO: Accomodate low ranks here.
             if self.all_diag_prec:
+                chol_prec = sqrt(prec)
+                piv = None
                 mean /= prec
             else:
-                mean = solve(prec,mean)
-            return prec, mean
+                chol_prec = cholesky(prec)
+                dpotrs_wrap(chol_prec, mean, uplo='L')
+            return chol_prec, mean
             
         @dtrm
         def chol_prec(prec_and_mean = prec_and_mean):
             """A Cholesky factor of the full conditional precision"""
-            prec = prec_and_mean[0]
-            if len(prec.shape)>1:
-                return cholesky(prec)
-            else:
-                return sqrt(prec)
+            return prec_and_mean[0]
                 
         @dtrm
         def mean(prec_and_mean = prec_and_mean):
@@ -205,12 +206,18 @@ class NormalGibbs(Metropolis):
         """
         Sample from the likelihood or the full conditional.
         """
+        out = normal(size=self.length)
+
         chol = self.chol_prec.value
+        
         if len(chol.shape)>1:
-            self.m.value = solve(chol, normal(size=self.length)) + self.mean.value
+            dtrsm_wrap(chol, out, uplo='L', transa='N', alpha=1.r)
         else:
-            self.m.value = normal(size=self.length)/chol + self.mean.value
-                
+            out /= chol
+
+        out += self.mean.value
+        self.m.value = out        
+
     def reject(self):
         self.m.value = self.m.last_value
         

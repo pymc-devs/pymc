@@ -296,8 +296,39 @@ c trace of sigma*X
       return
       END
       
-c
-c
+
+      SUBROUTINE dtrsm_wrap(M,N,A,B,UPLO,TRANSA,ALPHA)
+cf2py double precision intent(inplace), dimension(m,n)::B
+cf2py double precision intent(in), dimension(m,m)::A
+cf2py optional character intent(in)::uplo='U'
+cf2py optional character intent(in)::transa='N'
+cf2py optional double precision intent(in)::alpha=1.0
+cf2py integer intent(hide), depend(A)::M=shape(A,0)
+cf2py integer intent(hide), depend(B)::N=shape(B,1)
+
+
+      
+*     .. Scalar Arguments ..
+      DOUBLE PRECISION ALPHA
+      INTEGER LDA,LDB,M,N
+      CHARACTER DIAG,SIDE,TRANSA,UPLO
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION A(M,M),B(M,N)
+      
+      EXTERNAL DTRSM
+! DTRSM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+*     op( A )*X = alpha*B,   or   X*op( A ) = alpha*B,
+      
+      DIAG = 'N'
+      LDA = M
+      LDB = M
+      SIDE = 'L'
+
+      
+      CALL DTRSM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+      RETURN
+      END
 
       subroutine dchdc_wrap(a,p,work,piv,info)
 
@@ -562,4 +593,58 @@ C decrement the pivots.
       end
 
 
+      SUBROUTINE dpotrs_wrap(chol_fac, b, info, n, m, uplo)
 
+cf2py double precision dimension(n,n), intent(in) :: chol_fac
+cf2py integer depend(chol_fac), intent(hide)::n=shape(chol_fac,0)
+cf2py integer depend(b), intent(hide)::m=shape(b,1)
+cf2py optional character intent(in):: uplo='U'
+cf2py integer intent(out)::info
+cf2py double precision intent(inplace), dimension(n,m)::b
+
+      DOUBLE PRECISION chol_fac(n,n), b(n,m)
+      INTEGER n, info,m
+      
+      CHARACTER uplo
+
+      EXTERNAL DPOTRS
+! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
+
+      call DPOTRS(uplo,n,m,chol_fac,n,b,s,info)
+      
+      return
+      END
+      
+
+
+      SUBROUTINE dtrmm_wrap(M,N,A,B,UPLO,TRANSA)
+cf2py double precision intent(inplace), dimension(m,n)::B
+cf2py double precision intent(in), dimension(m,m)::A
+cf2py optional character intent(in)::uplo='U'
+cf2py optional character intent(in)::transa='N'
+cf2py integer intent(hide), depend(A)::M=shape(A,0)
+cf2py integer intent(hide), depend(B)::N=shape(B,1)
+
+
+      
+*     .. Scalar Arguments ..
+      DOUBLE PRECISION ALPHA
+      INTEGER LDA,LDB,M,N
+      CHARACTER DIAG,SIDE,TRANSA,UPLO
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION A(M,M),B(M,N)
+      
+      EXTERNAL DTRMM
+! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+*     alpha*op( A )*X or alpha*X*op(A)
+      
+      DIAG = 'N'
+      LDA = M
+      LDB = M
+      SIDE = 'L'
+      ALPHA=1.0D0
+      
+      CALL DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+      RETURN
+      END

@@ -114,22 +114,6 @@ except:
                 sig[:,i] = vec[:,i]*sqrt(val[i])
         return np.asmatrix(sig).T
 
-def _push(seq,new_value):
-    """
-    Usage:
-    _push(seq,new_value)
-
-    Put a deep copy of new_value at the beginning of seq, and kick out the last value.
-    """
-    length = len(seq)
-    for i in range(length-1):
-        seq[i+1] = seq[i]
-    if isinstance(seq,ndarray):
-        # ndarrays will automatically make a copy
-        seq[0] = new_value
-    else:
-        seq[0] = copy(new_value)
-
 
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None) 
