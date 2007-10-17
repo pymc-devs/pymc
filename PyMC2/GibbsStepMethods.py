@@ -16,17 +16,43 @@ def check_list(thing, label):
 
 
 
+class Gibbs(Metropolis):
+    
+    def __init__(self, stoch, verbose=0):
+        Metropolis.__init__(self, stoch, verbose=verbose)
+    
+    def step(self):
+        if not self.conjugate:
+            logp = self.stoch.logp
+
+        self.propose()
+
+        if not self.conjugate:
+
+            try:
+                logp_p = self.stoch.logp
+            except ZeroProbability:
+                self.reject()
+
+            if log(random()) > logp_p - logp:
+                self.reject()
+    
+    def tune(self, verbose):
+        return False
+
+
+
 # TODO: Automatically fill in when m and all children are normal parameters from class factory.
 # TODO: Let A be diagonal.
 # TODO: Allow sampling of scalar tau scale factor too.
-class GammaNormalGibbs(Metropolis):
+class GammaNormal(Gibbs):
     """
     Applies to tau in the following submodel:
     
     d_i ~ind N(mu_i, tau * theta_i)
     tau ~ Gamma(alpha, beta) [optional]
     """
-    def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None):
+    def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None, verbose=0):
         
         self.tau = tau
         self.d = check_list(d, 'd')
@@ -35,7 +61,12 @@ class GammaNormalGibbs(Metropolis):
         self.alpha = check_list(alpha, 'alpha')
         self.beta = check_list(beta, 'beta')
         
-        Metropolis.__init__(self, tau)
+        Gibbs.__init__(self, tau, verbose)
+        
+        if self.alpha is None or self.beta is None:
+            self.conjugate = False
+        else:
+            self.conjugate = True
         
         @dtrm
         def N(d=d):
@@ -63,40 +94,21 @@ class GammaNormalGibbs(Metropolis):
                         
         self.quad_term = quad_term
         
-    def step(self):
-        if self.alpha is None:
-            logp = self.tau.logp
-        
-        self.propose()
-            
-        if self.alpha is None:
-
-            try:
-                logp_p = self.tau.logp
-            except ZeroProbability:
-                self.reject()
-                
-            if log(random()) > logp_p - logp:
-                self.reject()
-        
     def propose(self):
         shape = .5*self.N.value
-        if self.alpha is not None:
+        if self.conjugate:
             shape += self.alpha
             scale = 1./(self.quad_term.value + 1./self.beta)
         else:
             shape += 1.
             scale = 1./self.quad_term.value
             
-        self.tau.value = gamma(shape, scale)
-        
-    def tune(self):
-        pass
+        self.stoch.value = gamma(shape, scale)
         
         
     
     
-class NormalNormalGibbs(Metropolis):
+class NormalNormal(Gibbs):
     """
     Applies to m in following submodel:
     
@@ -130,14 +142,16 @@ class NormalNormalGibbs(Metropolis):
     theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
     
     """
-    def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None):
+    def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None, verbose=0):
+        
+        print 'WARNING: NormalNormal is pretty beta.'
         
         self.d=check_list(d,'d')
         self.theta=check_list(theta,'theta')
         self.A=check_list(A,'A')
         self.b=check_list(b,'b')
 
-        Metropolis.__init__(self, m)
+        Gibbs.__init__(self, m, verbose)
         
         self.m = m
         
@@ -148,6 +162,11 @@ class NormalNormalGibbs(Metropolis):
             
         self.mu = mu
         self.tau = tau
+        
+        if self.mu is None or self.tau is None:
+            self.conjugate = False
+        else:
+            self.conjugate = True        
         
         length = len(self.m.value)
         self.length = length
@@ -181,7 +200,7 @@ class NormalNormalGibbs(Metropolis):
             
             # tau and tau * mu parts.
             if not self.all_diag_prec:
-                if tau is not None:
+                if self.conjugate:
                     if len(shape(tau))==2:
                         prec = tau                                  
                         mean = dot(tau, mu)
@@ -193,7 +212,7 @@ class NormalNormalGibbs(Metropolis):
                     mean=zeros(self.length, dtype=float)
 
             else:
-                if tau is not None:
+                if self.conjugate:
                     prec = tau
                     mean = dot(tau, mu)
                 else:
@@ -267,26 +286,7 @@ class NormalNormalGibbs(Metropolis):
         self.prec_and_mean = prec_and_mean
         self.chol_prec = chol_prec
         self.mean = mean
-                
-    def step(self):
-        """
-        In the non-conjugate case, propose from the likelihood and accept based on the prior.
-        In the conjugate case, Gibbs sample.
-        """
-        if self.tau is None:
-            logp = self.m.logp
-        
-        self.propose()
-            
-        if self.tau is None:
 
-            try:
-                logp_p = self.m.logp
-            except ZeroProbability:
-                self.reject()
-                
-            if log(random()) > logp_p - logp:
-                self.reject()
 
     def propose(self):
         """
@@ -297,12 +297,9 @@ class NormalNormalGibbs(Metropolis):
         chol = self.chol_prec.value
         
         if len(shape(chol))>1:
-            dtrsm_wrap(chol, out, uplo='L', transa='N', alpha=1.)
+            dtrsm_wrap(chol, out, uplo='L', transa='T', alpha=1.)
         else:
             out /= chol
 
         out += self.mean.value
-        self.m.value = out
-        
-    def tune(self):
-        pass
+        self.stoch.value = out
