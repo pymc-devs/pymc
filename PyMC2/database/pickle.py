@@ -37,10 +37,13 @@ class Database(base.Database):
         self.filename = filename
         self.Trace = Trace
 
-    def choose_name(self, extension):
+    def choose_name(self, extension=None):
         """If a file name has not been assigned, choose one from the 
         name of the input module imported by the Sampler."""
-        extension = '.'+extension
+        if extension is not None:
+            extension = '.'+extension
+        else:
+            extension = ''
         if self.filename is None:
             modname = self.model.__name__
             name = modname+extension

@@ -26,6 +26,12 @@ class test_ram(NumpyTestCase):
         assert_array_equal(M.e.trace().shape, (100,))
         assert_array_equal(M.e.trace(chain=None).shape, (300,))
         
+class test_txt(NumpyTestCase):
+    def check(self):
+        S = Sampler(DisasterModel, db='txt', dirname='txt_test', mode='w')
+        S.sample(100)
+        S.sample(100)
+        S.db.close()
         
 class test_pickle(NumpyTestCase):
     def __init__(*args, **kwds):

@@ -36,7 +36,6 @@ for mod in __optmodules__:
 for mod in __modules__:
     exec "from %s import *" % mod
 
-import Exceptions
 ##try:
 ##   import parallel
 ##except ImportError:
