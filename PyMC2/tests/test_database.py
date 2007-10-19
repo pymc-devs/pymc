@@ -1,6 +1,7 @@
 """ Test database backends """
 
 from numpy.testing import *
+
 from PyMC2 import Sampler, database
 from PyMC2.examples import DisasterModel
 import os,sys
@@ -120,6 +121,20 @@ if hasattr(database, 'hdf5'):
             db.close() # For some reason, the hdf5 file remains open.
             S.db.close()
             
+        def check_mode(self):
+            S = Sampler(DisasterModel, db='hdf5')
+            try:
+                tables = S.db._gettable(None)
+            except LookupError:
+                pass
+            else:
+                raise 'Mode not working'
+            S.sample(100)
+            S.db.close()
+            S = Sampler(DisasterModel, db='hdf5', mode='a')
+            tables = S.db._gettable(None)
+            assert_equal(len(tables), 1)
+            S.db.close()
             
         def check_compression(self):
             try: 
