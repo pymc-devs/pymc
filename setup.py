@@ -14,7 +14,7 @@ config = Configuration('PyMC2',parent_package=None,top_path=None)
 try:
     lapack_info = get_info('lapack_opt',1)
     config.add_extension(name='flib',sources=['PyMC2/flib.f',
-    'PyMC2/histogram.f', 'PyMC2/flib_blas.f', 'PyMC2/math.f'], extra_info=lapack_info)
+    'PyMC2/histogram.f', 'PyMC2/flib_blas.f', 'PyMC2/math.f', 'PyMC2/gibbsit.f'], extra_info=lapack_info)
 except:
     config.add_extension(name='flib',sources=['PyMC2/flib.f', 'PyMC2/histogram.f', 'PyMC2/math.f'])
     

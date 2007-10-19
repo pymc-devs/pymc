@@ -1,6 +1,6 @@
 from StepMethods import Metropolis
 from InstantiationDecorators import dtrm
-from PyMCBase import Variable
+#from PyMCBase import Variable  # Raises import error
 from Container import Container
 from utils import msqrt
 from numpy import asarray, diag, dot, zeros, log, shape

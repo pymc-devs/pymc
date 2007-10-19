@@ -111,6 +111,7 @@ if hasattr(database, 'hdf5'):
             assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
                DisasterModel.D_array)
             assert_array_equal(db.D, DisasterModel.D_array)
+            
             S = Sampler(DisasterModel, db)
             
             S.sample(100,0,1)

@@ -96,12 +96,14 @@ class Database(pickle.Database):
     stochs and dtrms are stored as arrays in each group.
 
     """
-    def __init__(self, filename=None, complevel=0, complib='zlib'):
+    def __init__(self, filename=None, mode='w', complevel=0, complib='zlib'):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
-        :Stochastics:
+        :Parameters:
           filename : string
             Specify the name of the file the results are stored in. 
+          mode : 'a', 'w', 'r'
+            File mode: 'a': append, 'w': overwrite, 'r': read-only.
           complevel : integer (0-9)
             Compression level, 0: no compression.
           complib : string
@@ -117,7 +119,7 @@ class Database(pickle.Database):
         self.filename = filename
         self.Trace = Trace
         self.filter = tables.Filters(complevel=complevel, complib=complib)
-        
+        self.mode = mode
         
     def connect(self, sampler):
         """Link the Database to the Sampler instance. 
@@ -128,22 +130,19 @@ class Database(pickle.Database):
         """
         base.Database.connect(self, sampler)
         self.choose_name('hdf5')
-        try:
-            self._h5file = tables.openFile(self.filename, 'a')
-        except IOError:
-            print "Database file seems already open. Skipping."
+        if not hasattr(self, '_h5file'):
+            self._h5file = tables.openFile(self.filename, self.mode)
         root = self._h5file.root
-        #try:
-        #    self.main = self.h5file.createGroup(root, "main")
-        #except tables.exceptions.DeterministicError:
-        #    pass
+        
         
     def _initialize(self, length):
         """Create group for the current chain."""
         i = len(self._h5file.listNodes('/'))+1
         self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
-        self._table = self._h5file.createTable(self._group, 'PyMCsamples', self._description(), 'PyMC samples from chain %d'%i, filters=self.filter, expectedrows=length)
+        self._table = self._h5file.createTable(self._group, 'PyMCsamples', \
+            self._model_trace_description(), 'PyMC samples from chain %d'%i, \
+            filters=self.filter, expectedrows=length)
         self._row = self._table.row
         for object in self.model._variables_to_tally:
             object.trace._initialize(length)
@@ -165,7 +164,7 @@ class Database(pickle.Database):
         # add attributes. Computation time.
         self._table.flush()
         
-    def _description(self):
+    def _model_trace_description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}
         for o in self.model._variables_to_tally:
@@ -176,9 +175,23 @@ class Database(pickle.Database):
             D[o.__name__] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
         return D
 
+    def _file_trace_description(self):
+        """Return a description of the last trace stored in the database."""
+        table = self._gettable(-1)[0]
+        return table.description
 
+    def _check_compatibility(self):
+        """Make sure the next objects to be tallied are compatible with the 
+        stored trace."""
+        stored_descr = self._file_trace_description()
+        try:
+            for k,v in self._model_trace_description():
+                assert(stored_descr[k][0]==v[0])
+        except:
+            raise "The objects to tally are incompatible with the objects stored in the file."
+            
     def _gettable(self, chain=-1):
-        """Return the hdf5 table corresponding to chain. 
+        """Return the list of hdf5 tables corresponding to chain. 
         
         chain : scalar or sequence.
         """
@@ -229,7 +242,15 @@ def load(filename, mode='a'):
     """Load an existing hdf5 database.
 
     Return a Database instance.
+    
+    :Parameters:
+      filename : string
+        Name of the hdf5 database to open.
+      mode : 'a', 'r'
+        File mode : 'a': append, 'r': read-only.
     """ 
+    if mode == 'w':
+        raise AttributeError, "mode='w' not allowed for load."
     db = Database(filename)
     db._h5file = tables.openFile(filename, mode)
     db._table = db._gettable(-1)[0]
