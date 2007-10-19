@@ -1,10 +1,12 @@
-# TODO: Allow integers in MAP and NormalApproximation if the fitting method doesn't use gradients.
-# TODO: In NormalApproximation, for integer-valued stochs eps must be equal to 1.
-# TODO: Allow constraints if fmin_l_bfgs_b is used... note fmin should work even with constraints, so you could just recommend that.
-# TODO: EM algorithm. Something like a NormalApproximation with Samplers embedded, or maybe just StepMethods.
-# TODO: When an error results from fit() not having been called, it should say so.
-# TODO: one-at-a-time vs. blocked option for all optimization algorithms. One-at-a-time version may be parallelizable.
-# TODO: Add precision and Cholesky attributes.
+# TODO: Test case for EM algorithm.
+# TODO: Double-check that it's valid to use derivatives from the EM algorithm to compute the Hessian for the normal approx.
+
+# Post-2.0-release:
+# TODO: Think about what to do about int-valued stochastics.
+# TODO: Allow constraints if fmin_l_bfgs_b is used.
+# TODO: 'Stochastic Gradient' algorithm options- these update based on a subset of the data/potentials available.
+
+
 
 
 __docformat__='reStructuredText'
@@ -43,6 +45,10 @@ class NormApproxMu(object):
         self.owner = owner
     
     def __getitem__(self, *stochs):
+        
+        if not owner.fitted:
+            raise ValueError, 'NormalApproximation object must be fitted before mu can be accessed.'
+        
         tot_len = 0
         
         try:
@@ -81,6 +87,10 @@ class NormApproxC(object):
         self.owner = owner
             
     def __getitem__(self, *stochs):
+        
+        if not owner.fitted:
+            raise ValueError, 'NormalApproximation object must be fitted before C can be accessed.'
+        
         tot_len = 0
         
         try:
@@ -109,19 +119,20 @@ class NormApproxC(object):
             
         return C
         
-class MAP(Model):
+class NormalApproximation(Model):
     """
-    M = MAP(input, db='ram', eps=.001, diff_order=5, verbose=False)
+    N = NormalApproximation(input, db='ram', eps=.001, diff_order = 5)
     
-    Sets all stochastic variables in the model to their maximal a-posteriori
-    values when fit() method is called.
+    Normal approximation to the posterior of a model.
     
     Useful methods:
-    revert_to_max:  Sets all stochastic variables to MAP estimate after fit() is called.
-    fit:            Finds the MAP estimate.
+    draw:           Draws values for all stochastic variables using normal approximation
+    revert_to_max:  Sets all stochastic variables to mean value under normal approximation
+    fit:            Finds the normal approximation.
     
     Useful attributes (after fit() is called):
     mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
+    C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
     len:                The number of free stochastic variables in the model ('k' in AIC and BIC)
@@ -132,21 +143,23 @@ class MAP(Model):
     :Arguments:
     input: As for Model
     db: A database backend
-    eps: 'h' for computing numerical derivatives.
+    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
+      as well as a scalar.
     diff_order: The order of the approximation used to compute derivatives.
         
-    :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize, scipy.derivative
+    :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, verbose=False):
+    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, verbose=0):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormalApproximation and MAP.'
         
-        Model.__init__(self, input, db)
+        Model.__init__(self, input, db=db, verbose=verbose)
 
         # Allocate memory for internal traces and get stoch slices
         self._slices = {}
         self.len = 0
         self.stoch_len = {}
+        self.fitted = False
         
         self.stoch_list = list(self.stochs)
         self.N_stochs = len(self.stoch_list)
@@ -205,7 +218,16 @@ class MAP(Model):
         # Initialize NormApproxMu object.
         self.mu = NormApproxMu(self)
         
-    def fit(self, method = 'fmin', iterlim=1000, tol=.0001):
+        def func_for_diff(val, index):
+            """
+            The function that gets passed to the derivatives.
+            """
+            self[index] = val
+            return self.i_logp(index)
+            
+        self.func_for_diff = func_for_diff
+        
+    def fit(self, method = 'fmin', iterlim=1000, tol=.0001, post_fit_computations=True):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
         
@@ -220,14 +242,14 @@ class MAP(Model):
         """
         self.tol = tol
         self.method = method
-        print method
+
         p = zeros(self.len,dtype=float)
         for stoch in self.stochs:
             p[self._slices[stoch]] = ravel(stoch.value)
 
         if not self.method == 'newton':
             if not scipy_imported:
-                raise ImportError, 'Scipy is required for any method other than Newton in MAP and NormalApproximation'
+                raise ImportError, 'Scipy is required to use EM and NormalApproximation'
 
         if self.verbose:
             def callback(p):
@@ -235,15 +257,6 @@ class MAP(Model):
         else:
             def callback(p):
                 pass
-                
-        def func_for_diff(val, index):
-            """
-            The function that gets passed to the derivatives.
-            """
-            self[index] = val
-            return self.i_logp(index)
-            
-        self.func_for_diff = func_for_diff
 
         if self.method == 'fmin_ncg':
             p=fmin_ncg( f = self.func, 
@@ -289,15 +302,25 @@ class MAP(Model):
         else:
             raise ValueError, 'Method unknown.'
 
-        self._set_stochs(p) 
-        self.grad_and_hess()
+        self._set_stochs(p)
         self._mu = p
+        if post_fit_computations:
+            self.post_fit_computations()
+        
+    def post_fit_computations(self):
+        self.grad_and_hess()
         try:
             self.logp_at_max = self.logp
         except:
             raise RuntimeError, 'Posterior probability optimization converged to value with zero probability.'
         self.AIC = 2. * (self.len - self.logp_at_max) # 2k - 2 ln(L)
         self.BIC = self.len * log(self.data_len) - 2. * self.logp_at_max # k ln(n) - 2 ln(L)
+        
+        self._C = -1. * self.hess.I
+        self._sig = msqrt(self._C).T
+        
+        self.fitted = True
+        
 
     def func(self, p):
         """
@@ -432,42 +455,7 @@ class MAP(Model):
         Sets all N's stochs to their MAP values.
         """
         self._set_stochs(self.mu)
-        
-
-class NormalApproximation(MAP):
-    """
-    N = NormalApproximation(input, db='ram', eps=.001, diff_order = 5, method = 'fmin')
-    
-    Normal approximation to the posterior of a model.
-    
-    Useful methods:
-    draw:           Draws values for all stochastic variables using normal approximation
-    revert_to_max:  Sets all stochastic variables to mean value under normal approximation
-    fit:            Finds the normal approximation.
-    
-    Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
-    C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
-    logp:               Returns the log-probability of the model
-    logp_at_max:        Returns the maximum log-probability of the model
-    len:                The number of free stochastic variables in the model ('k' in AIC and BIC)
-    data_len:           The number of datapoints used ('n' in BIC)
-    AIC:                Akaike's Information Criterion for the model
-    BIC:                Bayesian Information Criterion for the model
-    
-    :Arguments:
-    input: As for Model
-    db: A database backend
-    eps: 'h' for computing numerical derivatives.
-    diff_order: The order of the approximation used to compute derivatives.
-        
-    :SeeAlso: Model, MAP, Sampler, scipy.optimize
-    """
-
-    def __init__(self, input=None, db='ram', eps=.01, diff_order = 5, verbose=False):
-        MAP.__init__(self, input, db, eps, diff_order, verbose)
-        self.C = NormApproxC(self)
-    
+            
     def sample(self, iter):
         """
         N.sample(iter)
@@ -491,13 +479,141 @@ class NormalApproximation(MAP):
         p = inner(self._sig,devs)
         self._set_stochs(p)
     
-    def fit(self, method='fmin', iterlim=1000, tol=.00001):
+    
+
+class EM(NormalApproximation):
+    """
+    N = EM(input, sampler, db='ram', eps=.001, diff_order = 5)
+
+    Normal approximation to the posterior of a model via the EM algorithm.
+
+    Useful methods:
+    draw:           Draws values for all stochastic variables using normal approximation
+    revert_to_max:  Sets all stochastic variables to mean value under normal approximation
+    fit:            Finds the normal approximation.
+
+    Useful attributes (after fit() is called):
+    mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
+    C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
+    logp:               Returns the log-probability of the model
+    logp_at_max:        Returns the maximum log-probability of the model
+    len:                The number of free stochastic variables in the model ('k' in AIC and BIC)
+    data_len:           The number of datapoints used ('n' in BIC)
+    AIC:                Akaike's Information Criterion for the model
+    BIC:                Bayesian Information Criterion for the model
+
+    :Arguments:
+    input: As for Model
+    sampler: Should be a Sampler instance handling a submodel of input. The variables in
+      sampler will be integrated out; only the marginal probability of the other variables in input
+      will be maximized. The 'expectation' step will be computed using samples obtained from the 
+      sampler.
+    db: A database backend.
+    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
+      as well as a scalar.
+    diff_order: The order of the approximation used to compute derivatives.
+
+    :SeeAlso: Model, NormalApproximation, Sampler, scipy.optimize
+    """
+    def __init__(self, input, sampler, db='ram', eps=.001, diff_order = 5, verbose=0):
+
+        Q = Container(input)
+        new_input = (Q.nodes | sampler.nodes) - sampler.stochs
+
+        NormalApproximation.__init__(self, input=new_input, db=db, eps=eps, diff_order=diff_order, verbose=verbose)
+
+        self.iter = iter
+        self.burn = burn
+        self.thin = thin
+
+        # Figure out which stochs' log-probabilities need to be averaged.
+        self.stochs_to_integrate = set()
+
+        for stoch in self.stochs:
+            mb = stoch.markov_blanet
+            if any([other_stoch in mb for other_stoch in sampler.stochs]):
+                self.stochs_to_integrate.add(stoch)
+
+
+    def fit(self, iterlim=1000, tol=.0001, 
+            na_method = 'fmin', na_iterlim=1000, na_tol=.0001, 
+            sa_iter = 10000, sa_burn=1000, sa_thin=10):
         """
-        N.fit()
+        N.fit(iterlim=1000, tol=.0001, 
+        na_method='fmin', na_iterlim=1000, na_tol=.0001, 
+        sa_iter = 10000, sa_burn=1000, sa_thin=10)
         
-        Computes the normal approximation to the posterior,
-        endows self with new attributes.
+        Arguments 'iterlim' and 'tol' control the top-level EM iteration.
+        Arguments beginning with 'na' are passed to NormalApproximation.fit() during the M steps.
+        Arguments beginning with 'sa' are passed to self.sampler during the E-steps.
+        
+        The 'E' step consists of running the sampler, which will keep a trace. In the 'M' step, the 
+        log-probability of variables in the sampler's Markov blanket are averaged and combined with 
+        the log-probabilities of self's other variables to produce a joint log-probability. This 
+        quantity is maximized.
         """
-        MAP.fit(self, method, iterlim, tol)
-        self._C = -1. * self.hess.I
-        self._sig = msqrt(self._C).T
+
+        logps = []
+        for i in xrange(iterlim):
+            
+            # E step
+            sampler.sample(sa_iter, sa_burn, sa_thin)
+
+            # M step
+            NormalApproximation.fit(self, method = na_method, iterlim=na_iterlim, tol=na_tol, post_fit_computations=False)
+
+            logps.append(self.logp)
+            if abs(logps[i-1] - logps[i])<= tol:
+                print 'EM algorithm converged'
+                break
+
+        if i == iterlim-1:
+            print 'EM algorithm: Maximum number of iterations exceeded.'
+        self.post_fit_computations()
+
+
+    def i_logp(self, index):
+        """
+        Evaluates the log-probability of the Markov blanket of
+        a stoch owning a particular index. Used for computing derivatives.
+
+        Averages over the sampler's trace for variables in the sampler's 
+        Markov blanket.
+        """
+        all_relevant_stochs = set()
+        p,i = self.stoch_indices[index]
+
+        logps = []
+
+        # If needed, run an MCMC loop and use those samples.
+        if p in self.stochs_to_integrate:
+            for i in xrange(sampler.db.length):
+                sampler.remember(i-1)
+                try:
+                    logps.append(p.logp + sum([child.logp for child in self.extended_children[p]]))
+                except ZeroProbability:
+                    return -Inf
+
+                return mean(logps)
+
+        # Otherwise, just return the log-probability of the Markov blanket.
+        else:
+            try:
+                return p.logp + sum([child.logp for child in self.extended_children[p]])
+            except ZeroProbability:
+                return -Inf
+
+
+    def func(self, p):
+        """
+        The function that gets passed to the optimizers.
+        """
+        self._set_stochs(p)
+        logps = []
+        for i in xrange(sampler.db.length):
+            sampler.remember(i-1)            
+            try:
+                logps.append(self.logp)
+            except ZeroProbability:
+                return Inf
+        return -mean(logps)
