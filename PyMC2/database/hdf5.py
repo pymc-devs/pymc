@@ -96,7 +96,7 @@ class Database(pickle.Database):
     stochs and dtrms are stored as arrays in each group.
 
     """
-    def __init__(self, filename=None, mode='w', complevel=0, complib='zlib'):
+    def __init__(self, filename=None, mode='w', complevel=0, complib='zlib', **kwds):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
         :Parameters:
@@ -205,6 +205,9 @@ class Database(pickle.Database):
         elif size(chain) == 1:
            chains = [chain]
         
+        if len(chains) == 0:
+            raise LookupError, 'No table found, that is, no data in file.'
+            
         table = []
         for i,c in enumerate(chains):
             gr = groups[c]

@@ -79,7 +79,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, db='ram', output_path=None, verbose=0):
+    def __init__(self, input=None, db='ram', output_path=None, verbose=0, **kwds):
         """Initialize a Model instance.
 
         :Parameters:
@@ -93,11 +93,13 @@ class Model(ObjectContainer):
               The place where any output files should be put.
           - verbose : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+          - **kwds : 
+              Keywords arguments to be passed to the database instantiation method.
         """
 
         self.generations = []
         self.verbose = verbose
-        
+        self._db_args = kwds
         # Flag for model state
         self.status = 'ready'
 
@@ -258,7 +260,7 @@ class Model(ObjectContainer):
         # module, and assign a database instance to Model.
         if type(db) is str:
             module = getattr(database, db)
-            self.db = module.Database()
+            self.db = module.Database(**self._db_args)
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_state()
@@ -286,10 +288,10 @@ class Model(ObjectContainer):
 
 class Sampler(Model):
     # TODO: Docstring!!
-    def __init__(self, input=None, db='ram', output_path=None, verbose=0):
+    def __init__(self, input=None, db='ram', output_path=None, verbose=0, **kwds):
         
         # Instantiate superclass
-        Model.__init__(self, input, db, output_path, verbose)
+        Model.__init__(self, input, db, output_path, verbose, **kwds)
         
         # Default StepMethod
         self._assign_samplingmethod()
