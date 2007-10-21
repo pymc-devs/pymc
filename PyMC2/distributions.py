@@ -61,21 +61,29 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
         parents_default = dict(zip(args[-len(defaults):], defaults))
     except TypeError: # No parents at all.
         parents_default = {}
-
-    docstr = 'Stochastic with '+name+' distribution. Required parents are: '+', '.join(parent_names) + '.'
+    
+    name = name.capitalize()
+    
+    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
+    docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
+    docstr += 'Docstring of log-probability function:\n'
+    docstr += logp.__doc__
     class new_class(base):
         __doc__ = docstr
         def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, doc=docstr, **kwds):
 
             parents=parents_default
 
-            for k in kwds.keys():
-                if k in parent_names:
+            for k in parent_names:
+                try:
                     parents[k] = kwds.pop(k)
+                except:
+                    raise ValueError, self_name + ': no value given for parent ' + k
+                    
 
             if value is None:
                 if rseed is False:
-                    raise 'No initial value given. Provide one or set rseed to True.'
+                    raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
                 rseed = True
                 
                 if shape is not None:
@@ -96,7 +104,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
             base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
                 random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=False, doc=doc)
 
-    new_class.__name__ = name.capitalize()
+    new_class.__name__ = name
     new_class.parent_labels = parents_default.keys()
     return new_class
 
@@ -337,7 +345,7 @@ def bernoulli_like(x, p):
     .. math::
         f(x \\mid p) = p^{x- 1} (1-p)^{1-x}
 
-    :Stochastics:
+    :Parameters:
       - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
       - `p`: Probability of success. :math:`0 < p < 1`
 
@@ -388,7 +396,7 @@ def beta_like(x, alpha, beta):
     .. math::
         f(x \\mid \\alpha, \\beta) = \\frac{\\Gamma(\\alpha + \\beta)}{\\Gamma(\\alpha) \\Gamma(\\beta)} x^{\\alpha - 1} (1 - x)^{\\beta - 1}
 
-    :Stochastics:
+    :Parameters:
       - `x`: 0 < x < 1
       - `alpha`: > 0
       - `beta`: > 0
@@ -441,7 +449,7 @@ def binomial_like(x, n, p):
     .. math::
         f(x \\mid n, p) = \\frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
 
-    :Stochastics:
+    :Parameters:
       x : float
         Number of successes, > 0.
       n : int
@@ -519,7 +527,7 @@ def cauchy_like(x, alpha, beta):
     .. math::
         f(x \\mid \\alpha, \\beta) = \\frac{1}{\\pi \\beta [1 + (\\frac{x-\\alpha}{\\beta})^2]}
 
-    :Stochastics:
+    :Parameters:
       - `alpha` : Location stoch.
       - `beta`: Scale stoch > 0.
 
@@ -561,7 +569,7 @@ def chi2_like(x, k):
     .. math::
         f(x \\mid k) = \\frac{x^{\\frac{k}{2}-1}e^{-2x}}{\\Gamma(\\frac{k}{2}) \\frac{1}{2}^{k/2}}
 
-    :Stochastics:
+    :Parameters:
       x : float
         :math:`\\ge 0`
       k : int
@@ -615,7 +623,7 @@ def dirichlet_like(x, theta):
     .. math::
         f(\\mathbf{x}) = \\frac{\\Gamma(\\sum_{i=1}^k \\theta_i)}{\\prod \\Gamma(\\theta_i)} \\prod_{i=1}^k x_i^{\\theta_i - 1}
 
-    :Stochastics:
+    :Parameters:
       x : (n,k) array
         Where `n` is the number of samples and `k` the dimension.
         :math:`0 < x_i < 1`,  :math:`\\sum_{i=1}^k x_i = 1`
@@ -667,7 +675,7 @@ def exponential_like(x, beta):
     .. math::
         f(x \\mid \\beta) = \\frac{1}{\\beta}e^{-x/\\beta}
 
-    :Stochastics:
+    :Parameters:
       x : float
         :math:`x \\ge 0`
       beta : float
@@ -712,7 +720,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
         f(x \\mid \\alpha,k,loc,scale)  & = \\frac{\\alpha k}{scale} (1-e^{-z^c})^{\\alpha-1} e^{-z^c} z^{k-1} \\\\
         z & = \\frac{x-loc}{scale}
 
-    :Stochastics:
+    :Parameters:
       - `x` : > 0
       - `alpha` : Shape stoch
       - `k` : > 0
@@ -754,7 +762,7 @@ def gamma_like(x, alpha, beta):
     .. math::
         f(x \\mid \\alpha, \\beta) = \\frac{x^{\\alpha-1}e^{-x\\beta}}{\\Gamma(\\alpha) \\beta^{\\alpha}}
 
-    :Stochastics:
+    :Parameters:
       x : float
         :math:`x \\ge 0`
       alpha : float
@@ -845,7 +853,7 @@ def geometric_like(x, p):
     .. math::
         f(x \\mid p) = p(1-p)^{x-1}
 
-    :Stochastics:
+    :Parameters:
       x : int
         Number of trials before first success, > 0.
       p : float
@@ -893,7 +901,7 @@ def half_normal_like(x, tau):
     .. math::
         f(x \\mid \\tau) = \\sqrt{\\frac{2\\tau}{\\pi}}\\exp\\left\\{ {\\frac{-x^2 \\tau}{2}}\\right\\}
 
-    :Stochastics:
+    :Parameters:
       x : float
         :math:`x \\ge 0`
       tau : float
@@ -936,7 +944,7 @@ def hypergeometric_like(x, draws, success, failure):
     .. math::
         f(x \\mid draws, successes, failures)
 
-    :Stochastics:
+    :Parameters:
       x : int
         Number of successes in a sample drawn from a population.
         :math:`\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)`
@@ -988,7 +996,7 @@ def inverse_gamma_like(x, alpha, beta):
         f(x \\mid \\alpha, \\beta) = \\frac{x^{-\\alpha - 1} \\exp\\{-\\frac{1}{\\beta x}\\}}
         {\\Gamma(\\alpha)\\beta^{\\alpha}}
 
-    :Stochastics:
+    :Parameters:
       x : float
         x > 0
       alpha : float
@@ -1039,7 +1047,7 @@ def lognormal_like(x, mu, tau):
         f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}}\\frac{
         \\exp\\left\\{ -\\frac{\\tau}{2} (\\ln(x)-\\mu)^2 \\right\\}}{x}
 
-    :Stochastics:
+    :Parameters:
       x : float
         x > 0
       mu : float
@@ -1089,7 +1097,7 @@ def multinomial_like(x, n, p):
     .. math::
         f(x \\mid n, p) = \\frac{n!}{\\prod_{i=1}^k x_i!} \\prod_{i=1}^k p_i^{x_i}
 
-    :Stochastics:
+    :Parameters:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
         :math:`\\sum_{i=1}^k x_i=n`, :math:`x_i \\ge 0`.
@@ -1166,7 +1174,7 @@ def multivariate_hypergeometric_like(x, m):
 
     where :math:`N = \\sum_i m_i` and :math:`n = \\sum_i x_i`.
     
-    :Stochastics:
+    :Parameters:
         x : int sequence
             Number of draws from each category, :math:`< m`
         m : int sequence
@@ -1357,7 +1365,7 @@ def normal_like(x, mu, tau):
         f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}} \\exp\\left\\{ -\\frac{\\tau}{2} (x-\\mu)^2 \\right\\}
 
 
-    :Stochastics:
+    :Parameters:
       x : float
         Input data.
       mu : float
@@ -1411,7 +1419,7 @@ def poisson_like(x,mu):
     .. math::
         f(x \\mid \\mu) = \\frac{e^{-\\mu}\\mu^x}{x!}
 
-    :Stochastics:
+    :Parameters:
       x : int
         :math:`x \\in {0,1,2,...}`
       mu : float
@@ -1511,7 +1519,7 @@ def uniform_like(x,lower, upper):
     .. math::
         f(x \\mid lower, upper) = \\frac{1}{upper-lower}
 
-    :Stochastics:
+    :Parameters:
       x : float
        :math:`lower \\geq x \\geq upper`
       lower : float
@@ -1546,7 +1554,7 @@ def weibull_like(x, alpha, beta):
         f(x \\mid \\alpha, \\beta) = \\frac{\\alpha x^{\\alpha - 1}
         \\exp(-(\\frac{x}{\\beta})^{\\alpha})}{\\beta^\\alpha}
 
-    :Stochastics:
+    :Parameters:
       x : float
         :math:`x \\ge 0`
       alpha : float
@@ -1603,7 +1611,7 @@ def wishart_like(X, n, Tau):
     
     where :math:`k` is the rank of X.
     
-    :Stochastics:
+    :Parameters:
       X : matrix
         Symmetric, positive definite.
       n : int
