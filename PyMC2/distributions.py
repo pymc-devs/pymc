@@ -1668,9 +1668,6 @@ def random_method_wrapper(f, size, shape):
         return value
     return wrapper
         
-        
-        
-
 def fortranlike(f, snapshot, mv=False):
     """
     Decorator function for fortran likelihoods
@@ -1785,7 +1782,7 @@ def local_decorated_likelihoods(obj):
 
 
 
-# Create stoch instantiators
+# Create Stochastic instantiators
 
 for dist in continuous_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
@@ -1799,9 +1796,9 @@ dist_logp, dist_random = name_to_funcs('bernoulli', locals())
 locals()['Bernoulli']= stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
 
 
-# if __name__ == "__main__":
-#     import doctest
-#     doctest.testmod()
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
 
 
 

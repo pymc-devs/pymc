@@ -576,7 +576,10 @@ class DiscreteStochastic(Stochastic):
             
         # Save current value as last_value
         self.last_value = self._value
-        self._value = asarray(value, dtype=int)
+        if isinstance(value, ndarray):
+            self._value = asarray(value, dtype=int)
+        else:
+            self._value = int(round(value))
 
     value=property(Stochastic.get_value,set_value)
     
@@ -597,6 +600,9 @@ class BinaryStochastic(Stochastic):
             
         # Save current value as last_value
         self.last_value = self._value
-        self._value = asarray(value, dtype=bool)
+        if isinstance(value, ndarray):
+            self._value = asarray(value, dtype=bool)
+        else:
+            self._value = bool(value)
 
     value=property(Stochastic.get_value,set_value)
