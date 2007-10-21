@@ -94,7 +94,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 
                 
             base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
-                random=randomwrapper(random, size, shape), trace=trace, rseed=rseed, isdata=False, doc=doc)
+                random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=False, doc=doc)
 
     new_class.__name__ = name.capitalize()
     new_class.parent_labels = parents_default.keys()
@@ -1655,7 +1655,7 @@ def valuewrapper(f):
     wrapper.__dict__.update(f.__dict__)
     return wrapper
     
-def randomwrapper(f, size, shape):
+def random_method_wrapper(f, size, shape):
     """
     Wraps functions to return values of appropriate shape.
     """
