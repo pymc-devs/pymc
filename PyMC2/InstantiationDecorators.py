@@ -17,8 +17,7 @@ def _extract(__func__, kwds, keys, classname):
     parents = {}
     
     # Define global tracing function (I assume this is for debugging??)
-    # No, it's to inspect the arguments the function is expecting. This way
-    # we don't have to parse.
+    # No, it's to get out the logp and random functions, if they're in there.
     def probeFunc(frame, event, arg):
         if event == 'return':
             locals = frame.f_locals

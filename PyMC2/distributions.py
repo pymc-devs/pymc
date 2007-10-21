@@ -10,17 +10,23 @@
 __docformat__='reStructuredText'
 univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'multinomial',
- 'negative_binomial', 'normal', 'poisson', 'uniform',
+'inverse_gamma', 'lognormal', 'negative_binomial', 'normal', 'poisson', 'uniform',
 'weibull', 'wishart']
 
-mv_distributions = ['dirichlet','multivariate_hypergeometric','mvnormal']
+mv_distributions = ['dirichlet','multivariate_hypergeometric','mvnormal', 'multinomial']
+
+discrete_distributions = ['binomial', 'poisson', 'multinomial']
+continuous_distributions = univ_distributions + mv_distributions
+for non_cont in discrete_distributions + ['bernoulli']:
+    continuous_distributions.remove(non_cont)
 
 availabledistributions = univ_distributions+mv_distributions
+
 import flib
 import PyMC2
 import numpy as np
 from Node import ZeroProbability
+from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
 
 if hasattr(flib, 'cov_mvnorm'):
@@ -34,6 +40,65 @@ import inspect, types
 from copy import copy
 random_number = random.random
 inverse = np.linalg.pinv
+
+
+# ============================================================================================
+# = User-accessible function to convert a logp and random function to a Stochastic subclass. =
+# ============================================================================================
+
+def stoch_from_dist(name, logp, random=None, base=Stochastic):
+    """
+    Return a function to instantiate a stochastic from a particular distribution.
+
+      :Example:
+        >>> Exponential = create_distribution_instantiator('exponential')
+        >>> A = Exponential('A', value=2.3, beta=4)
+    """
+    
+    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
+    parent_names = args[1:]
+    try:
+        parents_default = dict(zip(args[-len(defaults):], defaults))
+    except TypeError: # No parents at all.
+        parents_default = {}
+
+    docstr = 'Stochastic with '+name+' distribution. Required parents are: '+', '.join(parent_names) + '.'
+    class new_class(base):
+        __doc__ = docstr
+        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, doc=docstr, **kwds):
+
+            parents=parents_default
+
+            for k in kwds.keys():
+                if k in parent_names:
+                    parents[k] = kwds.pop(k)
+
+            if value is None:
+                if rseed is False:
+                    raise 'No initial value given. Provide one or set rseed to True.'
+                rseed = True
+                
+                if shape is not None:
+                    size = np.prod(shape)
+                    if len(shape)==1:
+                        shape=None
+                else:
+                    size=1
+                    shape = None
+                    
+                value = np.reshape(random(size=size, **parents), shape)
+
+            else:
+                size = len(ravel(value))
+                shape = np.shape(value)
+                
+                
+            base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
+                random=randomwrapper(random, size, shape), trace=trace, rseed=rseed, isdata=False, doc=doc)
+
+    new_class.__name__ = name.capitalize()
+    new_class.parent_labels = parents_default.keys()
+    return new_class
 
 
 #-------------------------------------------------------------
@@ -231,10 +296,10 @@ def arlognorm_like(x, a, sigma, rho):
     Autoregressive normal log-likelihood.
     
     .. math::
-        x_i & = a_i \exp(e_i) \\
-        e_i & = \rho e_{i-1} + \epsilon_i
+        x_i & = a_i \\exp(e_i) \\\\
+        e_i & = \\rho e_{i-1} + \\epsilon_i
     
-    where :math:`\epsilon_i \sim N(0,\sigma)`.
+    where :math:`\\epsilon_i \\sim N(0,\\sigma)`.
     """
     return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
     
@@ -248,7 +313,7 @@ def rbernoulli(p,size=1):
     Random Bernoulli variates.
     """
 
-    return random.binomial(1,p,size)
+    return random.random(size)<p
 
 def bernoulli_expval(p):
     """
@@ -261,7 +326,7 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    r"""
+    """
     bernoulli_like(x, p)
 
     Bernoulli log-likelihood
@@ -270,7 +335,7 @@ def bernoulli_like(x, p):
     failures (x=0).
 
     .. math::
-        f(x \mid p) = p^{x- 1} (1-p)^{1-x}
+        f(x \\mid p) = p^{x- 1} (1-p)^{1-x}
 
     :Stochastics:
       - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
@@ -315,13 +380,13 @@ def beta_expval(alpha, beta):
 
 
 def beta_like(x, alpha, beta):
-    r"""
+    """
     beta_like(x, alpha, beta)
 
     Beta log-likelihood.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
+        f(x \\mid \\alpha, \\beta) = \\frac{\\Gamma(\\alpha + \\beta)}{\\Gamma(\\alpha) \\Gamma(\\beta)} x^{\\alpha - 1} (1 - x)^{\\beta - 1}
 
     :Stochastics:
       - `x`: 0 < x < 1
@@ -333,8 +398,8 @@ def beta_like(x, alpha, beta):
       0.18232160806655884
 
     :Note:
-      - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
-      - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+      - :math:`E(X)=\\frac{\\alpha}{\\alpha+\\beta}`
+      - :math:`Var(X)=\\frac{\\alpha \\beta}{(\\alpha+\\beta)^2(\\alpha+\\beta+1)}`
 
     """
     # try:
@@ -366,7 +431,7 @@ def binomial_expval(n, p):
     return p*n
 
 def binomial_like(x, n, p):
-    r"""
+    """
     binomial_like(x, n, p)
 
     Binomial log-likelihood.  The discrete probability distribution of the
@@ -374,7 +439,7 @@ def binomial_like(x, n, p):
     each of which yields success with probability p.
 
     .. math::
-        f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
+        f(x \\mid n, p) = \\frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
 
     :Stochastics:
       x : float
@@ -382,7 +447,7 @@ def binomial_like(x, n, p):
       n : int
         Number of Bernoulli trials, > x.
       p : float
-        Probability of success in each trial, :math:`p \in [0,1]`.
+        Probability of success in each trial, :math:`p \\in [0,1]`.
 
     :Note:
      - :math:`E(X)=np`
@@ -445,14 +510,14 @@ def cauchy_expval(alpha, beta):
 
 # In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
-    r"""
+    """
     cauchy_like(x, alpha, beta)
 
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+        f(x \\mid \\alpha, \\beta) = \\frac{1}{\\pi \\beta [1 + (\\frac{x-\\alpha}{\\beta})^2]}
 
     :Stochastics:
       - `alpha` : Location stoch.
@@ -470,10 +535,10 @@ def cauchy_like(x, alpha, beta):
 # Chi square----------------------------------------------
 @randomwrap
 def rchi2(k, size=1):
-    r"""
+    """
     rchi2(k, size=1)
 
-    Random :math:`\chi^2` variates.
+    Random :math:`\\chi^2` variates.
     """
 
     return random.chisquare(k, size)
@@ -488,17 +553,17 @@ def chi2_expval(k):
     return k
 
 def chi2_like(x, k):
-    r"""
+    """
     chi2_like(x, k)
 
-    Chi-squared :math:`\chi^2` log-likelihood.
+    Chi-squared :math:`\\chi^2` log-likelihood.
 
     .. math::
-        f(x \mid k) = \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}}
+        f(x \\mid k) = \\frac{x^{\\frac{k}{2}-1}e^{-2x}}{\\Gamma(\\frac{k}{2}) \\frac{1}{2}^{k/2}}
 
     :Stochastics:
       x : float
-        :math:`\ge 0`
+        :math:`\\ge 0`
       k : int
         Degrees of freedom > 0
 
@@ -540,7 +605,7 @@ def dirichlet_expval(theta):
     return theta/sum(theta)
 
 def dirichlet_like(x, theta):
-    r"""
+    """
     dirichlet_like(x, theta)
 
     Dirichlet log-likelihood.
@@ -548,14 +613,14 @@ def dirichlet_like(x, theta):
     This is a multivariate continuous distribution.
 
     .. math::
-        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
+        f(\\mathbf{x}) = \\frac{\\Gamma(\\sum_{i=1}^k \\theta_i)}{\\prod \\Gamma(\\theta_i)} \\prod_{i=1}^k x_i^{\\theta_i - 1}
 
     :Stochastics:
       x : (n,k) array
         Where `n` is the number of samples and `k` the dimension.
-        :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^k x_i = 1`
+        :math:`0 < x_i < 1`,  :math:`\\sum_{i=1}^k x_i = 1`
       theta : (n,k) or (1,k) float
-        :math:`\theta > 0`
+        :math:`\\theta > 0`
     """
 
     x = np.atleast_2d(x)
@@ -591,7 +656,7 @@ def exponential_expval(beta):
 
 
 def exponential_like(x, beta):
-    r"""
+    """
     exponential_like(x, beta)
 
     Exponential log-likelihood.
@@ -600,17 +665,17 @@ def exponential_like(x, beta):
     with alpha=1. It often describes the duration of an event.
 
     .. math::
-        f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
+        f(x \\mid \\beta) = \\frac{1}{\\beta}e^{-x/\\beta}
 
     :Stochastics:
       x : float
-        :math:`x \ge 0`
+        :math:`x \\ge 0`
       beta : float
-        Survival stoch :math:`\beta > 0`
+        Survival stoch :math:`\\beta > 0`
 
     :Note:
-      - :math:`E(X) = \beta`
-      - :math:`Var(X) = \beta^2`
+      - :math:`E(X) = \\beta`
+      - :math:`Var(X) = \\beta^2`
     """
     # try:
     #     constrain(x, lower=0)
@@ -638,14 +703,14 @@ def exponweib_expval(alpha, k, loc, scale):
     return 'Not implemented yet.'
 
 def exponweib_like(x, alpha, k, loc=0, scale=1):
-    r"""
+    """
     exponweib_like(x,alpha,k,loc=0,scale=1)
 
     Exponentiated Weibull log-likelihood.
 
     .. math::
-        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
-        z & = \frac{x-loc}{scale}
+        f(x \\mid \\alpha,k,loc,scale)  & = \\frac{\\alpha k}{scale} (1-e^{-z^c})^{\\alpha-1} e^{-z^c} z^{k-1} \\\\
+        z & = \\frac{x-loc}{scale}
 
     :Stochastics:
       - `x` : > 0
@@ -678,7 +743,7 @@ def gamma_expval(alpha, beta):
     return asarray(alpha) * beta
 
 def gamma_like(x, alpha, beta):
-    r"""
+    """
     gamma_like(x, alpha, beta)
 
     Gamma log-likelihood.
@@ -687,15 +752,15 @@ def gamma_like(x, alpha, beta):
     of which has mean beta.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{x^{\alpha-1}e^{-x\beta}}{\Gamma(\alpha) \beta^{\alpha}}
+        f(x \\mid \\alpha, \\beta) = \\frac{x^{\\alpha-1}e^{-x\\beta}}{\\Gamma(\\alpha) \\beta^{\\alpha}}
 
     :Stochastics:
       x : float
-        :math:`x \ge 0`
+        :math:`x \\ge 0`
       alpha : float
-        Shape stoch :math:`\alpha > 0`.
+        Shape stoch :math:`\\alpha > 0`.
       beta : float
-        Scale stoch :math:`\beta > 0`.
+        Scale stoch :math:`\\beta > 0`.
 
     """
     # try:
@@ -730,21 +795,21 @@ def gev_expval(xi, mu=0, sigma=1):
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
 
 def gev_like(x, xi, mu=0, sigma=1):
-    r"""
+    """
     gev_like(x, xi, mu=0, sigma=1)
 
     Generalized Extreme Value log-likelihood
 
     .. math::
-        pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi z)^{-1/\xi-1}\exp{-(1+\xi z)^{-1/\xi}}
+        pdf(x \\mid \\xi,\\mu,\\sigma) = \\frac{1}{\\sigma}(1 + \\xi z)^{-1/\\xi-1}\\exp{-(1+\\xi z)^{-1/\\xi}}
 
-    where :math:`z=\frac{x-\mu}{\sigma}`
+    where :math:`z=\\frac{x-\\mu}{\\sigma}`
 
     .. math::
-        \sigma & > 0,\\
-        x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
-        x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
-        x & \in [-\infty,\infty] \text{ if } \xi = 0
+        \\sigma & > 0,\\\\
+        x & > \\mu-\\sigma/\\xi \\text{ if } \\xi > 0,\\\\
+        x & < \\mu-\\sigma/\\xi \\text{ if } \\xi < 0\\\\
+        x & \\in [-\\infty,\\infty] \\text{ if } \\xi = 0
 
     """
 
@@ -771,24 +836,24 @@ def geometric_expval(p):
     return (1. - p) / p
 
 def geometric_like(x, p):
-    r"""
+    """
     geometric_like(x, p)
 
     Geometric log-likelihood. The probability that the first success in a
     sequence of Bernoulli trials occurs after x trials.
 
     .. math::
-        f(x \mid p) = p(1-p)^{x-1}
+        f(x \\mid p) = p(1-p)^{x-1}
 
     :Stochastics:
       x : int
         Number of trials before first success, > 0.
       p : float
-        Probability of success on an individual trial, :math:`p \in [0,1]`
+        Probability of success on an individual trial, :math:`p \\in [0,1]`
 
     :Note:
       - :math:`E(X)=1/p`
-      - :math:`Var(X)=\frac{1-p}{p^2}`
+      - :math:`Var(X)=\\frac{1-p}{p^2}`
 
     """
     # try:
@@ -819,20 +884,20 @@ def half_normal_expval(tau):
     return sqrt(0.5 * pi / asarray(tau))
 
 def half_normal_like(x, tau):
-    r"""
+    """
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
-    to the domain :math:`x \in [0, \infty)`.
+    to the domain :math:`x \\in [0, \\infty)`.
 
     .. math::
-        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+        f(x \\mid \\tau) = \\sqrt{\\frac{2\\tau}{\\pi}}\\exp\\left\\{ {\\frac{-x^2 \\tau}{2}}\\right\\}
 
     :Stochastics:
       x : float
-        :math:`x \ge 0`
+        :math:`x \\ge 0`
       tau : float
-        :math:`\tau > 0`
+        :math:`\\tau > 0`
 
     """
     # try:
@@ -861,7 +926,7 @@ def hypergeometric_expval(draws, success, failure):
     return draws * success / (success+failure)
 
 def hypergeometric_like(x, draws, success, failure):
-    r"""
+    """
     hypergeometric_like(x, draws, success, failure)
 
     Hypergeometric log-likelihood. Discrete probability distribution that
@@ -869,12 +934,12 @@ def hypergeometric_like(x, draws, success, failure):
     population without replacement.
 
     .. math::
-        f(x \mid draws, successes, failures)
+        f(x \\mid draws, successes, failures)
 
     :Stochastics:
       x : int
         Number of successes in a sample drawn from a population.
-        :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
+        :math:`\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)`
       draws : int
         Size of sample.
       success : int
@@ -883,7 +948,7 @@ def hypergeometric_like(x, draws, success, failure):
         Number of failures in the population.
 
     :Note:
-      :math:`E(X) = \frac{draws failures}{success+failures}`
+      :math:`E(X) = \\frac{draws failures}{success+failures}`
     """
     # try:
     #     constrain(x, max(0, draws - failure), min(success, draws))
@@ -914,25 +979,25 @@ def inverse_gamma_expval(alpha, beta):
     return 1. / (asarray(beta) * (alpha-1.))
 
 def inverse_gamma_like(x, alpha, beta):
-    r"""
+    """
     inverse_gamma_like(x, alpha, beta)
 
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{x^{-\alpha - 1} \exp\{-\frac{1}{\beta x}\}}
-        {\Gamma(\alpha)\beta^{\alpha}}
+        f(x \\mid \\alpha, \\beta) = \\frac{x^{-\\alpha - 1} \\exp\\{-\\frac{1}{\\beta x}\\}}
+        {\\Gamma(\\alpha)\\beta^{\\alpha}}
 
     :Stochastics:
       x : float
         x > 0
       alpha : float
-        Shape stoch, :math:`\alpha > 0`.
+        Shape stoch, :math:`\\alpha > 0`.
       beta : float
-        Scale stoch, :math:`\beta > 0`.
+        Scale stoch, :math:`\\beta > 0`.
 
     :Note:
-      :math:`E(X)=\frac{1}{\beta(\alpha-1)}` for :math:`\alpha > 1`.
+      :math:`E(X)=\\frac{1}{\\beta(\\alpha-1)}` for :math:`\\alpha > 1`.
     """
     # try:
     #     constrain(x, lower=0)
@@ -962,7 +1027,7 @@ def lognormal_expval(mu, tau):
     return np.exp(mu + 1./2/tau)
 
 def lognormal_like(x, mu, tau):
-    r"""
+    """
     lognormal_like(x, mu, tau)
 
     Log-normal log-likelihood. Distribution of any random variable whose
@@ -971,8 +1036,8 @@ def lognormal_like(x, mu, tau):
     small independent factors.
 
     .. math::
-        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
-        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+        f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}}\\frac{
+        \\exp\\left\\{ -\\frac{\\tau}{2} (\\ln(x)-\\mu)^2 \\right\\}}{x}
 
     :Stochastics:
       x : float
@@ -983,7 +1048,7 @@ def lognormal_like(x, mu, tau):
         Scale stoch, > 0.
 
     :Note:
-      :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
+      :math:`E(X)=e^{\\mu+\\frac{1}{2\\tau}}`
     """
     # try:
     #     constrain(tau, lower=0)
@@ -1012,7 +1077,7 @@ def multinomial_expval(n,p):
     return asarray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
-    r"""
+    """
     multinomial_like(x, n, p)
 
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
@@ -1022,17 +1087,17 @@ def multinomial_like(x, n, p):
     of times outcome number i was observed over the n trials.
 
     .. math::
-        f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
+        f(x \\mid n, p) = \\frac{n!}{\\prod_{i=1}^k x_i!} \\prod_{i=1}^k p_i^{x_i}
 
     :Stochastics:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
-        :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
+        :math:`\\sum_{i=1}^k x_i=n`, :math:`x_i \\ge 0`.
       n : int
         Number of trials.
       p : (k,1) float
         Probability of each one of the different outcomes,
-        :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+        :math:`\\sum_{i=1}^k p_i = 1)`, :math:`p_i \\ge 0`.
 
     :Note:
       - :math:`E(X_i)=n p_i`
@@ -1088,7 +1153,7 @@ def multivariate_hypergeometric_expval(n, m):
 
 
 def multivariate_hypergeometric_like(x, m):
-    r"""
+    """
     multivariate_hypergeometric_like(x, m)
 
     The multivariate hypergeometric describes the probability of drawing x[i] 
@@ -1097,9 +1162,9 @@ def multivariate_hypergeometric_like(x, m):
     
 
     .. math::
-        \frac{\prod_i \binom{m_i}{c_i}}{\binom{N}{n]}
+        \\frac{\\prod_i \\binom{m_i}{c_i}}{\\binom{N}{n]}
 
-    where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
+    where :math:`N = \\sum_i m_i` and :math:`n = \\sum_i x_i`.
     
     :Stochastics:
         x : int sequence
@@ -1132,13 +1197,13 @@ def mvnormal_expval(mu, tau):
     return mu
 
 def mvnormal_like(x, mu, tau):
-    r"""
+    """
     mvnormal_like(x, mu, tau)
 
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        f(x \\mid \\pi, T) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}T(x-\\mu) \\right\\}
 
     x: (k,n)
     mu: (k,n) or (k,1)
@@ -1166,13 +1231,13 @@ def mvnormal_cov_expval(mu, C):
     return mu
 
 def mvnormal_cov_like(x, mu, C):
-    r"""
+    """
     mvnormal_cov_like(x, mu, C)
 
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
+        f(x \\mid \\pi, C) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}C^{-1}(x-\\mu) \\right\\}
 
     x: (k,n)
     mu: (k,n) or (k,1)
@@ -1207,13 +1272,13 @@ def mvnormal_chol_expval(mu, sig):
     return mu
 
 def mvnormal_chol_like(x, mu, sig):
-    r"""
+    """
     mvnormal_like(x, mu, tau)
 
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
+        f(x \\mid \\pi, \\sigma) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}\\sigma \\sigma^{\\prime}(x-\\mu) \\right\\}
 
     x: (k,n)
     mu: (k,n) or (k,1)
@@ -1245,13 +1310,13 @@ def negative_binomial_expval(mu, alpha):
 
 
 def negative_binomial_like(x, mu, alpha):
-    r"""
+    """
     negative_binomial_like(x, mu, alpha)
 
     Negative binomial log-likelihood
 
     .. math::
-        f(x \mid r, p) = \frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
+        f(x \\mid r, p) = \\frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
 
     x > 0, mu > 0, alpha > 0
     """
@@ -1283,13 +1348,13 @@ def normal_expval(mu, tau):
     return mu
 
 def normal_like(x, mu, tau):
-    r"""
+    """
     normal_like(x, mu, tau)
 
     Normal log-likelihood.
 
     .. math::
-        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
+        f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}} \\exp\\left\\{ -\\frac{\\tau}{2} (x-\\mu)^2 \\right\\}
 
 
     :Stochastics:
@@ -1334,7 +1399,7 @@ def poisson_expval(mu):
 
 
 def poisson_like(x,mu):
-    r"""
+    """
     poisson_like(x,mu)
 
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
@@ -1344,18 +1409,18 @@ def poisson_like(x,mu):
     be derived as a limiting case of the binomial distribution.
 
     .. math::
-        f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+        f(x \\mid \\mu) = \\frac{e^{-\\mu}\\mu^x}{x!}
 
     :Stochastics:
       x : int
-        :math:`x \in {0,1,2,...}`
+        :math:`x \\in {0,1,2,...}`
       mu : float
         Expected number of occurrences that occur during the given interval,
-        :math:`\mu \geq 0`.
+        :math:`\\mu \\geq 0`.
 
     :Note:
-      - :math:`E(x)=\mu`
-      - :math:`Var(x)=\mu`
+      - :math:`E(x)=\\mu`
+      - :math:`Var(x)=\\mu`
     """
     # try:
     #     constrain(x, lower=0,allow_equal=True)
@@ -1385,7 +1450,7 @@ def rtruncnorm(mu, sigma, a, b, size=1):
 
 # TODO: code this.
 def truncnorm_expval(mu, sigma, a, b):
-    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable."""
+    """E(X)=\\mu + \\frac{\\sigma(\\varphi_1-\\varphi_2)}{T}, where T=\\Phi\\left(\\frac{B-\\mu}{\\sigma}\\right)-\\Phi\\left(\\frac{A-\\mu}{\\sigma}\\right) and \\varphi_1 = \\varphi\\left(\\frac{A-\\mu}{\\sigma}\\right) and \\varphi_2 = \\varphi\\left(\\frac{B-\\mu}{\\sigma}\\right), where \\varphi is the probability density function of a standard normal random variable."""
     pass
 
 def truncnorm_like(x, mu, sigma, a, b):
@@ -1394,7 +1459,7 @@ def truncnorm_like(x, mu, sigma, a, b):
     Truncated normal log-likelihood.
     
     .. math::
-        f(x \mid \mu, \sigma, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})}, 
+        f(x \\mid \\mu, \\sigma, a, b) = \\frac{\\phi(\\frac{x-\\mu}{\\sigma})} {\\Phi(\\frac{b-\\mu}{\\sigma}) - \\Phi(\\frac{a-\\mu}{\\sigma})}, 
     
     """
     x = np.atleast_1d(x)
@@ -1438,17 +1503,17 @@ def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like(x,lower, upper):
-    r"""
+    """
     uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
 
     .. math::
-        f(x \mid lower, upper) = \frac{1}{upper-lower}
+        f(x \\mid lower, upper) = \\frac{1}{upper-lower}
 
     :Stochastics:
       x : float
-       :math:`lower \geq x \geq upper`
+       :math:`lower \\geq x \\geq upper`
       lower : float
         Lower limit.
       upper : float
@@ -1472,26 +1537,26 @@ def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    r"""
+    """
     weibull_like(x, alpha, beta)
 
     Weibull log-likelihood
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
-        \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+        f(x \\mid \\alpha, \\beta) = \\frac{\\alpha x^{\\alpha - 1}
+        \\exp(-(\\frac{x}{\\beta})^{\\alpha})}{\\beta^\\alpha}
 
     :Stochastics:
       x : float
-        :math:`x \ge 0`
+        :math:`x \\ge 0`
       alpha : float
         > 0
       beta : float
         > 0
 
     :Note:
-      - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha}`
-      - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2`
+      - :math:`E(x)=\\beta \\Gamma(1+\\frac{1}{\\alpha}`
+      - :math:`Var(x)=\\beta^2 \\Gamma(1+\\frac{2}{\\alpha} - \\mu^2`
     """
     # try:
     #     constrain(alpha, lower=0)
@@ -1525,7 +1590,7 @@ def wishart_expval(n, Tau):
     return n * asarray(Tau)
 
 def wishart_like(X, n, Tau):
-    r"""
+    """
     wishart_like(X, n, Tau)
 
     Wishart log-likelihood. The Wishart distribution is the probability
@@ -1534,7 +1599,7 @@ def wishart_like(X, n, Tau):
     is identical to the chi-square distribution with n degrees of freedom.
 
     .. math::
-        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+        f(X \\mid n, T) = {\\mid T \\mid}^{n/2}{\\mid X \\mid}^{(n-k-1)/2} \\exp\\left\\{ -\\frac{1}{2} Tr(TX) \\right\\}
     
     where :math:`k` is the rank of X.
     
@@ -1558,16 +1623,8 @@ def wishart_like(X, n, Tau):
 # -----------------------------------------------------------
 # DECORATORS
 # -----------------------------------------------------------
-def create_distribution_instantiator(name, logp=None, random=None, module=locals()):
-    """
-    Return a function to instantiate a stoch from a particular distribution.
 
-      :Example:
-        >>> Exponential = create_distribution_instantiator('exponential')
-        >>> A = Exponential('A', value=2.3, beta=4)
-    """
-
-
+def name_to_funcs(name, module):
     if type(module) is types.ModuleType:
         module = copy(module.__dict__)
     elif type(module) is dict:
@@ -1575,52 +1632,18 @@ def create_distribution_instantiator(name, logp=None, random=None, module=locals
     else:
         raise AttributeError
 
-    if logp is None:
-        try:
-           logp = module[name+"_like"]
-        except:
-            raise "No likelihood found with this name ", name+"_like"
-    if random is None:
-        try:
-            random = module['r'+name]
-        except:
-            raise "No random generator found with this name ", 'r'+name
-
-    # Build parents dictionary by parsing the __func__tion's arguments.
-    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
-    parent_names = args[1:]
     try:
-        parents_default = dict(zip(args[-len(defaults):], defaults))
-    except TypeError: # No parents at all.
-        parents_default = {}
+       logp = module[name+"_like"]
+    except:
+        raise "No likelihood found with this name ", name+"_like"
 
-
-    def instantiator(name, value=None, trace=True, rseed=False, 
-        doc='PyMC stoch', **kwds):
-        """
-
-        Instantiate a Stochastic instance with a %s prior.
-        """
-
-        # Deal with keywords
-        # Find which are parents
-        parents=parents_default
-
-        for k in kwds.keys():
-            if k in parent_names:
-                parents[k] = kwds.pop(k)
-
-        if value is None:
-            if rseed is False:
-                raise 'No initial value given. Provide one or set rseed to True.'
-            rseed = True
-            value = random(**parents)
-
-        return PyMC2.Stochastic(value=value, name=name, parents=parents, logp=valuewrapper(logp), random=random, \
-        trace=trace, rseed=rseed, isdata=False, doc=doc)
-
-    #instantiator.__doc__="Instantiate a Stochastic instance with a %s prior."%name
-    return instantiator
+    try:
+        random = module['r'+name]
+    except:
+        random = None
+            
+    return logp, random
+    
 
 def valuewrapper(f):
     """Return a likelihood accepting value instead of x as a keyword argument.
@@ -1630,6 +1653,19 @@ def valuewrapper(f):
         value = kwds.pop('value')
         return f(value, **kwds)
     wrapper.__dict__.update(f.__dict__)
+    return wrapper
+    
+def randomwrapper(f, size, shape):
+    """
+    Wraps functions to return values of appropriate shape.
+    """
+    if f is None:
+        return f
+    def wrapper(**kwds):
+        value = f(size=size, **kwds)
+        if shape is not None:
+            value= np.reshape(value, shape)
+        return value
     return wrapper
         
         
@@ -1751,13 +1787,21 @@ def local_decorated_likelihoods(obj):
 
 # Create stoch instantiators
 
-for dist in availabledistributions:
-    locals()[dist.capitalize()]= create_distribution_instantiator(dist, module=locals())
+for dist in continuous_distributions:
+    dist_logp, dist_random = name_to_funcs(dist, locals())
+    locals()[dist.capitalize()]= stoch_from_dist(dist, dist_logp, dist_random)
+    
+for dist in discrete_distributions:
+    dist_logp, dist_random = name_to_funcs(dist, locals())
+    locals()[dist.capitalize()]= stoch_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
+
+dist_logp, dist_random = name_to_funcs('bernoulli', locals())
+locals()['Bernoulli']= stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
 
 
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+# if __name__ == "__main__":
+#     import doctest
+#     doctest.testmod()
 
 
 

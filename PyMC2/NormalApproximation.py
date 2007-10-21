@@ -1,12 +1,9 @@
 # TODO: Test case for EM algorithm.
-# TODO: Double-check that it's valid to use derivatives from the EM algorithm to compute the Hessian for the normal approx.
+# TODO: Derivatives from the EM algorithm can't actually be used to compute the Hessian for the normal approx.
 
 # Post-2.0-release:
 # TODO: Think about what to do about int-valued stochastics.
 # TODO: Allow constraints if fmin_l_bfgs_b is used.
-# TODO: 'Stochastic Gradient' algorithm options- these update based on a subset of the data/potentials available.
-
-
 
 
 __docformat__='reStructuredText'
@@ -320,7 +317,6 @@ class NormalApproximation(Model):
         self._sig = msqrt(self._C).T
         
         self.fitted = True
-        
 
     def func(self, p):
         """
@@ -617,3 +613,13 @@ class EM(NormalApproximation):
             except ZeroProbability:
                 return Inf
         return -mean(logps)
+
+
+class StochasticGradient(NormalApproximation):
+    """
+    At each iteration, randomly chooses one of self.data | self.potentials.
+    Updates parameters by gradient descent (with step size parameter) as if
+    self's other data and potentials didn't exist.
+    """
+    def __init__(self):
+        raise NotImplemented

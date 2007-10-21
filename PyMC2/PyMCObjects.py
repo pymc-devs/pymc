@@ -3,7 +3,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from copy import deepcopy, copy
-from numpy import array, ndarray, reshape, Inf
+from numpy import array, ndarray, reshape, Inf, asarray
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 
@@ -576,8 +576,9 @@ class DiscreteStochastic(Stochastic):
             
         # Save current value as last_value
         self.last_value = self._value
-        self._value = int(round(value, 0))
-        
+        self._value = asarray(value, dtype=int)
+
+    value=property(Stochastic.get_value,set_value)
     
 class BinaryStochastic(Stochastic):
     """
@@ -596,4 +597,6 @@ class BinaryStochastic(Stochastic):
             
         # Save current value as last_value
         self.last_value = self._value
-        self._value = bool(value)
+        self._value = asarray(value, dtype=bool)
+
+    value=property(Stochastic.get_value,set_value)
