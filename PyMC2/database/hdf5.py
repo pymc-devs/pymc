@@ -164,6 +164,11 @@ class Database(pickle.Database):
         # add attributes. Computation time.
         self._table.flush()
         
+    def savestate(self, state):
+        """Store a dictionnary containing the state of the Model and its 
+        StepMethods."""
+        self.add_attr('_state_', state, 'Final state of the sampler.')
+            
     def _model_trace_description(self):
         """Return a description of the table to be created in terms of PyTables columns."""
         D = {}

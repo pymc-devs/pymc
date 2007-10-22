@@ -522,19 +522,18 @@ class Sampler(Model):
         Return the sampler and step methods current state in order to
         restart sampling at a later time.
         """
-        state = dict(sampler={}, step_methods={})
+        state = dict(sampler={}, step_methods={}, stochs={})
         # The state of the sampler itself.
         for s in self._state:
             state['sampler'][s] = getattr(self, s)
 
         # The state of each StepMethod.
         for sm in self.step_methods:
-            smstate = {}
-            for s in sm._state:
-                if hasattr(sm, s):
-                    smstate[s] = getattr(sm, s)
-            state['step_methods'][sm._id] = smstate.copy()
+            state['step_methods'][sm._id] = sm.current_state().copy()
 
+        # The state of each stochastic parameter
+        for stoch in self.stochs:
+            state['stochs'][stoch.__name__] = stoch.value
         return state
 
     def save_state(self):
@@ -549,10 +548,23 @@ class Sampler(Model):
         the state stored in the database.
         """
         state = self.db.getstate()
-        self.__dict__.update(state.get('sampler', {}))
+        
+        # Restore sampler's state
+        sampler_state = state.get('sampler', {})
+        self.__dict__.update(sampler_state)
+        
+        # Restore stepping methods state
+        sm_state = state.get('step_methods', {})
         for sm in self.step_methods:
-            tmp = state.get('step_methods', {})
-            sm.__dict__.update(tmp.get(sm._id, {}))
+            sm.__dict__.update(sm_state.get(sm._id, {}))
+            
+        # Restore stochastic parameters state
+        stoch_state = state.get('stochs', {})
+        for sm in self.stochs:
+            try:
+                self.stoch.value = stoch_state[sm.__name__]
+            except:
+                pass
             
     def remember(self, trace_index = None):
         """

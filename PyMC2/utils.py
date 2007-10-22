@@ -480,3 +480,29 @@ def draw_random(obj, **kwds):
         for k,v in kwds.iteritems():
             obj.parents[k] = v.next()
         yield obj.random()
+
+def rec_getattr(obj, attr):
+    """Get object's attribute. May use dot notation.
+
+    >>> class C(object): pass
+    >>> a = C()
+    >>> a.b = C()
+    >>> a.b.c = 4
+    >>> rec_getattr(a, 'b.c')
+    4
+    """
+    return reduce(getattr, attr.split('.'), obj)
+            
+def rec_setattr(obj, attr, value):
+    """Set object's attribute. May use dot notation.
+
+    >>> class C(object): pass
+    >>> a = C()
+    >>> a.b = C()
+    >>> a.b.c = 4
+    >>> rec_setattr(a, 'b.c', 2)
+    >>> a.b.c
+    2
+    """
+    attrs = attr.split('.')
+    setattr(reduce(getattr, attrs[:-1], obj), attrs[-1], value)

@@ -3,6 +3,7 @@
 # Trace are stored in memory during sampling and saved to a
 # txt file at the end of sampling. Each object has its own file. 
 ###
+# TODO: Implement load function.
 
 import base, ram, no_trace, pickle
 import os, datetime, shutil
