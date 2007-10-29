@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#epydoc --verbose --debug --config epydoc.conf
+
+
+# Make manual
+cd docs
+rst2latex ../README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\hypertarget{installation}{} -o README.tex
+rst2latex ../INSTALL.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o INSTALL.tex
+rst2latex ../PyMC2/database/README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o database.tex
+
+pdflatex -output-directory=pdf guide2.0
+pdflatex -output-directory=pdf guide2.0
+cd ..
+

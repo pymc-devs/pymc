@@ -1,0 +1,89 @@
+%
+%  PyMC User's Guide
+%
+%  Created by Chris Fonnesbeck on 2006-05-03.
+%  Copyright (c) 2006 . All rights reserved.
+%
+\documentclass[]{manual}
+
+% Use utf-8 encoding for foreign characters
+%\usepackage[utf8]{inputenc}
+
+% Setup for fullpage use
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{epsfig}
+\usepackage{pdfsync} 
+
+% Flexible citation syntax
+\usepackage{natbib}
+% Uncomment some of the following if you use the features
+%
+
+% Multipart figures
+%\usepackage{subfigure}
+
+% More symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+
+% Surround parts of graphics with box
+%\usepackage{boxedminipage}
+
+% Enable hyeprlinks
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+
+\usepackage{graphicx}
+
+\title{PyMC 2.0 svn User's Guide \\
+Installation and tutorial}
+\author{ Christopher Fonnesbeck\\ David Huard \\ Anand Patil }
+\graphicspath{{docs/}}
+\pdfoutput=1
+% \date
+% TODO: Logo.
+
+%%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
+\newcommand{\titlereference}[1]{\textsl{#1}}
+\newlength{\locallinewidth}
+\setlength{\locallinewidth}{\linewidth}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction} %(fold)
+\label{chap:intro} 
+\input{README}
+
+\chapter{Installation} %(fold)
+\label{chap:install} 
+\input{INSTALL}
+
+\chapter{Markov chain Monte Carlo} %(fold)
+\label{chap:MCMC} 
+\input{theory}
+
+\chapter{Model building in PyMC} %(fold)
+\label{chap:modelbuilding} 
+\input{modelbuilding}
+
+% \chapter{Model fitting in PyMC} %(fold)
+% \label{chap:modelfitting}
+% \input{modelfitting}
+
+\chapter{Saving and managing sampling results} %(fold)
+\label{chap:database} 
+\input{database}
+
+\bibliographystyle{plainnat}
+\bibliography{pymc}
+
+\end{document}
+ 
