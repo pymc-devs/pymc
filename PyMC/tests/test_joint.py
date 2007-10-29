@@ -1,5 +1,5 @@
-from PyMC2 import Sampler, JointMetropolis
-from PyMC2.examples import model_for_joint
+from PyMC import Sampler, JointMetropolis
+from PyMC.examples import model_for_joint
 from pylab import plot, show,title, xlabel, ylabel, figure
 
 from numpy.testing import *

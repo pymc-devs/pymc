@@ -9,8 +9,8 @@ The object passed as db to Sampler may be:
 2. A Database instance,
 
 There could be two ways to initialize a Database instance:
-1. Instantiation: db = PyMC2.database.pickle.Database(**kwds)
-2. Loading : db = PyMC2.database.pickle.load(file)
+1. Instantiation: db = PyMC.database.pickle.Database(**kwds)
+2. Loading : db = PyMC.database.pickle.load(file)
 
 Supporting 2 is a bit tricky, since it implies that we must :
 a) restore the state of the database, using previously computed values,

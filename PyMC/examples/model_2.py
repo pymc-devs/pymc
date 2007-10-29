@@ -5,10 +5,10 @@ global_rate ~ Exp(3.)
 disasters[t] ~ Po(global_rate)
 """
 
-from PyMC2 import stoch, data, Metropolis, discrete_stoch
+from PyMC import stoch, data, Metropolis, discrete_stoch
 from numpy import array, log, sum
-from PyMC2 import exponential_like, poisson_like
-from PyMC2 import rexponential, constrain
+from PyMC import exponential_like, poisson_like
+from PyMC import rexponential, constrain
 
 __all__ = ['global_rate', 'disasters', 'disasters_array']
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

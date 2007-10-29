@@ -69,7 +69,7 @@ This step method's constructor arguments are simply:
 \end{itemize}
 
 \section{Things that would be nice for Gibbs sampling in general}
-I started a class called Gibbs in \texttt{PyMC2/special\_StepMethods/GibbsSampler.py}, but couldn't figure out how to make it work well. It would be nice if:  
+I started a class called Gibbs in \texttt{PyMC/special\_StepMethods/GibbsSampler.py}, but couldn't figure out how to make it work well. It would be nice if:  
 \begin{itemize}
 	\item We come up with some consistent class factory for making conjugate/ nonconjugate pairs of Gibbs samplers, maybe similar to what we're doing in distributions.py.	
 	\item The accessory dictionaries that get passed in to the constructor should be allowed to contain stochs, dtrms, or simple ndarrays. The nodes should have their values extracted automatically somehow.

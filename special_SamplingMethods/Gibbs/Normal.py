@@ -1,5 +1,5 @@
-from PyMC2 import StepMethod, Stochastic, Deterministic, Container
-from PyMC2.utils import msqrt
+from PyMC import StepMethod, Stochastic, Deterministic, Container
+from PyMC.utils import msqrt
 from numpy import asarray
 from numpy.random import normal
 

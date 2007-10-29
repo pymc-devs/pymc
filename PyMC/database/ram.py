@@ -3,7 +3,7 @@
 # Simply store the trace in memory
 ###
 
-import PyMC2
+import PyMC
 from numpy import zeros,shape,concatenate, ndarray,dtype
 import base
 
@@ -20,7 +20,7 @@ class Trace(base.Trace):
             self._trace = value
         
         if obj is not None:
-            if isinstance(obj, PyMC2.Variable):
+            if isinstance(obj, PyMC.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj

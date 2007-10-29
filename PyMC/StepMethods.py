@@ -50,7 +50,7 @@ def blacklist(stoch):
     If you want to exclude a particular step method from
     consideration for handling a variable, do this:
     
-    from PyMC2 import StepMethodRegistry
+    from PyMC import StepMethodRegistry
     StepMethodRegistry[bad_step_method] = blacklist
     """
     return 0

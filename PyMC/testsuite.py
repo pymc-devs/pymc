@@ -1,6 +1,6 @@
 from numpy.testing import NumpyTest
 
-from PyMC2 import tests
+from PyMC import tests
 import os
 # Changeset
 # 19/03/2007 -DH- The modules in tests/ are now imported when test is called. 
@@ -14,7 +14,7 @@ def test():
     except:
         pass
     os.chdir('test_results')
-    testmod = __import__('PyMC2.tests', [], [], tests.__modules__)
+    testmod = __import__('PyMC.tests', [], [], tests.__modules__)
     
     for m in tests.__modules__:
         print 'Testing ' + m

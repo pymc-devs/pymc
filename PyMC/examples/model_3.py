@@ -6,11 +6,11 @@ amp_of_mean ~ Exp(3)
 disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 """
 
-from PyMC2 import stoch, data, Metropolis, discrete_stoch
+from PyMC import stoch, data, Metropolis, discrete_stoch
 from numpy import array, log, sum, zeros, arange
-from PyMC2 import poisson_like, normal_like, exponential_like
-from PyMC2 import rnormal, rexponential, constrain
-from PyMC2 import ZeroProbability
+from PyMC import poisson_like, normal_like, exponential_like
+from PyMC import rnormal, rexponential, constrain
+from PyMC import ZeroProbability
 
 
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

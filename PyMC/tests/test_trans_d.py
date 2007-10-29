@@ -8,8 +8,8 @@ PLOT=True
 
 class test_Sampler(NumpyTestCase):
     def check(self):
-        from PyMC2 import Sampler
-        from PyMC2.examples import trans_dimensional
+        from PyMC import Sampler
+        from PyMC.examples import trans_dimensional
         M = Sampler(trans_dimensional)
         M.sample(5000,0,10,verbose=False)
         M.plot()

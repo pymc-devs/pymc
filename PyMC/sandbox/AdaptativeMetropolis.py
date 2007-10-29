@@ -4,13 +4,13 @@
 # Date: April 23, 2007
 # Reference: Haario, H., E. Saksman and J. Tamminen, An adaptative Metropolis algorithm, Bernouilli, vol. 7 (2), pp. 223-242, 2001.
 ###
-from PyMC2.utils import msqrt, extend_children, check_type, round_array, extend_parents
-from PyMC2 import StepMethod
-from PyMC2.flib import fill_stdnormal
+from PyMC.utils import msqrt, extend_children, check_type, round_array, extend_parents
+from PyMC import StepMethod
+from PyMC.flib import fill_stdnormal
 from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
     reshape, shape, log, asarray, dot
 from numpy.random import randint, random
-from PyMC2.Node import ZeroProbability
+from PyMC.Node import ZeroProbability
 
 class AdaptativeMetropolis(StepMethod):
     """
@@ -234,10 +234,10 @@ class AdaptativeMetropolis(StepMethod):
    
 if __name__=='__main__':
     from numpy.testing import *
-    from PyMC2 import Sampler, JointMetropolis
-    from PyMC2 import stoch, data, JointMetropolis
+    from PyMC import Sampler, JointMetropolis
+    from PyMC import stoch, data, JointMetropolis
     from numpy import array, eye, ones
-    from PyMC2.distributions import multivariate_normal_like
+    from PyMC.distributions import multivariate_normal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = eye(2)

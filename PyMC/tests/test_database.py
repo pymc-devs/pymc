@@ -1,8 +1,8 @@
 """ Test database backends """
 
 from numpy.testing import *
-from PyMC2 import Sampler, database
-from PyMC2.examples import DisasterModel
+from PyMC import Sampler, database
+from PyMC.examples import DisasterModel
 import os,sys
 import numpy as np
 

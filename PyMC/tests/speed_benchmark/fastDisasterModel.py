@@ -7,7 +7,7 @@ late_mean ~ Exp(1.)
 disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
-from PyMC2 import stoch, data, ZeroProbability, discrete_stoch
+from PyMC import stoch, data, ZeroProbability, discrete_stoch
 from numpy import array, log, sum
 from fastDisasterLikes import fpoisson, fpoisson_d
 

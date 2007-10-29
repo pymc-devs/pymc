@@ -74,7 +74,7 @@ backend subclasses the base clases.
 For more information about individual backends, refer to the `API`_ documentation.
 
 .. _`database/base.py`:
-   PyMC2/database/base.py
+   PyMC/database/base.py
 
 .. _`API`:
    docs/API.pdf

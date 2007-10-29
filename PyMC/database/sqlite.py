@@ -9,7 +9,7 @@ Updated by DH on 2007-04-04.
 
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
-import base, pickle, ram, PyMC2
+import base, pickle, ram, PyMC
 import pdb
 
 class Trace(object):
@@ -18,7 +18,7 @@ class Trace(object):
     def __init__(self, obj=None):
         """Assign an initial value and an internal PyMC object."""       
         if obj is not None:
-            if isinstance(obj, PyMC2.Variable):
+            if isinstance(obj, PyMC.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj

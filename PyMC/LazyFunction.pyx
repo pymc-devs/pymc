@@ -3,7 +3,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from numpy import array, zeros, ones, arange, resize
-from PyMC2 import Node, ContainerBase, Variable
+from PyMC import Node, ContainerBase, Variable
 from Container import ArrayContainer
 from Container_values import ACValue
 

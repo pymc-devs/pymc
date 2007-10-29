@@ -1,7 +1,7 @@
-from PyMC2 import stoch, data, discrete_stoch
+from PyMC import stoch, data, discrete_stoch
 from numpy import arange, ones, eye, sum, zeros, exp, concatenate
 from numpy.random import normal
-from PyMC2 import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
+from PyMC import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
 
 # Generate data
 K_true = 5

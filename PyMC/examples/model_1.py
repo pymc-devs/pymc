@@ -8,11 +8,11 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC2 import stoch, data, discrete_stoch
+from PyMC import stoch, data, discrete_stoch
 from numpy import array, log, sum, random
 from numpy.random import randint
-from PyMC2 import uniform_like, exponential_like, poisson_like
-from PyMC2 import rexponential
+from PyMC import uniform_like, exponential_like, poisson_like
+from PyMC import rexponential
 
 __all__ = ['disasters_array', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
 

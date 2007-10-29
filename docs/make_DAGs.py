@@ -1,4 +1,4 @@
-from PyMC2 import *
+from PyMC import *
 
 def disaster_no_r():
     @discrete_stoch

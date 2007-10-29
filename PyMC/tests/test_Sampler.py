@@ -11,8 +11,8 @@ class test_Sampler(NumpyTestCase):
     def check(self):
         
         # Import modules
-        from PyMC2 import Sampler
-        from PyMC2.examples import DisasterModel
+        from PyMC import Sampler
+        from PyMC.examples import DisasterModel
         
         # Instantiate samplers
         M = Sampler(DisasterModel)

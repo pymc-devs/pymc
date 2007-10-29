@@ -1,4 +1,4 @@
-from PyMC2 import Sampler
+from PyMC import Sampler
 import fastDisasterModel
 M = Sampler(fastDisasterModel)
 

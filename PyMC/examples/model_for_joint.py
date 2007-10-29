@@ -1,6 +1,6 @@
-from PyMC2 import stoch, data, JointMetropolis, Sampler
+from PyMC import stoch, data, JointMetropolis, Sampler
 from numpy import array, eye, ones
-from PyMC2.distributions import mvnormal_like
+from PyMC.distributions import mvnormal_like
 
 mu_A = array([0.,0.])
 tau_A = eye(2)

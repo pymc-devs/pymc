@@ -1,5 +1,5 @@
 #from GibbsSampler import Gibbs
-from PyMC2.StepMethods import StepMethod
+from PyMC.StepMethods import StepMethod
 
 class MVNormalChildren(StepMethod):
     """

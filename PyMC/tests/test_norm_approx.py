@@ -1,5 +1,5 @@
-from PyMC2 import NormalApproximation, msqrt
-from PyMC2.examples import gelman_bioassay
+from PyMC import NormalApproximation, msqrt
+from PyMC.examples import gelman_bioassay
 from pylab import *
 from numpy import *
 from numpy.testing import * 

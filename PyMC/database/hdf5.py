@@ -12,8 +12,8 @@
 
 import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
-import PyMC2
-from PyMC2.database import base, pickle
+import PyMC
+from PyMC.database import base, pickle
 from copy import copy
 import tables
 
@@ -26,7 +26,7 @@ class Trace(base.Trace):
         """Assign an initial value and an internal PyMC object."""
         self._trace = value
         if obj is not None:
-            if isinstance(obj, PyMC2.Variable):
+            if isinstance(obj, PyMC.Variable):
                 self._obj = obj
                 self.name = self._obj.__name__
             else:

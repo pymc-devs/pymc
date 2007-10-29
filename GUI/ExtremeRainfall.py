@@ -3,7 +3,7 @@ A simple model to test the GUI.
 Sample the stochs of a Generalized Extreme Value (GEV) distribution.
 """
 
-from PyMC2 import data, stoch, Uniform, Beta, gev_like
+from PyMC import data, stoch, Uniform, Beta, gev_like
 from numpy import array
 
 # Define the priors for the location (xi), scale (alpha) and shape (kappa) 

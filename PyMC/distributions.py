@@ -23,7 +23,7 @@ for non_cont in discrete_distributions + ['bernoulli']:
 availabledistributions = univ_distributions+mv_distributions
 
 import flib
-import PyMC2
+import PyMC
 import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
@@ -287,7 +287,7 @@ def rarlognorm(a, sigma, rho, size=1):
     If a is a sequence, generates size series of the same length
     as a. 
     """
-    f = PyMC2.utils.ar1
+    f = PyMC.utils.ar1
     if np.isscalar(a):
         r = f(rho, 0, sigma, size)
     else:
@@ -1445,13 +1445,13 @@ def rtruncnorm(mu, sigma, a, b, size=1):
     Random truncated normal variates.
     """
     
-    na = PyMC2.utils.normcdf((a-mu)/sigma)
-    nb = PyMC2.utils.normcdf((b-mu)/sigma)
+    na = PyMC.utils.normcdf((a-mu)/sigma)
+    nb = PyMC.utils.normcdf((b-mu)/sigma)
     
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
     q = U * nb + (1-U)*na
-    R = PyMC2.utils.invcdf(q)
+    R = PyMC.utils.invcdf(q)
     
     # Unnormalize
     return R*sigma + mu
@@ -1480,11 +1480,11 @@ def truncnorm_like(x, mu, sigma, a, b):
     else:
         n = len(x)
         phi = normal_like(x, mu, 1./sigma**2)
-        Phia = PyMC2.utils.normcdf((a-mu)/sigma)
+        Phia = PyMC.utils.normcdf((a-mu)/sigma)
         if b == np.inf:
             Phib = 1.0
         else:
-            Phib = PyMC2.utils.normcdf((b-mu)/sigma)
+            Phib = PyMC.utils.normcdf((b-mu)/sigma)
         d = log(Phib-Phia)
         if len(d) == n:
             Phi = d.sum()

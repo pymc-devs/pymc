@@ -86,7 +86,7 @@ static PyObject *__pyx_n_ArrayContainer;
 static PyObject *__pyx_n_ACValue;
 static PyObject *__pyx_n_reStructuredText;
 static PyObject *__pyx_n_numpy;
-static PyObject *__pyx_n_PyMC2;
+static PyObject *__pyx_n_PyMC;
 static PyObject *__pyx_n_Container;
 static PyObject *__pyx_n_Container_values;
 
@@ -127,22 +127,22 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   __pyx_v_arg = Py_None; Py_INCREF(Py_None);
   __pyx_v_name = Py_None; Py_INCREF(Py_None);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":84 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":84 */
   Py_INCREF(__pyx_v_arguments);
   Py_DECREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->arguments);
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->arguments = __pyx_v_arguments;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":86 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":86 */
   __pyx_1 = PyInt_AsLong(__pyx_v_cache_depth); if (PyErr_Occurred()) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 86; goto __pyx_L1;}
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cache_depth = __pyx_1;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":89 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":89 */
   __pyx_2 = PyList_New(0); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; goto __pyx_L1;}
   Py_DECREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->frame_queue);
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->frame_queue = __pyx_2;
   __pyx_2 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":90 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":90 */
   __pyx_2 = __Pyx_GetName(__pyx_b, __pyx_n_xrange); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 90; goto __pyx_L1;}
   __pyx_3 = PyInt_FromLong(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cache_depth); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 90; goto __pyx_L1;}
   __pyx_4 = PyTuple_New(1); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 90; goto __pyx_L1;}
@@ -163,7 +163,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
     Py_DECREF(__pyx_4); __pyx_4 = 0;
     __pyx_v_i = __pyx_1;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":91 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":91 */
     __pyx_3 = PyObject_GetAttr(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->frame_queue, __pyx_n_append); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; goto __pyx_L1;}
     __pyx_4 = PyInt_FromLong(__pyx_v_i); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; goto __pyx_L1;}
     __pyx_5 = PyTuple_New(1); if (!__pyx_5) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; goto __pyx_L1;}
@@ -176,7 +176,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   }
   Py_DECREF(__pyx_2); __pyx_2 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":94 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":94 */
   __pyx_3 = PyObject_GetAttr(__pyx_v_arguments, __pyx_n_iterkeys); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 94; goto __pyx_L1;}
   __pyx_5 = PyObject_CallObject(__pyx_3, 0); if (!__pyx_5) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 94; goto __pyx_L1;}
   Py_DECREF(__pyx_3); __pyx_3 = 0;
@@ -192,7 +192,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
     __pyx_v_name = __pyx_2;
     __pyx_2 = 0;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":97 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":97 */
     __pyx_3 = PyObject_GetItem(__pyx_v_arguments, __pyx_v_name); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; goto __pyx_L1;}
     Py_DECREF(__pyx_v_arg);
     __pyx_v_arg = __pyx_3;
@@ -200,7 +200,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   }
   Py_DECREF(__pyx_4); __pyx_4 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":99 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":99 */
   __pyx_5 = __Pyx_GetName(__pyx_m, __pyx_n_ArrayContainer); if (!__pyx_5) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; goto __pyx_L1;}
   __pyx_2 = __Pyx_GetName(__pyx_m, __pyx_n_array); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; goto __pyx_L1;}
   __pyx_3 = __Pyx_GetName(__pyx_b, __pyx_n_list); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; goto __pyx_L1;}
@@ -232,7 +232,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->ultimate_args = __pyx_3;
   __pyx_3 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":100 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":100 */
   __pyx_6 = __Pyx_GetName(__pyx_b, __pyx_n_len); if (!__pyx_6) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; goto __pyx_L1;}
   __pyx_4 = PyTuple_New(1); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; goto __pyx_L1;}
   Py_INCREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->ultimate_args);
@@ -244,7 +244,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   Py_DECREF(__pyx_5); __pyx_5 = 0;
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->N_args = __pyx_1;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":104 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":104 */
   __pyx_2 = __Pyx_GetName(__pyx_m, __pyx_n_zeros); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; goto __pyx_L1;}
   __pyx_3 = PyInt_FromLong((((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cache_depth * ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->N_args)); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; goto __pyx_L1;}
   __pyx_6 = PyTuple_New(1); if (!__pyx_6) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; goto __pyx_L1;}
@@ -262,13 +262,13 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_args = __pyx_3;
   __pyx_3 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":105 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":105 */
   __pyx_5 = PyList_New(0); if (!__pyx_5) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 105; goto __pyx_L1;}
   Py_DECREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_values);
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_values = __pyx_5;
   __pyx_5 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":106 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":106 */
   __pyx_2 = __Pyx_GetName(__pyx_b, __pyx_n_range); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 106; goto __pyx_L1;}
   __pyx_6 = PyInt_FromLong(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cache_depth); if (!__pyx_6) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 106; goto __pyx_L1;}
   __pyx_4 = PyTuple_New(1); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 106; goto __pyx_L1;}
@@ -289,7 +289,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
     Py_DECREF(__pyx_6); __pyx_6 = 0;
     __pyx_v_i = __pyx_1;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":107 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":107 */
     __pyx_2 = PyObject_GetAttr(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_values, __pyx_n_append); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; goto __pyx_L1;}
     __pyx_4 = PyTuple_New(1); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; goto __pyx_L1;}
     Py_INCREF(Py_None);
@@ -301,15 +301,15 @@ static int __pyx_f_12LazyFunction_12LazyFunction___init__(PyObject *__pyx_v_self
   }
   Py_DECREF(__pyx_5); __pyx_5 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":110 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":110 */
   if (PySequence_SetSlice(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_args, 0, 0x7fffffff, Py_None) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 110; goto __pyx_L1;}
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":113 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":113 */
   Py_INCREF(__pyx_v_fun);
   Py_DECREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->fun);
   ((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->fun = __pyx_v_fun;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":117 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":117 */
   ((struct __pyx_vtabstruct_12LazyFunction_LazyFunction *)((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->__pyx_vtab)->get_array_data(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self));
 
   __pyx_r = 0;
@@ -340,18 +340,18 @@ static void __pyx_f_12LazyFunction_12LazyFunction_get_array_data(struct __pyx_ob
   PyObject *__pyx_1 = 0;
   Py_INCREF(__pyx_v_self);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":121 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":121 */
   __pyx_k19;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":128 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":128 */
   __pyx_v_self->ultimate_arg_p = ((void (*(*)))PyArray_DATA(__pyx_v_self->ultimate_args));
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":129 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":129 */
   __pyx_1 = PyObject_GetAttr(__pyx_v_self->ultimate_args, __pyx_n_value); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 129; goto __pyx_L1;}
   __pyx_v_self->ultimate_arg_value_p = ((void (*(*)))PyArray_DATA(__pyx_1));
   Py_DECREF(__pyx_1); __pyx_1 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":130 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":130 */
   __pyx_v_self->cached_arg_p = ((void (*(*)))PyArray_DATA(__pyx_v_self->cached_args));
 
   goto __pyx_L0;
@@ -379,10 +379,10 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
   int __pyx_6;
   Py_INCREF(__pyx_v_self);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":134 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":134 */
   __pyx_k20;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":142 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":142 */
   __pyx_1 = __Pyx_GetName(__pyx_m, __pyx_n_ACValue); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; goto __pyx_L1;}
   __pyx_2 = PyTuple_New(1); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; goto __pyx_L1;}
   Py_INCREF(__pyx_v_self->ultimate_args);
@@ -392,29 +392,29 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   Py_DECREF(__pyx_3); __pyx_3 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":144 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":144 */
   __pyx_4 = (__pyx_v_self->cache_depth > 0);
   if (__pyx_4) {
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":146 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":146 */
     __pyx_4 = __pyx_v_self->cache_depth;
     for (__pyx_v_i = 0; __pyx_v_i < __pyx_4; ++__pyx_v_i) {
 
-      /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":147 */
+      /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":147 */
       __pyx_v_mismatch = 0;
 
-      /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":149 */
+      /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":149 */
       __pyx_5 = __pyx_v_self->N_args;
       for (__pyx_v_j = 0; __pyx_v_j < __pyx_5; ++__pyx_v_j) {
 
-        /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":150 */
+        /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":150 */
         __pyx_6 = (!((__pyx_v_self->ultimate_arg_value_p[__pyx_v_j]) == (__pyx_v_self->cached_arg_p[((__pyx_v_i * __pyx_v_self->N_args) + __pyx_v_j)])));
         if (__pyx_6) {
 
-          /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":151 */
+          /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":151 */
           __pyx_v_mismatch = 1;
 
-          /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":152 */
+          /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":152 */
           goto __pyx_L6;
           goto __pyx_L7;
         }
@@ -422,15 +422,15 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
       }
       __pyx_L6:;
 
-      /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":154 */
+      /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":154 */
       __pyx_6 = (__pyx_v_mismatch == 0);
       if (__pyx_6) {
 
-        /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":157 */
+        /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":157 */
         __pyx_5 = __pyx_v_self->cache_depth;
         for (__pyx_v_j = 0; __pyx_v_j < __pyx_5; ++__pyx_v_j) {
 
-          /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":158 */
+          /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":158 */
           __pyx_1 = PyInt_FromLong(__pyx_v_j); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; goto __pyx_L1;}
           __pyx_2 = PyObject_GetItem(__pyx_v_self->frame_queue, __pyx_1); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; goto __pyx_L1;}
           Py_DECREF(__pyx_1); __pyx_1 = 0;
@@ -441,7 +441,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
           Py_DECREF(__pyx_3); __pyx_3 = 0;
           if (__pyx_6) {
 
-            /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":159 */
+            /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":159 */
             goto __pyx_L10;
             goto __pyx_L11;
           }
@@ -449,7 +449,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
         }
         __pyx_L10:;
 
-        /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":160 */
+        /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":160 */
         __pyx_1 = PyObject_GetAttr(__pyx_v_self->frame_queue, __pyx_n_pop); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; goto __pyx_L1;}
         __pyx_2 = PyInt_FromLong(__pyx_v_j); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; goto __pyx_L1;}
         __pyx_3 = PyTuple_New(1); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; goto __pyx_L1;}
@@ -460,7 +460,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
         Py_DECREF(__pyx_3); __pyx_3 = 0;
         Py_DECREF(__pyx_2); __pyx_2 = 0;
 
-        /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":161 */
+        /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":161 */
         __pyx_1 = PyObject_GetAttr(__pyx_v_self->frame_queue, __pyx_n_append); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 161; goto __pyx_L1;}
         __pyx_3 = PyInt_FromLong(__pyx_v_i); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 161; goto __pyx_L1;}
         __pyx_2 = PyTuple_New(1); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 161; goto __pyx_L1;}
@@ -471,7 +471,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
         Py_DECREF(__pyx_2); __pyx_2 = 0;
         Py_DECREF(__pyx_3); __pyx_3 = 0;
 
-        /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":162 */
+        /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":162 */
         __pyx_r = __pyx_v_i;
         goto __pyx_L0;
         goto __pyx_L8;
@@ -482,7 +482,7 @@ static int __pyx_f_12LazyFunction_12LazyFunction_check_argument_caches(struct __
   }
   __pyx_L2:;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":164 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":164 */
   __pyx_r = (-1);
   goto __pyx_L0;
 
@@ -510,14 +510,14 @@ static void __pyx_f_12LazyFunction_12LazyFunction_cache(struct __pyx_obj_12LazyF
   Py_INCREF(__pyx_v_self);
   Py_INCREF(__pyx_v_value);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":169 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":169 */
   __pyx_k21;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":177 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":177 */
   __pyx_1 = (__pyx_v_self->cache_depth > 0);
   if (__pyx_1) {
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":179 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":179 */
     __pyx_2 = PyObject_GetAttr(__pyx_v_self->frame_queue, __pyx_n_pop); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 179; goto __pyx_L1;}
     __pyx_3 = PyInt_FromLong(0); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 179; goto __pyx_L1;}
     __pyx_4 = PyTuple_New(1); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 179; goto __pyx_L1;}
@@ -530,7 +530,7 @@ static void __pyx_f_12LazyFunction_12LazyFunction_cache(struct __pyx_obj_12LazyF
     Py_DECREF(__pyx_3); __pyx_3 = 0;
     __pyx_v_cur_frame = __pyx_1;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":180 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":180 */
     __pyx_2 = PyObject_GetAttr(__pyx_v_self->frame_queue, __pyx_n_append); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 180; goto __pyx_L1;}
     __pyx_4 = PyInt_FromLong(__pyx_v_cur_frame); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 180; goto __pyx_L1;}
     __pyx_3 = PyTuple_New(1); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 180; goto __pyx_L1;}
@@ -541,16 +541,16 @@ static void __pyx_f_12LazyFunction_12LazyFunction_cache(struct __pyx_obj_12LazyF
     Py_DECREF(__pyx_3); __pyx_3 = 0;
     Py_DECREF(__pyx_4); __pyx_4 = 0;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":183 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":183 */
     __pyx_2 = PyInt_FromLong(__pyx_v_cur_frame); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 183; goto __pyx_L1;}
     if (PyObject_SetItem(__pyx_v_self->cached_values, __pyx_2, __pyx_v_value) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 183; goto __pyx_L1;}
     Py_DECREF(__pyx_2); __pyx_2 = 0;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":184 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":184 */
     __pyx_1 = __pyx_v_self->N_args;
     for (__pyx_v_j = 0; __pyx_v_j < __pyx_1; ++__pyx_v_j) {
 
-      /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":185 */
+      /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":185 */
       __pyx_3 = (PyObject *)(__pyx_v_self->ultimate_arg_value_p[__pyx_v_j]);
       Py_INCREF(__pyx_3);
       __pyx_4 = PyInt_FromLong(((__pyx_v_cur_frame * __pyx_v_self->N_args) + __pyx_v_j)); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; goto __pyx_L1;}
@@ -586,7 +586,7 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_force_compute(PyObject *_
   Py_INCREF(__pyx_v_self);
   __pyx_v_value = Py_None; Py_INCREF(Py_None);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":192 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":192 */
   __pyx_1 = PyTuple_New(0); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; goto __pyx_L1;}
   __pyx_2 = PyObject_GetAttr(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->arguments, __pyx_n_value); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; goto __pyx_L1;}
   __pyx_3 = PyEval_CallObjectWithKeywords(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->fun, __pyx_1, __pyx_2); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; goto __pyx_L1;}
@@ -596,7 +596,7 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_force_compute(PyObject *_
   __pyx_v_value = __pyx_3;
   __pyx_3 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":195 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":195 */
   __pyx_1 = __Pyx_GetName(__pyx_m, __pyx_n_ACValue); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 195; goto __pyx_L1;}
   __pyx_2 = PyTuple_New(1); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 195; goto __pyx_L1;}
   Py_INCREF(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->ultimate_args);
@@ -606,7 +606,7 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_force_compute(PyObject *_
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   Py_DECREF(__pyx_3); __pyx_3 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":198 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":198 */
   ((struct __pyx_vtabstruct_12LazyFunction_LazyFunction *)((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->__pyx_vtab)->cache(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self),__pyx_v_value);
 
   __pyx_r = Py_None; Py_INCREF(Py_None);
@@ -638,14 +638,14 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_get(PyObject *__pyx_v_sel
   Py_INCREF(__pyx_v_self);
   __pyx_v_value = Py_None; Py_INCREF(Py_None);
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":210 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":210 */
   __pyx_v_match_index = ((struct __pyx_vtabstruct_12LazyFunction_LazyFunction *)((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->__pyx_vtab)->check_argument_caches(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self));
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":212 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":212 */
   __pyx_1 = (__pyx_v_match_index < 0);
   if (__pyx_1) {
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":215 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":215 */
     __pyx_2 = PyTuple_New(0); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; goto __pyx_L1;}
     __pyx_3 = PyObject_GetAttr(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->arguments, __pyx_n_value); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; goto __pyx_L1;}
     __pyx_4 = PyEval_CallObjectWithKeywords(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->fun, __pyx_2, __pyx_3); if (!__pyx_4) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; goto __pyx_L1;}
@@ -655,13 +655,13 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_get(PyObject *__pyx_v_sel
     __pyx_v_value = __pyx_4;
     __pyx_4 = 0;
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":216 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":216 */
     ((struct __pyx_vtabstruct_12LazyFunction_LazyFunction *)((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->__pyx_vtab)->cache(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self),__pyx_v_value);
     goto __pyx_L2;
   }
   /*else*/ {
 
-    /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":219 */
+    /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":219 */
     __pyx_2 = PyInt_FromLong(__pyx_v_match_index); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 219; goto __pyx_L1;}
     __pyx_3 = PyObject_GetItem(((struct __pyx_obj_12LazyFunction_LazyFunction *)__pyx_v_self)->cached_values, __pyx_2); if (!__pyx_3) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 219; goto __pyx_L1;}
     Py_DECREF(__pyx_2); __pyx_2 = 0;
@@ -672,7 +672,7 @@ static PyObject *__pyx_f_12LazyFunction_12LazyFunction_get(PyObject *__pyx_v_sel
   }
   __pyx_L2:;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":221 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":221 */
   Py_INCREF(__pyx_v_value);
   __pyx_r = __pyx_v_value;
   goto __pyx_L0;
@@ -698,7 +698,7 @@ static __Pyx_InternTabEntry __pyx_intern_tab[] = {
   {&__pyx_n_ContainerBase, "ContainerBase"},
   {&__pyx_n_Container_values, "Container_values"},
   {&__pyx_n_Node, "Node"},
-  {&__pyx_n_PyMC2, "PyMC2"},
+  {&__pyx_n_PyMC, "PyMC"},
   {&__pyx_n_Variable, "Variable"},
   {&__pyx_n___author__, "__author__"},
   {&__pyx_n___docformat__, "__docformat__"},
@@ -962,13 +962,13 @@ PyMODINIT_FUNC initLazyFunction(void) {
   if (PyObject_SetAttrString(__pyx_m, "LazyFunction", (PyObject *)&__pyx_type_12LazyFunction_LazyFunction) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 16; goto __pyx_L1;}
   __pyx_ptype_12LazyFunction_LazyFunction = &__pyx_type_12LazyFunction_LazyFunction;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":1 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":1 */
   if (PyObject_SetAttr(__pyx_m, __pyx_n___docformat__, __pyx_n_reStructuredText) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; goto __pyx_L1;}
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":3 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":3 */
   if (PyObject_SetAttr(__pyx_m, __pyx_n___author__, __pyx_k2p) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 3; goto __pyx_L1;}
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":5 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":5 */
   __pyx_1 = PyList_New(5); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 5; goto __pyx_L1;}
   Py_INCREF(__pyx_n_array);
   PyList_SET_ITEM(__pyx_1, 0, __pyx_n_array);
@@ -999,7 +999,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   Py_DECREF(__pyx_1); __pyx_1 = 0;
   Py_DECREF(__pyx_2); __pyx_2 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":6 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":6 */
   __pyx_2 = PyList_New(3); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
   Py_INCREF(__pyx_n_Node);
   PyList_SET_ITEM(__pyx_2, 0, __pyx_n_Node);
@@ -1007,7 +1007,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   PyList_SET_ITEM(__pyx_2, 1, __pyx_n_ContainerBase);
   Py_INCREF(__pyx_n_Variable);
   PyList_SET_ITEM(__pyx_2, 2, __pyx_n_Variable);
-  __pyx_1 = __Pyx_Import(__pyx_n_PyMC2, __pyx_2); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
+  __pyx_1 = __Pyx_Import(__pyx_n_PyMC, __pyx_2); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   __pyx_2 = PyObject_GetAttr(__pyx_1, __pyx_n_Node); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
   if (PyObject_SetAttr(__pyx_m, __pyx_n_Node, __pyx_2) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
@@ -1020,7 +1020,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   Py_DECREF(__pyx_1); __pyx_1 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":7 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":7 */
   __pyx_1 = PyList_New(1); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; goto __pyx_L1;}
   Py_INCREF(__pyx_n_ArrayContainer);
   PyList_SET_ITEM(__pyx_1, 0, __pyx_n_ArrayContainer);
@@ -1031,7 +1031,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   Py_DECREF(__pyx_1); __pyx_1 = 0;
   Py_DECREF(__pyx_2); __pyx_2 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":8 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":8 */
   __pyx_2 = PyList_New(1); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 8; goto __pyx_L1;}
   Py_INCREF(__pyx_n_ACValue);
   PyList_SET_ITEM(__pyx_2, 0, __pyx_n_ACValue);
@@ -1042,7 +1042,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   Py_DECREF(__pyx_1); __pyx_1 = 0;
 
-  /* "/Users/anand/renearch/PyMC/PyMC2/LazyFunction.pyx":201 */
+  /* "/Users/anand/renearch/PyMC/PyMC/LazyFunction.pyx":201 */
   return;
   __pyx_L1:;
   Py_XDECREF(__pyx_1);

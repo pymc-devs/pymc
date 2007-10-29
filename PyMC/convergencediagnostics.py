@@ -2,7 +2,7 @@
 # Heidelberger and Welch (1983) ?
 
 import numpy as np
-import PyMC2
+import PyMC
 
 def geweke(x, first=.1, last=.5, intervals=20):
     """Return z-scores for convergence diagnostics.
@@ -96,7 +96,7 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001):
         
         See the fortran source file `gibbsit.f` for more details and references.
     """
-    return PyMC2.flib.gibbmain(x, q, r, s, epsilon)
+    return PyMC.flib.gibbmain(x, q, r, s, epsilon)
 
 def gelman_rubin(x):
     pass

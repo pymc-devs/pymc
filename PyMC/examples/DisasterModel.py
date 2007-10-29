@@ -7,9 +7,9 @@ l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D']
-from PyMC2 import stoch, data, dtrm, discrete_stoch, DiscreteMetropolis
+from PyMC import stoch, data, dtrm, discrete_stoch, DiscreteMetropolis
 from numpy import array, log, sum, ones, concatenate, inf
-from PyMC2 import uniform_like, exponential_like, poisson_like
+from PyMC import uniform_like, exponential_like, poisson_like
 
 
 D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

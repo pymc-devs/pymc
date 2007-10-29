@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division
-import sys,os, os.path, PyMC2
-import PyMC2.database
+import sys,os, os.path, PyMC
+import PyMC.database
 try:
     import pygtk
     pygtk.require("2.0")
@@ -64,7 +64,7 @@ class GladeWidget:
         self.__dict__.update(W)
         self.get_widget = get_widget
 
-        for db in PyMC2.database.available_modules:
+        for db in PyMC.database.available_modules:
             self.combobox1.append_text(db)
             self.combobox1.set_active(0)
 
@@ -91,7 +91,7 @@ class GladeWidget:
             sys.path.append(os.path.dirname(self.filename))
             mod = __import__(self.modulename)
             db = self.combobox1.get_active_text()
-            self.sampler = PyMC2.Sampler(mod, db=db)
+            self.sampler = PyMC.Sampler(mod, db=db)
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no files selected'

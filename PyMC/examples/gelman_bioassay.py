@@ -1,4 +1,4 @@
-from PyMC2 import *
+from PyMC import *
 from numpy import *
 
 n = 5*ones(4,dtype=int)
