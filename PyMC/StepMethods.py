@@ -10,50 +10,12 @@ from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
-# TODO: Make the competences attributes of the step methods, the code will be cleaner.
 # TODO: Test cases for binary and discrete Metropolises.
 
-__all__=['DictWithDoc', 'blacklist', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method', 
-'pick_best_methods']
+__all__=['no_competence', 'DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method', 
+'pick_best_methods', 'StepMethodRegistry','CompetenceFunction', 'competence']
 
-class DictWithDoc(dict):
-    """
-    The step method registry is a dictionary mapping each
-    step method to its competence function. Competence
-    functions must be of the form
-    
-    c = competence(stoch),
-    
-    where stoch is a Stochastic object. c should be a competence
-    score from 0 to 3, assigned as follows:
-    
-    0:  I can't handle that variable.
-    1:  I can handle that variable, but I'm a generalist and
-        probably shouldn't be your top choice (Metropolis
-        and friends fall into this category).
-    2:  I'm designed for this type of situation, but I could be
-        more specialized.
-    3:  I was made for this situation, let me handle the variable.
-    
-    In order to be eligible for inclusion in the registry, a sampling
-    method's init method must work with just a single argument, a
-    Stochastic object.
-    
-    :SeeAlso: blacklist, pick_best_methods, assign_method
-    """
-    pass
-
-StepMethodRegistry = DictWithDoc()
-
-def blacklist(stoch):
-    """
-    If you want to exclude a particular step method from
-    consideration for handling a variable, do this:
-    
-    from PyMC import StepMethodRegistry
-    StepMethodRegistry[bad_step_method] = blacklist
-    """
-    return 0
+StepMethodRegistry = []
 
 def pick_best_methods(stoch):
     """
@@ -67,11 +29,10 @@ def pick_best_methods(stoch):
     best_candidates = set([])
     
     # Loop over StepMethodRegistry
-    for item in StepMethodRegistry.iteritems():
+    for method in StepMethodRegistry:
         
         # Parse method and its associated competence
-        method = item[0]
-        competence = item[1](stoch)
+        competence = method.competence(stoch)
         
         # If better than current best method, promote it
         if competence > max_competence:
@@ -103,6 +64,66 @@ def assign_method(stoch, scale=None):
     
     return method(stoch = stoch)
 
+class CompetenceFunction(object):
+    """
+    C = CompetenceFunction(competence_fun)
+    
+    This is here for intercepting the competence functions and turning
+    them to callable objects before they're mutated to unbound methods.
+    
+    c = competence_fun(stoch),
+    
+    where stoch is a Stochastic object. c should be a competence
+    score from 0 to 3, assigned as follows:
+    
+    0:  I can't handle that variable.
+    1:  I can handle that variable, but I'm a generalist and
+        probably shouldn't be your top choice (Metropolis
+        and friends fall into this category).
+    2:  I'm designed for this type of situation, but I could be
+        more specialized.
+    3:  I was made for this situation, let me handle the variable.
+    
+    In order to be eligible for inclusion in the registry, a sampling
+    method's init method must work with just a single argument, a
+    Stochastic object.
+    
+    :SeeAlso: no_competence, pick_best_methods, assign_method
+    """
+    def __init__(self, competence_fun):
+        self._fun = competence_fun
+    def __call__(self, stoch):
+        return self._fun(stoch)
+
+def competence(competence_fun):
+    """
+    A decorator for competence functions declared inside classes.
+    Will convert the competence function to a CompetenceFunction
+    object, NOT an unbound method.
+    """
+    return CompetenceFunction(competence_fun)
+
+@competence
+def no_competence(stoch):
+    """
+    If you want to exclude a particular step method from
+    consideration for handling a variable, do this:
+
+    from PyMC import StepMethodRegistry
+    StepMethodRegistry[bad_step_method] = no_competence
+    """
+    return 0
+
+class StepMethodMeta(type):
+    """
+    Automatically registers new step methods, and mutates their 
+    unbound competence methods to callable CompetenceFunction
+    instances.
+    """
+    def __init__(cls, name, bases, dict):
+        type.__init__(cls)
+        StepMethodRegistry.append(cls)
+        
 class StepMethod(StepMethodBase):
     """
     This object knows how to make Stochastics take single MCMC steps.
@@ -138,6 +159,9 @@ class StepMethod(StepMethodBase):
     
     :SeeAlso: Metropolis, Sampler.
     """
+    
+    competence = no_competence
+    __metaclass__ = StepMethodMeta
     
     def __init__(self, variables, verbose=0):
         # StepMethod initialization
@@ -306,6 +330,8 @@ class StepMethod(StepMethodBase):
             state[s] = getattr(self, s)
         return state
 
+
+
 # The default StepMethod, which Model uses to handle singleton stochs.
 class Metropolis(StepMethod):
     """
@@ -379,6 +405,25 @@ class Metropolis(StepMethod):
         
         else:
             self._dist = dist
+    
+    @competence
+    def competence(stoch):
+        """
+        The competence function for Metropolis
+        """
+
+        if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
+            # If the stoch's binary or discrete, I can't do it.
+            return 0
+
+        else:
+            # If the stoch's value is an ndarray or a number, I can do it,
+            # but not necessarily particularly well.
+            _type = check_type(stoch)[0]
+            if _type in [float, int]:
+                return 1
+            else:
+                return 0
     
     def step(self):
         """
@@ -468,26 +513,6 @@ class Metropolis(StepMethod):
         if self._dist == "Normal":
             self.stoch.value = rnormal(self.stoch.value, self._asf * self.proposal_sig)
 
-def MetroCompetence(stoch):
-    """
-    The competence function for Metropolis
-    """
-    
-    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
-        # If the stoch's binary or discrete, I can't do it.
-        return 0
-    
-    else:
-        # If the stoch's value is an ndarray or a number, I can do it,
-        # but not necessarily particularly well.
-        _type = check_type(stoch)[0]
-        if _type in [float, int]:
-            return 1
-        else:
-            return 0
-
-StepMethodRegistry[Metropolis] = MetroCompetence
-
 
 class DiscreteMetropolis(Metropolis):
     """
@@ -504,6 +529,17 @@ class DiscreteMetropolis(Metropolis):
         # Initialize verbose feedback string
         self._id = stoch.__name__
     
+    @competence
+    def competence(stoch):
+        """
+        The competence function for DiscreteMetropolis.
+        """
+        if isinstance(stoch, DiscreteStochastic):
+            return 1
+        else:
+            return 0
+    
+    
     def propose(self):
         # Propose new stoch values using normal distribution
         
@@ -511,17 +547,6 @@ class DiscreteMetropolis(Metropolis):
             new_val = rnormal(self.stoch.value,self._asf * self.proposal_sig)
             
             self.stoch.value = round_array(new_val)
-
-def DiscreteMetroCompetence(stoch):
-    """
-    The competence function for DiscreteMetropolis.
-    """
-    if isinstance(stoch, DiscreteStochastic):
-        return 1
-    else:
-        return 0
-
-StepMethodRegistry[DiscreteMetropolis] = DiscreteMetroCompetence
 
 
 class BinaryMetropolis(Metropolis):
@@ -544,6 +569,17 @@ class BinaryMetropolis(Metropolis):
         
         # Initialize verbose feedback string
         self._id = stoch.__name__
+        
+    @competence
+    def competence(stoch):
+        """
+        The competence function for Binary One-At-A-Time Metropolis
+        """
+        if isinstance(stoch, BinaryStochastic):
+            return 1
+        else:
+            return 0
+    
     
     def set_stoch_val(self, i, val, to_value):
         """
@@ -610,16 +646,6 @@ class BinaryMetropolis(Metropolis):
             # Increment accepted count
             self._accepted += 1
 
-def BinaryMetroCompetence(stoch):
-    """
-    The competence function for Binary One-At-A-Time Metropolis
-    """
-    if isinstance(stoch, BinaryStochastic):
-        return 1
-    else:
-        return 0
-
-StepMethodRegistry[BinaryMetropolis] = BinaryMetroCompetence
 
 
 class JointMetropolis(StepMethod):
@@ -701,6 +727,8 @@ class JointMetropolis(StepMethod):
     Also: when the covariance is nonsquare,
     
     """
+    
+    
     def __init__(self, variables=None, stoch=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
         
         self.verbose = verbose
@@ -729,7 +757,6 @@ class JointMetropolis(StepMethod):
             print self._id + ': Assigning single-stoch handlers.'
         self._single_stoch_handlers = set()
         
-        StepMethodRegistry[JointMetropolis] = blacklist
         for stoch in self.stochs:
             if oneatatime_scales is not None:
                 scale_now = oneatatime_scales[stoch]
@@ -738,7 +765,7 @@ class JointMetropolis(StepMethod):
             
             new_method = assign_method(stoch, scale_now)
             self._single_stoch_handlers.add(new_method)
-        StepMethodRegistry[JointMetropolis] = JointMetroCompetence
+        StepMethodRegistry[JointMetropolis] = Jointcompetence
 
         
         # Allocate memory for internal traces and get stoch slices
@@ -762,6 +789,21 @@ class JointMetropolis(StepMethod):
         self._state += ['last_trace_index', '_cov', '_sig',
         '_proposal_deviate', '_trace']
 
+    
+    @competence
+    def competence(stoch):
+        """
+        The competence function for Metropolis
+        """
+
+        if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
+            # If the stoch's binary or discrete, I can't do it.
+            return 0
+        elif isinstance(stoch.value, ndarray):
+            return 2
+        else:
+            return 0
+    
     
     def compute_sig(self):
         """
@@ -894,18 +936,4 @@ class JointMetropolis(StepMethod):
                 self.compute_sig()
                 self.last_trace_index = self._model._cur_trace_index
 
-
-def JointMetroCompetence(stoch):
-    """
-    The competence function for Metropolis
-    """
-    
-    if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
-        # If the stoch's binary or discrete, I can't do it.
-        return 0
-    elif isinstance(stoch.value, ndarray):
-        return 2
-    else:
-        return 0
-
-StepMethodRegistry[JointMetropolis] = JointMetroCompetence
+JointMetropolis.competence = no_competence
