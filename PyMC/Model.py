@@ -467,6 +467,7 @@ class Sampler(Model):
         Samples in interactive mode. Main thread of control stays in this function.
         """
         self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
+        self.status = 'running'
         self._sampling_thread.start()
         self.interactive_prompt()
 
@@ -475,6 +476,7 @@ class Sampler(Model):
         Restarts thread in interactive mode
         """
         self._sampling_thread = Thread(target=self._loop)
+        self.status = 'running'        
         self._sampling_thread.start()
         self.interactive_prompt()
         
