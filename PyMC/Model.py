@@ -2,12 +2,6 @@
 # 22/03/2007 -DH- Added methods to query the StepMethod's state and pass it to database.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
 
-# TODO: Importance-resampling method. 
-# TODO: Should weight each entry in the trace according to some function, subsample 
-# TODO: new traces according to weights. Useful for particle filters, etc.
-# TODO: Then make NormalApproximation able to importance-resample self, and make a Model subclass
-# TODO: that updates traces with new data and potentials (no stochastics yet).
-
 __docformat__='reStructuredText'
 
 """ Summary"""
@@ -358,8 +352,8 @@ class Sampler(Model):
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
-                    print 'Pausing at iteration ', self._current_iter, ' of ', self._iter
-                    return None
+                    self.pause_sampling()
+                    break
 
                 i = self._current_iter
 
@@ -385,7 +379,8 @@ class Sampler(Model):
                 self._current_iter += 1
 
         except KeyboardInterrupt:
-            self.status='halt'
+            self.status='paused'
+            self.pause_sampling()
             
         if self.status == 'halt':
             self.halt_sampling()
@@ -395,18 +390,26 @@ class Sampler(Model):
         self.status = 'ready'
         self.save_state()
         self.db._finalize()
-        # TODO: This should interrupt the main thread immediately, but it waits until 
-        # TODO: return is pressed before doing its thing. Bug report filed at python.org.
-        # TODO: Doesn't seem fixable without a funky patch...
+
+        # # TODO: This should interrupt the main thread immediately, but it waits until 
+        # # TODO: return is pressed before doing its thing. Bug report filed at python.org.
+        # # TODO: Doesn't seem fixable without a funky patch...
         try:
             interrupt_main()
         except KeyboardInterrupt:
             pass
+            
+    def pause_sampling(self):
+        print 'Pausing at iteration ', self._current_iter, ' of ', self._iter
+        return None
 
     def halt_sampling(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
         for variable in self._variables_to_tally:
-           variable.trace.truncate(self._cur_trace_index)
+            variable.trace.truncate(self._cur_trace_index)
+           
+    def continue_sampling(self):
+        self._loop()
     
     #
     # Tally
@@ -502,7 +505,7 @@ class Sampler(Model):
                         print self.interactive_prompt.__doc__
         except KeyboardInterrupt:
             if not self.status == 'ready':
-                self.status = 'halt'      
+                self.status = 'pause'      
                 
         if not self.status == 'ready':        
             print 'Waiting for current iteration to finish...'
