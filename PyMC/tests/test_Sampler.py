@@ -1,10 +1,18 @@
+# Write test results straight to folder instead of displaying (avoids TKAGG clf() errors)import matplotlib
+import matplotlib
+try:
+    matplotlib.use('PDF')
+except:
+    pass
+
+
 """
 The DisasterSampler example.
 
 """
 from numpy.testing import *
 from pylab import *
-PLOT=True
+PLOT=False
 
 
 class test_Sampler(NumpyTestCase):
@@ -25,8 +33,9 @@ class test_Sampler(NumpyTestCase):
         # Sample
         M.sample(100000,50000,verbose=2)
         
-        # Plot samples
-        M.plot()
+        if PLOT:
+            # Plot samples
+            M.plot()
 
 if __name__ == '__main__':
     NumpyTest().run()

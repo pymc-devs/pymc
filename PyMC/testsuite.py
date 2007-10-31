@@ -1,6 +1,13 @@
+# Write test results straight to folder instead of displaying (avoids TKAGG clf() errors)import matplotlib
+try:
+    matplotlib.use('PDF')
+except:
+    pass
+
 from numpy.testing import NumpyTest
 
 from PyMC import tests
+
 import os
 # Changeset
 # 19/03/2007 -DH- The modules in tests/ are now imported when test is called. 

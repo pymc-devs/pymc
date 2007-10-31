@@ -116,7 +116,7 @@ cdef class LazyFunction:
         self.get_array_data()
     
     
-    cdef void get_array_data(self):
+    cdef void get_array_data(self) except *:
         """
         Get underlying pointers from arrays ultimate_args, ultimate_keys,
         ultimate_arg_values, and cached_args.
@@ -129,7 +129,7 @@ cdef class LazyFunction:
         self.cached_arg_p = <void**> PyArray_DATA(self.cached_args)
             
     
-    cdef int check_argument_caches(self):
+    cdef int check_argument_caches(self)  except *:
         """
         Compare the value of the ultimate arguments to the values in the cache.
         If there's a mismatch (match is by reference, not value), return -1.
@@ -164,7 +164,7 @@ cdef class LazyFunction:
 
             
         
-    cdef void cache(self, value):
+    cdef void cache(self, value)  except *:
         """
         Stick self's value in the cache, and also the values of all self's
         ultimate arguments for future caching.
