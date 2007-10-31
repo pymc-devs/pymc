@@ -391,13 +391,13 @@ class Sampler(Model):
         self.save_state()
         self.db._finalize()
 
-        # # TODO: This should interrupt the main thread immediately, but it waits until 
-        # # TODO: return is pressed before doing its thing. Bug report filed at python.org.
-        # # TODO: Doesn't seem fixable without a funky patch...
-        try:
-            interrupt_main()
-        except KeyboardInterrupt:
-            pass
+        # TODO: This should interrupt the main thread immediately, but it waits until 
+        # TODO: return is pressed before doing its thing. Bug report filed at python.org.
+        # TODO: Doesn't seem fixable without a funky patch...
+        # try:
+        #     interrupt_main()
+        # except KeyboardInterrupt:
+        #     pass
             
     def pause_sampling(self):
         print 'Pausing at iteration ', self._current_iter, ' of ', self._iter

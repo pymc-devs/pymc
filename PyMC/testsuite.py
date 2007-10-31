@@ -1,4 +1,5 @@
 # Write test results straight to folder instead of displaying (avoids TKAGG clf() errors)import matplotlib
+import matplotlib
 try:
     matplotlib.use('PDF')
 except:
