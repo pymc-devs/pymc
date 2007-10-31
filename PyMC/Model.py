@@ -352,7 +352,6 @@ class Sampler(Model):
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
-                    self.pause_sampling()
                     break
 
                 i = self._current_iter
@@ -379,8 +378,7 @@ class Sampler(Model):
                 self._current_iter += 1
 
         except KeyboardInterrupt:
-            self.status='paused'
-            self.pause_sampling()
+            self.status='halt'
             
         if self.status == 'halt':
             self.halt_sampling()
@@ -398,10 +396,6 @@ class Sampler(Model):
         #     interrupt_main()
         # except KeyboardInterrupt:
         #     pass
-            
-    def pause_sampling(self):
-        print 'Pausing at iteration ', self._current_iter, ' of ', self._iter
-        return None
 
     def halt_sampling(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
@@ -462,25 +456,25 @@ class Sampler(Model):
             self._tuning = False
 
 
-    def interactive_sample(self, *args, **kwds):
+    def isample(self, *args, **kwds):
         """
         Samples in interactive mode. Main thread of control stays in this function.
         """
         self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
-        self.interactive_prompt()
+        self.iprompt()
 
-    def interactive_continue(self):
+    def icontinue(self):
         """
         Restarts thread in interactive mode
         """
         self._sampling_thread = Thread(target=self._loop)
         self.status = 'running'        
         self._sampling_thread.start()
-        self.interactive_prompt()
+        self.iprompt()
         
-    def interactive_prompt(self):
+    def iprompt(self):
         """
         Drive the sampler from the prompt.
 
@@ -489,7 +483,7 @@ class Sampler(Model):
           p -- pause
           q -- quit
         """
-        print self.interactive_prompt.__doc__, '\n'
+        print self.iprompt.__doc__, '\n'
         try:
             while self.status in ['running', 'paused']:
                     # sys.stdout.write('PyMC> ')
@@ -504,10 +498,10 @@ class Sampler(Model):
                         break
                     else:
                         print 'Unknown command'
-                        print self.interactive_prompt.__doc__
+                        print self.iprompt.__doc__
         except KeyboardInterrupt:
             if not self.status == 'ready':
-                self.status = 'pause'      
+                self.status = 'halt'      
                 
         if not self.status == 'ready':        
             print 'Waiting for current iteration to finish...'
@@ -519,7 +513,7 @@ class Sampler(Model):
 
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
-                print 'Call interactive_continue method to continue, or call halt_step method to truncate traces and stop.'
+                print 'Call icontinue method to continue, or call halt_step method to truncate traces and stop.'
 
     # Should get_state, save_state, restore_state and remember be moved up to Model?
     def get_state(self):
