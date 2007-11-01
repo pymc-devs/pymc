@@ -178,21 +178,14 @@ This restriction becomes onerous if a step method proposes values for the elemen
 Although the data $D$ was a random variable at the model-specification stage, we subsequently fixed its value by observing it. In PyMC such variables are represented by \texttt{Stochastic} objects whose \texttt{isdata} attribute is set to \texttt{True}. If a stochastic variable's \texttt{isdata} flag is \texttt{True}, its value cannot be changed.
 
 \subsection{Why are data and unknown variables represented by the same object?}
-Since it's represented by a \texttt{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data.
+Since it's represented by a \texttt{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
-One way to understand this issue is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have easily sampled from its prior predictive distribution $p(D)$ as follows:
+This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this issue is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have easily sampled from its prior predictive distribution $p(D)$ as follows:
 \begin{enumerate}
     \item Sample $e$, $s$ and $l$ from their priors.
     \item Sample $D$ conditional on these values.
 \end{enumerate}
-Even after we observe the value of $D$, we need to use this process model to make inferences about $e$, $s$ and $l$. Bayes' theorem gives a way to convert this process model, consisting of the likelihood
-\begin{eqnarray*}
-    p(D|s,e,l)
-\end{eqnarray*}
-and priors, to the posterior
-\begin{eqnarray*}
-    p(s,e,l|D).
-\end{eqnarray*}
+Even after we observe the value of $D$, we need to use this process model to make inferences about $e$, $s$ and $l$.
 
 \medskip
 To look at the issue another way, we could in principle have written a model equivalent to (\ref{disastermodel}) in such a way that $D$ depended on nothing and everything else depended on $D$, for example
@@ -498,7 +491,11 @@ This class serves as a container for probability models and as a base class for 
 
 Models' useful methods are:
 \begin{description}
-    \item \texttt{sample_likelihood(iter)}: Returns \texttt{iter} samples from the unconditional distribution of $p(\mathtt{data} |\mathtt{stochastics})$. The mean of these samples converges to the model likelihood, $p(\mathtt{data})$.
+    \item \texttt{sample_likelihood(iter)}: Returns the following: 
+    \begin{itemize}
+        \item \texttt{iter} samples from the unconditional distribution of $p(\mathtt{data} |\mathtt{stochastics})$ times the product of the probabilities or densities associated with all factor potentials.
+        \item \texttt{iter} samples from the unconditional distribution of the product of the probabilities or densities associated with all factor potentials.
+    \end{itemize} The mean of the former divided by the mean of the latter converges to the model likelihood, $p(\mathtt{data})$. This mean is computed by the function \texttt{weight}, but be careful; for models with more than a handful of parameters, this estimate is likely to be poor.
     \item \texttt{plot()}: Produces summary plots of the posterior distributions of all variables.
     \item \texttt{tally(index)}: Writes all variables' current values to their traces at position \texttt{index}.
 \end{description}
