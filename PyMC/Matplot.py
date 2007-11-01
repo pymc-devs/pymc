@@ -1,5 +1,4 @@
 # FIXME: PlotFactory methods plot, geweke_plot, bar_series_plot, gof_plot not working.
-# FIXME: 
 
 """
 Plotting module using matplotlib.

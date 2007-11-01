@@ -168,7 +168,13 @@ class Model(ObjectContainer):
         Exponentiating and averaging gives an estimate of the model likelihood,
         p(data|self).
         """
+        
         loglikes = zeros(iter)
+
+        if len (self.potentials) > 0:
+            logpots = zeros(iter)
+        else:
+            logpots = zeros(1, dtype=float)
 
         try:
             for i in xrange(iter):
@@ -181,12 +187,15 @@ class Model(ObjectContainer):
 
                 for datum in self.data | self.potentials:
                     loglikes[i] += datum.logp
+                if len (self.potentials) > 0:
+                    for pot in self.potentials:
+                        logpots[i] += pot.logp
 
         except KeyboardInterrupt:
             print 'Sample ', i, ' of ', iter
             raise KeyboardInterrupt
-
-        return loglikes
+        
+        return loglikes, logpots
 
     def status():
         doc = \

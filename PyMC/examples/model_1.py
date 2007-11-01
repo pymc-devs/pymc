@@ -8,11 +8,9 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC import stoch, data, discrete_stoch
-from numpy import array, log, sum, random
+from PyMC import *
+from numpy import *
 from numpy.random import randint
-from PyMC import uniform_like, exponential_like, poisson_like
-from PyMC import rexponential
 
 __all__ = ['disasters_array', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
 
@@ -26,44 +24,9 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and stochs
 
-@discrete_stoch
-def switchpoint(value=50, length=110):
-    """Change time for rate stoch."""
-
-    def logp(value, length):
-        return uniform_like(value, 0, length)
-        
-    def random(length):
-        return randint(length)
-        
-    rseed = 1.
-
-
-@stoch
-def early_mean(value=1., rate=1.):
-    """Rate stoch of poisson distribution."""
-
-    def logp(value, rate):
-        return exponential_like(value, rate)
-        
-    def random(rate):
-        return rexponential(rate)
-        
-    rseed = 1.
-
-
-@stoch
-def late_mean(value=.1, rate = 1.):
-    """Rate stoch of poisson distribution."""
-
-    def logp(value, rate):
-        return exponential_like(value, rate)
-        
-    def random(rate):
-        return rexponential(rate)
-        
-    rseed = 1.
-
+switchpoint = Uniform('switchpoint',50,lower=0,upper=110)
+early_mean = Exponential('early_mean',1.,beta=1.)
+late_mean = Exponential('late_mean',1.,beta=1.)
     
 @data
 @discrete_stoch

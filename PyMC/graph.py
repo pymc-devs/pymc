@@ -37,7 +37,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
 
     # Stochastics are open ellipses
     for stoch in model.stochs:
-        model.moral_dot_object.add_node(pydot.Node(name=datum.__name__))
+        model.moral_dot_object.add_node(pydot.Node(name=stoch.__name__))
     
     gone_already = set()
     for stoch in model.stochs | model.data:
@@ -146,10 +146,16 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             for parent in potential.parents.values():
                 if isinstance(parent, Variable):
                     potential_parents |= set(obj_substitute_names[parent])
+                elif isinstance(parent, ContainerBase):
+                    for ult_parent in parent.variables:
+                        potential_parents |= set(obj_substitute_names[ult_parent])
             remaining_parents = copy(potential_parents)
+            
             for p1 in potential_parents:
+                print p1
                 remaining_parents.discard(p1)
                 for p2 in remaining_parents:
+                    print p2
                     new_edge = pydot.Edge(src = p2, dst = p1, label=potential.__name__, arrowhead='none')
                     model.dot_object.add_edge(new_edge)
             

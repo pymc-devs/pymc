@@ -7,9 +7,8 @@ l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D']
-from PyMC import stoch, data, dtrm, discrete_stoch, DiscreteMetropolis
-from numpy import array, log, sum, ones, concatenate, inf
-from PyMC import uniform_like, exponential_like, poisson_like
+from PyMC import *
+from numpy import *
 
 
 D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -21,21 +20,9 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                     0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 # Define data and stochs
-
-@discrete_stoch
-def s(value=50, length=110):
-    """Change time for rate stoch."""
-    return uniform_like(value, 0, length)
-
-@stoch
-def e(value=1., rate=1.):
-    """Rate stoch of poisson distribution."""
-    return exponential_like(value, rate)
-
-@stoch
-def l(value=.1, rate = 1.):
-    """Rate stoch of poisson distribution."""
-    return exponential_like(value, rate)
+s = Uniform('s',50,lower=0,upper=110)
+e=Exponential('e',1,beta=1)
+l=Exponential('l',1,beta=1)
         
 @data
 @discrete_stoch

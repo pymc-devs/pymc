@@ -1,7 +1,7 @@
 # March 30 07 AP: This can work with any Model subclass, not just Sampler.
 
 from PyMC import Model
-from numpy import mean, exp
+from numpy import mean, exp, Inf
 
 # Get posterior probabilities for a list of models
 def weight(models, iter, priors = None):
@@ -21,27 +21,35 @@ def weight(models, iter, priors = None):
     """
     # TODO: Need to attach an MCSE value to the return values!
     loglikes = {}
+    logpots = {}
     i=0
     for model in models:
         print 'Model ', i
-        loglikes[model] = model.sample_likelihood(iter)
+        loglikes[model], logpots[model] = model.sample_likelihood(iter)
         i+=1
 
     # Find max log-likelihood for regularization purposes
-    max_loglike = 0
+    max_loglike = -Inf
+    max_logpot = -Inf
     for model in models:
         max_loglike = max((max_loglike,loglikes[model].max()))
+        max_logpot = max((max_logpot,logpots[model].max()))
 
     posteriors = {}
     sumpost = 0
     for model in models:
+        
         # Regularize
         loglikes[model] -= max_loglike
+        logpots[model] -= max_logpot
+        
         # Exponentiate and average
-        posteriors[model] = mean(exp(loglikes[model]))
+        posteriors[model] = mean(exp(loglikes[model])) / mean(exp(logpots[model]))
+
         # Multiply in priors
         if priors is not None:
             posteriors[model] *= priors[model]
+
         # Count up normalizing constant
         sumpost += posteriors[model]
 
