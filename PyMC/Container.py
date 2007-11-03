@@ -1,6 +1,6 @@
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, StepMethodBase
 from copy import copy
-from numpy import ndarray, array, zeros, shape, arange, where
+from numpy import ndarray, array, zeros, shape, arange, where, dtype
 from Container_values import LTCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
@@ -137,17 +137,25 @@ def file_items(container, iterable):
         
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
-	    i = item
-            item = iterable[item]
-	else:
+            key = item
+            item = iterable[key]
+
 	    i += 1
 
         if hasattr(item,'__iter__'):
             
+            # If this is a non-object-valued ndarray, don't container-ize it.
+            if isinstance(item, ndarray):
+                if item.dtype!=dtype('object'):
+                    continue
+            
             # If the item is iterable, wrap it in a container. Replace the item
             # with the wrapped version.
             new_container = Container(item)
-            container.replace(item, new_container, i)
+            if isinstance(container, dict):
+                container.replace(key, new_container)
+            else:
+                container.replace(item, new_container, i)
 
             # Update all of container's variables, potentials, etc. with the new wrapped
             # iterable's. This process recursively unpacks nested iterables.
@@ -160,7 +168,7 @@ def file_items(container, iterable):
             container.step_methods.update(new_container.step_methods)
 
         else:
-            
+        
             # If the item isn't iterable, file it away.
             if isinstance(item, Variable):
                 container.variables.add(item)
@@ -179,13 +187,15 @@ def file_items(container, iterable):
 
     container.nodes = container.potentials | container.variables
     
+    # Make 'parents' attribute
     container.parents = {}
     for node in container.nodes:
         for key in node.parents.keys():
             if isinstance(node.parents[key],Variable):
                 if not node.parents[key] in container.nodes:
                     container.parents[node.__name__ + '_' + key] = node.parents[key]
-                
+    
+    # Make 'children' attribute            
     container.children = set()
     for variable in container.variables:
         for child in variable.children:
@@ -218,8 +228,8 @@ class SetContainer(ContainerBase, set):
         self.add(new_container)
         
     def get_value(self):
-        _value = copy(self)
-        for item in _value:
+        _value = set(self)
+        for item in copy(_value):
             if isinstance(item, Variable) or isinstance(item, ContainerBase):
                 set.discard(_value, item)
                 set.add(_value, item.value)
@@ -286,7 +296,7 @@ class DictContainer(ContainerBase, dict):
         self.n_val = len(self.val_keys)
         self.n_nonval = len(self) - self.n_val
         
-    def replace(self, item, new_container, key):
+    def replace(self, key, new_container):
         dict.__setitem__(self, key, new_container)
         
     def get_value(self):
