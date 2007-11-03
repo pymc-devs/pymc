@@ -67,7 +67,7 @@ cdef class LazyFunction:
     
     cdef public object arguments, fun, argument_values
     cdef int cache_depth, N_args, 
-    cdef public object ultimate_args
+    cdef public object ultimate_args, ultimate_arg_values
     cdef public object cached_args, cached_values
     
     cdef public object frame_queue
@@ -115,28 +115,26 @@ cdef class LazyFunction:
         Otherwise return 0.
         """
         cdef int i, j, mismatch
-        cdef object ultimate_arg_values
-        ultimate_arg_values = self.ultimate_args.value
         
-        if self.cache_depth > 0:
-            
-            for i from 0 <= i < self.cache_depth:
-                mismatch = 0
-            
-                for j from 0 <= j < self.N_args:
-                    if not ultimate_arg_values[j] is self.cached_args[i * self.N_args + j]:
-                        mismatch = 1
+        self.ultimate_arg_values = self.ultimate_args.value
+        
+        for i from 0 <= i < self.cache_depth:
+            mismatch = 0
+        
+            for j from 0 <= j < self.N_args:
+                if not self.ultimate_arg_values[j] is self.cached_args[i * self.N_args + j]:
+                    mismatch = 1
+                    break
+                
+            if mismatch == 0:
+                # Find i in the frame queue and move it to the end, so the current
+                # value gets overwritten late.
+                for j from 0 <= j < self.cache_depth:
+                    if self.frame_queue[j] == i:
                         break
-                    
-                if mismatch == 0:
-                    # Find i in the frame queue and move it to the end, so the current
-                    # value gets overwritten late.
-                    for j from 0 <= j < self.cache_depth:
-                        if self.frame_queue[j] == i:
-                            break
-                    self.frame_queue.pop(j)
-                    self.frame_queue.append(i)
-                    return i        
+                self.frame_queue.pop(j)
+                self.frame_queue.append(i)
+                return i        
 
         return -1;
 
@@ -148,20 +146,14 @@ cdef class LazyFunction:
         ultimate arguments for future caching.
         """
         cdef int i, j, cur_frame
-        cdef object ultimate_arg_values
-        ultimate_arg_values = self.ultimate_args.value
-        
-        # print 'cache called'
-        
-        if self.cache_depth > 0:
-            
-            cur_frame = self.frame_queue.pop(0)
-            self.frame_queue.append(cur_frame)
-        
-            # Store new
-            self.cached_values[cur_frame] = value
-            for j from 0 <= j < self.N_args:
-                self.cached_args[cur_frame * self.N_args + j] = ultimate_arg_values[j]
+                    
+        cur_frame = self.frame_queue.pop(0)
+        self.frame_queue.append(cur_frame)
+    
+        # Store new
+        self.cached_values[cur_frame] = value
+        for j from 0 <= j < self.N_args:
+            self.cached_args[cur_frame * self.N_args + j] = self.ultimate_arg_values[j]
     
     def force_compute(self):
         """
@@ -170,8 +162,10 @@ cdef class LazyFunction:
         # Refresh parents' values
         value = self.fun(**self.arguments.value)
 
-        # Cache
-        self.cache(value)
+        self.ultimate_arg_values = self.ultimate_args.value
+
+        if self.cache_depth>0:
+            self.cache(value)
         
 
     def get(self):
@@ -183,6 +177,9 @@ cdef class LazyFunction:
         cdef int match_index
         # print 'get called'
         
+        if self.cache_depth == 0:
+            return self.fun(**self.arguments.value)
+        
         match_index = self.check_argument_caches()
 
         if match_index < 0:
@@ -192,6 +189,6 @@ cdef class LazyFunction:
             self.cache(value)
         
         else:
-            value = <object> self.cached_values[match_index]
+            value = self.cached_values[match_index]
 
         return value

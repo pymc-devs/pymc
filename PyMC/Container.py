@@ -11,7 +11,6 @@ def filter_dict(obj):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
 
-# TODO: Make changeable. Or not?
 
 def Container(*args):
     """
@@ -93,15 +92,18 @@ def Container(*args):
     if isinstance(iterable, set):
         return SetContainer(iterable)
     
-    # # Wrap lists and tuples
+    # Wrap lists and tuples
     elif isinstance(iterable, tuple) or isinstance(iterable, list):
         return ListTupleContainer(iterable)
 
+    # Dictionaries
     elif isinstance(iterable, dict):
         return DictContainer(iterable)
-        
+    
+    # Arrays of dtype=object
     elif isinstance(iterable, ndarray):
-        return ArrayContainer(iterable) 
+        if iterable.dtype == dtype('object'):
+            return ArrayContainer(iterable) 
     
     # Wrap modules
     elif isinstance(iterable, ModuleType):
@@ -128,7 +130,8 @@ def file_items(container, iterable):
     container.potentials = set()
     container.data = set()
     container.step_methods = set()
-    # containers needs to be a list too.
+    
+    # containers needs to be a list to hold unhashable items.
     container.containers = []
     
     i=-1
@@ -139,8 +142,9 @@ def file_items(container, iterable):
         if isinstance(iterable, dict):
             key = item
             item = iterable[key]
-
-	    i += 1
+        # Item counter
+        else:
+    	    i += 1
 
         if hasattr(item,'__iter__'):
             
@@ -187,21 +191,6 @@ def file_items(container, iterable):
 
     container.nodes = container.potentials | container.variables
     
-    # Make 'parents' attribute
-    container.parents = {}
-    for node in container.nodes:
-        for key in node.parents.keys():
-            if isinstance(node.parents[key],Variable):
-                if not node.parents[key] in container.nodes:
-                    container.parents[node.__name__ + '_' + key] = node.parents[key]
-    
-    # Make 'children' attribute            
-    container.children = set()
-    for variable in container.variables:
-        for child in variable.children:
-            if not child in container.nodes:
-                container.children.add(child)
-    
     
 
 class SetContainer(ContainerBase, set):
@@ -229,7 +218,7 @@ class SetContainer(ContainerBase, set):
         
     def get_value(self):
         _value = set(self)
-        for item in copy(_value):
+        for item in self:
             if isinstance(item, Variable) or isinstance(item, ContainerBase):
                 set.discard(_value, item)
                 set.add(_value, item.value)
@@ -250,7 +239,6 @@ class ListTupleContainer(ContainerBase, list):
         list.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)        
         file_items(self, iterable)
-        self._value = list(self._value)
         
         self.val_ind = []   
         self.nonval_ind = []
@@ -329,7 +317,6 @@ class ObjectContainer(ContainerBase):
         self._dict_container = DictContainer(self.__dict__)  
         file_items(self, self._dict_container)
 
-        
         self._value = copy(self)
         ContainerBase.__init__(self, input)
 	
