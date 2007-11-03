@@ -152,10 +152,8 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             remaining_parents = copy(potential_parents)
             
             for p1 in potential_parents:
-                print p1
                 remaining_parents.discard(p1)
                 for p2 in remaining_parents:
-                    print p2
                     new_edge = pydot.Edge(src = p2, dst = p1, label=potential.__name__, arrowhead='none')
                     model.dot_object.add_edge(new_edge)
             
@@ -213,6 +211,5 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
         if format=='raw':
             ext='dot'
         model.dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
-        # print model.dot_object.create(format=format, prog=prog)
 
     return model.dot_object

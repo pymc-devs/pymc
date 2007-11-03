@@ -4,8 +4,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from numpy import array, zeros, ones, arange, resize
 from PyMC import Node, ContainerBase, Variable
-from Container import ArrayContainer
-from Container_values import ACValue
+from Container import ListTupleContainer
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
@@ -69,9 +68,7 @@ cdef class LazyFunction:
     cdef public object arguments, fun, argument_values
     cdef int cache_depth, N_args, 
     cdef public object ultimate_args
-    cdef void **ultimate_arg_p, **ultimate_arg_value_p
     cdef public object cached_args, cached_values
-    cdef void **cached_arg_p
     
     cdef public object frame_queue
     
@@ -96,38 +93,20 @@ cdef class LazyFunction:
             # This object is arg.
             arg = arguments[name]
             
-        self.ultimate_args = ArrayContainer(array(list(arguments.variables), dtype=object))
+        self.ultimate_args = ListTupleContainer(list(arguments.variables))
         self.N_args = len(self.ultimate_args)
         
         # Initialize caches
-        self.cached_args = zeros(self.cache_depth * self.N_args, dtype=object)
+        self.cached_args = []
         self.cached_values = []
         for i in range(self.cache_depth):
             self.cached_values.append(None)
-        
-        # Initialize current values and caches to None
-        self.cached_args[:] = None
+            for j in xrange(self.N_args):
+                self.cached_args.append(None)
 
         # Underlying function
         self.fun = fun
-        
-        # Get pointers from arrays. This has to be a separate method
-        # because __init__ can't be a C method.
-        self.get_array_data()
-    
-    
-    cdef void get_array_data(self) except *:
-        """
-        Get underlying pointers from arrays ultimate_args, ultimate_keys,
-        ultimate_arg_values, and cached_args.
-        
-        Although the underlying pointers are PyObject**, they're cast to 
-        void** because Pyrex doesn't let you work with object* pointers.
-        """
-        self.ultimate_arg_p = <void**> PyArray_DATA(self.ultimate_args)
-        self.ultimate_arg_value_p = <void**> PyArray_DATA(self.ultimate_args.value)
-        self.cached_arg_p = <void**> PyArray_DATA(self.cached_args)
-            
+                    
     
     cdef int check_argument_caches(self)  except *:
         """
@@ -136,9 +115,8 @@ cdef class LazyFunction:
         Otherwise return 0.
         """
         cdef int i, j, mismatch
-        
-        # Refresh ultimate args' values
-        ACValue(self.ultimate_args)
+        cdef object ultimate_arg_values
+        ultimate_arg_values = self.ultimate_args.value
         
         if self.cache_depth > 0:
             
@@ -146,7 +124,7 @@ cdef class LazyFunction:
                 mismatch = 0
             
                 for j from 0 <= j < self.N_args:
-                    if not self.ultimate_arg_value_p[j] == self.cached_arg_p[i * self.N_args + j]:
+                    if not ultimate_arg_values[j] is self.cached_args[i * self.N_args + j]:
                         mismatch = 1
                         break
                     
@@ -170,6 +148,8 @@ cdef class LazyFunction:
         ultimate arguments for future caching.
         """
         cdef int i, j, cur_frame
+        cdef object ultimate_arg_values
+        ultimate_arg_values = self.ultimate_args.value
         
         # print 'cache called'
         
@@ -181,7 +161,7 @@ cdef class LazyFunction:
             # Store new
             self.cached_values[cur_frame] = value
             for j from 0 <= j < self.N_args:
-                self.cached_args[cur_frame * self.N_args + j] = <object> self.ultimate_arg_value_p[j]
+                self.cached_args[cur_frame * self.N_args + j] = ultimate_arg_values[j]
     
     def force_compute(self):
         """
@@ -189,9 +169,6 @@ cdef class LazyFunction:
         """
         # Refresh parents' values
         value = self.fun(**self.arguments.value)
-
-        # Refresh ultimate args' values
-        ACValue(self.ultimate_args)
 
         # Cache
         self.cache(value)
