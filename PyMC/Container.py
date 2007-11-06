@@ -371,7 +371,7 @@ class ArrayContainer(ContainerBase, ndarray):
         
         C.n_val = len(C.val_ind)
         C.n_nonval = len(C.nonval_ind)
-
+        
         C.flags['W'] = False
         
         return C

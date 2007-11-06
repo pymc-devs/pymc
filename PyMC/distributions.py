@@ -1803,8 +1803,17 @@ for dist in discrete_distributions:
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
 Bernoulli = stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
 
-Uninformative = stoch_from_dist('uninformative', logp = lambda x: 0., base=Stochastic)
-DiscreteUninformative = stoch_from_dist('uninformative', logp = lambda x: 0., base=DiscreteStochastic)
+
+def uninformative_like(x):
+    """
+    uninformative_like(x)
+    
+    Uninformative log-likelihood. Returns 0 regardless of the value of x.
+    """
+    return 0.
+
+Uninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
+DiscreteUninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
 
 if __name__ == "__main__":
     import doctest
