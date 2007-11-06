@@ -171,8 +171,8 @@ class MAP(Model):
             self.stoch_type_dict[stoch] = type_now
 
             if not type_now is float:
-                raise TypeError,    "Stochastic " + stoch.__name__ + "'s value must be numerical with " + \
-                                    "floating-point dtype for NormApprox or MAP to be applied."
+                print "Warning: Stochastic " + stoch.__name__ + "'s value is neither numerical nor array with " + \
+                            "floating-point dtype. Recommend fitting method fmin (default)."
 
             # Inspect shapes of all stochs and create stoch slices.
             if isinstance(stoch.value, ndarray):

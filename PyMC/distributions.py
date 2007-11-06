@@ -70,7 +70,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     docstr += logp.__doc__
     class new_class(base):
         __doc__ = docstr
-        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, doc=docstr, **kwds):
+        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, isdata=False, doc=docstr, **kwds):
 
             parents=parents_default
 
@@ -102,7 +102,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 
                 
             base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
-                random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=False, doc=doc)
+                random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
 
     new_class.__name__ = name
     new_class.parent_labels = parents_default.keys()
