@@ -1801,8 +1801,10 @@ for dist in discrete_distributions:
     locals()[dist.capitalize()]= stoch_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
 
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
-locals()['Bernoulli']= stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
+Bernoulli = stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
 
+Uninformative = stoch_from_dist('uninformative', logp = lambda x: 0., base=Stochastic)
+DiscreteUninformative = stoch_from_dist('uninformative', logp = lambda x: 0., base=DiscreteStochastic)
 
 if __name__ == "__main__":
     import doctest
