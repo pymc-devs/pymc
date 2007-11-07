@@ -306,7 +306,6 @@ class Sampler(Model):
         Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
         """
-        print self.step_methods
         for stoch in self.stochs:
 
             # Is it a member of any StepMethod?
