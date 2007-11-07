@@ -62,6 +62,7 @@ def assign_method(stoch, scale=None):
     if scale:
         return method(stoch = stoch, scale = scale)
     
+    print method, stoch
     return method(stoch = stoch)
 
 

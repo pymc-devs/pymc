@@ -297,16 +297,16 @@ class Sampler(Model):
         Model.__init__(self, input, db, output_path, verbose, **kwds)
         
         # Default StepMethod
-        self._assign_samplingmethod()
+        self._assign_stepmethods()
 
         self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
         
-    def _assign_samplingmethod(self):
+    def _assign_stepmethods(self):
         """
         Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
         """
-
+        print self.step_methods
         for stoch in self.stochs:
 
             # Is it a member of any StepMethod?

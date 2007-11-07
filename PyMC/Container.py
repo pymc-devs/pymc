@@ -7,7 +7,7 @@ from types import ModuleType
 def filter_dict(obj):
     filtered_dict = {}
     for item in obj.__dict__.iteritems():
-        if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
+        if isinstance(item[1], Node) or isinstance(item[1], ContainerBase) or isinstance(item[1], StepMethodBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
 
