@@ -1,10 +1,10 @@
 from StepMethods import Metropolis
 from InstantiationDecorators import dtrm
-from Node import ZeroProbability, Variable  # Raises import error
+from Node import ZeroProbability, Variable
 from Container import Container
 from utils import msqrt
-from numpy import asarray, diag, dot, zeros, log, shape
-from numpy.random import normal, random, gamma
+from numpy import asarray, diag, dot, zeros, log, shape, isscalar, sum
+from numpy.random import normal, random, gamma, beta
 from numpy.linalg import cholesky, solve
 from flib import dpotrs_wrap, dtrsm_wrap
 
@@ -15,6 +15,23 @@ def check_list(thing, label):
         return thing
 
 
+# To do:
+# GammaPoisson
+# DirichletMultinomial
+# BetaGeometric
+# ParetoUniform
+# GammaExponential
+# GammaPareto
+# GammaGammaScale
+# WishartNormal
+# Other parametrizations of the normal/gamma business
+# Test case for NormalNormal (blech)
+
+def safe_len(val):
+    if isscalar(val):
+        return 1
+    else:
+        return len(val)
 
 class Gibbs(Metropolis):
     
@@ -51,6 +68,27 @@ class GammaNormal(Gibbs):
     
     d_i ~ind N(mu_i, tau * theta_i)
     tau ~ Gamma(alpha, beta) [optional]
+    
+    The argument tau must be a Stochastic.
+    
+    The arguments alpha and beta may be:
+    - Arrays
+    - Scalars
+    - Stochastics
+    - Deterministics
+    - None. In this case, a non-conjugate updating procedure is used.
+      tau's value is proposed from its likelihood and accepted based on 
+      its prior.
+    
+      The argument d must be a list or array of Stochastics.
+
+      The arguments mu and theta must be lists of:
+      - Arrays
+      - Scalars
+      - Stochastics
+      - Deterministics
+      These arguments may be lists of length 1 or of the same length as d.
+      theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
     """
     def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None, verbose=0):
         
@@ -58,8 +96,8 @@ class GammaNormal(Gibbs):
         self.d = check_list(d, 'd')
         self.mu = check_list(mu, 'mu')
         self.theta = check_list(theta, 'theta')
-        self.alpha = check_list(alpha, 'alpha')
-        self.beta = check_list(beta, 'beta')
+        self.alpha = alpha
+        self.beta = beta
         
         Gibbs.__init__(self, tau, verbose)
         
@@ -71,7 +109,7 @@ class GammaNormal(Gibbs):
         @dtrm
         def N(d=d):
             """The total number of observations"""
-            return sum([len(d_now) for d_now in d])
+            return sum([safe_len(d_now) for d_now in d])
     
         self.N = N
         self.N_d = len(d)
@@ -79,17 +117,22 @@ class GammaNormal(Gibbs):
         @dtrm
         def quad_term(d=d, mu=mu, theta=theta):
             """The quadratic term in the likelihood."""
+            quad_term = 0
             for i in xrange(self.N_d):
+                
                 if len(mu)>1:
                     delta_now = d[i] - mu[i]
                 else:
                     delta_now = d[i] - mu[0]
-                    
+    
                 if theta is not None:
-                    quad_term = dot(dot(delta_now, theta), delta_now)
+                    if not isscalar(theta[i]):
+                        quad_term += dot(dot(delta_now, theta[i]), delta_now)
+                    else:
+                        quad_term += dot(delta_now, delta_now) * theta[i]
                 else:
-                    quad_term = dot(delta_now, delta_now)
-                    
+                    quad_term += dot(delta_now, delta_now)
+
             return quad_term*.5
                         
         self.quad_term = quad_term
@@ -105,8 +148,90 @@ class GammaNormal(Gibbs):
             
         self.stoch.value = gamma(shape, scale)
         
-        
+
+class BetaBinomial(Gibbs):
+    """
+    Applies to p in the following submodel:
     
+    d_i ~ind Binomial(n_i, p)
+    p ~ Beta(a, b) [optional]
+    
+    The argument p must be a Stochastic.
+    
+    The arguments a and b may be:
+    - Arrays
+    - Scalars
+    - Stochastics
+    - Deterministics
+    - None. In this case, a non-conjugate updating procedure is used.
+      p's value is proposed from its likelihood and accepted based on 
+      its prior.
+    
+      The argument d must be a list or array of Stochastics.
+
+      The argument n must be a list of:
+      - Arrays
+      - Scalars
+      - Stochastics
+      - Deterministics
+      These arguments may be lists of length 1 or of the same length as d.
+      theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
+    """
+    def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
+        
+        self.p = p
+        self.d = check_list(d, 'd')
+        self.n = check_list(n, 'n')
+        self.a = alpha
+        self.b = beta
+        
+        Gibbs.__init__(self, p, verbose)
+        
+        if self.a is None or self.b is None:
+            self.conjugate = False
+        else:
+            self.conjugate = True
+        
+        @dtrm
+        def N(d=d):
+            """The total number of observations."""
+            return sum([safe_len(d_now) for d_now in d])
+    
+        self.N, self.N_d = N, len(d)
+        
+        @dtrm
+        def sum_d(d=d):
+            """The sum of the number of 'successes' for each 'experiment'"""
+            return sum([sum(d_now) for d_now in d])
+        
+        @dtrm
+        def sum_nmd(sum_d=sum_d,n=n,d=d):
+            """The sum of the total number of 'failures' for each 'experiment'"""
+            out = -sum_d
+
+            for i in xrange(self.N_d):
+                if isscalar(n[i]):
+                    out += n[i]*safe_len(d[i])
+                else:
+                    out += sum(n[i])
+                    
+            return out
+            
+        self.sum_d = sum_d
+        self.sum_nmd = sum_nmd
+                    
+    def propose(self):
+        a = self.sum_d.value
+        b = self.sum_nmd.value
+        if self.conjugate:
+            a += self.a
+            b += self.b
+        else:
+            a += 1.
+            b += 1.
+        self.stoch.value = beta(a, b)
+            
+        
     
 class NormalNormal(Gibbs):
     """
@@ -168,7 +293,7 @@ class NormalNormal(Gibbs):
         else:
             self.conjugate = True        
         
-        length = len(self.m.value)
+        length = safe_len(self.m.value)
         self.length = length
 
         self.N_d = len(d)
