@@ -1862,17 +1862,9 @@ def uninformative_like(x):
     """
     return 0.
 
-def jeffreys_like(x):
-    """
-    jeffreys_like(x)
-    
-    Jeffreys log-likelihood. Returns -log(x).
-    """
-    return -sum(log(x))
 
 Uninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
 DiscreteUninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
-Jeffreys = stoch_from_dist('jeffreys', logp=jeffreys_like, base=Stochastic)
 
 if __name__ == "__main__":
     import doctest
