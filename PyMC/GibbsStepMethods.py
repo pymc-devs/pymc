@@ -95,6 +95,7 @@ class GammaNormal(Gibbs):
     """
     def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None, verbose=0):
         
+        print 'WARNING: GammaNormal is untested'
         self.tau = tau
 
         self.d = check_list(d, 'd')
@@ -184,6 +185,8 @@ class BetaBinomial(Gibbs):
     """
     def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
         
+        print 'WARNING: BetaBinomial is untested'
+        
         self.p = p
         self.d = check_list(d, 'd')
         self.n = check_list(n, 'n')
@@ -241,6 +244,8 @@ class VecBetaBinomial(Gibbs):
     """
     """
     def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
+        
+        print 'WARNING: VecBetaBinomial is untested'
         
         self.p = p
         self.d = d
@@ -310,7 +315,7 @@ class NormalNormal(Gibbs):
     """
     def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None, verbose=0):
         
-        print 'WARNING: NormalNormal is pretty beta.'
+        print 'WARNING: NormalNormal is untested.'
         
         self.d=check_list(d,'d')
         self.theta=check_list(theta,'theta')
