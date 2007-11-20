@@ -272,7 +272,10 @@ class Plotter:
         # Class initialization
         
         # Specify pylab backend
-        matplotlib.use(backend)
+        try:
+            matplotlib.use(backend)
+        except RuntimeError:
+            print 'Warning: unable to change backend to %s, because matplotlib was already imported this session.' % backend
         
         # Store output format
         self._format = format

@@ -62,11 +62,14 @@ class Gibbs(Metropolis):
 # TODO: Automatically fill in when m and all children are normal parameters from class factory.
 # TODO: Let A be diagonal.
 # TODO: Allow sampling of scalar tau scale factor too.
+
+
+
 class GammaNormal(Gibbs):
     """
     Applies to tau in the following submodel:
     
-    d_i ~ind N(mu_i, tau * theta_i)
+    d ~ind N(mu, tau * theta)
     tau ~ Gamma(alpha, beta) [optional]
     
     The argument tau must be a Stochastic.
@@ -80,9 +83,9 @@ class GammaNormal(Gibbs):
       tau's value is proposed from its likelihood and accepted based on 
       its prior.
     
-      The argument d must be a list or array of Stochastics.
+      The argument d must be a list or array of lists or arrays of Stochastics.
 
-      The arguments mu and theta must be lists of:
+      The arguments mu and theta must be lists or arrays of:
       - Arrays
       - Scalars
       - Stochastics
@@ -93,9 +96,11 @@ class GammaNormal(Gibbs):
     def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None, verbose=0):
         
         self.tau = tau
+
         self.d = check_list(d, 'd')
         self.mu = check_list(mu, 'mu')
         self.theta = check_list(theta, 'theta')
+
         self.alpha = alpha
         self.beta = beta
         
@@ -224,14 +229,50 @@ class BetaBinomial(Gibbs):
         a = self.sum_d.value
         b = self.sum_nmd.value
         if self.conjugate:
-            a += self.a
-            b += self.b
+            a = a + self.a
+            b = b + self.b
         else:
             a += 1.
             b += 1.
         self.stoch.value = beta(a, b)
             
+            
+class VecBetaBinomial(Gibbs):        
+    """
+    """
+    def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
         
+        self.p = p
+        self.d = d
+        self.a = alpha
+        self.b = beta
+        
+        Gibbs.__init__(self, p, verbose)
+        
+        if self.a is None or self.b is None:
+            self.conjugate = False
+        else:
+            self.conjugate = True
+            
+        @dtrm
+        def n(n=n):
+            """n = function(n)"""
+            return n
+            
+        self.n = n
+            
+    def propose(self):
+        a = self.d.value
+        b = self.n.value - self.d.value
+        if self.conjugate:
+            a = a + self.a
+            b = b + self.b
+        else:
+            a += 1.
+            b += 1.
+        self.stoch.value = beta(a, b)
+    
+    
     
 class NormalNormal(Gibbs):
     """

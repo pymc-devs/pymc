@@ -422,8 +422,8 @@ def psi_i(x_lo = x[i], x_hi = x[i+1]):
 The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with stochastic variable's medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stoch} decorator.
     \item[Direct] The same potential could be instantiated directly as follows:
 \begin{verbatim}
-    def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
-        return -(xlo - xhi)**2
+def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
+    return -(xlo - xhi)**2
         
 psi_i = Potential(  logp = psi_i_logp, 
                     name = 'psi_i',
@@ -434,10 +434,10 @@ psi_i = Potential(  logp = psi_i_logp,
 \end{verbatim}
 \end{description}
 
-\section{Graphical models (optional)}
+\section{Graphing models (optional)}
 \label{sec:graphical}
 
-It's often helpful to view probability models graphically; graphical representations harmonize very well with object-oriented programming, so most Bayesian statistics packages (including PyMC) are at least somewhat graphically inspired. PyMC's provides a function called \texttt{graph} which draws graphical representations of \texttt{Model} instances using GraphViz. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+It's often helpful to view probability models graphically; graphical representations harmonize very well with object-oriented programming, so most Bayesian statistics packages (including PyMC) are at least somewhat graphically inspired. PyMC's provides a function called \texttt{graph} which draws graphical representations of \texttt{Model} (chapter \ref{modelfitting}) instances using GraphViz. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 PyMC's symbol for stochastic variables is the ellipse. Parent-child relationships are indicated by arrows. These arrows always point from parent to child, and PyMC labels them with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
@@ -484,52 +484,3 @@ Before calling \texttt{fun}, \texttt{L} will check the values of \texttt{argumen
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parental value configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected.
 
 Lazy functions are implemented in C via Pyrex.
-
-
-\section{The \texttt{Model} class} \label{sec:Model}
-This class serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \texttt{Sampler}. It can also be useful for computing Bayes factors.
-
-Models' useful methods are:
-\begin{description}
-    \item \texttt{sample_likelihood(iter)}: Returns the following: 
-    \begin{itemize}
-        \item \texttt{iter} samples from the unconditional distribution of $p(\mathtt{data} |\mathtt{stochastics})$ times the product of the probabilities or densities associated with all factor potentials.
-        \item \texttt{iter} samples from the unconditional distribution of the product of the probabilities or densities associated with all factor potentials.
-    \end{itemize} The mean of the former divided by the mean of the latter converges to the model likelihood, $p(\mathtt{data})$. This mean is computed by the function \texttt{weight}, but be careful; for models with more than a handful of parameters, this estimate is likely to be poor.
-    \item \texttt{plot()}: Produces summary plots of the posterior distributions of all variables.
-    \item \texttt{tally(index)}: Writes all variables' current values to their traces at position \texttt{index}.
-\end{description}
-
-The helper functions \texttt{weight} and \texttt{graph} act on models. \texttt{weight} computes Bayes' factors (posterior probabilities of model correctness) for lists of models using the \texttt{sample_likelihood} method, and \texttt{graph} produces graphical representations; see section \ref{sec:graphical}.
-
-Models inherit the following attributes from \texttt{ContainerBase}:
-\begin{itemize}
-    \item \texttt{variables}
-    \item \texttt{stochs}
-    \item \texttt{potentials}
-    \item \texttt{dtrms}
-    \item \texttt{data}
-    \item \texttt{step_methods}
-    \item \texttt{value}
-\end{itemize}
-
-Models have the following graph-related attributes:
-\begin{itemize}
-    \item \texttt{extended_parents}
-    \item \texttt{extended_children}
-    \item \texttt{moral_neighbors}
-    \item \texttt{markov_blanket}
-\end{itemize}
-each of which are dictionaries keyed by stochastic object, which give access to the corresponding attribute of that object. Models also have a list-valued attribute called \texttt{generations}. Each generation is a set of stochastic objects whose extended parents are all in previous generations.
-
-In addition, models expose each node they contain as an attribute. For instance, if model \texttt{M} were produced from model (\ref{disastermodel}) \texttt{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique \texttt{__name__} attribute if you want to access them this way.
-
-
-\subsection{Instantiation of models} \label{sec:ModelInstantiation}
-The \texttt{Model} class's init method takes the following arguments:
-\begin{description}
-    \item \texttt{input} Some collection of PyMC nodes defining a probability model. These may be stored in a list, set, tuple, dictionary, array, module, or any object with a \texttt{__dict__} method. If \texttt{input} is \texttt{None} (the default), all the nodes on the main namespace are collected.
-    \item \texttt{db} A string indicating which database backend should be used to store the traces of the variables. The default is \texttt{'ram'}.
-    \item \texttt{output_path} A string indicating where all of the files produced by the model should be saved by default.
-    \item \texttt{verbose} An integer controlling the verbosity of the model's output.
-\end{description}

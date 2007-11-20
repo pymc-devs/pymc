@@ -22,6 +22,7 @@ __modules__ = [ 'Node',
                 'InstantiationDecorators',
                 'testsuite',
                 'NormalApproximation', 
+                'MCMC',
                 'convergencediagnostics']
                 
 __optmodules__ = []

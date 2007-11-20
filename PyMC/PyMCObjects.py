@@ -193,7 +193,8 @@ class Potential(PotentialBase):
             raise ValueError, "Potential " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
     def gen_lazy_function(self):
-        self._logp = LazyFunction(fun = self._logp_fun, arguments = self.parents, cache_depth = self._cache_depth)        
+        self._logp = LazyFunction(fun = self._logp_fun, arguments = self.parents, cache_depth = self._cache_depth)     
+        self._logp.force_compute()   
 
     def get_logp(self):
         if self.verbose > 2:
@@ -291,6 +292,7 @@ class Deterministic(DeterministicBase):
     def gen_lazy_function(self):
         # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
         self._value = LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)        
+        self._value.force_compute()
 
     def get_value(self):
         if self.verbose > 2:
@@ -462,7 +464,9 @@ class Stochastic(StochasticBase):
         arguments = DictContainer(arguments)
         
         # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
-        self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)                
+        self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)   
+        
+        self._logp.force_compute()             
     
     def get_value(self):
         # Define value attribute

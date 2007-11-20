@@ -12,7 +12,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from PyMCObjects import Stochastic, Potential
 from Node import ZeroProbability
-from Model import Model
+from Model import Model, Sampler
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
@@ -118,7 +118,7 @@ class NormApproxC(object):
 
 class MAP(Model):
     """
-    N = MAP(input, db='ram', eps=.001, diff_order = 5)
+    N = MAP(input, eps=.001, diff_order = 5)
 
     Sets all parameters to maximum a posteriori values.
 
@@ -137,18 +137,17 @@ class MAP(Model):
 
     :Arguments:
     input: As for Model
-    db: A database backend
     eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
       as well as a scalar.
     diff_order: The order of the approximation used to compute derivatives.
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, verbose=0):
+    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=0):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
 
-        Model.__init__(self, input, db=db, verbose=verbose)
+        Model.__init__(self, input, verbose=verbose)
 
         # Allocate memory for internal traces and get stoch slices
         self._slices = {}
@@ -444,7 +443,7 @@ class MAP(Model):
         """
         self._set_stochs(self.mu)
 
-class NormApprox(MAP):
+class NormApprox(MAP, Sampler):
     """
     N = NormApprox(input, db='ram', eps=.001, diff_order = 5)
     
@@ -474,11 +473,12 @@ class NormApprox(MAP):
         
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, verbose=0):
+    def __init__(self, input=None, db='ram', output_path=None, eps=.001, diff_order = 5, verbose=0):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
         
-        MAP.__init__(self, input, db, eps, diff_order, verbose)
+        MAP.__init__(self, input, eps, diff_order, verbose)
+        Sampler.__init__(self, input, db, output_path, verbose, reinit_model=False)
 
     def fit(self, *args, **kwargs):
         MAP.fit(self, *args, **kwargs)
@@ -489,18 +489,6 @@ class NormApprox(MAP):
         self._sig = msqrt(self._C).T
         
         self.fitted = True
-
-    def sample(self, iter):
-        """
-        N.sample(iter)
-        
-        Generates iter samples from the normal approximation and stores
-        them in traces, as if they were output from an MCMC loop.
-        """
-        self.db._initialize(iter)
-        for i in xrange(iter):
-            self.draw()
-            self.tally(i)
         
     def draw(self):
         """
