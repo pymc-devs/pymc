@@ -27,7 +27,7 @@ import PyMC
 import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
-from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel
+from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel, prod
 
 if hasattr(flib, 'cov_mvnorm'):
     flib_blas_OK = True
@@ -90,11 +90,11 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                     size = np.prod(shape)
                     if len(shape)==1:
                         shape=None
+                    value = np.reshape(random(size=size, **parents), shape)    
                 else:
                     size=1
                     shape = None
-                    
-                value = np.reshape(random(size=size, **parents), shape)
+                    value = random(size=1, **parents)
 
             else:
                 size = len(ravel(value))
@@ -1186,6 +1186,8 @@ def multivariate_hypergeometric_like(x, m):
     #     return -Inf
     return flib.mvhyperg(x, m)
 
+
+
 # Multivariate normal--------------------------------------
 def rmvnormal(mu, tau, size=1):
     """
@@ -1193,8 +1195,30 @@ def rmvnormal(mu, tau, size=1):
 
     Random multivariate normal variates.
     """
-    # TODO: Implement this without inverting tau.
-    return random.multivariate_normal(mu, inverse(tau), size)
+    
+    sig = np.linalg.cholesky(tau)
+    mu_size = mu.shape
+
+    if size==1:
+        out = random.normal(size=mu_size)
+        try:
+            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
+        except:
+            out = np.linalg.solve(sig, out)
+        out+=mu    
+        return out
+    else:
+        if not hasattr(size,'__iter__'):
+            size = (size,)
+        tot_size = prod(size)
+        out = random.normal(size = (tot_size,) + mu_size)
+        for i in xrange(tot_size):
+            try:
+                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
+            except:
+                out[i,:] = np.linalg.solve(sig, out[i,:])
+            out[i,:] += mu
+        return out.reshape(size+mu_size)
 
 def mvnormal_expval(mu, tau):
     """
@@ -1220,7 +1244,7 @@ def mvnormal_like(x, mu, tau):
     """
     return flib.prec_mvnorm(x,mu,tau)
         
-# Multivariate normal, stochetrized with covariance---------------------------
+# Multivariate normal, parametrized with covariance---------------------------
 def rmvnormal_cov(mu, C, size=1):
     """
     rmvnormal_cov(mu, C)
@@ -1254,22 +1278,35 @@ def mvnormal_cov_like(x, mu, C):
     """
     return flib.cov_mvnorm(x,mu,C)        
 
-# Multivariate normal, stochetrized with Cholesky factorization.----------
+# Multivariate normal, parametrized with Cholesky factorization.----------
 def rmvnormal_chol(mu, sig, size=1):
     """
     rmvnormal(mu, sig)
 
     Random multivariate normal variates.
     """
-    mu_size = mu.ravel().shape
-    mu_shape = mu.shape
+    mu_size = mu.shape
+
     if size==1:
-        return mu+np.dot(sig , random.normal(size=mu_size)).reshape(mu_shape)
-    else:
-        out = np.zeros((size,) + mu_size, dtype=float)
-        for i in xrange(size):
-            out[i,:] = mu+np.dot(sig , random.normal(size=mu_size)).reshape(mu_shape)
+        out = random.normal(size=mu_size)
+        try:
+            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
+        except:
+            out = np.dot(sig, out)
+        out+=mu    
         return out
+    else:
+        if not hasattr(size,'__iter__'):
+            size = (size,)
+        tot_size = prod(size)
+        out = random.normal(size = (tot_size,) + mu_size)
+        for i in xrange(tot_size):
+            try:
+                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
+            except:
+                out[i,:] = np.dot(sig, out[i,:])
+            out[i,:] += mu
+        return out.reshape(size+mu_size)
 
 def mvnormal_chol_expval(mu, sig):
     """

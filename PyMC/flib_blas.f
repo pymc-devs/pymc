@@ -297,15 +297,10 @@ c trace of sigma*X
       END
       
 
-      SUBROUTINE dtrsm_wrap(M,N,A,B,UPLO,TRANSA,ALPHA)
-cf2py double precision intent(inplace), dimension(m,n)::B
-cf2py double precision intent(in), dimension(m,m)::A
-cf2py optional character intent(in)::uplo='U'
-cf2py optional character intent(in)::transa='N'
-cf2py optional double precision intent(in)::alpha=1.0
-cf2py integer intent(hide), depend(A)::M=shape(A,0)
-cf2py integer intent(hide), depend(B)::N=shape(B,1)
-
+      SUBROUTINE dtrsm_wrap(M,N,A,B,SIDE,TRANSA,UPLO)
+cf2py intent(inplace)::B
+cf2py integer intent(hide)::M
+cf2py integer intent(hide)::N
 
       
 *     .. Scalar Arguments ..
@@ -323,10 +318,39 @@ cf2py integer intent(hide), depend(B)::N=shape(B,1)
       DIAG = 'N'
       LDA = M
       LDB = M
-      SIDE = 'L'
+      ALPHA=1.0D0
 
       
       CALL DTRSM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+      RETURN
+      END
+
+
+      SUBROUTINE dtrmm_wrap(M,N,A,B,SIDE,TRANSA,UPLO)
+cf2py intent(inplace)::B
+cf2py integer intent(hide)::M
+cf2py integer intent(hide)::N
+
+      
+*     .. Scalar Arguments ..
+      DOUBLE PRECISION ALPHA
+      INTEGER LDA,LDB,M,N
+      CHARACTER DIAG,SIDE,TRANSA,UPLO
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION A(M,M),B(M,N)
+      
+      EXTERNAL DTRMM
+! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
+*     X = alpha*op( A )*B,   or   X = alpha*B*op( A ),
+      
+      DIAG = 'N'
+      LDA = M
+      LDB = M
+      ALPHA=1.0D0
+
+      
+      CALL DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
       RETURN
       END
 
@@ -613,38 +637,4 @@ cf2py double precision intent(inplace), dimension(n,m)::b
       call DPOTRS(uplo,n,m,chol_fac,n,b,n,info)
       
       return
-      END
-      
-
-
-      SUBROUTINE dtrmm_wrap(M,N,A,B,UPLO,TRANSA)
-cf2py double precision intent(inplace), dimension(m,n)::B
-cf2py double precision intent(in), dimension(m,m)::A
-cf2py optional character intent(in)::uplo='U'
-cf2py optional character intent(in)::transa='N'
-cf2py integer intent(hide), depend(A)::M=shape(A,0)
-cf2py integer intent(hide), depend(B)::N=shape(B,1)
-
-
-      
-*     .. Scalar Arguments ..
-      DOUBLE PRECISION ALPHA
-      INTEGER LDA,LDB,M,N
-      CHARACTER DIAG,SIDE,TRANSA,UPLO
-*     ..
-*     .. Array Arguments ..
-      DOUBLE PRECISION A(M,M),B(M,N)
-      
-      EXTERNAL DTRMM
-! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
-*     alpha*op( A )*X or alpha*X*op(A)
-      
-      DIAG = 'N'
-      LDA = M
-      LDB = M
-      SIDE = 'L'
-      ALPHA=1.0D0
-      
-      CALL DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
-      RETURN
       END
