@@ -1237,12 +1237,16 @@ def mvnormal_like(x, mu, tau):
     .. math::
         f(x \\mid \\pi, T) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}T(x-\\mu) \\right\\}
 
-    x: (k,n)
-    mu: (k,n) or (k,1)
+    x: (n,k)
+    mu: (k)
     tau: (k,k)
     tau positive definite
     """
-    return flib.prec_mvnorm(x,mu,tau)
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return sum([flib.prec_mvnorm(r,mu,tau)] for r in x)
+    else:
+        return flib.prec_mvnorm(x,mu,tau)
         
 # Multivariate normal, parametrized with covariance---------------------------
 def rmvnormal_cov(mu, C, size=1):
@@ -1271,12 +1275,17 @@ def mvnormal_cov_like(x, mu, C):
     .. math::
         f(x \\mid \\pi, C) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}C^{-1}(x-\\mu) \\right\\}
 
-    x: (k,n)
-    mu: (k,n) or (k,1)
+    x: (n,k)
+    mu: (k)
     C: (k,k)
     C positive definite
     """
-    return flib.cov_mvnorm(x,mu,C)        
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return sum([flib.cov_mvnorm(r,mu,C)] for r in x)
+    else:
+        return flib.cov_mvnorm(x,mu,C)
+     
 
 # Multivariate normal, parametrized with Cholesky factorization.----------
 def rmvnormal_chol(mu, sig, size=1):
@@ -1325,13 +1334,17 @@ def mvnormal_chol_like(x, mu, sig):
     .. math::
         f(x \\mid \\pi, \\sigma) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}\\sigma \\sigma^{\\prime}(x-\\mu) \\right\\}
 
-    x: (k,n)
-    mu: (k,n) or (k,1)
+    x: (n,k)
+    mu: (k)
     sigma: (k,k)
     sigma lower triangular
     """
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return sum([flib.chol_mvnorm(r,mu,sig)] for r in x)
+    else:
+        return flib.chol_mvnorm(x,mu,sig)
 
-    return flib.chol_mvnorm(x,mu,sig)
 
 
 # Negative binomial----------------------------------------
@@ -1849,8 +1862,17 @@ def uninformative_like(x):
     """
     return 0.
 
+def jeffreys_like(x):
+    """
+    jeffreys_like(x)
+    
+    Jeffreys log-likelihood. Returns -log(x).
+    """
+    return -sum(log(x))
+
 Uninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
 DiscreteUninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
+Jeffreys = stoch_from_dist('jeffreys', logp=jeffreys_like, base=Stochastic)
 
 if __name__ == "__main__":
     import doctest
