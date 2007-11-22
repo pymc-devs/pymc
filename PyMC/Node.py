@@ -46,11 +46,13 @@ class Node(object):
         # Adopt passed trace
         self.trace = trace
         
-        # Flag for feedback verbosity
+        # Level of feedback verbosity
         self.verbose = verbose
 
+        # Number of memorized values
         self._cache_depth = cache_depth
         
+        # Initialize sets of children and parents
         self.children = set()
         self.parents = parents
         
@@ -64,20 +66,20 @@ class Node(object):
     def _set_parents(self, new_parents):
         # Define parents of this object
         
-        # Iterate over items in ParentDict
+        # Remove from current parents
         if hasattr(self,'_parents'):
+            # Iterate over items in ParentDict
             for parent in self._parents.itervalues():
                 if isinstance(parent, Variable):
                     parent.children.discard(self)
                 elif isinstance(parent, ContainerBase):
                     for variable in parent.variables:
-                        variable.chidren.add(self)
+                        variable.chidren.discard(self)
                 
         # Specify new parents
         self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
 
         # Add self as child of parents
-        
         for parent in self._parents.itervalues():
             if isinstance(parent, Variable):
                 parent.children.add(self)
@@ -85,7 +87,6 @@ class Node(object):
                 for variable in parent.variables:
                     variable.children.add(self)
                     
-            
         
         # Get new lazy function
         self.gen_lazy_function()
@@ -114,6 +115,9 @@ class ContainerBase(object):
     __name__ = 'container'
     
     def __init__(self, input):
+        # ContainerBase class initialization
+        
+        # Look for name attributes
         if hasattr(input, '__file__'):
             _filename = os.path.split(input.__file__)[-1]
             self.__name__ = os.path.splitext(_filename)[0]
@@ -126,7 +130,10 @@ class ContainerBase(object):
                 self.__name__ = 'container'
     
     def _get_logp(self):
+        # Return total log-probabilities from all elements
         return sum(obj.logp for obj in self.stochs | self.potentials | self.data)
+        
+    # Define log-probability property
     logp = property(_get_logp)
         
 class StochasticBase(Variable):
