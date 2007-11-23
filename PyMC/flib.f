@@ -420,45 +420,35 @@ cf2py integer intent(hide),depend(p) :: np=shape(p,0)
 cf2py integer intent(hide),depend(x,p),check(k==shape(p,1)) :: k=shape(x,1)
 cf2py double precision intent(out) :: like      
 
-      DOUBLE PRECISION like,sump
-      DOUBLE PRECISION p(np,k), p_tmp
-      INTEGER i,j,ll,n(nn),sumx, n_tmp
+      DOUBLE PRECISION like, factln, infinity
+      DOUBLE PRECISION p(np,k), p_tmp(k)
+      INTEGER i,j,n(nn),n_tmp
       INTEGER x(nx,k)
-      DOUBLE PRECISION factln
-      DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
       like = 0.0
       n_tmp = n(1)
-      ll=1
+      p_tmp = p(1,1:k)
       do j=1,nx
-        sumx = 0
-        sump = 0.0
-        if (np .NE. 1) ll=j
+        if (np .NE. 1) p_tmp = p(j,1:k)
         if (nn .NE. 1) n_tmp = n(j)
-            
-        if ((ll .LT. 0) .OR. (n(j) .LT. 0)) then
+        if (n_tmp .LT. 0) then
           like=-infinity
           RETURN
         endif
         
         do i=1,k
-          p_tmp = p(ll,i)+1E-10
-          like = like + x(j,i)*dlog(p_tmp) - factln(x(j,i))
-
-          if (x(j,i) .LT. 0) then
+          if ((x(j,i) .LT. 0) .OR. (p_tmp(i) .LT. 1E-10)) then
             like = -infinity
             RETURN
           endif
+          
+          like = like + x(j,i)*dlog(p_tmp(i)) - factln(x(j,i))
 
-          sumx = sumx + x(j,i)
-          sump = sump + p_tmp
         enddo
-        like=like+factln(n_tmp)
-c I don't understand this
-c like = like + factln(n_tmp-sumx)+(n_tmp-sumx)*log(max(1.0-sump,1E-10))
+        like = like + factln(n_tmp)
       enddo
-      return
+      RETURN
       END
       
       SUBROUTINE weibull(x,alpha,beta,n,nalpha,nbeta,like)

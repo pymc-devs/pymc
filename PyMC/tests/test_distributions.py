@@ -23,7 +23,7 @@ from PyMC import flib, utils
 import numpy as np
 from numpy import exp, array, cov, prod, matrix
 from numpy.linalg import cholesky
-import os
+import os, pdb
 PLOT=True
 if PLOT is True:
     try:
@@ -573,8 +573,9 @@ class test_multinomial(NumpyTestCase):
         assert_array_almost_equal(rmean, n*p, 1)
         rvar = r.var(0)
         assert_array_almost_equal(rvar, n*p*(1-p),1)
-
+    
     def check_consistency(self):
+        #pdb.set_trace()
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
@@ -582,7 +583,8 @@ class test_multinomial(NumpyTestCase):
         b = log(multinomial(x,n,p).prod())
         assert_almost_equal(a,b,4)
 
-    def check_vectorization(self):
+    def check_vectorization(self):    
+        #pdb.set_trace()
         p = array([[.2,.3,.5], [.2,.3,.5]])
         r = rmultinomial(10, p=p[0], size=2)
         a = multinomial_like(r,10,p[0])

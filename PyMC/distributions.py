@@ -64,10 +64,12 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     
     name = name.capitalize()
     
+    # Build docstring from distribution
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
+    
     class new_class(base):
         __doc__ = docstr
         def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, isdata=False, doc=docstr, **kwds):
@@ -80,7 +82,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 except:
                     raise ValueError, self_name + ': no value given for parent ' + k
                     
-
+            # Determine size and shape of value
             if value is None:
                 if rseed is False:
                     raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
@@ -100,7 +102,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 size = len(ravel(value))
                 shape = np.shape(value)
                 
-                
+            # Call base class initialization method
             base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
                 random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
 
@@ -156,6 +158,7 @@ def randomwrap(func):
     mv = func.__name__[1:] in mv_distributions
 
     def wrapper(*args, **kwds):
+        
         # First transform keyword arguments into positional arguments.
         n = len(args)
         if nkwds > 0:
