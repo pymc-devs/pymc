@@ -80,6 +80,7 @@ class Model(ObjectContainer):
         # Get stochs, dtrms, etc.
         if input is None:
             import __main__
+            __main__.__dict__.update(self.__class__.__dict__)
             input = __main__
         
         ObjectContainer.__init__(self, input)
@@ -146,12 +147,13 @@ class Model(ObjectContainer):
         """
         Seed new initial values for the stochs.
         """
-        for stochs in self.stochs:
-            try:
-                if stochs.rseed is not None:
-                    value = stochs.random(**stochs.parent_values)
-            except:
-                pass
+        for generation in self.generations:
+            for stoch in generation:
+                try:
+                    if stoch.rseed is not None:
+                        value = stoch.random(**stoch.parents.value)
+                except:
+                    pass
     
     
 
@@ -389,9 +391,6 @@ class Sampler(Model):
         for variable in self._variables_to_tally:
             variable.trace.truncate(self._cur_trace_index)
            
-    def continue_sampling(self):
-        self._loop()
-    
     #
     # Tally
     #
@@ -470,7 +469,6 @@ class Sampler(Model):
             if self.status == 'paused':
                 print 'Call icontinue method to continue, or call halt_step method to truncate traces and stop.'
 
-    # Should get_state, save_state, restore_state and remember be moved up to Model?
     def get_state(self):
         """
         Return the sampler and step methods current state in order to

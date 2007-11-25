@@ -297,11 +297,6 @@ class StepMethod(StepMethodBase):
         
         return sum
     
-    def _del_loglike(self):
-        # Delete log-likelihood
-        
-        self.loglike = None
-    
     # Make get property for retrieving log-probability
     loglike = property(fget = _get_loglike)
     
@@ -420,7 +415,7 @@ class Metropolis(StepMethod):
             print
             print self._id + ' getting initial prior.'
         
-        if "Prior" in self._dist:
+        if self._dist == "Prior":
             # No children
             logp = 0.
         else:
@@ -434,14 +429,11 @@ class Metropolis(StepMethod):
             print self._id + ' proposing.'
         
         # Sample a candidate value
-        if "Prior" in self._dist:
-            self.stoch.random()
-        else:
-            self.propose()
+        self.propose()
         
         # Probability and likelihood for stoch's proposed value:
         try:
-            if "Prior" in self._dist:
+            if self._dist == "Prior":
                 logp_p = 0.
             else:
                 logp_p = self.stoch.logp
@@ -495,6 +487,8 @@ class Metropolis(StepMethod):
         """
         if self._dist == "Normal":
             self.stoch.value = rnormal(self.stoch.value, self._asf * self.proposal_sig)
+        elif self._dist == "Prior":
+            self.stoch.random()
 
 
 class DiscreteMetropolis(Metropolis):
@@ -528,8 +522,9 @@ class DiscreteMetropolis(Metropolis):
         
         if self._dist == "Normal":
             new_val = rnormal(self.stoch.value,self._asf * self.proposal_sig)
-            
             self.stoch.value = round_array(new_val)
+        elif self._dist == "Prior":
+            self.stoch.random()
 
 
 class BinaryMetropolis(Metropolis):
@@ -542,6 +537,8 @@ class BinaryMetropolis(Metropolis):
     (??? But, it is a subclass of Metropolis, which has a reject() method)
     True... but it's never called, this is really a Gibbs sampler since there
     are only 2 states available.
+    
+    This should be a subclass of Gibbs, not Metropolis.
     """
     
     def __init__(self, stoch, dist=None):
