@@ -5,13 +5,13 @@ GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
 
-class MCMCSampler(Sampler):
+class MCMC(Sampler):
     """
     This class fits probability models using Markov Chain Monte Carlo. Each stochastic variable
     is assigned a StepMethod object, which makes it take a single MCMC step conditional on the
     rest of the model. These step methods are called in turn.
 
-      >>> A = MCMCSampler(input, db, output_path=None, verbose=0)
+      >>> A = MCMC(input, db, output_path=None, verbose=0)
 
       :Parameters:
         - input : module, list, tuple, dictionary, set, object or nothing.

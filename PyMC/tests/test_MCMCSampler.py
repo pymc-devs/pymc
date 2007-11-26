@@ -1,5 +1,5 @@
 """
-The DisasterMCMCSampler example.
+The DisasterMCMC example.
 
 """
 from numpy.testing import *
@@ -7,15 +7,15 @@ from pylab import *
 PLOT=False
 
 
-class test_MCMCSampler(NumpyTestCase):
+class test_MCMC(NumpyTestCase):
     def check(self):
         
         # Import modules
-        from PyMC import MCMCSampler
+        from PyMC import MCMC
         from PyMC.examples import DisasterModel
         
         # Instantiate samplers
-        M = MCMCSampler(DisasterModel)
+        M = MCMC(DisasterModel)
         
         # Check stoch arrays
         assert_equal(len(M.stochs), 3)

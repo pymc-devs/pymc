@@ -1,0 +1,218 @@
+9PyMC probability models are linked collections of variables and factor potentials. The constituent objects of these models are only really aware of their parents: given values for their parents \texttt{Deterministic} instances can compute their values, \texttt{Stochastic} instances can compute their log-probabilities or draw new values, and \texttt{Potential} instances can compute their log-probabilities. Since all useful computations with probability models require larger-scale coordination and communication, the models we have created so far are fairly inert.
+
+All objects that actually fit probability models are descended from the \texttt{Model} class. The only useful behaviors of \texttt{Model} instances are:
+\begin{itemize}
+    \item They organize and file the various objects that make up probability models.
+    \item They can draw joint samples for all the variables in the probability model, without conditioning on the data.
+\end{itemize}
+The latter behavior can be useful for computing Bayes' factors (posterior probabilities for models) if the dimension of the parameter space is low. In future releases, \texttt{Model} will provide graphical services such as finding maximal cliques and junction trees.
+
+All objects that fit probability models using some kind of Monte Carlo method are descended from the \texttt{Model} subclass \texttt{Sampler}. \texttt{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, inspect progress, and make adjustments.
+
+Currently, PyMC provides three classes that actually fit models:
+\begin{itemize}
+    \item \texttt{MAP}, which computes maximum a posteriori estimates.
+    \item \texttt{NormApprox}, which computes the `normal approximation' \cite{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum a posteriori estimate.
+    \item \texttt{MCMC}, which is coordinates Markov Chain Monte Carlo algorithms. The actual work of updating stochastic variables conditional on the rest of the model is done by \texttt{StepMethod} instances, which are described in this chapter.
+\end{itemize}
+This set will hopefully grow in future releases. 
+
+
+
+\section{The \texttt{Model} class} \label{sec:Model}
+This class serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \texttt{MCMC}. It can also be useful for computing Bayes factors.
+
+Models' useful methods are:
+\begin{description}
+    \item[\texttt{draw_from_prior()}:] Sets all stochastic varibales' values to new random values, which would be a sample from the joint distribution if all data and \texttt{Potential} instances were removed from the model.
+    \item[\texttt{seed()}:] Same as \texttt{draw_from_prior}, but only stochastic variables with an \texttt{rseed} attribute are changed.
+    \item[\texttt{find_generations():}] Sets the \texttt{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
+\end{description}
+
+The helper functions \texttt{weight} and \texttt{graph} act on models. \texttt{weight} computes Bayes' factors (posterior probabilities of model correctness) for lists of models using the \texttt{draw_from_prior} method, and \texttt{graph} produces graphical representations; see section \ref{sec:graphical}. The \texttt{weight} function's algorithm can only be expected to perform well when the dimension of the parameter space is small (less than about 10).
+
+Models inherit the following attributes from \texttt{ContainerBase}:
+\begin{itemize}
+    \item \texttt{variables}
+    \item \texttt{stochs}
+    \item \texttt{potentials}
+    \item \texttt{dtrms}
+    \item \texttt{data}
+    \item \texttt{step_methods}
+    \item \texttt{value}
+\end{itemize}
+
+In addition, models expose each node they contain as an attribute. For instance, if model \texttt{M} were produced from model (\ref{disastermodel}) \texttt{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique \texttt{__name__} attribute if you want to access them this way.
+
+
+\subsection{Instantiation of models} \label{sec:ModelInstantiation}
+The \texttt{Model} class's init method takes the following arguments:
+\begin{description}
+    \item[\texttt{input}:] Some collection of PyMC nodes defining a probability model. These may be stored in a list, set, tuple, dictionary, array, module, or any object with a \texttt{__dict__} attribute. If \texttt{input} is \texttt{None} (the default), all the nodes on the main namespace and the \texttt{Model} object's class's dictionary are collected.
+    \item[\texttt{output_path} (optional):] A string indicating where all of the files produced by the model should be saved by default.
+    \item[\texttt{verbose} (optional):] An integer controlling the verbosity of the model's output.
+\end{description}
+The input argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \texttt{Model} instance. Some examples of model instantiation, using nodes \texttt{a}, \texttt{b} and \texttt{c}:
+\begin{itemize}
+    \item \texttt{M = Model(a,b,c)}
+    \item \texttt{M = Model(set([a,b,c]))}
+    \item \texttt{M = Model(\{'a': a, 'd': [b,c]\})}
+    \item \texttt{M = Model([[a,b],c])}
+    \item Here module \texttt{MyModule} contains the definitions of \texttt{a}, \texttt{b} and \texttt{c}:\begin{verbatim}
+import MyModule
+M = Model(MyModule)
+    \end{verbatim}
+    \item This is a useful way to make a `model factory' using input parameters:
+    \begin{verbatim}
+def make_model(x):
+    a = Exponential('a',.5,beta=x)
+    
+    @dtrm
+    def b(a=a):
+        return 100-a
+    
+    @stoch
+    def c(value=.5, a=a, b=b);
+        return (value-a)**2/b
+        
+    return locals()
+    
+M = Model(make_model(3))
+    \end{verbatim}
+    \item Model subclasses are inspected for nodes:
+    \begin{verbatim}
+class MyModel(Model):
+    a = Exponential('a',.5,beta=x)
+
+    @dtrm
+    def b(a=a):
+        return 100-a
+
+    @stoch
+    def c(value=.5, a=a, b=b);
+        return (value-a)**2/b        
+        
+M = MyModel()
+    \end{verbatim}    
+    \item If no input argument is provided, the main namespace is inspected for nodes:
+    \begin{verbatim}
+    a = Exponential('a',.5,beta=x)
+
+    @dtrm
+    def b(a=a):
+        return 100-a
+
+    @stoch
+    def c(value=.5, a=a, b=b);
+        return (value-a)**2/b        
+    
+    M = Model()
+    \end{verbatim}
+
+\end{itemize}
+
+\section{The \texttt{Sampler} class} 
+Samplers fit models with Monte Carlo fitting methods, which characterize the joint distribution by approximate samples from it. They are initialized as follows: \texttt{Sampler(input, db='ram', output\_path=None, verbose=0)}. The \texttt{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), and the other three arguments are the same as for \texttt{Model}. Samplers have the following useful methods:
+\begin{description}
+    \item[\texttt{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \texttt{iter} argument controls how many times the sampling loop should be run, and the \texttt{length} argument controls the initial size of the database that will be used to store the samples.
+    \item[\texttt{isample(iter, length=None, verbose=0)}:] The same as \texttt{sample}, but the sampling is done interactively: the user can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful: 
+    \begin{description}
+        \item[\texttt{icontinue()}:] Continue interactive sampling.
+        \item[\texttt{halt\_sampling()}:] Truncate the database and clean up.
+    \end{description}
+    \item[\texttt{tally()}:] Write all variables' current values to the database.
+    \item[\texttt{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \texttt{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values all the stochastic variables in the model).
+    \item[\texttt{save\_state()}:] \textbf{Someone else document this}
+    \item[\texttt{restore\_state()}:] \textbf{Someone else document this}
+    \item[\texttt{plot()}:] \textbf{Someone else document this}
+    \item[\texttt{remember(trace\_index)}:] Set all variables' values from frame \texttt{trace\_index} in the database.
+\end{description}
+
+\section{Maximum a posteriori estimates} 
+
+\section{Normal approximations} 
+
+
+\section{Markov Chain Monte Carlo}
+MCMC samplers fit models with Markov Chain Monte Carlo, and are of course subclasses of \texttt{Sampler}. At instantiation, in addition to organizing and filing the nodes that make up the probability model they handle (as \texttt{Model} does), they assign a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 1 to 3. An instance of the highest bidder is created to handle the variable.
+
+MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
+\begin{description}
+    \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations.
+    \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{sample}.
+    \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called.
+    \item[\texttt{goodness()}:] \textbf{Someone else document this}
+\end{description}
+
+\section{Step methods} 
+\label{sec:stepmethod} 
+
+Step method objects handle individual stochastic variables, or sometimes groups of these. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \texttt{StepMethod} implements a method called \texttt{step()}, which does this. Step methods with adaptive tuning parameters can optionally implement a method called \texttt{tune()}, which causes them to assess performance so far and adjust.
+
+The major subclasses of \texttt{StepMethod} are \texttt{Metropolis} and \texttt{Gibbs}. PyMC provides several flavors of the basic Metropolis steps, but the Gibbs steps are not implemented in the current release. However, because it is feasible to write Gibbs step methods for particular applications , the \texttt{Gibbs} class will be documented here.
+
+
+\subsection{Metropolis step methods}
+\textbf{Needs more detail: relate to \ref{chap:MCMC}}.
+
+Subclasses of \texttt{Metropolis} must implement the following methods:
+\begin{description}
+    \item[\texttt{propose()}:] Sets the values of the stochastic variables handled by the step method to new values.
+    \item[\texttt{reject()}:] If the Metropolis acceptance test fails, reset the values of the stochastic variables to their values before \texttt{propose()} was called.
+\end{description}
+Note that there is no \texttt{accept()} method; if a proposal is accepted, the variables' values are simply left alone.
+
+Metropolis step methods have the following useful attributes:
+\begin{description}
+    \item[\texttt{dist}:] A string indicating which distribution should be used for proposals. Current options are \texttt{'Normal'} and \texttt{'Prior'}.
+    \item[\texttt{proposal\_sig}:] Proportional to the standard deviation of the proposal distribution (if it is \texttt{'Normal'}).
+    \item[\texttt{\_asf}:] The `adaptive scale factor'. When \texttt{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \texttt{self.proposal\_sig * self.\_asf}. 
+\end{description}
+
+Metropolis step methods can be created as follows:
+\begin{verbatim}
+M = Metropolis(stoch, scale=1., dist=None, verbose=0)
+\end{verbatim}
+The \texttt{scale} argument determines \texttt{proposal\_sig} as follows:
+\begin{verbatim}
+if all(self.stoch.value != 0.):
+    self.proposal_sig = ones(shape(self.stoch.value)) * abs(self.stoch.value) * scale
+else:
+    self.proposal_sig = ones(shape(self.stoch.value)) * scale
+\end{verbatim}
+
+\subsubsection{The \texttt{DiscreteMetropolis} class}
+This class is just like \texttt{Metropolis}, but specialized to handle \texttt{DiscreteStochastic} instances.
+
+\subsubsection{The \texttt{BinaryMetropolis} class} 
+This class is specialized to handle \texttt{BinaryStochastic} instances, which are Bernoulli random variables. It is more of a Gibbs step method than a Metropolis step method in that it computes the probability of both available states conditional on the rest of the model, and chooses between them accordingly.
+
+\subsubsection{The \texttt{AdaptiveMetropolis} class} 
+\textbf{Someone else document this}
+
+\subsection{Gibbs step methods}
+No Gibbs step method have been provided with this release, because we haven't had time to write and test them. The standard for Gibbs step method is still evolving, but a few things are settled.
+
+Each Gibbs step method will have a conjugate and a non-conjugate version, determined by the \texttt{conjugate} flag. Conjugate Gibbs step methods are what are normally called Gibbs step methods: they handle stochastic variables whose priors are of the same form as their full conditional distributions. Non-conjugate Gibbs step methods handle stochastic variables whose full conditional likelihoods have standard forms, but not the same forms as their priors. 
+
+Steps will be taken by the \texttt{propose()} method. A non-conjugate Gibbs step methods will test the proposed value using the prior log-probability or log-density of the variable it handles, and possibly call its \texttt{reject()} method.
+
+\subsection{Granularity of step methods: one-at-a-time vs. block updating} 
+There is currently no way for an individual stochastic variable to cache individual terms of its log-probability; when this is recomputed, it is recomputed from scratch. This means that updating the elements of a array-valued variable individually is inefficient, so all existing step methods update array-valued variables together, in a block update.
+
+To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
+\begin{verbatim}
+A = Normal('A', value = zeros(100), mu=0., tau=1.)    
+\end{verbatim}
+do this:
+\begin{verbatim}
+A = [Normal('A[%i]'%i, 0., mu=0., tau=1.) for i in xrange(100)]
+\end{verbatim}
+An individual step method will be assigned to each element of \texttt{A} in the latter case, and the elements will be updated individually. Note that \texttt{A} can be broken up into larger blocks if desired.
+
+It would be possible to make variables compute their log-probabilities factor-by-factor in the future given sufficient demand, but this might not be a good idea. The expense of cache-checking is nonvanishing, so unnecessarily maintaining separate caches for each of an array-valued variable's elements would slow cases where block updating is desired. 
+
+\subsection{Automatic assignment of step methods} 
+Every step method subclass (including user-defined ones) adds itself to a list called \texttt{StepMethodRegistry} in the PyMC namespace. If a step method is created by the user to handle a stochastic variable, no other step method will be created to handle that variable by \texttt{MCMC} (though the user can create multiple step methods for the same variable if desired). 
+
+If the user has not created any step method to handle a stochastic variable, each class in \texttt{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \texttt{competence(stoch)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \texttt{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.

@@ -1,4 +1,4 @@
-from PyMC import MCMCSampler, JointMetropolis
+from PyMC import MCMC, JointMetropolis
 from PyMC.examples import model_for_joint
 from pylab import plot, show,title, xlabel, ylabel, figure
 
@@ -7,7 +7,7 @@ PLOT=True
 
 class test_Joint(NumpyTestCase):
     def check(self):
-        M = MCMCSampler(model_for_joint)
+        M = MCMC(model_for_joint)
         M.sample(iter=30000,burn=0,thin=100)
         M.plot()
         

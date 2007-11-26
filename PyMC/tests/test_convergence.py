@@ -9,7 +9,7 @@ from numpy.testing import *
 import PyMC
 import PyMC.examples.maximum_rainfall as mr
 
-S = PyMC.Sampler(mr.Gumbelfit, 'ram')
+S = PyMC.MCMC(mr.Gumbelfit, 'ram')
 S.sample(1000)
 sigma = S.sigma.trace()
 
