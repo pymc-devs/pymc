@@ -38,7 +38,7 @@ class Gibbs(Metropolis):
     def __init__(self, stoch, verbose=0):
         Metropolis.__init__(self, stoch, verbose=verbose)
     
-    competence = StepMethod.competence
+    competence = staticmethod(StepMethod.competence)
     
     def step(self):
         if not self.conjugate:
