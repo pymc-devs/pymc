@@ -1,4 +1,4 @@
-from StepMethods import Metropolis
+from StepMethods import Metropolis, StepMethod
 from InstantiationDecorators import dtrm
 from Node import ZeroProbability, Variable
 from Container import Container
@@ -37,6 +37,8 @@ class Gibbs(Metropolis):
     
     def __init__(self, stoch, verbose=0):
         Metropolis.__init__(self, stoch, verbose=verbose)
+    
+    competence = StepMethod.competence
     
     def step(self):
         if not self.conjugate:
