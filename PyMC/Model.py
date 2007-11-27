@@ -186,7 +186,7 @@ class Sampler(Model):
             - 'ready': Ready to sample.
             - 'paused': A pause has been requested, or the sampler is paused. _loop should return control
                 as soon as it is safe to do so.
-            - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt_sampling as soon
+            - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt as soon
                 as it is safe to do so.
             - 'running': Sampling is in progress.
             
@@ -277,7 +277,7 @@ class Sampler(Model):
         - 'ready': Ready to sample.
         - 'paused': A pause has been requested, or the sampler is paused. _loop should return control
             as soon as it is safe to do so.
-        - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt_sampling as soon
+        - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt as soon
             as it is safe to do so.
         - 'running': Sampling is in progress.
         """
@@ -302,7 +302,7 @@ class Sampler(Model):
             self.status='halt'
 
         if self.status == 'halt':
-            self.halt_sampling()
+            self.halt()
     
     def draw(self):
         """
@@ -386,7 +386,7 @@ class Sampler(Model):
         # Assign Trace instances to tallyable objects. 
         self.db.connect(self)
 
-    def halt_sampling(self):
+    def halt(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
         for variable in self._variables_to_tally:
             variable.trace.truncate(self._cur_trace_index)

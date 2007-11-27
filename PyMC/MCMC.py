@@ -34,7 +34,7 @@ class MCMC(Sampler):
             - 'ready': Ready to sample.
             - 'paused': A pause has been requested, or the sampler is paused. _loop should return control
                 as soon as it is safe to do so.
-            - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt_sampling as soon
+            - 'halt': A halt has been requested, or the sampler is stopped. _loop should call halt as soon
                 as it is safe to do so.
             - 'running': Sampling is in progress.
     
@@ -146,7 +146,7 @@ class MCMC(Sampler):
             self.status='halt'
 
         if self.status == 'halt':
-            self.halt_sampling()
+            self.halt()
     
     def tune(self):
         """
