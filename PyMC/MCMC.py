@@ -69,20 +69,24 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
         """
+        self.step_method_dict = {}
 
         for stoch in self.stochs:
+
+            self.step_method_dict[stoch] = []
 
             # Is it a member of any StepMethod?
             homeless = True
             for step_method in self.step_methods:
                 if stoch in step_method.stochs:
                     homeless = False
-                    break
+                    self.step_method_dict[stoch].append(step_method)
 
             # If not, make it a new StepMethod using the registry
             if homeless:
                 new_method = assign_method(stoch)
                 setattr(new_method, '_model', self)
+                self.step_method_dict[stoch].append(new_method)
                 self.step_methods.add(new_method)
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
