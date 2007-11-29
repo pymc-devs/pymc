@@ -410,6 +410,7 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
 
 c Multinomial log-likelihood function     
 c Updated 12/02/2007 DH. N-D still buggy.
+c Fixed 22/11/2007 CF
 
 cf2py integer dimension(nx,k),intent(in) :: x
 cf2py integer dimension(nn), intent(in) :: n
@@ -420,9 +421,9 @@ cf2py integer intent(hide),depend(p) :: np=shape(p,0)
 cf2py integer intent(hide),depend(x,p),check(k==shape(p,1)) :: k=shape(x,1)
 cf2py double precision intent(out) :: like      
 
-      DOUBLE PRECISION like, factln, infinity
+      DOUBLE PRECISION like, factln, infinity, sump, pk
       DOUBLE PRECISION p(np,k), p_tmp(k)
-      INTEGER i,j,n(nn),n_tmp
+      INTEGER i,j,n(nn),n_tmp,sumx,xk
       INTEGER x(nx,k)
       PARAMETER (infinity = 1.7976931348623157d308)
 
@@ -437,6 +438,8 @@ cf2py double precision intent(out) :: like
           RETURN
         endif
         
+        sumx = 0
+        sump = 0.0
         do i=1,k
           if ((x(j,i) .LT. 0) .OR. (p_tmp(i) .LT. 1E-10)) then
             like = -infinity
@@ -444,8 +447,21 @@ cf2py double precision intent(out) :: like
           endif
           
           like = like + x(j,i)*dlog(p_tmp(i)) - factln(x(j,i))
+          
+          sumx = sumx + x(j,i)
+          sump = sump + p_tmp(i)
 
         enddo
+c This is to account for the kth term that is not passed!
+        xk = n_tmp - sumx
+        pk = 1.0 - sump
+        if ((xk .LT. 0) .OR. (pk .LT. 0)) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + (xk) * dlog(pk) 
+        like = like - factln(xk)
+        
         like = like + factln(n_tmp)
       enddo
       RETURN
