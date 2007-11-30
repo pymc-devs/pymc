@@ -216,9 +216,9 @@ class Sampler(Model):
         
         # Instantiate superclass
         if reinit_model:
-            Model.__init__(self, input, output_path, verbose, **kwds)
+            Model.__init__(self, input, output_path, verbose)
         
-        # Specify database backend
+        # Specify database backend and save its keywords
         self._db_args = kwds        
         self._assign_database_backend(db)
         

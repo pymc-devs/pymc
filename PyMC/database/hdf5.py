@@ -264,12 +264,9 @@ def load(filename, mode='a'):
     db._table = db._gettable(-1)[0]
     db._group = db._table._g_getparent()
     for k in db._table.colnames:
-        if k == '_state_':
-           db._state_ = v
-        else:
-            setattr(db, k, Trace(name=k))
-            o = getattr(db,k)
-            setattr(o, 'db', db)
+        setattr(db, k, Trace(name=k))
+        o = getattr(db,k)
+        setattr(o, 'db', db)
     for k in db._table.attrs._v_attrnamesuser:
         setattr(db, k, getattr(db._table.attrs, k))
     for k in db._group._f_listNodes():

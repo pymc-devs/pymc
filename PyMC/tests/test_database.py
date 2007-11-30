@@ -27,10 +27,25 @@ class test_ram(NumpyTestCase):
         
 class test_txt(NumpyTestCase):
     def check(self):
-        S = MCMC(DisasterModel, db='txt', dirname='txt_test', mode='w')
+        try:
+            os.removedir('txt_data')
+        except:
+            pass
+        S = MCMC(DisasterModel, db='txt', dirname='txt_data', mode='w')
         S.sample(100)
         S.sample(100)
         S.db.close()
+    
+    def check_load(self):
+        db = database.txt.load('txt_data')
+        assert_equal(len(db.e._trace), 2)
+        assert_array_equal(db.e().shape, (100,))
+        assert_array_equal(db.e(chain=None).shape, (200,))
+        S = MCMC(DisasterModel, db)
+        S.sample(100)
+        S.db.close()
+        
+        
         
 class test_pickle(NumpyTestCase):
     def __init__(*args, **kwds):
