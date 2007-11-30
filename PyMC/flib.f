@@ -429,9 +429,15 @@ cf2py double precision intent(out) :: like
 
       like = 0.0
       n_tmp = n(1)
-      p_tmp = p(1,1:k)
+      do i=1,k
+	      p_tmp(i) = p(1,i)
+      enddo
       do j=1,nx
-        if (np .NE. 1) p_tmp = p(j,1:k)
+        if (np .NE. 1) then
+	        do i=1,k
+    	    	p_tmp(i) = p(j,i)
+    	    enddo
+        endif
         if (nn .NE. 1) n_tmp = n(j)
         if (n_tmp .LT. 0) then
           like=-infinity
