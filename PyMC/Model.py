@@ -15,6 +15,7 @@ import sys,os
 from copy import copy
 from threading import Thread
 from Node import ContainerBase
+from time import sleep
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -459,11 +460,9 @@ class Sampler(Model):
                 
         if not self.status == 'ready':        
             print 'Waiting for current iteration to finish...'
-            try:
-                while self._sampling_thread.isAlive():
-                    sleep(.1)
-            except:
-                pass
+            while self._sampling_thread.isAlive():
+                sleep(.1)
+
 
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
