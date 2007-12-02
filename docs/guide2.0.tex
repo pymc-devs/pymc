@@ -28,13 +28,23 @@
 \usepackage{amssymb}
 \usepackage{latexsym}
 
+% Package for including code in the document
+\usepackage{listings}
+
 % Surround parts of graphics with box
 %\usepackage{boxedminipage}
+
+% This is now the recommended way for checking for PDFLaTeX:
+\usepackage{ifpdf}
 
 % Enable hyeprlinks
 \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
+\ifpdf
+\usepackage[pdftex]{graphicx}
+\else
 \usepackage{graphicx}
+\fi
 
 \title{PyMC 2.0 User's Guide \\
 Installation and tutorial}
@@ -84,6 +94,7 @@ Installation and tutorial}
 
 \chapter{Probability distributions and mathematical utilities} 
 \label{chap:distributions}
+\input{distributions}
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}
