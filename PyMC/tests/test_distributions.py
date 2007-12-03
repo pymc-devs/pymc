@@ -74,14 +74,14 @@ def dirichlet(x, theta):
 def geometric(x, p):
     return p*(1.-p)**(x-1)
 
-def hypergeometric(x, d, s, N):
+def hypergeometric(x, n, m, N):
     """
     x : number of successes drawn
-    d : number of draws
-    s : number of successes in total
-    n : nuccesses + failures in total.
+    n : number of draws
+    m : number of successes in total
+    N : nuccesses + failures in total.
     """
-    return comb(n-s, x) * comb(s, d-x) / comb(n,d)
+    return comb(N-m, x) * comb(m, n-x) / comb(N,n)
 
 def mv_hypergeometric(x,m):
     """
@@ -254,7 +254,7 @@ class test_arlognormal(NumpyTestCase):
         a = (1,2)
         sigma = .1
         rho = 0
-        r = rarlognorm(a, sigma, rho, size=1000) 
+        r = rarnormal(a, sigma, rho, size=1000) 
         assert_array_almost_equal(np.median(r), [1,2],1)
         
         rho =.8
@@ -270,7 +270,7 @@ class test_arlognormal(NumpyTestCase):
         a = 1
         rho =.8
         sigma = .1
-        r = rarlognorm(a, sigma, rho, size=1000)
+        r = rarnormal(a, sigma, rho, size=1000)
         opt = fmin(self.like, (.8, .4, .9), args=([r],), disp=0)
         assert_array_almost_equal(opt, [rho, sigma, a], 1)
 
@@ -363,7 +363,7 @@ class test_chi2(NumpyTestCase):
     """Based on flib.gamma, so no need to make the calling check and
     normalization check."""
     def check_consistency(self):
-        stochs = {'k':2}
+        stochs = {'nu':2}
         hist, like, figdata = consistency(rchi2, chi2_like, stochs, range=[0,15])
         if PLOT:
             compare_hist(figname='chi2', **figdata)
@@ -517,7 +517,7 @@ class test_half_normal(NumpyTestCase):
 
 class test_hypergeometric(NumpyTestCase):
     def check_consistency(self):
-        stochs=dict(draws=10, success=20, failure=12)
+        stochs=dict(n=10, m=20, N=12)
         hist, like, figdata = discrete_consistency(rhypergeometric, \
         hypergeometric_like, stochs, nrandom=5000)
         if PLOT:
