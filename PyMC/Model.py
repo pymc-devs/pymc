@@ -86,11 +86,6 @@ class Model(ObjectContainer):
         
         ObjectContainer.__init__(self, input)
         
-        for stoch_attr in ['extended_children', 'extended_parents', 'markov_blanket', 'moral_neighbors']:
-            setattr(self, stoch_attr, {})
-            for stoch in self.stochs | self.data:
-                getattr(self, stoch_attr)[stoch] = getattr(stoch, stoch_attr)
-        
         if not hasattr(self, 'generations'):
             self.find_generations()
                         
@@ -101,7 +96,6 @@ class Model(ObjectContainer):
         """
         
         self.generations = []
-        # self.extend_children()
 
         # Find root generation
         self.generations.append(set())

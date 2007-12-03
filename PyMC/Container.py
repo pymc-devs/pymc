@@ -137,7 +137,7 @@ def file_items(container, iterable):
     i=-1
     
     for item in iterable:
-        
+
         # If this is a dictionary, switch from key to item.
         if isinstance(iterable, dict):
             key = item
@@ -302,6 +302,8 @@ class ObjectContainer(ContainerBase):
     """
     def __init__(self, input):
 
+        file_items(self, input)
+
         if isinstance(input, dict):
             self.__dict__.update(input)
 
@@ -315,7 +317,6 @@ class ObjectContainer(ContainerBase):
 
 
         self._dict_container = DictContainer(self.__dict__)  
-        file_items(self, self._dict_container)
 
         self._value = copy(self)
         ContainerBase.__init__(self, input)
