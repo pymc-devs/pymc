@@ -71,6 +71,24 @@ C a nicety that you can omit if five-figure accuracy is good enough.
       gammln=tmp+dlog(stp*ser/x) 
       return 
       END
+      
+      
+      DOUBLE PRECISION FUNCTION mvgammln(x, k)
+C Returns the logarithm of the multivariate gamma function for x > 0
+      
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      INTEGER j,k
+      
+      mvgammln = k * (k-1) / 4 * log(PI)
+      
+      do j=1,k
+        mvgammln = mvgammln + gammln(x + (1-j)/2)
+      enddo
+      
+      return
+      END
+      
 
       DOUBLE PRECISION FUNCTION factrl(n) 
 C Returns the value n! as a floating-point number. 
