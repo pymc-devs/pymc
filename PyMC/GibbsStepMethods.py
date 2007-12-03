@@ -1,3 +1,24 @@
+"""
+Gibbs step methods apply to conjugate submodels. In other words, if in the
+following model:
+
+B|A ~ d2(A, p2)
+A ~ d1(p1)
+
+d1 is a standard distribution and A's distribution conditional on B is d1 
+with parameters p1_*, A can be Gibbs sampled using standard random variables.
+
+If, on the other hand, the likelihood p(B|A) regarded as a function of A is 
+proportional to a standard distribution d3, but A's distribution conditional
+on its parents is /not/ d3, A can be Metropolis sampled using p(B|A) as a 
+proposal distribution. In this case the Metropolis-Hastings acceptance 
+threshold is
+
+    min(1, p(A_p|parents) / p(A|parents)).
+    
+Each Gibbs step method has a fully conjugate version and a nonconjugate version.
+"""
+
 from StepMethods import Metropolis, StepMethod
 from InstantiationDecorators import dtrm
 from Node import ZeroProbability, Variable
@@ -38,6 +59,7 @@ class Gibbs(Metropolis):
     def __init__(self, stoch, verbose=0):
         Metropolis.__init__(self, stoch, verbose=verbose)
     
+    # Override Metropolis's competence.
     competence = staticmethod(StepMethod.competence)
     
     def step(self):

@@ -1,3 +1,7 @@
+"""
+Base classes Model and Sampler are defined here.
+"""
+
 # Changeset history
 # 22/03/2007 -DH- Added methods to query the StepMethod's state and pass it to database.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.

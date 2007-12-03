@@ -1,3 +1,8 @@
+"""
+The decorators stoch, dtrm, discrete_stoch, binary_stoch, potential and data
+are defined here, but the actual objects are defined in PyMCObjects.py
+"""
+
 import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Stochastic, Deterministic, DiscreteStochastic, BinaryStochastic, Potential

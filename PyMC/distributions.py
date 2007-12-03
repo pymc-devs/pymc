@@ -52,7 +52,7 @@ inverse = np.linalg.pinv
 
 def stoch_from_dist(name, logp, random=None, base=Stochastic):
     """
-    Return a function to instantiate a stochastic from a particular distribution.
+    Return a Stochastic subclass made from a particular distribution.
 
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')

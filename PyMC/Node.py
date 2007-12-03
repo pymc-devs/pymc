@@ -1,3 +1,7 @@
+"""
+Base classes are defined here.
+"""
+
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'

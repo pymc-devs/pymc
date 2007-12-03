@@ -1,8 +1,47 @@
+"""
+The point of Container.py is to provide a function Container which converts 
+any old thing A to thing B which looks and acts just like A, but it has a 
+'value' attribute. B.value looks and acts just like A but every variable 
+'inside' B has been replaced by its value. Examples:
+
+    class MyObject(object):
+        def __init__(self):
+            self.x = Uninformative('x',0)
+            self.y = 3
+
+    A = MyObject()
+    B = Container(A)
+    B.x
+    B.value.x
+
+
+    A = [Uninformative('x',0), 3]
+    B = Container(A)
+    B
+    B.value
+
+Should work even with nested inputs:
+
+    class MyObject(object):
+        def __init__(self):
+            self.x = [Uninformative('x',0), 5]
+            self.y = 3
+
+    A = MyObject()
+    B = Container(A)
+    
+
+In addition, container objects file away the objects they contain into the
+following sets: stochs, dtrms, variables, nodes, containers, data, step methods.
+These flattened representations are useful for things like cache checking.
+"""
+
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, StepMethodBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype
 from Container_values import LTCValue, DCValue, ACValue, OCValue
 from types import ModuleType
+
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -111,7 +150,8 @@ def Container(*args):
         
     # Wrap mutable objects
     elif hasattr(iterable, '__dict__'):
-        return ObjectContainer(iterable)
+        print iterable, iterable.__dict__
+        return ObjectContainer(iterable.__dict__)
         
     # Otherwise raise an error.
     else:
@@ -147,8 +187,23 @@ def file_items(container, iterable):
         else:
     	    i += 1
 
-        if hasattr(item,'__iter__'):
-            
+        # If the item isn't iterable, file it away.
+        if isinstance(item, Variable):
+            container.variables.add(item)
+            if isinstance(item, StochasticBase):
+                if item.isdata:
+                    container.data.add(item)
+                else:
+                    container.stochs.add(item)
+            elif isinstance(item, DeterministicBase):
+                container.dtrms.add(item)
+        elif isinstance(item, PotentialBase):
+            container.potentials.add(item)
+        elif isinstance(item, StepMethodBase):
+            container.step_methods.add(item)
+
+        # Wrap internal containers
+        elif hasattr(item, '__iter__') or hasattr(item, '__dict__'):
             # If this is a non-object-valued ndarray, don't container-ize it.
             if isinstance(item, ndarray):
                 if item.dtype!=dtype('object'):
@@ -172,22 +227,6 @@ def file_items(container, iterable):
             container.data.update(new_container.data)
             container.step_methods.update(new_container.step_methods)
 
-        else:
-        
-            # If the item isn't iterable, file it away.
-            if isinstance(item, Variable):
-                container.variables.add(item)
-                if isinstance(item, StochasticBase):
-                    if item.isdata:
-                        container.data.add(item)
-                    else:
-                        container.stochs.add(item)
-                elif isinstance(item, DeterministicBase):
-                    container.dtrms.add(item)
-            elif isinstance(item, PotentialBase):
-                container.potentials.add(item)
-            elif isinstance(item, StepMethodBase):
-                container.step_methods.add(item)
 
 
     container.nodes = container.potentials | container.variables
