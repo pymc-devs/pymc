@@ -357,7 +357,7 @@ class MAP(Model):
         all_relevant_stochs = set()
         p,i = self.stoch_indices[index]
         try:
-            return p.logp + sum([child.logp for child in self.extended_children[p]])
+            return p.logp + sum([child.logp for child in p.extended_children])
         except ZeroProbability:
             return -Inf
 
@@ -382,7 +382,7 @@ class MAP(Model):
 
         old_val = copy(self[j])
 
-        if not self.stoch_indices[i][0] in self.moral_neighbors[self.stoch_indices[j][0]]:
+        if not self.stoch_indices[i][0] in self.stoch_indices[j][0].moral_neighbors:
             return 0.
 
         def diff_for_diff(val):

@@ -121,6 +121,7 @@ def file_items(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
     """
+
     container._value = copy(iterable)
     
     container.nodes = set()
@@ -302,21 +303,21 @@ class ObjectContainer(ContainerBase):
     """
     def __init__(self, input):
 
-        file_items(self, input)
-
         if isinstance(input, dict):
             self.__dict__.update(input)
+            input_to_file = input
 
         elif hasattr(input,'__iter__'):
+            input_to_file = input
             for item in input:
                 if isinstance(item, Node) or isinstance(item, ContainerBase):
                     self.__dict__[item.__name__] = item
         else:
-            input_dict = filter_dict(input)
-            self.__dict__.update(input_dict)
-
+            input_to_file = filter_dict(input)
+            self.__dict__.update(input_to_file)
 
         self._dict_container = DictContainer(self.__dict__)  
+        file_items(self, input_to_file)
 
         self._value = copy(self)
         ContainerBase.__init__(self, input)
