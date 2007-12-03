@@ -270,6 +270,8 @@ class StepMethod(StepMethodBase):
         self._accepted = 0.
         
         # More verbose feedback, if requested
+        # Warning: self.stoch is not defined above. The following assumes
+        # that the class has created this value, which is a bit fragile. DH
         if verbose > 1 or self.verbose > 1:
             print '\t\tvalue:', self.stoch.value
             print '\t\tacceptance rate:', acc_rate

@@ -1,10 +1,11 @@
 ###
-# Adaptative Metropolis Algorithm
+# Adaptive Metropolis Algorithm
 # Author: David Huard
 # Date: April 23, 2007
-# Reference: Haario, H., E. Saksman and J. Tamminen, An adaptative Metropolis algorithm, Bernouilli, vol. 7 (2), pp. 223-242, 2001.
+# Reference: Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm, Bernouilli, vol. 7 (2), pp. 223-242, 2001.
 ###
-from PyMC.utils import msqrt, extend_children, check_type, round_array, extend_parents
+import PyMC
+from PyMC.utils import msqrt, check_type, round_array
 from PyMC import StepMethod
 from PyMC.flib import fill_stdnormal
 from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
@@ -12,51 +13,97 @@ from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
 from numpy.random import randint, random
 from PyMC.Node import ZeroProbability
 
-class AdaptativeMetropolis(StepMethod):
+class AdaptiveMetropolis(StepMethod):
     """
-    S = AdaptativeMetropolis(nodes, delay=1000, rate=1, scale={})
+    S = AdaptiveMetropolis(self, stoch, cov, delay=1000, scale={})
 
     Applies the Metropolis-Hastings algorithm to several stochs
     together. Jumping density is a multivariate normal distribution
     with mean zero and covariance equal to the empirical covariance
     of the stochs.
     
-    :Stochastics:
+    :Parameters:
+    
+      - stoch : PyMC objects
+            These objects are to be handled using the AdaptativeMetropolis step 
+            method.
+            
+      - cov : array
+            Initial guess for the covariance matrix C_0. 
+            
       - delay : int
-          Number of iterations before the empirical covariance is computed. 
-      - rate : int
+          Number of iterations before the empirical covariance is computed.
+          Equivalent to t_0 in Haario et al. (2001).
+        
+      - interval : int
           Interval between covariance updates.
+          
       - scale : dict
           Dictionary containing the scale for each stoch keyed by name.
           The scales are used to define an initial covariance matrix used 
-          until delay is reached.  
+          until delay is reached. If it not given, and cov is None, a first 
+          guess is estimated using the current objects value. 
 
     """
-    def __init__(self, nodes=None, delay=1000, rate=1, scales={}):
+    def __init__(self, stoch, cov=None, epoch=1000, delay=1000, scales=None, interval=100, verbose=0):
         
-        StepMethod.__init__(self,nodes)
-        self.check_type()
+        self.verbose = verbose
+        
+        if getattr(stoch, '__class__') is PyMC.PyMCObjects.Stochastic:
+            stoch = [stoch] 
+    
+        StepMethod.__init__(self,stoch, verbose)
+        
+        
+        self.epoch = epoch
         self.delay = delay
-        self.rate = rate
+        self.scales = scales
+        self.isdiscrete = {}
+        self.interval = interval
+
+        self._ready = False
+        self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
         
+        self.check_type()
         self.dimension()
-        self.scales(scales)    
-        self.C_0 = eye(self.dim)*self._init_scale
+        
+        ord_sc = self.order_scales(scales)    
+        if cov is None:
+            self.C_0 = eye(self.dim)*ord_sc
+        else:
+            self.C_0 = cov
         self._sig = msqrt(self.C_0)
         self.scaling_stoch = (2.4)**2/self.dim # Gelman et al. 1996.
         
         self._last_trace_index = 0
+        self._current_iter = 0
         self._proposal_deviate = zeros(self.dim)
         self.C = zeros((self.dim,self.dim))
         self.chain_mean = asmatrix(zeros(self.dim))
         self._trace = []
         
         # State variables used to restore the state in a latter session. 
-        self._id = 'AdaptativeMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
-        self._state += ['last_trace_index', '_cov', '_sig',
+        self._state += ['_last_trace_index', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
 
                
+    @staticmethod
+    def competence(stoch):
+        """
+        The competence function for AdaptiveMetropolis.
+        """
+
+        if isinstance(stoch, BinaryStochastic):
+            return 0
+
+        else:
+            _type = check_type(stoch)[0]
+            if _type in [float, int]:
+                return 1
+            else:
+                return 2
+                
+                
     def check_type(self):
         """Make sure each stoch has a correct type, and identify discrete stochs."""
         self.isdiscrete = {}
@@ -86,22 +133,25 @@ class AdaptativeMetropolis(StepMethod):
             self.dim += p_len
             
             
-    def scales(self, init_scales):
+    def order_scales(self, scales):
         """Define an array of scales to build the initial covariance.
         If init_scales is None, the scale is taken to be the initial value of 
         the stochs.
         """
-        s = []
+        ord_sc = []
         for stoch in self.stochs:
             try:
-                s.append(init_scales[stoch])
-            except KeyError:
-                s.append(stoch.value.ravel())
-                
-        self._init_scale = concatenate(s)
-        if squeeze(self._init_scale.shape) != self.dim:
+                ord_sc.append(scales[stoch])
+            except (TypeError, KeyError):
+                ord_sc.append(stoch.value.ravel())
+        ord_sc = concatenate(ord_sc)
+        
+        if squeeze(ord_sc.shape) != self.dim:
             raise "Improper initial scales, dimension don't match", \
-                (self._init_scale.shape, self.dim)
+                (ord_sc, self.dim)
+        if self.verbose >= 1:
+            print "Ordered scales : ", ord_sc
+        return ord_sc
         
     def covariance(self):
         """
@@ -124,7 +174,7 @@ class AdaptativeMetropolis(StepMethod):
         
         epsilon = 1.0e-6
         i0 = self._last_trace_index
-        i = self._model._cur_trace_index
+        i = self._current_iter
         s_d = self.scaling_stoch
         n = i - i0
         chain = asarray(self._trace)
@@ -142,7 +192,7 @@ class AdaptativeMetropolis(StepMethod):
               
     def update_mean(self, chain):
         """Update the chain mean"""
-        self.chain_mean = 1./self._model._current_iter * \
+        self.chain_mean = 1./self._current_iter * \
         ( self._last_trace_index * self.chain_mean + chain.sum(0))
         
     def trace2array(i0,i1):
@@ -219,18 +269,20 @@ class AdaptativeMetropolis(StepMethod):
         except (ZeroProbability, 'Rejected'):
             self._rejected += 1
             
-            if self._model._current_iter > self.delay: 
+            if self._current_iter > self.delay: 
                 self._trace.append(self._arrayjump)
                 
             for stoch in self.stochs:
                 stoch.value = stoch.last_value
             return
 
-        if self._model._current_iter>self.delay and \
-            self._model._current_iter%self.rate==0:
+        if self._current_iter>self.delay and \
+            self._current_iter%self.interval==0:
            self.update_cov()
-           self.last_trace_index = self._model._current_iter
+           self.last_trace_index = self._current_iter
            
+    def tune(self, verbose):
+        return True
    
 if __name__=='__main__':
     from numpy.testing import *

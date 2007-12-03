@@ -8,4 +8,4 @@ from PyMC import MCMC
 from PyMC.examples import DisasterModel
 
 S = MCMC(DisasterModel)
-S.interactive_sample(10000,1000,2)
+S.interactive_sample(1000,100,2)
