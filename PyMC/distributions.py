@@ -285,8 +285,8 @@ def GOFpoints(x,y,expval,loss):
 #--------------------------------------------------------
 
 # Autoregressive normal 
-def rarnormal(a, sigma, rho, size=1):
-    """rarnormal(a, sigma, rho)
+def rarnormal(a, tau, rho, size=1):
+    """rarnormal(a, tau, rho)
     
     Autoregressive normal random variates.
     
@@ -296,16 +296,16 @@ def rarnormal(a, sigma, rho, size=1):
     """
     f = PyMC.utils.ar1
     if np.isscalar(a):
-        r = f(rho, 0, sigma, size)
+        r = f(rho, 0, tau, size)
     else:
         n = len(a)
-        r = [f(rho, 0, sigma, n) for i in range(size)]
+        r = [f(rho, 0, tau, n) for i in range(size)]
         if size == 1:
             r = r[0]
     return a*np.exp(r)
             
 
-def arnormal_like(x, a, sigma, rho):
+def arnormal_like(x, a, tau, rho):
     """arnormal(x, a, tau, rho, beta=1)
     
     Autoregressive normal log-likelihood.
@@ -883,22 +883,21 @@ def half_normal_like(x, tau):
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
-def rhypergeometric(draws, success, total, size=1):
+def rhypergeometric(n, m, N, size=1):
     """
-    rhypergeometric(draws, success, total, size=1)
+    rhypergeometric(n, m, N, size=1)
 
     Returns hypergeometric random variates.
     """
+    return random.hypergeometric(m, N-m, n, size)
 
-    return random.hypergeometric(success, total-success, draws, size)
-
-def hypergeometric_expval(draws, success, total):
+def hypergeometric_expval(n, m, N):
     """
-    hypergeometric_expval(draws, success, total)
+    hypergeometric_expval(n, m, N)
 
     Expected value of hypergeometric distribution.
     """
-    return draws * success / total
+    return 1. * n * m / N
 
 def hypergeometric_like(x, n, m, N):
     """

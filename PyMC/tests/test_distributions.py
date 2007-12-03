@@ -242,45 +242,45 @@ def normalization(like, stochs, domain, N=100):
             y.append(f(i))
         return np.trapz(y,x)
 
-class test_arlognormal(NumpyTestCase):
+class test_arnormal(NumpyTestCase):
     def like(self, stochs, r):
         a = stochs[2:]
-        sigma = stochs[1]
+        tau = stochs[1]
         rho = stochs[0]
-        like = np.array([arlognorm_like(x, a, sigma, rho) for x in r])
+        like = np.array([arnormal_like(x, a, tau, rho) for x in r])
         return -like.sum()
             
     def check_random(self):
         a = (1,2)
-        sigma = .1
+        tau = 10
         rho = 0
-        r = rarnormal(a, sigma, rho, size=1000) 
+        r = rarnormal(a, tau, rho, size=1000) 
         assert_array_almost_equal(np.median(r), [1,2],1)
         
         rho =.8
         sigma = .1
-        r = rarlognorm(1, sigma, rho, size=1000)
+        r = rarnormal(1, tau, rho, size=1000)
         corr = utils.autocorr(np.log(r))
         assert_almost_equal(corr, rho, 1)
-        assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
+        assert_almost_equal(r.std(), tau/sqrt(1-rho**2),1)
     
     def check_consistency(self):
     
         # 1D case
         a = 1
         rho =.8
-        sigma = .1
-        r = rarnormal(a, sigma, rho, size=1000)
+        tau = 10
+        r = rarnormal(a, tau, rho, size=1000)
         opt = fmin(self.like, (.8, .4, .9), args=([r],), disp=0)
-        assert_array_almost_equal(opt, [rho, sigma, a], 1)
+        assert_array_almost_equal(opt, [rho, tau, a], 1)
 
         # 2D case
         a = (1,2)
-        sigma = .1
+        tau = 10
         rho = .7
-        r = rarlognorm(a, sigma, rho, size=2000) 
+        r = rarnormal(a, tau, rho, size=2000) 
         opt = fmin(self.like, (.75, .15, 1.1, 2.1), xtol=.05, args=(r,), disp=0)
-        assert_array_almost_equal(opt, (rho, sigma)+a, 1)
+        assert_array_almost_equal(opt, (rho, tau)+a, 1)
     
 
 class test_bernoulli(NumpyTestCase):
@@ -517,7 +517,7 @@ class test_half_normal(NumpyTestCase):
 
 class test_hypergeometric(NumpyTestCase):
     def check_consistency(self):
-        stochs=dict(n=10, m=20, N=12)
+        stochs=dict(n=10, m=12, N=20)
         hist, like, figdata = discrete_consistency(rhypergeometric, \
         hypergeometric_like, stochs, nrandom=5000)
         if PLOT:

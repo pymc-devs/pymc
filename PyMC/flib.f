@@ -927,8 +927,10 @@ c Combinations of x red balls
           like = -infinity
           RETURN
         endif
-        like = like + combinationln(t_tmp-s_tmp, x(i))
-        like = like + combinationln(s_tmp,draws_tmp-x(i))
+c        like = like + combinationln(t_tmp-s_tmp, x(i))
+c        like = like + combinationln(s_tmp,draws_tmp-x(i))
+        like = like + combinationln(t_tmp-s_tmp, draws_tmp-x(i))
+        like = like + combinationln(s_tmp, x(i))
         like = like - combinationln(t_tmp, draws_tmp)
       enddo
       return
