@@ -575,20 +575,18 @@ class test_multinomial(NumpyTestCase):
         assert_array_almost_equal(rvar, n*p*(1-p),1)
     
     def check_consistency(self):
-        #pdb.set_trace()
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
-        a = multinomial_like(x,n,p)
+        a = multinomial_like(x[:,:-1],n,p[:-1])
         b = log(multinomial(x,n,p).prod())
         assert_almost_equal(a,b,4)
 
-    def check_vectorization(self):    
-        #pdb.set_trace()
+    def check_vectorization(self):
         p = array([[.2,.3,.5], [.2,.3,.5]])
         r = rmultinomial(10, p=p[0], size=2)
-        a = multinomial_like(r,10,p[0])
-        b = multinomial_like(r,[10,10],p)
+        a = multinomial_like(r[:,:-1],10,p[0,:-1])
+        b = multinomial_like(r[:,:-1],[10,10],p[:,:-1])
         assert_equal(a,b)
 
 class test_multivariate_hypergeometric(NumpyTestCase):

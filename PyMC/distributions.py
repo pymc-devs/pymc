@@ -281,8 +281,8 @@ def GOFpoints(x,y,expval,loss):
 #--------------------------------------------------------
 
 # Autoregressive normal 
-def rarlognorm(a, sigma, rho, size=1):
-    """rarlognorm(a, sigma, rho)
+def rarnormal(a, sigma, rho, size=1):
+    """rarnormal(a, sigma, rho)
     
     Autoregressive normal random variates.
     
@@ -301,8 +301,8 @@ def rarlognorm(a, sigma, rho, size=1):
     return a*np.exp(r)
             
 
-def arlognorm_like(x, a, sigma, rho):
-    """arlognorm(x, a, sigma, rho, beta=1)
+def arnormal_like(x, a, sigma, rho):
+    """arnormal(x, a, tau, rho, beta=1)
     
     Autoregressive normal log-likelihood.
     
@@ -310,9 +310,9 @@ def arlognorm_like(x, a, sigma, rho):
         x_i & = a_i \\exp(e_i) \\\\
         e_i & = \\rho e_{i-1} + \\epsilon_i
     
-    where :math:`\\epsilon_i \\sim N(0,\\sigma)`.
+    where :math:'\\epsilon_i \\sim N(0,\\tau)'.
     """
-    return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
+    return flib.arlognormal(x, np.log(a), 1./tau, rho, beta=1)
     
 
 # Bernoulli----------------------------------------------
@@ -349,23 +349,19 @@ def bernoulli_like(x, p):
         f(x \\mid p) = p^{x- 1} (1-p)^{1-x}
 
     :Parameters:
-      - `x`: Series of successes (1) and failures (0). :math:`x=0,1`
-      - `p`: Probability of success. :math:`0 < p < 1`
+      - 'x': Series of successes (1) and failures (0). :math:'x=0,1'
+      - 'p': Probability of success. :math:'0 < p < 1'
 
     :Example:
       >>> bernoulli_like([0,1,0,1], .4)
       -2.8542325496673584
 
     :Note:
-      - :math:`E(x)= p`
-      - :math:`Var(x)= p(1-p)`
+      - :math:'E(x)= p'
+      - :math:'Var(x)= p(1-p)'
 
     """
-    # try:
-    #     constrain(p, 0, 1,allow_equal=True)
-    #     constrain(x, 0, 1,allow_equal=True)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.bernoulli(x, p)
 
 
@@ -400,17 +396,17 @@ def beta_like(x, alpha, beta):
         f(x \\mid \\alpha, \\beta) = \\frac{\\Gamma(\\alpha + \\beta)}{\\Gamma(\\alpha) \\Gamma(\\beta)} x^{\\alpha - 1} (1 - x)^{\\beta - 1}
 
     :Parameters:
-      - `x`: 0 < x < 1
-      - `alpha`: > 0
-      - `beta`: > 0
+      - 'x': 0 < x < 1
+      - 'alpha': > 0
+      - 'beta': > 0
 
     :Example:
       >>> beta_like(.4,1,2)
       0.18232160806655884
 
     :Note:
-      - :math:`E(X)=\\frac{\\alpha}{\\alpha+\\beta}`
-      - :math:`Var(X)=\\frac{\\alpha \\beta}{(\\alpha+\\beta)^2(\\alpha+\\beta+1)}`
+      - :math:'E(X)=\\frac{\\alpha}{\\alpha+\\beta}'
+      - :math:'Var(X)=\\frac{\\alpha \\beta}{(\\alpha+\\beta)^2(\\alpha+\\beta+1)}'
 
     """
     # try:
@@ -458,18 +454,13 @@ def binomial_like(x, n, p):
       n : int
         Number of Bernoulli trials, > x.
       p : float
-        Probability of success in each trial, :math:`p \\in [0,1]`.
+        Probability of success in each trial, :math:'p \\in [0,1]'.
 
     :Note:
-     - :math:`E(X)=np`
-     - :math:`Var(X)=np(1-p)`
+     - :math:'E(X)=np'
+     - :math:'Var(X)=np(1-p)'
     """
-    # try:
-    #     constrain(p, 0, 1)
-    #     constrain(n, lower=x)
-    #     constrain(x, 0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.binomial(x,n,p)
 
 # Categorical----------------------------------------------
@@ -496,6 +487,7 @@ def categorical_like( x, probs, minval=0, step=1):
 
     # Normalize, if not already
     if sum(probs) != 1.0: probs = probs/sum(probs)
+    
     return flib.categorical(x, probs, minval, step)
 
 
@@ -531,64 +523,57 @@ def cauchy_like(x, alpha, beta):
         f(x \\mid \\alpha, \\beta) = \\frac{1}{\\pi \\beta [1 + (\\frac{x-\\alpha}{\\beta})^2]}
 
     :Parameters:
-      - `alpha` : Location stoch.
-      - `beta`: Scale stoch > 0.
+      - 'alpha' : Location stoch.
+      - 'beta': Scale stoch > 0.
 
     :Note:
       - Mode and median are at alpha.
     """
-    # try:
-    #     constrain(beta, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.cauchy(x,alpha,beta)
 
 # Chi square----------------------------------------------
 @randomwrap
-def rchi2(k, size=1):
+def rchi2(nu, size=1):
     """
-    rchi2(k, size=1)
+    rchi2(nu, size=1)
 
-    Random :math:`\\chi^2` variates.
+    Random :math:'\\chi^2' variates.
     """
 
-    return random.chisquare(k, size)
+    return random.chisquare(nu, size)
 
-def chi2_expval(k):
+def chi2_expval(nu):
     """
-    chi2_expval(k)
+    chi2_expval(nu)
 
     Expected value of Chi-squared distribution.
     """
 
-    return k
+    return nu
 
-def chi2_like(x, k):
+def chi2_like(x, nu):
     """
-    chi2_like(x, k)
+    chi2_like(x, nu)
 
-    Chi-squared :math:`\\chi^2` log-likelihood.
+    Chi-squared :math:'\\chi^2' log-likelihood.
 
     .. math::
-        f(x \\mid k) = \\frac{x^{\\frac{k}{2}-1}e^{-2x}}{\\Gamma(\\frac{k}{2}) \\frac{1}{2}^{k/2}}
+        f(x \\mid \\nu) = \\frac{x^{(\\nu-2)/2}e^{-x/2}}{2^{\\nu/2}\Gamma(\\nu/2)}
 
     :Parameters:
       x : float
-        :math:`\\ge 0`
-      k : int
+        :math:'\\ge 0'
+      :math:'\\nu' : int
         Degrees of freedom > 0
 
     :Note:
-      - :math:`E(X)=k`
-      - :math:`Var(X)=2k`
+      - :math:'E(X)=\\nu'
+      - :math:'Var(X)=2\\nu'
 
     """
-    # try:
-    #     constrain(x, lower=0)
-    #     constrain(k, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
-    return flib.gamma(x, 0.5*k, 2)
+    
+    return flib.gamma(x, 0.5*nu, 2)
 
 # Dirichlet----------------------------------------------
 @randomwrap
@@ -628,20 +613,14 @@ def dirichlet_like(x, theta):
 
     :Parameters:
       x : (n,k) array
-        Where `n` is the number of samples and `k` the dimension.
-        :math:`0 < x_i < 1`,  :math:`\\sum_{i=1}^k x_i = 1`
+        Where 'n' is the number of samples and 'k' the dimension.
+        :math:'0 < x_i < 1',  :math:'\\sum_{i=1}^k x_i = 1'
       theta : (n,k) or (1,k) float
-        :math:`\\theta > 0`
+        :math:'\\theta > 0'
     """
 
     x = np.atleast_2d(x)
-    # try:
-    #     constrain(theta, lower=0)
-    #     constrain(x, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
-    #constrain(sum(x,1), upper=1, allow_equal=True) #??
-    #constrain(sum(x,1), lower=1, allow_equal=True)
+    
     if np.any(np.around(x.sum(1), 6)!=1):
         return -np.Inf
     return flib.dirichlet(x,np.atleast_2d(theta))
@@ -680,19 +659,15 @@ def exponential_like(x, beta):
 
     :Parameters:
       x : float
-        :math:`x \\ge 0`
+        :math:'x \\ge 0'
       beta : float
-        Survival stoch :math:`\\beta > 0`
+        Survival stoch :math:'\\beta > 0'
 
     :Note:
-      - :math:`E(X) = \\beta`
-      - :math:`Var(X) = \\beta^2`
+      - :math:'E(X) = \\beta'
+      - :math:'Var(X) = \\beta^2'
     """
-    # try:
-    #     constrain(x, lower=0)
-    #     constrain(beta, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.gamma(x, 1, beta)
 
 # Exponentiated Weibull-----------------------------------
@@ -724,11 +699,11 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
         z & = \\frac{x-loc}{scale}
 
     :Parameters:
-      - `x` : > 0
-      - `alpha` : Shape stoch
-      - `k` : > 0
-      - `loc` : Location stoch
-      - `scale` : Scale stoch > 0.
+      - 'x' : > 0
+      - 'alpha' : Shape stoch
+      - 'k' : > 0
+      - 'loc' : Location stoch
+      - 'scale' : Scale stoch > 0.
 
     """
 
@@ -763,23 +738,18 @@ def gamma_like(x, alpha, beta):
     of which has mean beta.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{x^{\\alpha-1}e^{-x\\beta}}{\\Gamma(\\alpha) \\beta^{\\alpha}}
+        f(x \\mid \\alpha, \\beta) = \\frac{x^{\\alpha-1}e^{-x/\\beta}}{\\Gamma(\\alpha) \\beta^{\\alpha}}
 
     :Parameters:
       x : float
-        :math:`x \\ge 0`
+        :math:'x \\ge 0'
       alpha : float
-        Shape stoch :math:`\\alpha > 0`.
+        Shape stoch :math:'\\alpha > 0'.
       beta : float
-        Scale stoch :math:`\\beta > 0`.
+        Scale stoch :math:'\\beta > 0'.
 
     """
-    # try:
-    #     constrain(x, lower=0)
-    #     constrain(alpha, lower=0)
-    #     constrain(beta, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.gamma(x, alpha, beta)
 
 
@@ -812,9 +782,7 @@ def gev_like(x, xi, mu=0, sigma=1):
     Generalized Extreme Value log-likelihood
 
     .. math::
-        pdf(x \\mid \\xi,\\mu,\\sigma) = \\frac{1}{\\sigma}(1 + \\xi z)^{-1/\\xi-1}\\exp{-(1+\\xi z)^{-1/\\xi}}
-
-    where :math:`z=\\frac{x-\\mu}{\\sigma}`
+        pdf(x \\mid \\xi,\\mu,\\sigma) = \\frac{1}{\\sigma}(1 + \\xi \\left[\\frac{x-\\mu}{\\sigma}\\right])^{-1/\\xi-1}\\exp{-(1+\\xi \\left[\\frac{x-\\mu}{\\sigma}\\right])^{-1/\\xi}}
 
     .. math::
         \\sigma & > 0,\\\\
@@ -844,7 +812,7 @@ def geometric_expval(p):
 
     Expected value of geometric distribution.
     """
-    return (1. - p) / p
+    return 1. / p
 
 def geometric_like(x, p):
     """
@@ -860,18 +828,14 @@ def geometric_like(x, p):
       x : int
         Number of trials before first success, > 0.
       p : float
-        Probability of success on an individual trial, :math:`p \\in [0,1]`
+        Probability of success on an individual trial, :math:'p \\in [0,1]'
 
     :Note:
-      - :math:`E(X)=1/p`
-      - :math:`Var(X)=\\frac{1-p}{p^2}`
+      - :math:'E(X)=1/p'
+      - :math:'Var(X)=\\frac{1-p}{p^2}'
 
     """
-    # try:
-    #     constrain(p, 0, 1)
-    #     constrain(x, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.geometric(x, p)
 
 # Half-normal----------------------------------------------
@@ -892,85 +856,75 @@ def half_normal_expval(tau):
     Expected value of half normal distribution.
     """
 
-    return sqrt(0.5 * pi / asarray(tau))
+    return sqrt(2. * pi / asarray(tau))
 
 def half_normal_like(x, tau):
     """
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
-    to the domain :math:`x \\in [0, \\infty)`.
+    to the domain :math:'x \\in [0, \\infty)'.
 
     .. math::
         f(x \\mid \\tau) = \\sqrt{\\frac{2\\tau}{\\pi}}\\exp\\left\\{ {\\frac{-x^2 \\tau}{2}}\\right\\}
 
     :Parameters:
       x : float
-        :math:`x \\ge 0`
+        :math:'x \\ge 0'
       tau : float
-        :math:`\\tau > 0`
+        :math:'\\tau > 0'
 
     """
-    # try:
-    #     constrain(tau, lower=0)
-    #     constrain(x, lower=0, allow_equal=True)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
-def rhypergeometric(draws, success, failure, size=1):
+def rhypergeometric(draws, success, total, size=1):
     """
-    rhypergeometric(draws, success, failure, size=1)
+    rhypergeometric(draws, success, total, size=1)
 
     Returns hypergeometric random variates.
     """
 
-    return random.hypergeometric(success, failure, draws, size)
+    return random.hypergeometric(success, total-success, draws, size)
 
-def hypergeometric_expval(draws, success, failure):
+def hypergeometric_expval(draws, success, total):
     """
-    hypergeometric_expval(draws, success, failure)
+    hypergeometric_expval(draws, success, total)
 
     Expected value of hypergeometric distribution.
     """
-    return draws * success / (success+failure)
+    return draws * success / total
 
-def hypergeometric_like(x, draws, success, failure):
+def hypergeometric_like(x, n, m, N):
     """
-    hypergeometric_like(x, draws, success, failure)
+    hypergeometric_like(x, n, m, N)
 
     Hypergeometric log-likelihood. Discrete probability distribution that
     describes the number of successes in a sequence of draws from a finite
     population without replacement.
 
     .. math::
-        f(x \\mid draws, successes, failures)
+        f(x \\mid n, m, N) = &=& \\frac{\\left(\\begin{array}{c}m \\\\x\\end{array}\\right) \\left(\\begin{array}{c}N-m \\\\n-x\\end{array}\\right)}{\\left(\\begin{array}{c}N \\\\n\\end{array}\\right)}
 
     :Parameters:
       x : int
         Number of successes in a sample drawn from a population.
-        :math:`\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)`
-      draws : int
+        :math:'\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)'
+      n : int
         Size of sample.
-      success : int
+      m : int
         Number of successes in the population.
-      failure : int
-        Number of failures in the population.
+      N : int
+        Total number of units in the population.
 
     :Note:
-      :math:`E(X) = \\frac{draws failures}{success+failures}`
+      :math:'E(X) = \\frac{n n}{N}'
     """
-    # try:
-    #     constrain(x, max(0, draws - failure), min(success, draws))
-    # except ZeroProbability:
-    #     return -Inf
-    return flib.hyperg(x, draws, success, success+failure)
+    
+    return flib.hyperg(x, n, m, N)
 
 # Inverse gamma----------------------------------------------
-# This one doesn't look kosher. Check it up.
-# Again, Gelman's stochetrization isn't the same
-# as numpy's. Matlab agrees with numpy, R agrees with Gelman.
 @randomwrap
 def rinverse_gamma(alpha, beta,size=1):
     """
@@ -1003,19 +957,14 @@ def inverse_gamma_like(x, alpha, beta):
       x : float
         x > 0
       alpha : float
-        Shape stoch, :math:`\\alpha > 0`.
+        Shape stoch, :math:'\\alpha > 0'.
       beta : float
-        Scale stoch, :math:`\\beta > 0`.
+        Scale stoch, :math:'\\beta > 0'.
 
     :Note:
-      :math:`E(X)=\\frac{1}{\\beta(\\alpha-1)}` for :math:`\\alpha > 1`.
+      :math:'E(X)=\\frac{1}{\\beta(\\alpha-1)}' for :math:'\\alpha > 1'.
     """
-    # try:
-    #     constrain(x, lower=0)
-    #     constrain(alpha, lower=0)
-    #     constrain(beta, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.igamma(x, alpha, beta)
 
 # Lognormal----------------------------------------------
@@ -1059,7 +1008,7 @@ def lognormal_like(x, mu, tau):
         Scale stoch, > 0.
 
     :Note:
-      :math:`E(X)=e^{\\mu+\\frac{1}{2\\tau}}`
+      :math:'E(X)=e^{\\mu+\\frac{1}{2\\tau}}'
     """
     # try:
     #     constrain(tau, lower=0)
@@ -1094,7 +1043,7 @@ def multinomial_like(x, n, p):
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
     "failure", each one results in exactly one of some fixed finite number k
-    of possible outcomes over n independent trials. `x[i]` indicates the number 
+    of possible outcomes over n independent trials. 'x[i]' indicates the number 
     of times outcome number i was observed over the n trials.
 
     .. math::
@@ -1103,17 +1052,17 @@ def multinomial_like(x, n, p):
     :Parameters:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
-        :math:`\\sum_{i=1}^k x_i=n`, :math:`x_i \\ge 0`.
+        :math:'\\sum_{i=1}^k x_i=n', :math:'x_i \\ge 0'.
       n : int
         Number of trials.
       p : (k,1) float
         Probability of each one of the different outcomes,
-        :math:`\\sum_{i=1}^k p_i = 1)`, :math:`p_i \\ge 0`.
+        :math:'\\sum_{i=1}^k p_i = 1)', :math:'p_i \\ge 0'.
 
     :Note:
-      - :math:`E(X_i)=n p_i`
-      - :math:`var(X_i)=n p_i(1-p_i)`
-      - :math:`cov(X_i,X_j) = -n p_i p_j`
+      - :math:'E(X_i)=n p_i'
+      - :math:'var(X_i)=n p_i(1-p_i)'
+      - :math:'cov(X_i,X_j) = -n p_i p_j'
 
     """
 
@@ -1175,11 +1124,11 @@ def multivariate_hypergeometric_like(x, m):
     .. math::
         \\frac{\\prod_i \\binom{m_i}{c_i}}{\\binom{N}{n]}
 
-    where :math:`N = \\sum_i m_i` and :math:`n = \\sum_i x_i`.
+    where :math:'N = \\sum_i m_i' and :math:'n = \\sum_i x_i'.
     
     :Parameters:
         x : int sequence
-            Number of draws from each category, :math:`< m`
+            Number of draws from each category, :math:'< m'
         m : int sequence
             Number of items in each categoy. 
     """
@@ -1359,7 +1308,7 @@ def rnegative_binomial(mu, alpha, size=1):
     Random negative binomial variates.
     """
 
-    return random.negative_binomial(alpha, alpha / (mu + alpha),size)
+    return random.negative_binomial(alpha, alpha / (mu + alpha), size)
 
 def negative_binomial_expval(mu, alpha):
     """
@@ -1427,8 +1376,8 @@ def normal_like(x, mu, tau):
         Precision of the distribution, > 0.
 
     :Note:
-      - :math:`E(X) = \mu`
-      - :math:`Var(X) = 1/\tau`
+      - :math:'E(X) = \mu'
+      - :math:'Var(X) = 1/\tau'
 
     """
     # try:
@@ -1474,14 +1423,14 @@ def poisson_like(x,mu):
 
     :Parameters:
       x : int
-        :math:`x \\in {0,1,2,...}`
+        :math:'x \\in {0,1,2,...}'
       mu : float
         Expected number of occurrences that occur during the given interval,
-        :math:`\\mu \\geq 0`.
+        :math:'\\mu \\geq 0'.
 
     :Note:
-      - :math:`E(x)=\\mu`
-      - :math:`Var(x)=\\mu`
+      - :math:'E(x)=\\mu'
+      - :math:'Var(x)=\\mu'
     """
     # try:
     #     constrain(x, lower=0,allow_equal=True)
@@ -1574,7 +1523,7 @@ def uniform_like(x,lower, upper):
 
     :Parameters:
       x : float
-       :math:`lower \\geq x \\geq upper`
+       :math:'lower \\geq x \\geq upper'
       lower : float
         Lower limit.
       upper : float
@@ -1609,15 +1558,15 @@ def weibull_like(x, alpha, beta):
 
     :Parameters:
       x : float
-        :math:`x \\ge 0`
+        :math:'x \\ge 0'
       alpha : float
         > 0
       beta : float
         > 0
 
     :Note:
-      - :math:`E(x)=\\beta \\Gamma(1+\\frac{1}{\\alpha}`
-      - :math:`Var(x)=\\beta^2 \\Gamma(1+\\frac{2}{\\alpha} - \\mu^2`
+      - :math:'E(x)=\\beta \\Gamma(1+\\frac{1}{\\alpha}'
+      - :math:'Var(x)=\\beta^2 \\Gamma(1+\\frac{2}{\\alpha} - \\mu^2'
     """
     # try:
     #     constrain(alpha, lower=0)
@@ -1634,7 +1583,7 @@ def rwishart(n, Tau):
 
     Return a Wishart random matrix.
     
-    Tau is the inverse of the covariance matrix :math:`\Sigma`.
+    Tau is the inverse of the covariance matrix :math:'\Sigma'.
     """
     Sigma = inverse(Tau)
     D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
@@ -1662,7 +1611,7 @@ def wishart_like(X, n, Tau):
     .. math::
         f(X \\mid n, T) = {\\mid T \\mid}^{n/2}{\\mid X \\mid}^{(n-k-1)/2} \\exp\\left\\{ -\\frac{1}{2} Tr(TX) \\right\\}
     
-    where :math:`k` is the rank of X.
+    where :math:'k' is the rank of X.
     
     :Parameters:
       X : matrix

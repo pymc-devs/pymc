@@ -1,18 +1,26 @@
-%!TEX root = guide2.0.tex
+\subsection*{Autoregressive Normal} 
+\verb=arnormal_like(x, a, sigma, rho)=
+\begin{eqnarray*}
+	x_i & = a_i \exp(e_i) \\
+   e_i & = \rho e_{i-1} + \epsilon_i \\
+ \\
+ & \epsilon_i \sim N(0,\tau)	
+\end{eqnarray*}
 
 \subsection*{Bernoulli}
 \verb=bernoulli_like(x, p)=
 \begin{eqnarray*}
-f(x \mid p) &=& p^{x- 1} (1-p)^{1-x} \\
+f(x \mid p) &= p^{x- 1} (1-p)^{1-x} \\
 \\
-&&0 < p < 1 \\
-&&x=0,1
+&0 < p < 1 \\
+&x=0,1
 \end{eqnarray*}
 
 \subsection*{Beta}
 \verb=beta_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
 \begin{eqnarray*}
 f(x \mid \alpha, \beta) &=& \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1} \\
+\\
 &&0 < x < 1 \\
 &&\alpha > 0, \beta > 0
 \end{eqnarray*}
@@ -30,36 +38,56 @@ f(x \mid n, p) &=& \frac{n!}{x!(n-x)!}p^x (1-p)^{1-x} \\
 \verb=cauchy_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
 \begin{eqnarray*}
 f(x \mid \alpha, \beta) &=& \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]} \\
-\vspace{2cm}\\
+\\
 && \beta > 0
 \end{eqnarray*}
 
 \subsection*{Chi-squared}
-\verb=chi2_like(x, k)=
+\verb=chi2_like(x, =$\nu$\verb=)=
 \begin{eqnarray*}
-f(x \mid k) &=& \frac{x^{\frac{k}{2}-1}e^{-2x}}{\Gamma(\frac{k}{2}) \frac{1}{2}^{k/2}} \\
-\vspace{2cm}\\
+f(x \mid \nu) &=& \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)} \\
+\\
 && x \ge 0 \\
-&& k > 0
+&& \nu > 0
 \end{eqnarray*}
 
 \subsection*{Dirichlet}
 \verb=dirichlet_like(p, =$\theta$\verb=)=
 \begin{eqnarray*}
-f(\mathbf{p}) &=& \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k p_i^{\theta_i - 1}\\
-\vspace{2cm}\\
+f(\mathbf{p}) &=& \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod_{i=1}^k \Gamma(\theta_i)} \prod_{i=1}^k p_i^{\theta_i - 1}\\
+\\
 && 0 < p_i < 1 \\
 && \theta_i > 0
+\end{eqnarray*}
+
+\subsection*{Exponential}
+\verb=exponential_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
+\begin{eqnarray*}
+f(x \mid \beta) &=& \frac{1}{\beta}e^{-x/\beta} \\
+\\
+&& x \ge 0 \\
+&& \beta > 0
 \end{eqnarray*}
 
 \subsection*{Gamma}
 \verb=gamma_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
 \begin{eqnarray*}
 f(x \mid \alpha, \beta) &=& \frac{x^{\alpha-1}e^{-x/\beta}}{\Gamma(\alpha) \beta^{\alpha}} \\
-\vspace{2cm}\\
+\\
 && x \ge 0 \\
 && \alpha > 0 \\
 && \beta > 0
+\end{eqnarray*}
+
+\subsection*{Generalized Extreme Value}
+\verb=gev_like(x, =$\alpha$\verb=, =$\beta$\verb=)=
+\begin{eqnarray*}
+f(x \mid \xi,\mu,\sigma) &=& \frac{1}{\sigma}(1 + \xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi-1}\exp{-(1+\xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi}}\\
+\\
+&& \sigma > 0,\\
+&& x > \mu-\sigma/\xi \text{ if } \xi > 0,\\
+&& x < \mu-\sigma/\xi \text{ if } \xi < 0\\
+&& x \in [-\infty,\infty] \text{ if } \xi = 0
 \end{eqnarray*}
 
 \subsection*{Geometric}
@@ -82,7 +110,7 @@ f(x \mid \tau) &=& \sqrt{\frac{2\tau}{\pi}} \exp\left\{ {\frac{-x^2 \tau}{2}}\ri
 \subsection*{Hypergeometric}
 \verb=hypergeometric_like(x,n,m,N)=
 \begin{eqnarray*}
-f(x \mid n, m, M) &=& \frac{\left(\begin{array}{c}m \\x\end{array}\right) \left(\begin{array}{c}N-m \\n-x\end{array}\right)}{\left(\begin{array}{c}N \\n\end{array}\right)} \\
+f(x \mid n, m, N) &=& \frac{\left(\begin{array}{c}m \\x\end{array}\right) \left(\begin{array}{c}N-m \\n-x\end{array}\right)}{\left(\begin{array}{c}N \\n\end{array}\right)} \\
 \vspace{3cm}\\
 && x = 0,1,\ldots,n\\
 && m = 0,1,\ldots,N
@@ -126,7 +154,7 @@ f(x \mid \pi, T) &=& \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\m
 \subsection*{Multivariate hypergeometric}
 \verb=multivariate_hypergeometric_like(x, n, m, N)=
 \begin{eqnarray*}
-f(x \mid n, m, N) &=& \frac{{\huge \prod}_{i=1}^k \left(\begin{array}{c}m_i \\x_i\end{array}\right)}{\left(\begin{array}{c}N \\n\end{array}\right)} \\
+f(x \mid n, m, N) &=& \frac{\prod_{i=1}^k \left(\begin{array}{c}m_i \\x_i\end{array}\right)}{\left(\begin{array}{c}N \\n\end{array}\right)} \\
 \vspace{3cm}\\
 && \sum_{i=1}^k x_i = n\\
 && \sum_{i=1}^k m_i = N
