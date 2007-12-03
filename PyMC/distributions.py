@@ -22,6 +22,10 @@ for non_cont in discrete_distributions + ['bernoulli']:
 
 availabledistributions = univ_distributions+mv_distributions
 
+# Changes lower case, underscore-separated names into "Class style" capitalized names
+# For example, 'negative_binomial' becomes 'NegativeBinomial'
+capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
+
 import flib
 import PyMC
 import numpy as np
@@ -62,7 +66,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     except TypeError: # No parents at all.
         parents_default = {}
     
-    name = name.capitalize()
+    name = capitalize(name)
     
     # Build docstring from distribution
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
@@ -1796,11 +1800,11 @@ def local_decorated_likelihoods(obj):
 
 for dist in continuous_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
-    locals()[dist.capitalize()]= stoch_from_dist(dist, dist_logp, dist_random)
+    locals()[capitalize(dist)]= stoch_from_dist(dist, dist_logp, dist_random)
     
 for dist in discrete_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
-    locals()[dist.capitalize()]= stoch_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
+    locals()[capitalize(dist)]= stoch_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
 
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
 Bernoulli = stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
