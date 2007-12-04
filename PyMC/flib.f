@@ -1230,19 +1230,29 @@ cf2py double precision intent(out) :: like
           RETURN
         endif
         
-        if ((ptmp .LE. 0.0) .OR. (ptmp .GE. 1.0)) then
-          if (ptmp .EQ. 0.0) then
-            ptmp = 1E-10
-          else if (ptmp .EQ. 1.0) then
-            ptmp = 1.0-1E-10
+        if ((ptmp .LE. 0.0D0) .OR. (ptmp .GE. 1.0D0)) then
+!         if p = 0, number of successes must be 0
+          if (ptmp .EQ. 0.0D0) then
+            if (x(i).GT.0.0D0) then
+                like = -infinity
+                RETURN
+!                 else like = like + 0
+            end if
+          else if (ptmp .EQ. 1.0D0) then
+!           if p = 1, number of successes must be n
+            if (x(i).LT.ntmp) then
+                like = -infinity
+                RETURN
+!                 else like = like + 0
+            end if
           else
             like = -infinity
             RETURN
           endif
-        endif
-        
-        like = like + x(i)*dlog(ptmp) + (ntmp-x(i))*dlog(1.-ptmp)
-        like = like + factln(ntmp)-factln(x(i))-factln(ntmp-x(i)) 
+        else
+            like = like + x(i)*dlog(ptmp) + (ntmp-x(i))*dlog(1.-ptmp)
+            like = like + factln(ntmp)-factln(x(i))-factln(ntmp-x(i)) 
+        end if
       enddo
       return
       END
