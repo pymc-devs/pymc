@@ -94,6 +94,8 @@ C Returns the logarithm of the multivariate gamma function for x > 0
 C Returns the value n! as a floating-point number. 
 
       INTEGER n 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       INTEGER j,ntop 
 C Table to be filled in only as required. 
@@ -103,7 +105,9 @@ C Table initialized with 0! only.
       DATA ntop,a(1)/0,1./
 
       if (n.lt.0) then 
-        write (*,*) 'negative factorial in factrl' 
+c        write (*,*) 'negative factorial in factrl' 
+        factrl=-infinity
+        return
       else if (n.le.ntop) then 
 C Already in table. 
         factrl=a(n+1) 
@@ -128,11 +132,18 @@ C USES gammln Returns ln(n!).
 
       INTEGER n 
       DOUBLE PRECISION a(100),gammln, pass_val 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
       SAVE a 
 C Initialize the table to negative values. 
       DATA a/100*-1./ 
       pass_val = n + 1
-      if (n.lt.0) write (*,*) 'negative factorial in factln' 
+      if (n.lt.0) then
+c        write (*,*) 'negative factorial in factln' 
+        factln=-infinity
+        return
+      endif
 C In range of the table. 
       if (n.le.99) then
 C If not already in the table, put it in.
@@ -1220,8 +1231,14 @@ cf2py double precision intent(out) :: like
         endif
         
         if ((ptmp .LE. 0.0) .OR. (ptmp .GE. 1.0)) then
-          like = -infinity
-          RETURN
+          if (ptmp .EQ. 0.0) then
+            ptmp = 1E-10
+          else if (ptmp .EQ. 1.0) then
+            ptmp = 1.0-1E-10
+          else
+            like = -infinity
+            RETURN
+          endif
         endif
         
         like = like + x(i)*dlog(ptmp) + (ntmp-x(i))*dlog(1.-ptmp)
