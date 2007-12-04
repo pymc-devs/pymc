@@ -12,6 +12,7 @@ from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
     reshape, shape, log, asarray, dot
 from numpy.random import randint, random
 from PyMC.Node import ZeroProbability
+from PyMC.PyMCObjects import BinaryStochastic
 
 class AdaptiveMetropolis(StepMethod):
     """
@@ -52,7 +53,7 @@ class AdaptiveMetropolis(StepMethod):
         if getattr(stoch, '__class__') is PyMC.PyMCObjects.Stochastic:
             stoch = [stoch] 
     
-        StepMethod.__init__(self,stoch, verbose)
+        StepMethod.__init__(self, stoch, verbose)
         
         
         self.epoch = epoch
@@ -66,7 +67,7 @@ class AdaptiveMetropolis(StepMethod):
         
         self.check_type()
         self.dimension()
-        
+                   
         ord_sc = self.order_scales(scales)    
         if cov is None:
             self.C_0 = eye(self.dim)*ord_sc
@@ -82,6 +83,13 @@ class AdaptiveMetropolis(StepMethod):
         self.chain_mean = asmatrix(zeros(self.dim))
         self._trace = []
         
+        if self.verbose >= 1:
+            print "Initialization..."
+            print 'Dimension: ', self.dim
+            print "Ordered scales: ", ord_sc
+            print "C_0: ", self.C_0
+            print "Sigma: ", self._sig
+
         # State variables used to restore the state in a latter session. 
         self._state += ['_last_trace_index', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
@@ -149,8 +157,6 @@ class AdaptiveMetropolis(StepMethod):
         if squeeze(ord_sc.shape) != self.dim:
             raise "Improper initial scales, dimension don't match", \
                 (ord_sc, self.dim)
-        if self.verbose >= 1:
-            print "Ordered scales : ", ord_sc
         return ord_sc
         
     def covariance(self):
@@ -189,11 +195,15 @@ class AdaptiveMetropolis(StepMethod):
         self.C = t1 + s_d/i * (t2 - t3 + t4 + t5)
         self._sig = msqrt(self.C)
         self._trace = []
+        if self.verbose > 1:
+            print "Updating covariance: -- %(self._current_iter)d -- "%vars(), self.C  
               
     def update_mean(self, chain):
         """Update the chain mean"""
         self.chain_mean = 1./self._current_iter * \
         ( self._last_trace_index * self.chain_mean + chain.sum(0))
+        if self.verbose > 1:
+            print "Updating mean: -- %(self._current_iter)d -- "%vars(), self.chain_mean 
         
     def trace2array(i0,i1):
         """Return an array with the trace of all stochs from index i0 to i1."""
