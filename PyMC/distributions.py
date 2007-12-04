@@ -55,7 +55,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     Return a Stochastic subclass made from a particular distribution.
 
       :Example:
-        >>> Exponential = create_distribution_instantiator('exponential')
+        >>> Exponential = stoch_from_dist('exponential')
         >>> A = Exponential('A', value=2.3, beta=4)
     """
     
@@ -76,7 +76,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     
     class new_class(base):
         __doc__ = docstr
-        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, isdata=False, doc=docstr, **kwds):
+        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, isdata=False, doc=docstr, debug=False, **kwds):
 
             parents=parents_default
 
@@ -107,11 +107,16 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 shape = np.shape(value)
                 
             # Call base class initialization method
-            base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
-                random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+            if debug:
+                base.__init__(self, value=value, name=self_name, parents=parents, logp=debugwrapper(valuewrapper(logp), self_name), \
+                    random=debugwrapper(random_method_wrapper(random, size, shape), self_name), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+            else:
+                base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
+                    random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
 
     new_class.__name__ = name
     new_class.parent_labels = parents_default.keys()
+    
     return new_class
 
 
@@ -219,6 +224,23 @@ def randomwrap(func):
                 return r[0][0]
 
     wrapper.__doc__ = func.__doc__
+    return wrapper
+    
+def debugwrapper(func, name):
+    # Wrapper to debug distributions
+    
+    import pdb
+    
+    def wrapper(*args, **kwargs):
+        
+        print 'Debugging inside %s; Press \'s\' twice to step into function for debugging' % name
+        
+        # Set debugging trace
+        pdb.set_trace()
+                
+        # Call function
+        return func(*args, **kwargs)
+    
     return wrapper
 
 
@@ -1013,11 +1035,8 @@ def lognormal_like(x, mu, tau):
     :Note:
       :math:'E(X)=e^{\\mu+\\frac{1}{2\\tau}}'
     """
-    # try:
-    #     constrain(tau, lower=0)
-    #     constrain(x, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
+    
     return flib.lognormal(x,mu,tau)
 
 # Multinomial----------------------------------------------
@@ -1071,13 +1090,8 @@ def multinomial_like(x, n, p):
 
     x = np.atleast_2d(x)
     p = np.atleast_2d(p)
-    # try:
-    #     constrain(p, lower=0, allow_equal=True)
-    #     constrain(x, lower=0, allow_equal=True)
-    #     constrain(p.sum(1), upper=1, allow_equal=True)
-    #     constrain(x.sum(1), upper=n, allow_equal=True)
-    # except ZeroProbability:
-    #     return -Inf
+    
+    
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
@@ -1135,10 +1149,8 @@ def multivariate_hypergeometric_like(x, m):
         m : int sequence
             Number of items in each categoy. 
     """
-    # try:
-    #     constrain(x, upper=m)
-    # except ZeroProbability:
-    #     return -Inf
+    
+    
     return flib.mvhyperg(x, m)
 
 
@@ -1333,12 +1345,8 @@ def negative_binomial_like(x, mu, alpha):
 
     x > 0, mu > 0, alpha > 0
     """
-    # try:
-    #     constrain(mu, lower=0)
-    #     constrain(alpha, lower=0)
-    #     constrain(x, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
+    
     return flib.negbin2(x, mu, alpha)
 
 # Normal---------------------------------------------------
@@ -1593,7 +1601,6 @@ def rwishart(n, Tau):
     np = len(Sigma)
     return expand_triangular(flib.wshrt(D, n, np), np)
 
-
 def wishart_expval(n, Tau):
     """
     wishart_expval(n, Tau)
@@ -1625,11 +1632,7 @@ def wishart_like(X, n, Tau):
         Symmetric and positive definite
 
     """
-    # try:
-    #     constrain(np.diagonal(Tau), lower=0)
-    #     constrain(n, lower=0)
-    # except ZeroProbability:
-    #     return -Inf
+    
     return flib.wishart(X, n, Tau)
 
 
