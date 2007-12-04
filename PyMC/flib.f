@@ -1225,7 +1225,7 @@ cf2py double precision intent(out) :: like
         if (not_scalar_n) ntmp = n(i)
         if (not_scalar_p) ptmp = p(i)
         
-        if ((x(i) .LT. 0) .OR. (ntmp .LT. 0)) then
+        if ((x(i) .LT. 0) .OR. (ntmp .LT. 0) .OR. (x(i) .GT. ntmp)) then
           like = -infinity
           RETURN
         endif
