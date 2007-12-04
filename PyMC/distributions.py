@@ -108,8 +108,8 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 
             # Call base class initialization method
             if debug:
-                base.__init__(self, value=value, name=self_name, parents=parents, logp=debugwrapper(valuewrapper(logp), self_name), \
-                    random=debugwrapper(random_method_wrapper(random, size, shape), self_name), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+                base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(debugwrapper(logp, self_name)), \
+                    random=random_method_wrapper(debugwrapper(random, self_name), size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
             else:
                 base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
                     random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
@@ -233,7 +233,8 @@ def debugwrapper(func, name):
     
     def wrapper(*args, **kwargs):
         
-        print 'Debugging inside %s; Press \'s\' twice to step into function for debugging' % name
+        print 'Debugging inside %s; Press \'s\' to step into function for debugging' % name
+        print 'Call \'args\' to list function arguments'
         
         # Set debugging trace
         pdb.set_trace()
