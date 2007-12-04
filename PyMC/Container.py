@@ -343,21 +343,19 @@ class ObjectContainer(ContainerBase):
     def __init__(self, input):
 
         if isinstance(input, dict):
-            self.__dict__.update(input)
             input_to_file = input
+            self.__dict__.update(input_to_file)
 
         elif hasattr(input,'__iter__'):
             input_to_file = input
-            for item in input:
-                if isinstance(item, Node) or isinstance(item, ContainerBase):
-                    self.__dict__[item.__name__] = item
-        else:
+
+        else: # Modules, objects, etc.
             input_to_file = filter_dict(input)
             self.__dict__.update(input_to_file)
 
         self._dict_container = DictContainer(self.__dict__)  
         file_items(self, input_to_file)
-
+        
         self._value = copy(self)
         ContainerBase.__init__(self, input)
 	

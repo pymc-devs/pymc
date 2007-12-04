@@ -78,10 +78,6 @@ class Model(ObjectContainer):
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
 
-        self.generations = []
-        self.verbose = verbose
-        self.output_path = output_path
-
         # Get stochs, dtrms, etc.
         if input is None:
             import __main__
@@ -89,6 +85,10 @@ class Model(ObjectContainer):
             input = __main__
         
         ObjectContainer.__init__(self, input)
+        
+        self.generations = []
+        self.verbose = verbose
+        self.output_path = output_path
         
         if not hasattr(self, 'generations'):
             self.find_generations()
