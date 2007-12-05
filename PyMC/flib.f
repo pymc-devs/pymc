@@ -75,8 +75,9 @@ C a nicety that you can omit if five-figure accuracy is good enough.
       
       DOUBLE PRECISION FUNCTION mvgammln(x, k)
 C Returns the logarithm of the multivariate gamma function for x > 0
-      
-      DOUBLE PRECISION PI
+      IMPLICIT NONE
+      DOUBLE PRECISION PI, x
+      DOUBLE PRECISION gammln
       PARAMETER (PI=3.141592653589793238462643d0)
       INTEGER j,k
       

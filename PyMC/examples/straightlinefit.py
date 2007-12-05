@@ -56,7 +56,7 @@ def theta(value=array([2.,5.])):
     return prob_intercept+prob_slope
     
 init_x = data_x.clip(min=0, max=50)
-print init_x
+
 @stoch
 def x(value=init_x):
     """Inferred true inputs."""
@@ -84,17 +84,17 @@ def y(value=data_y, y=modelled_y, sigma_y=2):
     return normal_like(value, y, sigma_y)
     
 
-def plot(model):
-    """Plot the objects of the straightline model."""
-    s = pylab.subplot(111)
-    s.plot(true_x, true_y, 'ko')
-    s.plot(model.x.value, model.modelled_y.value, 'bo')
-    s.plot(model.x.value, model.modelled_y.value, 'b-')
-    return s
+##def plot(model):
+##    """Plot the objects of the straightline model."""
+##    s = pylab.subplot(111)
+##    s.plot(true_x, true_y, 'ko')
+##    s.plot(model.x.value, model.modelled_y.value, 'bo')
+##    s.plot(model.x.value, model.modelled_y.value, 'b-')
+##    return s
     
    
 
-if __name__=='__main__':
-    S = AdaptativeSampler(locals(), 'ram')
-    S.sample(100,0,1)
-    S.close()
+##if __name__=='__main__':
+##    S = AdaptativeSampler(locals(), 'ram')
+##    S.sample(100,0,1)
+##    S.close()

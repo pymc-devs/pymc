@@ -3,12 +3,19 @@
 # Author: David Huard
 # Date: April 23, 2007
 # Reference: Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm, Bernouilli, vol. 7 (2), pp. 223-242, 2001.
-###
+### 
+
+### Changeset
+# Dec. 4, 2007 -- Fixed a slew of bugs. Refactored the code.
+# Dec. 5, 2007 -- 
+
+from __future__ import division
 import PyMC
 from PyMC.utils import msqrt, check_type, round_array
-from PyMC import StepMethod
+from PyMC import StepMethod, Metropolis, rmvnormal
 from PyMC.flib import fill_stdnormal
-from numpy import ndarray, concatenate, squeeze, eye, zeros, asmatrix, inner,\
+import numpy as np
+from numpy import ndarray, squeeze, eye, zeros, asmatrix, inner,\
     reshape, shape, log, asarray, dot
 from numpy.random import randint, random
 from PyMC.Node import ZeroProbability
@@ -16,7 +23,7 @@ from PyMC.PyMCObjects import BinaryStochastic
 
 class AdaptiveMetropolis(StepMethod):
     """
-    S = AdaptiveMetropolis(self, stoch, cov, delay=1000, scale={})
+    S = AdaptiveMetropolis(self, stoch, cov, delay=1000, interval=100, scale={})
 
     Applies the Metropolis-Hastings algorithm to several stochs
     together. Jumping density is a multivariate normal distribution
@@ -46,7 +53,7 @@ class AdaptiveMetropolis(StepMethod):
           guess is estimated using the current objects value. 
 
     """
-    def __init__(self, stoch, cov=None, epoch=1000, delay=1000, scales=None, interval=100, verbose=0):
+    def __init__(self, stoch, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
         
         self.verbose = verbose
         
@@ -56,12 +63,12 @@ class AdaptiveMetropolis(StepMethod):
         StepMethod.__init__(self, stoch, verbose)
         
         
-        self.epoch = epoch
         self.delay = delay
         self.scales = scales
         self.isdiscrete = {}
         self.interval = interval
-
+        self.greedy = greedy
+        
         self._ready = False
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
         
@@ -70,16 +77,22 @@ class AdaptiveMetropolis(StepMethod):
                    
         ord_sc = self.order_scales(scales)    
         if cov is None:
-            self.C_0 = eye(self.dim)*ord_sc
+            self.C_0 = eye(self.dim)*ord_sc/20.
         else:
             self.C_0 = cov
-        self._sig = msqrt(self.C_0)
-        self.scaling_stoch = (2.4)**2/self.dim # Gelman et al. 1996.
+            
+        #self._sig = msqrt(self.C_0)
+        self._sig = np.linalg.inv(self.C_0)
         
-        self._last_trace_index = 0
+        # Keep track of the internal trace length
+        # It may be different from the iteration count since greedy 
+        # sampling is done during warm-up. 
+        self._trace_count = 0 
+        
         self._current_iter = 0
+        
         self._proposal_deviate = zeros(self.dim)
-        self.C = zeros((self.dim,self.dim))
+        self.C = self.C_0.copy()
         self.chain_mean = asmatrix(zeros(self.dim))
         self._trace = []
         
@@ -91,7 +104,7 @@ class AdaptiveMetropolis(StepMethod):
             print "Sigma: ", self._sig
 
         # State variables used to restore the state in a latter session. 
-        self._state += ['_last_trace_index', '_current_iter', 'C', '_sig',
+        self._state += ['_trace_count', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
 
                
@@ -152,22 +165,13 @@ class AdaptiveMetropolis(StepMethod):
                 ord_sc.append(scales[stoch])
             except (TypeError, KeyError):
                 ord_sc.append(stoch.value.ravel())
-        ord_sc = concatenate(ord_sc)
+        ord_sc = np.concatenate(ord_sc)
         
         if squeeze(ord_sc.shape) != self.dim:
             raise "Improper initial scales, dimension don't match", \
                 (ord_sc, self.dim)
         return ord_sc
-        
-    def covariance(self):
-        """
-        Return the covariance of the chain. 
-        """
-        if self._model._current_iter < self.delay:
-            return self.C_0
-        else:
-            return self.C
-            
+                
     def update_cov(self):
         """Return the updated covariance.
         
@@ -178,39 +182,90 @@ class AdaptiveMetropolis(StepMethod):
         the covariance was computed. 
         """
         
-        epsilon = 1.0e-6
-        i0 = self._last_trace_index
-        i = self._current_iter
-        s_d = self.scaling_stoch
-        n = i - i0
+        scaling = (2.4)**2/self.dim # Gelman et al. 1996.
+        epsilon = 1.0e-5
         chain = asarray(self._trace)
         
-        t1 = i0/i * self.covariance()
-        t2 =  (i0+1) * dot(self.chain_mean.T, self.chain_mean)
-        self.update_mean(chain)
-        t3 = (i+1) * dot(self.chain_mean.T, self.chain_mean)
-        t4 = dot(chain.T, chain)
-        t5 = epsilon * eye(self.dim)
+        # Recursively compute the chain mean 
+        cov, mean = self.recursive_cov(self.C, self._trace_count, 
+            self.chain_mean, chain, scaling=scaling, epsilon=epsilon)
         
-        self.C = t1 + s_d/i * (t2 - t3 + t4 + t5)
-        self._sig = msqrt(self.C)
-        self._trace = []
-        if self.verbose > 1:
-            print "Updating covariance: -- %(self._current_iter)d -- "%vars(), self.C  
+        if self.verbose > 0:
+            print "\tUpdating covariance ...\n", cov
+            print "\tUpdating mean ... ", mean
+        
+        # Update state
+        self.C = cov
+        #self._sig = msqrt(self.C)
+        self._sig = np.linalg.inv(cov)
+        self.chain_mean = mean
+        self._trace_count += len(self._trace)
+        self._trace = []        
+        
+        
               
-    def update_mean(self, chain):
-        """Update the chain mean"""
-        self.chain_mean = 1./self._current_iter * \
-        ( self._last_trace_index * self.chain_mean + chain.sum(0))
-        if self.verbose > 1:
-            print "Updating mean: -- %(self._current_iter)d -- "%vars(), self.chain_mean 
+              
+    def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
+        r"""Compute the covariance recursively.
         
-    def trace2array(i0,i1):
-        """Return an array with the trace of all stochs from index i0 to i1."""
-        chain = []
-        for stoch in self.stochs:
-            chain.append(ravel(stoch.trace.gettrace(slicing=slice(i0,i1))))
-        return concatenate(chain)
+        Return the new covariance and the new mean. 
+        
+        .. math::
+            C_k & = \frac{1}{k-1} (\sum_{i=1}^k x_i x_i^T - k\bar{x_k}\bar{x_k}^T)
+            C_n & = \frac{1}{n-1} (\sum_{i=1}^k x_i x_i^T + \sum_{i=k+1}^n x_i x_i^T - k\bar{x_n}\bar{x_n}^T)
+                & = \frac{1}{n-1} ((k-1)C_k + k\bar{x_k}\bar{x_k}^T + \sum_{i=k+1}^n x_i x_i^T - k\bar{x_n}\bar{x_n}^T)
+                
+        :Parameters:
+            -  cov : matrix
+                Previous covariance matrix.
+            -  length : int
+                Length of chain used to compute the previous covariance.
+            -  mean : array
+                Previous mean. 
+            -  chain : array
+                Sample used to update covariance.
+            -  scaling : float
+                Scaling parameter
+            -  epsilon : float
+                Set to a small value to avoid singular matrices.
+            
+        """
+        n = length + len(chain)
+        k = length
+        new_mean = self.recursive_mean(mean, length, chain)
+        
+        t0 = (k-1) * cov
+        t2 = k * np.outer(mean, mean)
+        t3 = np.dot(chain.T, chain)
+        t4 = n*np.outer(new_mean, new_mean)
+        t5 = epsilon * np.eye(cov.ndim)
+        
+        new_cov =  (k-1)/(n-1)*cov + scaling/(n-1.  ) * (t2 + t3 - t4 + t5)
+        return new_cov, new_mean
+        
+    def recursive_mean(self, mean, length, chain):
+        r"""Compute the chain mean recursively.
+        
+        Instead of computing the mean :math:`\bar{x_n}` of the entire chain, 
+        use the last computed mean :math:`bar{x_j}` and the tail of the chain 
+        to recursively estimate the mean. 
+        
+        .. math::
+            \bar{x_n} & = \frac{1}{n} \sum_{i=1]^n x_i
+                      & = \frac{1}{n} (\sum_{i=1]^j x_i + \sum_{i=j+1]^n x_i)
+                      & = \frac{j\bar{x_j}}{n} + \frac{\sum_{i=j+1]^n x_i}{n}
+        
+        :Parameters:
+            -  mean : array
+                Previous mean.
+            -  length : int
+                Length of chain used to compute the previous mean.
+            -  chain : array
+                Sample used to update mean.
+        """      
+        n = length + len(chain)
+        return length * mean / n + chain.sum(0)/n
+        
 
     def propose(self):
         """
@@ -225,18 +280,16 @@ class AdaptiveMetropolis(StepMethod):
           3. Compute X = AZ.
         
         """
-        # 1. Done in compute_sig. A = self._sig
+        # 1. Done in self.update_cov. A = self._sig
         
         # 2. Draw Z. Fill in place with normal standard variates
-        fill_stdnormal(self._proposal_deviate)
+        #fill_stdnormal(self._proposal_deviate)
         
         # 3. Compute multivariate jump.
-        arrayjump = inner(self._proposal_deviate, self._sig)
-                
+        #arrayjump = inner(self._proposal_deviate, self._sig)
+        arrayjump = rmvnormal(np.zeros(self.dim), self._sig)
+        
         # 4. Update each stoch individually.
-        # TODO: test inplace jump, ie stoch.value += jump
-        # This won't work - in-place stoch value updates aren't allowed.
-
         for stoch in self.stochs:
             jump = reshape(arrayjump[self._slices[stoch]],shape(stoch.value))
             if self.isdiscrete[stoch]:
@@ -244,9 +297,6 @@ class AdaptiveMetropolis(StepMethod):
             else:
                 stoch.value = stoch.value + jump
                 
-        # 5. Store the trace internally. 
-        self._arrayjump = arrayjump
-
     def step(self):
         """
         If the empirical covariance hasn't been computed yet, the step() call
@@ -255,42 +305,70 @@ class AdaptiveMetropolis(StepMethod):
         
         If the empirical covariance has been computed, values for self's stochs
         are proposed and tested simultaneously.
+        
+        The algorithm is greedy until delay is reached. That is, only accepted
+        jumps are stored in the local trace in order to avoid singular 
+        covariance matrices. 
         """
 
         # Probability and likelihood for stoch's current value:
         logp = sum([stoch.logp for stoch in self.stochs])
         loglike = self.loglike
 
-        # Sample a candidate value
+        # Sample a candidate value              
         self.propose()
         
+        # Test
+        accept = False
         try:
             # Probability and likelihood for stoch's proposed value:
             logp_p = sum([stoch.logp for stoch in self.stochs])
             loglike_p = self.loglike
-            
-            # Test
-            if log(random()) > logp_p + loglike_p - logp - loglike:
-                raise 'Rejected'
-            else:
+            if log(random()) < logp_p + loglike_p - logp - loglike:
+                accept = True
                 self._accepted += 1
-                self._trace.append(self._arrayjump)
-                
-        except (ZeroProbability, 'Rejected'):
+            else:
+                self._rejected += 1
+        except ZeroProbability:
             self._rejected += 1
             
-            if self._current_iter > self.delay: 
-                self._trace.append(self._arrayjump)
-                
+        if self.verbose > 1:
+            print "Step ", self._current_iter
+            print "\tLogprobability (current, proposed): ", logp, logp_p
+            print "\tloglike (current, proposed):      : ", loglike, loglike_p
+            for stoch in self.stochs:
+                print "\t", stoch.__name__, stoch.last_value, stoch.value
+            if accept:
+                print "\tAccepted\t*******\n"
+            else: 
+                print "\tRejected\n"
+            print "\tAcceptance ratio: ", self._accepted/(self._accepted+self._rejected)
+            
+        if self._current_iter == self.delay: 
+            self.greedy = False
+            
+        if not accept:
             for stoch in self.stochs:
                 stoch.value = stoch.last_value
-            return
+        
+        if accept or not self.greedy:
+            self.internal_tally()
 
-        if self._current_iter>self.delay and \
-            self._current_iter%self.interval==0:
+        if self._current_iter>self.delay and self._current_iter%self.interval==0:
            self.update_cov()
-           self.last_trace_index = self._current_iter
-           
+    
+        self._current_iter += 1
+    
+    def internal_tally(self):
+        """Store the trace of stochs for the computation of the covariance.
+        This is completely independent from the backend used by the sampler to 
+        store the samples."""
+        chain = []
+        for stoch in self.stochs:
+            chain.append(stoch.value.ravel())
+        self._trace.append(np.concatenate(chain))
+        
+    
     def tune(self, verbose):
         return True
    
