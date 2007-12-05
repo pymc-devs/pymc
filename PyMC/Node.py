@@ -36,12 +36,15 @@ class Node(object):
               An integer indicating how many of this dtrm's
               value computations should be 'memorized'.
               
+          - plot (optional) : boolean
+            A flag indicating whether this variable is to be plotted.
+              
           - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     :SeeAlso: Stochastic, Deterministic
     """
-    def __init__(self, doc, name, parents, cache_depth, trace, verbose=0):
+    def __init__(self, doc, name, parents, cache_depth, trace, plot=True, verbose=0):
 
         # Name and docstrings
         self.__doc__ = doc
@@ -49,6 +52,9 @@ class Node(object):
         
         # Adopt passed trace
         self.trace = trace
+        
+        # Do we want to plot this Node
+        self._plot = plot
         
         # Level of feedback verbosity
         self.verbose = verbose
@@ -96,6 +102,12 @@ class Node(object):
         self.gen_lazy_function()
         
     parents = property(_get_parents, _set_parents)
+    
+    def _get_plot(self):
+        # Get plotting flag
+        return self._plot
+        
+    plot = property(_get_plot)
     
     def __str__(self):
         return self.__repr__()

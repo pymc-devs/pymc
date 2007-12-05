@@ -154,6 +154,9 @@ class Potential(PotentialBase):
         -cache_depth (optional): integer
               An integer indicating how many of this potential's value computations 
               should be 'memoized'.
+              
+        - plot (optional) : boolean
+            A flag indicating whether this variable is to be plotted.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -169,7 +172,7 @@ class Potential(PotentialBase):
     
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=True, verbose=0):
         
         self.ParentDict = ParentDict
 
@@ -182,6 +185,7 @@ class Potential(PotentialBase):
                         parents=parents, 
                         cache_depth = cache_depth, 
                         trace=False,
+                        plot=plot,
                         verbose=verbose)
 
         self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
@@ -255,6 +259,9 @@ class Deterministic(DeterministicBase):
         -cache_depth (optional): integer  
               An integer indicating how many of this variable's
               value computations should be 'memoized'.
+              
+        - plot (optional) : boolean
+            A flag indicating whether this variable is to be plotted.
                                     
         - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -270,7 +277,7 @@ class Deterministic(DeterministicBase):
     
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, verbose=0):
+    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, plot=True, verbose=0):
 
         self.ParentDict = ParentDict
 
@@ -283,6 +290,7 @@ class Deterministic(DeterministicBase):
                         parents=parents, 
                         cache_depth = cache_depth, 
                         trace=trace,
+                        plot=plot,
                         verbose=verbose)
         
         self._value.force_compute()
@@ -373,6 +381,9 @@ class Stochastic(StochasticBase):
     - cache_depth (optional) : integer
             An integer indicating how many of this variable's
             log-probability computations should be 'memoized'.
+            
+    - plot (optional) : boolean
+            A flag indicating whether this variable is to be plotted.
                             
     - verbose (optional) : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -410,6 +421,7 @@ class Stochastic(StochasticBase):
                     rseed=False, 
                     isdata=False,
                     cache_depth=2,
+                    plot=True,
                     verbose = 0):                    
 
         self.ParentDict = ParentDict
@@ -445,6 +457,7 @@ class Stochastic(StochasticBase):
                         parents=parents, 
                         cache_depth=cache_depth, 
                         trace=trace,
+                        plot=plot,
                         verbose=verbose)
                             
         self._logp.force_compute()                   

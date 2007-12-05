@@ -4,7 +4,7 @@ The DisasterMCMC example.
 """
 from numpy.testing import *
 from pylab import *
-PLOT=False
+PLOT=True
 
 
 class test_MCMC(NumpyTestCase):
@@ -23,7 +23,7 @@ class test_MCMC(NumpyTestCase):
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
         # Sample
-        M.sample(100000,50000,verbose=2)
+        M.sample(20000,10000,verbose=2)
         
         if PLOT:
             # Plot samples

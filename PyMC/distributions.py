@@ -233,8 +233,9 @@ def debugwrapper(func, name):
     
     def wrapper(*args, **kwargs):
         
-        print 'Debugging inside %s; Press \'s\' to step into function for debugging' % name
-        print 'Call \'args\' to list function arguments'
+        print 'Debugging inside %s:' % name
+        print '\tPress \'s\' to step into function for debugging' 
+        print '\tCall \'args\' to list function arguments'
         
         # Set debugging trace
         pdb.set_trace()

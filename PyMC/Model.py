@@ -317,7 +317,7 @@ class Sampler(Model):
         # Loop over nodes
         for variable in self._variables_to_tally:            
             # Plot object
-            self._plotter.plot(variable)
+            if variable.plot: self._plotter.plot(variable)
 
         # show()
 
