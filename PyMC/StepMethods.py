@@ -1,6 +1,6 @@
 __docformat__='reStructuredText'
 from utils import msqrt, check_type, round_array
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -571,7 +571,7 @@ class BinaryMetropolis(Metropolis):
             # Vector-valued stochs
             
             val[i] = to_value
-            self.stoch.value = reshape(val, self._type[1])
+            self.stoch.value = reshape(val, check_type(self.stoch)[1])
         
         else:
             # Scalar stochs
