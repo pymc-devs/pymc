@@ -16,6 +16,20 @@ def dtrm_to_NDarray(arg):
     else:
         return arg
 
+def prop(func):
+  """Function decorator for defining property attributes
+
+  The decorated function is expected to return a dictionary
+  containing one or more of the following pairs:
+      fget - function for getting attribute value
+      fset - function for setting attribute value
+      fdel - function for deleting attribute
+  This can be conveniently constructed by the locals() builtin
+  function; see:
+  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/205183
+  """
+  return property(doc=func.__doc__, **func())
+  
 def fortranlike_method(f, snapshot, mv=False):
     """
     Decorator function building likelihood method for Sampler

@@ -10,14 +10,14 @@
 # Dec. 5, 2007 -- 
 
 from __future__ import division
+
+import numpy as np
+from numpy.random import randint, random
+
 import PyMC
 from PyMC.utils import msqrt, check_type, round_array
 from PyMC import StepMethod, Metropolis, rmvnormal
 from PyMC.flib import fill_stdnormal
-import numpy as np
-from numpy import ndarray, squeeze, eye, zeros, asmatrix, inner,\
-    reshape, shape, log, asarray, dot
-from numpy.random import randint, random
 from PyMC.Node import ZeroProbability
 from PyMC.PyMCObjects import BinaryStochastic
 
@@ -25,32 +25,31 @@ class AdaptiveMetropolis(StepMethod):
     """
     S = AdaptiveMetropolis(self, stoch, cov, delay=1000, interval=100, scale={})
 
-    Applies the Metropolis-Hastings algorithm to several stochs
-    together. Jumping density is a multivariate normal distribution
-    with mean zero and covariance equal to the empirical covariance
-    of the stochs.
+    The AdaptativeMetropolis (AM) sampling algorithm works like a regular 
+    Metropolis, with the exception that stochastic parameters are block-updated 
+    using a multivariate jump distribution whose covariance is tuned during 
+    sampling. Although the chain is non-Markovian, i.e. the proposal 
+    distribution is asymetric, it has correct ergodic properties. See
+    (Haario et al., 2001) for details. 
     
     :Parameters:
-    
       - stoch : PyMC objects
-            These objects are to be handled using the AdaptativeMetropolis step 
-            method.
+            Stochastic objects to be handled by the AM algorith,
             
       - cov : array
             Initial guess for the covariance matrix C_0. 
             
       - delay : int
           Number of iterations before the empirical covariance is computed.
-          Equivalent to t_0 in Haario et al. (2001).
         
       - interval : int
           Interval between covariance updates.
           
       - scale : dict
           Dictionary containing the scale for each stoch keyed by name.
-          The scales are used to define an initial covariance matrix used 
-          until delay is reached. If it not given, and cov is None, a first 
-          guess is estimated using the current objects value. 
+          If cov is None, those scales are used to define an initial covariance
+          C_0. If neither cov nor scale is given, the initial covariance is 
+          guessed from the objects value (or trace if available).
 
     """
     def __init__(self, stoch, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
@@ -59,72 +58,83 @@ class AdaptiveMetropolis(StepMethod):
         
         if getattr(stoch, '__class__') is PyMC.PyMCObjects.Stochastic:
             stoch = [stoch] 
-    
         StepMethod.__init__(self, stoch, verbose)
         
+        self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
+        
+        # State variables used to restore the state in a latter session. 
+        self._state += ['_trace_count', '_current_iter', 'C', '_sig',
+        '_proposal_deviate', '_trace']
         
         self.delay = delay
-        self.scales = scales
         self.isdiscrete = {}
         self.interval = interval
         self.greedy = greedy
         
-        self._ready = False
-        self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
-        
         self.check_type()
         self.dimension()
-                   
-        ord_sc = self.order_scales(scales)    
-        if cov is None:
-            self.C_0 = eye(self.dim)*ord_sc/20.
-        else:
-            self.C_0 = cov
-            
+        self.C_0 = self.initialize_cov(cov, scales)           
+        
         #self._sig = msqrt(self.C_0)
         self._sig = np.linalg.inv(self.C_0)
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
-        # sampling is done during warm-up. 
+        # sampling can be done during warm-up period.
         self._trace_count = 0 
-        
         self._current_iter = 0
         
-        self._proposal_deviate = zeros(self.dim)
+        self._proposal_deviate = np.zeros(self.dim)
         self.C = self.C_0.copy()
-        self.chain_mean = asmatrix(zeros(self.dim))
+        self.chain_mean = np.asmatrix(np.zeros(self.dim))
         self._trace = []
         
         if self.verbose >= 1:
             print "Initialization..."
             print 'Dimension: ', self.dim
-            print "Ordered scales: ", ord_sc
             print "C_0: ", self.C_0
             print "Sigma: ", self._sig
-
-        # State variables used to restore the state in a latter session. 
-        self._state += ['_trace_count', '_current_iter', 'C', '_sig',
-        '_proposal_deviate', '_trace']
-
-               
+              
     @staticmethod
     def competence(stoch):
         """
         The competence function for AdaptiveMetropolis.
+        The AM algorithm is well suited to deal with multivariate
+        parameters. 
         """
-
         if isinstance(stoch, BinaryStochastic):
             return 0
-
+        elif np.iterable(stoch):
+            return 2
+                
+                
+    def initialize_cov(self, cov=None, scales=None, scaling=20):
+        """Define C_0, the initial jump distributioin covariance matrix.
+        
+        Return:
+            - cov,  if cov != None
+            - covariance matrix built from the scales dictionary if scales!=None
+            - covariance matrix estimated from the stochs trace
+            - covariance matrix estimated from the stochs value, scaled by 
+                scaling parameter.
+        """
+        if cov:
+            return cov
+        elif scales:
+            ord_sc = self.order_scales(scales)    
+            return np.eye(self.dim)*ord_sc
         else:
-            _type = check_type(stoch)[0]
-            if _type in [float, int]:
-                return 1
-            else:
-                return 2
-                
-                
+            try:
+                a = self.trace2array(-2000, -1)
+                nz = a[:, 0]!=0
+                return np.cov(a[nz, :], rowvar=0)
+            except:
+                ord_sc = []
+                for stoch in self.stochs:
+                    ord_sc.append(stoch.value.ravel())
+                return np.eye(self.dim)*ord_sc/scaling
+            
+        
     def check_type(self):
         """Make sure each stoch has a correct type, and identify discrete stochs."""
         self.isdiscrete = {}
@@ -146,7 +156,7 @@ class AdaptiveMetropolis(StepMethod):
         self.dim = 0
         self._slices = {}
         for stoch in self.stochs:
-            if isinstance(stoch.value, ndarray):
+            if isinstance(stoch.value, np.ndarray):
                 p_len = len(stoch.value.ravel())
             else:
                 p_len = 1
@@ -161,30 +171,25 @@ class AdaptiveMetropolis(StepMethod):
         """
         ord_sc = []
         for stoch in self.stochs:
-            try:
-                ord_sc.append(scales[stoch])
-            except (TypeError, KeyError):
-                ord_sc.append(stoch.value.ravel())
+            ord_sc.append(scales[stoch])
         ord_sc = np.concatenate(ord_sc)
         
-        if squeeze(ord_sc.shape) != self.dim:
+        if np.squeeze(ord_sc.shape) != self.dim:
             raise "Improper initial scales, dimension don't match", \
                 (ord_sc, self.dim)
         return ord_sc
                 
     def update_cov(self):
-        """Return the updated covariance.
+        """Recursively compute the covariance matrix for the multivariate normal 
+        proposal distribution.
         
-        .. math::
-          \Sigma_i = \frac{k}{i} C_k + ...
-        
-        where i is the current index and k is the index from the last time
-        the covariance was computed. 
+        This method is called every self.interval once self.delay iterations 
+        have been performed.
         """
         
         scaling = (2.4)**2/self.dim # Gelman et al. 1996.
         epsilon = 1.0e-5
-        chain = asarray(self._trace)
+        chain = np.asarray(self._trace)
         
         # Recursively compute the chain mean 
         cov, mean = self.recursive_cov(self.C, self._trace_count, 
@@ -201,9 +206,6 @@ class AdaptiveMetropolis(StepMethod):
         self.chain_mean = mean
         self._trace_count += len(self._trace)
         self._trace = []        
-        
-        
-              
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.
@@ -228,7 +230,6 @@ class AdaptiveMetropolis(StepMethod):
                 Scaling parameter
             -  epsilon : float
                 Set to a small value to avoid singular matrices.
-            
         """
         n = length + len(chain)
         k = length
@@ -269,29 +270,20 @@ class AdaptiveMetropolis(StepMethod):
 
     def propose(self):
         """
-        This method proposes values for self's stochs based on the empirical
-        covariance :math:`\Sigma`.
+        This method proposes values for stochs based on the empirical
+        covariance of the values sampled so far.
         
-        The proposal jumps X are drawn from a multivariate normal distribution
-        by the following method:
-          1. Compute `A`, the Cholesky decomposition (matrix square root) of the
-             covariance matrix. :math:`AA^T = \Sigma`
-          2. Draw Z, a vector of n independent standard normal variates.
-          3. Compute X = AZ.
-        
+        The proposal jumps are drawn from a multivariate normal distribution.        
         """
-        # 1. Done in self.update_cov. A = self._sig
-        
-        # 2. Draw Z. Fill in place with normal standard variates
+                
         #fill_stdnormal(self._proposal_deviate)
+        #arrayjump = np.inner(self._proposal_deviate, self._sig)
         
-        # 3. Compute multivariate jump.
-        #arrayjump = inner(self._proposal_deviate, self._sig)
         arrayjump = rmvnormal(np.zeros(self.dim), self._sig)
         
         # 4. Update each stoch individually.
         for stoch in self.stochs:
-            jump = reshape(arrayjump[self._slices[stoch]],shape(stoch.value))
+            jump = np.reshape(arrayjump[self._slices[stoch]],np.shape(stoch.value))
             if self.isdiscrete[stoch]:
                 stoch.value = stoch.value + round_array(jump)
             else:
@@ -299,16 +291,19 @@ class AdaptiveMetropolis(StepMethod):
                 
     def step(self):
         """
-        If the empirical covariance hasn't been computed yet, the step() call
-        is passed along to the OneAtATimeMetropolis instances that handle self's
-        stochs before the end of the first epoch.
+        Perform a Metropolis step. 
         
-        If the empirical covariance has been computed, values for self's stochs
-        are proposed and tested simultaneously.
+        Stochastic parameters are block-updated using a multivariate normal 
+        distribution whose covariance is updated every self.interval once 
+        self.delay steps have been performed. 
         
-        The algorithm is greedy until delay is reached. That is, only accepted
-        jumps are stored in the local trace in order to avoid singular 
-        covariance matrices. 
+        The AM instance keeps a local copy of the stochastic parameter's trace.
+        This trace is used to computed the empirical covariance, and is 
+        completely independent from the Database backend.
+
+        If self.greedy is True and the number of iterations is smaller than 
+        self.delay, only accepted jumps are stored in the internal 
+        trace to avoid computing singular covariance matrices. 
         """
 
         # Probability and likelihood for stoch's current value:
@@ -318,13 +313,13 @@ class AdaptiveMetropolis(StepMethod):
         # Sample a candidate value              
         self.propose()
         
-        # Test
+        # Metropolis acception/rejection test
         accept = False
         try:
             # Probability and likelihood for stoch's proposed value:
             logp_p = sum([stoch.logp for stoch in self.stochs])
             loglike_p = self.loglike
-            if log(random()) < logp_p + loglike_p - logp - loglike:
+            if np.log(random()) < logp_p + loglike_p - logp - loglike:
                 accept = True
                 self._accepted += 1
             else:
@@ -332,7 +327,7 @@ class AdaptiveMetropolis(StepMethod):
         except ZeroProbability:
             self._rejected += 1
             
-        if self.verbose > 1:
+        if self.verbose > 2:
             print "Step ", self._current_iter
             print "\tLogprobability (current, proposed): ", logp, logp_p
             print "\tloglike (current, proposed):      : ", loglike, loglike_p
@@ -361,31 +356,39 @@ class AdaptiveMetropolis(StepMethod):
     
     def internal_tally(self):
         """Store the trace of stochs for the computation of the covariance.
-        This is completely independent from the backend used by the sampler to 
-        store the samples."""
+        This trace is completely independent from the backend used by the 
+        sampler to store the samples."""
         chain = []
         for stoch in self.stochs:
             chain.append(stoch.value.ravel())
         self._trace.append(np.concatenate(chain))
         
-    
+    def trace2array(i0,i1):
+        """Return an array with the trace of all stochs from index i0 to i1."""
+        chain = []
+        for stoch in self.stochs:
+            chain.append(ravel(stoch.trace.gettrace(slicing=slice(i0,i1))))
+        return concatenate(chain)
+        
     def tune(self, verbose):
-        return True
+        """Tuning is done during the entire run, independently from the Sampler 
+        tuning specifications. """
+        return False
    
 if __name__=='__main__':
     from numpy.testing import *
     from PyMC import Sampler, JointMetropolis
     from PyMC import stoch, data, JointMetropolis
-    from numpy import array, eye, ones
+    from numpy import array,  ones
     from PyMC.distributions import multivariate_normal_like
     class AMmodel:
         mu_A = array([0.,0.])
-        tau_A = eye(2)
+        tau_A = np.eye(2)
         @stoch
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
             return multivariate_normal_like(value,mu,tau)
         
-        tau_B = eye(2) * 100.          
+        tau_B = np.eye(2) * 100.          
         @stoch
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
             return multivariate_normal_like(value,mu,tau)

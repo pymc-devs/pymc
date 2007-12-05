@@ -7,7 +7,7 @@ from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Stochastic, Deterministic, Node, DiscreteStochastic, BinaryStochastic, Potential
 from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
-
+from PyMC.decorators import prop
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
 # TODO: Test cases for binary and discrete Metropolises.
@@ -309,7 +309,12 @@ class StepMethod(StepMethodBase):
             state[s] = getattr(self, s)
         return state
 
-
+    @prop
+    def ratio():
+        """Acceptance ratio"""
+        def fget(self):
+            return self._accepted/(self._accepted + self._rejected)
+        return locals()
 
 # The default StepMethod, which Model uses to handle singleton stochs.
 class Metropolis(StepMethod):

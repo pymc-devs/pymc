@@ -353,3 +353,5 @@ class MCMC(Sampler):
         outfile.close()
         
         return stats
+    
+        
