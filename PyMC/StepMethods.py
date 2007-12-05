@@ -583,49 +583,43 @@ class BinaryMetropolis(Metropolis):
         This method is substituted for the default step() method in
         BinaryMetropolis.
         """
-        
-        if "Prior" in self._dist:
-            # If no children, just sample new value
-            self.stoch.random()
-        
+            
+        # Make local variable for value
+        if self._len > 1:
+            val = self.stoch.value.ravel()
         else:
+            val = self.stoch.value
+        
+        for i in xrange(self._len):
             
-            # Make local variable for value
-            if self._len > 1:
-                val = self.stoch.value.ravel()
-            else:
-                val = self.stoch.value
+            self.set_stoch_val(i, val, True)
             
-            for i in xrange(self._len):
-                
-                self.set_stoch_val(i, val, True)
-                
-                try:
-                    logp_true = self.stoch.logp
-                    loglike_true = self.loglike
-                except ZeroProbability:
-                    self.set_stoch_val(i, val, False)
-                    continue
-                
+            try:
+                logp_true = self.stoch.logp
+                loglike_true = self.loglike
+            except ZeroProbability:
                 self.set_stoch_val(i, val, False)
-                
-                try:
-                    logp_false = self.stoch.logp
-                    loglike_false = self.loglike
-                except ZeroProbability:
-                    self.set_stoch_val(i,val,True)
-                    continue
-                
-                p_true = exp(logp_true + loglike_true)
-                p_false = exp(logp_false + loglike_false)
-                
-                # Stochastically set value according to relative
-                # probabilities of True and False
-                if log(random()) > p_true / (p_true + p_false):
-                    self.set_stoch_val(i,val,True)
+                continue
             
-            # Increment accepted count
-            self._accepted += 1
+            self.set_stoch_val(i, val, False)
+            
+            try:
+                logp_false = self.stoch.logp
+                loglike_false = self.loglike
+            except ZeroProbability:
+                self.set_stoch_val(i,val,True)
+                continue
+            
+            p_true = exp(logp_true + loglike_true)
+            p_false = exp(logp_false + loglike_false)
+            
+            # Stochastically set value according to relative
+            # probabilities of True and False
+            if random() > p_true / (p_true + p_false):
+                self.set_stoch_val(i,val,True)
+        
+        # Increment accepted count
+        self._accepted += 1
 
 
 
