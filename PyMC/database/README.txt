@@ -1,75 +1,107 @@
 -----------------
-Database backends
+Database Backends
 -----------------
 
-
-A typical MCMC run will generate thousands of samples, and some application requires well over 100000 iterations. Keeping all this information in memory can badly strain the performances of PyMC, and users will find their other applications slowing down. Moreover, we generally wish to store all or part of the sampled data for future use. However, there are dozens of different solutions to store data, and each user has his own preference based on previous experience, performance, compatibility, etc. To cover as many user cases as possible, PyMC proposes a database backend. That is, instead of hardcoding data management in the Sampler or Node class, we ask that each parameter is provided with a set of methods taking care of tallying values, and eventually, returning them. PyMC provides a couple of backends for popular data management tools , but users have the possibility to code their own custom made backend, and let Sampler use it seamlessly. 
-
-.. table:: Description of database backends available in PyMC 2.0.
-
-  =========  ==================================================  ================
-  Backend    Description                                         Dependencies
-  =========  ==================================================  ================
-  no_trace   Do not tally samples. Very efficient, mostly used   None
-             for testing purposes.
-  RAM        Store samples in memory. Efficient for small to     None
-             medium size samples. 
-  pickle     Store samples in memory, then dump them in a        Cpickle
-             pickle file. 
-  sqlite     Store samples in a sqlite database.                 sqlite3
-  mysql      Store samples in a mysql database.                  MySQLdb
-  txt        Store samples in memory, then dump them in a txt    None
-             file.
-  hdf5       Store samples in the HDF5 format.                   pytables2.0
-  =========  ==================================================  ================                     
-
-Backends are selected at Sampler instantiation through the db keyword::
-    
-	S = Sampler(DisasterSampler, db='sqlite')
-
-Another possibility is to instantiate a Database, then pass it to Sampler::
-    
-	DB = database.sqlite.Database(filename='test')
-	S = Sampler(DisasterSampler, db=DB)
-
-This calling mechanism allows user to pass arguments to the Database, instead 
-of relying on the defaults. For databases that provide a load function, it also 
-allows user to open an existing database and restart interrupted computations::
-
-	DB = database.pickle.load('results.pickle')
-	S = Sampler(DisasterSampler, db=DB)
+By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different strategies, from simple ASCII files to compressed binary formats. These strategies are implemented different *database backends*, behaving identically from the user perspective. In the following, the interface to these backends is discussed, and a description of the different backends is given. 
 
 
+Accessing Sampled Data: User Interface
+=======================================
 
-Use of trace methods
-====================
 
-From the user perpective, the only method that really matters is the gettrace()
-method (equivalent to trace.__call__). This method returns the values tallied during sampling. So for 
-instance::
+The choice of database backend is made when a Sampler is created using the `db` keyword::
+
+	S = Sampler(DisasterSampler, db='txt', dirname='test')
 	
-	S = Sampler(DisasterModel, db='ram')
-	S.sample(30000,10000,2)
+This instructs the sampler to tally samples in txt files stored in a directory named `test`. Other choices for the database are given in the table below, the default being `ram`. When the `sample` method is called, a `chain` is created storing the sampled variables. The data in this chain can be accessed for each stochastic parameter using its trace object ::
 
-Will tally in memory every other sample, creating arrays of 15000 elements. To 
-fetch the last 10000 values of parameter `e` say, we would type::
+	S.e.trace()
 
-	S.e.trace(burn=5000)
+When `S.db.close()` is called, the data is flushed to disk. That is, directories are created for each chain, with samples from each stochastic variable in a separate file. To access this data during a following session, each database provides a `load` function instantiating a `Database` object ::
+
+	DB = Database.txt.load('test')
+
+This object can then be linked to a model definition using ::
+
+	S = Sampler(DisasterSampler, db=DB)
+
+For some databases (`hdf5`, `pickle`), loading an existing database restores the previous state of the sampler. That is, the attribtues of the Sampler, its Stochastic parameters and StepMethods are all set to the value they had at the time `D.db.close()` was called. 
 
 
-Backend requirements
+The `trace` object has the following signature .. [#]::
+
+	trace(self,  burn=0, thin=1, chain=-1, slicing=None)
+
+with arguments having the following meaning:
+
+burn : int
+	Number of initial samples to skip. 
+	
+thin : int
+	Number of samples to step.
+
+chain : int or None
+	Index of the sampling chain to return. Use `None` to return all chains. Note that a new chain is created each time `sample` is called.
+
+slicing : slice
+	Slice object used to parse the samples. Overrides burn and thin parameters. 
+	
+	
+.. [#]: The `trace` attribute of stochastic parameters is in fact an instance of a Trace class, defined for each backend. This class has a method called `gettrace` that returns the trace of the object, and which is called by `trace()` . 
+
+
+
+Backends description
 ====================
 
-Each backend must define minimally two classes: Database and Trace. The Database
-class is responsible for opening files, connecting to databases, assigning 
-tallyable PyMC objects a Trace instance and calling its methods. Optionnaly, 
-the Database class can provide methods to save and return the state of the 
-sampler. This is useful for very long computations liable to be stopped then
-restarted at a later time. 
-The Trace class defines several methods to tally and return the trace of PyMC objects. 
+PyMC provides seven different backends with different level of support. 
 
-The basic framework of those classes is displayed in `database/base.py`_. Each 
-backend subclasses the base clases. 
+ram
+---
+
+Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all running applications on your computer. 
+
+txt
+---
+
+The `txt` backend is a modified `ram` backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called `Chain_<#>`, the trace for each variable being stored in a file names`<stoch name>.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory. 
+
+pickle
+------
+
+As its name implies, the `pickle` database used the `Cpickle` module to save the trace objects. Use of this backend is not suggested since the generated files may become unreadable after a Python update. 
+
+sqlite
+------
+
+Chris ...
+
+mysql
+-----
+
+Chris ...
+
+
+hdf5
+----
+
+The hdf5 backend uses pyTables to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available memory. Data access is also very fast.
+
+
+
+
+==========  ============================================================  ========================
+ Backend     Description                                                   External Dependencies
+==========  ============================================================  ========================
+ no_trace    Do not tally samples at all. Use only for testing purposes.
+ ram         Store samples in memory. 
+ txt         Write data to ascii files. 
+ pickle      Write data to a pickle file. 
+ sqlite      Store samples in a sqlite database.                           sqlite3
+ mysql       Store samples in a mysql database.                            MySQLdb
+ hdf5        Store samples in the HDF5 format.                             pytables (>2.0), libhdf5
+==========  ============================================================  ========================
+
 
 For more information about individual backends, refer to the `API`_ documentation.
 

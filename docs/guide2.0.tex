@@ -35,16 +35,16 @@
 %\usepackage{boxedminipage}
 
 % This is now the recommended way for checking for PDFLaTeX:
-\usepackage{ifpdf}
+%\usepackage{ifpdf}
 
 % Enable hyeprlinks
 \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
-\ifpdf
-\usepackage[pdftex]{graphicx}
-\else
-\usepackage{graphicx}
-\fi
+%\ifpdf
+%\usepackage[pdftex]{graphicx}
+%\else
+%\usepackage{graphicx}
+%\fi
 
 \title{PyMC 2.0 User's Guide \\
 Installation and tutorial}
@@ -58,7 +58,7 @@ Installation and tutorial}
 \newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
 \newcommand{\titlereference}[1]{\textsl{#1}}
 \newlength{\locallinewidth}
-\setlength{\locallinewidth}{\linewidth}
+\setlength{\locallinewidth}{.5\textwidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

@@ -5,7 +5,7 @@
 # Make manual
 cd docs
 rst2latex.py ../README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\hypertarget{installation}{} -o README.tex
-#rst2latex.py ../INSTALL.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o INSTALL.tex
+rst2latex.py ../INSTALL.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o INSTALL.tex
 rst2latex.py ../PyMC/database/README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o database.tex
 
 mkdir pdf
