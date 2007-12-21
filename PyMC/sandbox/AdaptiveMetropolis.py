@@ -76,7 +76,7 @@ class AdaptiveMetropolis(StepMethod):
         self.C_0 = self.initialize_cov(cov, scales)           
         
         #self._sig = msqrt(self.C_0)
-        self._sig = np.linalg.inv(self.C_0)
+        self._sig = np.linalg.cholesky(self.C_0)
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
@@ -131,7 +131,7 @@ class AdaptiveMetropolis(StepMethod):
             except:
                 ord_sc = []
                 for stoch in self.stochs:
-                    ord_sc.append(stoch.value.ravel())
+                    ord_sc.append(abs(np.ravel(stoch.value)))
                 return np.eye(self.dim)*ord_sc/scaling
             
         
@@ -202,7 +202,12 @@ class AdaptiveMetropolis(StepMethod):
         # Update state
         self.C = cov
         #self._sig = msqrt(self.C)
-        self._sig = np.linalg.inv(cov)
+        old_sig = self._sig
+        try:
+            self._sig = np.linalg.cholesky(cov)
+        except LinAlgError:
+            print 'Warning, covariance was not positive definite. Skipping update of proposal distribution.'
+            self._sig = old_sig
         self.chain_mean = mean
         self._trace_count += len(self._trace)
         self._trace = []        
@@ -239,7 +244,7 @@ class AdaptiveMetropolis(StepMethod):
         t2 = k * np.outer(mean, mean)
         t3 = np.dot(chain.T, chain)
         t4 = n*np.outer(new_mean, new_mean)
-        t5 = epsilon * np.eye(cov.ndim)
+        t5 = epsilon * np.eye(cov.shape[0])
         
         new_cov =  (k-1)/(n-1)*cov + scaling/(n-1.  ) * (t2 + t3 - t4 + t5)
         return new_cov, new_mean
@@ -279,7 +284,7 @@ class AdaptiveMetropolis(StepMethod):
         #fill_stdnormal(self._proposal_deviate)
         #arrayjump = np.inner(self._proposal_deviate, self._sig)
         
-        arrayjump = rmvnormal(np.zeros(self.dim), self._sig)
+        arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
         
         # 4. Update each stoch individually.
         for stoch in self.stochs:
@@ -326,6 +331,8 @@ class AdaptiveMetropolis(StepMethod):
                 self._rejected += 1
         except ZeroProbability:
             self._rejected += 1
+            logp_p = None
+            loglike_p = None
             
         if self.verbose > 2:
             print "Step ", self._current_iter
@@ -360,7 +367,7 @@ class AdaptiveMetropolis(StepMethod):
         sampler to store the samples."""
         chain = []
         for stoch in self.stochs:
-            chain.append(stoch.value.ravel())
+            chain.append(np.ravel(stoch.value))
         self._trace.append(np.concatenate(chain))
         
     def trace2array(i0,i1):
