@@ -76,15 +76,44 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     
     class new_class(base):
         __doc__ = docstr
-        def __init__(self, self_name, value=None, shape=None, trace=True, rseed=True, isdata=False, doc=docstr, debug=False, **kwds):
+        def __init__(self, self_name, value=None, *args, **kwds):
 
             parents=parents_default
 
-            for k in parent_names:
+            # Extract special (non-parent) keyword arguments
+            shape=None
+            trace=True
+            rseed=True
+            isdata=False
+            doc=docstr
+            debug=False
+
+            special_kwds = ['shape', 'trace', 'rseed', 'isdata', 'doc', 'debug']
+            
+            for name in special_kwds:
+                if name in kwds:
+                    locals()[name] = kwds.pop(name)
+
+                    
+            # Extract positional parents
+            local_parent_names = copy(parent_names)
+            for i in xrange(len(args)):
+                try:
+                    name_now = local_parent_names.pop(0)
+                    parents[name_now] = args[i]
+                except:
+                    raise ValueError, self_name + ': Too many positional parents provided. Parents for class ' + self.__class__.__name__ + 'are: ' + str(parent_names)
+
+            # Extract keyword parents
+            for k in local_parent_names:
                 try:
                     parents[k] = kwds.pop(k)
                 except:
                     raise ValueError, self_name + ': no value given for parent ' + k
+            
+            # Check for superfluous keywords
+            if len(kwds)>0:
+                raise ValueError, self_name + ": Don't understand the following keyword arguments: " + str(kwds.keys())
                     
             # Determine size and shape of value
             if value is None:
