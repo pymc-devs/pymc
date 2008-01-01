@@ -46,32 +46,41 @@ Run convergence diagnostics.
 \section*{What's new in 2.0}
 \label{what-s-new-in-2-0}
 \begin{itemize}
-\item {} 
-Faster internal logic by coding the bottlenecks with Pyrex,
 
 \item {} 
-Faster distributions by an optimization of the Fortran functions,
+Added database backends: Select one from sqlite, MySQL, HDF5,
+pickle files, text files or write a custom database backend from a template,
 
 \item {} 
-Added a Joint Metropolis and a Gibbs sampler,
-
-\item {} 
-Define your problem in a separate file using the Node, Data and Parameter
-classes. Use decorators to improve code readability.
-
-\item {} 
-Save your samples directly to a database. Select one from sqlite, MySQL, HDF5,
-pickle files, text files or write a custom database backend from a template.
-
-\item {} 
-Run interactive convergence diagnostics,
-
-\item {} 
-Stop a sampling run in the middle, save it's state and restart the sampler
+Added interactive mode: stop a sampling run in the middle, check progress, tweak it, save its state and restart the sampler
 later,
 
+\item {}
+Added maximum a posteriori and normal approximation fitting methods,
+
+\item {}
+Separated model declaration from model fitting, so multiple fitting methods can be applied to the same model with no recoding,
+
 \item {} 
-Seed multiple chains on different processors.
+Refactored MCMC code for extensibility and added an adaptive Metropolis step method for array-valued variables,
+
+\item {} 
+Added interactive convergence diagnostics,
+
+\item {} 
+Used decorators to improve code readability,
+
+\item {} 
+Sped up internal logic by coding the bottlenecks with Pyrex,
+
+\item {}
+Sped up MCMC computations by taking advantage of cancellations,
+
+\item {} 
+Sped up distributions by an optimization of the Fortran functions.
+
+% \item {} 
+% Seed multiple chains on different processors.
 
 \end{itemize}
 
@@ -86,12 +95,11 @@ Seed multiple chains on different processors.
 From a python shell, type:
 \begin{quote}{\ttfamily \raggedright \noindent
 import~PyMC~\\
-S~=~PyMC.Sampler(problem{\_}definition,~db='pickle')~\\
+S~=~PyMC.Sampler(model{\_}definition,~db='pickle')~\\
 S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 
-where problem{\_}definition is a module or a dictionary containing Node, Data and
-Parameter instances defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
+where model{\_}definition is a module or iterable object containing variables, data and (possibly) factor potentials defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
 complete description of the package, classes and some examples to get started.
 
 

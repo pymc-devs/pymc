@@ -1,6 +1,6 @@
 __docformat__='reStructuredText'
 from utils import msqrt, check_type, round_array
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -8,12 +8,13 @@ from flib import fill_stdnormal
 from PyMCObjects import Stochastic, Deterministic, Node, DiscreteStochastic, BinaryStochastic, Potential
 from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
 from PyMC.decorators import prop
+from copy import copy
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
 # TODO: Test cases for binary and discrete Metropolises.
 
 __all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method', 
-'pick_best_methods', 'StepMethodRegistry']
+'pick_best_methods', 'StepMethodRegistry', 'BinaryMetropolis']
 
 StepMethodRegistry = []
 
@@ -409,6 +410,13 @@ class Metropolis(StepMethod):
             else:
                 return 0
     
+    def hastings_factor(self):
+        """
+        If this is a Metropolis-Hastings method (proposal is not symmetric random walk), 
+        this method should return log(back_proposal) - log(forward_proposal).
+        """
+        return 0.
+    
     def step(self):
         """
         The default step method applies if the variable is floating-point
@@ -463,8 +471,10 @@ class Metropolis(StepMethod):
             print 'logp_p - logp: ', logp_p - logp
             print 'loglike_p - loglike: ', loglike_p - loglike
         
+        HF = self.hastings_factor()
+        
         # Evaluate acceptance ratio
-        if log(random()) > logp_p + loglike_p - logp - loglike:
+        if log(random()) > logp_p + loglike_p - logp - loglike + HF:
             
             # Revert stoch if fail
             self.reject()
@@ -547,14 +557,17 @@ class BinaryMetropolis(Metropolis):
     This should be a subclass of Gibbs, not Metropolis.
     """
     
-    def __init__(self, stoch, dist=None):
+    def __init__(self, stoch, p_jump=.1, dist=None, verbose=0):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stoch, dist=dist)
+        Metropolis.__init__(self, stoch, dist=dist, verbose=verbose)
         
         # Initialize verbose feedback string
         self._id = stoch.__name__
+        
+        # _asf controls the jump probability
+        self._asf = log(1.-p_jump) / log(.5)
         
     @staticmethod
     def competence(stoch):
@@ -565,66 +578,58 @@ class BinaryMetropolis(Metropolis):
             return 1
         else:
             return 0
-    
-    
-    def set_stoch_val(self, i, val, to_value):
-        """
-        Utility method for setting a particular element of a stoch's value.
-        """
-        
-        if self._len>1:
-            # Vector-valued stochs
-            
-            val[i] = to_value
-            self.stoch.value = reshape(val, check_type(self.stoch)[1])
-        
-        else:
-            # Scalar stochs
-            
-            self.stoch.value = to_value
-    
+
     def step(self):
-        """
-        This method is substituted for the default step() method in
-        BinaryMetropolis.
-        """
-            
-        # Make local variable for value
-        if self._len > 1:
-            val = self.stoch.value.ravel()
+        if not isscalar(self.stoch.value):
+            Metropolis.step(self)
         else:
-            val = self.stoch.value
+            
+            # See what log-probability of True is.
+            self.stoch.value = True
         
-        for i in xrange(self._len):
-            
-            self.set_stoch_val(i, val, True)
-            
             try:
                 logp_true = self.stoch.logp
                 loglike_true = self.loglike
             except ZeroProbability:
-                self.set_stoch_val(i, val, False)
-                continue
-            
-            self.set_stoch_val(i, val, False)
-            
+                self.stoch.value = False
+                return
+        
+            # See what log-probability of False is.
+            self.stoch.value = False
+        
             try:
                 logp_false = self.stoch.logp
                 loglike_false = self.loglike
             except ZeroProbability:
-                self.set_stoch_val(i,val,True)
-                continue
-            
+                self.stoch.value = True
+                return
+        
+            # Test
             p_true = exp(logp_true + loglike_true)
             p_false = exp(logp_false + loglike_false)
-            
+        
             # Stochastically set value according to relative
             # probabilities of True and False
             if random() > p_true / (p_true + p_false):
-                self.set_stoch_val(i,val,True)
+                self.stoch.value = True
         
-        # Increment accepted count
-        self._accepted += 1
+    
+    def propose(self):
+        # Propose new values
+
+        if self._dist == 'Prior':
+            self.stoch.random()
+        else:
+            # Convert _asf to a jump probability
+            p_jump = 1.-.5**self._asf
+        
+            rand_array = random(size=shape(self.stoch.value))
+            new_value = copy(self.stoch.value)
+            switch_locs = where(rand_array<p_jump)
+            new_value[switch_locs] = True - new_value[switch_locs]
+            print switch_locs, rand_array, new_value, self.stoch.value
+            self.stoch.value = new_value
+
 
 
 

@@ -94,6 +94,14 @@ Installation and tutorial}
 
 \chapter{Probability distributions and mathematical utilities} 
 \label{chap:distributions}
+Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
+\begin{itemize}
+    \item A function that evaluates its log-probability or log-density: \texttt{dist_name_like()}.
+    \item A function that draws random variables: \texttt{rdist_name()}.
+    \item A function that computes the expectation associated with the distribution: \texttt{dist_name_expval()}.
+    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Dist_name}.
+\end{itemize} 
+
 \input{distributions}
 
 \bibliographystyle{plainnat}

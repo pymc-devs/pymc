@@ -127,7 +127,6 @@ class MAP(Model):
     fit:            Finds the normal approximation.
 
     Useful attributes (after fit() is called):
-    mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
     logp:               Returns the log-probability of the model
     logp_at_max:        Returns the maximum log-probability of the model
     len:                The number of free stochastic variables in the model ('k' in AIC and BIC)

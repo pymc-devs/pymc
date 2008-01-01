@@ -45,8 +45,10 @@ binary distribution of PyMC comes bundled with these prerequisites.
 
 If instead of installing the prebuilt binaries you prefer (or have) to build PyMC
 yourself, make sure you have a Fortran and a C compiler. There are free
-compilers (g77, gcc) available on all platforms. Other compilers have not been
+compilers (g77, gfortran, gcc) available on all platforms. Other compilers have not been
 tested with PyMC but may work nonetheless.
+
+\textbf{Should we be recommending gfortran + gcc 4.2? Reason: These support OpenMP, which would let us parallelize flib with comments. However, I don't know if they come standard with the developer tools yet.}
 
 
 %___________________________________________________________________________

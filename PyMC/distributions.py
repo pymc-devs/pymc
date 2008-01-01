@@ -56,7 +56,10 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
 
       :Example:
         >>> Exponential = stoch_from_dist('exponential')
-        >>> A = Exponential('A', value=2.3, beta=4)
+        >>> A = Exponential(self_name, value, beta)
+        
+    Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
+    value is set to None by default, and can only be provided as a keyword argument.
     """
     
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
@@ -76,7 +79,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
     
     class new_class(base):
         __doc__ = docstr
-        def __init__(self, self_name, value=None, *args, **kwds):
+        def __init__(self, *args, **kwds):
 
             parents=parents_default
 
@@ -87,44 +90,57 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
             isdata=False
             doc=docstr
             debug=False
-
-            special_kwds = ['shape', 'trace', 'rseed', 'isdata', 'doc', 'debug']
             
-            for name in special_kwds:
-                if name in kwds:
-                    locals()[name] = kwds.pop(name)
-
-                    
-            # Extract positional parents
-            local_parent_names = copy(parent_names)
+            # Figure out what argument names are needed.
+            args_needed = ['name'] + copy(parent_names) + ['value', 'shape', 'trace', 'rseed', 'doc']
+            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'shape': None, 'trace': True, 'rseed': True, 'doc': None}
+            
+            # Sort positional arguments
             for i in xrange(len(args)):
                 try:
-                    name_now = local_parent_names.pop(0)
-                    parents[name_now] = args[i]
+                    k = args_needed.pop(0)
+                    if k in parent_names:
+                        parents[k] = args[i]
+                    else:
+                        arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, self_name + ': Too many positional parents provided. Parents for class ' + self.__class__.__name__ + 'are: ' + str(parent_names)
-
-            # Extract keyword parents
-            for k in local_parent_names:
-                try:
-                    parents[k] = kwds.pop(k)
-                except:
-                    raise ValueError, self_name + ': no value given for parent ' + k
+                    raise ValueError, self_name + ': Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                  
+            # Sort keyword arguments
+            for k in args_needed:
+                if k in parent_names:
+                    try:
+                        parents[k] = kwds.pop(k)
+                    except:
+                        raise ValueError, self_name + ': no value given for parent ' + k
+                elif k in ['name', 'value', 'shape', 'trace', 'rseed', 'doc']:
+                    try:
+                        arg_dict_out[k] = kwds.pop(k)
+                    except:
+                        pass
+                else:
+                    raise ValueError, self_name + ': keyword '+ k + ' not recognized. Arguments recognized are ', args_needed
             
-            # Check for superfluous keywords
-            if len(kwds)>0:
-                raise ValueError, self_name + ": Don't understand the following keyword arguments: " + str(kwds.keys())
-                    
+            # Read in from arg_dict_out to locals (annoying, but locals()[k] didn't work)
+            self_name = arg_dict_out['name']    
+            value = arg_dict_out['value']
+            shape = arg_dict_out['shape']
+            trace = arg_dict_out['trace']
+            rseed = arg_dict_out['rseed']
+            doc = arg_dict_out['doc']
+                                
             # Determine size and shape of value
             if value is None:
-                if rseed is False:
+                if rseed == False:
                     raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
-                rseed = True
                 
                 if shape is not None:
                     size = np.prod(shape)
-                    if len(shape)==1:
+                    if np.isscalar(shape):
+                        shape = (shape,)
+                    if len(shape)==0 or shape == (1,):
                         shape=None
+                        value = random(size=1, **parents)
                     value = np.reshape(random(size=size, **parents), shape)    
                 else:
                     size=1

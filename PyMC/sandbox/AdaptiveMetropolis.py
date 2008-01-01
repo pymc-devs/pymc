@@ -205,7 +205,7 @@ class AdaptiveMetropolis(StepMethod):
         old_sig = self._sig
         try:
             self._sig = np.linalg.cholesky(cov)
-        except LinAlgError:
+        except np.linalg.LinAlgError:
             print 'Warning, covariance was not positive definite. Skipping update of proposal distribution.'
             self._sig = old_sig
         self.chain_mean = mean

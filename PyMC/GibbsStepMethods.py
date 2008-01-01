@@ -87,6 +87,89 @@ class Gibbs(Metropolis):
 # TODO: Let A be diagonal.
 # TODO: Allow sampling of scalar tau scale factor too.
 
+class BernoulliAnything(Gibbs):
+    """
+    Formerly known as BinaryMetropolis
+    
+    Like Metropolis, but with a modified step() method.
+    Good for binary variables.
+    
+    NOTE this is not compliant with the Metropolis standard
+    yet because it lacks a reject() method.
+    (??? But, it is a subclass of Metropolis, which has a reject() method)
+    True... but it's never called, this is really a Gibbs sampler since there
+    are only 2 states available.
+    
+    This should be a subclass of Gibbs, not Metropolis.
+    """
+    
+    def __init__(self, stoch, dist=None):
+        # BinaryMetropolis class initialization
+        
+        # Initialize superclass
+        Metropolis.__init__(self, stoch, dist=dist)
+        
+        # Initialize verbose feedback string
+        self._id = stoch.__name__
+        
+    def set_stoch_val(self, i, val, to_value):
+        """
+        Utility method for setting a particular element of a stoch's value.
+        """
+        
+        if self._len>1:
+            # Vector-valued stochs
+            
+            val[i] = to_value
+            self.stoch.value = reshape(val, check_type(self.stoch)[1])
+        
+        else:
+            # Scalar stochs
+            
+            self.stoch.value = to_value
+    
+    def step(self):
+        """
+        This method is substituted for the default step() method in
+        BinaryMetropolis.
+        """
+            
+        # Make local variable for value
+        if self._len > 1:
+            val = self.stoch.value.ravel()
+        else:
+            val = self.stoch.value
+        
+        for i in xrange(self._len):
+            
+            self.set_stoch_val(i, val, True)
+            
+            try:
+                logp_true = self.stoch.logp
+                loglike_true = self.loglike
+            except ZeroProbability:
+                self.set_stoch_val(i, val, False)
+                continue
+            
+            self.set_stoch_val(i, val, False)
+            
+            try:
+                logp_false = self.stoch.logp
+                loglike_false = self.loglike
+            except ZeroProbability:
+                self.set_stoch_val(i,val,True)
+                continue
+            
+            p_true = exp(logp_true + loglike_true)
+            p_false = exp(logp_false + loglike_false)
+            
+            # Stochastically set value according to relative
+            # probabilities of True and False
+            if random() > p_true / (p_true + p_false):
+                self.set_stoch_val(i,val,True)
+        
+        # Increment accepted count
+        self._accepted += 1
 
 
 class GammaNormal(Gibbs):
