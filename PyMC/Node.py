@@ -21,31 +21,31 @@ class Node(object):
     :Parameters:
           -doc : string
               The docstring for this dtrm.
-
+          
           -name : string
               The name of this dtrm.
-
+          
           -parents : dictionary
               A dictionary containing the parents of this dtrm.
-
+          
           -trace : boolean
-              A boolean indicating whether this dtrm's value 
+              A boolean indicating whether this dtrm's value
               should be traced (in MCMC).
-
-          -cache_depth : integer   
+          
+          -cache_depth : integer
               An integer indicating how many of this dtrm's
               value computations should be 'memorized'.
-              
+          
           - plot (optional) : boolean
             A flag indicating whether this variable is to be plotted.
-              
+          
           - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     :SeeAlso: Stochastic, Deterministic
     """
     def __init__(self, doc, name, parents, cache_depth, trace, plot=True, verbose=0):
-
+        
         # Name and docstrings
         self.__doc__ = doc
         self.__name__ = name
@@ -58,7 +58,7 @@ class Node(object):
         
         # Level of feedback verbosity
         self.verbose = verbose
-
+        
         # Number of memorized values
         self._cache_depth = cache_depth
         
@@ -68,11 +68,11 @@ class Node(object):
         
         # New lazy function
         self.gen_lazy_function()
-                
+    
     def _get_parents(self):
         # Get parents of this object
         return self._parents
-        
+    
     def _set_parents(self, new_parents):
         # Define parents of this object
         
@@ -85,10 +85,10 @@ class Node(object):
                 elif isinstance(parent, ContainerBase):
                     for variable in parent.variables:
                         variable.chidren.discard(self)
-                
+        
         # Specify new parents
         self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
-
+        
         # Add self as child of parents
         for parent in self._parents.itervalues():
             if isinstance(parent, Variable):
@@ -96,27 +96,45 @@ class Node(object):
             elif isinstance(parent, ContainerBase):
                 for variable in parent.variables:
                     variable.children.add(self)
-                    
+        
         
         # Get new lazy function
         self.gen_lazy_function()
-        
+    
     parents = property(_get_parents, _set_parents)
     
     def _get_plot(self):
         # Get plotting flag
         return self._plot
-        
+    
     plot = property(_get_plot)
     
     def __str__(self):
         return self.__repr__()
-        
+    
     def __repr__(self):
         return object.__repr__(self).replace('object', self.__name__)
-                
+    
     def gen_lazy_function(self):
-        pass                
+        pass
+    
+    def stats(self, alpha=0.05):
+        """
+        Generate posterior statistics for node.
+        """
+        from utils import hpd, quantiles
+        from numpy import sqrt
+        
+        trace = self.trace()
+        
+        return {
+            'n': len(trace),
+            'standard deviation': trace.std(0),
+            'mean': trace.mean(0),
+            '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
+            'mc error': trace.std(0) / sqrt(len(trace)),
+            'quantiles': quantiles(trace)
+        }
 
 class Variable(Node):
     """
@@ -142,34 +160,34 @@ class ContainerBase(object):
         else:
             try:
                 self.__name__ = input['__name__']
-            except: 
+            except:
                 self.__name__ = 'container'
     
     def _get_logp(self):
         # Return total log-probabilities from all elements
         return sum(obj.logp for obj in self.stochs | self.potentials | self.data)
-        
+    
     # Define log-probability property
     logp = property(_get_logp)
-        
+
 class StochasticBase(Variable):
     """
     Abstract base class.
     """
     pass
-    
+
 class DeterministicBase(Variable):
     """
     Abstract base class.
     """
     pass
-    
+
 class PotentialBase(Node):
     """
     Abstract base class.
     """
     pass
-    
+
 class StepMethodBase(object):
     """
     Abstract base class.

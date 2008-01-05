@@ -320,6 +320,21 @@ class Sampler(Model):
             if variable.plot: self._plotter.plot(variable)
 
         # show()
+        
+    def stats(self):
+        """
+        Statistical output for variables
+        """
+        
+        stat_dict = {}
+        
+        # Loop over nodes
+        for variable in self._variables_to_tally:            
+            # Plot object
+            stat_dict[variable.__name__] = variable.stats()
+            
+        return stat_dict
+        
 
     def status():
         doc = \
