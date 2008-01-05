@@ -791,7 +791,7 @@ def rgamma(alpha, beta, size=1):
     Random gamma variates.
     """
 
-    return random.gamma(shape=alpha,scale=beta,size=size)
+    return random.gamma(shape=alpha,scale=1./beta,size=size)
 
 def gamma_expval(alpha, beta):
     """
@@ -1005,7 +1005,7 @@ def rinverse_gamma(alpha, beta,size=1):
     Random inverse gamma variates.
     """
 
-    return 1. / random.gamma(shape=alpha, scale=beta, size=size)
+    return 1. / random.gamma(shape=alpha, scale=1./beta, size=size)
 
 def inverse_gamma_expval(alpha, beta):
     """
