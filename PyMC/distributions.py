@@ -811,7 +811,7 @@ def gamma_like(x, alpha, beta):
     of which has mean beta.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{x^{\\alpha-1}e^{-x/\\beta}}{\\Gamma(\\alpha) \\beta^{\\alpha}}
+        f(x \\mid \\alpha, \\beta) = \\frac{\\beta^{\\alpha}x^{\\alpha-1}e^{-\\beta x}}{\\Gamma(\\alpha)}
 
     :Parameters:
       x : float
@@ -1022,8 +1022,7 @@ def inverse_gamma_like(x, alpha, beta):
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{x^{-\\alpha - 1} \\exp\\{-\\frac{1}{\\beta x}\\}}
-        {\\Gamma(\\alpha)\\beta^{\\alpha}}
+        f(x \\mid \\alpha, \\beta) = \\frac{\\beta^{\\alpha}}{\\Gamma(\\alpha)} x^{-\\alpha - 1} \\exp\\left(\\frac{-\\beta}{x}}\\right)
 
     :Parameters:
       x : float

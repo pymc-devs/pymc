@@ -194,7 +194,7 @@ c increment log-likelihood
       return
       END
 
-        subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
+      subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
         
 c Return the uniform likelihood of x.
 c CREATED 12/06 DH
@@ -228,7 +228,7 @@ cf2py double precision intent(out) :: like
             like = like - dlog(high-low)
           endif
         enddo
-        END subroutine uniform_like
+      END subroutine uniform_like
 
       SUBROUTINE exponweib(x,a,c,loc,scale,n,na,nc,nloc,nscale,like)
       
@@ -401,23 +401,24 @@ cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
 
       INTEGER x(n)
       DOUBLE PRECISION mu(nmu)
-      DOUBLE PRECISION like,sumx, mut
-      INTEGER n,i
+      DOUBLE PRECISION like, sumx, mut
+      INTEGER n, i
       LOGICAL not_scalar_mu
-      DOUBLE PRECISION factln
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_mu =  (nmu .NE. 1)
       mut = mu(1)
-
+      
 c      CALL constrain(x,0,INFINITY,allow_equal=1)
 c      CALL constrain(mu,0,INFINITY,allow_equal=0)
 
       sumx = 0.0
       sumfact = 0.0
       do i=1,n
-        if (not_scalar_mu) mut = mu(i)
+        if (not_scalar_mu) then
+          mut = mu(i)
+        endif
         
         if (mut .LE. 0.0) then
           like = -infinity
@@ -430,6 +431,7 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
         endif
         
         sumx = sumx + x(i)*dlog(mut) - mut
+        
         sumfact = sumfact + factln(x(i))
       enddo
       like = sumx - sumfact
@@ -460,13 +462,13 @@ cf2py double precision intent(out) :: like
       like = 0.0
       n_tmp = n(1)
       do i=1,k
-	      p_tmp(i) = p(1,i)
+            p_tmp(i) = p(1,i)
       enddo
       do j=1,nx
         if (np .NE. 1) then
-	        do i=1,k
-    	    	p_tmp(i) = p(j,i)
-    	    enddo
+              do i=1,k
+                    p_tmp(i) = p(j,i)
+              enddo
         endif
         if (nn .NE. 1) n_tmp = n(j)
         if (n_tmp .LT. 0) then
@@ -852,8 +854,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
           like = -infinity
           RETURN
         endif
-        like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
-        like = like + (alpha_tmp - 1.0)*dlog(x(i)) - x(i)/beta_tmp
+        like = like - gammln(alpha_tmp) + alpha_tmp*dlog(beta_tmp)
+        like = like + (alpha_tmp - 1.0)*dlog(x(i)) - beta_tmp*x(i)
       enddo     
 
       return
@@ -897,7 +899,7 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
           RETURN
         endif
         like = like - (gammln(alpha(i)) + alpha(i)*dlog(beta(i)))
-        like = like - (alpha(i)+1.0)*dlog(x(i)) - 1./(x(i)*beta(i)) 
+        like = like + (-alpha(i)-1.)*dlog(x(i)) - beta(i)/x(i) 
       enddo
 
       return
@@ -1234,14 +1236,14 @@ cf2py double precision intent(out) :: like
         if ((ptmp .LE. 0.0D0) .OR. (ptmp .GE. 1.0D0)) then
 !         if p = 0, number of successes must be 0
           if (ptmp .EQ. 0.0D0) then
-            if (x(i).GT.0.0D0) then
+            if (x(i) .GT. 0.0D0) then
                 like = -infinity
                 RETURN
 !                 else like = like + 0
             end if
           else if (ptmp .EQ. 1.0D0) then
 !           if p = 1, number of successes must be n
-            if (x(i).LT.ntmp) then
+            if (x(i) .LT. ntmp) then
                 like = -infinity
                 RETURN
 !                 else like = like + 0
@@ -1526,6 +1528,53 @@ cf2py double precision intent(out) :: gx
       gx = -tmp + dlog(2.50662827465*ser/xx)
       return
       END
+      
+      
+      double precision function gammds (y,p,ifault)
+      
+cf2py double precision intent(in) :: y,p,ifault
+cf2py double precision intent(out) :: gammds
+      
+c
+c        Algorithm AS 147  Appl. Statist. (1980) Vol. 29, No. 1
+c
+c        Computes the incomplete gamma integral for positive
+c        parameters y,p using an infinite series
+c
+c        Auxiliary function required: ALNGAM = CACM algorithm 291
+c
+c	 AS239 should be considered as an alternative to AS147
+c
+      implicit double precision (a-h,o-z)
+      data e/1.0d-9/, zero/0.0d0/, one/1.0d0/, uflo/1.0d-37/
+c
+c        Checks admissibility of arguments and value of f
+c
+      ifault = 1
+      gammds = zero
+      if(y.le.zero .or. p.le.zero) return
+      ifault = 2
+c
+c        alngam is natural log of gamma function
+c
+      arg = p*log(y)-gammln(p+one)-y
+      if(arg.lt.log(uflo)) return
+      f = exp(arg)
+      if(f.eq.zero) return
+      ifault = 0
+c
+c          Series begins
+c
+      c = one
+      gammds = one
+      a = p
+    1 a = a+one
+      c = c*y/a
+      gammds = gammds+c
+      if (c/gammds.gt.e) goto 1
+      gammds = gammds*f
+      return
+      end
 
 
       SUBROUTINE trans(mat,tmat,m,n)
@@ -1543,8 +1592,8 @@ cf2py integer intent(hide),depend(mat) :: n=shape(mat,1)
       do 88 i=1,m
         do 99 j=1,n
           tmat(j,i) = mat(i,j)
-99      continue
-88    continue
+ 99     continue
+ 88   continue
 
       return
       END
