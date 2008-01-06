@@ -11,7 +11,6 @@ __docformat__='reStructuredText'
 """ Summary"""
 
 from numpy import zeros, floor
-from Matplot import Plotter, show
 import database
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import Container, ObjectContainer
@@ -20,7 +19,11 @@ from copy import copy
 from threading import Thread
 from Node import ContainerBase
 from time import sleep
-
+try:  # Matplotlib is an optional dependency
+	from Matplot import Plotter, show
+except:
+	pass
+	
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 

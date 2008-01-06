@@ -399,15 +399,15 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
 
+	  IMPLICIT NONE
+      INTEGER n, i, nmu
       INTEGER x(n)
-      DOUBLE PRECISION mu(nmu)
-      DOUBLE PRECISION like, sumx, mut
-      INTEGER n, i
-      LOGICAL not_scalar_mu
-      DOUBLE PRECISION infinity
+      DOUBLE PRECISION mu(nmu), like
+      DOUBLE PRECISION sumx, mut, infinity, sumfact
+      DOUBLE PRECISION factln
       PARAMETER (infinity = 1.7976931348623157d308)
 
-      not_scalar_mu =  (nmu .NE. 1)
+
       mut = mu(1)
       
 c      CALL constrain(x,0,INFINITY,allow_equal=1)
@@ -416,7 +416,7 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       sumx = 0.0
       sumfact = 0.0
       do i=1,n
-        if (not_scalar_mu) then
+        if (nmu .NE. 1) then
           mut = mu(i)
         endif
         
