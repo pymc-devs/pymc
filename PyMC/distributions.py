@@ -92,8 +92,8 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
             debug=False
             
             # Figure out what argument names are needed.
-            args_needed = ['name'] + copy(parent_names) + ['value', 'shape', 'trace', 'rseed', 'doc']
-            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'shape': None, 'trace': True, 'rseed': True, 'doc': None}
+            args_needed = ['name'] + copy(parent_names) + ['value', 'shape', 'trace', 'rseed', 'doc','isdata']
+            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'shape': None, 'trace': True, 'rseed': True, 'doc': None, 'isdata': False}
             
             # Sort positional arguments
             for i in xrange(len(args)):
@@ -104,7 +104,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, self_name + ': Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                    raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
                   
             # Sort keyword arguments
             for k in args_needed:
@@ -113,13 +113,13 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                         parents[k] = kwds.pop(k)
                     except:
                         raise ValueError, self_name + ': no value given for parent ' + k
-                elif k in ['name', 'value', 'shape', 'trace', 'rseed', 'doc']:
+                elif k in ['name', 'value', 'shape', 'trace', 'rseed', 'doc', 'isdata']:
                     try:
                         arg_dict_out[k] = kwds.pop(k)
                     except:
                         pass
                 else:
-                    raise ValueError, self_name + ': keyword '+ k + ' not recognized. Arguments recognized are ', args_needed
+                    raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
             
             # Read in from arg_dict_out to locals (annoying, but locals()[k] didn't work)
             self_name = arg_dict_out['name']    
@@ -127,6 +127,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
             shape = arg_dict_out['shape']
             trace = arg_dict_out['trace']
             rseed = arg_dict_out['rseed']
+            isdata = arg_dict_out['isdata']
             doc = arg_dict_out['doc']
                                 
             # Determine size and shape of value
