@@ -627,7 +627,7 @@ class BinaryMetropolis(Metropolis):
             new_value = copy(self.stoch.value)
             switch_locs = where(rand_array<p_jump)
             new_value[switch_locs] = True - new_value[switch_locs]
-            print switch_locs, rand_array, new_value, self.stoch.value
+            # print switch_locs, rand_array, new_value, self.stoch.value
             self.stoch.value = new_value
 
 

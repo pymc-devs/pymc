@@ -95,11 +95,47 @@ Sped up distributions by an optimization of the Fortran functions.
 From a python shell, type:
 \begin{quote}{\ttfamily \raggedright \noindent
 import~PyMC~\\
-S~=~PyMC.Sampler(model{\_}definition,~db='pickle')~\\
-S.sample(iter=10000,~burn=5000,~thin=2)
+S~=~PyMC.MCMC(model{\_}definition,~db='pickle')~\\
+S.isample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
+where model{\_}definition is a module or iterable object containing variables, data and (possibly) factor potentials defining your problem. 
 
-where model{\_}definition is a module or iterable object containing variables, data and (possibly) factor potentials defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
+A module declaring the example model
+\begin{eqnarray*}
+        \begin{array}{ccc}
+            (D_t | s, e, l) \sim \textup{Po}\left(r_t\right), & r_t=\left\{\begin{array}{ll}
+                e & t\le s\\ l & t>s
+                \end{array}\right.,&t\in[0,110]\\
+            s\sim \textup{U}(0,110)\\
+            e\sim \textup{Exp}(1)\\
+            l\sim \textup{Exp}(1)        
+        \end{array}
+        \label{disastermodel} 
+\end{eqnarray*}
+where $D$ is data could be implemented as follows:
+\begin{verbatim}
+    import PyMC
+    import numpy
+
+    s=PyMC.Uniform('s',lower=0,upper=110)
+    e=PyMC.Exponential('e',beta=1)
+    l=PyMC.Exponential('l',beta=1)
+
+    D_array=numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+                          3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                          2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                          1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                          0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                          3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                          0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+
+    @PyMC.data
+    @PyMC.discrete_stoch
+    def D(value = D_array, s = s, e = e, l = l):
+        return PyMC.poisson_like(value[:s],e) \
+        + PyMC.poisson_like(value[s:],l)
+\end{verbatim}
+Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
 complete description of the package, classes and some examples to get started.
 
 
