@@ -420,19 +420,20 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
           mut = mu(i)
         endif
         
-        if (mut .LE. 0.0) then
+        if (mut .LT. 0.0) then
           like = -infinity
           RETURN
         endif
-        
+    
         if (x(i) .LT. 0.0) then
           like = -infinity
           RETURN
         endif
-        
-        sumx = sumx + x(i)*dlog(mut) - mut
-        
-        sumfact = sumfact + factln(x(i))
+    
+        if (.NOT.((x(i) .EQ. 0.0) .AND. (mut .EQ. 0.0))) then
+          sumx = sumx + x(i)*dlog(mut) - mut      
+          sumfact = sumfact + factln(x(i))
+        endif
       enddo
       like = sumx - sumfact
       return
