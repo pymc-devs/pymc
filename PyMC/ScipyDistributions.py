@@ -46,10 +46,10 @@ def separate_shape_args(kwds, shape_args):
 
 def stoch_from_scipy_dist(scipy_dist):
     """
-    Return a Stochastic subclass made from a particular scipy distribution.
+    Return a Stochastic subclass made from a particular SciPy distribution.
     """
     
-    name = 'Scipy'+scipy_dist.__class__.__name__.replace('_gen','').capitalize()
+    name = 'SciPy'+scipy_dist.__class__.__name__.replace('_gen','').capitalize()
 
 
     (args, varargs, varkw, defaults) = inspect.getargspec(scipy_dist._cdf)
@@ -92,19 +92,10 @@ def stoch_from_scipy_dist(scipy_dist):
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += """
-    Methods:
+Methods:
 
     random()
         - draws random values and returns them
-
-    logp()
-        - sum(log(pdf())) or sum(log(pmf()))
-
-    cdf()
-        - cumulative distribution function
-
-    sf()
-        - survival function (1-cdf --- sometimes more accurate)
 
     ppf(q)
         - percent point function (inverse of cdf --- percentiles)
@@ -117,8 +108,25 @@ def stoch_from_scipy_dist(scipy_dist):
     stats(moments='mv')
         - mean('m',axis=0), variance('v'), skew('s'), and/or kurtosis('k')
 
-    entropy()
+
+Attributes:
+
+    logp
+        - sum(log(pdf())) or sum(log(pmf()))
+
+    cdf
+        - cumulative distribution function
+
+    sf
+        - survival function (1-cdf --- sometimes more accurate)
+
+    entropy
         - (differential) entropy of the RV.
+
+        
+NOTE: If you encounter difficulties with this object, please try the analogous 
+computation using the rv objects in scipy.stats.distributions directly before 
+reporting the problem to the PyMC team; the problem may be on the SciPy side.
     """
         
     new_class = new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
