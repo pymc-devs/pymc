@@ -50,37 +50,16 @@ inverse = np.linalg.pinv
 # = User-accessible function to convert a logp and random function to a Stochastic subclass. =
 # ============================================================================================
 
-def stoch_from_dist(name, logp, random=None, base=Stochastic):
-    """
-    Return a Stochastic subclass made from a particular distribution.
 
-      :Example:
-        >>> Exponential = stoch_from_dist('exponential')
-        >>> A = Exponential(self_name, value, beta)
-        
-    Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
-    value is set to None by default, and can only be provided as a keyword argument.
+def new_dist_class(*new_class_args):
     """
-    
-    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
-    parent_names = args[1:]
-    try:
-        parents_default = dict(zip(args[-len(defaults):], defaults))
-    except TypeError: # No parents at all.
-        parents_default = {}
-    
-    name = capitalize(name)
-    
-    # Build docstring from distribution
-    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
-    docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
-    docstr += 'Docstring of log-probability function:\n'
-    docstr += logp.__doc__
-    
+    Returns a new class from a distribution.
+    """
+    (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
     class new_class(base):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
-
+            (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
             parents=parents_default
 
             # Extract special (non-parent) keyword arguments
@@ -90,7 +69,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
             isdata=False
             doc=docstr
             debug=False
-            
+                        
             # Figure out what argument names are needed.
             args_needed = ['name'] + copy(parent_names) + ['value', 'shape', 'trace', 'rseed', 'doc','isdata']
             arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'shape': None, 'trace': True, 'rseed': True, 'doc': None, 'isdata': False}
@@ -112,7 +91,10 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                     try:
                         parents[k] = kwds.pop(k)
                     except:
-                        raise ValueError, self_name + ': no value given for parent ' + k
+                        if k in parents_default:
+                            parents[k] = parents_default[k]
+                        else:
+                            raise ValueError, 'No value given for parent ' + k
                 elif k in ['name', 'value', 'shape', 'trace', 'rseed', 'doc', 'isdata']:
                     try:
                         arg_dict_out[k] = kwds.pop(k)
@@ -120,7 +102,7 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                         pass
                 else:
                     raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
-            
+
             # Read in from arg_dict_out to locals (annoying, but locals()[k] didn't work)
             self_name = arg_dict_out['name']    
             value = arg_dict_out['value']
@@ -154,16 +136,48 @@ def stoch_from_dist(name, logp, random=None, base=Stochastic):
                 
             # Call base class initialization method
             if debug:
-                base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(debugwrapper(logp, self_name)), \
-                    random=random_method_wrapper(debugwrapper(random, self_name), size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+                logp = debug_wrapper(logp)
+                random = debug_wrapper(random)
             else:
-                base.__init__(self, value=value, name=self_name, parents=parents, logp=valuewrapper(logp), \
-                    random=random_method_wrapper(random, size, shape), trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+                base.__init__(self, value=value, name=self_name, parents=parents, logp=logp, \
+                    random=random, trace=trace, rseed=rseed, isdata=isdata, doc=doc)
 
     new_class.__name__ = name
     new_class.parent_labels = parents_default.keys()
     
     return new_class
+
+
+def stoch_from_dist(name, logp, random=None, base=Stochastic):
+    """
+    Return a Stochastic subclass made from a particular distribution.
+
+      :Example:
+        >>> Exponential = stoch_from_dist('exponential')
+        >>> A = Exponential(self_name, value, beta)
+        
+    Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
+    value is set to None by default, and can only be provided as a keyword argument.
+    """
+    
+    (args, varargs, varkw, defaults) = inspect.getargspec(logp)
+    parent_names = args[1:]
+    try:
+        parents_default = dict(zip(args[-len(defaults):], defaults))
+    except TypeError: # No parents at all.
+        parents_default = {}
+    
+    name = capitalize(name)
+    
+    # Build docstring from distribution
+    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, shape=None, trace=True, rseed=True, doc=None)\n\n'
+    docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
+    docstr += 'Docstring of log-probability function:\n'
+    docstr += logp.__doc__
+
+    logp=valuewrapper(logp)
+
+    return new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
 
 
 #-------------------------------------------------------------

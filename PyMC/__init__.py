@@ -25,17 +25,18 @@ __modules__ = [ 'Node',
                 'MCMC',
                 'convergencediagnostics']
                 
-__optmodules__ = []
+__optmodules__ = ['ScipyDistributions',
+                  'parallel']
 #ClosedCapture, OpenCapture   
-
-for mod in __optmodules__:
-    try:
-      exec "import %s" % mod
-    except ImportError:
-        print 'Error importing module ', mod
 
 for mod in __modules__:
     exec "from %s import *" % mod
+    
+for mod in __optmodules__:
+    try:
+      exec "from %s import *" % mod
+    except ImportError:
+        pass
 
 ##try:
 ##   import parallel
