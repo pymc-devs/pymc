@@ -95,7 +95,8 @@ def stoch_from_scipy_dist(scipy_dist):
 Methods:
 
     random()
-        - draws random values and returns them
+        - draws random value
+          sets value to return value
 
     ppf(q)
         - percent point function (inverse of cdf --- percentiles)
@@ -130,40 +131,57 @@ reporting the problem to the PyMC team; the problem may be on the SciPy side.
     """
         
     new_class = new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
-    
-    def cdf_wrap(self):
-        args, kwds = separate_shape_args(self.parents, shape_args)
-        return scipy_dist.cdf(self.value, *args, **kwds)
-    
-    def sf_wrap(self):
-        args, kwds = separate_shape_args(self.parents, shape_args)
-        return scipy_dist.sf(self.value, *args, **kwds)
-    
-    def ppf_wrap(self, q):
-        args, kwds = separate_shape_args(self.parents, shape_args)
-        self.value = scipy_dist.ppf(q, *args, **kwds)
-        return self.value
-        
-    def isf_wrap(self, q):
-        args, kwds = separate_shape_args(self.parents, shape_args)
-        self.value = scipy_dist.isf(q, *args, **kwds)
-        return self.value
-        
-    def stats_wrap(self, moments='mv'):
-        args, kwds = separate_shape_args(self.parents, shape_args)        
-        return scipy_dist.stats(moments=moments, *args, **kwds)
-        
-    def entropy_wrap(self):
-        args, kwds = separate_shape_args(self.parents, shape_args)        
-        return scipy_dist.entropy(*args, **kwds)
+    class newer_class(new_class):
+        __doc__ = docstr
+        rv = scipy_dist
+        def __init__(self, *args, **kwds):
+            new_class.__init__(self, *args, **kwds)
+            self.args, self.kwds = separate_shape_args(self.parents, shape_args)        
+            self.frozen_rv = self.rv(self.args, self.kwds)
 
-    for method_name in ['cdf_wrap', 'sf_wrap', 'entropy_wrap']:
-        setattr(new_class, method_name[:-5], property(locals()[method_name]))
+        def _cdf(self):
+            """
+            The cumulative distribution function of self conditional on parents 
+            evaluated at self's current value
+            """
+            return self.rv.cdf(self.value, *self.args, **self.kwds)
+        cdf = property(_cdf, doc=_cdf.__doc__)
+    
+        def _sf(self):
+            """
+            The survival function of self conditional on parents
+            evaluated at self's current value
+            """
+            return self.rv.sf(self.value, *self.args, **self.kwds)
+        sf = property(_sf, doc=_sf.__doc__)
+    
+        def ppf(self, q):
+            """
+            The percentile point function (inverse cdf) of self conditional on parents.
+            Self's value will be set to the return value.
+            """
+            self.value = self.rv.ppf(q, *self.args, **self.kwds)
+            return self.value
+        
+        def isf(self, q):
+            """
+            The inverse survival function of self conditional on parents.
+            Self's value will be set to the return value.
+            """
+            self.value = self.rv.isf(q, *self.args, **self.kwds)       
+            return self.value
+        
+        def stats(self, moments='mv'):
+            """The first few moments of self's distribution conditional on parents"""
+            return self.rv.stats(moments=moments, *self.args, **self.kwds)
+        
+        def _entropy(self):
+            """The entropy of self's distribution conditional on its parents"""
+            return self.rv.entropy(*self.args, **self.kwds)
+        entropy = property(_entropy, doc=_entropy.__doc__)
 
-    for method_name in ['ppf_wrap', 'isf_wrap', 'stats_wrap']:
-        setattr(new_class, method_name[:-5], locals()[method_name])
-
-    return new_class
+    newer_class.__name__ = new_class.__name__
+    return newer_class
     
 for scipy_dist_name in sc_dst.__all__:
     scipy_dist = sc_dst.__dict__[scipy_dist_name]

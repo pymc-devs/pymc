@@ -101,13 +101,13 @@ class Node(object):
         # Get new lazy function
         self.gen_lazy_function()
     
-    parents = property(_get_parents, _set_parents)
+    parents = property(_get_parents, _set_parents, doc="Self's parents: the variables referred to in self's declaration.")
     
     def _get_plot(self):
         # Get plotting flag
         return self._plot
     
-    plot = property(_get_plot)
+    plot = property(_get_plot, doc='A flag indicating whether self should be plotted.')
     
     def __str__(self):
         return self.__repr__()
@@ -165,10 +165,10 @@ class ContainerBase(object):
     
     def _get_logp(self):
         # Return total log-probabilities from all elements
-        return sum(obj.logp for obj in self.stochs | self.potentials | self.data)
+        return sum(obj.logp for obj in self.stochs | self.potentials | self.data_stochs)
     
     # Define log-probability property
-    logp = property(_get_logp)
+    logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
 class StochasticBase(Variable):
     """

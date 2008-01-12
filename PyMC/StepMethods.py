@@ -123,7 +123,7 @@ class StepMethod(StepMethodBase):
         self.variables = set(variables)
         self.dtrms = set()
         self.stochs = set()
-        self.data = set()
+        self.data_stochs = set()
         self.children = set()
         self.parents = set()
         
@@ -142,7 +142,7 @@ class StepMethod(StepMethodBase):
                 self.dtrms.add(variable)
             elif isinstance(variable,Stochastic):
                 if variable.isdata:
-                    self.data.add(variable)
+                    self.data_stochs.add(variable)
                 else:
                     self.stochs.add(variable)
         
@@ -300,7 +300,7 @@ class StepMethod(StepMethodBase):
         return sum
     
     # Make get property for retrieving log-probability
-    loglike = property(fget = _get_loglike)
+    loglike = property(fget = _get_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochs, with self.stochs removed.")
     
     def current_state(self):
         """Return a dictionary with the current value of the variables defining

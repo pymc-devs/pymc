@@ -32,7 +32,7 @@ def sample_likelihood(model, iter):
 
             model.draw_from_prior()
 
-            for datum in model.data | model.potentials:
+            for datum in model.data_stochs | model.potentials:
                 loglikes[i] += datum.logp
             if len (model.potentials) > 0:
                 for pot in model.potentials:

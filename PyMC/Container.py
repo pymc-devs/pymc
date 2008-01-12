@@ -169,7 +169,7 @@ def file_items(container, iterable):
     container.dtrms = set()
     container.stochs = set()
     container.potentials = set()
-    container.data = set()
+    container.data_stochs = set()
     container.step_methods = set()
     
     # containers needs to be a list to hold unhashable items.
@@ -192,7 +192,7 @@ def file_items(container, iterable):
             container.variables.add(item)
             if isinstance(item, StochasticBase):
                 if item.isdata:
-                    container.data.add(item)
+                    container.data_stochs.add(item)
                 else:
                     container.stochs.add(item)
             elif isinstance(item, DeterministicBase):
@@ -224,14 +224,14 @@ def file_items(container, iterable):
             container.stochs.update(new_container.stochs)
             container.potentials.update(new_container.potentials)
             container.dtrms.update(new_container.dtrms)
-            container.data.update(new_container.data)
+            container.data_stochs.update(new_container.data_stochs)
             container.step_methods.update(new_container.step_methods)
 
 
 
     container.nodes = container.potentials | container.variables
     
-    
+value_doc = 'A copy of self, with all variables replaced by their values.'    
 
 class SetContainer(ContainerBase, set):
     """
@@ -265,7 +265,7 @@ class SetContainer(ContainerBase, set):
                 
         return _value
 
-    value = property(fget = get_value)
+    value = property(fget = get_value, doc=value_doc)
         
 
 class ListTupleContainer(ContainerBase, list):
@@ -298,7 +298,7 @@ class ListTupleContainer(ContainerBase, list):
         LTCValue(self)
         return self._value
 
-    value = property(fget = get_value)
+    value = property(fget = get_value, doc=value_doc)
 
 class DictContainer(ContainerBase, dict):
     """
@@ -331,7 +331,7 @@ class DictContainer(ContainerBase, dict):
         DCValue(self)
         return self._value
 
-    value = property(fget = get_value)
+    value = property(fget = get_value, doc=value_doc)
 
 class ObjectContainer(ContainerBase):
     """
@@ -366,7 +366,7 @@ class ObjectContainer(ContainerBase):
     def _get_value(self):
         OCValue(self)
         return self._value
-    value = property(fget = _get_value)
+    value = property(fget = _get_value, doc=value_doc)
 
 class ArrayContainer(ContainerBase, ndarray):
     """
@@ -423,4 +423,4 @@ class ArrayContainer(ContainerBase, ndarray):
         ACValue(self)
         return self._value
                 
-    value = property(fget = get_value)
+    value = property(fget = get_value, doc=value_doc)

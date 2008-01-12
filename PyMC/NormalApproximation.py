@@ -186,7 +186,7 @@ class MAP(Model):
                 self.stoch_types.append(type_now)
 
         self.data_len = 0
-        for datum in self.data:
+        for datum in self.data_stochs:
             self.data_len += len(ravel(datum.value))
 
         # Unpack step    
@@ -477,6 +477,7 @@ class NormApprox(MAP, Sampler):
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
         
         MAP.__init__(self, input, eps, diff_order, verbose)
+        self.C = NormApproxC(self)
         Sampler.__init__(self, input, db, output_path, verbose, reinit_model=False)
 
     def fit(self, *args, **kwargs):

@@ -19,7 +19,7 @@ class test_MCMC(NumpyTestCase):
         
         # Check stoch arrays
         assert_equal(len(M.stochs), 3)
-        assert_equal(len(M.data),1)
+        assert_equal(len(M.data_stochs),1)
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
         # Sample

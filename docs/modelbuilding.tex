@@ -129,6 +129,8 @@ You can use the class factory \texttt{stoch_from_dist} to produce \texttt{Stocha
     \item[\texttt{cache_depth}:] See section \ref{sec:caching}. 
 \end{description}
 
+In addition to the classes in chapter \ref{chap:distributions}, \texttt{scipy.stats.distributions}' random variable classes are wrapped as \texttt{Stochastic} subclasses if SciPy is installed. The naming convention for these subclasses is \texttt{SciPy<capitalized original name>}, for example \texttt{SciPyFisk}, \texttt{SciPyPlanck} and \texttt{SciPyZipf}. The PyMC developers may need to refer you to the SciPy mailing list if you run into problems with these classes. SciPy provides many probability distributions that PyMC does not, but when a PyMC counterpart exists it will usually be faster.
+
 
     \item[Direct] It's possible to instantiate \texttt{Stochastic} directly:
 \begin{verbatim}
@@ -343,7 +345,7 @@ The list \texttt{x} is transparently wrapped in an appropriate container class b
 
 Containers, like variables, have an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with \emph{its} value. 
 
-Containers can currently be constructed from lists, tuples, dictionaries, numpy arrays, modules, sets and any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
+Containers can currently be constructed from lists, tuples, dictionaries, NumPy arrays, modules, sets and any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
 
 Nodes whose parents are containers make private (shallow) copies of those containers on instantiation. This is done for technical reasons rather than to protect users from accidental misuse.
 
@@ -353,7 +355,7 @@ Containers have the following useful attributes in addition to \texttt{value}:
     \item\texttt{stochs}
     \item\texttt{potentials}
     \item\texttt{dtrms}
-    \item\texttt{data}
+    \item\texttt{data_stochs}
     \item\texttt{step_methods}.
 \end{itemize}
 Each of these attributes is a set containing all the objects of each type in a container, and within any containers in the container.

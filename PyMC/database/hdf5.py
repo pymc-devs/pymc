@@ -148,7 +148,7 @@ class Database(pickle.Database):
             object.trace._initialize(length)
         
         # Store data objects
-        for object in self.model.data:
+        for object in self.model.data_stochs:
             if object.trace is True:
                 setattr(self._table.attrs, object.__name__, object.value)
     

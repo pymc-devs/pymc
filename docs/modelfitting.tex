@@ -17,7 +17,7 @@ This class serves as a container for probability models and as a base class for 
 
 Models' useful methods are:
 \begin{description}
-    \item[\texttt{draw_from_prior()}:] Sets all stochastic varibales' values to new random values, which would be a sample from the joint distribution if all data and \texttt{Potential} instances were removed from the model.
+    \item[\texttt{draw_from_prior()}:] Sets all stochastic varibales' values to new random values, which would be a sample from the joint distribution if all data and \texttt{Potential} instances' log-probability attributes were set to zero.
     \item[\texttt{seed()}:] Same as \texttt{draw_from_prior}, but only stochastic variables with an \texttt{rseed} attribute are changed.
     \item[\texttt{find_generations():}] Sets the \texttt{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
 \end{description}
@@ -30,7 +30,7 @@ Models inherit the following attributes from \texttt{ContainerBase}:
     \item \texttt{stochs}
     \item \texttt{potentials}
     \item \texttt{dtrms}
-    \item \texttt{data}
+    \item \texttt{data_stochs}
     \item \texttt{step_methods}
     \item \texttt{value}
 \end{itemize}
@@ -113,7 +113,7 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
     \item[\texttt{isample(iter, length=None, verbose=0)}:] The same as \texttt{sample}, but the sampling is done interactively: the user can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful: 
     \begin{description}
         \item[\texttt{icontinue()}:] Continue interactive sampling.
-        \item[\texttt{halt\_sampling()}:] Truncate the database and clean up.
+        \item[\texttt{halt()}:] Truncate the database and clean up.
     \end{description}
     \item[\texttt{tally()}:] Write all variables' current values to the database.
     \item[\texttt{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \texttt{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values all the stochastic variables in the model).
@@ -125,15 +125,15 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
 
 \section{Maximum a posteriori estimates} 
 
-The \texttt{MAP} class sets all stochastic variables to their maximum a posteriori values using functions in scipy's optimize package. Scipy must be installed to use it. A \texttt{MAP} instance \texttt{N} can be created as follows:
+The \texttt{MAP} class sets all stochastic variables to their maximum a posteriori values using functions in SciPy's optimize package. Scipy must be installed to use it. A \texttt{MAP} instance \texttt{N} can be created as follows:
 \begin{verbatim}
 N = MAP(input, eps=.001, diff_order = 5)    
 \end{verbatim}
-The parameters \texttt{eps} and \texttt{diff_order} control numerical differentiation. \texttt{diff_order}, which must be an integer, specifies the order of the numerical approximation (see the scipy function \texttt{derivative}). The step size for numerical derivatives is controlled by \texttt{eps}, which may be either a single value or a dictionary of values keyed by variable (actual objects, not names). \texttt{MAP} requires all stochastic variables in \texttt{input} to be either float-valued or array-valued with dtype float, unlike PyMC in general.
+The parameters \texttt{eps} and \texttt{diff_order} control numerical differentiation. \texttt{diff_order}, which must be an integer, specifies the order of the numerical approximation (see the SciPy function \texttt{derivative}). The step size for numerical derivatives is controlled by \texttt{eps}, which may be either a single value or a dictionary of values keyed by variable (actual objects, not names). \texttt{MAP} requires all stochastic variables in \texttt{input} to be either float-valued or array-valued with dtype float, unlike PyMC in general.
 
 \texttt{MAP} has two useful methods:
 \begin{description}
-    \item[\texttt{fit(method ='fmin', iterlim=1000, tol=.0001)}:] The optimization method may be \texttt{fmin}, \texttt{fmin_l_bfgs_b}, \texttt{fmin_ncg}, \texttt{fmin_cg}, or \texttt{fmin_powell}. See the documentation of scipy's optimize package for the details of these methods. The \texttt{tol} and \texttt{iterlim} parameters are passed to the optimization function under the appropriate names.
+    \item[\texttt{fit(method ='fmin', iterlim=1000, tol=.0001)}:] The optimization method may be \texttt{fmin}, \texttt{fmin_l_bfgs_b}, \texttt{fmin_ncg}, \texttt{fmin_cg}, or \texttt{fmin_powell}. See the documentation of SciPy's optimize package for the details of these methods. The \texttt{tol} and \texttt{iterlim} parameters are passed to the optimization function under the appropriate names.
     \item[\texttt{revert_to_max()}:] If the values of the constituent stochastic variables change after fitting, this function will reset them to their maximum a posteriori values.
 \end{description}
 
@@ -168,7 +168,7 @@ MCMC samplers fit models with Markov Chain Monte Carlo, and are of course subcla
 MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
 \begin{description}
     \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations. \textbf{Cite paper that says it's OK to keep tuning.}
-    \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{sample}.
+    \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{Sampler.isample}.
     \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called.
     \item[\texttt{goodness()}:] \textbf{Someone else document this}
 \end{description}
