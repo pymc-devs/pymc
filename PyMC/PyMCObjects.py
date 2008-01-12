@@ -216,11 +216,12 @@ class Potential(PotentialBase):
     def set_logp(self,value):      
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
 
-    logp = property(fget = get_logp, fset=set_logp)
+    logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
     
     def _get_extended_parents(self):
         return extend_parents(self.parents.values())
-    extended_parents = property(_get_extended_parents)
+        
+    extended_parents = property(_get_extended_parents, doc="All the stochastic variables on which self.logp depends.")
 
 
         
@@ -315,7 +316,7 @@ class Deterministic(DeterministicBase):
     def set_value(self,value):      
         raise AttributeError, 'Deterministic '+self.__name__+'\'s value cannot be set.'
 
-    value = property(fget = get_value, fset=set_value)
+    value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
     
 
 class Stochastic(StochasticBase):
@@ -508,7 +509,7 @@ class Stochastic(StochasticBase):
         self._value = value
         
 
-    value = property(fget=get_value, fset=set_value)
+    value = property(fget=get_value, fset=set_value, doc="Self's current value.")
 
 
     def get_logp(self):
@@ -527,7 +528,7 @@ class Stochastic(StochasticBase):
     def set_logp(self):
         raise AttributeError, 'Stochastic '+self.__name__+'\'s logp attribute cannot be set'
 
-    logp = property(fget = get_logp, fset=set_logp)        
+    logp = property(fget = get_logp, fset=set_logp, doc="Log-probability or log-density of self's current value\n given values of parents.")        
 
     
     # Sample self's value conditional on parents.
@@ -553,11 +554,11 @@ class Stochastic(StochasticBase):
     
     def _get_extended_parents(self):
         return extend_parents(self.parents.values())
-    extended_parents = property(_get_extended_parents)
+    extended_parents = property(_get_extended_parents, doc="All the variables on which self.logp depends.")
     
     def _get_extended_children(self):
         return extend_children(self.children)
-    extended_children = property(_get_extended_children)
+    extended_children = property(_get_extended_children, doc="All the stochastic variables and factor potentials whose logp attribute depends on self.value")
     
     def _get_coparents(self):
         coparents = set()
@@ -565,7 +566,7 @@ class Stochastic(StochasticBase):
             coparents |= child.extended_parents
         coparents.discard(self)
         return coparents
-    coparents = property(_get_coparents)
+    coparents = property(_get_coparents, doc="All the variables whose extended children intersect with self's.")
     
     def _get_moral_neighbors(self):
         moral_neighbors = self.coparents | self.extended_parents | self.extended_children
@@ -573,11 +574,11 @@ class Stochastic(StochasticBase):
             if isinstance(neighbor, PotentialBase):
                 moral_neighbors.remove(neighbor)
         return moral_neighbors
-    moral_neighbors = property(_get_moral_neighbors)
+    moral_neighbors = property(_get_moral_neighbors, doc="Self's neighbors in the moral graph: self's Markov blanket with self removed.")
     
     def _get_markov_blanket(self):
         return self.moral_neighbors | set([self])
-    markov_blanket = property(_get_markov_blanket)
+    markov_blanket = property(_get_markov_blanket, doc="Self's coparents, self's extended parents, self's children and self.")
 
 class DiscreteStochastic(Stochastic):
     """
@@ -598,7 +599,7 @@ class DiscreteStochastic(Stochastic):
         else:
             self._value = int(round(value))
 
-    value=property(Stochastic.get_value,set_value)
+    value=property(Stochastic.get_value,set_value,doc=Stochastic.value.__doc__)
     
 class BinaryStochastic(Stochastic):
     """
@@ -622,4 +623,4 @@ class BinaryStochastic(Stochastic):
         else:
             self._value = bool(value)
 
-    value=property(Stochastic.get_value,set_value)
+    value=property(Stochastic.get_value,set_value,doc=Stochastic.value.__doc__)
