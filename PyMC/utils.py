@@ -16,7 +16,7 @@ from numpy.linalg import cholesky, eigh, det, inv
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, vectorize, inf
+    hsplit, argsort, vectorize, inf, shape, transpose as tr
 
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
@@ -517,7 +517,7 @@ def hpd(x, alpha):
     if x.ndim>1:
         
         # Transpose first, then sort
-        tx = t(x, range(x.ndim)[1:]+[0])
+        tx = tr(x, range(x.ndim)[1:]+[0])
         dims = shape(tx)
         
         # Container list for intervals
@@ -595,7 +595,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     # For multivariate node
     if x.ndim>1:
         # Transpose first, then sort, then transpose back
-        sx = t(sort(t(x)))
+        sx = tr(sort(t(x)))
     else:
         # Sort univariate node
         sx = sort(x)
