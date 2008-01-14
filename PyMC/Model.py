@@ -507,7 +507,10 @@ class Sampler(Model):
         """
         Tell the database to save the current state of the sampler.
         """
-        self.db.savestate(self.get_state())
+        try:
+            self.db.savestate(self.get_state())
+        except:
+            print 'Warning, unable to save state.'
 
     def restore_state(self):
         """

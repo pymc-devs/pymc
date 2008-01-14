@@ -13,8 +13,7 @@ from copy import copy
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
 # TODO: Test cases for binary and discrete Metropolises.
 
-__all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method', 
-'pick_best_methods', 'StepMethodRegistry', 'BinaryMetropolis']
+__all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis']
 
 StepMethodRegistry = []
 
@@ -68,9 +67,7 @@ def assign_method(stoch, scale=None):
 
 class StepMethodMeta(type):
     """
-    Automatically registers new step methods, and mutates their 
-    unbound competence methods to callable CompetenceFunction
-    instances.
+    Automatically registers new step methods.
     """
     def __init__(cls, name, bases, dict):
         type.__init__(cls)
@@ -316,6 +313,17 @@ class StepMethod(StepMethodBase):
         def fget(self):
             return self._accepted/(self._accepted + self._rejected)
         return locals()
+        
+class NoStepper(StepMethod):
+    """
+    Step and tune methods do nothing.
+    
+    Useful for holding stochastics constant without setting isdata=True.
+    """
+    def step(self):
+        pass
+    def tune(self):
+        pass
 
 # The default StepMethod, which Model uses to handle singleton stochs.
 class Metropolis(StepMethod):
@@ -506,6 +514,16 @@ class Metropolis(StepMethod):
         elif self._dist == "Prior":
             self.stoch.random()
 
+class NoStepper(StepMethod):
+    """
+    Step and tune methods do nothing.
+    
+    Useful for holding stochastics constant without setting isdata=True.
+    """
+    def step(self):
+        pass
+    def tune(self):
+        pass
 
 class DiscreteMetropolis(Metropolis):
     """

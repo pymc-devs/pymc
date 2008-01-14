@@ -24,7 +24,7 @@ from InstantiationDecorators import dtrm
 from Node import ZeroProbability, Variable
 from Container import Container
 from utils import msqrt
-from numpy import asarray, diag, dot, zeros, log, shape, isscalar, sum
+from numpy import asarray, diag, dot, zeros, log, shape, isscalar, sum, sqrt
 from numpy.random import normal, random, gamma, beta
 from numpy.linalg import cholesky, solve
 from flib import dpotrs_wrap, dtrsm_wrap
@@ -418,7 +418,6 @@ class NormalNormal(Gibbs):
     - Deterministics
     These arguments may be lists of length 1 or of the same length as d.
     theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
-    
     """
     def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None, verbose=0):
         

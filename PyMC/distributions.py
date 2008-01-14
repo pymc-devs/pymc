@@ -31,7 +31,7 @@ import PyMC
 import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
-from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel, prod
+from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel, prod, any, sum
 
 if hasattr(flib, 'cov_mvnorm'):
     flib_blas_OK = True
@@ -1882,8 +1882,21 @@ def uninformative_like(x):
     return 0.
 
 
+def one_over_x_like(x):
+    """
+    one_over_x_like(x)
+
+    returns -Inf if x<0, -log(x) otherwise.
+    """
+    if any(x<0):
+        return -Inf
+    else:
+        return -sum(log(x))
+
+
 Uninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
 DiscreteUninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
+OneOverX = stoch_from_dist('one_over_x_like', logp = one_over_x_like, base = Stochastic)
 
 if __name__ == "__main__":
     import doctest

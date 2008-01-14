@@ -150,12 +150,10 @@ def Container(*args):
         
     # Wrap mutable objects
     elif hasattr(iterable, '__dict__'):
-        print iterable, iterable.__dict__
         return ObjectContainer(iterable.__dict__)
         
     # Otherwise raise an error.
-    else:
-        raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
+    raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
 
 def file_items(container, iterable):
     """
@@ -203,7 +201,7 @@ def file_items(container, iterable):
             container.step_methods.add(item)
 
         # Wrap internal containers
-        elif hasattr(item, '__iter__') or hasattr(item, '__dict__'):
+        elif hasattr(item, '__iter__'):
             # If this is a non-object-valued ndarray, don't container-ize it.
             if isinstance(item, ndarray):
                 if item.dtype!=dtype('object'):
