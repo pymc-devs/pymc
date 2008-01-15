@@ -10,12 +10,13 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide) :: info
 
       DOUBLE PRECISION sig(n,n), x(n), mu(n), like
-      INTEGER n, info
+      INTEGER n, info, i
+      DOUBLE PRECISION twopi_N, log_detC, gd
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)      
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
-      DOUBLE PRECISION twopi_N, log_detC
+
 
       EXTERNAL DPOTRS
 ! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
@@ -23,7 +24,8 @@ cf2py integer intent(hide) :: info
 ! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
       EXTERNAL DCOPY
 ! DCOPY(N,DX,INCX,DY,INCY) copies x to y
-      EXTERNAL DDOT
+! NB DDOT from ATLAS, compiled with gfortran 4.2 on Ubuntu Gutsy,
+! was producing bad output- hence the manual dot product.
       
 !     x <- (x-mu)      
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
@@ -33,9 +35,14 @@ cf2py integer intent(hide) :: info
       
 !     x <- sig ^-1 * x
       call DPOTRS('L',n,1,sig,n,x,n,info)
+
+      gd=0.0D0
+      do i=1,n
+          gd=gd+x(i)*mu(i)
+      end do
       
 !     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
-      like = -0.5D0 * DDOT(n, x, 1, mu, 1)
+      like = -0.5D0 * gd
 !       print *, like
       
       twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
@@ -68,17 +75,10 @@ cf2py integer intent(hide) :: info
       PARAMETER (infinity = 1.7976931348623157d308)      
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
-      DOUBLE PRECISION twopi_N, log_detC
 
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
-      EXTERNAL DPOTRS
-! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
-      EXTERNAL DAXPY
-! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
-      EXTERNAL DCOPY
-! DCOPY(N,DX,INCX,DY,INCY) copies x to y
-      EXTERNAL DDOT
+
       
 !     C <- cholesky(C)      
       call DPOTRF( 'L', n, C, n, info )
@@ -98,8 +98,8 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(copy) :: tau
 cf2py double precision intent(out) :: like
 
-      DOUBLE PRECISION tau(n,n), x(n), mu(n), like
-      INTEGER n, info
+      DOUBLE PRECISION tau(n,n), x(n), mu(n), like, gd
+      INTEGER n, info, i
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)      
       DOUBLE PRECISION PI
@@ -114,7 +114,6 @@ cf2py double precision intent(out) :: like
 ! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
       EXTERNAL DCOPY
 ! DCOPY(N,DX,INCX,DY,INCY) copies x to y
-      EXTERNAL DDOT
 
       twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
 
@@ -127,9 +126,13 @@ cf2py double precision intent(out) :: like
 !     mu <- tau * x
       call DSYMV('L',n,1.0D0,tau,n,x,1,0.0D0,mu,1)
 
+      gd = 0.0D0
+      do i=1,n
+          gd=gd+x(i)*mu(i)
+      end do
 
 !     like <- -.5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
-      like = -0.5D0 * DDOT(n, x, 1, mu, 1)
+      like = -0.5D0 * gd
 
 !      Cholesky factorize tau for the determinant.      
        call DPOTRF( 'L', n, tau, n, info )
