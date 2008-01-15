@@ -123,12 +123,12 @@ def new_dist_class(*new_class_args):
                         shape = (shape,)
                     if len(shape)==0 or shape == (1,):
                         shape=None
-                        value = random(size=1, **parents)
-                    value = np.reshape(random(size=size, **parents), shape)    
+                    #     value = random(size=1, **parents)
+                    # value = np.reshape(random(size=size, **parents), shape)    
                 else:
                     size=1
                     shape = None
-                    value = random(size=1, **parents)
+                    # value = random(size=1, **parents)
 
             else:
                 size = len(ravel(value))
@@ -1418,7 +1418,6 @@ def rnormal(mu, tau,size=1):
 
     Random normal variates.
     """
-
     return random.normal(mu, 1./sqrt(tau), size)
 
 def normal_expval(mu, tau):

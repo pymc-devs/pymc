@@ -441,17 +441,8 @@ class Stochastic(StochasticBase):
         self.rseed = rseed
         
         # Initialize value, either from value provided or from random function.
-        self._value = value
-        if value is None:
-            
-            # Use random function if provided
-            if random is not None:
-                self._value = random(**self._parents.value)
+        self._value = value        
                 
-            # Otherwise leave initial value at None and warn.
-            else:
-                raise ValueError, 'Stochastic ' + name + "'s value initialized to None; no initial value or random method provided."
-        
         Node.__init__(  self, 
                         doc=doc, 
                         name=name, 
@@ -460,8 +451,8 @@ class Stochastic(StochasticBase):
                         trace=trace,
                         plot=plot,
                         verbose=verbose)
-                            
-        self._logp.force_compute()                   
+            
+        # self._logp.force_compute()                   
         self.zero_logp_error_msg = "Stochastic " + self.__name__ + "'s value is outside its support."
 
         # Check initial value
@@ -472,6 +463,18 @@ class Stochastic(StochasticBase):
         """
         Will be called by Node at instantiation.
         """
+        
+        # If value argument to __init__ was None, draw value from random method.
+        if self._value is None:
+
+            # Use random function if provided
+            if self._random is not None:
+                self._value = self._random(**self._parents.value)
+
+            # Otherwise leave initial value at None and warn.
+            else:
+                raise ValueError, 'Stochastic ' + name + "'s value initialized to None; no initial value or random method provided."
+
         arguments = {}
         arguments.update(self.parents)
         arguments['value'] = self
