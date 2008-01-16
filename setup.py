@@ -11,13 +11,16 @@ config = Configuration('PyMC',parent_package=None,top_path=None)
 
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
 # TODO: Use numpy's lapack_lite if optimized BLAS are not present.
-try:
-    lapack_info = get_info('lapack_opt',1)
+
+
+lapack_info = get_info('lapack_opt',1)
+if lapack_info:
+    print 'Compiling everything'
     config.add_extension(name='flib',sources=['PyMC/flib.f',
     'PyMC/histogram.f', 'PyMC/flib_blas.f', 'PyMC/math.f', 'PyMC/gibbsit.f'], extra_info=lapack_info)
-except:
+else:
+    print 'Not compiling flib_blas'
     config.add_extension(name='flib',sources=['PyMC/flib.f', 'PyMC/histogram.f', 'PyMC/math.f'])
-    
     
 # Try to compile the Pyrex version of LazyFunction
 config.add_extension(name='LazyFunction',sources=['PyMC/LazyFunction.c'])

@@ -8,23 +8,6 @@
 # TODO: categorical, mvhypergeometric
 
 __docformat__='reStructuredText'
-univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
-'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'negative_binomial', 'normal', 'poisson', 'uniform',
-'weibull', 'wishart']
-
-mv_distributions = ['dirichlet','multivariate_hypergeometric','mvnormal', 'multinomial']
-
-discrete_distributions = ['binomial', 'poisson', 'multinomial']
-continuous_distributions = univ_distributions + mv_distributions
-for non_cont in discrete_distributions + ['bernoulli']:
-    continuous_distributions.remove(non_cont)
-
-availabledistributions = univ_distributions+mv_distributions
-
-# Changes lower case, underscore-separated names into "Class style" capitalized names
-# For example, 'negative_binomial' becomes 'NegativeBinomial'
-capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 
 import flib
 import PyMC
@@ -44,6 +27,28 @@ import inspect, types
 from copy import copy
 random_number = random.random
 inverse = np.linalg.pinv
+
+
+univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
+'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
+'inverse_gamma', 'lognormal', 'negative_binomial', 'normal', 'poisson', 'uniform',
+'weibull']
+
+if flib_blas_OK:
+    mv_distributions = ['dirichlet','multivariate_hypergeometric','mv_normal','mv_normal_cov','mv_normal_chol','multinomial', 'wishart']
+else:
+    mv_distributions = ['dirichlet','multivariate_hypergeometric','multinomial']
+
+discrete_distributions = ['binomial', 'poisson', 'multinomial']
+continuous_distributions = univ_distributions + mv_distributions
+for non_cont in discrete_distributions + ['bernoulli']:
+    continuous_distributions.remove(non_cont)
+
+availabledistributions = univ_distributions+mv_distributions
+
+# Changes lower case, underscore-separated names into "Class style" capitalized names
+# For example, 'negative_binomial' becomes 'NegativeBinomial'
+capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 
 
 # ============================================================================================
@@ -1215,163 +1220,164 @@ def multivariate_hypergeometric_like(x, m):
     return flib.mvhyperg(x, m)
 
 
+if flib_blas_OK:
+    # Multivariate normal--------------------------------------
+    def rmv_normal(mu, tau, size=1):
+        """
+        rmv_normal(mu, tau, size=1)
 
-# Multivariate normal--------------------------------------
-def rmvnormal(mu, tau, size=1):
-    """
-    rmvnormal(mu, tau, size=1)
-
-    Random multivariate normal variates.
-    """
+        Random multivariate normal variates.
+        """
     
-    sig = np.linalg.cholesky(tau)
-    mu_size = mu.shape
+        sig = np.linalg.cholesky(tau)
+        mu_size = mu.shape
 
-    if size==1:
-        out = random.normal(size=mu_size)
-        try:
-            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
-        except:
-            out = np.linalg.solve(sig, out)
-        out+=mu    
-        return out
-    else:
-        if not hasattr(size,'__iter__'):
-            size = (size,)
-        tot_size = prod(size)
-        out = random.normal(size = (tot_size,) + mu_size)
-        for i in xrange(tot_size):
+        if size==1:
+            out = random.normal(size=mu_size)
             try:
-                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
+                flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
             except:
-                out[i,:] = np.linalg.solve(sig, out[i,:])
-            out[i,:] += mu
-        return out.reshape(size+mu_size)
+                out = np.linalg.solve(sig, out)
+            out+=mu    
+            return out
+        else:
+            if not hasattr(size,'__iter__'):
+                size = (size,)
+            tot_size = prod(size)
+            out = random.normal(size = (tot_size,) + mu_size)
+            for i in xrange(tot_size):
+                try:
+                    flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
+                except:
+                    out[i,:] = np.linalg.solve(sig, out[i,:])
+                out[i,:] += mu
+            return out.reshape(size+mu_size)
 
-def mvnormal_expval(mu, tau):
-    """
-    mvnormal_expval(mu, tau)
+    def mv_normal_expval(mu, tau):
+        """
+        mv_normal_expval(mu, tau)
 
-    Expected value of multivariate normal distribution.
-    """
-    return mu
+        Expected value of multivariate normal distribution.
+        """
+        return mu
 
-def mvnormal_like(x, mu, tau):
-    """
-    mvnormal_like(x, mu, tau)
+    def mv_normal_like(x, mu, tau):
+        """
+        mv_normal_like(x, mu, tau)
 
-    Multivariate normal log-likelihood
+        Multivariate normal log-likelihood
 
-    .. math::
-        f(x \\mid \\pi, T) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}T(x-\\mu) \\right\\}
+        .. math::
+            f(x \\mid \\pi, T) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}T(x-\\mu) \\right\\}
 
-    x: (n,k)
-    mu: (k)
-    tau: (k,k)
-    tau positive definite
-    """
-    # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
-        return sum([flib.prec_mvnorm(r,mu,tau)] for r in x)
-    else:
-        return flib.prec_mvnorm(x,mu,tau)
+        x: (n,k)
+        mu: (k)
+        tau: (k,k)
+        tau positive definite
+        """
+        # TODO: Vectorize in Fortran
+        if len(x.shape)>1:
+            return sum([flib.prec_mvnorm(r,mu,tau)] for r in x)
+        else:
+            return flib.prec_mvnorm(x,mu,tau)
         
-# Multivariate normal, parametrized with covariance---------------------------
-def rmvnormal_cov(mu, C, size=1):
-    """
-    rmvnormal_cov(mu, C)
+    # Multivariate normal, parametrized with covariance---------------------------
+    def rmv_normal_cov(mu, C, size=1):
+        """
+        rmv_normal_cov(mu, C)
 
-    Random multivariate normal variates.
-    """
+        Random multivariate normal variates.
+        """
 
-    return random.multivariate_normal(mu, C, size)
+        return random.multivariate_normal(mu, C, size)
 
-def mvnormal_cov_expval(mu, C):
-    """
-    mvnormal_cov_expval(mu, C)
+    def mv_normal_cov_expval(mu, C):
+        """
+        mv_normal_cov_expval(mu, C)
 
-    Expected value of multivariate normal distribution.
-    """
-    return mu
+        Expected value of multivariate normal distribution.
+        """
+        return mu
 
-def mvnormal_cov_like(x, mu, C):
-    """
-    mvnormal_cov_like(x, mu, C)
+    def mv_normal_cov_like(x, mu, C):
+        """
+        mv_normal_cov_like(x, mu, C)
 
-    Multivariate normal log-likelihood
+        Multivariate normal log-likelihood
 
-    .. math::
-        f(x \\mid \\pi, C) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}C^{-1}(x-\\mu) \\right\\}
+        .. math::
+            f(x \\mid \\pi, C) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}C^{-1}(x-\\mu) \\right\\}
 
-    x: (n,k)
-    mu: (k)
-    C: (k,k)
-    C positive definite
-    """
-    # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
-        return sum([flib.cov_mvnorm(r,mu,C)] for r in x)
-    else:
-        return flib.cov_mvnorm(x,mu,C)
+        x: (n,k)
+        mu: (k)
+        C: (k,k)
+        C positive definite
+        """
+        # TODO: Vectorize in Fortran
+        if len(x.shape)>1:
+            return sum([flib.cov_mvnorm(r,mu,C)] for r in x)
+        else:
+            return flib.cov_mvnorm(x,mu,C)
      
 
-# Multivariate normal, parametrized with Cholesky factorization.----------
-def rmvnormal_chol(mu, sig, size=1):
-    """
-    rmvnormal(mu, sig)
+    # Multivariate normal, parametrized with Cholesky factorization.----------
+    def rmv_normal_chol(mu, sig, size=1):
+        """
+        rmv_normal(mu, sig)
 
-    Random multivariate normal variates.
-    """
-    mu_size = mu.shape
+        Random multivariate normal variates.
+        """
+        mu_size = mu.shape
 
-    if size==1:
-        out = random.normal(size=mu_size)
-        try:
-            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
-        except:
-            out = np.dot(sig, out)
-        out+=mu    
-        return out
-    else:
-        if not hasattr(size,'__iter__'):
-            size = (size,)
-        tot_size = prod(size)
-        out = random.normal(size = (tot_size,) + mu_size)
-        for i in xrange(tot_size):
+        if size==1:
+            out = random.normal(size=mu_size)
             try:
-                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
+                flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
             except:
-                out[i,:] = np.dot(sig, out[i,:])
-            out[i,:] += mu
-        return out.reshape(size+mu_size)
+                out = np.dot(sig, out)
+            out+=mu    
+            return out
+        else:
+            if not hasattr(size,'__iter__'):
+                size = (size,)
+            tot_size = prod(size)
+            out = random.normal(size = (tot_size,) + mu_size)
+            for i in xrange(tot_size):
+                try:
+                    flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
+                except:
+                    out[i,:] = np.dot(sig, out[i,:])
+                out[i,:] += mu
+            return out.reshape(size+mu_size)
 
-def mvnormal_chol_expval(mu, sig):
-    """
-    mvnormal_expval(mu, sig)
 
-    Expected value of multivariate normal distribution.
-    """
-    return mu
+    def mv_normal_chol_expval(mu, sig):
+        """
+        mv_normal_expval(mu, sig)
 
-def mvnormal_chol_like(x, mu, sig):
-    """
-    mvnormal_like(x, mu, tau)
+        Expected value of multivariate normal distribution.
+        """
+        return mu
 
-    Multivariate normal log-likelihood
+    def mv_normal_chol_like(x, mu, sig):
+        """
+        mv_normal_like(x, mu, tau)
 
-    .. math::
-        f(x \\mid \\pi, \\sigma) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}\\sigma \\sigma^{\\prime}(x-\\mu) \\right\\}
+        Multivariate normal log-likelihood
 
-    x: (n,k)
-    mu: (k)
-    sigma: (k,k)
-    sigma lower triangular
-    """
-    # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
-        return sum([flib.chol_mvnorm(r,mu,sig)] for r in x)
-    else:
-        return flib.chol_mvnorm(x,mu,sig)
+        .. math::
+            f(x \\mid \\pi, \\sigma) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}\\sigma \\sigma^{\\prime}(x-\\mu) \\right\\}
+
+        x: (n,k)
+        mu: (k)
+        sigma: (k,k)
+        sigma lower triangular
+        """
+        # TODO: Vectorize in Fortran
+        if len(x.shape)>1:
+            return sum([flib.chol_mvnorm(r,mu,sig)] for r in x)
+        else:
+            return flib.chol_mvnorm(x,mu,sig)
 
 
 
@@ -1692,8 +1698,10 @@ def wishart_like(X, n, Tau):
         Symmetric and positive definite
 
     """
-    
-    return flib.wishart(X, n, Tau)
+    if flib_blas_OK:
+        return flib.wishart(X, n, Tau)
+    else:
+        return flib.blas_wishart(X,n,Tau)
 
 
 # -----------------------------------------------------------

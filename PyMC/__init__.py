@@ -15,7 +15,6 @@ __modules__ = [ 'Node',
                 'PyMCObjects',                
                 'utils',
                 'StepMethods',
-                'GibbsStepMethods',
                 'Model',
                 'graph',
                 'MultiModelInference',
@@ -26,7 +25,8 @@ __modules__ = [ 'Node',
                 'convergencediagnostics']
                 
 __optmodules__ = ['ScipyDistributions',
-                  'parallel']
+                  'parallel',
+                  'GibbsStepMethods',]
 #ClosedCapture, OpenCapture   
 
 for mod in __modules__:
