@@ -350,8 +350,7 @@ class AdaptiveMetropolis(StepMethod):
             self.greedy = False
             
         if not accept:
-            for stoch in self.stochs:
-                stoch.value = stoch.last_value
+            self.reject()
         
         if accept or not self.greedy:
             self.internal_tally()
@@ -360,6 +359,11 @@ class AdaptiveMetropolis(StepMethod):
            self.update_cov()
     
         self._current_iter += 1
+    
+    # Please keep reject() factored out- helps RandomRealizations figure out what to do.
+    def reject(self):
+        for stoch in self.stochs:
+            stoch.value = stoch.last_value
     
     def internal_tally(self):
         """Store the trace of stochs for the computation of the covariance.

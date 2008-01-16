@@ -127,7 +127,7 @@ Attributes:
         
 NOTE: If you encounter difficulties with this object, please try the analogous 
 computation using the rv objects in scipy.stats.distributions directly before 
-reporting the problem to the PyMC team; the problem may be on the SciPy side.
+reporting the bug.
     """
         
     new_class = new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
