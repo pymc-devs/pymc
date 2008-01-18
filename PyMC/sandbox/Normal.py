@@ -1,7 +1,7 @@
 #from GibbsSampler import Gibbs
 from PyMC.StepMethods import StepMethod
 
-class MVNormalChildren(StepMethod):
+class MvNormalChildren(StepMethod):
     """
     If a stoch p's children are all normally distributed:
     
@@ -25,7 +25,7 @@ class MVNormalChildren(StepMethod):
             a normally-distributed stoch, is a dtrm whose value is the a
             array associated with that stoch.
 
-    :SeeAlso: cMVNormalWithMVNormalChildren, for fully conjugate sampling,
+    :SeeAlso: cMvNormalWithMvNormalChildren, for fully conjugate sampling,
         Normal.tex for more detailed documentation.
     """
     def __init__(self, stoch, F_dict, a_dict, tau_dict):
@@ -92,7 +92,7 @@ class MVNormalChildren(StepMethod):
 
         self._accepted += 1
 
-class cMVNormalChildren(MVNormalChildren):
+class cMvNormalChildren(MvNormalChildren):
     """
     If a stoch p's children are all normally distributed:
     
@@ -116,13 +116,13 @@ class cMVNormalChildren(MVNormalChildren):
     prior_mu, prior_tau: dtrms whose values are the prior mean and
         precision of p.
 
-    :SeeAlso: MVNormalWithMVNormalChildren, for nonconjugate sampling,
+    :SeeAlso: MvNormalWithMvNormalChildren, for nonconjugate sampling,
         Normal.tex for more detailed documentation.
     """ 
     def __init__(self, stoch, F_dict, a_dict, tau_dict, prior_mu, prior_tau):
         self.prior_mu = prior_mu
         self.prior_tau = prior_tau
-        MVNormalWithNormalChildren.__init__(self, stoch, F_dict, a_dict, tau_dict)
+        MvNormalWithNormalChildren.__init__(self, stoch, F_dict, a_dict, tau_dict)
     def step(self):
 
         logp = self.stoch.logp
