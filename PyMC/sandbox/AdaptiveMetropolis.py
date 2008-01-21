@@ -19,7 +19,7 @@ from PyMC.utils import msqrt, check_type, round_array
 from PyMC import StepMethod, Metropolis, rmvnormal
 from PyMC.flib import fill_stdnormal
 from PyMC.Node import ZeroProbability
-from PyMC.PyMCObjects import BinaryStochastic
+from PyMC.PyMCObjects import BinaryStochastic, DiscreteStochastic
 
 class AdaptiveMetropolis(StepMethod):
     """
@@ -139,12 +139,10 @@ class AdaptiveMetropolis(StepMethod):
         """Make sure each stoch has a correct type, and identify discrete stochs."""
         self.isdiscrete = {}
         for stoch in self.stochs:
-            type_now = check_type(stoch)[0]
-            if not type_now is float and not type_now is int:
-                raise TypeError,    'Stochastic ' + stoch.__name__ + "'s value must be numeric"+\
-                                    'or ndarray with numeric dtype for JointMetropolis to be applied.'
-            elif type_now is int:
+            if isinstance(stoch, DiscreteStochastic):
                 self.isdiscrete[stoch] = True
+            elif isinstance(stoch, BinaryStochastic):
+                raise 'BinaryStochastic objects not supported by AdaptativeMetropolis.'
             else:
                 self.isdiscrete[stoch] = False
                 
@@ -208,6 +206,7 @@ class AdaptiveMetropolis(StepMethod):
         except np.linalg.LinAlgError:
             print 'Warning, covariance was not positive definite. Skipping update of proposal distribution.'
             self._sig = old_sig
+            1/0
         self.chain_mean = mean
         self._trace_count += len(self._trace)
         self._trace = []        
@@ -391,20 +390,20 @@ if __name__=='__main__':
     from PyMC import Sampler, JointMetropolis
     from PyMC import stoch, data, JointMetropolis
     from numpy import array,  ones
-    from PyMC.distributions import multivariate_normal_like
+    from PyMC.distributions import mvnormal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = np.eye(2)
         @stoch
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
-            return multivariate_normal_like(value,mu,tau)
+            return mvnormal_like(value,mu,tau)
         
         tau_B = np.eye(2) * 100.          
         @stoch
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
-            return multivariate_normal_like(value,mu,tau)
+            return mvnormal_like(value,mu,tau)
     
-        AM = AdaptativeMetropolis([A,B])
+        AM = AdaptiveMetropolis([A,B])
     
     class test_AdaptativeMetropolis(NumpyTestCase):
         S = Sampler(AMmodel, 'ram')
