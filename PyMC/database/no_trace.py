@@ -5,7 +5,7 @@
 
 from numpy import zeros,shape
 import base
-import PyMC
+import pymc
 
 class Trace(base.Trace):
     """The no-trace backend provides a minimalistic backend where no

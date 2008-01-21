@@ -7,7 +7,7 @@ l ~ Exp(1.)
 D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D']
-from PyMC import *
+from pymc import *
 from numpy import *
 
 

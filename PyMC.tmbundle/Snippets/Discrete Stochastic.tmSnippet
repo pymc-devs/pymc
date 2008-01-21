@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>content</key>
-	<string>@discrete_stoch
+	<string>@discrete_stochastic
 def ${1:name}(value=${2:0}${3/([^,])?(.*)/(?1:, )/}${3:parents}):
 	"""$1 ~ ${4:distribution}$(${3/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:$2)(?4:$4)/g}${1/(\A\Z|\A\s*,\s*\Z)|.*/(?1:)/})"""
 	return ${5:$4_like(value${3/([^,])?(.*)/(?1:, )/}${3/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:$2)(?4:$4)/g}${1/(\A\Z|\A\s*,\s*\Z)|.*/(?1:)/})}

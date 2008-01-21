@@ -1,4 +1,4 @@
-from PyMC.NormalApproximation import *
+from pymc.NormalApproximation import *
 
 class EM(MAP):
     """

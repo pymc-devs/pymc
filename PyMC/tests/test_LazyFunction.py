@@ -1,8 +1,8 @@
 from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
-from PyMC.LazyFunction import LazyFunction
-from PyMC import stoch, data, dtrm, Normal, potential, ZeroProbability
+from pymc.LazyFunction import LazyFunction
+from pymc import stoch, data, dtrm, Normal, potential, ZeroProbability
 
 verbose = False
 

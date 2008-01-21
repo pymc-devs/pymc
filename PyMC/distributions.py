@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------
-# Decorate fortran functions from PyMC.flib to ease argument passing
+# Decorate fortran functions from pymc.flib to ease argument passing
 #-------------------------------------------------------------------
 # TODO: Deal with functions that take correlation matrices as arguments.wishart, normal,?
 # TODO: test and finalize vectorized multivariate normal like.
@@ -10,7 +10,7 @@
 __docformat__='reStructuredText'
 
 import flib
-import PyMC
+import pymc
 import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
@@ -383,7 +383,7 @@ def rarnormal(a, tau, rho, size=1):
     If a is a sequence, generates size series of the same length
     as a. 
     """
-    f = PyMC.utils.ar1
+    f = pymc.utils.ar1
     if np.isscalar(a):
         r = f(rho, 0, tau, size)
     else:
@@ -1524,13 +1524,13 @@ def rtruncnorm(mu, sigma, a, b, size=1):
     Random truncated normal variates.
     """
     
-    na = PyMC.utils.normcdf((a-mu)/sigma)
-    nb = PyMC.utils.normcdf((b-mu)/sigma)
+    na = pymc.utils.normcdf((a-mu)/sigma)
+    nb = pymc.utils.normcdf((b-mu)/sigma)
     
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
     q = U * nb + (1-U)*na
-    R = PyMC.utils.invcdf(q)
+    R = pymc.utils.invcdf(q)
     
     # Unnormalize
     return R*sigma + mu
@@ -1559,11 +1559,11 @@ def truncnorm_like(x, mu, sigma, a, b):
     else:
         n = len(x)
         phi = normal_like(x, mu, 1./sigma**2)
-        Phia = PyMC.utils.normcdf((a-mu)/sigma)
+        Phia = pymc.utils.normcdf((a-mu)/sigma)
         if b == np.inf:
             Phib = 1.0
         else:
-            Phib = PyMC.utils.normcdf((b-mu)/sigma)
+            Phib = pymc.utils.normcdf((b-mu)/sigma)
         d = log(Phib-Phia)
         if len(d) == n:
             Phi = d.sum()
@@ -1836,7 +1836,7 @@ Return likelihood."""
 
     # Assign function attributes to wrapper.
     wrapper.__doc__ = f.__doc__
-    wrapper._PyMC = True
+    wrapper._pymc = True
     wrapper.__name__ = f.__name__
     wrapper.name = name
     return wrapper

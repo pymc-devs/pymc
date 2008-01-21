@@ -10,7 +10,7 @@ rst2latex.py ../PyMC/database/README.txt | ./extract.py -s \\\\setlength{\\\\loc
 
 mkdir pdf
 pdflatex -output-directory=pdf guide2.0
-bibtex guide2.0
+bibtex pdf/guide2.0
 pdflatex -output-directory=pdf guide2.0
 pdflatex -output-directory=pdf guide2.0
 cd ..

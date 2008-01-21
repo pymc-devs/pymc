@@ -1,4 +1,4 @@
-###
+pymc###
 # Adaptive Metropolis Algorithm
 # Author: David Huard
 # Date: April 23, 2007
@@ -14,12 +14,12 @@ from __future__ import division
 import numpy as np
 from numpy.random import randint, random
 
-import PyMC
-from PyMC.utils import msqrt, check_type, round_array
-from PyMC import StepMethod, Metropolis, rmvnormal
-from PyMC.flib import fill_stdnormal
-from PyMC.Node import ZeroProbability
-from PyMC.PyMCObjects import BinaryStochastic, DiscreteStochastic
+import pymc
+from pymc.utils import msqrt, check_type, round_array
+from pymc import StepMethod, Metropolis, rmvnormal
+from pymc.flib import fill_stdnormal
+from pymc.Node import ZeroProbability
+from pymc.PyMCObjects import BinaryStochastic, DiscreteStochastic
 
 class AdaptiveMetropolis(StepMethod):
     """
@@ -56,7 +56,7 @@ class AdaptiveMetropolis(StepMethod):
         
         self.verbose = verbose
         
-        if getattr(stoch, '__class__') is PyMC.PyMCObjects.Stochastic:
+        if getattr(stoch, '__class__') is pymc.PyMCObjects.Stochastic:
             stoch = [stoch] 
         StepMethod.__init__(self, stoch, verbose)
         
@@ -387,10 +387,10 @@ class AdaptiveMetropolis(StepMethod):
    
 if __name__=='__main__':
     from numpy.testing import *
-    from PyMC import Sampler, JointMetropolis
-    from PyMC import stoch, data, JointMetropolis
+    from pymc import Sampler, JointMetropolis
+    from pymc import stoch, data, JointMetropolis
     from numpy import array,  ones
-    from PyMC.distributions import mvnormal_like
+    from pymc.distributions import mvnormal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = np.eye(2)

@@ -7,7 +7,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from numpy import array, zeros, ones, arange, resize
-from PyMC import Node, ContainerBase, Variable
+from pymc import Node, ContainerBase, Variable
 from Container import ListTupleContainer
 
 cdef extern from "stdlib.h":

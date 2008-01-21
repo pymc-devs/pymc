@@ -11,9 +11,9 @@ model posterior probabilities. This'll probably be worse for more complicated
 models. Maybe there's a literature on this problem.
 """
 
-from PyMC import weight, Model
+from pymc import weight, Model
 from numpy import log
-from PyMC.examples import model_1, model_2, model_3
+from pymc.examples import model_1, model_2, model_3
 
 from numpy.testing import *
 class test_model_ave(NumpyTestCase):

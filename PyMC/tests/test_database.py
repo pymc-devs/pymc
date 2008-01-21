@@ -1,8 +1,8 @@
 """ Test database backends """
 
 from numpy.testing import *
-from PyMC import MCMC, database
-from PyMC.examples import DisasterModel
+from pymc import MCMC, database
+from pymc.examples import DisasterModel
 import os,sys
 import numpy as np
 
@@ -129,7 +129,7 @@ if hasattr(database, 'hdf5'):
             
         def check_load(self):
             db = database.hdf5.load('DisasterModel.hdf5', 'a')
-            assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
+            assert_array_equal(db._h5file.root.chain1.pymcsamples.attrs.D, 
                DisasterModel.D_array)
             assert_array_equal(db.D, DisasterModel.D_array)
             S = MCMC(DisasterModel, db)

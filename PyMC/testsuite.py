@@ -1,6 +1,6 @@
 from numpy.testing import NumpyTest
 
-from PyMC import tests
+from pymc import tests
 
 import os
 # Changeset
@@ -15,7 +15,7 @@ def test():
     except:
         pass
     os.chdir('test_results')
-    testmod = __import__('PyMC.tests', [], [], tests.__modules__)
+    testmod = __import__('pymc.tests', [], [], tests.__modules__)
     
     for m in tests.__modules__:
         print 'Testing ' + m

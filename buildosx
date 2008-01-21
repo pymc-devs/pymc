@@ -1,4 +1,3 @@
 #!/bin/sh
 rm -rf build
-#python setup.py config_fc --fcompiler gnu95 config -L../staticlibs build bdist_mpkg --readme README.txt --open
-python setup.py config_fc --fcompiler gnu95 config build bdist_mpkg --readme README.txt --open
+python setup.py config_fc --fcompiler gnu95 config build bdist_egg

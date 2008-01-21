@@ -1,4 +1,4 @@
-from PyMC import *
+from pymc import *
 from numpy.testing import *
 
 

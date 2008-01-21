@@ -81,8 +81,8 @@ class Parallel:
             rc.executeAll( 'import %s as input; reload(input)'%input.__name__)
         
         # Instantiate Sampler instances in each process
-        rc.executeAll('from PyMC import Sampler')
-        rc.executeAll('from PyMC.database.parallel import Database')
+        rc.executeAll('from pymc import Sampler')
+        rc.executeAll('from pymc.database.parallel import Database')
         for i in range(nproc):
             rc.execute(i, 'db = Database(%d)'%i)
         rc.executeAll('S = Sampler(input, db=db)')
@@ -102,7 +102,7 @@ class Parallel:
     
 
 if __name__ == '__main__':
-    from PyMC.examples import DisasterModel
+    from pymc.examples import DisasterModel
     P = Parallel(DisasterModel, 'ram')
     P.sample(1000,500,1)
     #P.rc.killAll(controller=True)

@@ -5,7 +5,7 @@ global_rate ~ Exp(3.)
 disasters[t] ~ Po(global_rate)
 """
 
-from PyMC import *
+from pymc import *
 from numpy import *
 
 __all__ = ['global_rate', 'disasters', 'disasters_array']

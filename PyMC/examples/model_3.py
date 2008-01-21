@@ -6,7 +6,7 @@ amp_of_mean ~ Exp(3)
 disasters[t] ~ Po(intercept_of_mean + slope_of_mean * t)
 """
 
-from PyMC import *
+from pymc import *
 from numpy import *
 
 

@@ -1,4 +1,4 @@
-from PyMC import *
+from pymc import *
 from numpy import *
 
 mu_A = array([0.,0.])

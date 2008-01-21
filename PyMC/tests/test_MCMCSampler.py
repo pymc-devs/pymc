@@ -11,8 +11,8 @@ class test_MCMC(NumpyTestCase):
     def check(self):
         
         # Import modules
-        from PyMC import MCMC
-        from PyMC.examples import DisasterModel
+        from pymc import MCMC
+        from pymc.examples import DisasterModel
         
         # Instantiate samplers
         M = MCMC(DisasterModel)

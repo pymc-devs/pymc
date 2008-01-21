@@ -1,5 +1,5 @@
-from PyMC import NormApprox, msqrt
-from PyMC.examples import gelman_bioassay
+from pymc import NormApprox, msqrt
+from pymc.examples import gelman_bioassay
 from pylab import *
 from numpy import *
 from numpy.testing import * 

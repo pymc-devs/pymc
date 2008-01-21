@@ -1,4 +1,4 @@
-from PyMC import Stochastic, Deterministic, Node, StepMethod
+from pymc import Stochastic, Deterministic, Node, StepMethod
 from numpy import ma, random, where
 from numpy.random import random
 from copy import deepcopy

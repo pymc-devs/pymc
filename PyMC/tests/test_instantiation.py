@@ -13,11 +13,11 @@
 ###
 
 from numpy.testing import *
-import PyMC
-from PyMC import Sampler, data, stoch, dtrm, discrete_stoch, \
+import pymc
+from pymc import Sampler, data, stoch, dtrm, discrete_stoch, \
     Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
-from PyMC import uniform_like, exponential_like, poisson_like
+from pymc import uniform_like, exponential_like, poisson_like
 
 
 D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

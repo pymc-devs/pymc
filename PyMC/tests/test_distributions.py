@@ -16,10 +16,10 @@ For each distribution:
 
 
 #from decorators import *
-from PyMC.distributions import *
+from pymc.distributions import *
 import unittest
 from numpy.testing import *
-from PyMC import flib, utils
+from pymc import flib, utils
 import numpy as np
 from numpy import exp, array, cov, prod, matrix
 from numpy.linalg import cholesky

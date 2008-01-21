@@ -1,7 +1,7 @@
 import scipy.stats.distributions as sc_dst
 import inspect
 import numpy as np
-from PyMC import Stochastic, DiscreteStochastic
+from pymc import Stochastic, DiscreteStochastic
 from copy import copy
 from distributions import *
 

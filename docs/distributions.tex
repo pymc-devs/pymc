@@ -28,7 +28,7 @@ f(x \mid \alpha, \beta) &=& \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(
 \subsection*{Binomial}
 \verb=binomial_like(x, n, p)=
 \begin{eqnarray*}
-f(x \mid n, p) &=& \frac{n!}{x!(n-x)!}p^x (1-p)^{1-x} \\
+f(x \mid n, p) &=& \frac{n!}{x!(n-x)!}p^x (1-p)^{n-x} \\
 \\
 &&0 < p < 1 \\
 &&x = 0,\ldots,n

@@ -80,7 +80,7 @@ static PyObject *__pyx_n_Variable;
 static PyObject *__pyx_n_ListTupleContainer;
 static PyObject *__pyx_n_reStructuredText;
 static PyObject *__pyx_n_numpy;
-static PyObject *__pyx_n_PyMC;
+static PyObject *__pyx_n_pymc;
 static PyObject *__pyx_n_Container;
 
 static PyObject *__pyx_k2p;
@@ -677,7 +677,7 @@ static __Pyx_InternTabEntry __pyx_intern_tab[] = {
   {&__pyx_n_ContainerBase, "ContainerBase"},
   {&__pyx_n_ListTupleContainer, "ListTupleContainer"},
   {&__pyx_n_Node, "Node"},
-  {&__pyx_n_PyMC, "PyMC"},
+  {&__pyx_n_pymc, "pymc"},
   {&__pyx_n_Variable, "Variable"},
   {&__pyx_n___author__, "__author__"},
   {&__pyx_n___docformat__, "__docformat__"},
@@ -991,7 +991,7 @@ PyMODINIT_FUNC initLazyFunction(void) {
   PyList_SET_ITEM(__pyx_2, 1, __pyx_n_ContainerBase);
   Py_INCREF(__pyx_n_Variable);
   PyList_SET_ITEM(__pyx_2, 2, __pyx_n_Variable);
-  __pyx_1 = __Pyx_Import(__pyx_n_PyMC, __pyx_2); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
+  __pyx_1 = __Pyx_Import(__pyx_n_pymc, __pyx_2); if (!__pyx_1) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
   Py_DECREF(__pyx_2); __pyx_2 = 0;
   __pyx_2 = PyObject_GetAttr(__pyx_1, __pyx_n_Node); if (!__pyx_2) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}
   if (PyObject_SetAttr(__pyx_m, __pyx_n_Node, __pyx_2) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 6; goto __pyx_L1;}

@@ -473,7 +473,7 @@ def draw_random(obj, **kwds):
     parent_name=trace_generator_function.
     
     Ex:
-    R = draw_random(theta, beta=PyMC.utils.trace_generator(beta.trace))
+    R = draw_random(theta, beta=pymc.utils.trace_generator(beta.trace))
     R.next()
     """
     while True:

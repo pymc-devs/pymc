@@ -8,7 +8,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 """
 
-from PyMC import *
+from pymc import *
 from numpy import *
 from numpy.random import randint
 

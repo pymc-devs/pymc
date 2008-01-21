@@ -79,7 +79,7 @@ def _extract(__func__, kwds, keys, classname):
                     
     return (value, parents)
 
-def stoch(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
+def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
     """
     Decorator function for instantiating stochastic variables. Usages:
     
@@ -140,7 +140,10 @@ def stoch(__func__=None, __class__=Stochastic, binary=False, discrete=False, **k
         
     return instantiate_p
     
-def discrete_stoch(__func__=None, **kwds):
+# Shortcut alias
+stoch = stochastic
+    
+def discrete_stochastic(__func__=None, **kwds):
     """
     Instantiates a DiscreteStochastic instance, which takes only
     integer values.
@@ -149,7 +152,10 @@ def discrete_stoch(__func__=None, **kwds):
     """
     return stoch(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
     
-def binary_stoch(__func__=None, **kwds):
+# Shortcut alias
+discrete_stoch = discrete_stochastic
+    
+def binary_stochastic(__func__=None, **kwds):
     """
     Instantiates a BinaryStochastic instance, which takes only boolean
     values.
@@ -157,7 +163,9 @@ def binary_stoch(__func__=None, **kwds):
     Same usage as stoch.
     """
     return stoch(__func__=__func__, __class__ = BinaryStochastic, **kwds)
-
+    
+# Shortcut alias
+binary_stoch = binary_stochastic
 
 def potential(__func__ = None, **kwds):
     """
@@ -186,15 +194,15 @@ def potential(__func__ = None, **kwds):
     return instantiate_pot
 
 
-def dtrm(__func__ = None, **kwds):
+def deterministic(__func__ = None, **kwds):
     """
     Decorator function instantiating deterministic variables. Usage:
     
-    @dtrm
+    @deterministic
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
         
-    @dtrm(trace = trace_object)
+    @deterministic(trace = trace_object)
     def B(parent_name = ., ...)
         return baz(parent_name, ...)        
         
@@ -216,6 +224,8 @@ def dtrm(__func__ = None, **kwds):
 
     return instantiate_n
 
+# Shortcut alias
+dtrm = deterministic
 
 def data(obj=None, **kwds):
     """

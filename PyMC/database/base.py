@@ -4,7 +4,7 @@ Base backend
 Trace and Database classes from the other modules should Subclass the base 
 classes. 
 """
-import PyMC
+import pymc
 
 class Trace(object):
     """Dummy Trace class.
@@ -14,7 +14,7 @@ class Trace(object):
         """Assign an initial value and an internal PyMC object."""
         self._trace = value
         if obj is not None:
-            if isinstance(obj, PyMC.Variable):
+            if isinstance(obj, pymc.Variable):
                 self._obj = obj
             else:
                 raise AttributeError, 'Not PyMC object', obj
@@ -77,7 +77,7 @@ class Database(object):
         a Trace for the nodes to tally.
         """
         # Changed this to allow non-Model models. -AP
-        if isinstance(model, PyMC.Model):
+        if isinstance(model, pymc.Model):
             self.model = model
         else:
             raise AttributeError, 'Not a Model instance.'

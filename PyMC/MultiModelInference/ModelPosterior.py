@@ -1,6 +1,6 @@
 # March 30 07 AP: This can work with any Model subclass, not just Sampler.
 
-from PyMC import Model
+from pymc import Model
 from numpy import mean, exp, Inf, zeros
 
 def sample_likelihood(model, iter):

@@ -457,8 +457,8 @@ class Sampler(Model):
         print self.iprompt.__doc__, '\n'
         try:
             while self.status in ['running', 'paused']:
-                    # sys.stdout.write('PyMC> ')
-                    cmd = raw_input('PyMC> ')
+                    # sys.stdout.write('pymc> ')
+                    cmd = raw_input('pymc> ')
                     if cmd == 'i':
                         print 'Current iteration: ', self._current_iter
                     elif cmd == 'p':

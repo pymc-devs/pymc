@@ -22,7 +22,7 @@ marginalizing x from
 where p(x) stands for the prior for the true input and p(a,b) the prior for the 
 regression parameters. 
 """
-from PyMC import stoch, data, dtrm, uniform_like, normal_like, runiform, rnormal, Sampler
+from pymc import stoch, data, dtrm, uniform_like, normal_like, runiform, rnormal, Sampler
 from numpy import inf, log, cos,array
 import pylab 
 #from PyMC.sandbox import AdaptativeSampler

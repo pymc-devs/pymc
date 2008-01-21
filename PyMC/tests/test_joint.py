@@ -1,5 +1,5 @@
-from PyMC import MCMC, JointMetropolis
-from PyMC.examples import model_for_joint
+from pymc import MCMC, JointMetropolis
+from pymc.examples import model_for_joint
 from pylab import plot, show,title, xlabel, ylabel, figure
 
 from numpy.testing import *

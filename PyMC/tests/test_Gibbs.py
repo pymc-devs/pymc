@@ -1,6 +1,6 @@
 from numpy.testing import *
 from numpy import *
-from PyMC import *
+from pymc import *
 from numpy.random import randint
 
 class test_Gibbs(NumpyTestCase):

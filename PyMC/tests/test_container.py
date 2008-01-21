@@ -1,7 +1,7 @@
 from numpy.testing import *
 from numpy import *
-from PyMC.examples import DisasterModel as DM
-from PyMC import Container
+from pymc.examples import DisasterModel as DM
+from pymc import Container
 
 class test_Container(NumpyTestCase):
     def check(self):
