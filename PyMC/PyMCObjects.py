@@ -554,6 +554,8 @@ class Stochastic(StochasticBase):
             self.value = r
         return r
     
+    # Shortcut alias to random
+    rand = random
     
     def _get_extended_parents(self):
         return extend_parents(self.parents.values())
