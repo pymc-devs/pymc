@@ -18,7 +18,7 @@ from numpy.random import randint, random
 
 import pymc
 from pymc.utils import msqrt, check_type, round_array
-from pymc import StepMethod, Metropolis, rmvnormal
+from pymc import StepMethod, Metropolis, rmv_normal
 from pymc.flib import fill_stdnormal
 from pymc.Node import ZeroProbability
 from pymc.PyMCObjects import BinaryStochastic, DiscreteStochastic
@@ -392,18 +392,18 @@ if __name__=='__main__':
     from pymc import Sampler, JointMetropolis
     from pymc import stoch, data, JointMetropolis
     from numpy import array,  ones
-    from pymc.distributions import mvnormal_like
+    from pymc.distributions import mv_normal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = np.eye(2)
         @stoch
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
-            return mvnormal_like(value,mu,tau)
+            return mv_normal_like(value,mu,tau)
         
         tau_B = np.eye(2) * 100.          
         @stoch
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
-            return mvnormal_like(value,mu,tau)
+            return mv_normal_like(value,mu,tau)
     
         AM = AdaptiveMetropolis([A,B])
     
