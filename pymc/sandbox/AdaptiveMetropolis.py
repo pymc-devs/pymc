@@ -1,4 +1,6 @@
-pymc###
+from __future__ import division
+
+###
 # Adaptive Metropolis Algorithm
 # Author: David Huard
 # Date: April 23, 2007
@@ -9,7 +11,7 @@ pymc###
 # Dec. 4, 2007 -- Fixed a slew of bugs. Refactored the code.
 # Dec. 5, 2007 -- 
 
-from __future__ import division
+
 
 import numpy as np
 from numpy.random import randint, random
