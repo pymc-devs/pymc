@@ -16,15 +16,15 @@ config = Configuration('pymc',parent_package=None,top_path=None)
 lapack_info = get_info('lapack_opt',1)
 if lapack_info:
     print 'Compiling everything'
-    config.add_extension(name='flib',sources=['pymc/flib.f',
-    'pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f'], extra_info=lapack_info)
+    config.add_extension(name='flib',sources=['PyMC/flib.f',
+    'PyMC/histogram.f', 'PyMC/flib_blas.f', 'PyMC/math.f', 'PyMC/gibbsit.f'], extra_info=lapack_info)
 else:
     print 'Not compiling flib_blas'
-    config.add_extension(name='flib',sources=['pymc/flib.f', 'pymc/histogram.f', 'pymc/math.f'])
+    config.add_extension(name='flib',sources=['PyMC/flib.f', 'PyMC/histogram.f', 'PyMC/math.f'])
     
 # Try to compile the Pyrex version of LazyFunction
-config.add_extension(name='LazyFunction',sources=['pymc/LazyFunction.c'])
-config.add_extension(name='Container_values', sources='pymc/Container_values.c')
+config.add_extension(name='LazyFunction',sources=['PyMC/LazyFunction.c'])
+config.add_extension(name='Container_values', sources='PyMC/Container_values.c')
 
 config_dict = config.todict()
 try:
