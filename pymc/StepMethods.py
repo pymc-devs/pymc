@@ -118,6 +118,8 @@ class StepMethod(StepMethodBase):
         
         # Initialize public attributes
         self.variables = set(variables)
+        if len(self.variables)==0:
+            raise ValueError, 'No variables provided for step method to handle.'
         self.dtrms = set()
         self.stochs = set()
         self.data_stochs = set()

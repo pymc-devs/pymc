@@ -1277,7 +1277,7 @@ if flib_blas_OK:
         """
         # TODO: Vectorize in Fortran
         if len(x.shape)>1:
-            return sum([flib.prec_mvnorm(r,mu,tau)] for r in x)
+            return sum([flib.prec_mvnorm(r,mu,tau) for r in x])
         else:
             return flib.prec_mvnorm(x,mu,tau)
         
@@ -1315,7 +1315,7 @@ if flib_blas_OK:
         """
         # TODO: Vectorize in Fortran
         if len(x.shape)>1:
-            return sum([flib.cov_mvnorm(r,mu,C)] for r in x)
+            return sum([flib.cov_mvnorm(r,mu,C) for r in x])
         else:
             return flib.cov_mvnorm(x,mu,C)
      
@@ -1375,7 +1375,7 @@ if flib_blas_OK:
         """
         # TODO: Vectorize in Fortran
         if len(x.shape)>1:
-            return sum([flib.chol_mvnorm(r,mu,sig)] for r in x)
+            return sum([flib.chol_mvnorm(r,mu,sig) for r in x])
         else:
             return flib.chol_mvnorm(x,mu,sig)
 
