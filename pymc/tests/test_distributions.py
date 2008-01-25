@@ -79,9 +79,14 @@ def hypergeometric(x, n, m, N):
     x : number of successes drawn
     n : number of draws
     m : number of successes in total
-    N : nuccesses + failures in total.
+    N : successes + failures in total.
     """
-    return comb(N-m, x) * comb(m, n-x) / comb(N,n)
+    if x < max(0, n-(N-m)):
+        return 0.
+    elif x > min(n, m):
+        return 0.
+    else:
+        return comb(N-m, x) * comb(m, n-x) / comb(N,n)
 
 def mv_hypergeometric(x,m):
     """
@@ -242,45 +247,45 @@ def normalization(like, stochs, domain, N=100):
             y.append(f(i))
         return np.trapz(y,x)
 
-class test_arnormal(NumpyTestCase):
+class test_arlognormal(NumpyTestCase):
     def like(self, stochs, r):
         a = stochs[2:]
-        tau = stochs[1]
+        sigma = stochs[1]
         rho = stochs[0]
-        like = np.array([arnormal_like(x, a, tau, rho) for x in r])
+        like = np.array([arlognormal_like(x, a, sigma, rho) for x in r])
         return -like.sum()
             
     def check_random(self):
         a = (1,2)
-        tau = 10
+        sigma = .1
         rho = 0
-        r = rarnormal(a, tau, rho, size=1000) 
+        r = rarlognormal(a, sigma, rho, size=1000) 
         assert_array_almost_equal(np.median(r), [1,2],1)
         
         rho =.8
         sigma = .1
-        r = rarnormal(1, tau, rho, size=1000)
+        r = rarlognormal(1, sigma, rho, size=1000)
         corr = utils.autocorr(np.log(r))
         assert_almost_equal(corr, rho, 1)
-        assert_almost_equal(r.std(), tau/sqrt(1-rho**2),1)
+        assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
     
     def check_consistency(self):
     
         # 1D case
         a = 1
         rho =.8
-        tau = 10
-        r = rarnormal(a, tau, rho, size=1000)
+        sigma = .1
+        r = rarlognormal(a, sigma, rho, size=1000)
         opt = fmin(self.like, (.8, .4, .9), args=([r],), disp=0)
-        assert_array_almost_equal(opt, [rho, tau, a], 1)
+        assert_array_almost_equal(opt, [rho, sigma, a], 1)
 
         # 2D case
         a = (1,2)
-        tau = 10
+        sigma = .1
         rho = .7
-        r = rarnormal(a, tau, rho, size=2000) 
+        r = rarlognormal(a, sigma, rho, size=1000) 
         opt = fmin(self.like, (.75, .15, 1.1, 2.1), xtol=.05, args=(r,), disp=0)
-        assert_array_almost_equal(opt, (rho, tau)+a, 1)
+        assert_array_almost_equal(opt, (rho, sigma)+a, 1)
     
 
 class test_bernoulli(NumpyTestCase):
@@ -306,7 +311,7 @@ class test_beta(NumpyTestCase):
     def check_consistency(self):
         stochs ={'alpha':3, 'beta':5}
         hist, like, figdata = consistency(rbeta, flib.beta_like, stochs, nrandom=5000, range=[0,1])
-        assert_array_almost_equal((hist-like)/sqrt(like),0,1)
+        assert_array_almost_equal(hist, like,1)
         if PLOT:
             compare_hist(figname='beta', **figdata)
 

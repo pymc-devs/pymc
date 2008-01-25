@@ -956,7 +956,10 @@ c Combinations of x red balls
           like = -infinity
           RETURN
         endif
-        if (x(i) .LT. 0) then
+        if (x(i) .LT. MAX(0, draws_tmp - t_tmp + s_tmp)) then
+          like = -infinity
+          RETURN
+        else if (x(i) .GT. MIN(draws_tmp, s_tmp)) then
           like = -infinity
           RETURN
         endif

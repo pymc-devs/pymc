@@ -376,9 +376,9 @@ def GOFpoints(x,y,expval,loss):
 # random generator, expval, log-likelihood
 #--------------------------------------------------------
 
-# Autoregressive normal 
-def rarnormal(a, tau, rho, size=1):
-    """rarnormal(a, tau, rho)
+# Autoregressive lognormal 
+def rarlognormal(a, sigma, rho, size=1):
+    """rarnormal(a, sigma, rho)
     
     Autoregressive normal random variates.
     
@@ -388,27 +388,27 @@ def rarnormal(a, tau, rho, size=1):
     """
     f = pymc.utils.ar1
     if np.isscalar(a):
-        r = f(rho, 0, tau, size)
+        r = f(rho, 0, sigma, size)
     else:
         n = len(a)
-        r = [f(rho, 0, tau, n) for i in range(size)]
+        r = [f(rho, 0, sigma, n) for i in range(size)]
         if size == 1:
             r = r[0]
     return a*np.exp(r)
             
 
-def arnormal_like(x, a, tau, rho):
+def arlognormal_like(x, a, sigma, rho):
     """arnormal(x, a, tau, rho, beta=1)
     
-    Autoregressive normal log-likelihood.
+    Autoregressive lognormal log-likelihood.
     
     .. math::
         x_i & = a_i \\exp(e_i) \\\\
         e_i & = \\rho e_{i-1} + \\epsilon_i
     
-    where :math:'\\epsilon_i \\sim N(0,\\tau)'.
+    where :math:'\\epsilon_i \\sim N(0,\\sigma)'.
     """
-    return flib.arlognormal(x, np.log(a), 1./tau, rho, beta=1)
+    return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
     
 
 # Bernoulli----------------------------------------------
@@ -1007,7 +1007,7 @@ def hypergeometric_like(x, n, m, N):
         Number of successes in a sample drawn from a population.
         :math:'\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)'
       n : int
-        Size of sample.
+        Size of sample drawn from the population.
       m : int
         Number of successes in the population.
       N : int
@@ -1146,7 +1146,7 @@ def multinomial_like(x, n, p):
         :math:'\\sum_{i=1}^k x_i=n', :math:'x_i \\ge 0'.
       n : int
         Number of trials.
-      p : (k,1) float
+      p : (k,) float
         Probability of each one of the different outcomes,
         :math:'\\sum_{i=1}^k p_i = 1)', :math:'p_i \\ge 0'.
 
@@ -1157,8 +1157,8 @@ def multinomial_like(x, n, p):
 
     """
 
-    # x = np.atleast_2d(x)
-    # p = np.atleast_2d(p)
+    x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
+    p = np.atleast_2d(p)
     
     return flib.multinomial(x, n, p)
 
