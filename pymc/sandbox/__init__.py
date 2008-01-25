@@ -1,4 +1,4 @@
-__modules__ = ['AdaptiveMetropolis','bayes','EM','parallel']
+__modules__ = ['AdaptiveMetropolis','bayes','EM','parallel','GibbsStepMethods']
 
 for mod in __modules__:
     try:

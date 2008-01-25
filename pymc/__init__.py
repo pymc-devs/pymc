@@ -26,7 +26,6 @@ __modules__ = [ 'Node',
                 
 __optmodules__ = ['ScipyDistributions',
                   'parallel',
-                  'GibbsStepMethods',
                   'sandbox']
 #ClosedCapture, OpenCapture   
 

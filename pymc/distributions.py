@@ -398,15 +398,15 @@ def rarlognormal(a, sigma, rho, size=1):
             
 
 def arlognormal_like(x, a, sigma, rho):
-    """arnormal(x, a, tau, rho, beta=1)
+    r"""arnormal(x, a, tau, rho, beta=1)
     
     Autoregressive lognormal log-likelihood.
     
     .. math::
-        x_i & = a_i \\exp(e_i) \\\\
-        e_i & = \\rho e_{i-1} + \\epsilon_i
+        x_i & = a_i \exp(e_i) \\
+        e_i & = \rho e_{i-1} + \epsilon_i
     
-    where :math:'\\epsilon_i \\sim N(0,\\sigma)'.
+    where :math:'\epsilon_i \sim N(0,\sigma)'.
     """
     return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
     
@@ -433,7 +433,7 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    """
+    r"""
     bernoulli_like(x, p)
 
     Bernoulli log-likelihood
@@ -442,7 +442,7 @@ def bernoulli_like(x, p):
     failures (x=0).
 
     .. math::
-        f(x \\mid p) = p^{x- 1} (1-p)^{1-x}
+        f(x \mid p) = p^{x- 1} (1-p)^{1-x}
 
     :Parameters:
       - 'x': Series of successes (1) and failures (0). :math:'x=0,1'
@@ -483,13 +483,13 @@ def beta_expval(alpha, beta):
 
 
 def beta_like(x, alpha, beta):
-    """
+    r"""
     beta_like(x, alpha, beta)
 
     Beta log-likelihood.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{\\Gamma(\\alpha + \\beta)}{\\Gamma(\\alpha) \\Gamma(\\beta)} x^{\\alpha - 1} (1 - x)^{\\beta - 1}
+        f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
 
     :Parameters:
       - 'x': 0 < x < 1
@@ -501,8 +501,8 @@ def beta_like(x, alpha, beta):
       0.18232160806655884
 
     :Note:
-      - :math:'E(X)=\\frac{\\alpha}{\\alpha+\\beta}'
-      - :math:'Var(X)=\\frac{\\alpha \\beta}{(\\alpha+\\beta)^2(\\alpha+\\beta+1)}'
+      - :math:'E(X)=\frac{\alpha}{\alpha+\beta}'
+      - :math:'Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}'
 
     """
     # try:
@@ -534,7 +534,7 @@ def binomial_expval(n, p):
     return p*n
 
 def binomial_like(x, n, p):
-    """
+    r"""
     binomial_like(x, n, p)
 
     Binomial log-likelihood.  The discrete probability distribution of the
@@ -542,7 +542,7 @@ def binomial_like(x, n, p):
     each of which yields success with probability p.
 
     .. math::
-        f(x \\mid n, p) = \\frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
+        f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
 
     :Parameters:
       x : float
@@ -550,7 +550,7 @@ def binomial_like(x, n, p):
       n : int
         Number of Bernoulli trials, > x.
       p : float
-        Probability of success in each trial, :math:'p \\in [0,1]'.
+        Probability of success in each trial, :math:'p \in [0,1]'.
 
     :Note:
      - :math:'E(X)=np'
@@ -609,14 +609,14 @@ def cauchy_expval(alpha, beta):
 
 # In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
-    """
+    r"""
     cauchy_like(x, alpha, beta)
 
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{1}{\\pi \\beta [1 + (\\frac{x-\\alpha}{\\beta})^2]}
+        f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     :Parameters:
       - 'alpha' : Location stoch.
@@ -634,7 +634,7 @@ def rchi2(nu, size=1):
     """
     rchi2(nu, size=1)
 
-    Random :math:'\\chi^2' variates.
+    Random :math:'\chi^2' variates.
     """
 
     return random.chisquare(nu, size)
@@ -649,23 +649,23 @@ def chi2_expval(nu):
     return nu
 
 def chi2_like(x, nu):
-    """
+    r"""
     chi2_like(x, nu)
 
-    Chi-squared :math:'\\chi^2' log-likelihood.
+    Chi-squared :math:'\chi^2' log-likelihood.
 
     .. math::
-        f(x \\mid \\nu) = \\frac{x^{(\\nu-2)/2}e^{-x/2}}{2^{\\nu/2}\Gamma(\\nu/2)}
+        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
     :Parameters:
       x : float
-        :math:'\\ge 0'
-      :math:'\\nu' : int
+        :math:'\ge 0'
+      :math:'\nu' : int
         Degrees of freedom > 0
 
     :Note:
-      - :math:'E(X)=\\nu'
-      - :math:'Var(X)=2\\nu'
+      - :math:'E(X)=\nu'
+      - :math:'Var(X)=2\nu'
 
     """
     
@@ -697,7 +697,7 @@ def dirichlet_expval(theta):
     return theta/sum(theta)
 
 def dirichlet_like(x, theta):
-    """
+    r"""
     dirichlet_like(x, theta)
 
     Dirichlet log-likelihood.
@@ -705,14 +705,14 @@ def dirichlet_like(x, theta):
     This is a multivariate continuous distribution.
 
     .. math::
-        f(\\mathbf{x}) = \\frac{\\Gamma(\\sum_{i=1}^k \\theta_i)}{\\prod \\Gamma(\\theta_i)} \\prod_{i=1}^k x_i^{\\theta_i - 1}
+        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
     :Parameters:
       x : (n,k) array
         Where 'n' is the number of samples and 'k' the dimension.
-        :math:'0 < x_i < 1',  :math:'\\sum_{i=1}^k x_i = 1'
+        :math:'0 < x_i < 1',  :math:'\sum_{i=1}^k x_i = 1'
       theta : (n,k) or (1,k) float
-        :math:'\\theta > 0'
+        :math:'\theta > 0'
     """
 
     x = np.atleast_2d(x)
@@ -742,7 +742,7 @@ def exponential_expval(beta):
 
 
 def exponential_like(x, beta):
-    """
+    r"""
     exponential_like(x, beta)
 
     Exponential log-likelihood.
@@ -751,17 +751,17 @@ def exponential_like(x, beta):
     with alpha=1. It often describes the duration of an event.
 
     .. math::
-        f(x \\mid \\beta) = \\frac{1}{\\beta}e^{-x/\\beta}
+        f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
 
     :Parameters:
       x : float
-        :math:'x \\ge 0'
+        :math:'x \ge 0'
       beta : float
-        Survival stoch :math:'\\beta > 0'
+        Survival stoch :math:'\beta > 0'
 
     :Note:
-      - :math:'E(X) = \\beta'
-      - :math:'Var(X) = \\beta^2'
+      - :math:'E(X) = \beta'
+      - :math:'Var(X) = \beta^2'
     """
     
     return flib.gamma(x, 1, beta)
@@ -785,14 +785,14 @@ def exponweib_expval(alpha, k, loc, scale):
     return 'Not implemented yet.'
 
 def exponweib_like(x, alpha, k, loc=0, scale=1):
-    """
+    r"""
     exponweib_like(x,alpha,k,loc=0,scale=1)
 
     Exponentiated Weibull log-likelihood.
 
     .. math::
-        f(x \\mid \\alpha,k,loc,scale)  & = \\frac{\\alpha k}{scale} (1-e^{-z^c})^{\\alpha-1} e^{-z^c} z^{k-1} \\\\
-        z & = \\frac{x-loc}{scale}
+        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
+        z & = \frac{x-loc}{scale}
 
     :Parameters:
       - 'x' : > 0
@@ -825,7 +825,7 @@ def gamma_expval(alpha, beta):
     return asarray(alpha) * beta
 
 def gamma_like(x, alpha, beta):
-    """
+    r"""
     gamma_like(x, alpha, beta)
 
     Gamma log-likelihood.
@@ -834,15 +834,15 @@ def gamma_like(x, alpha, beta):
     of which has mean beta.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{\\beta^{\\alpha}x^{\\alpha-1}e^{-\\beta x}}{\\Gamma(\\alpha)}
+        f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
     :Parameters:
       x : float
-        :math:'x \\ge 0'
+        :math:'x \ge 0'
       alpha : float
-        Shape stoch :math:'\\alpha > 0'.
+        Shape stoch :math:'\alpha > 0'.
       beta : float
-        Scale stoch :math:'\\beta > 0'.
+        Scale stoch :math:'\beta > 0'.
 
     """
     
@@ -872,19 +872,19 @@ def gev_expval(xi, mu=0, sigma=1):
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
 
 def gev_like(x, xi, mu=0, sigma=1):
-    """
+    r"""
     gev_like(x, xi, mu=0, sigma=1)
 
     Generalized Extreme Value log-likelihood
 
     .. math::
-        pdf(x \\mid \\xi,\\mu,\\sigma) = \\frac{1}{\\sigma}(1 + \\xi \\left[\\frac{x-\\mu}{\\sigma}\\right])^{-1/\\xi-1}\\exp{-(1+\\xi \\left[\\frac{x-\\mu}{\\sigma}\\right])^{-1/\\xi}}
+        pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi-1}\exp{-(1+\xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi}}
 
     .. math::
-        \\sigma & > 0,\\\\
-        x & > \\mu-\\sigma/\\xi \\text{ if } \\xi > 0,\\\\
-        x & < \\mu-\\sigma/\\xi \\text{ if } \\xi < 0\\\\
-        x & \\in [-\\infty,\\infty] \\text{ if } \\xi = 0
+        \sigma & > 0,\\
+        x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
+        x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
+        x & \in [-\infty,\infty] \text{ if } \xi = 0
 
     """
 
@@ -911,24 +911,24 @@ def geometric_expval(p):
     return 1. / p
 
 def geometric_like(x, p):
-    """
+    r"""
     geometric_like(x, p)
 
     Geometric log-likelihood. The probability that the first success in a
     sequence of Bernoulli trials occurs after x trials.
 
     .. math::
-        f(x \\mid p) = p(1-p)^{x-1}
+        f(x \mid p) = p(1-p)^{x-1}
 
     :Parameters:
       x : int
         Number of trials before first success, > 0.
       p : float
-        Probability of success on an individual trial, :math:'p \\in [0,1]'
+        Probability of success on an individual trial, :math:'p \in [0,1]'
 
     :Note:
       - :math:'E(X)=1/p'
-      - :math:'Var(X)=\\frac{1-p}{p^2}'
+      - :math:'Var(X)=\frac{1-p}{p^2}'
 
     """
     
@@ -955,20 +955,20 @@ def half_normal_expval(tau):
     return sqrt(2. * pi / asarray(tau))
 
 def half_normal_like(x, tau):
-    """
+    r"""
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
-    to the domain :math:'x \\in [0, \\infty)'.
+    to the domain :math:'x \in \[0, \infty\)'.
 
     .. math::
-        f(x \\mid \\tau) = \\sqrt{\\frac{2\\tau}{\\pi}}\\exp\\left\\{ {\\frac{-x^2 \\tau}{2}}\\right\\}
+        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
     :Parameters:
       x : float
-        :math:'x \\ge 0'
+        :math:'x \ge 0'
       tau : float
-        :math:'\\tau > 0'
+        :math:'\tau > 0'
 
     """
     
@@ -992,7 +992,7 @@ def hypergeometric_expval(n, m, N):
     return 1. * n * m / N
 
 def hypergeometric_like(x, n, m, N):
-    """
+    r"""
     hypergeometric_like(x, n, m, N)
 
     Hypergeometric log-likelihood. Discrete probability distribution that
@@ -1000,12 +1000,12 @@ def hypergeometric_like(x, n, m, N):
     population without replacement.
 
     .. math::
-        f(x \\mid n, m, N) = &=& \\frac{\\left(\\begin{array}{c}m \\\\x\\end{array}\\right) \\left(\\begin{array}{c}N-m \\\\n-x\\end{array}\\right)}{\\left(\\begin{array}{c}N \\\\n\\end{array}\\right)}
+        f(x \mid n, m, N) = &=& \frac{\left(\begin{array}{c}m \\x\end{array}\right) \left(\begin{array}{c}N-m \\n-x\end{array}\right)}{\left(\begin{array}{c}N \\n\end{array}\right)}
 
     :Parameters:
       x : int
         Number of successes in a sample drawn from a population.
-        :math:'\\max(0, draws-failures) \\leq x \\leq \\min(draws, success)'
+        :math:'\max(0, draws-failures) \leq x \leq \min(draws, success)'
       n : int
         Size of sample drawn from the population.
       m : int
@@ -1014,7 +1014,7 @@ def hypergeometric_like(x, n, m, N):
         Total number of units in the population.
 
     :Note:
-      :math:'E(X) = \\frac{n n}{N}'
+      :math:'E(X) = \frac{n n}{N}'
     """
     
     return flib.hyperg(x, n, m, N)
@@ -1039,24 +1039,24 @@ def inverse_gamma_expval(alpha, beta):
     return 1. / (asarray(beta) * (alpha-1.))
 
 def inverse_gamma_like(x, alpha, beta):
-    """
+    r"""
     inverse_gamma_like(x, alpha, beta)
 
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{\\beta^{\\alpha}}{\\Gamma(\\alpha)} x^{-\\alpha - 1} \\exp\\left(\\frac{-\\beta}{x}}\\right)
+        f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}}\right)
 
     :Parameters:
       x : float
         x > 0
       alpha : float
-        Shape stoch, :math:'\\alpha > 0'.
+        Shape stoch, :math:'\alpha > 0'.
       beta : float
-        Scale stoch, :math:'\\beta > 0'.
+        Scale stoch, :math:'\beta > 0'.
 
     :Note:
-      :math:'E(X)=\\frac{1}{\\beta(\\alpha-1)}' for :math:'\\alpha > 1'.
+      :math:'E(X)=\frac{1}{\beta(\alpha-1)}' for :math:'\alpha > 1'.
     """
     
     return flib.igamma(x, alpha, beta)
@@ -1081,7 +1081,7 @@ def lognormal_expval(mu, tau):
     return np.exp(mu + 1./2/tau)
 
 def lognormal_like(x, mu, tau):
-    """
+    r"""
     lognormal_like(x, mu, tau)
 
     Log-normal log-likelihood. Distribution of any random variable whose
@@ -1090,8 +1090,8 @@ def lognormal_like(x, mu, tau):
     small independent factors.
 
     .. math::
-        f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}}\\frac{
-        \\exp\\left\\{ -\\frac{\\tau}{2} (\\ln(x)-\\mu)^2 \\right\\}}{x}
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
+        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
     :Parameters:
       x : float
@@ -1102,7 +1102,7 @@ def lognormal_like(x, mu, tau):
         Scale stoch, > 0.
 
     :Note:
-      :math:'E(X)=e^{\\mu+\\frac{1}{2\\tau}}'
+      :math:'E(X)=e^{\mu+\frac{1}{2\tau}}'
     """
     
     
@@ -1128,7 +1128,7 @@ def multinomial_expval(n,p):
     return asarray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
-    """
+    r"""
     multinomial_like(x, n, p)
 
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
@@ -1138,17 +1138,17 @@ def multinomial_like(x, n, p):
     of times outcome number i was observed over the n trials.
 
     .. math::
-        f(x \\mid n, p) = \\frac{n!}{\\prod_{i=1}^k x_i!} \\prod_{i=1}^k p_i^{x_i}
+        f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
     :Parameters:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
-        :math:'\\sum_{i=1}^k x_i=n', :math:'x_i \\ge 0'.
+        :math:'\sum_{i=1}^k x_i=n', :math:'x_i \ge 0'.
       n : int
         Number of trials.
       p : (k,) float
         Probability of each one of the different outcomes,
-        :math:'\\sum_{i=1}^k p_i = 1)', :math:'p_i \\ge 0'.
+        :math:'\sum_{i=1}^k p_i = 1)', :math:'p_i \ge 0'.
 
     :Note:
       - :math:'E(X_i)=n p_i'
@@ -1198,7 +1198,7 @@ def multivariate_hypergeometric_expval(n, m):
 
 
 def multivariate_hypergeometric_like(x, m):
-    """
+    r"""
     multivariate_hypergeometric_like(x, m)
 
     The multivariate hypergeometric describes the probability of drawing x[i] 
@@ -1207,9 +1207,9 @@ def multivariate_hypergeometric_like(x, m):
     
 
     .. math::
-        \\frac{\\prod_i \\binom{m_i}{c_i}}{\\binom{N}{n]}
+        \frac{\prod_i \binom{m_i}{c_i}}{\binom{N}{n]}
 
-    where :math:'N = \\sum_i m_i' and :math:'n = \\sum_i x_i'.
+    where :math:'N = \sum_i m_i' and :math:'n = \sum_i x_i'.
     
     :Parameters:
         x : int sequence
@@ -1264,13 +1264,13 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_like(x, mu, tau):
-        """
+        r"""
         mv_normal_like(x, mu, tau)
 
         Multivariate normal log-likelihood
 
         .. math::
-            f(x \\mid \\pi, T) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}T(x-\\mu) \\right\\}
+            f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
         x: (n,k)
         mu: (k)
@@ -1302,13 +1302,13 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_cov_like(x, mu, C):
-        """
+        r"""
         mv_normal_cov_like(x, mu, C)
 
         Multivariate normal log-likelihood
 
         .. math::
-            f(x \\mid \\pi, C) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}C^{-1}(x-\\mu) \\right\\}
+            f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
 
         x: (n,k)
         mu: (k)
@@ -1362,13 +1362,13 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_chol_like(x, mu, sig):
-        """
+        r"""
         mv_normal_like(x, mu, tau)
 
         Multivariate normal log-likelihood
 
         .. math::
-            f(x \\mid \\pi, \\sigma) = \\frac{T^{n/2}}{(2\\pi)^{1/2}} \\exp\\left\\{ -\\frac{1}{2} (x-\\mu)^{\\prime}\\sigma \\sigma^{\\prime}(x-\\mu) \\right\\}
+            f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
 
         x: (n,k)
         mu: (k)
@@ -1404,13 +1404,13 @@ def negative_binomial_expval(mu, alpha):
 
 
 def negative_binomial_like(x, mu, alpha):
-    """
+    r"""
     negative_binomial_like(x, mu, alpha)
 
     Negative binomial log-likelihood
 
     .. math::
-        f(x \\mid r, p) = \\frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
+        f(x \mid r, p) = \frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
 
     x > 0, mu > 0, alpha > 0
     """
@@ -1437,13 +1437,13 @@ def normal_expval(mu, tau):
     return mu
 
 def normal_like(x, mu, tau):
-    """
+    r"""
     normal_like(x, mu, tau)
 
     Normal log-likelihood.
 
     .. math::
-        f(x \\mid \\mu, \\tau) = \\sqrt{\\frac{\\tau}{2\\pi}} \\exp\\left\\{ -\\frac{\\tau}{2} (x-\\mu)^2 \\right\\}
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
 
     :Parameters:
@@ -1488,7 +1488,7 @@ def poisson_expval(mu):
 
 
 def poisson_like(x,mu):
-    """
+    r"""
     poisson_like(x,mu)
 
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
@@ -1498,18 +1498,18 @@ def poisson_like(x,mu):
     be derived as a limiting case of the binomial distribution.
 
     .. math::
-        f(x \\mid \\mu) = \\frac{e^{-\\mu}\\mu^x}{x!}
+        f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     :Parameters:
       x : int
-        :math:'x \\in {0,1,2,...}'
+        :math:'x \in {0,1,2,...}'
       mu : float
         Expected number of occurrences that occur during the given interval,
-        :math:'\\mu \\geq 0'.
+        :math:'\mu \geq 0'.
 
     :Note:
-      - :math:'E(x)=\\mu'
-      - :math:'Var(x)=\\mu'
+      - :math:'E(x)=\mu'
+      - :math:'Var(x)=\mu'
     """
     # try:
     #     constrain(x, lower=0,allow_equal=True)
@@ -1539,16 +1539,16 @@ def rtruncnorm(mu, sigma, a, b, size=1):
 
 # TODO: code this.
 def truncnorm_expval(mu, sigma, a, b):
-    """E(X)=\\mu + \\frac{\\sigma(\\varphi_1-\\varphi_2)}{T}, where T=\\Phi\\left(\\frac{B-\\mu}{\\sigma}\\right)-\\Phi\\left(\\frac{A-\\mu}{\\sigma}\\right) and \\varphi_1 = \\varphi\\left(\\frac{A-\\mu}{\\sigma}\\right) and \\varphi_2 = \\varphi\\left(\\frac{B-\\mu}{\\sigma}\\right), where \\varphi is the probability density function of a standard normal random variable."""
+    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable."""
     pass
 
 def truncnorm_like(x, mu, sigma, a, b):
-    """truncnorm_like(x, mu, sigma, a, b)
+    r"""truncnorm_like(x, mu, sigma, a, b)
     
     Truncated normal log-likelihood.
     
     .. math::
-        f(x \\mid \\mu, \\sigma, a, b) = \\frac{\\phi(\\frac{x-\\mu}{\\sigma})} {\\Phi(\\frac{b-\\mu}{\\sigma}) - \\Phi(\\frac{a-\\mu}{\\sigma})}, 
+        f(x \mid \mu, \sigma, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})}, 
     
     """
     x = np.atleast_1d(x)
@@ -1592,17 +1592,17 @@ def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like(x,lower, upper):
-    """
+    r"""
     uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
 
     .. math::
-        f(x \\mid lower, upper) = \\frac{1}{upper-lower}
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     :Parameters:
       x : float
-       :math:'lower \\geq x \\geq upper'
+       :math:'lower \geq x \geq upper'
       lower : float
         Lower limit.
       upper : float
@@ -1626,26 +1626,26 @@ def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    """
+    r"""
     weibull_like(x, alpha, beta)
 
     Weibull log-likelihood
 
     .. math::
-        f(x \\mid \\alpha, \\beta) = \\frac{\\alpha x^{\\alpha - 1}
-        \\exp(-(\\frac{x}{\\beta})^{\\alpha})}{\\beta^\\alpha}
+        f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
+        \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
     :Parameters:
       x : float
-        :math:'x \\ge 0'
+        :math:'x \ge 0'
       alpha : float
         > 0
       beta : float
         > 0
 
     :Note:
-      - :math:'E(x)=\\beta \\Gamma(1+\\frac{1}{\\alpha}'
-      - :math:'Var(x)=\\beta^2 \\Gamma(1+\\frac{2}{\\alpha} - \\mu^2'
+      - :math:'E(x)=\beta \Gamma(1+\frac{1}{\alpha})'
+      - :math:'Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)'
     """
     # try:
     #     constrain(alpha, lower=0)
@@ -1678,7 +1678,7 @@ def wishart_expval(n, Tau):
     return n * asarray(Tau)
 
 def wishart_like(X, n, Tau):
-    """
+    r"""
     wishart_like(X, n, Tau)
 
     Wishart log-likelihood. The Wishart distribution is the probability
@@ -1687,7 +1687,7 @@ def wishart_like(X, n, Tau):
     is identical to the chi-square distribution with n degrees of freedom.
 
     .. math::
-        f(X \\mid n, T) = {\\mid T \\mid}^{n/2}{\\mid X \\mid}^{(n-k-1)/2} \\exp\\left\\{ -\\frac{1}{2} Tr(TX) \\right\\}
+        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
     
     where :math:'k' is the rank of X.
     
