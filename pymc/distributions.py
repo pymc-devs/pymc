@@ -333,7 +333,10 @@ def standardize(x, loc=0, scale=1):
 
     return flib.standardize(x,loc,scale)
 
-@Vectorize
+# ==================================
+# = vectorize causes memory leaks. =
+# ==================================
+# @Vectorize
 def gammaln(x):
     """
     Logarithm of the Gamma function
@@ -666,7 +669,7 @@ def chi2_like(x, nu):
 
     """
     
-    return flib.gamma(x, 0.5*nu, 2)
+    return flib.gamma(x, 0.5*nu, 1./2)
 
 # Dirichlet----------------------------------------------
 @randomwrap
@@ -727,7 +730,7 @@ def rexponential(beta, size=1):
     Exponential random variates.
     """
 
-    return random.exponential(beta,size)
+    return random.exponential(1./beta,size)
 
 def exponential_expval(beta):
     """
@@ -1154,9 +1157,8 @@ def multinomial_like(x, n, p):
 
     """
 
-    x = np.atleast_2d(x)
-    p = np.atleast_2d(p)
-    
+    # x = np.atleast_2d(x)
+    # p = np.atleast_2d(p)
     
     return flib.multinomial(x, n, p)
 

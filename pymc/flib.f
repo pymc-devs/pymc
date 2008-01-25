@@ -899,8 +899,8 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
           like = -infinity
           RETURN
         endif
-        like = like - (gammln(alpha(i)) + alpha(i)*dlog(beta(i)))
-        like = like + (-alpha(i)-1.)*dlog(x(i)) - beta(i)/x(i) 
+        like = like - (gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp))
+        like = like + (-alpha_tmp-1.)*dlog(x(i)) - 1.0D0/x(i)/beta_tmp
       enddo
 
       return

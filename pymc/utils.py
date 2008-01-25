@@ -380,8 +380,11 @@ def _optimize_binning(x, range, method='Freedman'):
 
 
 # Logit and inverse-logit functions
-logit = vectorize(flib.logit)
-invlogit = vectorize(flib.invlogit)
+# ============================================================
+# = NB vectorize causes catastrophic memory leaks currently. =
+# ============================================================
+# logit = vectorize(flib.logit)
+# invlogit = vectorize(flib.invlogit)
 
 import scipy
 #@vectorize

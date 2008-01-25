@@ -226,6 +226,10 @@ def deterministic(__func__ = None, **kwds):
 
 # Shortcut alias
 dtrm = deterministic
+def lambda_deterministic(name, __func__, **kwds):
+    __func__.__name__ = name
+    return deterministic(__func__,**kwds)
+lam_dtrm = lambda_deterministic
 
 def data(obj=None, **kwds):
     """
