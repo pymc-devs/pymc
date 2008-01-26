@@ -7,20 +7,23 @@ except ImportError:
 
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
+import os
 config = Configuration('pymc',parent_package=None,top_path=None)
 
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
-# TODO: Use numpy's lapack_lite if optimized BLAS are not present.
-
-
+# Otherwise compile blas and lapack from netlib sources.
 lapack_info = get_info('lapack_opt',1)
+f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f']
 if lapack_info:
-    print 'Compiling everything'
-    config.add_extension(name='flib',sources=['pymc/flib.f',
-    'pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f'], extra_info=lapack_info)
+    config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info)
 else:
-    print 'Not compiling flib_blas'
-    config.add_extension(name='flib',sources=['pymc/flib.f', 'pymc/histogram.f', 'pymc/math.f'])
+    for fname in os.listdir('blas'):
+        if fname[:-2]=='.f':
+            f_sources.append('blas/'+fname)
+    for fname in os.listdir('lapack'):
+        if fname[:-2]=='.f':
+            f_sources.append('lapack/'+fname)        
+    config.add_extension(name='flib',sources=f_sources)
     
 # Try to compile the Pyrex version of LazyFunction
 config.add_extension(name='LazyFunction',sources=['pymc/LazyFunction.c'])

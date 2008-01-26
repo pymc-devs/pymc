@@ -383,16 +383,13 @@ def _optimize_binning(x, range, method='Freedman'):
 # ============================================================
 # = NB vectorize causes catastrophic memory leaks currently. =
 # ============================================================
-# logit = vectorize(flib.logit)
-# invlogit = vectorize(flib.invlogit)
+logit = flib.logit
+invlogit = flib.invlogit
 
-import scipy
-#@vectorize
 def normcdf(x):
     """Normal cumulative density function."""
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
-    #return .5*(1+scipy.special.erf(x/sqrt(2)))
 
 @vectorize
 def invcdf(x):
