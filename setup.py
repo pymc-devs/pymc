@@ -17,12 +17,17 @@ f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f'
 if lapack_info:
     config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info)
 else:
-    for fname in os.listdir('blas'):
-        if fname[:-2]=='.f':
-            f_sources.append('blas/'+fname)
-    for fname in os.listdir('lapack'):
-        if fname[:-2]=='.f':
-            f_sources.append('lapack/'+fname)        
+    ##inc_dirs = ['blas/BLAS','lapack/double']
+    print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
+    for fname in os.listdir('blas/BLAS'):
+        if fname[-2:]=='.f':
+            f_sources.append('blas/BLAS/'+fname)
+    ##    for fname in os.listdir('lapack/double'):
+    ##        if fname[-2:]=='.f':
+    ##            inc_dirs.append('lapack/double/'+fname)
+
+    for fname in ['dpotrs','dpotrf','dpotf2','ilaenv','dlamch','ilaver','ieeeck','iparmq']:
+        f_sources.append('lapack/double/'+fname+'.f')
     config.add_extension(name='flib',sources=f_sources)
     
 # Try to compile the Pyrex version of LazyFunction
