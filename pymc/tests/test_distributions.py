@@ -583,7 +583,7 @@ class test_multinomial(NumpyTestCase):
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
-        a = multinomial_like(x[:,:-1],n,p[:-1])
+        a = multinomial_like(x,n,p)
         b = log(multinomial(x,n,p).prod())
         assert_almost_equal(a,b,4)
 

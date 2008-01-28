@@ -445,20 +445,18 @@ c Multinomial log-likelihood function
 c Updated 12/02/2007 DH. N-D still buggy.
 c Fixed 22/11/2007 CF
 
-cf2py integer dimension(nx,k),intent(in) :: x
-cf2py integer dimension(nn), intent(in) :: n
-cf2py double precision dimension(np,k),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
 cf2py integer intent(hide),depend(n) :: nn=shape(n,0)
 cf2py integer intent(hide),depend(p) :: np=shape(p,0)
 cf2py integer intent(hide),depend(x,p),check(k==shape(p,1)) :: k=shape(x,1)
-cf2py double precision intent(out) :: like      
+cf2py intent(out) like      
 
       DOUBLE PRECISION like, factln, infinity, sump, pk
       DOUBLE PRECISION p(np,k), p_tmp(k)
       INTEGER i,j,n(nn),n_tmp,sumx,xk
       INTEGER x(nx,k)
       PARAMETER (infinity = 1.7976931348623157d308)
+
 
       like = 0.0
       n_tmp = n(1)
@@ -472,35 +470,60 @@ cf2py double precision intent(out) :: like
               enddo
         endif
         if (nn .NE. 1) n_tmp = n(j)
+            
+!       protect against negative n
         if (n_tmp .LT. 0) then
           like=-infinity
           RETURN
         endif
         
-        sumx = 0
         sump = 0.0
+        sumx = 0.0
         do i=1,k
-          if ((x(j,i) .LT. 0) .OR. (p_tmp(i) .LT. 1E-10)) then
+            
+!         protect against negative x or negative p
+          if ((x(j,i) .LT. 0) .OR. (p_tmp(i).LT.0.0D0)) then
             like = -infinity
             RETURN
           endif
+
+!         protect against zero p AND nonzero x
+          if (p_tmp(i) .EQ. 0.0D0) then
+              if (x(j,i) .GT. 0.0D0) then
+                  like=-infinity
+                  return
+              end if
+          else
+             like = like + x(j,i)*dlog(p_tmp(i))
+          end if
+        
+          like = like - factln(x(j,i))
           
-          like = like + x(j,i)*dlog(p_tmp(i)) - factln(x(j,i))
-          
-          sumx = sumx + x(j,i)
           sump = sump + p_tmp(i)
+          sumx = sumx + x(j,i)
 
         enddo
 c This is to account for the kth term that is not passed!
-        xk = n_tmp - sumx
-        pk = 1.0 - sump
-        if ((xk .LT. 0) .OR. (pk .LT. 0)) then
-          like = -infinity
-          RETURN
-        endif
-        like = like + (xk) * dlog(pk) 
-        like = like - factln(xk)
-        
+c The kth term does get passed... we can check for consistency.
+c But roundoff error ofter triggers a false alarm.
+
+          if (sumx.NE.n_tmp) then
+              like=-infinity
+              return
+          endif
+!         if (sump.NE.1.0D0) then
+!             like=-infinity
+!             return
+!         endif
+!         xk = n_tmp - sumx
+!         pk = 1.0 - sump
+!         print *,sump, pk, sumx, n_tmp, xk
+!         if ((xk .LT. 0) .OR. (pk .LT. 0)) then
+!           like = -infinity
+!           RETURN
+!         endif
+!         like = like + (xk) * dlog(pk) 
+!         like = like - factln(xk)
         like = like + factln(n_tmp)
       enddo
       RETURN

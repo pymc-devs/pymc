@@ -208,7 +208,6 @@ class AdaptiveMetropolis(StepMethod):
         except np.linalg.LinAlgError:
             print 'Warning, covariance was not positive definite. Skipping update of proposal distribution.'
             self._sig = old_sig
-            1/0
         self.chain_mean = mean
         self._trace_count += len(self._trace)
         self._trace = []        

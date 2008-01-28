@@ -1110,7 +1110,7 @@ def lognormal_like(x, mu, tau):
 
 # Multinomial----------------------------------------------
 #@randomwrap
-def rmultinomial(n,p,size=1):
+def rmultinomial(n,p,size=None): # Leaving size=None as the default means return value is 1d array if not specified-- nicer.
     """
     rmultinomial(n,p,size=1)
 
