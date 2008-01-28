@@ -521,7 +521,7 @@ def hpd(x, alpha):
         dims = shape(tx)
         
         # Container list for intervals
-        intervals = resize(0.0, dims[:-1]+(2,))
+        intervals = np.resize(0.0, dims[:-1]+(2,))
         
         for index in make_indices(dims[:-1]):
             
