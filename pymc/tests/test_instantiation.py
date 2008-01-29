@@ -8,13 +8,13 @@
 # TODO
 # ----
 # Add test for dtrm
-# Check discrete and binary stochs
+# Check discrete and binary stochastics
 # Test the distribution instantiators.
 ###
 
 from numpy.testing import *
 import pymc
-from pymc import Sampler, data, stoch, dtrm, discrete_stoch, \
+from pymc import Sampler, data, stochastic, dtrm, discrete_stochastic, \
     Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
 from pymc import uniform_like, exponential_like, poisson_like
@@ -28,21 +28,21 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                     3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                     0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Define data and stochs
+# Define data and stochastics
 
-@discrete_stoch
+@discrete_stochastic
 def s(value=50, length=110):
-    """Change time for rate stoch."""
+    """Change time for rate stochastic."""
     return uniform_like(value, 0, length)
 
-@stoch
+@stochastic
 def e(value=1., rate=1.):
-    """Rate stoch of poisson distribution."""
+    """Rate stochastic of poisson distribution."""
     return exponential_like(value, rate)
 
-@stoch
+@stochastic
 def l(value=.1, rate = 1.):
-    """Rate stoch of poisson distribution."""
+    """Rate stochastic of poisson distribution."""
     return exponential_like(value, rate)
         
 @data(discrete=True)
@@ -64,7 +64,7 @@ def F(value = D_array*.5,
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
         
 @data
-@stoch
+@stochastic
 def G(value = D_array*.5,
         s = s,
         e = e,
@@ -82,7 +82,7 @@ class test_instantiation(NumpyTestCase):
         assert(F.isdata)
         assert(isinstance(G, Stochastic))
         assert(G.isdata)
-    def check_stoch(self):
+    def check_stochastic(self):
         assert(isinstance(l, Stochastic))
         assert(not l.isdata)
 if __name__ == '__main__':

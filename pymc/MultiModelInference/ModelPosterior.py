@@ -7,11 +7,11 @@ def sample_likelihood(model, iter):
     """
     Returns iter samples of 
     
-    log p(data|self.stochs, self) * sum(self.potentials)
+    log p(data|self.stochastics, self) * sum(self.potentials)
         and 
     sum(self.potentials),
     
-    where 'sample' means that self.stochs are drawn from their joint prior and then these
+    where 'sample' means that self.stochastics are drawn from their joint prior and then these
     quantities are evaluated. See documentation.
     
     Exponentiating, averaging and dividing the return values gives an estimate of the model 
@@ -32,7 +32,7 @@ def sample_likelihood(model, iter):
 
             model.draw_from_prior()
 
-            for datum in model.data_stochs | model.potentials:
+            for datum in model.data_stochastics | model.potentials:
                 loglikes[i] += datum.logp
             if len (model.potentials) > 0:
                 for pot in model.potentials:

@@ -89,7 +89,7 @@ class Database(object):
                 o.trace._obj = o
         else: 
             # Set a fresh new state
-            for o in model._variables_to_tally:
+            for o in model._variables_to_tally:                
                 o.trace = self.Trace(obj=o)
         
         for o in model._variables_to_tally:

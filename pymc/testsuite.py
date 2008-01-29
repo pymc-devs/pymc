@@ -1,5 +1,4 @@
 from numpy.testing import NumpyTest
-
 from pymc import tests
 
 import os

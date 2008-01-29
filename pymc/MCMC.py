@@ -23,7 +23,7 @@ class MCMC(Sampler):
             If nothing, all nodes are collected from the base namespace.
         - db : string
             The name of the database backend that will store the values
-            of the stochs and dtrms sampled during the MCMC loop.            
+            of the stochastics and deterministics sampled during the MCMC loop.            
         - output_path : string
             The place where any output files should be put.
         - verbose : integer
@@ -53,7 +53,7 @@ class MCMC(Sampler):
               If nothing, all nodes are collected from the base namespace.
           - db : string
               The name of the database backend that will store the values
-              of the stochs and dtrms sampled during the MCMC loop.
+              of the stochastics and deterministics sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
           - verbose : integer
@@ -75,22 +75,22 @@ class MCMC(Sampler):
         """
         self.step_method_dict = {}
 
-        for stoch in self.stochs:
+        for s in self.stochastics:
 
-            self.step_method_dict[stoch] = []
+            self.step_method_dict[s] = []
 
             # Is it a member of any StepMethod?
             homeless = True
             for step_method in self.step_methods:
-                if stoch in step_method.stochs:
+                if s in step_method.stochastics:
                     homeless = False
-                    self.step_method_dict[stoch].append(step_method)
+                    self.step_method_dict[s].append(step_method)
 
             # If not, make it a new StepMethod using the registry
             if homeless:
-                new_method = assign_method(stoch)
+                new_method = assign_method(s)
                 setattr(new_method, '_model', self)
-                self.step_method_dict[stoch].append(new_method)
+                self.step_method_dict[s].append(new_method)
                 self.step_methods.add(new_method)
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
@@ -165,7 +165,7 @@ class MCMC(Sampler):
         if self.verbose > 1:
             print '\tTuning at iteration', self._current_iter
 
-        # Initialize counter for number of tuning stochs
+        # Initialize counter for number of tuning stochastics
         tuning_count = 0
 
         for step_method in self.step_methods:
@@ -258,22 +258,22 @@ class MCMC(Sampler):
                 # Initializealize list of GOF error loss values
                 self._gof_loss = []
                 
-                # Loop over stochs
-                for name in self.stochs:
+                # Loop over stochastics
+                for name in self.stochastics:
                     
                     # Look up stoch
-                    stoch = self.stochs[name]
+                    s = self.stochastics[name]
                     
                     # Retrieve copy of trace
-                    trace = stoch.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
+                    trace = s.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
                     
                     # Sample value from trace
                     sample = trace[random_integers(len(trace)) - 1]
                     
                     # Set current value to sampled value
-                    stoch.set_value(sample)
+                    s.set_value(sample)
                 
-                # Run calculate likelihood with sampled stochs
+                # Run calculate likelihood with sampled stochastics
                 try:
                     self()
                 except (LikelihoodError, OverflowError, ZeroDivisionError):

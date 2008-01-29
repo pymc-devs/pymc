@@ -32,7 +32,7 @@ from flib import dpotrs_wrap, dtrsm_wrap
 def check_list(thing, label):
     if thing is not None:
         if thing.__class__ is not list:
-            raise TypeError, 'Argument '+label+' must be a list.'
+            return [thing]
         return thing
 
 

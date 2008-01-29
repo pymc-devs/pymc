@@ -19,13 +19,13 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                     3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                     0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Define data and stochs
+# Define data and stochastics
 s = Uniform('s',50,lower=0,upper=110)
 e=Exponential('e',1,beta=1)
 l=Exponential('l',1,beta=1)
         
 @data
-@discrete_stoch
+@discrete_stochastic
 def D(  value = D_array,
         s = s,
         e = e,

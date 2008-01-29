@@ -93,7 +93,7 @@ class Database(pickle.Database):
     """HDF5 database
 
     Create an HDF5 file <model>.h5. Each chain is stored in a group, and the
-    stochs and dtrms are stored as arrays in each group.
+    stochastics and deterministics are stored as arrays in each group.
 
     """
     def __init__(self, filename=None, mode='w', complevel=0, complib='zlib', **kwds):
@@ -148,7 +148,7 @@ class Database(pickle.Database):
             object.trace._initialize(length)
         
         # Store data objects
-        for object in self.model.data_stochs:
+        for object in self.model.data_stochastics:
             if object.trace is True:
                 setattr(self._table.attrs, object.__name__, object.value)
     

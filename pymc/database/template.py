@@ -17,7 +17,7 @@ class Trace(object):
     is attributed to each traceable Deterministic and Stochastic:
     
     .. python::
-        for object in self.stochs | self.dtrms :
+        for object in self.stochastics | self.deterministics :
             if object.trace:
                 object.trace = module.Trace(object, self.db)
     

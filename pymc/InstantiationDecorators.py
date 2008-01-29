@@ -1,5 +1,5 @@
 """
-The decorators stoch, dtrm, discrete_stoch, binary_stoch, potential and data
+The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic, potential and data
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
@@ -12,7 +12,7 @@ import numpy as np
 
 def _extract(__func__, kwds, keys, classname): 
     """
-    Used by decorators stoch and dtrm to inspect declarations
+    Used by decorators stochastic and deterministic to inspect declarations
     """
     
     # Add docs and name
@@ -85,17 +85,17 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     
     Medium:
     
-        @stoch
+        @stochastic
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
         
-        @stoch(trace=trace_object)
+        @stochastic(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             return foo(value, parent_name, ...)
             
     Long:
 
-        @stoch
+        @stochastic
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -105,7 +105,7 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
                 return bar(parent_name, ...)
                 
     
-        @stoch(trace=trace_object)
+        @stochastic(trace=trace_object)
         def A(value = ., parent_name = .,  ...):
             
             def logp(value, parent_name, ...):
@@ -119,7 +119,7 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     generates a random value from A's distribution conditional on
     its parents' values.
     
-    :SeeAlso: Stochastic, Deterministic, dtrm, data, Potential, potential, Model, Container
+    :SeeAlso: Stochastic, Deterministic, deterministic, data, Potential, potential, Model, Container
     """
     
     if binary:
@@ -148,9 +148,9 @@ def discrete_stochastic(__func__=None, **kwds):
     Instantiates a DiscreteStochastic instance, which takes only
     integer values.
     
-    Same usage as stoch.
+    Same usage as stochastic.
     """
-    return stoch(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
+    return stochastic(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
     
 # Shortcut alias
 discrete_stoch = discrete_stochastic
@@ -160,9 +160,9 @@ def binary_stochastic(__func__=None, **kwds):
     Instantiates a BinaryStochastic instance, which takes only boolean
     values.
     
-    Same usage as stoch.
+    Same usage as stochastic.
     """
-    return stoch(__func__=__func__, __class__ = BinaryStochastic, **kwds)
+    return stochastic(__func__=__func__, __class__ = BinaryStochastic, **kwds)
     
 # Shortcut alias
 binary_stoch = binary_stochastic
@@ -175,10 +175,10 @@ def potential(__func__ = None, **kwds):
     def B(parent_name = ., ...)
         return baz(parent_name, ...)
 
-    where baz returns the dtrm B's value conditional
+    where baz returns the deterministic B's value conditional
     on its parents.
 
-    :SeeAlso: Deterministic, dtrm, Stochastic, Potential, stoch, data, Model, Container
+    :SeeAlso: Deterministic, deterministic, Stochastic, Potential, stochastic, data, Model, Container
     """
     def instantiate_pot(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Potential')
@@ -209,7 +209,7 @@ def deterministic(__func__ = None, **kwds):
     where baz returns the variable B's value conditional
     on its parents.
     
-    :SeeAlso: Deterministic, potential, Stochastic, stoch, data, Model, Container
+    :SeeAlso: Deterministic, potential, Stochastic, stochastic, data, Model, Container
     """
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Deterministic')
@@ -245,24 +245,24 @@ def data(obj=None, **kwds):
     or as
     
     @data
-    @stoch
+    @stochastic
     def A(value = ., parent_name = .,  ...):
         return foo(value, parent_name, ...)
         
     
-    :SeeAlso: stoch, Stochastic, dtrm, Deterministic, potential, Potential, Model, Container
+    :SeeAlso: stochastic, Stochastic, dtrm, Deterministic, potential, Potential, Model, Container
     """
     if obj is not None:
         if isinstance(obj, Stochastic):
             obj.isdata=True
             return obj
         else:
-            p = stoch(__func__=obj, isdata=True, **kwds)
+            p = stochastic(__func__=obj, isdata=True, **kwds)
             return p
     
     kwds['isdata']=True
     def instantiate_data(func):
-        return stoch(func, **kwds)
+        return stochastic(func, **kwds)
         
     return instantiate_data
 

@@ -32,19 +32,19 @@ def moral_graph(model, format='raw', prog='dot', path=None):
     model.moral_dot_object = pydot.Dot()
         
     # Data are filled ellipses
-    for datum in model.data_stochs:
+    for datum in model.data_stochastics:
         model.moral_dot_object.add_node(pydot.Node(name=datum.__name__, style='filled'))
 
     # Stochastics are open ellipses
-    for stoch in model.stochs:
-        model.moral_dot_object.add_node(pydot.Node(name=stoch.__name__))
+    for s in model.stochastics:
+        model.moral_dot_object.add_node(pydot.Node(name=s.__name__))
     
     gone_already = set()
-    for stoch in model.stochs | model.data_stochs:
-        gone_already.add(stoch)
-        for other_stoch in stoch.moral_neighbors:
-            if not other_stoch in gone_already:
-                model.moral_dot_object.add_edge(pydot.Edge(src=other_stoch.__name__, dst=stoch.__name__, arrowhead='none'))
+    for s in model.stochastics | model.data_stochastics:
+        gone_already.add(s)
+        for other_s in s.moral_neighbors:
+            if not other_s in gone_already:
+                model.moral_dot_object.add_edge(pydot.Edge(src=other_s.__name__, dst=s.__name__, arrowhead='none'))
     
     # Draw the graph
     if not path == None:
@@ -59,7 +59,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
     
 
 def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False, 
-        collapse_dtrms = False, collapse_potentials = False):
+        collapse_deterministics = False, collapse_potentials = False):
     """
     graph(  model,
             format='raw', 
@@ -67,7 +67,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             path=None, 
             consts=False, 
             legend=True, 
-            collapse_dtrms = False, 
+            collapse_deterministics = False, 
             collapse_potentials = False)
 
     Draws the graph for this model and writes it to path.
@@ -84,7 +84,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     If consts is True, constant parents are included in the graph; 
     otherwise they're not.
     
-    If collapse_dtrms is True, Deterministics (variables that are determined by their
+    If collapse_deterministics is True, Deterministics (variables that are determined by their
     parents) are made implicit.
     
     If collapse_potentials is True, potentials are displayed as undirected edges.
@@ -103,36 +103,36 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     
         
     # Data are filled ellipses
-    for datum in model.data_stochs:
+    for datum in model.data_stochastics:
         pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
         model.dot_object.add_node(pydot_nodes[datum])
         shown_objects.add(datum)
         obj_substitute_names[datum] = [datum.__name__]
 
     # Stochastics are open ellipses
-    for stoch in model.stochs:
-        pydot_nodes[stoch] = pydot.Node(name=stoch.__name__)
-        model.dot_object.add_node(pydot_nodes[stoch])
-        shown_objects.add(stoch)
-        obj_substitute_names[stoch] = [stoch.__name__]
+    for s in model.stochastics:
+        pydot_nodes[s] = pydot.Node(name=s.__name__)
+        model.dot_object.add_node(pydot_nodes[s])
+        shown_objects.add(s)
+        obj_substitute_names[s] = [s.__name__]
 
     # Deterministics are downward-pointing triangles
-    for dtrm in model.dtrms:
+    for d in model.deterministics:
 
-        if not collapse_dtrms:
-            pydot_nodes[dtrm] = pydot.Node(name=dtrm.__name__, shape='invtriangle')
-            model.dot_object.add_node(pydot_nodes[dtrm])
-            shown_objects.add(dtrm)
-            obj_substitute_names[dtrm] = [dtrm.__name__]
+        if not collapse_deterministics:
+            pydot_nodes[d] = pydot.Node(name=d.__name__, shape='invtriangle')
+            model.dot_object.add_node(pydot_nodes[d])
+            shown_objects.add(d)
+            obj_substitute_names[d] = [d.__name__]
 
         else:
-            obj_substitute_names[dtrm] = []
-            for parent in dtrm.parents.values():
+            obj_substitute_names[d] = []
+            for parent in d.parents.values():
                 if isinstance(parent, Variable):
-                    obj_substitute_names[dtrm].append(parent.__name__)
+                    obj_substitute_names[d].append(parent.__name__)
                 elif consts:
                     model.dot_object.add_node(pydot.Node(name=parent.__str__(), style='filled'))
-                    obj_substitute_names[dtrm].append(parent.__str__())
+                    obj_substitute_names[d].append(parent.__str__())
         
     # Potentials are octagons outlined three times
     for potential in model.potentials:
@@ -196,8 +196,8 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     if legend:
         legend = pydot.Cluster(graph_name = 'Legend', label = 'Legend')
         legend.add_node(pydot.Node(name='data', style='filled'))
-        legend.add_node(pydot.Node(name='stochs'))
-        legend.add_node(pydot.Node(name='dtrms', shape='invtriangle'))
+        legend.add_node(pydot.Node(name='stochastics'))
+        legend.add_node(pydot.Node(name='deterministics', shape='invtriangle'))
         legend.add_node(pydot.Node(name='potentials', shape='box'))
         if consts:
             legend.add_node(pydot.Node(name='constants', style='filled'))

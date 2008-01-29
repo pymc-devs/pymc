@@ -2,7 +2,7 @@
 
 """
 This demo compares three different models for the coal mining disasters data.
-It doesn't use RJMCMC, it just integrates out the model stochs by sampling
+It doesn't use RJMCMC, it just integrates out the model stochastics by sampling
 their values conditional on their parents. Nothing fancy, but it works OK.
 
 The biggest problem is that the variance of the samples of the model likelihoods

@@ -20,20 +20,20 @@ class Node(object):
     
     :Parameters:
           -doc : string
-              The docstring for this dtrm.
+              The docstring for this node.
           
           -name : string
-              The name of this dtrm.
+              The name of this node.
           
           -parents : dictionary
-              A dictionary containing the parents of this dtrm.
+              A dictionary containing the parents of this node.
           
           -trace : boolean
-              A boolean indicating whether this dtrm's value
+              A boolean indicating whether this node's value
               should be traced (in MCMC).
           
           -cache_depth : integer
-              An integer indicating how many of this dtrm's
+              An integer indicating how many of this node's
               value computations should be 'memorized'.
           
           - plot (optional) : boolean
@@ -165,7 +165,7 @@ class ContainerBase(object):
     
     def _get_logp(self):
         # Return total log-probabilities from all elements
-        return sum(obj.logp for obj in self.stochs | self.potentials | self.data_stochs)
+        return sum(obj.logp for obj in self.stochastics | self.potentials | self.data_stochastics)
     
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')

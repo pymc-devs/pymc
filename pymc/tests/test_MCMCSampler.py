@@ -17,9 +17,9 @@ class test_MCMC(NumpyTestCase):
         # Instantiate samplers
         M = MCMC(DisasterModel)
         
-        # Check stoch arrays
-        assert_equal(len(M.stochs), 3)
-        assert_equal(len(M.data_stochs),1)
+        # Check stochastic arrays
+        assert_equal(len(M.stochastics), 3)
+        assert_equal(len(M.data_stochastics),1)
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
         # Sample

@@ -22,7 +22,7 @@ marginalizing x from
 where p(x) stands for the prior for the true input and p(a,b) the prior for the 
 regression parameters. 
 """
-from pymc import stoch, data, dtrm, uniform_like, normal_like, runiform, rnormal, Sampler
+from pymc import stochastic, data, deterministic, uniform_like, normal_like, runiform, rnormal, Sampler
 from numpy import inf, log, cos,array
 import pylab 
 #from PyMC.sandbox import AdaptativeSampler
@@ -46,7 +46,7 @@ data_x = rnormal(true_x, 2)
 # ------------------------------------------------------------------------------
 
 
-@stoch
+@stochastic
 def theta(value=array([2.,5.])):
     """Slope and intercept parameters for a straight line. 
     The likelihood corresponds to the prior probability of the parameters."""
@@ -57,12 +57,12 @@ def theta(value=array([2.,5.])):
     
 init_x = data_x.clip(min=0, max=50)
 
-@stoch
+@stochastic
 def x(value=init_x):
     """Inferred true inputs."""
     return uniform_like(value, 0,50)
     
-@dtrm
+@deterministic
 def modelled_y(x=x, theta=theta):
     """Return y computed from the straight line model, given the 
     inferred true inputs and the model paramters."""

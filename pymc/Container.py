@@ -32,7 +32,7 @@ Should work even with nested inputs:
     
 
 In addition, container objects file away the objects they contain into the
-following sets: stochs, dtrms, variables, nodes, containers, data, step methods.
+following sets: stochastics, deterministics, variables, nodes, containers, data, step methods.
 These flattened representations are useful for things like cache checking.
 """
 
@@ -70,7 +70,7 @@ def Container(*args):
     
     Example:
     
-        @stoch
+        @stochastic
         def A(value=0., mu=3, tau=2):
             return normal_like(value, mu, tau)
         
@@ -88,7 +88,7 @@ def Container(*args):
     
         x = []
     
-        @stoch
+        @stochastic
         def x_0(value=0, mu=0, tau=2):
             return normal_like(value, mu, tau)
     
@@ -96,7 +96,7 @@ def Container(*args):
         last_x = x_0
     
         for i in range(1,N):          
-            @stoch
+            @stochastic
             def x_now(value=0, mu = last_x, tau=2):
                 return normal_like(value, mu, tau)
                 
@@ -105,7 +105,7 @@ def Container(*args):
         
             x.append(x_now)
         
-        @stoch
+        @stochastic
         def y(value=0, mu = x, tau = 100):
 
             mean_sum = 0
@@ -164,10 +164,10 @@ def file_items(container, iterable):
     
     container.nodes = set()
     container.variables = set()
-    container.dtrms = set()
-    container.stochs = set()
+    container.deterministics = set()
+    container.stochastics = set()
     container.potentials = set()
-    container.data_stochs = set()
+    container.data_stochastics = set()
     container.step_methods = set()
     
     # containers needs to be a list to hold unhashable items.
@@ -190,11 +190,11 @@ def file_items(container, iterable):
             container.variables.add(item)
             if isinstance(item, StochasticBase):
                 if item.isdata:
-                    container.data_stochs.add(item)
+                    container.data_stochastics.add(item)
                 else:
-                    container.stochs.add(item)
+                    container.stochastics.add(item)
             elif isinstance(item, DeterministicBase):
-                container.dtrms.add(item)
+                container.deterministics.add(item)
         elif isinstance(item, PotentialBase):
             container.potentials.add(item)
         elif isinstance(item, StepMethodBase):
@@ -219,10 +219,10 @@ def file_items(container, iterable):
             # iterable's. This process recursively unpacks nested iterables.
             container.containers.append(new_container)
             container.variables.update(new_container.variables)
-            container.stochs.update(new_container.stochs)
+            container.stochastics.update(new_container.stochastics)
             container.potentials.update(new_container.potentials)
-            container.dtrms.update(new_container.dtrms)
-            container.data_stochs.update(new_container.data_stochs)
+            container.deterministics.update(new_container.deterministics)
+            container.data_stochastics.update(new_container.data_stochastics)
             container.step_methods.update(new_container.step_methods)
 
 
@@ -370,7 +370,7 @@ class ArrayContainer(ContainerBase, ndarray):
     """
     ArrayContainers wrap Numerical Python ndarrays. These are full 
     ndarray subclasses, and should support all of ndarrays' 
-    dtrmity.
+    functionality.
     
     :SeeAlso: Container, SetContainer, ListDictContainer
     """

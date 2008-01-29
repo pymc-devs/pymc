@@ -44,7 +44,7 @@ def separate_shape_args(kwds, shape_args):
 
     return args, new_kwds
 
-def stoch_from_scipy_dist(scipy_dist):
+def stochastic_from_scipy_dist(scipy_dist):
     """
     Return a Stochastic subclass made from a particular SciPy distribution.
     """
@@ -186,5 +186,5 @@ reporting the bug.
 for scipy_dist_name in sc_dst.__all__:
     scipy_dist = sc_dst.__dict__[scipy_dist_name]
     if isinstance(scipy_dist, sc_dst.rv_continuous) or isinstance(scipy_dist, sc_dst.rv_discrete):
-        new_dist = stoch_from_scipy_dist(scipy_dist)
+        new_dist = stochastic_from_scipy_dist(scipy_dist)
         locals()[new_dist.__name__] = new_dist

@@ -18,13 +18,13 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Define data and stochs
+# Define data and stochastics
 
-@stoch
+@stochastic
 def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     """
-    Intercept and slope of rate stoch of poisson distribution
-    Rate stoch must be positive for t in [0,T]
+    Intercept and slope of rate stochastic of poisson distribution
+    Rate stochastic must be positive for t in [0,T]
     
     p(intercept, slope|tau,rate) = 
     N(slope|0,tau) Exp(intercept|rate) 1(intercept>0) 1(intercept + slope * T>0)

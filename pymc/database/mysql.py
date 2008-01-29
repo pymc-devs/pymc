@@ -10,7 +10,7 @@ from numpy import zeros, shape, squeeze, transpose
 import MySQLdb
 
 class Trace(object):
-    """ Define the methods that will be assigned to each stoch in the
+    """ Define the methods that will be assigned to each stochastic in the
     Model instance."""
     def __init__(self, obj, db):
         """Initialize the instance.

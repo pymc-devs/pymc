@@ -288,7 +288,7 @@ class Plotter:
     
     def plot(self, node, suffix=''):
         """ 
-        Plots summary of stoch/dtrm trace, including trace and histogram.
+        Plots summary of stochastic/deterministic trace, including trace and histogram.
         
         :Arguments:
             node: PyMCObject
@@ -553,17 +553,17 @@ class Plotter:
         pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
         :Arguments:
-        nodes:       An iterable containing stoch objects with traces.
-        mask:       A dictionary, indexed by stoch, of boolean-valued
-                    arrays. If mask[p][index]=False, stoch p's value
+        nodes:       An iterable containing stochastic objects with traces.
+        mask:       A dictionary, indexed by stochastic, of boolean-valued
+                    arrays. If mask[p][index]=False, stochastic p's value
                     at that index will be included in the plot.
-        trueval:    The true values of stochs (useful for summarizing
+        trueval:    The true values of stochastics (useful for summarizing
                     performance with simulated data).
 
         Produces a matrix of plots. On the diagonals are the marginal
-        posteriors of the stochs, subject to the masks. On the
+        posteriors of the stochastics, subject to the masks. On the
         off-diagonals are the marginal pairwise posteriors of the
-        stochs, subject to the masks.
+        stochastics, subject to the masks.
         """
 
         nodes = list(nodes)

@@ -41,7 +41,7 @@ class NormApproxMu(object):
     def __init__(self, owner):
         self.owner = owner
     
-    def __getitem__(self, *stochs):
+    def __getitem__(self, *stochastics):
         
         if not owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before mu can be accessed.'
@@ -49,11 +49,11 @@ class NormApproxMu(object):
         tot_len = 0
         
         try:
-            for p in stochs[0]:
+            for p in stochastics[0]:
                 pass
-            stoch_tuple = stochs[0]
+            stoch_tuple = stochastics[0]
         except:
-            stoch_tuple = stochs
+            stoch_tuple = stochastics
         
         for p in stoch_tuple:
             tot_len += self.owner.stoch_len[p]
@@ -83,7 +83,7 @@ class NormApproxC(object):
     def __init__(self, owner):
         self.owner = owner
             
-    def __getitem__(self, *stochs):
+    def __getitem__(self, *stochastics):
         
         if not owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before C can be accessed.'
@@ -91,11 +91,11 @@ class NormApproxC(object):
         tot_len = 0
         
         try:
-            for p in stochs[0]:
+            for p in stochastics[0]:
                 pass
-            stoch_tuple = stochs[0]
+            stoch_tuple = stochastics[0]
         except:
-            stoch_tuple = stochs
+            stoch_tuple = stochastics
         
         for p in stoch_tuple:
             tot_len += self.owner.stoch_len[p]
@@ -154,8 +154,8 @@ class MAP(Model):
         self.stoch_len = {}
         self.fitted = False
 
-        self.stoch_list = list(self.stochs)
-        self.N_stochs = len(self.stoch_list)
+        self.stoch_list = list(self.stochastics)
+        self.N_stochastics = len(self.stoch_list)
         self.stoch_indices = []
         self.stoch_types = []
         self.stoch_type_dict = {}
@@ -164,7 +164,7 @@ class MAP(Model):
 
             stoch = self.stoch_list[i]
 
-            # Check types of all stochs.
+            # Check types of all stochastics.
             type_now = check_type(stoch)[0]
             self.stoch_type_dict[stoch] = type_now
 
@@ -172,7 +172,7 @@ class MAP(Model):
                 print "Warning: Stochastic " + stoch.__name__ + "'s value is neither numerical nor array with " + \
                             "floating-point dtype. Recommend fitting method fmin (default)."
 
-            # Inspect shapes of all stochs and create stoch slices.
+            # Inspect shapes of all stochastics and create stoch slices.
             if isinstance(stoch.value, ndarray):
                 self.stoch_len[stoch] = len(ravel(stoch.value))
             else:
@@ -186,13 +186,13 @@ class MAP(Model):
                 self.stoch_types.append(type_now)
 
         self.data_len = 0
-        for datum in self.data_stochs:
+        for datum in self.data_stochastics:
             self.data_len += len(ravel(datum.value))
 
         # Unpack step    
         self.eps = zeros(self.len,dtype=float)
         if isinstance(eps,dict):        
-            for stoch in self.stochs:
+            for stoch in self.stochastics:
                 self.eps[self._slices[stoch]] = eps[stoch]
         else:
             self.eps[:] = eps
@@ -237,7 +237,7 @@ class MAP(Model):
         self.method = method
 
         p = zeros(self.len,dtype=float)
-        for stoch in self.stochs:
+        for stoch in self.stochastics:
             p[self._slices[stoch]] = ravel(stoch.value)
 
         if not self.method == 'newton':
@@ -295,7 +295,7 @@ class MAP(Model):
         else:
             raise ValueError, 'Method unknown.'
 
-        self._set_stochs(p)
+        self._set_stochastics(p)
         self._mu = p
 
         try:
@@ -312,7 +312,7 @@ class MAP(Model):
         """
         The function that gets passed to the optimizers.
         """
-        self._set_stochs(p)
+        self._set_stochastics(p)
         try:
             return -1. * self.logp
         except ZeroProbability:
@@ -323,15 +323,15 @@ class MAP(Model):
         The gradient-computing function that gets passed to the optimizers, 
         if needed.
         """
-        self._set_stochs(p)
+        self._set_stochastics(p)
         for i in xrange(self.len):
             self.grad[i] = self.diff(i)            
 
         return -1 * self.grad
 
 
-    def _set_stochs(self, p):
-        for stoch in self.stochs:
+    def _set_stochastics(self, p):
+        for stoch in self.stochastics:
             if self.stoch_type_dict[stoch] is int:
                 stoch.value = round_array(reshape(ravel(p)[self._slices[stoch]],shape(stoch.value)))
             else:
@@ -353,7 +353,7 @@ class MAP(Model):
         Evaluates the log-probability of the Markov blanket of
         a stoch owning a particular index.
         """
-        all_relevant_stochs = set()
+        all_relevant_stochastics = set()
         p,i = self.stoch_indices[index]
         try:
             return p.logp + sum([child.logp for child in p.extended_children])
@@ -418,7 +418,7 @@ class MAP(Model):
         The Hessian function that will be passed to the optimizer,
         if needed.
         """
-        self._set_stochs(p)
+        self._set_stochastics(p)
         for i in xrange(self.len):
 
             di = self.diff(i)            
@@ -438,9 +438,9 @@ class MAP(Model):
         """
         N.revert_to_max()
 
-        Sets all N's stochs to their MAP values.
+        Sets all N's stochastics to their MAP values.
         """
-        self._set_stochs(self.mu)
+        self._set_stochastics(self.mu)
 
 class NormApprox(MAP, Sampler):
     """
@@ -495,9 +495,9 @@ class NormApprox(MAP, Sampler):
         """
         N.draw()
         
-        Sets all N's stochs to random values drawn from
+        Sets all N's stochastics to random values drawn from
         the normal approximation to the posterior.
         """
         devs = normal(size=self._sig.shape[1])
         p = inner(self._sig,devs) + self._mu
-        self._set_stochs(p)
+        self._set_stochastics(p)

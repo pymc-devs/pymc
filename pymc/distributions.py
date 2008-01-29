@@ -153,12 +153,12 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stoch_from_dist(name, logp, random=None, base=Stochastic):
+def stochastic_from_dist(name, logp, random=None, base=Stochastic):
     """
     Return a Stochastic subclass made from a particular distribution.
 
       :Example:
-        >>> Exponential = stoch_from_dist('exponential')
+        >>> Exponential = stochastic_from_dist('exponential')
         >>> A = Exponential(self_name, value, beta)
         
     Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
@@ -200,15 +200,15 @@ def randomwrap(func):
     """
     Decorator for random value generators
 
-    Allows passing of sequence of stochs, as well as a size argument.
+    Allows passing of sequence of stochastics, as well as a size argument.
 
     Convention:
 
-      - If size=1 and the stochs are all scalars, return a scalar.
+      - If size=1 and the stochastics are all scalars, return a scalar.
       - If size=1, the random variates are 1D.
-      - If the stochs are scalars and size > 1, the random variates are 1D.
-      - If size > 1 and the stochs are sequences, the random variates are
-        aligned as (size, max(length)), where length is the stochs size.
+      - If the stochastics are scalars and size > 1, the random variates are 1D.
+      - If size > 1 and the stochastics are sequences, the random variates are
+        aligned as (size, max(length)), where length is the stochastics size.
 
 
     :Example:
@@ -274,16 +274,16 @@ def randomwrap(func):
             r.append(func(*arg))
 
         size = arg[-1]
-        vec_stochs = len(r)>1
+        vec_stochastics = len(r)>1
         if mv:
             if nr == 1 and N==1:
                 return r[0]
             else:
                 return np.vstack(r)
         else:
-            if size > 1 and vec_stochs:
+            if size > 1 and vec_stochastics:
                 return np.atleast_2d(r).transpose()
-            elif vec_stochs or size > 1:
+            elif vec_stochastics or size > 1:
                 return np.concatenate(r)
             else: # Scalar case
                 return r[0][0]
@@ -317,7 +317,7 @@ def debugwrapper(func, name):
 
 def constrain(value, lower=-Inf, upper=Inf, allow_equal=False):
     """
-    Apply interval constraint on stoch value.
+    Apply interval constraint on stochastic value.
     """
 
     ok = flib.constrain(value, lower, upper, allow_equal)
@@ -619,8 +619,8 @@ def cauchy_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     :Parameters:
-      - 'alpha' : Location stoch.
-      - 'beta': Scale stoch > 0.
+      - 'alpha' : Location parameter.
+      - 'beta': Scale parameter > 0.
 
     :Note:
       - Mode and median are at alpha.
@@ -757,7 +757,7 @@ def exponential_like(x, beta):
       x : float
         :math:'x \ge 0'
       beta : float
-        Survival stoch :math:'\beta > 0'
+        Survival parameter :math:'\beta > 0'
 
     :Note:
       - :math:'E(X) = \beta'
@@ -796,10 +796,10 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
     :Parameters:
       - 'x' : > 0
-      - 'alpha' : Shape stoch
+      - 'alpha' : Shape parameter
       - 'k' : > 0
-      - 'loc' : Location stoch
-      - 'scale' : Scale stoch > 0.
+      - 'loc' : Location parameter
+      - 'scale' : Scale parameter > 0.
 
     """
 
@@ -840,9 +840,9 @@ def gamma_like(x, alpha, beta):
       x : float
         :math:'x \ge 0'
       alpha : float
-        Shape stoch :math:'\alpha > 0'.
+        Shape parameter :math:'\alpha > 0'.
       beta : float
-        Scale stoch :math:'\beta > 0'.
+        Scale parameter :math:'\beta > 0'.
 
     """
     
@@ -850,7 +850,7 @@ def gamma_like(x, alpha, beta):
 
 
 # GEV Generalized Extreme Value ------------------------
-# Modify stochization -> Hosking (kappa, xi, alpha)
+# Modify parameterization -> Hosking (kappa, xi, alpha)
 @randomwrap
 def rgev(xi, mu=0, sigma=1, size=1):
     """
@@ -1051,9 +1051,9 @@ def inverse_gamma_like(x, alpha, beta):
       x : float
         x > 0
       alpha : float
-        Shape stoch, :math:'\alpha > 0'.
+        Shape parameter, :math:'\alpha > 0'.
       beta : float
-        Scale stoch, :math:'\beta > 0'.
+        Scale parameter, :math:'\beta > 0'.
 
     :Note:
       :math:'E(X)=\frac{1}{\beta(\alpha-1)}' for :math:'\alpha > 1'.
@@ -1097,9 +1097,9 @@ def lognormal_like(x, mu, tau):
       x : float
         x > 0
       mu : float
-        Location stoch.
+        Location parameter.
       tau : float
-        Scale stoch, > 0.
+        Scale parameter, > 0.
 
     :Note:
       :math:'E(X)=e^{\mu+\frac{1}{2\tau}}'
@@ -1761,9 +1761,9 @@ def fortranlike(f, snapshot, mv=False):
 
     Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
 
-    Assume args = (x, stoch1, stoch2, ...)
+    Assume args = (x, parameter1, parameter2, ...)
     Before passing the arguments to the function, the wrapper makes sure that
-    the stochs have the same shape as x.
+    the parameters have the same shape as x.
 
     mv: multivariate (True/False)
 
@@ -1872,14 +1872,14 @@ def local_decorated_likelihoods(obj):
 
 for dist in continuous_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stoch_from_dist(dist, dist_logp, dist_random)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random)
     
 for dist in discrete_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stoch_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
 
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
-Bernoulli = stoch_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
+Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
 
 
 def uninformative_like(x):
@@ -1903,9 +1903,9 @@ def one_over_x_like(x):
         return -sum(log(x))
 
 
-Uninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
-DiscreteUninformative = stoch_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
-OneOverX = stoch_from_dist('one_over_x_like', logp = one_over_x_like, base = Stochastic)
+Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
+DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
+OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like, base = Stochastic)
 
 if __name__ == "__main__":
     import doctest

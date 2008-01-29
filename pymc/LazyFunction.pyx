@@ -81,7 +81,7 @@ cdef class LazyFunction:
         cdef object arg, name
         cdef int i
         
-        # arguments will be parents and value for stochs, just parents for dtrms.
+        # arguments will be parents and value for stochastics, just parents for deterministics.
         self.arguments = arguments
         
         self.cache_depth = cache_depth

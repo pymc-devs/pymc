@@ -17,7 +17,7 @@ __all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'a
 
 StepMethodRegistry = []
 
-def pick_best_methods(stoch):
+def pick_best_methods(s):
     """
     Picks the StepMethods best suited to handle
     a stochastic variable.
@@ -32,7 +32,7 @@ def pick_best_methods(stoch):
     for method in StepMethodRegistry:
         
         # Parse method and its associated competence
-        competence = method.competence(stoch)
+        competence = method.competence(s)
         
         # If better than current best method, promote it
         if competence > max_competence:
@@ -43,10 +43,10 @@ def pick_best_methods(stoch):
         elif competence == max_competence:
             best_candidates.add(method)
     
-    # print stoch.__name__ + ': ', best_candidates, ' ', max_competence
+    # print s.__name__ + ': ', best_candidates, ' ', max_competence
     return best_candidates
 
-def assign_method(stoch, scale=None):
+def assign_method(s, scale=None):
     """
     Returns a step method instance to handle a
     variable. If several methods have the same competence,
@@ -54,15 +54,15 @@ def assign_method(stoch, scale=None):
     """
     
     # Retrieve set of best candidates
-    best_candidates = pick_best_methods(stoch)
+    best_candidates = pick_best_methods(s)
     
     # Randomly grab and appropriate method
     method = best_candidates.pop()
     
     if scale:
-        return method(stoch = stoch, scale = scale)
+        return method(s = s, scale = scale)
     
-    return method(stoch = stoch)
+    return method(s = s)
 
 
 class StepMethodMeta(type):
@@ -86,8 +86,8 @@ class StepMethod(StepMethodBase):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     Externally-accessible attributes:
-      dtrms:    The Deterministics over which self has jurisdiction.
-      stochs:   The Stochastics over which self has jurisdiction which have isdata = False.
+      deterministics:    The Deterministics over which self has jurisdiction.
+      stochastics:   The Stochastics over which self has jurisdiction which have isdata = False.
       data:     The Stochastics over which self has jurisdiction which have isdata = True.
       variables:The Deterministics and Stochastics over which self has jurisdiction.
       children: The combined children of all Variables over which self has jurisdiction.
@@ -100,7 +100,7 @@ class StepMethod(StepMethodBase):
       sample(): A single MCMC step for all the Stochastics over which self has 
         jurisdiction. Must be overridden in subclasses.
       tune(): Tunes proposal distribution widths for all self's Stochastics.
-      competence(stoch): Examines Stochastic instance stoch and returns self's 
+      competence(s): Examines Stochastic instance s and returns self's 
         competence to handle it, on a scale of 0 to 3.
     
     To instantiate a StepMethod called S with jurisdiction over a
@@ -120,9 +120,9 @@ class StepMethod(StepMethodBase):
         self.variables = set(variables)
         if len(self.variables)==0:
             raise ValueError, 'No variables provided for step method to handle.'
-        self.dtrms = set()
-        self.stochs = set()
-        self.data_stochs = set()
+        self.deterministics = set()
+        self.stochastics = set()
+        self.data_stochastics = set()
         self.children = set()
         self.parents = set()
         
@@ -138,12 +138,12 @@ class StepMethod(StepMethodBase):
             
             # Sort.
             if isinstance(variable,Deterministic):
-                self.dtrms.add(variable)
+                self.deterministics.add(variable)
             elif isinstance(variable,Stochastic):
                 if variable.isdata:
-                    self.data_stochs.add(variable)
+                    self.data_stochastics.add(variable)
                 else:
-                    self.stochs.add(variable)
+                    self.stochastics.add(variable)
         
         # Find children, no need to find parents; each variable takes care of those.
         for variable in self.variables:
@@ -154,13 +154,13 @@ class StepMethod(StepMethodBase):
         
         self.children = set([])
         self.parents = set([])
-        for stoch in self.stochs:
-            self.children |= stoch.extended_children
-            self.parents |= stoch.extended_parents
+        for s in self.stochastics:
+            self.children |= s.extended_children
+            self.parents |= s.extended_parents
         
         # Remove own stochastics from children and parents.
-        self.children -= self.stochs
-        self.parents -= self.stochs
+        self.children -= self.stochastics
+        self.parents -= self.stochastics
         
         # ID string for verbose feedback
         self._id = 'To define in subclasses'
@@ -173,7 +173,7 @@ class StepMethod(StepMethodBase):
         pass
 
     @staticmethod
-    def competence(stoch):
+    def competence(s):
         """
         This function is used by Sampler to determine which step method class
         should be used to handle stochastic variables.
@@ -200,8 +200,8 @@ class StepMethod(StepMethodBase):
         '@staticmethod' decorator. Example:
         
             @staticmethod
-            def competence(stoch):
-                if isinstance(stoch, MyStochasticSubclass):
+            def competence(s):
+                if isinstance(s, MyStochasticSubclass):
                     return 2
                 else:
                     return 0
@@ -270,10 +270,10 @@ class StepMethod(StepMethodBase):
         self._accepted = 0.
         
         # More verbose feedback, if requested
-        # Warning: self.stoch is not defined above. The following assumes
+        # Warning: self.s is not defined above. The following assumes
         # that the class has created this value, which is a bit fragile. DH
         if verbose > 1 or self.verbose > 1:
-            print '\t\tvalue:', self.stoch.value
+            print '\t\tvalue:', self.s.value
             print '\t\tacceptance rate:', acc_rate
             print '\t\tadaptive scale factor:', self._asf
             print
@@ -299,7 +299,7 @@ class StepMethod(StepMethodBase):
         return sum
     
     # Make get property for retrieving log-probability
-    loglike = property(fget = _get_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochs, with self.stochs removed.")
+    loglike = property(fget = _get_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, with self.stochastics removed.")
     
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
@@ -327,7 +327,7 @@ class NoStepper(StepMethod):
     def tune(self):
         pass
 
-# The default StepMethod, which Model uses to handle singleton stochs.
+# The default StepMethod, which Model uses to handle singleton stochastics.
 class Metropolis(StepMethod):
     """
     The default StepMethod, which Model uses to handle singleton, continuous variables.
@@ -339,7 +339,7 @@ class Metropolis(StepMethod):
       >>> M = Metropolis(P, scale=1, dist=None)
     
     :Arguments:
-    - stoch : Stochastic
+    - s : Stochastic
             The variable over which self has jurisdiction.
     
     - scale (optional) : number
@@ -356,31 +356,31 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, stoch, scale=1., dist=None, verbose=0):
+    def __init__(self, s, scale=1., dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
-        StepMethod.__init__(self, [stoch], verbose=verbose)
+        StepMethod.__init__(self, [s], verbose=verbose)
         
         # Set public attributes
-        self.stoch = stoch
+        self.s = s
         self.verbose = verbose
         
         # Avoid zeros when setting proposal variance
-        if all(self.stoch.value != 0.):
-            self.proposal_sig = ones(shape(self.stoch.value)) * abs(self.stoch.value) * scale
+        if all(self.s.value != 0.):
+            self.proposal_sig = ones(shape(self.s.value)) * abs(self.s.value) * scale
         else:
-            self.proposal_sig = ones(shape(self.stoch.value)) * scale
+            self.proposal_sig = ones(shape(self.s.value)) * scale
         
         # Initialize proposal deviate with array of zeros
-        self.proposal_deviate = zeros(shape(self.stoch.value), dtype=float)
+        self.proposal_deviate = zeros(shape(self.s.value), dtype=float)
         
         # Initialize verbose feedback string
-        self._id = stoch.__name__
+        self._id = s.__name__
         
-        # Determine size of stoch
-        if isinstance(self.stoch.value, ndarray):
-            self._len = len(self.stoch.value.ravel())
+        # Determine size of s
+        if isinstance(self.s.value, ndarray):
+            self._len = len(self.s.value.ravel())
         else:
             self._len = 1
         
@@ -390,10 +390,10 @@ class Metropolis(StepMethod):
             # Pick Gaussian, just because
             self._dist = "Normal"
             
-            # If self's extended children has no stochs, proposing from the prior is best.
+            # If self's extended children has no stochastics, proposing from the prior is best.
             if sum([isinstance(child, StochasticBase) for child in self.children]) == 0:
                 try:
-                    self.stoch.random()
+                    self.s.random()
                     self._dist = "Prior"
                 except:
                     pass
@@ -402,19 +402,19 @@ class Metropolis(StepMethod):
             self._dist = dist
     
     @staticmethod
-    def competence(stoch):
+    def competence(s):
         """
         The competence function for Metropolis
         """
 
-        if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
-            # If the stoch's binary or discrete, I can't do it.
+        if isinstance(s, DiscreteStochastic) or isinstance(s, BinaryStochastic):
+            # If the stochastic's binary or discrete, I can't do it.
             return 0
 
         else:
-            # If the stoch's value is an ndarray or a number, I can do it,
+            # If the stochastic's value is an ndarray or a number, I can do it,
             # but not necessarily particularly well.
-            _type = check_type(stoch)[0]
+            _type = check_type(s)[0]
             if _type in [float, int]:
                 return 1
             else:
@@ -433,7 +433,7 @@ class Metropolis(StepMethod):
         valued, and is not being proposed from its prior.
         """
         
-        # Probability and likelihood for stoch's current value:
+        # Probability and likelihood for s's current value:
         
         if self.verbose > 2:
             print
@@ -443,7 +443,7 @@ class Metropolis(StepMethod):
             # No children
             logp = 0.
         else:
-            logp = self.stoch.logp
+            logp = self.s.logp
         
         if self.verbose > 2:
             print self._id + ' getting initial likelihood.'
@@ -455,12 +455,12 @@ class Metropolis(StepMethod):
         # Sample a candidate value
         self.propose()
         
-        # Probability and likelihood for stoch's proposed value:
+        # Probability and likelihood for s's proposed value:
         try:
             if self._dist == "Prior":
                 logp_p = 0.
             else:
-                logp_p = self.stoch.logp
+                logp_p = self.s.logp
             loglike_p = self.loglike
         
         except ZeroProbability:
@@ -486,7 +486,7 @@ class Metropolis(StepMethod):
         # Evaluate acceptance ratio
         if log(random()) > logp_p + loglike_p - logp - loglike + HF:
             
-            # Revert stoch if fail
+            # Revert s if fail
             self.reject()
             
             # Increment rejected count
@@ -503,8 +503,8 @@ class Metropolis(StepMethod):
             print self._id + ' returning.'
     
     def reject(self):
-        # Sets current stoch value to the last accepted value
-        self.stoch.value = self.stoch.last_value
+        # Sets current s value to the last accepted value
+        self.s.value = self.s.last_value
     
     def propose(self):
         """
@@ -512,9 +512,9 @@ class Metropolis(StepMethod):
         if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.stoch.value = rnormal(self.stoch.value, self._asf * self.proposal_sig)
+            self.s.value = rnormal(self.s.value, self._asf * self.proposal_sig)
         elif self._dist == "Prior":
-            self.stoch.random()
+            self.s.random()
 
 class NoStepper(StepMethod):
     """
@@ -533,34 +533,34 @@ class DiscreteMetropolis(Metropolis):
     Good for DiscreteStochastics.
     """
     
-    def __init__(self, stoch, scale=1., dist=None):
+    def __init__(self, s, scale=1., dist=None):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stoch, scale=scale, dist=dist)
+        Metropolis.__init__(self, s, scale=scale, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = stoch.__name__
+        self._id = s.__name__
     
     @staticmethod
-    def competence(stoch):
+    def competence(s):
         """
         The competence function for DiscreteMetropolis.
         """
-        if isinstance(stoch, DiscreteStochastic):
+        if isinstance(s, DiscreteStochastic):
             return 1
         else:
             return 0
     
     
     def propose(self):
-        # Propose new stoch values using normal distribution
+        # Propose new values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.stoch.value,self._asf * self.proposal_sig)
-            self.stoch.value = round_array(new_val)
+            new_val = rnormal(self.s.value,self._asf * self.proposal_sig)
+            self.s.value = round_array(new_val)
         elif self._dist == "Prior":
-            self.stoch.random()
+            self.s.random()
 
 
 class BinaryMetropolis(Metropolis):
@@ -577,51 +577,51 @@ class BinaryMetropolis(Metropolis):
     This should be a subclass of Gibbs, not Metropolis.
     """
     
-    def __init__(self, stoch, p_jump=.1, dist=None, verbose=0):
+    def __init__(self, s, p_jump=.1, dist=None, verbose=0):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stoch, dist=dist, verbose=verbose)
+        Metropolis.__init__(self, s, dist=dist, verbose=verbose)
         
         # Initialize verbose feedback string
-        self._id = stoch.__name__
+        self._id = s.__name__
         
         # _asf controls the jump probability
         self._asf = log(1.-p_jump) / log(.5)
         
     @staticmethod
-    def competence(stoch):
+    def competence(s):
         """
         The competence function for Binary One-At-A-Time Metropolis
         """
-        if isinstance(stoch, BinaryStochastic):
+        if isinstance(s, BinaryStochastic):
             return 1
         else:
             return 0
 
     def step(self):
-        if not isscalar(self.stoch.value):
+        if not isscalar(self.s.value):
             Metropolis.step(self)
         else:
             
             # See what log-probability of True is.
-            self.stoch.value = True
+            self.s.value = True
         
             try:
-                logp_true = self.stoch.logp
+                logp_true = self.s.logp
                 loglike_true = self.loglike
             except ZeroProbability:
-                self.stoch.value = False
+                self.s.value = False
                 return
         
             # See what log-probability of False is.
-            self.stoch.value = False
+            self.s.value = False
         
             try:
-                logp_false = self.stoch.logp
+                logp_false = self.s.logp
                 loglike_false = self.loglike
             except ZeroProbability:
-                self.stoch.value = True
+                self.s.value = True
                 return
         
             # Test
@@ -631,24 +631,24 @@ class BinaryMetropolis(Metropolis):
             # Stochastically set value according to relative
             # probabilities of True and False
             if random() > p_true / (p_true + p_false):
-                self.stoch.value = True
+                self.s.value = True
         
     
     def propose(self):
         # Propose new values
 
         if self._dist == 'Prior':
-            self.stoch.random()
+            self.s.random()
         else:
             # Convert _asf to a jump probability
             p_jump = 1.-.5**self._asf
         
-            rand_array = random(size=shape(self.stoch.value))
-            new_value = copy(self.stoch.value)
+            rand_array = random(size=shape(self.s.value))
+            new_value = copy(self.s.value)
             switch_locs = where(rand_array<p_jump)
             new_value[switch_locs] = True - new_value[switch_locs]
-            # print switch_locs, rand_array, new_value, self.stoch.value
-            self.stoch.value = new_value
+            # print switch_locs, rand_array, new_value, self.s.value
+            self.s.value = new_value
 
 
 
@@ -669,7 +669,7 @@ class JointMetropolis(StepMethod):
             A sequence of pymc objects to handle using
             this StepMethod.
     
-    - stoch (optional) : Stochastic
+    - s (optional) : Stochastic
             Alternatively to variables, a single variable can be passed.
     
     - epoch (optional) : integer
@@ -701,7 +701,7 @@ class JointMetropolis(StepMethod):
     
     Externally-accessible attributes:
         
-        variables:      A sequence of stochastic variables to handle using
+        variables:      A sequence of sastic variables to handle using
                         this StepMethod.
         
         epoch:          After epoch values are stored in the internal
@@ -734,18 +734,18 @@ class JointMetropolis(StepMethod):
     """
     
     
-    def __init__(self, variables=None, stoch=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
+    def __init__(self, variables=None, s=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
         
         self.verbose = verbose
         
-        if stoch is not None:
-            variables = [stoch]
+        if s is not None:
+            variables = [s]
         StepMethod.__init__(self, variables, verbose=verbose)
         
         self.epoch = epoch
         self.memory = memory
         self.delay = delay
-        self._id = ''.join([p.__name__ for p in self.stochs])
+        self._id = ''.join([p.__name__ for p in self.stochastics])
         self.isdiscrete = {}
         self.scale = scale
         
@@ -759,16 +759,16 @@ class JointMetropolis(StepMethod):
         # Use Metropolis instances to handle independent jumps
         # before first epoch is complete
         if self.verbose > 2:
-            print self._id + ': Assigning single-stoch handlers.'
+            print self._id + ': Assigning single-stochastic handlers.'
         self._single_stoch_handlers = set()
         
-        for stoch in self.stochs:
+        for s in self.stochastics:
             if oneatatime_scales is not None:
-                scale_now = oneatatime_scales[stoch]
+                scale_now = oneatatime_scales[s]
             else:
                 scale_now = None
             
-            new_method = assign_method(stoch, scale_now)
+            new_method = assign_method(s, scale_now)
             self._single_stoch_handlers.add(new_method)
         StepMethodRegistry[JointMetropolis] = Jointcompetence
 
@@ -776,12 +776,12 @@ class JointMetropolis(StepMethod):
         # Allocate memory for internal traces and get stoch slices
         self._slices = {}
         self._len = 0
-        for stoch in self.stochs:
-            if isinstance(stoch.value, ndarray):
-                stoch_len = len(stoch.value.ravel())
+        for s in self.stochastics:
+            if isinstance(s.value, ndarray):
+                stoch_len = len(s.value.ravel())
             else:
                 stoch_len = 1
-            self._slices[stoch] = slice(self._len, self._len + stoch_len)
+            self._slices[s] = slice(self._len, self._len + stoch_len)
             self._len += stoch_len
         
         self._proposal_deviate = zeros(self._len,dtype=float)
@@ -796,7 +796,7 @@ class JointMetropolis(StepMethod):
 
     
     @staticmethod
-    def competence(stoch):
+    def competence(s):
         """
         The competence function for JointMetropolis. Currently returning 0,
         because JointMetropolis may be buggy.
@@ -804,10 +804,10 @@ class JointMetropolis(StepMethod):
         
         return 0
         
-        if isinstance(stoch, DiscreteStochastic) or isinstance(stoch, BinaryStochastic):
+        if isinstance(s, DiscreteStochastic) or isinstance(s, BinaryStochastic):
             # If the stoch's binary or discrete, I can't do it.
             return 0
-        elif isinstance(stoch.value, ndarray):
+        elif isinstance(s.value, ndarray):
             return 2
         else:
             return 0
@@ -832,18 +832,18 @@ class JointMetropolis(StepMethod):
             trace_len = (self._model._cur_trace_index - self.delay)
 
         
-        # Store all the stochs' traces in self._trace
-        for stoch in self.stochs:
-            stoch_trace = stoch.trace(slicing=trace_slice)
+        # Store all the stochastics' traces in self._trace
+        for s in self.stochastics:
+            stoch_trace = s.trace(slicing=trace_slice)
             
-            # If stoch is an array, ravel each tallied value
-            if isinstance(stoch.value, ndarray):
+            # If s is an array, ravel each tallied value
+            if isinstance(s.value, ndarray):
                 for i in range(trace_len):
-                    self._trace[self._slices[stoch], i] = stoch_trace[i,:].ravel()
+                    self._trace[self._slices[s], i] = stoch_trace[i,:].ravel()
             
-            # If stoch is a scalar, there's no need.
+            # If s is a scalar, there's no need.
             else:
-                self._trace[self._slices[stoch], :trace_len] = stoch_trace
+                self._trace[self._slices[s], :trace_len] = stoch_trace
         
         # Compute matrix square root of covariance of self._trace
         self._cov = cov(self._trace[: , :trace_len])
@@ -881,16 +881,16 @@ class JointMetropolis(StepMethod):
         
         proposed_vals = inner(self._proposal_deviate[:N], self._asf * self._sig)
         
-        for stoch in self.stochs:
+        for s in self.stochastics:
             
-            jump = reshape(proposed_vals[self._slices[stoch]],shape(stoch.value))
+            jump = reshape(proposed_vals[self._slices[s]],shape(s.value))
             
-            stoch.value = stoch.value + jump
+            s.value = s.value + jump
     
     def reject(self):
         """Reject a jump."""
-        for stoch in self.stochs:
-            stoch.value = stoch.last_value
+        for s in self.stochastics:
+            s.value = s.last_value
     
     def step(self):
         """
@@ -905,16 +905,16 @@ class JointMetropolis(StepMethod):
             for handler in self._single_stoch_handlers:
                 handler.step()
         else:
-            # Probability and likelihood for stoch's current value:
-            logp = sum([stoch.logp for stoch in self.stochs])
+            # Probability and likelihood for s's current value:
+            logp = sum([s.logp for s in self.stochastics])
             loglike = self.loglike
             
             # Sample a candidate value
             self.propose()
             
-            # Probability and likelihood for stoch's proposed value:
+            # Probability and likelihood for s's proposed value:
             try:
-                logp_p = sum([stoch.logp for stoch in self.stochs])
+                logp_p = sum([s.logp for s in self.stochastics])
             except ZeroProbability:
                 self._rejected += 1
                 self.reject()
@@ -924,7 +924,7 @@ class JointMetropolis(StepMethod):
             
             # Test
             if log(random()) > logp_p + loglike_p - logp - loglike:
-                # Revert stoch if fail
+                # Revert stochastic if fail
                 self._rejected += 1
                 self.reject()
             else:
@@ -939,7 +939,7 @@ class JointMetropolis(StepMethod):
             if not self._ready:
                 for handler in self._single_stoch_handlers:
                     if handler._accepted == 0:
-                        print self._id+ ": Warnining, stoch " + handler.stoch.__name__ + " did not mix, continuing one-at-a-time sampling"
+                        print self._id+ ": Warnining, stochastic " + handler.s.__name__ + " did not mix, continuing one-at-a-time sampling"
                 
                 self.compute_sig()
                 self.last_trace_index = self._model._cur_trace_index

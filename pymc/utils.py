@@ -29,16 +29,16 @@ from numpy import csingle, complex_, clongfloat
 # TODO : Wrap the nd histogramming fortran function.
     
 
-def check_type(stoch):
+def check_type(stochastic):
     """
-    type, shape = check_type(stoch)
+    type, shape = check_type(stochastic)
     
-    Checks the type of a stoch's value. Output value 'type' may be
+    Checks the type of a stochastic's value. Output value 'type' may be
     bool, int, float, or complex. Nonnative numpy dtypes are lumped into
-    these categories. Output value 'shape' is () if the stoch's value
+    these categories. Output value 'shape' is () if the stochastic's value
     is scalar, or a nontrivial tuple otherwise.
     """
-    val = stoch.value
+    val = stochastic.value
     if val.__class__ is bool:
         return bool, ()
     elif val.__class__ in [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:

@@ -10,7 +10,7 @@ import types, copy
 import distributions
 from Node import ZeroProbability
 
-def dtrm_to_NDarray(arg):
+def deterministic_to_NDarray(arg):
     if isinstance(arg,proposition5.Deterministic):
         return arg.value
     else:
@@ -42,9 +42,9 @@ def fortranlike_method(f, snapshot, mv=False):
     snapshot: Snapshot of the distributions local dictionary.
     mv: multivariate (True/False)
     
-    Assume args = (self, x, stoch1, stoch2, ...)
+    Assume args = (self, x, parameter1, parameter2, ...)
     Before passing the arguments to the function, the wrapper makes sure that 
-    the stochs have the same shape as x.
+    the parameters have the same shape as x.
 
 
     Add compatibility with Sampler class
@@ -226,7 +226,7 @@ def local_decorated_likelihoods(obj):
 
 
 def create_distribution_instantiator(name, logp=None, random=None, module=distributions):
-    """Return a function to instantiate a stoch from a particular distribution.
+    """Return a function to instantiate a parameter from a particular distribution.
      
       :Example:
         >>> Exponential = create_distribution_instantiator('exponential')

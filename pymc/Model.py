@@ -43,8 +43,8 @@ class Model(ObjectContainer):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Attributes:
-      - dtrms
-      - stochs (with isdata=False)
+      - deterministics
+      - stochastics (with isdata=False)
       - data (stochastic variables with isdata=True)
       - variables
       - potentials
@@ -81,7 +81,7 @@ class Model(ObjectContainer):
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
 
-        # Get stochs, dtrms, etc.
+        # Get stochastics, deterministics, etc.
         if input is None:
             import __main__
             __main__.__dict__.update(self.__class__.__dict__)
@@ -107,9 +107,9 @@ class Model(ObjectContainer):
         # Find root generation
         self.generations.append(set())
         all_children = set()
-        for stoch in self.stochs:
-            all_children.update(self.extended_children[stoch] & self.stochs)
-        self.generations[0] = self.stochs - all_children
+        for s in self.stochastics:
+            all_children.update(self.extended_children[s] & self.stochastics)
+        self.generations[0] = self.stochastics - all_children
 
         # Find subsequent _generations
         children_remaining = True
@@ -120,14 +120,14 @@ class Model(ObjectContainer):
 
             # Find children of last generation
             self.generations.append(set())
-            for stoch in self.generations[gen_num-1]:
-                self.generations[gen_num].update(self.extended_children[stoch] & self.stochs)
+            for s in self.generations[gen_num-1]:
+                self.generations[gen_num].update(self.extended_children[s] & self.stochastics)
 
 
-            # Take away stochs that have parents in the current generation.
+            # Take away stochastics that have parents in the current generation.
             thisgen_children = set()
-            for stoch in self.generations[gen_num]:
-                thisgen_children.update(self.extended_children[stoch] & self.stochs)
+            for s in self.generations[gen_num]:
+                thisgen_children.update(self.extended_children[s] & self.stochastics)
             self.generations[gen_num] -= thisgen_children
 
 
@@ -142,18 +142,18 @@ class Model(ObjectContainer):
         """
         
         for generation in self.generations:
-            for stoch in generation:
-                stoch.random()
+            for s in generation:
+                s.random()
 
     def seed(self):
         """
-        Seed new initial values for the stochs.
+        Seed new initial values for the stochastics.
         """
         for generation in self.generations:
-            for stoch in generation:
+            for s in generation:
                 try:
-                    if stoch.rseed is not None:
-                        value = stoch.random(**stoch.parents.value)
+                    if s.rseed is not None:
+                        value = s.random(**s.parents.value)
                 except:
                     pass
     
@@ -173,7 +173,7 @@ class Sampler(Model):
             If nothing, all nodes are collected from the base namespace.
         - db : string
             The name of the database backend that will store the values
-            of the stochs and dtrms sampled during the MCMC loop.            
+            of the stochastics and deterministics sampled during the MCMC loop.            
         - output_path : string
             The place where any output files should be put.
         - verbose : integer
@@ -206,7 +206,7 @@ class Sampler(Model):
               If nothing, all nodes are collected from the base namespace.
           - db : string
               The name of the database backend that will store the values
-              of the stochs and dtrms sampled during the MCMC loop.
+              of the stochastics and deterministics sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
           - verbose : integer
@@ -361,7 +361,7 @@ class Sampler(Model):
 
     
     def _assign_database_backend(self, db):
-        """Assign Trace instance to stochs and dtrms and Database instance
+        """Assign Trace instance to stochastics and deterministics and Database instance
         to self.
 
         :Parameters:
@@ -382,7 +382,7 @@ class Sampler(Model):
 
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
-        for object in self.stochs | self.dtrms :
+        for object in self.stochastics | self.deterministics :
             if object.trace:
                 self._variables_to_tally.add(object)
             else:
@@ -489,7 +489,7 @@ class Sampler(Model):
         Return the sampler and step methods current state in order to
         restart sampling at a later time.
         """
-        state = dict(sampler={}, step_methods={}, stochs={})
+        state = dict(sampler={}, step_methods={}, stochastics={})
         # The state of the sampler itself.
         for s in self._state:
             state['sampler'][s] = getattr(self, s)
@@ -499,8 +499,8 @@ class Sampler(Model):
             state['step_methods'][sm._id] = sm.current_state().copy()
 
         # The state of each stochastic parameter
-        for stoch in self.stochs:
-            state['stochs'][stoch.__name__] = stoch.value
+        for s in self.stochastics:
+            state['stochastics'][s.__name__] = s.value
         return state
 
     def save_state(self):
@@ -524,10 +524,10 @@ class Sampler(Model):
         self.__dict__.update(sampler_state)
             
         # Restore stochastic parameters state
-        stoch_state = state.get('stochs', {})
-        for sm in self.stochs:
+        stoch_state = state.get('stochastics', {})
+        for sm in self.stochastics:
             try:
-                self.stoch.value = stoch_state[sm.__name__]
+                self.s.value = stoch_state[sm.__name__]
             except:
                 pass
         

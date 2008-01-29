@@ -2,11 +2,11 @@ from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
 from pymc.LazyFunction import LazyFunction
-from pymc import stoch, data, dtrm, Normal, potential, ZeroProbability
+from pymc import stochastic, data, deterministic, Normal, potential, ZeroProbability
 
 verbose = False
 
-@stoch
+@stochastic
 def A(value=1.):
     return -10.*value
 
@@ -14,20 +14,20 @@ def A(value=1.):
 normcoef = 1.
 
 # B's value is a random function of A.
-@dtrm(verbose=verbose)
+@deterministic(verbose=verbose)
 def B(A=A):
     # print 'B computing' 
     return A + normcoef * normal()
 
 # Guarantee that initial state is OK
 while B.value<0.:
-    @dtrm(verbose=verbose)
+    @deterministic(verbose=verbose)
     def B(A=A):
         # print 'B computing'
         return A + normcoef * normal()
 
 @data
-@stoch(verbose=verbose)
+@stochastic(verbose=verbose)
 def C(value = 0., B=[A,B]):
     if B[0]<0.:
          return -np.Inf
