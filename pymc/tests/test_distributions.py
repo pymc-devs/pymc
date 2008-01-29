@@ -728,7 +728,10 @@ class test_weibull(NumpyTestCase):
         assert_equal(a,b)
 
 class test_wishart(NumpyTestCase):
-
+    """
+    There are results out there on the asymptotic distribution of eigenvalues
+    of very large Wishart matrices that we could use to make another test case...
+    """
     Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557,   11.13312087],
             [  10.88057915,  213.58694978,   11.18453854,    6.44094504],
             [  13.80581557,   11.18453854,  209.89396417,    9.77968244],
