@@ -1672,12 +1672,24 @@ def rwishart(n, Tau):
 
     Return a Wishart random matrix.
     
-    Tau is the inverse of the covariance matrix :math:'\Sigma'.
+    Tau is the inverse of the covariance matrix :math:'C'.
     """
-    Sigma = inverse(Tau)
-    D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
-    np = len(Sigma)
-    return expand_triangular(flib.wshrt(D, n, np), np)
+    # Sigma = inverse(Tau)
+    # D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
+    # np = len(Sigma)
+    # return expand_triangular(flib.wshrt(D, n, np), np)
+
+    p = Tau.shape[0]    
+    sig = np.linalg.cholesky(Tau)
+    if n>p:
+        norms = np.random.normal(size=p*(p-1)/2)
+        chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)+1))
+        A=np.asmatrix(flib.expand_triangular(chi_sqs, norms))
+        flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
+        return A.T*A
+    else:
+        raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+
 
 def wishart_expval(n, Tau):
     """
@@ -1685,7 +1697,7 @@ def wishart_expval(n, Tau):
 
     Expected value of wishart distribution.
     """
-    return n * asarray(Tau)
+    return n * np.asarray(Tau.I)
 
 def wishart_like(X, n, Tau):
     r"""
@@ -1710,10 +1722,64 @@ def wishart_like(X, n, Tau):
         Symmetric and positive definite
 
     """
-    if flib_blas_OK:
-        return flib.wishart(X, n, Tau)
+    return flib.blas_wishart(X,n,Tau)
+
+# Wishart, parametrized by covariance ------------------------------------
+def rwishart_cov(n, C):
+    """
+    rwishart(n, C)
+
+    Return a Wishart random matrix.
+    """
+    # Sigma = inverse(Tau)
+    # D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
+    # np = len(Sigma)
+    # return expand_triangular(flib.wshrt(D, n, np), np)
+
+    p = C.shape[0]    
+    sig = np.linalg.cholesky(C)
+    if n>p:
+        norms = np.random.normal(size=p*(p-1)/2)
+        chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)+1))
+        A=np.asmatrix(flib.expand_triangular(chi_sqs, norms))
+        flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
+        return A.T*A
     else:
-        return flib.blas_wishart(X,n,Tau)
+        raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+
+
+def wishart_cov_expval(n, C):
+    """
+    wishart_expval(n, C)
+
+    Expected value of wishart distribution.
+    """
+    return n * np.asarray(C)
+
+def wishart_cov_like(X, n, C):
+    r"""
+    wishart_like(X, n, C)
+
+    Wishart log-likelihood. The Wishart distribution is the probability
+    distribution of the maximum-likelihood estimator (MLE) of the covariance
+    matrix of a multivariate normal distribution. If Tau=1, the distribution
+    is identical to the chi-square distribution with n degrees of freedom.
+
+    .. math::
+        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+    
+    where :math:'k' is the rank of X.
+    
+    :Parameters:
+      X : matrix
+        Symmetric, positive definite.
+      n : int
+        Degrees of freedom, > 0.
+      Tau : matrix
+        Symmetric and positive definite
+
+    """
+    return flib.blas_wishart_cov(X,n,C)
 
 
 # -----------------------------------------------------------

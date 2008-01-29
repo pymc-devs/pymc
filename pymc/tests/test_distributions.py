@@ -728,15 +728,49 @@ class test_weibull(NumpyTestCase):
         assert_equal(a,b)
 
 class test_wishart(NumpyTestCase):
-    """How do we know it's really working ?"""
-    def check(self):
-        S = [[2,.4],[.4,3]]
-        T = np.linalg.inv(S)
-        n=2
-        r = rwishart(n, T)
-        wishart_like(r, n, T)
-        assert_equal(0,1)
 
+    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557,   11.13312087],
+            [  10.88057915,  213.58694978,   11.18453854,    6.44094504],
+            [  13.80581557,   11.18453854,  209.89396417,    9.77968244],
+            [  11.13312087,    6.44094504,    9.77968244,  205.76097544]])
+
+    def check_likelihoods(self):
+
+        from scipy.special import gammaln    
+
+        W_test = rwishart(100,self.Tau_test)
+
+        def slo_wishart_cov(W,n,V):
+            p = W.shape[0]
+
+            logp = (n-p-1)*.5 * np.log(np.linalg.det(W)) - n*p*.5*np.log(2) - n*.5*np.log(np.linalg.det(V)) - p*(p-1)/4.*np.log(pi)
+            for i in xrange(1,p+1):
+                logp -= gammaln((n+1-i)*.5)
+            logp -= np.trace(np.linalg.solve(V,W)*.5)
+            return logp
+
+        for i in [5,10,100,10000]:
+            right_answer = slo_wishart_cov(W_test,i,self.Tau_test.I)
+            assert_array_almost_equal(wishart_like(W_test,i,self.Tau_test), right_answer, decimal=5)
+            assert_array_almost_equal(wishart_cov_like(W_test,i,self.Tau_test.I), right_answer, decimal=5)
+    
+    def check_expval(self):
+
+        n = 10
+        N = 10000
+
+        A = 0.*self.Tau_test    
+        for i in xrange(N):
+            A += rwishart(n,self.Tau_test)    
+        A /= N
+        # print A, A-wishart_expval(n,self.Tau_test)
+        assert_array_almost_equal(A,wishart_expval(n,self.Tau_test), decimal=1)
+
+        A = 0.*self.Tau_test    
+        for i in xrange(N):
+            A += rwishart_cov(n,self.Tau_test.I)    
+        A /= N
+        assert_array_almost_equal(A,wishart_cov_expval(n,self.Tau_test.I), decimal=1)
 
 """
 Hyperg is parameteretrized differently in flib than is hypergeometric in numpy.random.

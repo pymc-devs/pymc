@@ -13,6 +13,28 @@ c DH, 5.02.2007
 
       END FUNCTION combinationln
 
+      SUBROUTINE expand_triangular(d, f, nf, t, n)
+!       d is diagonal,
+!       f is flattened lower triangle in column-major format,
+!       t is unflattened triangular output matrix.
+!       nf must be n * (n-1) / 2
+cf2py intent(hide) nf
+cf2py intent(hide) n
+cf2py intent(out) t
+       DOUBLE PRECISION f(nf), t(n,n), d(n)
+       INTEGER i_f,i_t,j_t
+       i_f = 0
+       do j_t = 1,n
+           t(j_t,j_t) = d(j_t)
+           do i_t = j_t+1, n
+               i_f = i_f + 1
+               t(i_t,j_t) = f(i_f)
+            end do
+       end do
+       
+       RETURN
+       END
+       
 
       SUBROUTINE standardize(x, loc, scale, n, nloc, nscale, z)
       
@@ -2084,7 +2106,7 @@ cf2py integer intent(in) :: N
 
       INTEGER N, NP, NNP
       DOUBLE PRECISION D(NNP), SB(NNP), SA(NNP)
-C
+C 
 C     Local variables
 C
       INTEGER K, NS, I, J, NR, IP, NQ, II
