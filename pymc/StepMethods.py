@@ -17,7 +17,7 @@ __all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'a
 
 StepMethodRegistry = []
 
-def pick_best_methods(s):
+def pick_best_methods(stochastic):
     """
     Picks the StepMethods best suited to handle
     a stochastic variable.
@@ -32,7 +32,7 @@ def pick_best_methods(s):
     for method in StepMethodRegistry:
         
         # Parse method and its associated competence
-        competence = method.competence(s)
+        competence = method.competence(stochastic)
         
         # If better than current best method, promote it
         if competence > max_competence:
@@ -46,7 +46,7 @@ def pick_best_methods(s):
     # print s.__name__ + ': ', best_candidates, ' ', max_competence
     return best_candidates
 
-def assign_method(s, scale=None):
+def assign_method(stochastic, scale=None):
     """
     Returns a step method instance to handle a
     variable. If several methods have the same competence,
@@ -54,15 +54,15 @@ def assign_method(s, scale=None):
     """
     
     # Retrieve set of best candidates
-    best_candidates = pick_best_methods(s)
+    best_candidates = pick_best_methods(stochastic)
     
     # Randomly grab and appropriate method
     method = best_candidates.pop()
     
     if scale:
-        return method(s = s, scale = scale)
+        return method(stochastic = stochastic, scale = scale)
     
-    return method(s = s)
+    return method(stochastic = stochastic)
 
 
 class StepMethodMeta(type):
@@ -270,10 +270,10 @@ class StepMethod(StepMethodBase):
         self._accepted = 0.
         
         # More verbose feedback, if requested
-        # Warning: self.s is not defined above. The following assumes
+        # Warning: self.stochastic is not defined above. The following assumes
         # that the class has created this value, which is a bit fragile. DH
         if verbose > 1 or self.verbose > 1:
-            print '\t\tvalue:', self.s.value
+            print '\t\tvalue:', self.stochastic.value
             print '\t\tacceptance rate:', acc_rate
             print '\t\tadaptive scale factor:', self._asf
             print
@@ -356,31 +356,31 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, s, scale=1., dist=None, verbose=0):
+    def __init__(self, stochastic, scale=1., dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
-        StepMethod.__init__(self, [s], verbose=verbose)
+        StepMethod.__init__(self, [stochastic], verbose=verbose)
         
         # Set public attributes
-        self.s = s
+        self.stochastic = stochastic
         self.verbose = verbose
         
         # Avoid zeros when setting proposal variance
-        if all(self.s.value != 0.):
-            self.proposal_sig = ones(shape(self.s.value)) * abs(self.s.value) * scale
+        if all(self.stochastic.value != 0.):
+            self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
         else:
-            self.proposal_sig = ones(shape(self.s.value)) * scale
+            self.proposal_sig = ones(shape(self.stochastic.value)) * scale
         
         # Initialize proposal deviate with array of zeros
-        self.proposal_deviate = zeros(shape(self.s.value), dtype=float)
+        self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
         
         # Initialize verbose feedback string
-        self._id = s.__name__
+        self._id = stochastic.__name__
         
-        # Determine size of s
-        if isinstance(self.s.value, ndarray):
-            self._len = len(self.s.value.ravel())
+        # Determine size of stochastic
+        if isinstance(self.stochastic.value, ndarray):
+            self._len = len(self.stochastic.value.ravel())
         else:
             self._len = 1
         
@@ -393,7 +393,7 @@ class Metropolis(StepMethod):
             # If self's extended children has no stochastics, proposing from the prior is best.
             if sum([isinstance(child, StochasticBase) for child in self.children]) == 0:
                 try:
-                    self.s.random()
+                    self.stochastic.random()
                     self._dist = "Prior"
                 except:
                     pass
@@ -443,7 +443,7 @@ class Metropolis(StepMethod):
             # No children
             logp = 0.
         else:
-            logp = self.s.logp
+            logp = self.stochastic.logp
         
         if self.verbose > 2:
             print self._id + ' getting initial likelihood.'
@@ -460,7 +460,7 @@ class Metropolis(StepMethod):
             if self._dist == "Prior":
                 logp_p = 0.
             else:
-                logp_p = self.s.logp
+                logp_p = self.stochastic.logp
             loglike_p = self.loglike
         
         except ZeroProbability:
@@ -504,7 +504,7 @@ class Metropolis(StepMethod):
     
     def reject(self):
         # Sets current s value to the last accepted value
-        self.s.value = self.s.last_value
+        self.stochastic.value = self.stochastic.last_value
     
     def propose(self):
         """
@@ -512,9 +512,9 @@ class Metropolis(StepMethod):
         if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.s.value = rnormal(self.s.value, self._asf * self.proposal_sig)
+            self.stochastic.value = rnormal(self.stochastic.value, self._asf * self.proposal_sig)
         elif self._dist == "Prior":
-            self.s.random()
+            self.stochastic.random()
 
 class NoStepper(StepMethod):
     """
@@ -557,10 +557,10 @@ class DiscreteMetropolis(Metropolis):
         # Propose new values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.s.value,self._asf * self.proposal_sig)
-            self.s.value = round_array(new_val)
+            new_val = rnormal(self.stochastic.value,self._asf * self.proposal_sig)
+            self.stochastic.value = round_array(new_val)
         elif self._dist == "Prior":
-            self.s.random()
+            self.stochastic.random()
 
 
 class BinaryMetropolis(Metropolis):
@@ -600,28 +600,28 @@ class BinaryMetropolis(Metropolis):
             return 0
 
     def step(self):
-        if not isscalar(self.s.value):
+        if not isscalar(self.stochastic.value):
             Metropolis.step(self)
         else:
             
             # See what log-probability of True is.
-            self.s.value = True
+            self.stochastic.value = True
         
             try:
-                logp_true = self.s.logp
+                logp_true = self.stochastic.logp
                 loglike_true = self.loglike
             except ZeroProbability:
-                self.s.value = False
+                self.stochastic.value = False
                 return
         
             # See what log-probability of False is.
-            self.s.value = False
+            self.stochastic.value = False
         
             try:
-                logp_false = self.s.logp
+                logp_false = self.stochastic.logp
                 loglike_false = self.loglike
             except ZeroProbability:
-                self.s.value = True
+                self.stochastic.value = True
                 return
         
             # Test
@@ -631,24 +631,24 @@ class BinaryMetropolis(Metropolis):
             # Stochastically set value according to relative
             # probabilities of True and False
             if random() > p_true / (p_true + p_false):
-                self.s.value = True
+                self.stochastic.value = True
         
     
     def propose(self):
         # Propose new values
 
         if self._dist == 'Prior':
-            self.s.random()
+            self.stochastic.random()
         else:
             # Convert _asf to a jump probability
             p_jump = 1.-.5**self._asf
         
-            rand_array = random(size=shape(self.s.value))
-            new_value = copy(self.s.value)
+            rand_array = random(size=shape(self.stochastic.value))
+            new_value = copy(self.stochastic.value)
             switch_locs = where(rand_array<p_jump)
             new_value[switch_locs] = True - new_value[switch_locs]
-            # print switch_locs, rand_array, new_value, self.s.value
-            self.s.value = new_value
+            # print switch_locs, rand_array, new_value, self.stochastic.value
+            self.stochastic.value = new_value
 
 
 

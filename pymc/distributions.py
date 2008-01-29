@@ -1116,8 +1116,18 @@ def rmultinomial(n,p,size=None): # Leaving size=None as the default means return
 
     Random multinomial variates.
     """
+    
+    # Single value for p:
+    if len(np.shape(p))==1:
+        return random.multinomial(n,p,size)
 
-    return random.multinomial(n,p,size)
+    # Multiple values for p:
+    if np.isscalar(n):
+        n = n * np.ones(p.shape[0],dtype=int)
+    out = np.empty(p.shape)
+    for i in xrange(p.shape[0]):
+        out[i,:] = random.multinomial(n[i],p[i,:],size)
+    return out
 
 def multinomial_expval(n,p):
     """

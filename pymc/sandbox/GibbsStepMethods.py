@@ -19,15 +19,12 @@ threshold is
 Each Gibbs step method has a fully conjugate version and a nonconjugate version.
 """
 
-from StepMethods import Metropolis, StepMethod
-from InstantiationDecorators import dtrm
-from Node import ZeroProbability, Variable
-from Container import Container
-from utils import msqrt
+from pymc import *
 from numpy import asarray, diag, dot, zeros, log, shape, isscalar, sum, sqrt
 from numpy.random import normal, random, gamma, beta
 from numpy.linalg import cholesky, solve
-from flib import dpotrs_wrap, dtrsm_wrap
+import numpy as np
+from pymc.flib import dpotrs_wrap, dtrsm_wrap
 
 def check_list(thing, label):
     if thing is not None:
@@ -38,7 +35,6 @@ def check_list(thing, label):
 
 # To do:
 # GammaPoisson
-# DirichletMultinomial
 # BetaGeometric
 # ParetoUniform
 # GammaExponential
@@ -46,7 +42,6 @@ def check_list(thing, label):
 # GammaGammaScale
 # WishartNormal
 # Other parametrizations of the normal/gamma business
-# Test case for NormalNormal (blech)
 
 def safe_len(val):
     if isscalar(val):
@@ -56,22 +51,22 @@ def safe_len(val):
 
 class Gibbs(Metropolis):
     
-    def __init__(self, stoch, verbose=0):
-        Metropolis.__init__(self, stoch, verbose=verbose)
+    def __init__(self, stochastic, verbose=0):
+        Metropolis.__init__(self, stochastic, verbose=verbose)
     
     # Override Metropolis's competence.
     competence = staticmethod(StepMethod.competence)
     
     def step(self):
         if not self.conjugate:
-            logp = self.stoch.logp
+            logp = self.stochastic.logp
 
         self.propose()
 
         if not self.conjugate:
 
             try:
-                logp_p = self.stoch.logp
+                logp_p = self.stochastic.logp
             except ZeroProbability:
                 self.reject()
 
@@ -103,30 +98,30 @@ class BernoulliAnything(Gibbs):
     This should be a subclass of Gibbs, not Metropolis.
     """
     
-    def __init__(self, stoch, dist=None):
+    def __init__(self, stochastic, dist=None):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stoch, dist=dist)
+        Metropolis.__init__(self, stochastic, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = stoch.__name__
+        self._id = stochastic.__name__
         
-    def set_stoch_val(self, i, val, to_value):
+    def set_stochastic_val(self, i, val, to_value):
         """
-        Utility method for setting a particular element of a stoch's value.
+        Utility method for setting a particular element of a stochastic's value.
         """
         
         if self._len>1:
-            # Vector-valued stochs
+            # Vector-valued stochastics
             
             val[i] = to_value
-            self.stoch.value = reshape(val, check_type(self.stoch)[1])
+            self.stochastic.value = reshape(val, check_type(self.stochastic)[1])
         
         else:
-            # Scalar stochs
+            # Scalar stochastics
             
-            self.stoch.value = to_value
+            self.stochastic.value = to_value
     
     def step(self):
         """
@@ -136,28 +131,28 @@ class BernoulliAnything(Gibbs):
             
         # Make local variable for value
         if self._len > 1:
-            val = self.stoch.value.ravel()
+            val = self.stochastic.value.ravel()
         else:
-            val = self.stoch.value
+            val = self.stochastic.value
         
         for i in xrange(self._len):
             
-            self.set_stoch_val(i, val, True)
+            self.set_stochastic_val(i, val, True)
             
             try:
-                logp_true = self.stoch.logp
+                logp_true = self.stochastic.logp
                 loglike_true = self.loglike
             except ZeroProbability:
-                self.set_stoch_val(i, val, False)
+                self.set_stochastic_val(i, val, False)
                 continue
             
-            self.set_stoch_val(i, val, False)
+            self.set_stochastic_val(i, val, False)
             
             try:
-                logp_false = self.stoch.logp
+                logp_false = self.stochastic.logp
                 loglike_false = self.loglike
             except ZeroProbability:
-                self.set_stoch_val(i,val,True)
+                self.set_stochastic_val(i,val,True)
                 continue
             
             p_true = exp(logp_true + loglike_true)
@@ -166,7 +161,7 @@ class BernoulliAnything(Gibbs):
             # Stochastically set value according to relative
             # probabilities of True and False
             if random() > p_true / (p_true + p_false):
-                self.set_stoch_val(i,val,True)
+                self.set_stochastic_val(i,val,True)
         
         # Increment accepted count
         self._accepted += 1
@@ -202,7 +197,6 @@ class GammaNormal(Gibbs):
     """
     def __init__(self, tau, d, mu, theta=None, alpha=None, beta=None, verbose=0):
         
-        print 'WARNING: GammaNormal is untested'
         self.tau = tau
 
         self.d = check_list(d, 'd')
@@ -259,7 +253,7 @@ class GammaNormal(Gibbs):
             shape += 1.
             scale = 1./self.quad_term.value
             
-        self.stoch.value = gamma(shape, scale)
+        self.stochastic.value = gamma(shape, scale)
         
 
 class BetaBinomial(Gibbs):
@@ -267,32 +261,11 @@ class BetaBinomial(Gibbs):
     Applies to p in the following submodel:
     
     d_i ~ind Binomial(n_i, p)
-    p ~ Beta(a, b) [optional]
+    p ~ Beta(alpha, beta) [optional]
     
-    The argument p must be a Stochastic.
-    
-    The arguments a and b may be:
-    - Arrays
-    - Scalars
-    - Stochastics
-    - Deterministics
-    - None. In this case, a non-conjugate updating procedure is used.
-      p's value is proposed from its likelihood and accepted based on 
-      its prior.
-    
-      The argument d must be a list or array of Stochastics.
-
-      The argument n must be a list of:
-      - Arrays
-      - Scalars
-      - Stochastics
-      - Deterministics
-      These arguments may be lists of length 1 or of the same length as d.
-      theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
+    The argument p must be a Stochastic, preferably a Beta.
     """
-    def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
-        
-        print 'WARNING: BetaBinomial is untested'
+    def __init__(self, p, verbose=0):
         
         self.p = p
         self.d = check_list(d, 'd')
@@ -344,239 +317,246 @@ class BetaBinomial(Gibbs):
         else:
             a += 1.
             b += 1.
-        self.stoch.value = beta(a, b)
-            
-            
-class VecBetaBinomial(Gibbs):        
+        self.stochastic.value = beta(a, b)
+
+class DirichletMultinomial(Gibbs):            
     """
+    Applies to p in the following submodel:
+    
+    d_i ~ind Multinomial(n_i, p)
+    p ~ Dirichlet(theta) [optional] 
+    
+    p must be a Stochastic, preferably a Dirichlet.   
     """
-    def __init__(self, p, d, n, alpha=None, beta=None, verbose=0):
-        
-        print 'WARNING: VecBetaBinomial is untested'
+    def __init__(self, p, verbose=0):
         
         self.p = p
-        self.d = d
-        self.a = alpha
-        self.b = beta
+        self.n = []
+        self.d = []
+        for child in p.children:
+            if not isinstance(child, Multinomial):
+                raise ValueError, 'Stochastic %s must have all multinomial children for DirichletMultinomial\n \
+                                    to be able to handle it.' %self.p.__name__
+            self.d.append(child)
+            self.n.append(child.parents['n'])
         
         Gibbs.__init__(self, p, verbose)
         
-        if self.a is None or self.b is None:
+        if not isinstance(self.p, Dirichlet):
+            self.theta = None
             self.conjugate = False
         else:
+            self.theta = lam_dtrm('theta',lambda theta=p.parents['theta']: theta)
             self.conjugate = True
-            
-        @dtrm
-        def n(n=n):
-            """n = function(n)"""
-            return n
-            
-        self.n = n
-            
+        
+        self.sum_d = lam_dtrm('sum_d', lambda d=self.d: sum(array([sum(np.atleast_2d(d_now),0) for d_now in d]),0))
+
     def propose(self):
-        a = self.d.value
-        b = self.n.value - self.d.value
+        
+        theta = self.sum_d.value
         if self.conjugate:
-            a = a + self.a
-            b = b + self.b
+            theta = theta + self.theta.value
         else:
-            a += 1.
-            b += 1.
-        self.stoch.value = beta(a, b)
+            theta += 1.
+        self.stochastic.value = np.random.dirichlet(theta)
     
+if __name__ == '__main__':
+    A=Dirichlet('A',[.5,.5])    
+    B=Multinomial('B',n=10000,p=A,value=[1000,9000])
+    C = DirichletMultinomial(p=A)
     
-    
-class NormalNormal(Gibbs):
-    """
-    Applies to m in following submodel:
-    
-    d_i ~ind N(A_i m - b_i, theta_i)
-    m ~ N(mu, tau) [optional]
-    
-    S = NormalGibbs(m, mu, tau, d, A, b, theta)
-    
-    The argument m must be a Stochastic.
-    
-    The arguments mu and tau may be:
-    - Arrays
-    - Scalars
-    - Stochastics
-    - Deterministics
-    - None. In this case, a non-conjugate updating procedure is used.
-      m's value is proposed from its likelihood and accepted based on 
-      its prior.
-    tau may be a matrix or vector. If a vector, it is assumed to be diagonal.
-    If mu and tau are not provided, it is assumed that the submodel is non-
-    conjugate. m's value is proposed from its likelihood and accepted
-    according to its prior.
-    
-    The argument d must be a list or array of Stochastics.
-    
-    The arguments A, b, and theta must be lists of:
-    - Arrays
-    - Stochastics
-    - Deterministics
-    These arguments may be lists of length 1 or of the same length as d.
-    theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
-    """
-    def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None, verbose=0):
-        
-        print 'WARNING: NormalNormal is untested.'
-        
-        self.d=check_list(d,'d')
-        self.theta=check_list(theta,'theta')
-        self.A=check_list(A,'A')
-        self.b=check_list(b,'b')
-
-        Gibbs.__init__(self, m, verbose)
-        
-        self.m = m
-        
-        if mu is None:
-            if self.m.parents.has_key('mu') and self.m.parents.has_key('tau'):
-                mu = self.m.parents['mu']
-                tau = self.m.parents['tau']
-            
-        self.mu = mu
-        self.tau = tau
-        
-        if self.mu is None or self.tau is None:
-            self.conjugate = False
-        else:
-            self.conjugate = True        
-        
-        length = safe_len(self.m.value)
-        self.length = length
-
-        self.N_d = len(d)
-        
-        
-        # Is the full conditional distribution independent?
-        @dtrm
-        def all_diag_prec(tau=tau, theta = theta, A=A):
-            all_diag_prec = True
-            if tau is not None:
-                if len(shape(tau))>1:
-                    all_diag_prec = False
-            
-            if A is not None:
-                all_diag_prec = False
-            
-            if not all([len(shape(theta_now))<2 for theta_now in theta]):
-                all_diag_prec = False
-                
-            return all_diag_prec
-
-        self.all_diag_prec = all_diag_prec.value
-        
-        
-        @dtrm
-        def prec_and_mean(d=self.d, A=self.A, b=self.b, theta=self.theta, tau=tau, mu=mu):
-            """The full conditional precision and mean."""
-            
-            
-            # tau and tau * mu parts.
-            if not self.all_diag_prec:
-                if self.conjugate:
-                    if len(shape(tau))==2:
-                        prec = tau                                  
-                        mean = dot(tau, mu)
-                    else:                                                   
-                        prec = diag(tau)                            
-                        mean = tau*mu
-                else:                                                       
-                    prec = zeros((self.length, self.length), dtype=float)
-                    mean=zeros(self.length, dtype=float)
-
-            else:
-                if self.conjugate:
-                    prec = tau
-                    mean = dot(tau, mu)
-                else:
-                    prec = zeros(self.length, dtype=float)
-                    mean = zeros(self.length, dtype=float)
-            
-            
-            # Add in A.T theta A and A.T theta (d-b) parts
-            for i in xrange(self.N_d):                                                                        
-                
-                if len(theta)>1:                                        
-                    theta_now = theta[i]                                
-                else:                                                   
-                    theta_now = theta[0]
-                
-                if b is not None:    
-                    if len(b)>1:                                        
-                        b_now = d[i] + b[i]
-                    else:                                                   
-                        b_now = d[i] + b[0]
-                else:
-                    b_now = d[i]
-                
-                if self.all_diag_prec:
-                    prec += theta_now
-                    mean += theta_now * b_now
-                else:
-                    if A is not None:                                  
-                        if len(A)>1:                                    
-                            A_now = A[i]
-                            # print A[i]                                        
-                        else:                                           
-                            A_now = A[0]                                        
-
-                        if len(shape(theta_now))==2:
-                            A_theta = dot(A_now.T, theta_now)                                 
-                        else:                                                   
-                            A_theta = A_now.T*theta_now
-                        
-                        prec += dot(A_theta, A_now)
-                        mean += dot(A_theta, b_now)
-                        
-                    elif len(shape(theta_now))==2:
-                        prec += theta_now
-                        mean += dot(theta_now, b_now)
-                    else:
-                        prec += diag(theta_now)
-                        mean += theta_now * b_now
-            
-                        
-            # Divide precision into mean.
-            # TODO: Accomodate low ranks here.
-            if self.all_diag_prec:
-                chol_prec = sqrt(prec)
-                piv = None
-                mean /= prec
-            else:
-                chol_prec = cholesky(prec)
-                dpotrs_wrap(chol_prec, mean, uplo='L')
-            return chol_prec, mean
-            
-        @dtrm
-        def chol_prec(prec_and_mean = prec_and_mean):
-            """A Cholesky factor of the full conditional precision"""
-            return prec_and_mean[0]
-                
-        @dtrm
-        def mean(prec_and_mean = prec_and_mean):
-            return prec_and_mean[1]
-        
-        self.prec_and_mean = prec_and_mean
-        self.chol_prec = chol_prec
-        self.mean = mean
-
-
-    def propose(self):
-        """
-        Sample from the likelihood or the full conditional.
-        """
-        out = normal(size=self.length)
-
-        chol = self.chol_prec.value
-        
-        if len(shape(chol))>1:
-            dtrsm_wrap(chol, out, uplo='L', transa='T', alpha=1.)
-        else:
-            out /= chol
-
-        out += self.mean.value
-        self.stoch.value = out
+# NormalNormal soon to be phased out...    
+# class NormalNormal(Gibbs):
+#     """
+#     Applies to m in following submodel:
+#     
+#     d_i ~ind N(A_i m - b_i, theta_i)
+#     m ~ N(mu, tau) [optional]
+#     
+#     S = NormalGibbs(m, mu, tau, d, A, b, theta)
+#     
+#     The argument m must be a Stochastic.
+#     
+#     The arguments mu and tau may be:
+#     - Arrays
+#     - Scalars
+#     - Stochastics
+#     - Deterministics
+#     - None. In this case, a non-conjugate updating procedure is used.
+#       m's value is proposed from its likelihood and accepted based on 
+#       its prior.
+#     tau may be a matrix or vector. If a vector, it is assumed to be diagonal.
+#     If mu and tau are not provided, it is assumed that the submodel is non-
+#     conjugate. m's value is proposed from its likelihood and accepted
+#     according to its prior.
+#     
+#     The argument d must be a list or array of Stochastics.
+#     
+#     The arguments A, b, and theta must be lists of:
+#     - Arrays
+#     - Stochastics
+#     - Deterministics
+#     These arguments may be lists of length 1 or of the same length as d.
+#     theta may be a matrix or a vector. If a vector, it is asssumed to be diagonal.
+#     """
+#     def __init__(self, m, d, theta, mu=None, tau=None, A=None, b=None, verbose=0):
+#         
+#         print 'WARNING: NormalNormal is untested.'
+#         
+#         self.d=check_list(d,'d')
+#         self.theta=check_list(theta,'theta')
+#         self.A=check_list(A,'A')
+#         self.b=check_list(b,'b')
+# 
+#         Gibbs.__init__(self, m, verbose)
+#         
+#         self.m = m
+#         
+#         if mu is None:
+#             if self.m.parents.has_key('mu') and self.m.parents.has_key('tau'):
+#                 mu = self.m.parents['mu']
+#                 tau = self.m.parents['tau']
+#             
+#         self.mu = mu
+#         self.tau = tau
+#         
+#         if self.mu is None or self.tau is None:
+#             self.conjugate = False
+#         else:
+#             self.conjugate = True        
+#         
+#         length = safe_len(self.m.value)
+#         self.length = length
+# 
+#         self.N_d = len(d)
+#         
+#         
+#         # Is the full conditional distribution independent?
+#         @dtrm
+#         def all_diag_prec(tau=tau, theta = theta, A=A):
+#             all_diag_prec = True
+#             if tau is not None:
+#                 if len(shape(tau))>1:
+#                     all_diag_prec = False
+#             
+#             if A is not None:
+#                 all_diag_prec = False
+#             
+#             if not all([len(shape(theta_now))<2 for theta_now in theta]):
+#                 all_diag_prec = False
+#                 
+#             return all_diag_prec
+# 
+#         self.all_diag_prec = all_diag_prec.value
+#         
+#         
+#         @dtrm
+#         def prec_and_mean(d=self.d, A=self.A, b=self.b, theta=self.theta, tau=tau, mu=mu):
+#             """The full conditional precision and mean."""
+#             
+#             
+#             # tau and tau * mu parts.
+#             if not self.all_diag_prec:
+#                 if self.conjugate:
+#                     if len(shape(tau))==2:
+#                         prec = tau                                  
+#                         mean = dot(tau, mu)
+#                     else:                                                   
+#                         prec = diag(tau)                            
+#                         mean = tau*mu
+#                 else:                                                       
+#                     prec = zeros((self.length, self.length), dtype=float)
+#                     mean=zeros(self.length, dtype=float)
+# 
+#             else:
+#                 if self.conjugate:
+#                     prec = tau
+#                     mean = dot(tau, mu)
+#                 else:
+#                     prec = zeros(self.length, dtype=float)
+#                     mean = zeros(self.length, dtype=float)
+#             
+#             
+#             # Add in A.T theta A and A.T theta (d-b) parts
+#             for i in xrange(self.N_d):                                                                        
+#                 
+#                 if len(theta)>1:                                        
+#                     theta_now = theta[i]                                
+#                 else:                                                   
+#                     theta_now = theta[0]
+#                 
+#                 if b is not None:    
+#                     if len(b)>1:                                        
+#                         b_now = d[i] + b[i]
+#                     else:                                                   
+#                         b_now = d[i] + b[0]
+#                 else:
+#                     b_now = d[i]
+#                 
+#                 if self.all_diag_prec:
+#                     prec += theta_now
+#                     mean += theta_now * b_now
+#                 else:
+#                     if A is not None:                                  
+#                         if len(A)>1:                                    
+#                             A_now = A[i]
+#                             # print A[i]                                        
+#                         else:                                           
+#                             A_now = A[0]                                        
+# 
+#                         if len(shape(theta_now))==2:
+#                             A_theta = dot(A_now.T, theta_now)                                 
+#                         else:                                                   
+#                             A_theta = A_now.T*theta_now
+#                         
+#                         prec += dot(A_theta, A_now)
+#                         mean += dot(A_theta, b_now)
+#                         
+#                     elif len(shape(theta_now))==2:
+#                         prec += theta_now
+#                         mean += dot(theta_now, b_now)
+#                     else:
+#                         prec += diag(theta_now)
+#                         mean += theta_now * b_now
+#             
+#                         
+#             # Divide precision into mean.
+#             # TODO: Accomodate low ranks here.
+#             if self.all_diag_prec:
+#                 chol_prec = sqrt(prec)
+#                 piv = None
+#                 mean /= prec
+#             else:
+#                 chol_prec = cholesky(prec)
+#                 dpotrs_wrap(chol_prec, mean, uplo='L')
+#             return chol_prec, mean
+#             
+#         @dtrm
+#         def chol_prec(prec_and_mean = prec_and_mean):
+#             """A Cholesky factor of the full conditional precision"""
+#             return prec_and_mean[0]
+#                 
+#         @dtrm
+#         def mean(prec_and_mean = prec_and_mean):
+#             return prec_and_mean[1]
+#         
+#         self.prec_and_mean = prec_and_mean
+#         self.chol_prec = chol_prec
+#         self.mean = mean
+# 
+# 
+#     def propose(self):
+#         """
+#         Sample from the likelihood or the full conditional.
+#         """
+#         out = normal(size=self.length)
+# 
+#         chol = self.chol_prec.value
+#         
+#         if len(shape(chol))>1:
+#             dtrsm_wrap(chol, out, uplo='L', transa='T', alpha=1.)
+#         else:
+#             out /= chol
+# 
+#         out += self.mean.value
+#         self.stochastic.value = out
