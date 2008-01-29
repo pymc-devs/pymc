@@ -1,19 +1,19 @@
 from PyMC import *
 
 def disaster_no_r():
-    @discrete_stoch
+    @discrete_stochastic
     def s(value=50, length=110):
-        """Change time for rate stoch."""
+        """Change time for rate stochastic."""
         return 0.
 
-    @stoch
+    @stochastic
     def e(value=1., rate=1.):
-        """Rate stoch of poisson distribution."""
+        """Rate stochastic of poisson distribution."""
         return 0.
 
-    @stoch
+    @stochastic
     def l(value=.1, rate = 1.):
-        """Rate stoch of poisson distribution."""
+        """Rate stochastic of poisson distribution."""
         return 0.
         
     @data(discrete=True)
@@ -30,22 +30,22 @@ M = Model(disaster_no_r())
 M.DAG(consts=False, path='DisasterModel.dot', format='raw', legend=False)
 
 def disaster_yes_r():
-    @discrete_stoch
+    @discrete_stochastic
     def s(value=50, length=110):
-        """Change time for rate stoch."""
+        """Change time for rate stochastic."""
         return 0.
 
-    @stoch
+    @stochastic
     def e(value=1., rate=1.):
-        """Rate stoch of poisson distribution."""
+        """Rate stochastic of poisson distribution."""
         return 0.
 
-    @stoch
+    @stochastic
     def l(value=.1, rate = 1.):
-        """Rate stoch of poisson distribution."""
+        """Rate stochastic of poisson distribution."""
         return 0.
     
-    @dtrm
+    @deterministic
     def r(switchpoint = s,
         early_rate = e,
         late_rate = l):
@@ -63,84 +63,84 @@ def disaster_yes_r():
 M = Model(disaster_yes_r())
 M.DAG(consts=False, path='DisasterModel2.dot', format='raw', legend=False)
 
-def dtrm_pre():
-    @stoch
+def deterministic_pre():
+    @stochastic
     def A(value=0):
         return 0.
         
-    @stoch
+    @stochastic
     def B(value=0):
         return 0.
         
-    @dtrm
+    @deterministic
     def C(p1=A, p2=B):
         return 0.
         
-    @stoch
+    @stochastic
     def D(value=0, C = C):
         return 0.
         
-    @stoch
+    @stochastic
     def E(value=0, C=C):
         return 0.
         
     return locals()
     
-M = Model(dtrm_pre())
+M = Model(deterministic_pre())
 M.DAG(consts=False, path='DeterministicPreInheritance.dot', format='raw', legend=False)    
     
-def dtrm_post():
-    @stoch
+def deterministic_post():
+    @stochastic
     def A(value=0):
         return 0.
         
-    @stoch
+    @stochastic
     def B(value=0):
         return 0.
         
-    @stoch
+    @stochastic
     def D(value=0, C_p1 = A, C_p2=B):
         return 0.
         
-    @stoch
+    @stochastic
     def E(value=0, C_p1=A, C_p2 = B):
         return 0.
         
     return locals()
     
-M = Model(dtrm_post())
+M = Model(deterministic_post())
 M.DAG(consts=False, path='DeterministicPostInheritance.dot', format='raw', legend=False)    
     
     
 def survival():
-    @stoch
+    @stochastic
     def beta(value=0):
         return 0.
         
     @data
-    @stoch
+    @stochastic
     def x(value=0):
         return 0.
         
-    @dtrm
+    @deterministic
     def S(covariates = x, coefs = beta):
         return 0.
         
     @data
-    @stoch
+    @stochastic
     def t(value=0, survival = S):
         return 0.
         
-    @stoch
+    @stochastic
     def a(value=0):
         return 0.
         
-    @stoch
+    @stochastic
     def b(value=0):
         return 0.
     
     @potential
-    def gamma(survival = S, stoch1=a, stoch2=b):
+    def gamma(survival = S, stochastic1=a, stochastic2=b):
         return 0.
     
     return locals()

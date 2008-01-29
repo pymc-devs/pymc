@@ -27,10 +27,10 @@ The helper functions \texttt{weight} and \texttt{graph} act on models. \texttt{w
 Models inherit the following attributes from \texttt{ContainerBase}:
 \begin{itemize}
     \item \texttt{variables}
-    \item \texttt{stochs}
+    \item \texttt{stochastics}
     \item \texttt{potentials}
-    \item \texttt{dtrms}
-    \item \texttt{data_stochs}
+    \item \texttt{deterministics}
+    \item \texttt{data_stochastics}
     \item \texttt{step_methods}
     \item \texttt{value}
 \end{itemize}
@@ -62,11 +62,11 @@ M = Model(MyModule)
 def make_model(x):
     a = Exponential('a',.5,beta=x)
     
-    @dtrm
+    @deterministic
     def b(a=a):
         return 100-a
     
-    @stoch
+    @stochastic
     def c(value=.5, a=a, b=b);
         return (value-a)**2/b
         
@@ -79,11 +79,11 @@ M = Model(make_model(3))
 class MyModel(Model):
     a = Exponential('a',.5,beta=x)
 
-    @dtrm
+    @deterministic
     def b(a=a):
         return 100-a
 
-    @stoch
+    @stochastic
     def c(value=.5, a=a, b=b);
         return (value-a)**2/b        
         
@@ -93,11 +93,11 @@ M = MyModel()
     \begin{verbatim}
     a = Exponential('a',.5,beta=x)
 
-    @dtrm
+    @deterministic
     def b(a=a):
         return 100-a
 
-    @stoch
+    @stochastic
     def c(value=.5, a=a, b=b);
         return (value-a)**2/b        
     
@@ -198,14 +198,14 @@ Metropolis step methods have the following useful attributes:
 
 Metropolis step methods can be created as follows:
 \begin{verbatim}
-M = Metropolis(stoch, scale=1., dist=None, verbose=0)
+M = Metropolis(stochastic, scale=1., dist=None, verbose=0)
 \end{verbatim}
 The \texttt{scale} argument determines \texttt{proposal\_sig} as follows:
 \begin{verbatim}
-if all(self.stoch.value != 0.):
-    self.proposal_sig = ones(shape(self.stoch.value)) * abs(self.stoch.value) * scale
+if all(self.stochastic.value != 0.):
+    self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
 else:
-    self.proposal_sig = ones(shape(self.stoch.value)) * scale
+    self.proposal_sig = ones(shape(self.stochastic.value)) * scale
 \end{verbatim}
 
 The \texttt{dist} argument specifies the proposal distribution and may be either of the following strings:
@@ -254,4 +254,4 @@ It would be possible to make variables compute their log-probabilities factor-by
 \subsection{Automatic assignment of step methods} 
 Every step method subclass (including user-defined ones) adds itself to a list called \texttt{StepMethodRegistry} in the PyMC namespace. If a step method is created by the user to handle a stochastic variable, no other step method will be created to handle that variable by \texttt{MCMC} (though the user can create multiple step methods for the same variable if desired). 
 
-If the user has not created any step method to handle a stochastic variable, each class in \texttt{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \texttt{competence(stoch)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \texttt{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
+If the user has not created any step method to handle a stochastic variable, each class in \texttt{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \texttt{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \texttt{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.

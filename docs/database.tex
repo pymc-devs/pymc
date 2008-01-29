@@ -86,7 +86,7 @@ Used by default, this backend simply holds a copy in memory, with no output writ
 \subsection*{txt}
 \label{txt}
 
-The \titlereference{txt} backend is a modified \titlereference{ram} backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, the trace for each variable being stored in a file names`{\textless}stoch name{\textgreater}.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory.
+The \titlereference{txt} backend is a modified \titlereference{ram} backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, the trace for each variable being stored in a file names`{\textless}stochastc name{\textgreater}.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory.
 
 
 %___________________________________________________________________________

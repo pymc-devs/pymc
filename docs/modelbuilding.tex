@@ -80,7 +80,7 @@ There are four ways to instantiate stochastic variables, called the `short', `lo
 \begin{description}    
     \item[Short] Uniformly-distributed stochastic variable $s$ could be created as follows:
     \begin{verbatim}
-@stoch
+@stochastic
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
@@ -88,15 +88,15 @@ def s(value=1900, t_l=1851, t_h=1962):
     else:
         return -log(t_h - t_l) 
     \end{verbatim}
-    The \texttt{Stochastic} object produced by the decorator \texttt{stoch} will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The names of the function \texttt{s}'s other arguments will become the keys of the stochastic variable \texttt{s}'s \texttt{parents} dictionary. The values of these arguments will become the values of the parents.
+    The \texttt{Stochastic} object produced by the decorator \texttt{stochastic} will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The names of the function \texttt{s}'s other arguments will become the keys of the stochastic variable \texttt{s}'s \texttt{parents} dictionary. The values of these arguments will become the values of the parents.
 
 Stochastic variables may be valued as any object, their parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a real number (float). PyMC, scientific Python and numerical Python all provide fast implementations of several standard probability distributions that can be used to create stochastic variables.
 
-    The decorater \texttt{stoch} can take a flag called \texttt{trace} which signals to \texttt{MCMCSampler} instances whether an MCMC trace should be kept for the stochastic variable: \texttt{@stoch(trace = False)} would turn tracing off. Similarly, it can take an integer-valued argument called \texttt{verbose} that controls the amount of output the variable prints to the screen. The default is $0$, no output; the maximum value is 3.
+    The decorater \texttt{stochastic} can take a flag called \texttt{trace} which signals to \texttt{MCMCSampler} instances whether an MCMC trace should be kept for the stochastic variable: \texttt{@stochastic(trace = False)} would turn tracing off. Similarly, it can take an integer-valued argument called \texttt{verbose} that controls the amount of output the variable prints to the screen. The default is $0$, no output; the maximum value is 3.
 
     \item[Long] The long interface allows the user to specify a \texttt{random} method for sampling the stochastic variable's value conditional on its parents.
     \begin{verbatim}
-@stoch
+@stochastic
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
 
@@ -117,7 +117,7 @@ The stochastic variable again gets its name, docstring and parents from function
 \begin{verbatim}
     e = Exponential('e', 1., beta = 1)
 \end{verbatim}
-You can use the class factory \texttt{stoch_from_dist} to produce \texttt{Stochastic} subclasses like \texttt{Exponential} from probability distributions not included with PyMC. These classes' init methods take the following arguments:
+You can use the class factory \texttt{stochastic_from_dist} to produce \texttt{Stochastic} subclasses like \texttt{Exponential} from probability distributions not included with PyMC. These classes' init methods take the following arguments:
 \begin{description}
     \item[\texttt{name}:] The name of the variable.
     \item[\texttt{value}:] An initial value for the variable.
@@ -203,10 +203,10 @@ and we would have no use for MCMC or any other fitting method. Bayesian methods,
 
 \subsection{Declaring stochastic variables to be data}
 
-In the short and long interfaces, a \texttt{Stochastic} object's \texttt{isdata} flag can be set to true by stacking a \texttt{@data} decorator on top of the \texttt{@stoch} decorator:
+In the short and long interfaces, a \texttt{Stochastic} object's \texttt{isdata} flag can be set to true by stacking a \texttt{@data} decorator on top of the \texttt{@stochastic} decorator:
 \begin{verbatim}
 @data
-@stoch
+@stochastic
 def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
     """The observed annual disaster counts."""
     logp = sum(-value[:switchpoint]) + early_rate * log(value[:switchpoint]) \
@@ -254,7 +254,7 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-The function supplied should return a new value (which may be any object) for the variable. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The function's \texttt{__name__} is passed on to the variable. The \texttt{dtrm} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stoch} decorator.
+The function supplied should return a new value (which may be any object) for the variable. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The function's \texttt{__name__} is passed on to the variable. The \texttt{dtrm} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
     \item[Direct] The same variable could be instantiated directly as follows:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
@@ -280,7 +280,7 @@ Note that deterministic variables have no \texttt{isdata} flag. If a determinist
 If we make a deterministic variable out of $r$, we'll want to rewrite $D$ as follows:
 \begin{verbatim}
 @data
-@stoch
+@stochastic
 def D(value=count_array, rate=r):
     """The observed annual disaster counts."""
     return sum(-value + rate * log(value) - gammaln(rate))
@@ -297,7 +297,7 @@ It's up to us whether to use $r$ explicitly or compute it implicitly in $D$'s lo
 Let's take a closer look at our most recent definition of $D$:
 \begin{verbatim}
 @data
-@stoch
+@stochastic
 def D(value=count_array, rate=r):
     """The observed annual disaster counts."""
     return sum(-value + rate * log(value) - gammaln(rate))
@@ -317,7 +317,7 @@ $y$ depends on every element of the Markov chain $x$, but we wouldn't want to ma
 
 This situation can be handled in the natural way:
 \begin{verbatim}
-@stoch
+@stochastic
 def x_0(value=0, mu = 0, tau = 1):
     return normal_like(value, mu, tau)
 
@@ -325,7 +325,7 @@ x = [x_0]
 last_x = x_0
 
 for i in range(1,N):          
-    @stoch
+    @stochastic
     def x_now(value=0, mu = last_x, tau = 1):
         return normal_like(value, mu, tau)
         
@@ -334,7 +334,7 @@ for i in range(1,N):
     x.append(x_now)
 
 @data
-@stoch
+@stochastic
 def y(value = 1, mu = x, tau = 100):
     mu_sum = 0
     for i in range(N):
@@ -352,10 +352,10 @@ Nodes whose parents are containers make private (shallow) copies of those contai
 Containers have the following useful attributes in addition to \texttt{value}:
 \begin{itemize}
     \item\texttt{variables}
-    \item\texttt{stochs}
+    \item\texttt{stochastics}
     \item\texttt{potentials}
     \item\texttt{dtrms}
-    \item\texttt{data_stochs}
+    \item\texttt{data_stochastics}
     \item\texttt{step_methods}.
 \end{itemize}
 Each of these attributes is a set containing all the objects of each type in a container, and within any containers in the container.
@@ -418,7 +418,7 @@ def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
     return -(xlo - xhi)**2
 \end{verbatim}
-The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with stochastic variable's medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stoch} decorator.
+The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with stochastic variable's medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
     \item[Direct] The same potential could be instantiated directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
