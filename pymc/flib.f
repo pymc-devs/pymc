@@ -500,7 +500,7 @@ cf2py intent(out) like
         endif
         
         sump = 0.0
-        sumx = 0.0
+        sumx = 0
         do i=1,k
             
 !         protect against negative x or negative p
@@ -529,14 +529,14 @@ c This is to account for the kth term that is not passed!
 c The kth term does get passed... we can check for consistency.
 c But roundoff error ofter triggers a false alarm.
 
-          if (sumx.NE.n_tmp) then
+          if (sumx .NE. n_tmp) then
               like=-infinity
               return
           endif
-!         if (sump.NE.1.0D0) then
-!             like=-infinity
-!             return
-!         endif
+         if ((sump .GT. 1.000001) .OR. (sump .LT. 0.999999)) then
+             like=-infinity
+             return
+         endif
 !         xk = n_tmp - sumx
 !         pk = 1.0 - sump
 !         print *,sump, pk, sumx, n_tmp, xk
