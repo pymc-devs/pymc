@@ -35,7 +35,7 @@ univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'weibull']
 
 if flib_blas_OK:
-    mv_distributions = ['dirichlet','multivariate_hypergeometric','mv_normal','mv_normal_cov','mv_normal_chol','multinomial', 'wishart']
+    mv_distributions = ['dirichlet','multivariate_hypergeometric','mv_normal','mv_normal_cov','mv_normal_chol','multinomial', 'wishart','wishart_cov']
 else:
     mv_distributions = ['dirichlet','multivariate_hypergeometric','multinomial']
 

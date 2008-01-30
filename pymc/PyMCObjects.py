@@ -453,7 +453,7 @@ class Stochastic(StochasticBase):
                         verbose=verbose)
             
         # self._logp.force_compute()                   
-        self.zero_logp_error_msg = "Stochastic " + self.__name__ + "'s value is outside its support."
+        self.zero_logp_error_msg = "Stochastic " + self.__name__ + "'s value is outside its support,\n or it forbids its parents' current values."
 
         # Check initial value
         if not isinstance(self.logp, float):
