@@ -601,6 +601,32 @@ def hpd(x, alpha):
         
         return array(calc_min_interval(sx, alpha))
 
+def make_indices(dimensions):
+    # Generates complete set of indices for given dimensions
+    
+    level = len(dimensions)
+    
+    if level==1: return range(dimensions[0])
+    
+    indices = [[]]
+    
+    while level:
+        
+        _indices = []
+        
+        for j in range(dimensions[level-1]):
+            
+            _indices += [[j]+i for i in indices]
+        
+        indices = _indices
+        
+        level -= 1
+    
+    try:
+        return [tuple(i) for i in indices]
+    except TypeError:
+        return indices
+        
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
     a given width"""
