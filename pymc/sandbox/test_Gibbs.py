@@ -94,30 +94,53 @@ class test_Gibbs(NumpyTestCase):
         alpha_real = 3.
         assert(abs(mean(tau_values)- alpha_real / beta_real)<.01)
         assert(abs(var(tau_values)- alpha_real / beta_real ** 2)<.01)
+    
+    def check_DirichletMultinomial(self):
+        p = Dirichlet('p',ones(10)*3.)
+        d_list = []
+        for i in xrange(10):
+            d_list.append(Multinomial('d_%i'%i, sum(arange(10)), p, value=arange(10)))
+
+        p_stepper = DirichletMultinomial(p)
+        p_values = empty((10,10000),dtype=float)
+        for i in xrange(10000):
+            p_stepper.step()
+            p_values[:,i] = p.value
+
+        mean_p_values = mean(p_values,axis=-1)
+        var_p_values = var(p_values,axis=-1)
+
+        theta_real = 10.*arange(10) + 3.*ones(10)
+
+        real_mean = theta_real / sum(theta_real)
+        real_var = theta_real * (sum(theta_real) - theta_real) / sum(theta_real)**2/(sum(theta_real)+1)
+        assert((abs(real_mean-mean_p_values)/real_mean).max()<.01)
+        assert((abs(real_var-var_p_values)/real_mean).max()<.01)
         
-    def check_wishart(self):
-        tau = WishartCov('tau',10,eye(3))
+    def check_WishartNormal(self):
+        tau = Wishart('tau',10000,eye(3)+.1*ones((3,3)))
         orig_value = tau.value
+
         d_list = []
         for i in xrange(5000):
             d_list.append(MvNormal('d_%i'%i,zeros(3),tau))
-    
+
         tau_stepper = WishartMvNormal(tau)
-    
+
         val_mat = asmatrix(empty((len(d_list),3)))
         for i in xrange(len(d_list)):
             val_mat[i,:] = d_list[i].value
-    
-    
-        tau_values = empty((3,3,100))
-        for i in xrange(100):
-            tau_stepper.step()
+
+
+        tau_values = empty((3,3,1000),dtype=float)
+        for i in xrange(1000):
+            # tau_stepper.step()
+            tau.random()
             tau_values[:,:,i] = tau.value
-    
+
         avg_tau_value = mean(tau_values, axis=-1)
-        assert_array_almost_equal(np.linalg.inv(avg_tau_value),orig_value.I,decimal=1)
-
-
+        delta = avg_tau_value - orig_value
+        assert(np.abs(np.asarray(delta)/np.asarray(orig_value)).max()<.1)
 
 if __name__ == '__main__':
     NumpyTest().run()

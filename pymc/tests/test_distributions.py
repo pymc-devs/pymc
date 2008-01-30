@@ -732,11 +732,10 @@ class test_wishart(NumpyTestCase):
     There are results out there on the asymptotic distribution of eigenvalues
     of very large Wishart matrices that we could use to make another test case...
     """
-    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557,   11.13312087],
-            [  10.88057915,  213.58694978,   11.18453854,    6.44094504],
-            [  13.80581557,   11.18453854,  209.89396417,    9.77968244],
-            [  11.13312087,    6.44094504,    9.77968244,  205.76097544]])
-
+    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
+                          [  10.88057915,  213.58694978,   11.18453854],
+                          [  13.80581557,   11.18453854,  209.89396417]])/100.
+  
     def check_likelihoods(self):
 
         from scipy.special import gammaln    
@@ -759,21 +758,22 @@ class test_wishart(NumpyTestCase):
     
     def check_expval(self):
 
-        n = 10
-        N = 10000
+        n = 1000
+        N = 1000
 
         A = 0.*self.Tau_test    
         for i in xrange(N):
             A += rwishart(n,self.Tau_test)    
         A /= N
-        # print A, A-wishart_expval(n,self.Tau_test)
-        assert_array_almost_equal(A,wishart_expval(n,self.Tau_test), decimal=1)
-
+        delta=A-wishart_expval(n,self.Tau_test)
+        assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
+        
         A = 0.*self.Tau_test    
         for i in xrange(N):
             A += rwishart_cov(n,self.Tau_test.I)    
         A /= N
-        assert_array_almost_equal(A,wishart_cov_expval(n,self.Tau_test.I), decimal=1)
+        delta=A-wishart_cov_expval(n,self.Tau_test.I)
+        assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
 
 """
 Hyperg is parameteretrized differently in flib than is hypergeometric in numpy.random.

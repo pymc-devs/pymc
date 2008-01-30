@@ -2081,7 +2081,6 @@ C
       RETURN
       END
 
-
       SUBROUTINE WSHRT(D, N, NP, NNP, SB, SA)
 C
 C     ALGORITHM AS 53  APPL. STATIST. (1972) VOL.21, NO.3
@@ -2175,6 +2174,40 @@ C
       RETURN
       END
 C
+
+!      SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP,D,SA,SB)
+      SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP)
+cf2py intent(out) SAOUT
+cf2py intent(hide) NP
+cf2py integer intent(hide),depend(NP)::NNP=NP*(NP+1)/2
+      INTEGER N, NP, NNP, i, j, ni
+      DOUBLE PRECISION DIN(NP,NP), SAOUT(NP,NP)
+      DOUBLE PRECISION D(NNP), SA(NNP), SB(NNP)
+      
+      ni=0
+      do i=1,np
+          do j=i,np
+              ni = ni + 1
+              D(ni) = DIN(j,i)
+          end do
+      end do
+      
+      CALL WSHRT(D,N,NP,NNP,SB,SA)
+      
+      print *,D
+      print *,SA
+      
+      ni=0
+      do i=1,np
+          do j=i,np
+              ni = ni + 1
+              SAOUT(i,j) = SA(ni)
+              SAOUT(j,i) = SA(ni)
+          end do
+      end do
+      
+      RETURN
+      END
 
       SUBROUTINE rbin(n,pp,x) 
 

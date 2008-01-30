@@ -1674,21 +1674,19 @@ def rwishart(n, Tau):
     
     Tau is the inverse of the covariance matrix :math:'C'.
     """
-    # Sigma = inverse(Tau)
-    # D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
-    # np = len(Sigma)
-    # return expand_triangular(flib.wshrt(D, n, np), np)
 
     p = Tau.shape[0]    
+    # sig = np.linalg.cholesky(np.linalg.inv(Tau))
     sig = np.linalg.cholesky(Tau)
-    if n>p:
-        norms = np.random.normal(size=p*(p-1)/2)
-        chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)+1))
-        A=np.asmatrix(flib.expand_triangular(chi_sqs, norms))
-        flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
-        return A.T*A
-    else:
+    if n<p:
         raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+    norms = np.random.normal(size=p*(p-1)/2)
+    chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
+    A= flib.expand_triangular(chi_sqs, norms)
+    flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
+    # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
+    return np.asmatrix(np.dot(A,A.T))
+        
 
 
 def wishart_expval(n, Tau):
@@ -1731,21 +1729,15 @@ def rwishart_cov(n, C):
 
     Return a Wishart random matrix.
     """
-    # Sigma = inverse(Tau)
-    # D = [i for i in ravel((flib.chol(Sigma)).transpose()) if i]
-    # np = len(Sigma)
-    # return expand_triangular(flib.wshrt(D, n, np), np)
-
     p = C.shape[0]    
     sig = np.linalg.cholesky(C)
-    if n>p:
-        norms = np.random.normal(size=p*(p-1)/2)
-        chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)+1))
-        A=np.asmatrix(flib.expand_triangular(chi_sqs, norms))
-        flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-        return A.T*A
-    else:
+    if n<p:
         raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+    norms = np.random.normal(size=p*(p-1)/2)
+    chi_sqs = sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
+    A= flib.expand_triangular(chi_sqs, norms)
+    flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
+    return np.asmatrix(np.dot(A,A.T))
 
 
 def wishart_cov_expval(n, C):

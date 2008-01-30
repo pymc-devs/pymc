@@ -232,7 +232,7 @@ class WishartMvNormal(Gibbs):
     Applies to tau in the following submodel:
     
     d_i ~ind Normal(mu_i, tau)
-    tau ~ WishartCov(n, V) [optional]
+    tau ~ WishartCov(n, Tau) [optional]
     
     where the stochastics d are parametrized by precision, not covariance.
     """
@@ -245,7 +245,7 @@ class WishartMvNormal(Gibbs):
         # Get distributional parameters from children and make sure children are Normal.
         for child in tau.children:
             if isinstance(child, MvNormal):                
-                # TODO: Allow covariance to be scalar multiple of self plus something else. Use LinearCombination class.
+                # TODO: Allow covariance to be scalar multiple of self plus something else. Use LinearTauombination class.
                 self.d.append(child)
                 self.mu.append(child.parents['mu'])
             else:
@@ -255,13 +255,13 @@ class WishartMvNormal(Gibbs):
         self.N = self.stochastic.value.shape[0]
         
         # See whether to use conjugate or non-conjugate version.
-        if not isinstance(self.stochastic, WishartCov):
+        if not isinstance(self.stochastic, Wishart):
             self.n = None
-            self.C = None
+            self.Tau = None
             self.conjugate = False
         else:
             self.n = lam_dtrm('n',lambda n=tau.parents['n']: n)
-            self.C = lam_dtrm('C',lambda C=tau.parents['C']: C)            
+            self.Tau = lam_dtrm('Tau',lambda Tau=tau.parents['Tau']: Tau)            
             self.conjugate = True
         
         Gibbs.__init__(self, tau, verbose)
@@ -280,12 +280,13 @@ class WishartMvNormal(Gibbs):
         n = len(self.d)
         if self.conjugate:
             n += self.n.value
-            C = np.linalg.inv(self.quad_term.value + np.linalg.inv(self.C.value))
+            Tau = self.quad_term.value + self.Tau.value
         else:
             n += 1.
-            C = self.quad_term.value.I
-           
-        self.stochastic.value = rwishart_cov(n, C)
+            Tau = self.quad_term.value
+        
+        # print n, Tau, Tau.I*n   
+        self.stochastic.value = rwishart(n, Tau)
 
 class GammaPoisson(Gibbs):
     """
