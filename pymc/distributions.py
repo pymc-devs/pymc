@@ -1300,8 +1300,11 @@ if flib_blas_OK:
 
         Random multivariate normal variates.
         """
-
-        return random.multivariate_normal(mu, C, size)
+        mu_size = mu.shape
+        if size==1:
+            return random.multivariate_normal(mu, C, size).reshape(mu_size)
+        else:
+            return random.multivariate_normal(mu, C, size).reshape(size+mu_size)
 
     def mv_normal_cov_expval(mu, C):
         """

@@ -25,7 +25,7 @@ from pymc.PyMCObjects import BinaryStochastic, DiscreteStochastic
 
 class AdaptiveMetropolis(StepMethod):
     """
-    S = AdaptiveMetropolis(self, stoch, cov, delay=1000, interval=100, scale={})
+    S = AdaptiveMetropolis(self, stochastic, cov, delay=1000, interval=100, scale={})
 
     The AdaptativeMetropolis (AM) sampling algorithm works like a regular 
     Metropolis, with the exception that stochastic parameters are block-updated 
@@ -35,7 +35,7 @@ class AdaptiveMetropolis(StepMethod):
     (Haario et al., 2001) for details. 
     
     :Parameters:
-      - stoch : PyMC objects
+      - stochastic : PyMC objects
             Stochastic objects to be handled by the AM algorith,
             
       - cov : array
@@ -48,22 +48,21 @@ class AdaptiveMetropolis(StepMethod):
           Interval between covariance updates.
           
       - scale : dict
-          Dictionary containing the scale for each stoch keyed by name.
+          Dictionary containing the scale for each stochastic keyed by name.
           If cov is None, those scales are used to define an initial covariance
           C_0. If neither cov nor scale is given, the initial covariance is 
           guessed from the objects value (or trace if available).
 
     """
-    def __init__(self, stoch, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
         
         self.verbose = verbose
         
-        if getattr(stoch, '__class__') is pymc.PyMCObjects.Stochastic:
-            stoch = [stoch] 
-        StepMethod.__init__(self, stoch, verbose)
+        if getattr(stochastic, '__class__') is pymc.PyMCObjects.Stochastic:
+            stochastic = [stochastic] 
+        StepMethod.__init__(self, stochastic, verbose)
         
-        self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochs])
-        
+        self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session. 
         self._state += ['_trace_count', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
@@ -98,15 +97,15 @@ class AdaptiveMetropolis(StepMethod):
             print "Sigma: ", self._sig
               
     @staticmethod
-    def competence(stoch):
+    def competence(stochastic):
         """
         The competence function for AdaptiveMetropolis.
         The AM algorithm is well suited to deal with multivariate
         parameters. 
         """
-        if isinstance(stoch, BinaryStochastic):
+        if isinstance(stochastic, BinaryStochastic):
             return 0
-        elif np.iterable(stoch):
+        elif np.iterable(stochastic):
             return 2
                 
                 
@@ -116,8 +115,8 @@ class AdaptiveMetropolis(StepMethod):
         Return:
             - cov,  if cov != None
             - covariance matrix built from the scales dictionary if scales!=None
-            - covariance matrix estimated from the stochs trace
-            - covariance matrix estimated from the stochs value, scaled by 
+            - covariance matrix estimated from the stochastics trace
+            - covariance matrix estimated from the stochastics value, scaled by 
                 scaling parameter.
         """
         if cov:
@@ -132,46 +131,49 @@ class AdaptiveMetropolis(StepMethod):
                 return np.cov(a[nz, :], rowvar=0)
             except:
                 ord_sc = []
-                for stoch in self.stochs:
-                    ord_sc.append(abs(np.ravel(stoch.value)))
+                for s in self.stochastics:
+                    this_value = abs(np.ravel(s.value))
+                    for elem in this_value:
+                        ord_sc.append(elem)
+                # print len(ord_sc), self.dim
                 return np.eye(self.dim)*ord_sc/scaling
             
         
     def check_type(self):
-        """Make sure each stoch has a correct type, and identify discrete stochs."""
+        """Make sure each stochastic has a correct type, and identify discrete stochastics."""
         self.isdiscrete = {}
-        for stoch in self.stochs:
-            if isinstance(stoch, DiscreteStochastic):
-                self.isdiscrete[stoch] = True
-            elif isinstance(stoch, BinaryStochastic):
+        for stochastic in self.stochastics:
+            if isinstance(stochastic, DiscreteStochastic):
+                self.isdiscrete[stochastic] = True
+            elif isinstance(stochastic, BinaryStochastic):
                 raise 'BinaryStochastic objects not supported by AdaptativeMetropolis.'
             else:
-                self.isdiscrete[stoch] = False
+                self.isdiscrete[stochastic] = False
                 
                 
     def dimension(self):
         """Compute the dimension of the sampling space and identify the slices
-        belonging to each stoch.
+        belonging to each stochastic.
         """
         self.dim = 0
         self._slices = {}
-        for stoch in self.stochs:
-            if isinstance(stoch.value, np.ndarray):
-                p_len = len(stoch.value.ravel())
+        for stochastic in self.stochastics:
+            if isinstance(stochastic.value, np.ndarray):
+                p_len = len(stochastic.value.ravel())
             else:
                 p_len = 1
-            self._slices[stoch] = slice(self.dim, self.dim + p_len)
+            self._slices[stochastic] = slice(self.dim, self.dim + p_len)
             self.dim += p_len
             
             
     def order_scales(self, scales):
         """Define an array of scales to build the initial covariance.
         If init_scales is None, the scale is taken to be the initial value of 
-        the stochs.
+        the stochastics.
         """
         ord_sc = []
-        for stoch in self.stochs:
-            ord_sc.append(scales[stoch])
+        for stochastic in self.stochastics:
+            ord_sc.append(scales[stochastic])
         ord_sc = np.concatenate(ord_sc)
         
         if np.squeeze(ord_sc.shape) != self.dim:
@@ -275,7 +277,7 @@ class AdaptiveMetropolis(StepMethod):
 
     def propose(self):
         """
-        This method proposes values for stochs based on the empirical
+        This method proposes values for stochastics based on the empirical
         covariance of the values sampled so far.
         
         The proposal jumps are drawn from a multivariate normal distribution.        
@@ -286,13 +288,13 @@ class AdaptiveMetropolis(StepMethod):
         
         arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
         
-        # 4. Update each stoch individually.
-        for stoch in self.stochs:
-            jump = np.reshape(arrayjump[self._slices[stoch]],np.shape(stoch.value))
-            if self.isdiscrete[stoch]:
-                stoch.value = stoch.value + round_array(jump)
+        # 4. Update each stochastic individually.
+        for stochastic in self.stochastics:
+            jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
+            if self.isdiscrete[stochastic]:
+                stochastic.value = stochastic.value + round_array(jump)
             else:
-                stoch.value = stoch.value + jump
+                stochastic.value = stochastic.value + jump
                 
     def step(self):
         """
@@ -311,8 +313,8 @@ class AdaptiveMetropolis(StepMethod):
         trace to avoid computing singular covariance matrices. 
         """
 
-        # Probability and likelihood for stoch's current value:
-        logp = sum([stoch.logp for stoch in self.stochs])
+        # Probability and likelihood for stochastic's current value:
+        logp = sum([stochastic.logp for stochastic in self.stochastics])
         loglike = self.loglike
 
         # Sample a candidate value              
@@ -321,8 +323,8 @@ class AdaptiveMetropolis(StepMethod):
         # Metropolis acception/rejection test
         accept = False
         try:
-            # Probability and likelihood for stoch's proposed value:
-            logp_p = sum([stoch.logp for stoch in self.stochs])
+            # Probability and likelihood for stochastic's proposed value:
+            logp_p = sum([stochastic.logp for stochastic in self.stochastics])
             loglike_p = self.loglike
             if np.log(random()) < logp_p + loglike_p - logp - loglike:
                 accept = True
@@ -338,8 +340,8 @@ class AdaptiveMetropolis(StepMethod):
             print "Step ", self._current_iter
             print "\tLogprobability (current, proposed): ", logp, logp_p
             print "\tloglike (current, proposed):      : ", loglike, loglike_p
-            for stoch in self.stochs:
-                print "\t", stoch.__name__, stoch.last_value, stoch.value
+            for stochastic in self.stochastics:
+                print "\t", stochastic.__name__, stochastic.last_value, stochastic.value
             if accept:
                 print "\tAccepted\t*******\n"
             else: 
@@ -362,23 +364,23 @@ class AdaptiveMetropolis(StepMethod):
     
     # Please keep reject() factored out- helps RandomRealizations figure out what to do.
     def reject(self):
-        for stoch in self.stochs:
-            stoch.value = stoch.last_value
+        for stochastic in self.stochastics:
+            stochastic.value = stochastic.last_value
     
     def internal_tally(self):
-        """Store the trace of stochs for the computation of the covariance.
+        """Store the trace of stochastics for the computation of the covariance.
         This trace is completely independent from the backend used by the 
         sampler to store the samples."""
         chain = []
-        for stoch in self.stochs:
-            chain.append(np.ravel(stoch.value))
+        for stochastic in self.stochastics:
+            chain.append(np.ravel(stochastic.value))
         self._trace.append(np.concatenate(chain))
         
     def trace2array(i0,i1):
-        """Return an array with the trace of all stochs from index i0 to i1."""
+        """Return an array with the trace of all stochastics from index i0 to i1."""
         chain = []
-        for stoch in self.stochs:
-            chain.append(ravel(stoch.trace.gettrace(slicing=slice(i0,i1))))
+        for stochastic in self.stochastics:
+            chain.append(ravel(stochastic.trace.gettrace(slicing=slice(i0,i1))))
         return concatenate(chain)
         
     def tune(self, verbose):
@@ -389,18 +391,18 @@ class AdaptiveMetropolis(StepMethod):
 if __name__=='__main__':
     from numpy.testing import *
     from pymc import Sampler, JointMetropolis
-    from pymc import stoch, data, JointMetropolis
+    from pymc import stochastic, data, JointMetropolis
     from numpy import array,  ones
     from pymc.distributions import mv_normal_like
     class AMmodel:
         mu_A = array([0.,0.])
         tau_A = np.eye(2)
-        @stoch
+        @stochastic
         def A(value = ones(2,dtype=float), mu=mu_A, tau = tau_A):
             return mv_normal_like(value,mu,tau)
         
         tau_B = np.eye(2) * 100.          
-        @stoch
+        @stochastic
         def B(value = ones(2,dtype=float), mu = A, tau = tau_B):
             return mv_normal_like(value,mu,tau)
     

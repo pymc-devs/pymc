@@ -60,9 +60,9 @@ def assign_method(stochastic, scale=None):
     method = best_candidates.pop()
     
     if scale:
-        return method(stochastic = stochastic, scale = scale)
+        return method(stochastic, scale = scale)
     
-    return method(stochastic = stochastic)
+    return method(stochastic)
 
 
 class StepMethodMeta(type):
@@ -533,21 +533,21 @@ class DiscreteMetropolis(Metropolis):
     Good for DiscreteStochastics.
     """
     
-    def __init__(self, s, scale=1., dist=None):
+    def __init__(self, stochastic, scale=1., dist=None):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, s, scale=scale, dist=dist)
+        Metropolis.__init__(self, stochastic, scale=scale, dist=dist)
         
         # Initialize verbose feedback string
-        self._id = s.__name__
+        self._id = stochastic.__name__
     
     @staticmethod
-    def competence(s):
+    def competence(stochastic):
         """
         The competence function for DiscreteMetropolis.
         """
-        if isinstance(s, DiscreteStochastic):
+        if isinstance(stochastic, DiscreteStochastic):
             return 1
         else:
             return 0
@@ -577,24 +577,24 @@ class BinaryMetropolis(Metropolis):
     This should be a subclass of Gibbs, not Metropolis.
     """
     
-    def __init__(self, s, p_jump=.1, dist=None, verbose=0):
+    def __init__(self, stochastic, p_jump=.1, dist=None, verbose=0):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, s, dist=dist, verbose=verbose)
+        Metropolis.__init__(self, stochastic, dist=dist, verbose=verbose)
         
         # Initialize verbose feedback string
-        self._id = s.__name__
+        self._id = stochastic.__name__
         
         # _asf controls the jump probability
         self._asf = log(1.-p_jump) / log(.5)
         
     @staticmethod
-    def competence(s):
+    def competence(stochastic):
         """
         The competence function for Binary One-At-A-Time Metropolis
         """
-        if isinstance(s, BinaryStochastic):
+        if isinstance(stochastic, BinaryStochastic):
             return 1
         else:
             return 0
