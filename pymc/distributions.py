@@ -15,6 +15,7 @@ import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel, prod, any, sum
+import pdb
 
 if hasattr(flib, 'cov_mvnorm'):
     flib_blas_OK = True
@@ -66,7 +67,7 @@ def new_dist_class(*new_class_args):
         def __init__(self, *args, **kwds):
             (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
             parents=parents_default
-
+            
             # Extract special (non-parent) keyword arguments
             shape=None
             trace=True
@@ -116,24 +117,25 @@ def new_dist_class(*new_class_args):
             rseed = arg_dict_out['rseed']
             isdata = arg_dict_out['isdata']
             doc = arg_dict_out['doc']
-                                
+            
             # Determine size and shape of value
             if value is None:
                 if rseed == False:
                     raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
                 
                 if shape is not None:
+                    
                     size = np.prod(shape)
                     if np.isscalar(shape):
                         shape = (shape,)
                     if len(shape)==0 or shape == (1,):
                         shape=None
                     #     value = random(size=1, **parents)
-                    # value = np.reshape(random(size=size, **parents), shape)    
+                    value = np.reshape(random(size=size, **parents), shape)    
                 else:
                     size=1
                     shape = None
-                    # value = random(size=1, **parents)
+                    value = random(size=1, **parents)
 
             else:
                 size = len(ravel(value))
@@ -1169,7 +1171,6 @@ def multinomial_like(x, n, p):
 
     x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
     p = np.atleast_2d(p)
-    
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
