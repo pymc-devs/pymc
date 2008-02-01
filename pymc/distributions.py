@@ -148,7 +148,8 @@ def new_dist_class(*new_class_args):
                     random=random, trace=trace, rseed=rseed, isdata=isdata, doc=doc)
 
     new_class.__name__ = name
-    new_class.parent_labels = parents_default.keys()
+    # new_class.parent_labels = parents_default.keys()
+    new_class.parent_names = parent_names
     
     return new_class
 
@@ -802,7 +803,6 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
       - 'scale' : Scale parameter > 0.
 
     """
-
     return flib.exponweib(x,alpha,k,loc,scale)
 
 # Gamma----------------------------------------------
