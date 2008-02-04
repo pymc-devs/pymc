@@ -6,6 +6,7 @@ from copy import deepcopy, copy
 from numpy import array, ndarray, reshape, Inf, asarray
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
+import pdb
 
 d_neg_inf = float(-1.79E308)
 

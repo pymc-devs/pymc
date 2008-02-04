@@ -29,6 +29,9 @@ from copy import copy
 random_number = random.random
 inverse = np.linalg.pinv
 
+class ArgumentError(AttributeError):
+    """Incorrect class argument"""
+    pass
 
 univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
@@ -120,6 +123,8 @@ def new_dist_class(*new_class_args):
             
             # Determine size and shape of value
             if value is None:
+                if isdata:
+                    raise ArgumentError, self_name + " is specified as data, but has no value."
                 if rseed == False:
                     raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
                 

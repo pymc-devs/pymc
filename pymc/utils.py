@@ -677,7 +677,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     # For multivariate node
     if x.ndim>1:
         # Transpose first, then sort, then transpose back
-        sx = tr(sort(t(x)))
+        sx = tr(sort(tr(x)))
     else:
         # Sort univariate node
         sx = sort(x)
