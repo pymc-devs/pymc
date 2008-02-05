@@ -406,7 +406,7 @@ def rarlognormal(a, sigma, rho, size=1):
             
 
 def arlognormal_like(x, a, sigma, rho):
-    r"""arnormal(x, a, tau, rho, beta=1)
+    r"""arnormal(x, a, sigma, rho, beta=1)
     
     Autoregressive lognormal log-likelihood.
     
@@ -1310,7 +1310,7 @@ if flib_blas_OK:
         if size==1:
             return random.multivariate_normal(mu, C, size).reshape(mu_size)
         else:
-            return random.multivariate_normal(mu, C, size).reshape(size+mu_size)
+            return random.multivariate_normal(mu, C, size).reshape((size,)+mu_size)
 
     def mv_normal_cov_expval(mu, C):
         """
