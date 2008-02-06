@@ -20,9 +20,9 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                     0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 # Define data and stochastics
-s = Uniform('s',50,lower=0,upper=110)
-e=Exponential('e',1,beta=1)
-l=Exponential('l',1,beta=1)
+s = Uniform('s',lower=0,upper=110,value=50)
+e=Exponential('e',beta=1,value=1)
+l=Exponential('l',beta=1,value=1)
         
 @data
 @discrete_stochastic

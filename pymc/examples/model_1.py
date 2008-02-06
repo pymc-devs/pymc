@@ -24,9 +24,9 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and stochastics
 
-switchpoint = Uniform('switchpoint',50,lower=0,upper=110)
-early_mean = Exponential('early_mean',1.,beta=1.)
-late_mean = Exponential('late_mean',1.,beta=1.)
+switchpoint = Uniform('switchpoint',lower=0,upper=110)
+early_mean = Exponential('early_mean',beta=1.)
+late_mean = Exponential('late_mean',beta=1.)
     
 @data
 @discrete_stochastic
