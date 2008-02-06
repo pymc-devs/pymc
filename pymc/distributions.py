@@ -70,18 +70,10 @@ def new_dist_class(*new_class_args):
         def __init__(self, *args, **kwds):
             (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
             parents=parents_default
-            
-            # Extract special (non-parent) keyword arguments
-            shape=None
-            trace=True
-            rseed=True
-            isdata=False
-            doc=docstr
-            debug=False
                         
             # Figure out what argument names are needed.
-            args_needed = ['name'] + copy(parent_names) + ['value', 'shape', 'trace', 'rseed', 'doc','isdata']
-            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'shape': None, 'trace': True, 'rseed': True, 'doc': None, 'isdata': False}
+            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'size': None, 'trace': True, 'rseed': True, 'doc': None, 'isdata': False, 'debug': False}
+            args_needed = ['name'] + parent_names + arg_dict_out.keys()[2:]
             
             # Sort positional arguments
             for i in xrange(len(args)):
@@ -93,7 +85,8 @@ def new_dist_class(*new_class_args):
                         arg_dict_out[k] = args[i]
                 except:
                     raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
-                  
+            
+
             # Sort keyword arguments
             for k in args_needed:
                 if k in parent_names:
@@ -104,58 +97,32 @@ def new_dist_class(*new_class_args):
                             parents[k] = parents_default[k]
                         else:
                             raise ValueError, 'No value given for parent ' + k
-                elif k in ['name', 'value', 'shape', 'trace', 'rseed', 'doc', 'isdata']:
+                elif k in arg_dict_out.keys():
                     try:
                         arg_dict_out[k] = kwds.pop(k)
                     except:
                         pass
                 else:
                     raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
-
-            # Read in from arg_dict_out to locals (annoying, but locals()[k] didn't work)
-            self_name = arg_dict_out['name']    
-            value = arg_dict_out['value']
-            shape = arg_dict_out['shape']
-            trace = arg_dict_out['trace']
-            rseed = arg_dict_out['rseed']
-            isdata = arg_dict_out['isdata']
-            doc = arg_dict_out['doc']
             
             # Determine size and shape of value
-            if value is None:
-                if isdata:
-                    raise ArgumentError, self_name + " is specified as data, but has no value."
-                if rseed == False:
-                    raise ValueError, self_name + ': no initial value given. Provide one or set rseed to True.'
-                
-                if shape is not None:
-                    
-                    size = np.prod(shape)
-                    if np.isscalar(shape):
-                        shape = (shape,)
-                    if len(shape)==0 or shape == (1,):
-                        shape=None
-                    #     value = random(size=1, **parents)
-                    value = np.reshape(random(size=size, **parents), shape)    
-                else:
-                    size=1
-                    shape = None
-                    value = random(size=1, **parents)
+            size = arg_dict_out['size']
+            if size is not None:
+                def random_wrapper_with_size(random=random,size=size,**parents):
+                    return random(size=size,**parents)
+                random_wrapper_with_size.__name__ = random.__name__
+                random = random_wrapper_with_size
+            
+            arg_dict_out.pop('size')        
 
-            else:
-                size = len(ravel(value))
-                shape = np.shape(value)
-                
             # Call base class initialization method
-            if debug:
+            if arg_dict_out.pop('debug'):
                 logp = debug_wrapper(logp)
                 random = debug_wrapper(random)
             else:
-                base.__init__(self, value=value, name=self_name, parents=parents, logp=logp, \
-                    random=random, trace=trace, rseed=rseed, isdata=isdata, doc=doc)
+                base.__init__(self, logp=logp, random=random, **arg_dict_out)
 
     new_class.__name__ = name
-    # new_class.parent_labels = parents_default.keys()
     new_class.parent_names = parent_names
     
     return new_class
@@ -208,15 +175,16 @@ def randomwrap(func):
     """
     Decorator for random value generators
 
-    Allows passing of sequence of stochastics, as well as a size argument.
+    Allows passing of sequence of parameters, as well as a size argument.
+
 
     Convention:
 
-      - If size=1 and the stochastics are all scalars, return a scalar.
+      - If size=1 and the parameters are all scalars, return a scalar.
       - If size=1, the random variates are 1D.
-      - If the stochastics are scalars and size > 1, the random variates are 1D.
-      - If size > 1 and the stochastics are sequences, the random variates are
-        aligned as (size, max(length)), where length is the stochastics size.
+      - If the parameters are scalars and size > 1, the random variates are 1D.
+      - If size > 1 and the parameters are sequences, the random variates are
+        aligned as (size, max(length)), where length is the parameters size.
 
 
     :Example:

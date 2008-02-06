@@ -474,7 +474,7 @@ class Stochastic(StochasticBase):
 
             # Otherwise leave initial value at None and warn.
             else:
-                raise ValueError, 'Stochastic ' + name + "'s value initialized to None; no initial value or random method provided."
+                raise ValueError, 'Stochastic ' + self.__name__ + "'s value initialized to None; no initial value or random method provided."
 
         arguments = {}
         arguments.update(self.parents)
