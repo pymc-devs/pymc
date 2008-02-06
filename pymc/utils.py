@@ -50,7 +50,7 @@ to x.value.
         if not (len(self.A)==len(self.x) and isinstance(self.A, dict)) and not isinstance(self.A, ndarray):
             raise ValueError, 'Argument A must either be an array or a dictionary of the same length as x.'
             
-        if instance(self.A, dict):
+        if isinstance(self.A, dict):
             self.A_dict = True
         else:
             self.A_dict = False
