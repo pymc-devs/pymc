@@ -72,8 +72,10 @@ def new_dist_class(*new_class_args):
             parents=parents_default
                         
             # Figure out what argument names are needed.
-            arg_dict_out = {'name': None, 'parents': parents, 'value': None, 'size': None, 'trace': True, 'rseed': True, 'doc': None, 'isdata': False, 'debug': False}
-            args_needed = ['name'] + parent_names + arg_dict_out.keys()[2:]
+            arg_keys = ['name', 'parents', 'value', 'size', 'trace', 'rseed', 'doc', 'isdata', 'debug']
+            arg_vals = [None, parents, None, None, True, True, None, False, False]
+            arg_dict_out = dict(zip(arg_keys, arg_vals))
+            args_needed = ['name'] + parent_names + arg_keys[2:]
             
             # Sort positional arguments
             for i in xrange(len(args)):
@@ -85,7 +87,7 @@ def new_dist_class(*new_class_args):
                         arg_dict_out[k] = args[i]
                 except:
                     raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
-            
+                        
 
             # Sort keyword arguments
             for k in args_needed:
