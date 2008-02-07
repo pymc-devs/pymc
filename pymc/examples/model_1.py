@@ -29,7 +29,7 @@ early_mean = Exponential('early_mean',beta=1.)
 late_mean = Exponential('late_mean',beta=1.)
     
 @data
-@discrete_stochastic
+@stochastic(dtype=int)
 def disasters(  value = disasters_array, 
                 early_mean = early_mean, 
                 late_mean = late_mean, 

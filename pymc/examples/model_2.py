@@ -21,7 +21,7 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 global_rate = Exponential('global_rate',beta=1./3)    
 
 @data
-@discrete_stochastic
+@stochastic(dtype=int)
 def disasters(value = disasters_array, rate = global_rate):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value, rate)

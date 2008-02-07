@@ -44,17 +44,11 @@ class Node(object):
     
     :SeeAlso: Stochastic, Deterministic
     """
-    def __init__(self, doc, name, parents, cache_depth, trace, plot=True, verbose=0):
+    def __init__(self, doc, name, parents, cache_depth, verbose=0):
         
         # Name and docstrings
         self.__doc__ = doc
         self.__name__ = name
-        
-        # Adopt passed trace
-        self.trace = trace
-        
-        # Do we want to plot this Node
-        self._plot = plot
         
         # Level of feedback verbosity
         self.verbose = verbose
@@ -140,7 +134,12 @@ class Variable(Node):
     """
     The base class for Stochastics and Deterministics.
     """
-    pass
+    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=True, verbose=0):
+        # print doc, name, parents, cache_depth, trace, dtype, plot, verbose
+        self.dtype=dtype        
+        self.trace=trace
+        self._plot=plot
+        Node.__init__(self, doc, name, parents, cache_depth, verbose=0)
 
 class ContainerBase(object):
     """

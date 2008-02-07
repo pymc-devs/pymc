@@ -85,6 +85,10 @@ from numpy import csingle, complex_, clongfloat
 
 # TODO : Wrap the nd histogramming fortran function.    
 
+integer_dtypes = [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
+float_dtypes = [float, single, float_, longfloat]
+complex_dtypes = [complex, csingle, complex_, clongfloat]
+bool_dtypes = [bool, bool_]
 def check_type(stochastic):
     """
     type, shape = check_type(stochastic)

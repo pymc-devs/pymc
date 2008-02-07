@@ -13,7 +13,7 @@ import flib
 import pymc
 import numpy as np
 from Node import ZeroProbability
-from PyMCObjects import Stochastic, DiscreteStochastic, BinaryStochastic
+from PyMCObjects import Stochastic
 from numpy import Inf, random, sqrt, log, size, tan, pi, shape, ravel, prod, any, sum
 import pdb
 
@@ -64,11 +64,11 @@ def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
     """
-    (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
-    class new_class(base):
+    (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+    class new_class(Stochastic):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
-            (base, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+            (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
             parents=parents_default
                         
             # Figure out what argument names are needed.
@@ -122,7 +122,7 @@ def new_dist_class(*new_class_args):
                 logp = debug_wrapper(logp)
                 random = debug_wrapper(random)
             else:
-                base.__init__(self, logp=logp, random=random, **arg_dict_out)
+                Stochastic.__init__(self, logp=logp, random=random, dtype=dtype, **arg_dict_out)
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
@@ -130,7 +130,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, base=Stochastic):
+def stochastic_from_dist(name, logp, random=None, dtype=np.float):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -159,7 +159,7 @@ def stochastic_from_dist(name, logp, random=None, base=Stochastic):
 
     logp=valuewrapper(logp)
 
-    return new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random)
 
 
 #-------------------------------------------------------------
@@ -1100,7 +1100,7 @@ def rmultinomial(n,p,size=None): # Leaving size=None as the default means return
 
     # Multiple values for p:
     if np.isscalar(n):
-        n = n * np.ones(p.shape[0],dtype=int)
+        n = n * np.ones(p.shape[0],dtype=np.int)
     out = np.empty(p.shape)
     for i in xrange(p.shape[0]):
         out[i,:] = random.multinomial(n[i],p[i,:],size)
@@ -1923,10 +1923,10 @@ for dist in continuous_distributions:
     
 for dist in discrete_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, DiscreteStochastic)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, dtype=np.int)
 
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
-Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random, BinaryStochastic)
+Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random, dtype=np.bool)
 
 
 def uninformative_like(x):
@@ -1950,9 +1950,9 @@ def one_over_x_like(x):
         return -sum(log(x))
 
 
-Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like, base=Stochastic)
-DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, base=DiscreteStochastic)
-OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like, base = Stochastic)
+Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
+DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
+OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
 
 if __name__ == "__main__":
     import doctest

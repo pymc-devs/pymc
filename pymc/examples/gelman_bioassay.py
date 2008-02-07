@@ -18,7 +18,7 @@ def theta(a=alpha, b=beta, d=dose):
     return invlogit(a+b*d)
 
 @data
-@stochastic
+@stochastic(dtype=int)
 def deaths(value=array([0,1,3,5],dtype=float), n=n, p=theta):
     """deaths ~ binomial(n, p)"""
     return binomial_like(value, n, p)

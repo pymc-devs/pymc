@@ -5,7 +5,7 @@ are defined here, but the actual objects are defined in PyMCObjects.py
 
 import sys, inspect
 from imp import load_dynamic
-from PyMCObjects import Stochastic, Deterministic, DiscreteStochastic, BinaryStochastic, Potential
+from PyMCObjects import Stochastic, Deterministic, Potential
 from Node import ZeroProbability, ContainerBase, Node
 from Container import Container
 import numpy as np
@@ -142,30 +142,6 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     
 # Shortcut alias
 stoch = stochastic
-    
-def discrete_stochastic(__func__=None, **kwds):
-    """
-    Instantiates a DiscreteStochastic instance, which takes only
-    integer values.
-    
-    Same usage as stochastic.
-    """
-    return stochastic(__func__=__func__, __class__ = DiscreteStochastic, **kwds)
-    
-# Shortcut alias
-discrete_stoch = discrete_stochastic
-    
-def binary_stochastic(__func__=None, **kwds):
-    """
-    Instantiates a BinaryStochastic instance, which takes only boolean
-    values.
-    
-    Same usage as stochastic.
-    """
-    return stochastic(__func__=__func__, __class__ = BinaryStochastic, **kwds)
-    
-# Shortcut alias
-binary_stoch = binary_stochastic
 
 def potential(__func__ = None, **kwds):
     """

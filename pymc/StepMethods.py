@@ -1,13 +1,13 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
-from PyMCObjects import Stochastic, Deterministic, Node, DiscreteStochastic, BinaryStochastic, Potential
+from PyMCObjects import Stochastic, Potential, Deterministic
 from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
 from pymc.decorators import prop
 from copy import copy
@@ -18,7 +18,7 @@ __docformat__='reStructuredText'
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
 # TODO: Test cases for binary and discrete Metropolises.
 
-__all__=['DiscreteMetropolis', 'JointMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis']
+__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis']
 
 StepMethodRegistry = []
 
@@ -412,18 +412,11 @@ class Metropolis(StepMethod):
         The competence function for Metropolis
         """
 
-        if isinstance(s, DiscreteStochastic) or isinstance(s, BinaryStochastic):
+        if not s.dtype in float_dtypes:
             # If the stochastic's binary or discrete, I can't do it.
             return 0
-
         else:
-            # If the stochastic's value is an ndarray or a number, I can do it,
-            # but not necessarily particularly well.
-            _type = check_type(s)[0]
-            if _type in [float, int]:
-                return 1
-            else:
-                return 0
+            return 1
     
     def hastings_factor(self):
         """
@@ -535,7 +528,7 @@ class NoStepper(StepMethod):
 class DiscreteMetropolis(Metropolis):
     """
     Just like Metropolis, but rounds the variable's value.
-    Good for DiscreteStochastics.
+    Good for discrete stochastics.
     """
     
     def __init__(self, stochastic, scale=1., dist=None):
@@ -552,7 +545,7 @@ class DiscreteMetropolis(Metropolis):
         """
         The competence function for DiscreteMetropolis.
         """
-        if isinstance(stochastic, DiscreteStochastic):
+        if stochastic.dtype in integer_dtypes:
             return 1
         else:
             return 0
@@ -573,13 +566,6 @@ class BinaryMetropolis(Metropolis):
     Like Metropolis, but with a modified step() method.
     Good for binary variables.
     
-    NOTE this is not compliant with the Metropolis standard
-    yet because it lacks a reject() method.
-    (??? But, it is a subclass of Metropolis, which has a reject() method)
-    True... but it's never called, this is really a Gibbs sampler since there
-    are only 2 states available.
-    
-    This should be a subclass of Gibbs, not Metropolis.
     """
     
     def __init__(self, stochastic, p_jump=.1, dist=None, verbose=0):
@@ -599,7 +585,7 @@ class BinaryMetropolis(Metropolis):
         """
         The competence function for Binary One-At-A-Time Metropolis
         """
-        if isinstance(stochastic, BinaryStochastic):
+        if stochastic.dtype in bool_dtypes:
             return 1
         else:
             return 0
@@ -747,9 +733,9 @@ class AdaptiveMetropolis(StepMethod):
         The AM algorithm is well suited to deal with multivariate
         parameters. 
         """
-        if isinstance(stochastic, BinaryStochastic):
+        if not stochastic.dtype in float_dtypes and not stochastic.dtype in integer_dtypes:
             return 0
-        elif np.iterable(stochastic):
+        if np.iterable(stochastic.value):
             return 2
         else:
             return 0
@@ -789,10 +775,10 @@ class AdaptiveMetropolis(StepMethod):
         """Make sure each stochastic has a correct type, and identify discrete stochastics."""
         self.isdiscrete = {}
         for stochastic in self.stochastics:
-            if isinstance(stochastic, DiscreteStochastic):
+            if stochastic.dtype in integer_dtypes:
                 self.isdiscrete[stochastic] = True
-            elif isinstance(stochastic, BinaryStochastic):
-                raise 'BinaryStochastic objects not supported by AdaptativeMetropolis.'
+            elif stochastic.dtype in bool_dtypes:
+                raise 'Binary stochastics not supported by AdaptativeMetropolis.'
             else:
                 self.isdiscrete[stochastic] = False
                 
@@ -1034,295 +1020,295 @@ class AdaptiveMetropolis(StepMethod):
         tuning specifications. """
         return False
 
-class JointMetropolis(StepMethod):
-    """
-    JointMetropolis will be superseded by AdaptiveMetropolis.
-    
-    S = Joint(variables, epoch=1000, memory=10, delay=1000)
-    
-    Applies the Metropolis-Hastings algorithm to several variables
-    together. Jumping density is a multivariate normal distribution
-    with mean zero and covariance equal to the empirical covariance
-    of the variables, times _asf ** 2.
-    
-    :Arguments:
-    - variables (optional) : list or array
-            A sequence of pymc objects to handle using
-            this StepMethod.
-    
-    - s (optional) : Stochastic
-            Alternatively to variables, a single variable can be passed.
-    
-    - epoch (optional) : integer
-            After epoch values are stored in the internal
-            traces, the covariance is recomputed.
-    
-    - memory (optional) : integer
-            The maximum number of epochs to consider when
-            computing the covariance.
-    
-    - delay (optional) : integer
-            Number of one-at-a-time iterations to do before
-            starting to record values for computing the joint
-            covariance.
-    
-    - dist (optional) : string
-            The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
-            'Prior' or None. If None is provided, a proposal distribution is
-            chosen by examining P.value's type.
-    
-    - scale (optional) : float
-            Scale proposal distribution.
-    
-    - oneatatime_scales (optional) : dict
-            Dictionary of scales for one-at-a-time iterations.
-    
-    - verbose (optional) : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
-    
-    Externally-accessible attributes:
-        
-        variables:      A sequence of sastic variables to handle using
-                        this StepMethod.
-        
-        epoch:          After epoch values are stored in the internal
-                        traces, the covariance is recomputed.
-        
-        memory:         The maximum number of epochs to consider when
-                        computing the covariance.
-        
-        delay:          Number of one-at-a-time iterations to do before
-                        starting to record values for computing the joint
-                        covariance.
-        
-        _asf:           Adaptive scale factor.
-    
-    Externally-accessible methods:
-        
-        step():         Make a Metropolis step. Applies the one-at-a-time
-                        Metropolis algorithm until the first time the
-                        covariance is computed, then applies the joint
-                        Metropolis algorithm.
-        
-        tune():         sets _asf according to a heuristic.
-        
-    Also: don't start joint sampling until all variables have mixed at
-    least a little. Warn if another epoch of one-at-a-time sampling is
-    required.
-    
-    Also: when the covariance is nonsquare,
-    
-    """
-    
-    
-    def __init__(self, variables=None, s=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
-        print "This StepMethod is deprecated and will be removed from future versions, please use AdaptiveMetropolis."
-        self.verbose = verbose
-        
-        if s is not None:
-            variables = [s]
-        StepMethod.__init__(self, variables, verbose=verbose)
-        
-        self.epoch = epoch
-        self.memory = memory
-        self.delay = delay
-        self._id = ''.join([p.__name__ for p in self.stochastics])
-        self.isdiscrete = {}
-        self.scale = scale
-        
-        # Flag indicating whether covariance has been computed
-        self._ready = False
-        
-        # For making sure the covariance isn't recomputed multiple times
-        # on the same trace index
-        self.last_trace_index = 0
-        
-        # Use Metropolis instances to handle independent jumps
-        # before first epoch is complete
-        if self.verbose > 2:
-            print self._id + ': Assigning single-stochastic handlers.'
-        self._single_stoch_handlers = set()
-        
-        for s in self.stochastics:
-            if oneatatime_scales is not None:
-                scale_now = oneatatime_scales[s]
-            else:
-                scale_now = None
-            
-            new_method = assign_method(s, scale_now)
-            self._single_stoch_handlers.add(new_method)
-        StepMethodRegistry[JointMetropolis] = Jointcompetence
-
-        
-        # Allocate memory for internal traces and get stoch slices
-        self._slices = {}
-        self._len = 0
-        for s in self.stochastics:
-            if isinstance(s.value, ndarray):
-                stoch_len = len(s.value.ravel())
-            else:
-                stoch_len = 1
-            self._slices[s] = slice(self._len, self._len + stoch_len)
-            self._len += stoch_len
-        
-        self._proposal_deviate = zeros(self._len,dtype=float)
-        
-        self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)
-        
-        # __init__ should also check that each stoch's value is an ndarray or
-        # a numerical type.
-        
-        self._state += ['last_trace_index', '_cov', '_sig',
-        '_proposal_deviate', '_trace']
-
-    
-    @staticmethod
-    def competence(s):
-        """
-        The competence function for JointMetropolis. Currently returning 0,
-        because JointMetropolis may be buggy.
-        """
-        
-        return 0
-        
-        if isinstance(s, DiscreteStochastic) or isinstance(s, BinaryStochastic):
-            # If the stoch's binary or discrete, I can't do it.
-            return 0
-        elif isinstance(s.value, ndarray):
-            return 0
-        else:
-            return 0
-    
-    
-    def compute_sig(self):
-        """
-        This method computes and stores the matrix square root of the empirical
-        covariance every epoch.
-        """
-        
-        if self.verbose > 1:
-            print 'Joint StepMethod ' + self._id + ' computing covariance.'
-        
-        # Figure out which slice of the traces to use
-        if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
-            trace_slice = slice(self._model._cur_trace_index-self.epoch * self.memory,\
-                                self._model._cur_trace_index)
-            trace_len = self.memory * self.epoch
-        else:
-            trace_slice = slice(self.delay, self._model._cur_trace_index)
-            trace_len = (self._model._cur_trace_index - self.delay)
-
-        
-        # Store all the stochastics' traces in self._trace
-        for s in self.stochastics:
-            stoch_trace = s.trace(slicing=trace_slice)
-            
-            # If s is an array, ravel each tallied value
-            if isinstance(s.value, ndarray):
-                for i in range(trace_len):
-                    self._trace[self._slices[s], i] = stoch_trace[i,:].ravel()
-            
-            # If s is a scalar, there's no need.
-            else:
-                self._trace[self._slices[s], :trace_len] = stoch_trace
-        
-        # Compute matrix square root of covariance of self._trace
-        self._cov = cov(self._trace[: , :trace_len])
-        
-        self._sig = msqrt(self._cov).T * self.scale
-        
-        self._ready = True
-
-    
-    def tune(self, divergence_threshold = 1e10, verbose=0):
-        """
-        If the empirical covariance hasn't been computed yet (the first
-        epoch isn't over), this method passes the tune() call along to the
-        Metropolis instances handling self's variables. If the
-        empirical covariance has been computed, the Metropolis
-        instances aren't in use anymore so this method does nothing.
-        
-        We may want to make this method do something eventually.
-        """
-        
-        if not self._accepted > 0 or self._rejected > 0:
-            for handler in self._single_stoch_handlers:
-                handler.tune(divergence_threshold, verbose)
-        # This has to return something... please check this. DH
-        return False 
-    
-    def propose(self):
-        """
-        This method proposes values for self's variables based on the empirical
-        covariance.
-        """
-        fill_stdnormal(self._proposal_deviate)
-        
-        N = self._sig.shape[1]
-        
-        proposed_vals = inner(self._proposal_deviate[:N], self._asf * self._sig)
-        
-        for s in self.stochastics:
-            
-            jump = reshape(proposed_vals[self._slices[s]],shape(s.value))
-            
-            s.value = s.value + jump
-    
-    def reject(self):
-        """Reject a jump."""
-        for s in self.stochastics:
-            s.value = s.last_value
-    
-    def step(self):
-        """
-        If the empirical covariance hasn't been computed yet, the step() call
-        is passed along to the Metropolis instances that handle self's
-        variables before the end of the first epoch.
-        
-        If the empirical covariance has been computed, values for self's variables
-        are proposed and tested simultaneously.
-        """
-        if not self._ready:
-            for handler in self._single_stoch_handlers:
-                handler.step()
-        else:
-            # Probability and likelihood for s's current value:
-            logp = sum([s.logp for s in self.stochastics])
-            loglike = self.loglike
-            
-            # Sample a candidate value
-            self.propose()
-            
-            # Probability and likelihood for s's proposed value:
-            try:
-                logp_p = sum([s.logp for s in self.stochastics])
-            except ZeroProbability:
-                self._rejected += 1
-                self.reject()
-                return
-            
-            loglike_p = self.loglike
-            
-            # Test
-            if log(random()) > logp_p + loglike_p - logp - loglike:
-                # Revert stochastic if fail
-                self._rejected += 1
-                self.reject()
-            else:
-                self._accepted += 1
-        
-        # If an epoch has passed, recompute covariance.
-        if  (float(self._model._cur_trace_index - self.delay)) % self.epoch == 0 \
-            and self._model._cur_trace_index > self.delay \
-            and not self._model._cur_trace_index == self.last_trace_index:
-            
-            # Make sure all the one-at-a-time handlers mixed.
-            if not self._ready:
-                for handler in self._single_stoch_handlers:
-                    if handler._accepted == 0:
-                        print self._id+ ": Warnining, stochastic " + handler.s.__name__ + " did not mix, continuing one-at-a-time sampling"
-                
-                self.compute_sig()
-                self.last_trace_index = self._model._cur_trace_index
-
-# JointMetropolis.competence = StepMethod.competence
+# class JointMetropolis(StepMethod):
+#     """
+#     JointMetropolis will be superseded by AdaptiveMetropolis.
+#     
+#     S = Joint(variables, epoch=1000, memory=10, delay=1000)
+#     
+#     Applies the Metropolis-Hastings algorithm to several variables
+#     together. Jumping density is a multivariate normal distribution
+#     with mean zero and covariance equal to the empirical covariance
+#     of the variables, times _asf ** 2.
+#     
+#     :Arguments:
+#     - variables (optional) : list or array
+#             A sequence of pymc objects to handle using
+#             this StepMethod.
+#     
+#     - s (optional) : Stochastic
+#             Alternatively to variables, a single variable can be passed.
+#     
+#     - epoch (optional) : integer
+#             After epoch values are stored in the internal
+#             traces, the covariance is recomputed.
+#     
+#     - memory (optional) : integer
+#             The maximum number of epochs to consider when
+#             computing the covariance.
+#     
+#     - delay (optional) : integer
+#             Number of one-at-a-time iterations to do before
+#             starting to record values for computing the joint
+#             covariance.
+#     
+#     - dist (optional) : string
+#             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
+#             'Prior' or None. If None is provided, a proposal distribution is
+#             chosen by examining P.value's type.
+#     
+#     - scale (optional) : float
+#             Scale proposal distribution.
+#     
+#     - oneatatime_scales (optional) : dict
+#             Dictionary of scales for one-at-a-time iterations.
+#     
+#     - verbose (optional) : integer
+#             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+#     
+#     Externally-accessible attributes:
+#         
+#         variables:      A sequence of sastic variables to handle using
+#                         this StepMethod.
+#         
+#         epoch:          After epoch values are stored in the internal
+#                         traces, the covariance is recomputed.
+#         
+#         memory:         The maximum number of epochs to consider when
+#                         computing the covariance.
+#         
+#         delay:          Number of one-at-a-time iterations to do before
+#                         starting to record values for computing the joint
+#                         covariance.
+#         
+#         _asf:           Adaptive scale factor.
+#     
+#     Externally-accessible methods:
+#         
+#         step():         Make a Metropolis step. Applies the one-at-a-time
+#                         Metropolis algorithm until the first time the
+#                         covariance is computed, then applies the joint
+#                         Metropolis algorithm.
+#         
+#         tune():         sets _asf according to a heuristic.
+#         
+#     Also: don't start joint sampling until all variables have mixed at
+#     least a little. Warn if another epoch of one-at-a-time sampling is
+#     required.
+#     
+#     Also: when the covariance is nonsquare,
+#     
+#     """
+#     
+#     
+#     def __init__(self, variables=None, s=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
+#         print "This StepMethod is deprecated and will be removed from future versions, please use AdaptiveMetropolis."
+#         self.verbose = verbose
+#         
+#         if s is not None:
+#             variables = [s]
+#         StepMethod.__init__(self, variables, verbose=verbose)
+#         
+#         self.epoch = epoch
+#         self.memory = memory
+#         self.delay = delay
+#         self._id = ''.join([p.__name__ for p in self.stochastics])
+#         self.isdiscrete = {}
+#         self.scale = scale
+#         
+#         # Flag indicating whether covariance has been computed
+#         self._ready = False
+#         
+#         # For making sure the covariance isn't recomputed multiple times
+#         # on the same trace index
+#         self.last_trace_index = 0
+#         
+#         # Use Metropolis instances to handle independent jumps
+#         # before first epoch is complete
+#         if self.verbose > 2:
+#             print self._id + ': Assigning single-stochastic handlers.'
+#         self._single_stoch_handlers = set()
+#         
+#         for s in self.stochastics:
+#             if oneatatime_scales is not None:
+#                 scale_now = oneatatime_scales[s]
+#             else:
+#                 scale_now = None
+#             
+#             new_method = assign_method(s, scale_now)
+#             self._single_stoch_handlers.add(new_method)
+#         StepMethodRegistry[JointMetropolis] = Jointcompetence
+# 
+#         
+#         # Allocate memory for internal traces and get stoch slices
+#         self._slices = {}
+#         self._len = 0
+#         for s in self.stochastics:
+#             if isinstance(s.value, ndarray):
+#                 stoch_len = len(s.value.ravel())
+#             else:
+#                 stoch_len = 1
+#             self._slices[s] = slice(self._len, self._len + stoch_len)
+#             self._len += stoch_len
+#         
+#         self._proposal_deviate = zeros(self._len,dtype=float)
+#         
+#         self._trace = zeros((self._len, self.memory * self.epoch),dtype=float)
+#         
+#         # __init__ should also check that each stoch's value is an ndarray or
+#         # a numerical type.
+#         
+#         self._state += ['last_trace_index', '_cov', '_sig',
+#         '_proposal_deviate', '_trace']
+# 
+#     
+#     @staticmethod
+#     def competence(s):
+#         """
+#         The competence function for JointMetropolis. Currently returning 0,
+#         because JointMetropolis may be buggy.
+#         """
+#         
+#         return 0
+#         
+#         if isinstance(s, DiscreteStochastic) or isinstance(s, BinaryStochastic):
+#             # If the stoch's binary or discrete, I can't do it.
+#             return 0
+#         elif isinstance(s.value, ndarray):
+#             return 0
+#         else:
+#             return 0
+#     
+#     
+#     def compute_sig(self):
+#         """
+#         This method computes and stores the matrix square root of the empirical
+#         covariance every epoch.
+#         """
+#         
+#         if self.verbose > 1:
+#             print 'Joint StepMethod ' + self._id + ' computing covariance.'
+#         
+#         # Figure out which slice of the traces to use
+#         if (self._model._cur_trace_index - self.delay) / self.epoch > self.memory:
+#             trace_slice = slice(self._model._cur_trace_index-self.epoch * self.memory,\
+#                                 self._model._cur_trace_index)
+#             trace_len = self.memory * self.epoch
+#         else:
+#             trace_slice = slice(self.delay, self._model._cur_trace_index)
+#             trace_len = (self._model._cur_trace_index - self.delay)
+# 
+#         
+#         # Store all the stochastics' traces in self._trace
+#         for s in self.stochastics:
+#             stoch_trace = s.trace(slicing=trace_slice)
+#             
+#             # If s is an array, ravel each tallied value
+#             if isinstance(s.value, ndarray):
+#                 for i in range(trace_len):
+#                     self._trace[self._slices[s], i] = stoch_trace[i,:].ravel()
+#             
+#             # If s is a scalar, there's no need.
+#             else:
+#                 self._trace[self._slices[s], :trace_len] = stoch_trace
+#         
+#         # Compute matrix square root of covariance of self._trace
+#         self._cov = cov(self._trace[: , :trace_len])
+#         
+#         self._sig = msqrt(self._cov).T * self.scale
+#         
+#         self._ready = True
+# 
+#     
+#     def tune(self, divergence_threshold = 1e10, verbose=0):
+#         """
+#         If the empirical covariance hasn't been computed yet (the first
+#         epoch isn't over), this method passes the tune() call along to the
+#         Metropolis instances handling self's variables. If the
+#         empirical covariance has been computed, the Metropolis
+#         instances aren't in use anymore so this method does nothing.
+#         
+#         We may want to make this method do something eventually.
+#         """
+#         
+#         if not self._accepted > 0 or self._rejected > 0:
+#             for handler in self._single_stoch_handlers:
+#                 handler.tune(divergence_threshold, verbose)
+#         # This has to return something... please check this. DH
+#         return False 
+#     
+#     def propose(self):
+#         """
+#         This method proposes values for self's variables based on the empirical
+#         covariance.
+#         """
+#         fill_stdnormal(self._proposal_deviate)
+#         
+#         N = self._sig.shape[1]
+#         
+#         proposed_vals = inner(self._proposal_deviate[:N], self._asf * self._sig)
+#         
+#         for s in self.stochastics:
+#             
+#             jump = reshape(proposed_vals[self._slices[s]],shape(s.value))
+#             
+#             s.value = s.value + jump
+#     
+#     def reject(self):
+#         """Reject a jump."""
+#         for s in self.stochastics:
+#             s.value = s.last_value
+#     
+#     def step(self):
+#         """
+#         If the empirical covariance hasn't been computed yet, the step() call
+#         is passed along to the Metropolis instances that handle self's
+#         variables before the end of the first epoch.
+#         
+#         If the empirical covariance has been computed, values for self's variables
+#         are proposed and tested simultaneously.
+#         """
+#         if not self._ready:
+#             for handler in self._single_stoch_handlers:
+#                 handler.step()
+#         else:
+#             # Probability and likelihood for s's current value:
+#             logp = sum([s.logp for s in self.stochastics])
+#             loglike = self.loglike
+#             
+#             # Sample a candidate value
+#             self.propose()
+#             
+#             # Probability and likelihood for s's proposed value:
+#             try:
+#                 logp_p = sum([s.logp for s in self.stochastics])
+#             except ZeroProbability:
+#                 self._rejected += 1
+#                 self.reject()
+#                 return
+#             
+#             loglike_p = self.loglike
+#             
+#             # Test
+#             if log(random()) > logp_p + loglike_p - logp - loglike:
+#                 # Revert stochastic if fail
+#                 self._rejected += 1
+#                 self.reject()
+#             else:
+#                 self._accepted += 1
+#         
+#         # If an epoch has passed, recompute covariance.
+#         if  (float(self._model._cur_trace_index - self.delay)) % self.epoch == 0 \
+#             and self._model._cur_trace_index > self.delay \
+#             and not self._model._cur_trace_index == self.last_trace_index:
+#             
+#             # Make sure all the one-at-a-time handlers mixed.
+#             if not self._ready:
+#                 for handler in self._single_stoch_handlers:
+#                     if handler._accepted == 0:
+#                         print self._id+ ": Warnining, stochastic " + handler.s.__name__ + " did not mix, continuing one-at-a-time sampling"
+#                 
+#                 self.compute_sig()
+#                 self.last_trace_index = self._model._cur_trace_index
+# 
+# # JointMetropolis.competence = StepMethod.competence

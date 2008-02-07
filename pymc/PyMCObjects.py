@@ -173,7 +173,7 @@ class Potential(PotentialBase):
     
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
         
         self.ParentDict = ParentDict
 
@@ -184,9 +184,7 @@ class Potential(PotentialBase):
                         doc=doc, 
                         name=name, 
                         parents=parents, 
-                        cache_depth = cache_depth, 
-                        trace=False,
-                        plot=plot,
+                        cache_depth = cache_depth,
                         verbose=verbose)
 
         self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
@@ -279,18 +277,19 @@ class Deterministic(DeterministicBase):
     
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, eval,  doc, name, parents, trace=True, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0):
 
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
         
-        Node.__init__(  self, 
+        Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
                         parents=parents, 
                         cache_depth = cache_depth, 
+                        dtype=dtype,
                         trace=trace,
                         plot=plot,
                         verbose=verbose)
@@ -419,7 +418,8 @@ class Stochastic(StochasticBase):
                     parents, 
                     random = None, 
                     trace=True, 
-                    value=None, 
+                    value=None,
+                    dtype=None, 
                     rseed=False, 
                     isdata=False,
                     cache_depth=2,
@@ -440,14 +440,28 @@ class Stochastic(StochasticBase):
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.
         self.rseed = rseed
-        
-        # Initialize value, either from value provided or from random function.
-        self._value = value        
                 
-        Node.__init__(  self, 
+        # Initialize value, either from value provided or from random function.
+        if value is not None:
+            if isinstance(value, ndarray):
+                value.flags['W'] = False  
+                if dtype is not None:
+                    self._value = asarray(value, dtype=dtype)
+                else:
+                    self._value = value
+            elif dtype is not None:
+                self._value = dtype(value)
+            else:
+                self._value = value
+        else:
+            self._value = None
+ 
+                
+        Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
                         parents=parents, 
+                        dtype=dtype,
                         cache_depth=cache_depth, 
                         trace=trace,
                         plot=plot,
@@ -504,13 +518,20 @@ class Stochastic(StochasticBase):
         if self.isdata:
             raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
             
-        if isinstance(value, ndarray):
-            value.flags['W'] = False            
-            
         # Save current value as last_value
         # Don't copy because caching depends on the object's reference. 
-        self.last_value = self._value
-        self._value = value
+        self.last_value = self._value            
+        
+        if isinstance(value, ndarray):
+            value.flags['W'] = False  
+            if self.dtype is not None:
+                self._value = asarray(value, dtype=self.dtype)
+            else:
+                self._value = value
+        elif self.dtype is not None:
+            self._value = self.dtype(value)
+        else:
+            self._value = value
         
 
     value = property(fget=get_value, fset=set_value, doc="Self's current value.")
@@ -585,48 +606,3 @@ class Stochastic(StochasticBase):
     def _get_markov_blanket(self):
         return self.moral_neighbors | set([self])
     markov_blanket = property(_get_markov_blanket, doc="Self's coparents, self's extended parents, self's children and self.")
-
-class DiscreteStochastic(Stochastic):
-    """
-    A subclass of Stochastic that takes only integer values.
-    """
-        
-    def set_value(self, value):
-        # Record new value and increment counter
-        
-        # Value can't be updated if isdata=True
-        if self.isdata:
-            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
-            
-        # Save current value as last_value
-        self.last_value = self._value
-        if isinstance(value, ndarray):
-            self._value = asarray(value, dtype=int)
-        else:
-            self._value = int(round(value))
-
-    value=property(Stochastic.get_value,set_value,doc=Stochastic.value.__doc__)
-    
-class BinaryStochastic(Stochastic):
-    """
-    A subclass of Stochastic that takes only boolean values.
-    """
-    
-    def set_value(self, value):
-        # Record new value and increment counter
-        
-        # Value can't be updated if isdata=True
-        if self.isdata:
-            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
-            
-        # As a first shot at this, all non-zero values are coded as unity and 
-        # zero as zero. Better way? (e.g. positives as 1, otherwise zero)
-            
-        # Save current value as last_value
-        self.last_value = self._value
-        if isinstance(value, ndarray):
-            self._value = asarray(value, dtype=bool)
-        else:
-            self._value = bool(value)
-
-    value=property(Stochastic.get_value,set_value,doc=Stochastic.value.__doc__)

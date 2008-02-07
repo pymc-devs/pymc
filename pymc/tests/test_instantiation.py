@@ -7,14 +7,14 @@
 ###
 # TODO
 # ----
-# Add test for dtrm
+# Add test for deterministic
 # Check discrete and binary stochastics
 # Test the distribution instantiators.
 ###
 
 from numpy.testing import *
 import pymc
-from pymc import Sampler, data, stochastic, dtrm, discrete_stochastic, \
+from pymc import Sampler, data, stochastic, deterministic, \
     Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
 from pymc import uniform_like, exponential_like, poisson_like
@@ -30,7 +30,7 @@ D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 # Define data and stochastics
 
-@discrete_stochastic
+@stochastic(dtype=int)
 def s(value=50, length=110):
     """Change time for rate stochastic."""
     return uniform_like(value, 0, length)
@@ -45,7 +45,7 @@ def l(value=.1, rate = 1.):
     """Rate stochastic of poisson distribution."""
     return exponential_like(value, rate)
         
-@data(discrete=True)
+@data(dtype=int)
 def D(  value = D_array,
         s = s,
         e = e,

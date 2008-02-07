@@ -25,7 +25,7 @@ e=Exponential('e',beta=1,value=1)
 l=Exponential('l',beta=1,value=1)
         
 @data
-@discrete_stochastic
+@stochastic(dtype=int)
 def D(  value = D_array,
         s = s,
         e = e,
