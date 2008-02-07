@@ -141,6 +141,9 @@ class Variable(Node):
         self._plot=plot
         Node.__init__(self, doc, name, parents, cache_depth, verbose=0)
 
+    def __str__(self):
+        return str(self.value)
+        
 class ContainerBase(object):
     """
     The base class from which containers inherit.
