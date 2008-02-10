@@ -63,31 +63,42 @@ class MCMC(Sampler):
         """
         Sampler.__init__(self, input, db, output_path, verbose, **kwds)
 
-        # Default StepMethod
-        self._assign_stepmethods()
+        self.step_method_dict = {}
+        for s in self.stochastics:
+            self.step_method_dict[s] = []
+        self._step_methods_assigned = False
+        self.step_methods = set([])
         
         self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
     
-    def _assign_stepmethods(self):
+    def use_step_method(self, step_method_class, *args, **kwds):
+        """
+        M.use_step_method(step_method_class, *args, **kwds)
+        
+        Example of usage: To handle stochastic A with a Metropolis instance,
+        
+            M.use_step_method(Metropolis, A, sig=.1)
+            
+        To subsequently get a reference to the new step method,
+        
+            S = M.step_method_dict[A][0]
+        """
+        new_method = step_method_class(*args, **kwds)
+        for s in new_method.stochastics:
+            self.step_method_dict[s].append(new_method)
+        setattr(new_method, '_model', self)
+        self.step_methods.add(new_method)
+    
+    def _assign_step_methods(self):
         """
         Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
         """
-        self.step_method_dict = {}
 
         for s in self.stochastics:
 
-            self.step_method_dict[s] = []
-
-            # Is it a member of any StepMethod?
-            homeless = True
-            for step_method in self.step_methods:
-                if s in step_method.stochastics:
-                    homeless = False
-                    self.step_method_dict[s].append(step_method)
-
-            # If not, make it a new StepMethod using the registry
-            if homeless:
+            # If not handled by any step method, make it a new step method using the registry
+            if len(self.step_method_dict[s])==0:
                 new_method = assign_method(s)
                 setattr(new_method, '_model', self)
                 self.step_method_dict[s].append(new_method)
@@ -99,6 +110,9 @@ class MCMC(Sampler):
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
+        
+        if not self._step_methods_assigned:
+            self._assign_step_methods()
 
         self._iter = int(iter)
         self._burn = int(burn)
@@ -183,6 +197,22 @@ class MCMC(Sampler):
         if self._tuned_count == 5:
             if self.verbose > 0: print 'Finished tuning'
             self._tuning = False    
+
+
+    def get_state(self):
+        """
+        Return the sampler and step methods current state in order to
+        restart sampling at a later time.
+        """
+        
+        state = Sampler.get_state(self)
+        state['step_methods'] = {}
+        
+        # The state of each StepMethod.
+        for sm in self.step_methods:
+            state['step_methods'][sm._id] = sm.current_state().copy()
+
+        return state
     
     def restore_state(self):
         
@@ -192,6 +222,8 @@ class MCMC(Sampler):
         sm_state = state.get('step_methods', {})
         for sm in self.step_methods:
             sm.__dict__.update(sm_state.get(sm._id, {}))
+            
+        return state
         
     def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
         """

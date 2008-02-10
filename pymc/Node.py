@@ -107,7 +107,7 @@ class Node(object):
         return self.__repr__()
     
     def __repr__(self):
-        return object.__repr__(self).replace('object', self.__name__)
+        return object.__repr__(self).replace('object', "'%s'"%self.__name__)
     
     def gen_lazy_function(self):
         pass
@@ -189,9 +189,3 @@ class PotentialBase(Node):
     Abstract base class.
     """
     pass
-
-class StepMethodBase(object):
-    """
-    Abstract base class.
-    """
-    pass    

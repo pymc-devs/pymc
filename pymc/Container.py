@@ -36,7 +36,7 @@ following sets: stochastics, deterministics, variables, nodes, containers, data,
 These flattened representations are useful for things like cache checking.
 """
 
-from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, StepMethodBase
+from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype
 from Container_values import LTCValue, DCValue, ACValue, OCValue
@@ -46,7 +46,7 @@ from types import ModuleType
 def filter_dict(obj):
     filtered_dict = {}
     for item in obj.__dict__.iteritems():
-        if isinstance(item[1], Node) or isinstance(item[1], ContainerBase) or isinstance(item[1], StepMethodBase):
+        if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
 
@@ -168,7 +168,7 @@ def file_items(container, iterable):
     container.stochastics = set()
     container.potentials = set()
     container.data_stochastics = set()
-    container.step_methods = set()
+
     
     # containers needs to be a list to hold unhashable items.
     container.containers = []
@@ -197,8 +197,6 @@ def file_items(container, iterable):
                 container.deterministics.add(item)
         elif isinstance(item, PotentialBase):
             container.potentials.add(item)
-        elif isinstance(item, StepMethodBase):
-            container.step_methods.add(item)
 
         # Wrap internal containers
         elif hasattr(item, '__iter__'):
@@ -223,7 +221,7 @@ def file_items(container, iterable):
             container.potentials.update(new_container.potentials)
             container.deterministics.update(new_container.deterministics)
             container.data_stochastics.update(new_container.data_stochastics)
-            container.step_methods.update(new_container.step_methods)
+
 
 
 

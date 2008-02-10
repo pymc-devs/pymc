@@ -227,6 +227,9 @@ class Sampler(Model):
         # Flag for model state
         self.status = 'ready'
         
+        self._current_iter = None
+        self._iter = None
+        
         # Instantiate plotter 
         # Hardcoding the matplotlib backend raises error in
         # interactive use. DH
@@ -482,21 +485,17 @@ class Sampler(Model):
 
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
-                print 'Call icontinue method to continue, or call halt_step method to truncate traces and stop.'
+                print 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
 
     def get_state(self):
         """
-        Return the sampler and step methods current state in order to
+        Return the sampler's current state in order to
         restart sampling at a later time.
         """
-        state = dict(sampler={}, step_methods={}, stochastics={})
+        state = dict(sampler={}, stochastics={})
         # The state of the sampler itself.
         for s in self._state:
             state['sampler'][s] = getattr(self, s)
-
-        # The state of each StepMethod.
-        for sm in self.step_methods:
-            state['step_methods'][sm._id] = sm.current_state().copy()
 
         # The state of each stochastic parameter
         for s in self.stochastics:
@@ -514,7 +513,7 @@ class Sampler(Model):
 
     def restore_state(self):
         """
-        Restore the state of the sampler and of the step methods to
+        Restore the state of the sampler and to
         the state stored in the database.
         """
         state = self.db.getstate()

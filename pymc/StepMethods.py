@@ -8,7 +8,7 @@ from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Stochastic, Potential, Deterministic
-from Node import ZeroProbability, Node, Variable, StepMethodBase, StochasticBase
+from Node import ZeroProbability, Node, Variable, StochasticBase
 from pymc.decorators import prop
 from copy import copy
 
@@ -78,7 +78,7 @@ class StepMethodMeta(type):
         type.__init__(cls)
         StepMethodRegistry.append(cls)
         
-class StepMethod(StepMethodBase):
+class StepMethod(object):
     """
     This object knows how to make Stochastics take single MCMC steps.
     It's sample() method will be called by Model at every MCMC iteration.
@@ -361,7 +361,7 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, stochastic, scale=1., dist=None, verbose=0):
+    def __init__(self, stochastic, sig=1., dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
@@ -373,9 +373,9 @@ class Metropolis(StepMethod):
         
         # Avoid zeros when setting proposal variance
         if all(self.stochastic.value != 0.):
-            self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+            self._sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * sig
         else:
-            self.proposal_sig = ones(shape(self.stochastic.value)) * scale
+            self._sig = ones(shape(self.stochastic.value)) * sig
         
         # Initialize proposal deviate with array of zeros
         self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
@@ -510,7 +510,7 @@ class Metropolis(StepMethod):
         if self._dist is "Normal" (i.e. no proposal specified).
         """
         if self._dist == "Normal":
-            self.stochastic.value = rnormal(self.stochastic.value, self._asf * self.proposal_sig)
+            self.stochastic.value = rnormal(self.stochastic.value, self._asf * self._sig)
         elif self._dist == "Prior":
             self.stochastic.random()
 
@@ -555,7 +555,7 @@ class DiscreteMetropolis(Metropolis):
         # Propose new values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.stochastic.value,self._asf * self.proposal_sig)
+            new_val = rnormal(self.stochastic.value,self._asf * self._sig)
             self.stochastic.value = round_array(new_val)
         elif self._dist == "Prior":
             self.stochastic.random()

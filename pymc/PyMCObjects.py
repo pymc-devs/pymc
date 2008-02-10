@@ -449,7 +449,7 @@ class Stochastic(StochasticBase):
                     self._value = asarray(value, dtype=dtype)
                 else:
                     self._value = value
-            elif dtype is not None and self.dtype is not object:
+            elif dtype is not None and dtype is not object:
                 self._value = dtype(value)
             else:
                 self._value = value

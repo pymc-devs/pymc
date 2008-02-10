@@ -189,6 +189,9 @@ class DP(Stochastic):
         def dp_random_fun(basemeas_logp, basemeas_rand, nu, **basemeas_params):
             return DPRealization(basemeas_rand, nu, **basemeas_params)
         
+        # If value argument provided, read off intrinsic clusters.
+        # If clusters argument provided, well store them.
+        # If no clusters argument provided, propose from prior all over the place.
         
         Stochastic.__init__(self, logp=dp_logp_fun, random=dp_random_fun, doc=doc, name=name, parents=parents,
                             trace=trace, value=value, dtype=np.object, rseed=True, isdata=False, cache_depth=cache_depth,
