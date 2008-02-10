@@ -958,7 +958,13 @@ def rhypergeometric(n, m, N, size=1):
 
     Returns hypergeometric random variates.
     """
-    return random.hypergeometric(m, N-m, n, size)
+    if n==0:
+        return np.zeros(size,dtype=int)
+    elif n==N:
+        out = np.empty(size,dtype=int)
+        out.fill(m)
+        return out
+    return random.hypergeometric(n, N-n, m, size)
 
 def hypergeometric_expval(n, m, N):
     """

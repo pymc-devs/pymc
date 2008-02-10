@@ -986,6 +986,8 @@ c      CALL constrain(x, 0, d, allow_equal=1)
       draws_tmp = draws(1)
       s_tmp = success(1)
       t_tmp = total(1)
+      
+!       print *,draws,success,total
 
       like = 0.0
       do i=1,n
