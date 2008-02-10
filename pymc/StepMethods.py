@@ -371,6 +371,9 @@ class Metropolis(StepMethod):
         self.stochastic = stochastic
         self.verbose = verbose
         
+        # Add _sig to state
+        self._state += ['_sig', '_dist']
+        
         # Avoid zeros when setting proposal variance
         if all(self.stochastic.value != 0.):
             self._sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * sig
@@ -573,6 +576,8 @@ class BinaryMetropolis(Metropolis):
         
         # Initialize superclass
         Metropolis.__init__(self, stochastic, dist=dist, verbose=verbose)
+        
+        self.state.pop('_sig')
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
