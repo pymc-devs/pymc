@@ -66,8 +66,6 @@ class MCMC(Sampler):
         self.step_method_dict = {}
         for s in self.stochastics:
             self.step_method_dict[s] = []
-        self._step_methods_assigned = False
-        self.step_methods = set([])
         
         self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
     
@@ -87,7 +85,6 @@ class MCMC(Sampler):
         for s in new_method.stochastics:
             self.step_method_dict[s].append(new_method)
         setattr(new_method, '_model', self)
-        self.step_methods.add(new_method)
     
     def _assign_step_methods(self):
         """
@@ -102,7 +99,6 @@ class MCMC(Sampler):
                 new_method = assign_method(s)
                 setattr(new_method, '_model', self)
                 self.step_method_dict[s].append(new_method)
-                self.step_methods.add(new_method)
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
@@ -111,8 +107,11 @@ class MCMC(Sampler):
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
         
-        if not self._step_methods_assigned:
-            self._assign_step_methods()
+        self.step_methods = set()
+        for s in self.stochastics:
+            self.step_methods |= set(self.step_method_dict[s])
+        
+        self._assign_step_methods()
 
         self._iter = int(iter)
         self._burn = int(burn)
@@ -131,7 +130,7 @@ class MCMC(Sampler):
     def _loop(self):
         # Set status flag
         self.status='running'
-
+            
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
@@ -205,6 +204,10 @@ class MCMC(Sampler):
         restart sampling at a later time.
         """
         
+        self.step_methods = set()
+        for s in self.stochastics:
+            self.step_methods |= set(self.step_method_dict[s])
+        
         state = Sampler.get_state(self)
         state['step_methods'] = {}
         
@@ -217,6 +220,10 @@ class MCMC(Sampler):
     def restore_state(self):
         
         state = Sampler.restore_state(self)
+        
+        self.step_methods = set()
+        for s in self.stochastics:
+            self.step_methods |= set(self.step_method_dict[s])        
         
         # Restore stepping methods state
         sm_state = state.get('step_methods', {})

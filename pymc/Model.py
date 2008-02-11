@@ -108,7 +108,7 @@ class Model(ObjectContainer):
         self.generations.append(set())
         all_children = set()
         for s in self.stochastics:
-            all_children.update(self.extended_children[s] & self.stochastics)
+            all_children.update(s.extended_children & self.stochastics)
         self.generations[0] = self.stochastics - all_children
 
         # Find subsequent _generations
@@ -121,13 +121,13 @@ class Model(ObjectContainer):
             # Find children of last generation
             self.generations.append(set())
             for s in self.generations[gen_num-1]:
-                self.generations[gen_num].update(self.extended_children[s] & self.stochastics)
+                self.generations[gen_num].update(s.extended_children & self.stochastics)
 
 
             # Take away stochastics that have parents in the current generation.
             thisgen_children = set()
             for s in self.generations[gen_num]:
-                thisgen_children.update(self.extended_children[s] & self.stochastics)
+                thisgen_children.update(s.extended_children & self.stochastics)
             self.generations[gen_num] -= thisgen_children
 
 
