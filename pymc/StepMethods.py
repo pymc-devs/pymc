@@ -9,7 +9,7 @@ from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Stochastic, Potential, Deterministic
 from Node import ZeroProbability, Node, Variable, StochasticBase
-from pymc.decorators import prop
+from     pymc.decorators import prop
 from copy import copy
 
 __docformat__='reStructuredText'
@@ -63,7 +63,7 @@ def assign_method(stochastic, scale=None):
     
     # Randomly grab and appropriate method
     method = best_candidates.pop()
-    
+        
     if scale:
         return method(stochastic, scale = scale)
     
@@ -414,6 +414,14 @@ class Metropolis(StepMethod):
         """
         The competence function for Metropolis
         """
+        # If no stochastics depend on this stochastic, I'll just propose it from its conditional prior.
+        # This is the best possible step method for this stochastic.
+        if len(s.extended_children)==0:
+            try:
+                s.rand()
+                return 3                
+            except:
+                pass
 
         if not s.dtype in float_dtypes:
             # If the stochastic's binary or discrete, I can't do it.
@@ -693,7 +701,7 @@ class AdaptiveMetropolis(StepMethod):
         
         self.verbose = verbose
         
-        if getattr(stochastic, '__class__') is pymc.PyMCObjects.Stochastic:
+        if isinstance(stochastic, Stochastic):
             stochastic = [stochastic] 
         StepMethod.__init__(self, stochastic, verbose)
         

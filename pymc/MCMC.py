@@ -93,7 +93,6 @@ class MCMC(Sampler):
         """
 
         for s in self.stochastics:
-
             # If not handled by any step method, make it a new step method using the registry
             if len(self.step_method_dict[s])==0:
                 new_method = assign_method(s)
