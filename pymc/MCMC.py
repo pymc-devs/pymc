@@ -98,6 +98,10 @@ class MCMC(Sampler):
                 new_method = assign_method(s)
                 setattr(new_method, '_model', self)
                 self.step_method_dict[s].append(new_method)
+                
+        self.step_methods = set()
+        for s in self.stochastics:
+            self.step_methods |= set(self.step_method_dict[s])
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
@@ -105,10 +109,6 @@ class MCMC(Sampler):
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
-        
-        self.step_methods = set()
-        for s in self.stochastics:
-            self.step_methods |= set(self.step_method_dict[s])
         
         self._assign_step_methods()
 

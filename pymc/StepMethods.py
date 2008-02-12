@@ -48,6 +48,9 @@ def pick_best_methods(stochastic):
         elif competence == max_competence:
             best_candidates.add(method)
     
+    if max_competence<=0:
+        raise ValueError, 'Maximum competence reported for stochastic %s is <= 0... you may need to write a custom step method class.' % stochastic.__name__
+    
     # print s.__name__ + ': ', best_candidates, ' ', max_competence
     return best_candidates
 
@@ -120,6 +123,9 @@ class StepMethod(object):
     
     def __init__(self, variables, verbose=0):
         # StepMethod initialization
+        
+        if not hasattr(variables, '__iter__'):
+            variables = [variables]
         
         # Initialize public attributes
         self.variables = set(variables)
