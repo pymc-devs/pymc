@@ -293,7 +293,7 @@ class StepMethod(object):
     
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
-        
+
         # Initialize sum
         sum = 0.
         
@@ -367,7 +367,7 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, stochastic, sig=1., dist=None, verbose=0):
+    def __init__(self, stochastic, scale=1., sig=None, dist=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
@@ -381,10 +381,13 @@ class Metropolis(StepMethod):
         self._state += ['_sig', '_dist']
         
         # Avoid zeros when setting proposal variance
-        if all(self.stochastic.value != 0.):
-            self._sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * sig
+        if sig is not None:
+            self._sig = sig
         else:
-            self._sig = ones(shape(self.stochastic.value)) * sig
+            if all(self.stochastic.value != 0.):
+                self._sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+            else:
+                self._sig = ones(shape(self.stochastic.value)) * scale
         
         # Initialize proposal deviate with array of zeros
         self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
@@ -550,11 +553,11 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
     
-    def __init__(self, stochastic, scale=1., dist=None):
+    def __init__(self, stochastic, scale=1., sig=None, dist=None):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stochastic, scale=scale, dist=dist)
+        Metropolis.__init__(self, stochastic, scale=scale, sig=sig, dist=dist)
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
