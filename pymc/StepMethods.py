@@ -411,7 +411,7 @@ class Metropolis(StepMethod):
                     self._dist = "Prior"
                 except:
                     pass
-        
+
         else:
             self._dist = dist
     
@@ -474,6 +474,8 @@ class Metropolis(StepMethod):
         try:
             if self._dist == "Prior":
                 logp_p = 0.
+                # Check for weirdness before accepting jump
+                self.stochastic.logp
             else:
                 logp_p = self.stochastic.logp
             loglike_p = self.loglike
