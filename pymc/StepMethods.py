@@ -243,7 +243,7 @@ class StepMethod(object):
         """
         
         # Verbose feedback
-        if verbose > 1 or self.verbose > 1:
+        if verbose > 0 or self.verbose > 0:
             print '\t%s tuning:' % self._id
         
         # Flag for tuning state
@@ -283,7 +283,7 @@ class StepMethod(object):
         # More verbose feedback, if requested
         # Warning: self.stochastic is not defined above. The following assumes
         # that the class has created this value, which is a bit fragile. DH
-        if verbose > 1 or self.verbose > 1:
+        if verbose > 0 or self.verbose > 0:
             print '\t\tvalue:', self.stochastic.value
             print '\t\tacceptance rate:', acc_rate
             print '\t\tadaptive scale factor:', self._asf
@@ -301,12 +301,13 @@ class StepMethod(object):
         for child in self.children:
             
             # Verbose feedback
-            if self.verbose > 2:
+            if self.verbose > 1:
                 print '\t'+self._id+' Getting log-probability from child ' + child.__name__
             
             # Increment sum
             sum += child.logp
-        
+        if self.verbose > 0:
+            print '\t' + self._id + 'Current log-likelihood ', sum
         return sum
     
     # Make get property for retrieving log-probability
@@ -453,7 +454,7 @@ class Metropolis(StepMethod):
         
         # Probability and likelihood for s's current value:
         
-        if self.verbose > 2:
+        if self.verbose > 0:
             print
             print self._id + ' getting initial prior.'
         
@@ -463,11 +464,11 @@ class Metropolis(StepMethod):
         else:
             logp = self.stochastic.logp
         
-        if self.verbose > 2:
+        if self.verbose > 0:
             print self._id + ' getting initial likelihood.'
         loglike = self.loglike
         
-        if self.verbose > 2:
+        if self.verbose > 0:
             print self._id + ' proposing.'
         
         # Sample a candidate value
@@ -486,18 +487,18 @@ class Metropolis(StepMethod):
         except ZeroProbability:
             
             # Reject proposal
-            if self.verbose > 2:
+            if self.verbose > 0:
                 print self._id + ' rejecting due to ZeroProbability.'
             self.reject()
             
             # Increment rejected count
             self._rejected += 1
             
-            if self.verbose > 2:
+            if self.verbose > 1:
                 print self._id + ' returning.'
             return
         
-        if self.verbose > 2:
+        if self.verbose > 1:
             print 'logp_p - logp: ', logp_p - logp
             print 'loglike_p - loglike: ', loglike_p - loglike
         
@@ -511,15 +512,15 @@ class Metropolis(StepMethod):
             
             # Increment rejected count
             self._rejected += 1
-            if self.verbose > 2:
+            if self.verbose > 0:
                 print self._id + ' rejecting'
         else:
             # Increment accepted count
             self._accepted += 1
-            if self.verbose > 2:
+            if self.verbose > 0:
                 print self._id + ' accepting'
         
-        if self.verbose > 2:
+        if self.verbose > 1:
             print self._id + ' returning.'
     
     def reject(self):

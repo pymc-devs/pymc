@@ -6,15 +6,11 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-from numpy import array, zeros, ones, arange, resize
 from pymc import Node, ContainerBase, Variable
 from Container import ListTupleContainer
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
-    
-cdef extern from "numpy/ndarrayobject.h":
-    void* PyArray_DATA(object obj)
 
 cdef class LazyFunction:
     """
@@ -140,9 +136,7 @@ cdef class LazyFunction:
                 self.frame_queue.append(i)
                 return i        
 
-        return -1;
-
-            
+        return -1
         
     cdef void cache(self, value)  except *:
         """

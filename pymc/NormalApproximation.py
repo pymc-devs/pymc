@@ -51,19 +51,19 @@ class NormApproxMu(object):
         try:
             for p in stochastics[0]:
                 pass
-            stoch_tuple = stochastics[0]
+            stochastic_tuple = stochastics[0]
         except:
-            stoch_tuple = stochastics
+            stochastic_tuple = stochastics
         
-        for p in stoch_tuple:
-            tot_len += self.owner.stoch_len[p]
+        for p in stochastic_tuple:
+            tot_len += self.owner.stochastic_len[p]
             
         mu = zeros(tot_len, dtype=float)
         
         start_index = 0
-        for p in stoch_tuple:
-            mu[start_index:(start_index + self.owner.stoch_len[p])] = self.owner._mu[self.owner._slices[p]]
-            start_index += self.owner.stoch_len[p]
+        for p in stochastic_tuple:
+            mu[start_index:(start_index + self.owner.stochastic_len[p])] = self.owner._mu[self.owner._slices[p]]
+            start_index += self.owner.stochastic_len[p]
             
         return mu
         
@@ -93,26 +93,26 @@ class NormApproxC(object):
         try:
             for p in stochastics[0]:
                 pass
-            stoch_tuple = stochastics[0]
+            stochastic_tuple = stochastics[0]
         except:
-            stoch_tuple = stochastics
+            stochastic_tuple = stochastics
         
-        for p in stoch_tuple:
-            tot_len += self.owner.stoch_len[p]
+        for p in stochastic_tuple:
+            tot_len += self.owner.stochastic_len[p]
 
         C = asmatrix(zeros((tot_len, tot_len)), dtype=float)
             
         start_index1 = 0
-        for p1 in stoch_tuple:
+        for p1 in stochastic_tuple:
             start_index2 = 0
-            for p2 in stoch_tuple:                
-                C[start_index1:(start_index1 + self.owner.stoch_len[p1]), \
-                start_index2:(start_index2 + self.owner.stoch_len[p2])] = \
+            for p2 in stochastic_tuple:                
+                C[start_index1:(start_index1 + self.owner.stochastic_len[p1]), \
+                start_index2:(start_index2 + self.owner.stochastic_len[p2])] = \
                 self.owner._C[self.owner._slices[p1],self.owner._slices[p2]]
                 
-                start_index2 += self.owner.stoch_len[p2]
+                start_index2 += self.owner.stochastic_len[p2]
                 
-            start_index1 += self.owner.stoch_len[p1]
+            start_index1 += self.owner.stochastic_len[p1]
             
         return C
 
@@ -142,48 +142,48 @@ class MAP(Model):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=0):
+    def __init__(self, input=None, eps=.001, diff_order = 5):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
 
-        Model.__init__(self, input, verbose=verbose)
+        Model.__init__(self, input)
 
-        # Allocate memory for internal traces and get stoch slices
+        # Allocate memory for internal traces and get stochastic slices
         self._slices = {}
         self.len = 0
-        self.stoch_len = {}
+        self.stochastic_len = {}
         self.fitted = False
 
-        self.stoch_list = list(self.stochastics)
-        self.N_stochastics = len(self.stoch_list)
-        self.stoch_indices = []
-        self.stoch_types = []
-        self.stoch_type_dict = {}
+        self.stochastic_list = list(self.stochastics)
+        self.N_stochastics = len(self.stochastic_list)
+        self.stochastic_indices = []
+        self.stochastic_types = []
+        self.stochastic_type_dict = {}
 
-        for i in xrange(len(self.stoch_list)):
+        for i in xrange(len(self.stochastic_list)):
 
-            stoch = self.stoch_list[i]
+            stochastic = self.stochastic_list[i]
 
             # Check types of all stochastics.
-            type_now = check_type(stoch)[0]
-            self.stoch_type_dict[stoch] = type_now
+            type_now = check_type(stochastic)[0]
+            self.stochastic_type_dict[stochastic] = type_now
 
             if not type_now is float:
-                print "Warning: Stochastic " + stoch.__name__ + "'s value is neither numerical nor array with " + \
+                print "Warning: Stochastic " + stochastic.__name__ + "'s value is neither numerical nor array with " + \
                             "floating-point dtype. Recommend fitting method fmin (default)."
 
-            # Inspect shapes of all stochastics and create stoch slices.
-            if isinstance(stoch.value, ndarray):
-                self.stoch_len[stoch] = len(ravel(stoch.value))
+            # Inspect shapes of all stochastics and create stochastic slices.
+            if isinstance(stochastic.value, ndarray):
+                self.stochastic_len[stochastic] = len(ravel(stochastic.value))
             else:
-                self.stoch_len[stoch] = 1
-            self._slices[stoch] = slice(self.len, self.len + self.stoch_len[stoch])
-            self.len += self.stoch_len[stoch]
+                self.stochastic_len[stochastic] = 1
+            self._slices[stochastic] = slice(self.len, self.len + self.stochastic_len[stochastic])
+            self.len += self.stochastic_len[stochastic]
 
-            # Record indices that correspond to each stoch.
-            for j in range(len(ravel(stoch.value))):
-                self.stoch_indices.append((stoch, j))
-                self.stoch_types.append(type_now)
+            # Record indices that correspond to each stochastic.
+            for j in range(len(ravel(stochastic.value))):
+                self.stochastic_indices.append((stochastic, j))
+                self.stochastic_types.append(type_now)
 
         self.data_len = 0
         for datum in self.data_stochastics:
@@ -192,13 +192,12 @@ class MAP(Model):
         # Unpack step    
         self.eps = zeros(self.len,dtype=float)
         if isinstance(eps,dict):        
-            for stoch in self.stochastics:
-                self.eps[self._slices[stoch]] = eps[stoch]
+            for stochastic in self.stochastics:
+                self.eps[self._slices[stochastic]] = eps[stochastic]
         else:
             self.eps[:] = eps
 
         self.diff_order = diff_order
-        self.verbose = verbose
 
         self._len_range = arange(self.len)
 
@@ -220,7 +219,7 @@ class MAP(Model):
 
         self.func_for_diff = func_for_diff
 
-    def fit(self, method = 'fmin', iterlim=1000, tol=.0001):
+    def fit(self, method = 'fmin', iterlim=1000, tol=.0001, verbose=0):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
 
@@ -235,16 +234,17 @@ class MAP(Model):
         """
         self.tol = tol
         self.method = method
+        self.verbose = verbose
 
         p = zeros(self.len,dtype=float)
-        for stoch in self.stochastics:
-            p[self._slices[stoch]] = ravel(stoch.value)
+        for stochastic in self.stochastics:
+            p[self._slices[stochastic]] = ravel(stochastic.value)
 
         if not self.method == 'newton':
             if not scipy_imported:
                 raise ImportError, 'Scipy is required to use EM and NormApprox'
 
-        if self.verbose:
+        if self.verbose > 0:
             def callback(p):
                 print 'Current log-probability : %f' %self.logp
         else:
@@ -331,30 +331,30 @@ class MAP(Model):
 
 
     def _set_stochastics(self, p):
-        for stoch in self.stochastics:
-            if self.stoch_type_dict[stoch] is int:
-                stoch.value = round_array(reshape(ravel(p)[self._slices[stoch]],shape(stoch.value)))
+        for stochastic in self.stochastics:
+            if self.stochastic_type_dict[stochastic] is int:
+                stochastic.value = round_array(reshape(ravel(p)[self._slices[stochastic]],shape(stochastic.value)))
             else:
-                stoch.value = reshape(ravel(p)[self._slices[stoch]],shape(stoch.value))
+                stochastic.value = reshape(ravel(p)[self._slices[stochastic]],shape(stochastic.value))
 
     def __setitem__(self, index, value):
-        p, i = self.stoch_indices[index]
+        p, i = self.stochastic_indices[index]
         val = ravel(p.value).copy()
         val[i] = value
         p.value = reshape(val, shape(p.value))
 
     def __getitem__(self, index):
-        p, i = self.stoch_indices[index]
+        p, i = self.stochastic_indices[index]
         val = ravel(p.value)
         return val[i]
 
     def i_logp(self, index):
         """
         Evaluates the log-probability of the Markov blanket of
-        a stoch owning a particular index.
+        a stochastic owning a particular index.
         """
         all_relevant_stochastics = set()
-        p,i = self.stoch_indices[index]
+        p,i = self.stochastic_indices[index]
         try:
             return p.logp + sum([child.logp for child in p.extended_children])
         except ZeroProbability:
@@ -381,7 +381,7 @@ class MAP(Model):
 
         old_val = copy(self[j])
 
-        if not self.stoch_indices[i][0] in self.stoch_indices[j][0].moral_neighbors:
+        if not self.stochastic_indices[i][0] in self.stochastic_indices[j][0].moral_neighbors:
             return 0.
 
         def diff_for_diff(val):
@@ -472,13 +472,13 @@ class NormApprox(MAP, Sampler):
         
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', output_path=None, eps=.001, diff_order = 5, verbose=0, **kwds):
+    def __init__(self, input=None, db='ram', output_path=None, eps=.001, diff_order = 5, **kwds):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
         
-        MAP.__init__(self, input, eps, diff_order, verbose)
+        MAP.__init__(self, input, eps, diff_order)
 
-        Sampler.__init__(self, input, db, output_path, verbose, reinit_model=False, **kwds)
+        Sampler.__init__(self, input, db, output_path, reinit_model=False, **kwds)
         self.C = NormApproxC(self)
 
     def fit(self, *args, **kwargs):

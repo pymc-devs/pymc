@@ -200,10 +200,10 @@ class Potential(PotentialBase):
         self._logp.force_compute()   
 
     def get_logp(self):
-        if self.verbose > 2:
+        if self.verbose > 1:
             print '\t' + self.__name__ + ': log-probability accessed.'
         _logp = self._logp.get()
-        if self.verbose > 2:
+        if self.verbose > 1:
             print '\t' + self.__name__ + ': Returning log-probability ', _logp
 
         # Check if the value is smaller than a double precision infinity:
@@ -304,12 +304,12 @@ class Deterministic(DeterministicBase):
         self._value.force_compute()
 
     def get_value(self):
-        if self.verbose > 2:
+        if self.verbose > 1:
             print '\t' + self.__name__ + ': value accessed.'
         _value = self._value.get()
         if isinstance(_value, ndarray):
             _value.flags['W'] = False
-        if self.verbose > 2:
+        if self.verbose > 1:
             print '\t' + self.__name__ + ': Returning value ',_value
         return _value
         
@@ -466,7 +466,7 @@ class Stochastic(StochasticBase):
                         trace=trace,
                         plot=plot,
                         verbose=verbose)
-            
+    
         # self._logp.force_compute()                   
         self.zero_logp_error_msg = "Stochastic " + self.__name__ + "'s value is outside its support,\n or it forbids its parents' current values."
 
@@ -503,7 +503,7 @@ class Stochastic(StochasticBase):
     def get_value(self):
         # Define value attribute
         
-        if self.verbose > 2:
+        if self.verbose > 1:
             print '\t' + self.__name__ + ': value accessed.'
         return self._value
 
@@ -511,7 +511,7 @@ class Stochastic(StochasticBase):
     def set_value(self, value):
         # Record new value and increment counter
         
-        if self.verbose > 2:
+        if self.verbose > 0:
             print '\t' + self.__name__ + ': value set to ', value
         
         # Value can't be updated if isdata=True
@@ -538,10 +538,10 @@ class Stochastic(StochasticBase):
 
 
     def get_logp(self):
-        if self.verbose > 2:
+        if self.verbose > 0:
             print '\t' + self.__name__ + ': logp accessed.'
         logp = self._logp.get()
-        if self.verbose > 2:
+        if self.verbose > 0:
             print '\t' + self.__name__ + ': Returning log-probability ', logp
         
         # Check if the value is smaller than a double precision infinity:

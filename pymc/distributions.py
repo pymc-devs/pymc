@@ -64,16 +64,16 @@ def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
     """
-    (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+    (dtype, name, parent_names, parents_default, docstr, logp, random, verbose) = new_class_args
     class new_class(Stochastic):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
-            (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+            (dtype, name, parent_names, parents_default, docstr, logp, random, verbose) = new_class_args
             parents=parents_default
                         
             # Figure out what argument names are needed.
-            arg_keys = ['name', 'parents', 'value', 'trace', 'rseed', 'doc', 'isdata', 'debug']
-            arg_vals = [None, parents, None, True, True, None, False, False]
+            arg_keys = ['name', 'parents', 'value', 'trace', 'rseed', 'doc', 'isdata', 'debug', 'verbose']
+            arg_vals = [None, parents, None, True, True, None, False, False, 0]
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed = ['name'] + parent_names + arg_keys[2:]
             
@@ -116,7 +116,7 @@ def new_dist_class(*new_class_args):
             #     random = random_wrapper_with_size
             # 
             # arg_dict_out.pop('size')        
-
+            
             # Call base class initialization method
             if arg_dict_out.pop('debug'):
                 logp = debug_wrapper(logp)
@@ -130,7 +130,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, dtype=np.float):
+def stochastic_from_dist(name, logp, random=None, dtype=np.float, verbose=0):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -152,14 +152,14 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float):
     name = capitalize(name)
     
     # Build docstring from distribution
-    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, trace=True, rseed=True, doc=None)\n\n'
+    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, trace=True, rseed=True, doc=None, verbose=0)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
 
     logp=valuewrapper(logp)
 
-    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random)
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, verbose)
 
 
 #-------------------------------------------------------------

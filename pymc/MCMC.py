@@ -44,7 +44,7 @@ class MCMC(Sampler):
     
     :SeeAlso: Model, Sampler, StepMethod.
     """
-    def __init__(self, input=None, db='ram', output_path=None, verbose=0, **kwds):
+    def __init__(self, input=None, db='ram', output_path=None, **kwds):
         """Initialize an MCMC instance.
 
         :Parameters:
@@ -61,7 +61,7 @@ class MCMC(Sampler):
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
-        Sampler.__init__(self, input, db, output_path, verbose, **kwds)
+        Sampler.__init__(self, input, db, output_path, **kwds)
 
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -81,9 +81,15 @@ class MCMC(Sampler):
         
             S = M.step_method_dict[A][0]
         """
+
         new_method = step_method_class(*args, **kwds)
+        if self.verbose > 1:
+            print 'Using step method %s. Stochastics: ' % step_method_class.__name__        
         for s in new_method.stochastics:
             self.step_method_dict[s].append(new_method)
+            if self.verbose > 1:
+                print '\t'+s.__name__
+            
         setattr(new_method, '_model', self)
     
     def _assign_step_methods(self):
@@ -98,6 +104,8 @@ class MCMC(Sampler):
                 new_method = assign_method(s)
                 setattr(new_method, '_model', self)
                 self.step_method_dict[s].append(new_method)
+                if self.verbose > 1:
+                    print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, s.__name__)
                 
         self.step_methods = set()
         for s in self.stochastics:
@@ -129,7 +137,8 @@ class MCMC(Sampler):
     def _loop(self):
         # Set status flag
         self.status='running'
-            
+
+
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
@@ -146,7 +155,8 @@ class MCMC(Sampler):
 
                 # Tell all the step methods to take a step
                 for step_method in self.step_methods:
-
+                    if self.verbose > 2:
+                        print 'Step method %s stepping.' % step_method._id
                     # Step the step method
                     step_method.step()
 
@@ -174,7 +184,7 @@ class MCMC(Sampler):
             self._tuning = False
             return
 
-        if self.verbose > 1:
+        if self.verbose > 0:
             print '\tTuning at iteration', self._current_iter
 
         # Initialize counter for number of tuning stochastics
@@ -183,6 +193,8 @@ class MCMC(Sampler):
         for step_method in self.step_methods:
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)
+            if self.verbose > 1:
+                print 'Tuning step method %s, returned %i' %(step_method._id, tuning_count)
 
         if not tuning_count:
             # If no step methods needed tuning, increment count

@@ -18,6 +18,8 @@ def sample_likelihood(model, iter):
     likelihood, p(data|self).
     """
     
+    model.find_generations()
+    
     loglikes = zeros(iter)
 
     if len (model.potentials) > 0:

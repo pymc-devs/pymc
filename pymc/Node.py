@@ -139,7 +139,7 @@ class Variable(Node):
         self.dtype=dtype        
         self.trace=trace
         self._plot=plot
-        Node.__init__(self, doc, name, parents, cache_depth, verbose=0)
+        Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
 
     def __str__(self):
         return str(self.value)

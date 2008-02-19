@@ -39,8 +39,6 @@ class Model(ObjectContainer):
             If nothing, all nodes are collected from the base namespace.
         - output_path : string
             The place where any output files should be put.
-        - verbose : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
     Attributes:
       - deterministics
@@ -68,7 +66,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, output_path=None, verbose=0):
+    def __init__(self, input=None, name=None, output_path=None):
         """Initialize a Model instance.
 
         :Parameters:
@@ -77,8 +75,6 @@ class Model(ObjectContainer):
               If nothing, all nodes are collected from the base namespace.
           - output_path : string
               The place where any output files should be put.
-          - verbose : integer
-              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
         """
 
         # Get stochastics, deterministics, etc.
@@ -88,9 +84,16 @@ class Model(ObjectContainer):
             input = __main__
         
         ObjectContainer.__init__(self, input)
+
+        if name is not None:
+            self.__name__ = name
+        elif hasattr(input, '__name__'):
+            self.__name__ = input.__name__
+        else:
+            self.__name__ = 'Model'
+        self.verbose = 0
         
         self.generations = []
-        self.verbose = verbose
         self.output_path = output_path
         
         if not hasattr(self, 'generations'):
@@ -176,8 +179,7 @@ class Sampler(Model):
             of the stochastics and deterministics sampled during the MCMC loop.            
         - output_path : string
             The place where any output files should be put.
-        - verbose : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+
 
     Inherits all methods and attributes from Model. Subclasses must either define the _loop method:
 
@@ -197,7 +199,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', output_path=None, verbose=0, reinit_model=True, **kwds):
+    def __init__(self, input=None, db='ram', output_path=None, reinit_model=True, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -209,8 +211,6 @@ class Sampler(Model):
               of the stochastics and deterministics sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
-          - verbose : integer
-              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
@@ -218,7 +218,7 @@ class Sampler(Model):
         
         # Instantiate superclass
         if reinit_model:
-            Model.__init__(self, input, output_path, verbose)
+            Model.__init__(self, input, output_path)
         
         # Specify database backend and save its keywords
         self._db_args = kwds        
@@ -248,9 +248,7 @@ class Sampler(Model):
         self.max_trace_length = iter
         self._iter = iter
         
-        # Flag for verbose output
-        self.verbose = verbose        
-        
+        self.verbose = verbose
         self.seed()        
         
         # Initialize database -> initialize traces.
