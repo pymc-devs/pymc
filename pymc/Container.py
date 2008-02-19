@@ -207,7 +207,10 @@ def file_items(container, iterable):
             
             # If the item is iterable, wrap it in a container. Replace the item
             # with the wrapped version.
-            new_container = Container(item)
+            try:
+                new_container = Container(item)
+            except:
+                continue
             if isinstance(container, dict):
                 container.replace(key, new_container)
             else:
