@@ -87,10 +87,6 @@ class Model(ObjectContainer):
 
         if name is not None:
             self.__name__ = name
-        elif hasattr(input, '__name__'):
-            self.__name__ = input.__name__
-        else:
-            self.__name__ = 'Model'
         self.verbose = 0
         
         self.generations = []
