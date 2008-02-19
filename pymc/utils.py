@@ -26,56 +26,6 @@ def check_list(thing, label):
         return thing
 
 
-class LinearCombination(Deterministic):
-    def __init__(self, name, x, A, b, trace=True, cache_depth=2, plot=True, verbose=0):
-        doc_str = """
-L = LinearCombination(x,A,b)
-
-A Deterministic returning the sum of A*x+b.
-Output will be of same shape as b.
-
-x must be a list or single Stochastic.
-
-A must be a dictionary of coefficients (matrices or scalars that 
-can be multiplied by x.value), keyed by element of x, or a single 
-coefficient.
-
-b must be a single Stochastic, scalar or array that can be added 
-to x.value.
-        """
-        self.x = check_list(x,'x')
-        self.b = b
-        self.A = A
-
-        if not (len(self.A)==len(self.x) and isinstance(self.A, dict)) and not isinstance(self.A, ndarray):
-            raise ValueError, 'Argument A must either be an array or a dictionary of the same length as x.'
-            
-        if isinstance(self.A, dict):
-            self.A_dict = True
-        else:
-            self.A_dict = False
-
-        def eval_fun(x, A, b):
-            out = b.copy()
-            for x_now in x:
-                if not self.A_dict:
-                    A_now = A
-                else:
-                    A_now = A[x_now]
-                out += A_now * x_now
-            return out
-
-        Deterministic.__init__(self,
-                                eval=eval_fun,
-                                doc = doc_str,
-                                name = name,
-                                parents = {'x':self.x, 'A':self.A, 'b':self.b},
-                                trace = trace,
-                                cache_depth = cache_depth,
-                                plot = plot,
-                                verbose = verbose)
-
-
 # TODO: Look into using numpy.core.numerictypes to do this part.
 from numpy import bool_
 from numpy import byte, short, intc, int_, longlong, intp

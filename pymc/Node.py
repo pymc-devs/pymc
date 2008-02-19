@@ -142,7 +142,7 @@ class Variable(Node):
         Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
 
     def __str__(self):
-        return str(self.value)
+        return self.__name__
         
 class ContainerBase(object):
     """

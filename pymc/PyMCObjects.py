@@ -2,8 +2,8 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-from copy import deepcopy, copy
-from numpy import array, ndarray, reshape, Inf, asarray
+from copy import copy
+from numpy import array, ndarray, reshape, Inf, asarray, dot
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 import pdb
@@ -317,7 +317,49 @@ class Deterministic(DeterministicBase):
         raise AttributeError, 'Deterministic '+self.__name__+'\'s value cannot be set.'
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
-    
+
+
+class LinearCombination(Deterministic):
+    def __init__(self, name, x, coefs, offset, *args, **kwds):
+        doc_str = """
+        L = LinearCombination(name, x, coefs, offsets[, dtype, trace, cache_depth, plot, verbose])
+
+        A Deterministic returning the sum of A*x+b.
+        Output will be of same shape as b.
+
+        x must be a list or single Stochastic.
+
+        A must be a dictionary of coefficients (matrices or scalars that 
+        can be multiplied by x.value), keyed by element of x, or a single 
+        coefficient.
+
+        b must be a single Stochastic, scalar or array that can be added 
+        to x.value.
+        """
+        self.x = x
+        self.coefs = coefs
+        self.offset = offset
+
+        if not len(self.coefs)==len(self.x) or not isinstance(self.coefs, dict):
+            raise ValueError, 'Argument coefs must a dictionary of the same length as x.'
+
+        self.coef_list = []
+        for i in xrange(len(self.x)):
+            self.coef_list.append(self.coefs[self.x[i]])
+        
+        def eval_fun(x, coef_list, offset):
+            out = offset
+            for i in xrange(len(x)):
+                out = out + dot(coef_list[i], x[i])
+            return out
+
+        Deterministic.__init__(self,
+                                eval=eval_fun,
+                                doc = doc_str,
+                                name = name,
+                                parents = {'x':self.x, 'coef_list':self.coef_list, 'offset':self.offset},
+                                *args, **kwds)    
+                                
 
 class Stochastic(StochasticBase):
     
