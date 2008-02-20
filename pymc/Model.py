@@ -28,7 +28,7 @@ except:
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-def find_generations(container):
+def find_generations(container, with_data = False):
     """
     A generation is the set of stochastic variables that only has parents in 
     previous generations.
@@ -39,9 +39,13 @@ def find_generations(container):
     # Find root generation
     generations.append(set())
     all_children = set()
-    for s in container.stochastics:
-        all_children.update(s.extended_children & container.stochastics)
-    generations[0] = container.stochastics - all_children
+    if with_data:
+        stochastics_to_iterate = container.stochastics | container.data_stochastics
+    else:
+        stochastics_to_iterate = container.stochastics
+    for s in stochastics_to_iterate:
+        all_children.update(s.extended_children & stochastics_to_iterate)
+    generations[0] = stochastics_to_iterate - all_children
 
     # Find subsequent _generations
     children_remaining = True
@@ -53,13 +57,13 @@ def find_generations(container):
         # Find children of last generation
         generations.append(set())
         for s in generations[gen_num-1]:
-            generations[gen_num].update(s.extended_children & container.stochastics)
+            generations[gen_num].update(s.extended_children & stochastics_to_iterate)
 
 
         # Take away stochastics that have parents in the current generation.
         thisgen_children = set()
         for s in generations[gen_num]:
-            thisgen_children.update(s.extended_children & container.stochastics)
+            thisgen_children.update(s.extended_children & stochastics_to_iterate)
         generations[gen_num] -= thisgen_children
 
 
