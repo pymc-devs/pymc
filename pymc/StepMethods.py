@@ -789,7 +789,7 @@ class AdaptiveMetropolis(StepMethod):
             except:
                 ord_sc = []
                 for s in self.stochastics:
-                    this_value = abs(np.ravel(s.value))
+                    this_value = abs(np.ravel(s.value)) or 1.
                     for elem in this_value:
                         ord_sc.append(elem)
                 # print len(ord_sc), self.dim
