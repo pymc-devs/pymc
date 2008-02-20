@@ -1,3 +1,7 @@
+# TODO: non-Gaussian parents need to be added to offset
+# TODO: Make get_offset method.
+# TODO: Fill in actual functionality.
+
 from pymc import *
 import numpy as np
 from scipy import sparse
@@ -26,7 +30,7 @@ def ravel_submodel(stochastic_list):
 
         # Inspect shapes of all stochastics and create stochastic slices.
         if isinstance(stochastic.value, np.ndarray):
-            stochastic_len[stochastic] = np.len(np.ravel(stochastic.value))
+            stochastic_len[stochastic] = len(np.ravel(stochastic.value))
         else:
             stochastic_len[stochastic] = 1
         slices[stochastic] = slice(_len, _len + stochastic_len[stochastic])
@@ -38,8 +42,20 @@ def ravel_submodel(stochastic_list):
 
     return stochastic_indices, stochastic_len, slices, _len
 
+def find_children_and_parents(stochastic_list):
+    children = []
+    parents = []
+    for s in stochastic_list:
+        if all([not child in stochastic_list for child in s.extended_children]):
+            children.append(s)
+        if all([not parent in stochastic_list for parent in s.extended_parents]):
+            parents.append(s)
+        
+    return set(children), set(parents)
+    
+        
 
-class GaussianSubmodel(SetContainer):
+class GaussianSubmodel(ListTupleContainer):
     """
     G = GaussianSubmodel(input)
     
@@ -69,27 +85,33 @@ class GaussianSubmodel(SetContainer):
     """
 
     def __init__(self, input):
-        SetContainer.__init__(self, input, name='GaussianSubmodel')
+        ListTupleContainer.__init__(self, input)
         self.check_input()
 
         self.generations = find_generations(self, with_data = True)
         self.stochastic_list = []
         for generation in self.generations[::-1]:
             self.stochastic_list += list(generation)
-        # self.stochastic_list = self.stochastics | self.data_stochastics
-        # Need to figure out children of model.
 
+        # Need to figure out children and parents of model.
+        self.children, self.parents = find_children_and_parents(self.stochastic_list)
+        
         self.stochastic_indices, self.stochastic_len, self.slices, self.len\
          = ravel_submodel(self.stochastic_list)
-
         
     def get_A(self, stochastic):
         """
         Need to use LinearCombination here eventually.
         """
+        A = []
         p = stochastic.parents['mu']
-        if p in self.stochastic_list:
-            return (self.slices[p], -np.eye(self.stochastic_len[p]))
+        if p.__class__ in gaussian_classes:
+            A.append((self.slices[p], -np.eye(self.stochastic_len[p])))
+        elif p.__class__ is LinearCombination:
+            for pp in p.x:
+                A.append((self.slices[pp], -p.coefs[pp]))
+            
+        return A
         
 
     def compute_diag_chol_facs(self):
@@ -100,9 +122,14 @@ class GaussianSubmodel(SetContainer):
         self.diag_chol_facs = {}
         
         for s in self.stochastic_list:
+
             parent_vals = s.parents.value
+
             if isinstance(s, Normal):
-                chol_now = np.sqrt(parent_vals['tau'])
+                # This is likely to be a bottleneck. Leaving it in for now for the sake of
+                # getting stuff working.
+                chol_now = np.empty(np.atleast_1d(s.value).shape)
+                chol_now.fill(np.sqrt(parent_vals['tau']))
                 
             else:    
                 if isinstance(s, MvNormal):
@@ -154,10 +181,10 @@ class GaussianSubmodel(SetContainer):
             chol_now = self.diag_chol_facs[s]
 
             A = self.get_A(s)
-
             if isinstance(s, Normal):
-                if A is not None:
-                    tau_chol[A[0], self.slices[s]] = A[1] * chol_now
+                if len(A) > 0:
+                    for A_elem in A:
+                        tau_chol[A_elem[0], self.slices[s]] = np.transpose(A_elem[1]) * chol_now
             
                 start_i = self.slices[s].start
                 for i in xrange(start_i, self.slices[s].stop):
@@ -166,9 +193,11 @@ class GaussianSubmodel(SetContainer):
             else:    
 
                 tau_chol[self.slices[s], self.slices[s]] = chol_now
-                if A is not None:
-                    flib.dtrmm_wrap(chol_now, A[1], side='R', transa='N', uplo='L')
-                    tau_chol[self.slices[s], A[0]] = A[1]
+
+                if len(A) > 0:
+                    for A_elem in A:
+                        flib.dtrmm_wrap(chol_now, A_elem[1], side='L', transa='T', uplo='L')
+                        tau_chol[A_elem[0], self.slices[s]] = np.transpose(A_elem[1])
 
         return sparse.csr_matrix(tau_chol)
 
@@ -177,9 +206,36 @@ class GaussianSubmodel(SetContainer):
         """
         Improve this...
         """
-        
+
         if not all([s.__class__ in gaussian_classes for s in self.stochastics]):
             raise ValueError, 'All stochastics must be Normal, MvNormal, MvNormalCov or MvNormalChol.'
+        
+        for s in self.stochastics:
+            
+            # Make sure all extended children are Gaussian.
+            for c in s.extended_children:
+                if c.__class__ in gaussian_classes:
+                    if c in s.children:
+                        if not s is c.parents['mu']:
+                            raise ValueError, 'Stochastic %s is a non-mu parent of stochastic %s' % (s,c)
+                else:
+                    raise ValueError, 'Stochastic %s has non-Gaussian extended child %s' % (s,c)
+            
+            # Make sure all children that aren't Gaussian but have extended children are LinearCombinations.
+            for c in s.children:
+                if isinstance(c, Deterministic):
+                    if len(c.extended_children) > 0:
+                        if c.__class__ is LinearCombination:
+                            if any([val is s for val in c.coefs.values()]) or s is c.offset:
+                                raise ValueError, 'Stochastic %s is considered either a coefficient or an offset by\
+                                                    LinearCombination %s. Must be considered an "x" value.' % (s, c)
+
+                        else:
+                            raise ValueError, 'Stochastic %s has a parent %s which is Deterministic, but not\
+                                                LinearCombination, which has extended children.' % (s,c)
+                
+                    
+                
             
         if not all([d.__class__ is LinearCombination for d in self.deterministics]):
             raise ValueError, 'All deterministics must be LinearCombinations.'
@@ -189,20 +245,30 @@ class GaussianSubmodel(SetContainer):
 if __name__=='__main__':
     
     A = Normal('A',0,1)
-    B = Normal('B',A,2)
-    C = Normal('C',B,.5, isdata=True)
-    D = Normal('D',A,.5)
-    G = GaussianSubmodel([D,B,C,A])
-
+    B = Normal('B',A,2*np.ones(2))
+    C_tau = np.diag([.5,.5])
+    C_tau[0,1] = C_tau[1,0] = .25
+    C = MvNormal('C',B, C_tau, isdata=True)
+    D_mean = LinearCombination('D_mean', x=[C], coefs={C:np.ones((3,2))}, offset=0)
+    
+    # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+    D = Normal('D',D_mean,.5*np.ones(3))
+    G = GaussianSubmodel([B,C,A,D,D_mean])
+    
     G.compute_diag_chol_facs()
     q=G.compute_tau_chol()
     p=q.todense()
-    print (p.T*p).I
     print (p*p.T).I
     
-    h = np.asmatrix(np.eye(3))
-    h[1,0] = -1
-    h[2,1] = -1
-    
-    tau = np.asmatrix(np.diag([C.parents['tau'], B.parents['tau'], A.parents['tau']]))
-    m = h*np.sqrt(tau)
+    # W = np.eye(2)
+    # W[0,1] = W[1,0] = .5
+    # x_list = [MvNormal('x_0',np.zeros(2),W)]
+    # for i in xrange(1,1000):
+    #     L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
+    #     x_list.append(MvNormal('x_%i'%i,L,W))
+    # # q = lam_dtrm('q',lambda x=x_list[999]: x**2)
+    # # h = Gamma('h', alpha=q, beta=1)
+    # G = GaussianSubmodel(x_list)
+    # G.compute_diag_chol_facs()
+    # q=G.compute_tau_chol()
+    # 

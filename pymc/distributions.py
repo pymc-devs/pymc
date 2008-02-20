@@ -1225,7 +1225,7 @@ if flib_blas_OK:
         mu_size = mu.shape
 
         if size==1:
-            out = random.normal(size=mu_size)
+            out = np.random.normal(size=mu_size)
             try:
                 flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
             except:
@@ -1325,7 +1325,7 @@ if flib_blas_OK:
         mu_size = mu.shape
 
         if size==1:
-            out = random.normal(size=mu_size)
+            out = np.random.normal(size=mu_size)
             try:
                 flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
             except:

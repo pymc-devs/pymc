@@ -240,7 +240,7 @@ class SetContainer(ContainerBase, set):
     
     :SeeAlso: Container, ListContainer, DictContainer, ArrayContainer
     """
-    def __init__(self, iterable, name='container'):
+    def __init__(self, iterable):
         set.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)
         for item in iterable:

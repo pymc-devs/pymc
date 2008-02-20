@@ -320,6 +320,10 @@ class Deterministic(DeterministicBase):
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
 
+    def _get_extended_children(self):
+        return extend_children(self.children)
+    extended_children = property(_get_extended_children, doc="All the stochastic variables and factor potentials whose logp attribute depends on self.value")
+
 
 class LinearCombination(Deterministic):
     def __init__(self, name, x, coefs, offset, *args, **kwds):
@@ -625,7 +629,7 @@ class Stochastic(StochasticBase):
     
     def _get_extended_parents(self):
         return extend_parents(self.parents.values())
-    extended_parents = property(_get_extended_parents, doc="All the variables on which self.logp depends.")
+    extended_parents = property(_get_extended_parents, doc="All the stochastic variables on which self.logp depends.")
     
     def _get_extended_children(self):
         return extend_children(self.children)
