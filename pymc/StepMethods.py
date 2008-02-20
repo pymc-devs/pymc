@@ -18,7 +18,7 @@ __docformat__='reStructuredText'
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
 # TODO: Test cases for binary and discrete Metropolises.
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis']
+__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs']
 
 StepMethodRegistry = []
 
@@ -536,6 +536,87 @@ class Metropolis(StepMethod):
             self.stochastic.value = rnormal(self.stochastic.value, self._asf * self._sig)
         elif self._dist == "Prior":
             self.stochastic.random()
+
+def safe_len(val):
+    if np.isscalar(val):
+        return 1
+    else:
+        return np.prod(np.shape(val))
+
+class Gibbs(Metropolis):
+    """
+    Base class for the Gibbs step methods
+    """
+    def __init__(self, stochastic, verbose=0):
+        Metropolis.__init__(self, stochastic, verbose=verbose)
+
+        @dtrm
+        def N(d=self.d):
+            """The total number of observations."""
+            return sum([safe_len(d_now) for d_now in d])
+
+        @dtrm
+        def sum_d(d=self.d):
+            """The sum of the number of 'successes' for each 'experiment'"""
+            return sum([sum(d_now) for d_now in d])
+
+        self.N_d = len(self.d)
+        self.N = N
+        self.sum_d = sum_d
+
+    # Override Metropolis's competence.
+    competence = staticmethod(StepMethod.competence)
+
+    def step(self):
+        if not self.conjugate:
+            logp = self.stochastic.logp
+
+        self.propose()
+
+        if not self.conjugate:
+
+            try:
+                logp_p = self.stochastic.logp
+            except ZeroProbability:
+                self.reject()
+
+            if log(np.random.random()) > logp_p - logp:
+                self.reject()
+
+    def tune(self, verbose):
+        return False
+
+    def propose(self):
+        raise NotImplementedError, 'The Gibbs class has to be subclassed, it is not usable directly.'
+
+    def check_children(self, child_class, parent_key):
+        self.d = []
+        for name in child_class.parent_names:
+            if not name == parent_key:
+                setattr(self, name, [])
+        for child in self.stochastic.children:
+            if not isinstance(child, child_class):
+                raise ValueError, 'Stochastic %s must have all %s children for %s\n \
+                                    to be able to handle it.' \
+                                    %(self.stochastic.__name__, child_class.__name__, self.__class__.__name__)
+            self.d.append(child)
+            for name in child_class.parent_names:
+                if not name == parent_key:
+                    getattr(self, name).append(child.parents[name])
+
+    def check_conjugacy(self, target_class):
+        if not isinstance(self.stochastic, target_class):
+            for name in self.stochastic.parents:
+                setattr(self, name, None)
+            self.conjugate = False
+        else:
+            for name in self.stochastic.parents:
+                setattr(self, name, lam_dtrm(name, lambda parent = self.stochastic.parents[name]: parent))
+            self.conjugate = True
+
+    def check_linear_extended_children(self):
+        pass
+
 
 class NoStepper(StepMethod):
     """
