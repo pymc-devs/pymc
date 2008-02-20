@@ -1,4 +1,6 @@
-from Model import *
+from pymc import *
+
+__all__ = ['graph', 'moral_graph']
 
 try:
     import pydot

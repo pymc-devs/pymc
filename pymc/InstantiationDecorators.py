@@ -3,6 +3,8 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
+__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'lam_dtrm', 'lambda_deterministic']
+
 import sys, inspect
 from imp import load_dynamic
 from PyMCObjects import Stochastic, Deterministic, Potential
@@ -168,7 +170,7 @@ def potential(__func__ = None, **kwds):
         return instantiate_pot(__func__)
 
     return instantiate_pot
-
+pot = potential
 
 def deterministic(__func__ = None, **kwds):
     """

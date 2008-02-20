@@ -1,6 +1,8 @@
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+__all__ = ['extend_children', 'extend_parents', 'ParentDict', 'LinearCombination', 'Stochastic', 'Deterministic', 'Potential']
+
 
 from copy import copy
 from numpy import array, ndarray, reshape, Inf, asarray, dot

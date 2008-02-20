@@ -18,6 +18,7 @@ Connelly Barnes.  Public domain.
 import sys
 
 __version__ = '1.0.1'
+__all__ = ['pytime', 'pytime_statement']
 
 if sys.platform == "win32":
   from time import clock

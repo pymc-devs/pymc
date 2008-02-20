@@ -1,7 +1,9 @@
 # March 30 07 AP: This can work with any Model subclass, not just Sampler.
 
-from pymc import Model
+from pymc import *
 from numpy import mean, exp, Inf, zeros
+
+__all__ = ['sample_likelihood', 'weight']
 
 def sample_likelihood(model, iter):
     """
@@ -18,7 +20,7 @@ def sample_likelihood(model, iter):
     likelihood, p(data|self).
     """
     
-    model.find_generations()
+    model.generations = find_generations(model)
     
     loglikes = zeros(iter)
 

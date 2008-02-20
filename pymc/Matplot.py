@@ -18,6 +18,8 @@ from numpy import histogram2d, mean, std, sort, prod, floor, shape
 from numpy import apply_along_axis
 import pdb
 
+__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'Plotter']
+
 def get_index_list(shape, j):
     """
     index_list = get_index_list(shape, j)

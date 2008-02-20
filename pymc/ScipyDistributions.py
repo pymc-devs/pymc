@@ -1,7 +1,7 @@
 import scipy.stats.distributions as sc_dst
 import inspect
 import numpy as np
-from pymc import Stochastic, DiscreteStochastic
+from pymc import Stochastic
 from copy import copy
 from distributions import *
 
@@ -33,7 +33,7 @@ generic.stats(<shape(s)>,loc=0,scale=1,moments='mv')
 generic.entropy(<shape(s)>,loc=0,scale=1)
     - (differential) entropy of the RV.
 """
-
+__all__ = ['stochastic_from_scipy_dist']
 def separate_shape_args(kwds, shape_args):
 
     new_kwds = {}
@@ -49,13 +49,13 @@ def stochastic_from_scipy_dist(scipy_dist):
     Return a Stochastic subclass made from a particular SciPy distribution.
     """
     
-    name = 'SciPy'+scipy_dist.__class__.__name__.replace('_gen','').capitalize()
+    name = scipy_dist.__class__.__name__.replace('_gen','').capitalize()
 
 
     (args, varargs, varkw, defaults) = inspect.getargspec(scipy_dist._cdf)
     shape_args = args[2:]            
     if isinstance(scipy_dist, sc_dst.rv_continuous):
-        base = Stochastic
+        dtype=float
     
         def logp(value, **kwds):
             args, kwds = separate_shape_args(kwds, shape_args)
@@ -65,7 +65,7 @@ def stochastic_from_scipy_dist(scipy_dist):
         defaults = [None] * (len(parent_names)-2) + [0., 1.]
         
     elif isinstance(scipy_dist, sc_dst.rv_discrete):
-        base = DiscreteStochastic
+        dtype=int
 
         def logp(value, **kwds):
             args, kwds = separate_shape_args(kwds, shape_args)
@@ -130,7 +130,7 @@ computation using the rv objects in scipy.stats.distributions directly before
 reporting the bug.
     """
         
-    new_class = new_dist_class(base, name, parent_names, parents_default, docstr, logp, random)
+    new_class = new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random)
     class newer_class(new_class):
         __doc__ = docstr
         rv = scipy_dist
@@ -188,3 +188,4 @@ for scipy_dist_name in sc_dst.__all__:
     if isinstance(scipy_dist, sc_dst.rv_continuous) or isinstance(scipy_dist, sc_dst.rv_discrete):
         new_dist = stochastic_from_scipy_dist(scipy_dist)
         locals()[new_dist.__name__] = new_dist
+        __all__.append(new_dist.__name__)

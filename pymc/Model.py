@@ -7,6 +7,7 @@ Base classes Model and Sampler are defined here.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
 
 __docformat__='reStructuredText'
+__all__ = ['find_generations', 'Model', 'Sampler']
 
 """ Summary"""
 
@@ -26,6 +27,47 @@ except:
 	
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
+
+def find_generations(container):
+    """
+    A generation is the set of stochastic variables that only has parents in 
+    previous generations.
+    """
+    
+    generations = []
+
+    # Find root generation
+    generations.append(set())
+    all_children = set()
+    for s in container.stochastics:
+        all_children.update(s.extended_children & container.stochastics)
+    generations[0] = container.stochastics - all_children
+
+    # Find subsequent _generations
+    children_remaining = True
+    gen_num = 0
+    while children_remaining:
+        gen_num += 1
+
+
+        # Find children of last generation
+        generations.append(set())
+        for s in generations[gen_num-1]:
+            generations[gen_num].update(s.extended_children & container.stochastics)
+
+
+        # Take away stochastics that have parents in the current generation.
+        thisgen_children = set()
+        for s in generations[gen_num]:
+            thisgen_children.update(s.extended_children & container.stochastics)
+        generations[gen_num] -= thisgen_children
+
+
+        # Stop when no subsequent _generations remain
+        if len(thisgen_children) == 0:
+            children_remaining = False
+    return generations
+
 
 class Model(ObjectContainer):
     """
@@ -93,47 +135,8 @@ class Model(ObjectContainer):
         self.output_path = output_path
         
         if not hasattr(self, 'generations'):
-            self.find_generations()
+            self.generations = find_generations(self)
                         
-    def find_generations(self):
-        """
-        Parse up the generations for model averaging. A generation is the
-        set of stochastic variables that only has parents in previous generations.
-        """
-        
-        self.generations = []
-
-        # Find root generation
-        self.generations.append(set())
-        all_children = set()
-        for s in self.stochastics:
-            all_children.update(s.extended_children & self.stochastics)
-        self.generations[0] = self.stochastics - all_children
-
-        # Find subsequent _generations
-        children_remaining = True
-        gen_num = 0
-        while children_remaining:
-            gen_num += 1
-
-
-            # Find children of last generation
-            self.generations.append(set())
-            for s in self.generations[gen_num-1]:
-                self.generations[gen_num].update(s.extended_children & self.stochastics)
-
-
-            # Take away stochastics that have parents in the current generation.
-            thisgen_children = set()
-            for s in self.generations[gen_num]:
-                thisgen_children.update(s.extended_children & self.stochastics)
-            self.generations[gen_num] -= thisgen_children
-
-
-            # Stop when no subsequent _generations remain
-            if len(thisgen_children) == 0:
-                children_remaining = False
-
     def draw_from_prior(self):
         """
         Sets all variables to random values drawn from joint 'prior', meaning contributions 

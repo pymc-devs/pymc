@@ -2,6 +2,8 @@
 Class MCMC, which fits probability models using Markov Chain Monte Carlo, is defined here.
 """
 
+__all__ = ['MCMC']
+
 from Model import Sampler
 from StepMethods import StepMethodRegistry, assign_method
 

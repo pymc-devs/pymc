@@ -9,6 +9,7 @@
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+__all__ = ['NormApproxMu', 'NormApproxC', 'MAP', 'NormApprox']
 
 from PyMCObjects import Stochastic, Potential
 from Node import ZeroProbability

@@ -1,6 +1,8 @@
 # Convergence diagnostics
 # Heidelberger and Welch (1983) ?
 
+__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis']
+
 import numpy as np
 import pymc
 

@@ -34,7 +34,7 @@ for mod in __modules__:
     
 for mod in __optmodules__:
     try:
-      exec "from %s import *" % mod
+      exec "import %s" % mod
     except ImportError:
         pass
 

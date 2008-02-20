@@ -21,7 +21,7 @@ import unittest
 from numpy.testing import *
 from pymc import flib, utils
 import numpy as np
-from numpy import exp, array, cov, prod, matrix
+from numpy import *
 from numpy.linalg import cholesky
 import os, pdb
 PLOT=True
