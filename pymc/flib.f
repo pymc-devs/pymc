@@ -216,6 +216,44 @@ c increment log-likelihood
       return
       END
 
+c
+      SUBROUTINE RSKEWNORM(x, nx, mu, tau, alph, nmu, ntau, nalph)
+cf2py intent(hide) nmu, ntau, nalph
+cf2py intent(out) x
+      DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
+      DOUBLE PRECISION U1,U2, mu_now, tau_now, alph_now, d_now
+      INTEGER i, nx, nalph, nmu, ntau
+      LOGICAL vec_mu, vec_tau, vec_alph
+      
+      vec_mu = (nmu.GT.1)
+      vec_tau = (ntau.GT.1)
+      vec_alph = (nalph.GT.1)
+      
+      alph_now = alph(1)
+      tau_now = tau(1)
+      mu_now = mu(1)
+      
+      do i=1,nx
+         if (vec_mu) then
+             mu_now = mu(i)
+         end if
+         if (vec_alph) then
+             alph_now = alph(i)
+         end if
+         if (vec_tau) then
+             tau_now = tau(i)
+         end if
+         
+         CALL RNORM(U1,U2)
+         d_now = alph_now / dsqrt(1.0D0 + alph_now * alph_now)
+         
+         x(i)=(d_now*dabs(U1)+dsqrt(1.0D0-d_now**2)*U2)
+     *   /dsqrt(tau_now)+mu_now
+                           
+      end do
+
+      RETURN
+      END
       subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
         
 c Return the uniform likelihood of x.
@@ -2049,6 +2087,7 @@ c assign value to array
       enddo
       return
       END
+
 
       SUBROUTINE RNORM(U1, U2)
 C

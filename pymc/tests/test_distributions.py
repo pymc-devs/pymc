@@ -683,6 +683,28 @@ class test_poisson(NumpyTestCase):
         a = flib.poisson([1,2,3], 2)
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
+
+class test_skew_normal(NumpyTestCase):
+    def check_consistency(self):
+        parameters = dict(mu=10, tau=10, alpha=-5)
+        hist,like, figdata = consistency(rskew_normal, skew_normal_like, parameters, nrandom=5000)
+        compare_hist(figname='truncnorm', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+    def normalization(self):
+        parameters = dict(mu=10, tau=10, alpha=-5)
+        integral = normalization(skew_normal_like, parameters, [8.5, 10.5], 200)
+        assert_almost_equal(integral, 1, 2)
+    
+    def test_calling(self):
+        a = skew_normal_like([0,1,2], 2, 1, 5)
+        b = skew_normal_like([0,1,2], [2,2,2], 1, 5)
+        c = skew_normal_like([0,1,2], [2,2,2], [1,1,1], 5)
+        d = skew_normal_like([0,1,2], [2,2,2], [1,1,1], [5,5,5])
+
+        assert_equal(a,b)
+        assert_equal(a,c)
+        assert_equal(a,d)
         
 class test_truncnorm(NumpyTestCase):
     def check_consistency(self):

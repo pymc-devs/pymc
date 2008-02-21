@@ -34,7 +34,7 @@ class ArgumentError(AttributeError):
 univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'lognormal', 'negative_binomial', 'normal', 'poisson', 'uniform',
-'weibull']
+'weibull','skew_normal']
 
 if flib_blas_OK:
     mv_distributions = ['dirichlet','multivariate_hypergeometric','mv_normal','mv_normal_cov','mv_normal_chol','multinomial', 'wishart','wishart_cov']
@@ -1565,6 +1565,27 @@ def truncnorm_like(x, mu, sigma, a, b):
         else:
             Phi = n*d
         return phi - Phi
+
+# Azzalini's skew-normal-----------------------------------
+@randomwrap
+def rskew_normal(mu,tau,alpha,size=1):
+    return flib.rskewnorm(size,mu,tau,alpha)
+
+def skew_normal_like(x,mu,tau,alpha):
+    r"""skew_normal_like(x,mu,tau,alpha)
+    
+    Azzalini's skew-normal log-likelihood
+    
+    ..math::
+        f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{tau}\alpha) \phi(x,\mu,\tau)
+    """
+    mu = np.asarray(mu)
+    tau = np.asarray(tau)
+    return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+    
+def skew_normal_expval(mu,tau,alpha):
+    delta = alpha / np.sqrt(1.+alpha**2)
+    return mu + np.sqrt(2/pi/tau) * delta
 
 # Uniform--------------------------------------------------
 @randomwrap
