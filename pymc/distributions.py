@@ -1569,21 +1569,42 @@ def truncnorm_like(x, mu, sigma, a, b):
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
 def rskew_normal(mu,tau,alpha,size=1):
+    """rskew_normal(mu, tau, alpha, size=1)
+    
+    Skew-normal random variates.
+    """
     return flib.rskewnorm(size,mu,tau,alpha)
 
 def skew_normal_like(x,mu,tau,alpha):
-    r"""skew_normal_like(x,mu,tau,alpha)
+    r"""skew_normal_like(x, mu, tau, alpha)
     
     Azzalini's skew-normal log-likelihood
     
     ..math::
         f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{tau}\alpha) \phi(x,\mu,\tau)
+        
+    :Parameters:
+      x : float
+        Input data.
+      mu : float
+        Mean of the distribution.
+      tau : float
+        Precision of the distribution, > 0.
+      alpha : float
+        Shape parameter of the distribution.
+
+    :Note:
+      - See http://azzalini.stat.unipd.it/SN/
     """
     mu = np.asarray(mu)
     tau = np.asarray(tau)
     return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
     
 def skew_normal_expval(mu,tau,alpha):
+    """skew_normal_expval(mu, tau, alpha)
+    
+    Expectation of Azzalini's skew-normal random variables.
+    """
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
 
