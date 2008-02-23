@@ -158,25 +158,28 @@ The \texttt{NormApprox} class extends the \texttt{MAP} class by approximating th
 \end{description}
 It provides the following additional attributes:
 \begin{description}
-    \item[mu:] A special dictionary-like object which can be keyed with multiple variables. \texttt{N.mu[p1, p2, p3]} would return the approximate posterior mean values of stochastic variables \texttt{p1}, \texttt{p2} and \texttt{p3}, ravelled and concatenated to form a vector.
+    \item[mu:] A special dictionary-like object that can be keyed with multiple variables. \texttt{N.mu[p1, p2, p3]} would return the approximate posterior mean values of stochastic variables \texttt{p1}, \texttt{p2} and \texttt{p3}, ravelled and concatenated to form a vector.
     \item[C:] Another special dictionary-like object. \texttt{N.C[p1, p2, p3]} would return the approximate posterior covariance matrix of stochastic variables \texttt{p1}, \texttt{p2} and \texttt{p3}. As with \texttt{mu}, these variables' values are ravelled and concatenated before their covariance matrix is constructed.
 \end{description}
 
 \section{Markov Chain Monte Carlo}
-MCMC samplers fit models with Markov Chain Monte Carlo, and are of course subclasses of \texttt{Sampler}. At instantiation, they assign a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
+ \texttt{MCMC} is a subclass of \texttt{Sampler}. \texttt{MCMC} objects fit models with Markov Chain Monte Carlo. At the beginning of a sampling loop, they assign a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
 
 MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
 \begin{description}
     \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations. \textbf{Cite paper that says it's OK to keep tuning.}
     \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{Sampler.isample}.
+    \item[\texttt{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \texttt{method} to handle some stochastic variables. The extra arguments are passed to the init method.
     \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called.
     \item[\texttt{goodness()}:] \textbf{Someone else document this}
 \end{description}
 
+MCMC samplers' step methods can be accessed via the \texttt{\textbf{step_method_dict}} attribute. \texttt{M.step_method_dict[x]} returns a list of the step methods \texttt{M} will use to handle the stochastic variable \texttt{x}.
+
 \section{Step methods} 
 \label{sec:stepmethod} 
 
-Step method objects handle individual stochastic variables, or sometimes groups of these. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \texttt{StepMethod} implements a method called \texttt{step()}, which does this. Step methods with adaptive tuning parameters can optionally implement a method called \texttt{tune()}, which causes them to assess performance so far and adjust.
+Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \texttt{StepMethod} implements a method called \texttt{step()}, which does this. Step methods with adaptive tuning parameters can optionally implement a method called \texttt{tune()}, which causes them to assess performance so far and adjust.
 
 The major subclasses of \texttt{StepMethod} are \texttt{Metropolis} and \texttt{Gibbs}. PyMC provides several flavors of the basic Metropolis steps, but the Gibbs steps are not implemented in the current release. However, because it is feasible to write Gibbs step methods for particular applications , the \texttt{Gibbs} class will be documented here.
 
@@ -198,9 +201,9 @@ Metropolis step methods have the following useful attributes:
 
 Metropolis step methods can be created as follows:
 \begin{verbatim}
-M = Metropolis(stochastic, scale=1., dist=None, verbose=0)
+M = Metropolis(stochastic, scale=1., sig=None, dist=None, verbose=0)
 \end{verbatim}
-The \texttt{scale} argument determines \texttt{proposal\_sig} as follows:
+The \texttt{scale} and \texttt{sig} arguments determine \texttt{proposal\_sig}. If \texttt{sig} is provided, \texttt{proposal\_sig} is set to \texttt{sig}. Otherwise it is computed from \texttt{scale} as follows:
 \begin{verbatim}
 if all(self.stochastic.value != 0.):
     self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale

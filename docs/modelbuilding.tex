@@ -218,7 +218,7 @@ def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
 In the one-liner and direct interfaces, the \texttt{isdata} argument can be simply set to \texttt{True}.
 
 
-\section{The \texttt{Deterministic} class}\label{dtrm}
+\section{The \texttt{Deterministic} class}\label{deterministic}
 
 The \texttt{Deterministic} class represents variables whose values are fully determined by the values of their parents. In model (\ref{disastermodel}), $r$ can be represented as a deterministic variable. Recall that $r$ was defined by
 \begin{eqnarray*}
@@ -246,7 +246,7 @@ Deterministic variables are less complicated than stochastic variables, and ther
 \begin{description}
     \item[Decorator] A deterministic variable can be instantiated via a decorator in a way very similar to \texttt{Stochastic}'s short interface:
 \begin{verbatim}
-@dtrm
+@deterministic
 def r(switchpoint = s, early_rate = e, late_rate = l):
     """The rate of disaster occurrence."""
     value = zeros(N)
@@ -254,7 +254,7 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-The function supplied should return a new value (which may be any object) for the variable. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The function's \texttt{__name__} is passed on to the variable. The \texttt{dtrm} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
+The function supplied should return a new value (which may be any object) for the variable. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The function's \texttt{__name__} is passed on to the variable. The \texttt{deterministic} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
     \item[Direct] The same variable could be instantiated directly as follows:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
@@ -354,7 +354,7 @@ Containers have the following useful attributes in addition to \texttt{value}:
     \item\texttt{variables}
     \item\texttt{stochastics}
     \item\texttt{potentials}
-    \item\texttt{dtrms}
+    \item\texttt{deterministics}
     \item\texttt{data_stochastics}
     \item\texttt{step_methods}.
 \end{itemize}

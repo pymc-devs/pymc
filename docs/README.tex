@@ -94,8 +94,8 @@ Sped up distributions by an optimization of the Fortran functions.
 
 From a python shell, type:
 \begin{quote}{\ttfamily \raggedright \noindent
-import~PyMC~\\
-S~=~PyMC.MCMC(model{\_}definition,~db='pickle')~\\
+import~pymc~\\
+S~=~pymc.MCMC(model{\_}definition,~db='pickle')~\\
 S.isample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 where model{\_}definition is a module or iterable object containing variables, data and (possibly) factor potentials defining your problem. 
@@ -114,12 +114,12 @@ A module declaring the example model
 \end{eqnarray*}
 where $D$ is data could be implemented as follows:
 \begin{verbatim}
-    import PyMC
+    import pymc
     import numpy
 
-    s=PyMC.Uniform('s',lower=0,upper=110)
-    e=PyMC.Exponential('e',beta=1)
-    l=PyMC.Exponential('l',beta=1)
+    s=pymc.Uniform('s',lower=0,upper=110)
+    e=pymc.Exponential('e',beta=1)
+    l=pymc.Exponential('l',beta=1)
 
     D_array=numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                           3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -129,11 +129,11 @@ where $D$ is data could be implemented as follows:
                           3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                           0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-    @PyMC.data
-    @PyMC.discrete_stoch
+    @pymc.data
+    @pymc.discrete_stochastic
     def D(value = D_array, s = s, e = e, l = l):
-        return PyMC.poisson_like(value[:s],e) \
-        + PyMC.poisson_like(value[s:],l)
+        return pymc.poisson_like(value[:s],e) \
+        + pymc.poisson_like(value[s:],l)
 \end{verbatim}
 Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
 complete description of the package, classes and some examples to get started.
