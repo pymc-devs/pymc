@@ -944,12 +944,12 @@ class AdaptiveMetropolis(StepMethod):
     
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
-        old_sig = self._sig
+        # old_sig = self._sig
         try:
             self._sig = np.linalg.cholesky(self.C)
         except np.linalg.LinAlgError:
             print 'Warning, covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value.'
-            self._sig = old_sig
+            # self._sig = old_sig
              
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
