@@ -140,6 +140,10 @@ if hasattr(database, 'hdf5'):
             db.close() # For some reason, the hdf5 file remains open.
             S.db.close()
             
+            # Check that the step method state was correctly restored.
+            sm = S.step_methods.pop()
+            assert(sm._accepted+sm._rejected ==600)
+            
         def check_mode(self):
             S = MCMC(DisasterModel, db='hdf5')
             try:
