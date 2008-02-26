@@ -113,6 +113,8 @@ class MCMC(Sampler):
         for s in self.stochastics:
             self.step_methods |= set(self.step_method_dict[s])
 
+        self.restore_sm_state()
+
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
         """
         sample(iter, burn, thin, tune_interval)
@@ -230,20 +232,14 @@ class MCMC(Sampler):
 
         return state
     
-    def restore_state(self):
+    def restore_sm_state(self):
         
-        state = Sampler.restore_state(self)
-        
-        self.step_methods = set()
-        for s in self.stochastics:
-            self.step_methods |= set(self.step_method_dict[s])        
+        sm_state = self.db.getstate().get('step_methods', {})
         
         # Restore stepping methods state
-        sm_state = state.get('step_methods', {})
         for sm in self.step_methods:
             sm.__dict__.update(sm_state.get(sm._id, {}))
             
-        return state
         
     def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
         """

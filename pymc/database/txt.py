@@ -22,7 +22,8 @@ class Trace(ram.Trace):
         arr = self.gettrace()
         f = open(path, 'w')
         print >> f, '# Variable: %s' % self._obj.__name__
-        print >> f, '# Description: %s' % self._obj.__doc__.replace('\n', '\n# ')
+        doc = self._obj.__doc__ or ""
+        print >> f, '# Description: %s' % doc.replace('\n', '\n# ')
         print >> f, '# Burned: %d, thinned= %d' % \
             (self.db.model._burn, self.db.model._thin)
         print >> f, '# Sample shape: %s' % str(arr.shape)

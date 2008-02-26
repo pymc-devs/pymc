@@ -764,7 +764,7 @@ class AdaptiveMetropolis(StepMethod):
             Stochastic objects to be handled by the AM algorith,
             
       - cov : array
-            Initial guess for the covariance matrix C_0. 
+            Initial guess for the covariance matrix C. 
             
       - delay : int
           Number of successful steps before the empirical covariance is computed.
@@ -810,10 +810,8 @@ class AdaptiveMetropolis(StepMethod):
         
         self.check_type()
         self.dimension()
-        self.C_0 = self.initialize_cov(cov, scales)           
-        
-        #self._sig = msqrt(self.C_0)
-        self._sig = np.linalg.cholesky(self.C_0)
+        self.set_cov(cov, scales)           
+        self.update_sig()
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
@@ -822,14 +820,13 @@ class AdaptiveMetropolis(StepMethod):
         self._current_iter = 0
         
         self._proposal_deviate = np.zeros(self.dim)
-        self.C = self.C_0.copy()
         self.chain_mean = np.asmatrix(np.zeros(self.dim))
         self._trace = []
         
         if self.verbose >= 1:
             print "Initialization..."
             print 'Dimension: ', self.dim
-            print "C_0: ", self.C_0
+            print "C_0: ", self.C
             print "Sigma: ", self._sig
               
     @staticmethod
@@ -847,13 +844,13 @@ class AdaptiveMetropolis(StepMethod):
             return 0
                 
                 
-    def initialize_cov(self, cov=None, scales=None, scaling=20):
-        """Define C_0, the initial jump distributioin covariance matrix.
+    def set_cov(self, cov=None, scales=None, trace=2000, scaling=20):
+        """Define C, the jump distributioin covariance matrix.
         
         Return:
             - cov,  if cov != None
             - covariance matrix built from the scales dictionary if scales!=None
-            - covariance matrix estimated from the stochastics trace
+            - covariance matrix estimated from the stochastics last trace values.
             - covariance matrix estimated from the stochastics value, scaled by 
                 scaling parameter.
         """
@@ -861,12 +858,12 @@ class AdaptiveMetropolis(StepMethod):
             return cov
         elif scales:
             ord_sc = self.order_scales(scales)    
-            return np.eye(self.dim)*ord_sc
+            self.C = np.eye(self.dim)*ord_sc
         else:
             try:
-                a = self.trace2array(-2000, -1)
+                a = self.trace2array(-trace, -1)
                 nz = a[:, 0]!=0
-                return np.cov(a[nz, :], rowvar=0)
+                self.C = np.cov(a[nz, :], rowvar=0)
             except:
                 ord_sc = []
                 for s in self.stochastics:
@@ -874,7 +871,7 @@ class AdaptiveMetropolis(StepMethod):
                     for elem in this_value:
                         ord_sc.append(elem)
                 # print len(ord_sc), self.dim
-                return np.eye(self.dim)*ord_sc/scaling
+                self.C = np.eye(self.dim)*ord_sc/scaling
             
         
     def check_type(self):
@@ -932,25 +929,28 @@ class AdaptiveMetropolis(StepMethod):
         chain = np.asarray(self._trace)
         
         # Recursively compute the chain mean 
-        cov, mean = self.recursive_cov(self.C, self._trace_count, 
+        self.C, self.chain_mean = self.recursive_cov(self.C, self._trace_count, 
             self.chain_mean, chain, scaling=scaling, epsilon=epsilon)
         
         if self.verbose > 0:
-            print "\tUpdating covariance ...\n", cov
-            print "\tUpdating mean ... ", mean
+            print "\tUpdating covariance ...\n", self.C
+            print "\tUpdating mean ... ", self.chain_mean
         
         # Update state
-        self.C = cov
-        #self._sig = msqrt(self.C)
+        self.update_sig()
+        
+        self._trace_count += len(self._trace)
+        self._trace = []  
+    
+    def update_sig(self):
+        """Compute the Cholesky decomposition of self.C."""
         old_sig = self._sig
         try:
-            self._sig = np.linalg.cholesky(cov)
+            self._sig = np.linalg.cholesky(self.C)
         except np.linalg.LinAlgError:
-            print 'Warning, covariance was not positive definite. Skipping update of proposal distribution.'
+            print 'Warning, covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value.'
             self._sig = old_sig
-        self.chain_mean = mean
-        self._trace_count += len(self._trace)
-        self._trace = []        
+             
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.

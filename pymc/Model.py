@@ -399,7 +399,7 @@ class Sampler(Model):
             self.db = module.Database(**self._db_args)
         elif isinstance(db, database.base.Database):
             self.db = db
-            self.restore_state()
+            self.restore_sampler_state()
         else:
             module = db.__module__
             self.db = db
@@ -512,7 +512,7 @@ class Sampler(Model):
         except:
             print 'Warning, unable to save state.'
 
-    def restore_state(self):
+    def restore_sampler_state(self):
         """
         Restore the state of the sampler and to
         the state stored in the database.
@@ -531,7 +531,6 @@ class Sampler(Model):
             except:
                 pass
         
-        return state
             
     def remember(self, trace_index = None):
         """
