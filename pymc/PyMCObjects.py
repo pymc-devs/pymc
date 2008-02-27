@@ -57,6 +57,8 @@ def extend_parents(parents):
                 for grandparent in parent.parents.itervalues():
                     if isinstance(grandparent, Variable):
                         new_parents.add(grandparent)
+                    elif isinstance(grandparent, ContainerBase):
+                        new_parents |= grandparent.variables
         
         elif isinstance(parent, ContainerBase):
             need_recursion = True

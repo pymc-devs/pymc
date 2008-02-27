@@ -91,8 +91,9 @@ def find_children_and_parents(stochastic_list):
         
     return set(children), set(parents)
     
-def order_stochastic_list(container):        
-    generations = find_generations(container, with_data = True)
+def order_stochastic_list(stochastics):      
+      
+    generations = find_generations(stochastics)
     out = []
     for generation in generations[::-1]:
         out += list(generation)

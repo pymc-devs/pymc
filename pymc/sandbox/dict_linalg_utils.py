@@ -1,6 +1,11 @@
 from pymc import *
 import numpy as np
 
+# Need to use cvxopt or wrap CHOLMOD, because even blocked there's no 
+# guarantee that fill will be low. That means all you need is the 'squaring'
+# routine and to_csr and from_csr functions.
+
+
 class stochastic_keyed_dict_mat(object):
     """
     A sparse symmetric or upper-triangular matrix stored as a
