@@ -31,22 +31,19 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-univ_distributions = ['bernoulli', 'beta', 'binomial', 'cauchy', 'chi2',
+sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'negative_binomial', 'normal', 'poisson', 'uniform',
+'inverse_gamma', 'lognormal', 'normal', 'uniform',
 'weibull','skew_normal']
 
-if flib_blas_OK:
-    mv_distributions = ['dirichlet','multivariate_hypergeometric','mv_normal','mv_normal_cov','mv_normal_chol','multinomial', 'wishart','wishart_cov']
-else:
-    mv_distributions = ['dirichlet','multivariate_hypergeometric','multinomial']
+sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical']
 
-discrete_distributions = ['binomial', 'poisson', 'multinomial']
-continuous_distributions = univ_distributions + mv_distributions
-for non_cont in discrete_distributions + ['bernoulli']:
-    continuous_distributions.remove(non_cont)
+mv_continuous_distributions = ['dirichlet','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
-availabledistributions = univ_distributions+mv_distributions
+mv_discrete_distributions = ['multivariate_hypergeometric','multinomial']
+
+
+availabledistributions = sc_continuous_distributions + sc_discrete_distributions + mv_continuous_distributions + mv_discrete_distributions
 
 # Changes lower case, underscore-separated names into "Class style" capitalized names
 # For example, 'negative_binomial' becomes 'NegativeBinomial'
@@ -58,20 +55,31 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # ============================================================================================
 
 
+def bind_size(randfun, size):
+    def newfun(*args, **kwargs):
+        return randfun(size=size, *args, **kwargs)
+    return newfun
+
 def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
     """
-    (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+    (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
-            (dtype, name, parent_names, parents_default, docstr, logp, random) = new_class_args
+            (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
             parents=parents_default
                         
             # Figure out what argument names are needed.
-            arg_keys = ['name', 'parents', 'value', 'trace', 'rseed', 'doc', 'isdata', 'debug', 'verbose']
-            arg_vals = [None, parents, None, True, True, None, False, False, 0]
+            arg_keys = ['name', 'parents', 'value', 'isdata', 'size', 'trace', 'rseed', 'doc', 'debug', 'verbose']
+            arg_vals = [None, parents, None, False, 1, True, True, None, False, 0]
+            
+            # No size argument allowed for multivariate distributions.
+            if mv:
+                arg_keys.pop(4)
+                arg_vals.pop(4)
+            
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed = ['name'] + parent_names + arg_keys[2:]
             
@@ -105,16 +113,17 @@ def new_dist_class(*new_class_args):
                 else:
                     raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
             
-            # Determine size and shape of value
-            # size = arg_dict_out['size']
-            # if size is not None:
-            #     def random_wrapper_with_size(random=random,size=size,**parents):
-            #         return random(size=size,**parents)
-            #     random_wrapper_with_size.__name__ = random.__name__
-            #     random = random_wrapper_with_size
-            # 
-            # arg_dict_out.pop('size')        
-            
+            # Determine size desired for scalar variables
+            if not mv:
+                size = arg_dict_out.pop('size')
+                init_val = arg_dict_out['value']
+                if init_val is not None:
+                    if np.isscalar(init_val):
+                        size = 1
+                    else:
+                        size = len(init_val)
+                random = bind_size(random, size)
+                                    
             # Call base class initialization method
             if arg_dict_out.pop('debug'):
                 logp = debug_wrapper(logp)
@@ -128,7 +137,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, dtype=np.float):
+def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -150,14 +159,16 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float):
     name = capitalize(name)
     
     # Build docstring from distribution
-    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, trace=True, rseed=True, doc=None, verbose=0)\n\n'
+    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, isdata=False,'
+    if not mv:
+        docstr += ' size=1,'
+    docstr += ' trace=True, rseed=True, doc=None, debug=False, verbose=0)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
 
     logp=valuewrapper(logp)
-
-    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random)
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv)
 
 
 #-------------------------------------------------------------
@@ -205,7 +216,7 @@ def randomwrap(func):
     #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
-    mv = func.__name__[1:] in mv_distributions
+    mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
 
     def wrapper(*args, **kwds):
         
@@ -537,30 +548,27 @@ def binomial_like(x, n, p):
 
 # Categorical----------------------------------------------
 # GOF not working yet, because expval not conform to wrapper spec.
-@randomwrap
-def rcategorical(probs, minval=0, step=1):
-    return flib.rcat(probs, minval, step)
+# @randomwrap
+def rcategorical(p, minval=0, step=1, size=1):
+    return flib.rcat(p, minval, step, size)
 
-def categorical_expval(probs, minval=0, step=1):
+def categorical_expval(p, minval=0, step=1):
     """
-    categorical_expval(probs, minval=0, step=1)
+    categorical_expval(p, minval=0, step=1)
 
     Expected value of categorical distribution.
     """
-    return np.sum([p*(minval + i*step) for i, p in enumerate(probs)])
+    return np.sum([p*(minval + i*step) for i, p in enumerate(p)])
 
-def categorical_like( x, probs, minval=0, step=1):
+def categorical_like( x, p, minval=0, step=1):
     """
     Categorical log-likelihood.
     Accepts an array of probabilities associated with the histogram,
     the minimum value of the histogram (defaults to zero),
     and a step size (defaults to 1).
     """
-
-    # Normalize, if not already
-    if np.sum(probs) != 1.0: probs = probs/np.sum(probs)
     
-    return flib.categorical(x, probs, minval, step)
+    return flib.categor(x, p, minval, step)
 
 
 # Cauchy----------------------------------------------
@@ -654,23 +662,30 @@ def rdirichlet(theta, size=1):
     rdirichlet(theta, size=1)
 
     Dirichlet random variates.
+    
+    NOTE only the first k-1 values are returned.
+    The k'th value is equal to one minus the sum of the first k-1 values.
     """
 
     gammas = rgamma(theta,1,size)
     if size > 1 and np.size(theta) > 1:
-        return (gammas.transpose()/gammas.sum(1)).transpose()
+        return (gammas[:,:-1].transpose()/gammas.sum(1)).transpose()
     elif np.size(theta)>1:
-        return gammas/gammas.sum()
+        return gammas[:-1]/gammas.sum()
     else:
-        return gammas
+        return 1.
 
 def dirichlet_expval(theta):
     """
     dirichlet_expval(theta)
 
     Expected value of Dirichlet distribution.
+    
+    NOTE only the expectations of the first k-1 values are returned.
+    The expectation of the k'th value is one minus the expectations of
+    the first k-1 values.
     """
-    return theta/np.sum(theta)
+    return theta[:-1]/np.sum(theta)
 
 def dirichlet_like(x, theta):
     r"""
@@ -684,18 +699,25 @@ def dirichlet_like(x, theta):
         f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
     :Parameters:
-      x : (n,k) array
+      x : (n,k-1) array
         Where 'n' is the number of samples and 'k' the dimension.
-        :math:'0 < x_i < 1',  :math:'\sum_{i=1}^k x_i = 1'
+        :math:'0 < x_i < 1',  :math:'\sum_{i=1}^{k-1} x_i < 1'
       theta : (n,k) or (1,k) float
         :math:'\theta > 0'
+    
+    :Note:
+      There is an `implicit' k'th value of x, equal to :math:'\sum_{i=1}^{k-1} x_i'.
     """
 
-    x = np.atleast_2d(x)
-    
-    if np.any(np.around(x.sum(1), 6)!=1):
-        return -np.np.Inf
-    return flib.dirichlet(x,np.atleast_2d(theta))
+    # Disabled multiple x's and theta's ... got confused reparametrizing
+    # by first k-1. AP
+    #
+    # x = np.atleast_2d(x)
+    # 
+    # if np.any(np.around(x.sum(1), 6)!=1):
+    #     return -np.Inf
+    # return flib.dirichlet(x,np.atleast_2d(theta))
+    return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------
 @randomwrap
@@ -1097,7 +1119,7 @@ def rmultinomial(n,p,size=None): # Leaving size=None as the default means return
 
     Random multinomial variates.
     """
-    
+
     # Single value for p:
     if len(np.shape(p))==1:
         return np.random.multinomial(n,p,size)
@@ -1603,7 +1625,7 @@ def skew_normal_like(x,mu,tau,alpha):
 def skew_normal_expval(mu,tau,alpha):
     """skew_normal_expval(mu, tau, alpha)
     
-    Expectation of Azzalini's skew-normal random variables.
+    Expectation of skew-normal random variables.
     """
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
@@ -1963,13 +1985,22 @@ def local_decorated_likelihoods(obj):
 
 # Create Stochastic instantiators
 
-for dist in continuous_distributions:
+for dist in sc_continuous_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
     locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random)
-    
-for dist in discrete_distributions:
+
+for dist in mv_continuous_distributions:
+    dist_logp, dist_random = name_to_funcs(dist, locals())
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, mv=True)    
+
+for dist in sc_discrete_distributions:
     dist_logp, dist_random = name_to_funcs(dist, locals())
     locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, dtype=np.int)
+
+for dist in mv_discrete_distributions:
+    dist_logp, dist_random = name_to_funcs(dist, locals())
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, dtype=np.int, mv=True)
+
 
 dist_logp, dist_random = name_to_funcs('bernoulli', locals())
 Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random, dtype=np.bool)
@@ -1999,6 +2030,86 @@ def one_over_x_like(x):
 Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
 DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
 OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
+
+# Children of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
+
+def extend_dirichlet(p):
+    if len(p.shape)>1:
+        return np.hstack((p, np.atleast_2d(1.-np.sum(p))))
+    else:
+        return np.hstack((p,1.-np.sum(p)))
+
+@valuewrapper
+def mod_categor_like(x,p,minval=0,step=1):
+    return categorical_like(x,extend_dirichlet(p), minval, step)
+
+def mod_rcategor(p,minval,step,size=1):
+    return rcategorical(extend_dirichlet(p), minval, step, size)
+
+class Categorical(Stochastic):
+    """
+    C = Categorical(name, p, minval, step[, trace=True, value=None, 
+       rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
+    
+    A categorical random variable. Parents are p, minval, step.
+    
+    If parent p is Dirichlet and has length k-1, an implicit k'th
+    category is assumed to exist with associated probability 1-sum(p.value).
+    
+    Otherwise parent p's value should sum to 1.
+
+    """
+    def __init__(self, name, p, minval=0, step=1, value=None, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
+        
+        if value is not None:
+            if np.isscalar(value):
+                self.size = 1
+            else:
+                self.size = len(value)
+        else:
+            self.size = size
+                    
+        if isinstance(p, Dirichlet):
+            Stochastic.__init__(self, logp=mod_categor_like, doc='A Categorical random variable', name=name, 
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(mod_rcategor, self.size), trace=trace, value=value, dtype=np.float,
+                rseed=rseed, isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
+        else:
+            Stochastic.__init__(self, logp=valuewrapper(categorical_like), doc='A Categorical random variable', name=name, 
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=np.float,
+                rseed=rseed, isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
+
+
+def mod_rmultinom(n,p):
+    return rmultinomial(n,extend_dirichlet(p))
+
+@valuewrapper
+def mod_multinom_like(x,n,p):
+    return multinomial_like(x,n,extend_dirichlet(p))
+
+class Multinomial(Stochastic):
+    """
+    M = Multinomial(name, n, p, trace=True, value=None, 
+       rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
+
+    A categorical random variable. Parents are p, minval, step.
+
+    If parent p is Dirichlet and has length k-1, an implicit k'th
+    category is assumed to exist with associated probability 1-sum(p.value).
+
+    Otherwise parent p's value should sum to 1.
+
+    """
+    def __init__(self, name, n, p, trace=True, value=None, rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0):
+
+        if isinstance(p, Dirichlet):
+            Stochastic.__init__(self, logp=mod_multinom_like, doc='A Multinomial random variable', name=name, 
+                parents={'n':n,'p':p}, random=mod_rmultinom, trace=trace, value=value, dtype=np.int, rseed=rseed,
+                isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
+        else:
+            Stochastic.__init__(self, logp=valuewrapper(multinomial_like), doc='A Multinomial random variable', name=name, 
+                parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
+                isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
+
 
 if __name__ == "__main__":
     import doctest

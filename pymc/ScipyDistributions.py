@@ -43,6 +43,11 @@ def separate_shape_args(kwds, shape_args):
     args = [new_kwds.pop(name) for name in shape_args]
 
     return args, new_kwds
+    
+def remove_size_arg(fun):
+    def wrapper(size=1,*args, **kwds):
+        return fun(*args, **kwds)
+        
 
 def stochastic_from_scipy_dist(scipy_dist):
     """
@@ -130,7 +135,7 @@ computation using the rv objects in scipy.stats.distributions directly before
 reporting the bug.
     """
         
-    new_class = new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random)
+    new_class = new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, True)
     class newer_class(new_class):
         __doc__ = docstr
         rv = scipy_dist
