@@ -11,6 +11,7 @@ from PyMCObjects import Stochastic, Potential, Deterministic
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from     pymc.decorators import prop
 from copy import copy
+import pdb
 
 __docformat__='reStructuredText'
 
@@ -867,7 +868,9 @@ class AdaptiveMetropolis(StepMethod):
             except:
                 ord_sc = []
                 for s in self.stochastics:
-                    this_value = abs(np.ravel(s.value)) or 1.
+                    this_value = abs(np.ravel(s.value))
+                    if not this_value.any():
+                        this_value = [1.]
                     for elem in this_value:
                         ord_sc.append(elem)
                 # print len(ord_sc), self.dim
