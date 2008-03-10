@@ -24,10 +24,6 @@ import numpy as np
 
 __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 'WishartMvNormal', 'DirichletMultinomial', 'BetaBinomial', 'BetaGeometric', 'BernoulliAnything', 'check_children', 'check_linear_extended_children', 'check_conjugacy','StandardGibbs']
 
-import pymc
-pymc.conjugate_Gibbs_competence = 3
-pymc.nonconjugate_Gibbs_competence = 1
-
 
 # If we implement Pareto:
 # ParetoUniform
@@ -218,8 +214,6 @@ class DirichletMultinomial(StandardGibbs):
 
     d_i ~ind Multinomial(n_i, p)
     p ~ Dirichlet(theta) [optional] 
-
-    p must be a Stochastic, preferably a Dirichlet.   
     """
     linear_OK = False
     child_class = Multinomial

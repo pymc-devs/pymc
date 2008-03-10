@@ -35,7 +35,7 @@ Models inherit the following attributes from \texttt{ContainerBase}:
     \item \texttt{value}
 \end{itemize}
 
-In addition, models expose each node they contain as an attribute. For instance, if model \texttt{M} were produced from model (\ref{disastermodel}) \texttt{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique \texttt{__name__} attribute if you want to access them this way.
+% In addition, models expose each node they contain as an attribute. For instance, if model \texttt{M} were produced from model (\ref{disastermodel}) \texttt{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique \texttt{__name__} attribute if you want to access them this way.
 
 In future releases, \texttt{Model} will provide graphical services such as finding maximal cliques and junction trees.
 
@@ -125,7 +125,7 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
 
 \section{Maximum a posteriori estimates} 
 
-The \texttt{MAP} class sets all stochastic variables to their maximum a posteriori values using functions in SciPy's optimize package. Scipy must be installed to use it. A \texttt{MAP} instance \texttt{N} can be created as follows:
+The \texttt{MAP} class sets all stochastic variables to their maximum a posteriori values using functions in SciPy's \texttt{optimize} package. Scipy must be installed to use it. A \texttt{MAP} instance \texttt{N} can be created as follows:
 \begin{verbatim}
 N = MAP(input, eps=.001, diff_order = 5)    
 \end{verbatim}
@@ -162,15 +162,16 @@ It provides the following additional attributes:
     \item[C:] Another special dictionary-like object. \texttt{N.C[p1, p2, p3]} would return the approximate posterior covariance matrix of stochastic variables \texttt{p1}, \texttt{p2} and \texttt{p3}. As with \texttt{mu}, these variables' values are ravelled and concatenated before their covariance matrix is constructed.
 \end{description}
 
-\section{Markov Chain Monte Carlo}
- \texttt{MCMC} is a subclass of \texttt{Sampler}. \texttt{MCMC} objects fit models with Markov Chain Monte Carlo. At the beginning of a sampling loop, they assign a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
+\section{Markov Chain Monte Carlo: the \texttt{MCMC} class}
+ \texttt{MCMC} is a subclass of \texttt{Sampler}. At the beginning of a sampling loop, it assigns a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
 
 MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
 \begin{description}
     \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations. \textbf{Cite paper that says it's OK to keep tuning.}
     \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{Sampler.isample}.
     \item[\texttt{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \texttt{method} to handle some stochastic variables. The extra arguments are passed to the init method.
-    \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called.
+    \item[\texttt{assign_step_methods()}:] Assigns step methods now. This method is called whenever \texttt{sample} or \texttt{isample} is called, but it can be useful to call it directly to see what the default step methods will be.
+    \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called. This method is called periodically throughout the sampling loop.
     \item[\texttt{goodness()}:] \textbf{Someone else document this}
 \end{description}
 
@@ -233,11 +234,44 @@ For array-valued variables, \texttt{BinaryMetropolis} can be set to propose from
 \textbf{Someone else document this}
 
 \subsection{Gibbs step methods}
-No Gibbs step method have been provided with this release, because we haven't had time to write and test them. The standard for Gibbs step method is still evolving, but a few things are settled.
+Conjugate submodels can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \texttt{AdaptiveMetropolis} even when Gibbs step methods for the individual variables are available.
 
-Each Gibbs step method will have a conjugate and a non-conjugate version, determined by the \texttt{conjugate} flag. Conjugate Gibbs step methods are what are normally called Gibbs step methods: they handle stochastic variables whose priors are of the same form as their full conditional distributions. Non-conjugate Gibbs step methods handle stochastic variables whose full conditional likelihoods have standard forms, but not the same forms as their priors. 
+The following conjugate submodels are supported (see \href{http://en.wikipedia.org/wiki/Conjugate_prior}{http://en.wikipedia.org/wiki/Conjugate_prior} ):
+\begin{itemize}
+    \item Gamma-Gamma
+    \item Gamma-Exponential
+    \item Gamma-Poisson
+    \item Gamma-Normal
+    \item Beta-Geometric
+    \item Beta-Binomial
+    \item Wishart-Multivariate Normal (represented by the \texttt{MvNormal} class, which is parameterized by precision)
+    \item Dirichlet-Multinomial.
+    \item Normal-Normal (or Normal-MvNormal, etc.) \textbf{[Not yet implemented]}
+\end{itemize}
 
-Steps will be taken by the \texttt{propose()} method. A non-conjugate Gibbs step methods will test the proposed value using the prior log-probability or log-density of the variable it handles, and possibly call its \texttt{reject()} method.
+Gibbs step methods have the following class attributes:
+\begin{itemize}
+    \item \texttt{child_class}: The step method can handle variables whose children are all of this class. \texttt{GammaNormal.child_class} is \texttt{Normal}, for example.
+    \item \texttt{parent_label}: The target variable's children must refer to it by this label. \texttt{GammaNormal.parent_label} is \texttt{'mu'}.
+    \item \texttt{target_class}: The target variable should be of this class for the submodel to be fully conjugate. \texttt{GammaNormal.target_class} is \texttt{Gamma}.
+    \item \texttt{linear_OK}: A flag indicating whether the variable's children can depend on a multiple of the variable. Such multiples must be implemented via the \texttt{Deterministic} subclass \texttt{LinearCombination}.
+\end{itemize}
+
+A Gibbs step method can handle variables that are not of their target class, as long as all their children are of the appropriate class. If this is the case, the step method's \texttt{conjugate} attribute will be set to false and its acceptance rate will no longer be 1.
+
+Gibbs step methods can are easy to use manually. To tell an \texttt{MCMC} object $M$ to handle a variable $x$ using the \texttt{GammaNormal} class, simply use the call
+\begin{verbatim}
+    M.use_step_method(GammaNormal, M)
+\end{verbatim}
+
+To indicate a general preference for Gibbs step methods vs. Metropolis step methods, set the following global integer values:
+\begin{itemize}
+    \item \texttt{pymc.conjugate_Gibbs_competence}: Applicable Gibbs step methods' competence functions will return this value for variables that are not of their target classes. The default value is 3, meaning that these methods will always be assigned when possible. Set this value to 0 to prevent these methods from being assigned automatically, or to 1.5 to set their priorities between those of \texttt{Metropolis} and \texttt{AdaptiveMetropolis}.
+    \item \texttt{pymc.nonconjugate_Gibbs_competence}: Applicable Gibbs step methods' competence functions will return this value for variables that are of their target classes. The default value is 0, meaning that these methods are never assigned automaticall.
+\end{itemize}
+
+
+\subsection{Gaussian submodels, all-Gaussian models, and the \texttt{NormalNormal} Gibbs step method}
 
 \subsection{Granularity of step methods: one-at-a-time vs. block updating} 
 There is currently no way for an individual stochastic variable to cache individual terms of its log-probability; when this is recomputed, it is recomputed from scratch. This means that updating the elements of a array-valued variable individually is inefficient, so all existing step methods update array-valued variables together, in a block update.
