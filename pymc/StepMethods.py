@@ -1,16 +1,18 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from flib import fill_stdnormal
 from PyMCObjects import Stochastic, Potential, Deterministic
+from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from     pymc.decorators import prop
 from copy import copy
+from InstantiationDecorators import lambda_deterministic, deterministic
 import pdb
 
 __docformat__='reStructuredText'
@@ -538,32 +540,12 @@ class Metropolis(StepMethod):
         elif self._dist == "Prior":
             self.stochastic.random()
 
-def safe_len(val):
-    if np.isscalar(val):
-        return 1
-    else:
-        return np.prod(np.shape(val))
-
 class Gibbs(Metropolis):
     """
     Base class for the Gibbs step methods
     """
     def __init__(self, stochastic, verbose=0):
         Metropolis.__init__(self, stochastic, verbose=verbose)
-
-        @dtrm
-        def N(d=self.d):
-            """The total number of observations."""
-            return sum([safe_len(d_now) for d_now in d])
-
-        @dtrm
-        def sum_d(d=self.d):
-            """The sum of the number of 'successes' for each 'experiment'"""
-            return sum([sum(d_now) for d_now in d])
-
-        self.N_d = len(self.d)
-        self.N = N
-        self.sum_d = sum_d
 
     # Override Metropolis's competence.
     competence = staticmethod(StepMethod.competence)
@@ -589,34 +571,6 @@ class Gibbs(Metropolis):
 
     def propose(self):
         raise NotImplementedError, 'The Gibbs class has to be subclassed, it is not usable directly.'
-
-    def check_children(self, child_class, parent_key):
-        self.d = []
-        for name in child_class.parent_names:
-            if not name == parent_key:
-                setattr(self, name, [])
-        for child in self.stochastic.children:
-            if not isinstance(child, child_class):
-                raise ValueError, 'Stochastic %s must have all %s children for %s\n \
-                                    to be able to handle it.' \
-                                    %(self.stochastic.__name__, child_class.__name__, self.__class__.__name__)
-            self.d.append(child)
-            for name in child_class.parent_names:
-                if not name == parent_key:
-                    getattr(self, name).append(child.parents[name])
-
-    def check_conjugacy(self, target_class):
-        if not isinstance(self.stochastic, target_class):
-            for name in self.stochastic.parents:
-                setattr(self, name, None)
-            self.conjugate = False
-        else:
-            for name in self.stochastic.parents:
-                setattr(self, name, lam_dtrm(name, lambda parent = self.stochastic.parents[name]: parent))
-            self.conjugate = True
-
-    def check_linear_extended_children(self):
-        pass
 
 
 class NoStepper(StepMethod):

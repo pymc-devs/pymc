@@ -213,7 +213,11 @@ class GaussianSubmodel(ListTupleContainer):
                 mat_list[i].append(cvx.base.spmatrix([],[],[], (lj, li)))
         
         self.tau_chol = cvx.base.sparse(mat_list)
-        self.tau = self.tau_chol.T * self.tau_chol
+        self.tau = cvx.base.spmatrix([],[],[], (self.len,self.len))
+        cvx.base.syrk(self.tau_chol, self.tau, uplo='U', trans='T')
+
+        # self.tau = self.tau_chol.T * self.tau_chol
+
         # return mat_list
     
     def slice_by_stochastics(spmat, stochastics, slices, keep_stochastics):
@@ -374,13 +378,17 @@ if __name__=='__main__':
     C = MvNormal('C',B, C_tau, isdata=True)
     D_mean = LinearCombination('D_mean', x=[C], coefs={C:np.ones((3,2))}, offset=0)
     
-    # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
-    D = Normal('D',D_mean,.5*np.ones(3))
+    D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+    # D = Normal('D',D_mean,.5*np.ones(3))
     G = GaussianSubmodel([B,C,A,D,D_mean])
     # G = GaussianSubmodel([A,B,C])
     G.compute_diag_chol_facs()
     G.compute_tau_chol()
-    CC=(sp_to_ar(G.tau)).I
+    dense_tau = sp_to_ar(G.tau)
+    for i in xrange(G.len):
+        for j in xrange(i):
+            dense_tau[i,j] = dense_tau[j,i]
+    CC=(dense_tau).I
     # print p
     # print 
     print CC

@@ -19,7 +19,7 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, vectorize, inf, shape, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','logit','invlogit','stukel_logit','stukel_invlogit']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','logit','invlogit','stukel_logit','stukel_invlogit','safe_len']
 
 
 def check_list(thing, label):
@@ -71,6 +71,13 @@ def check_type(stochastic):
             return complex, val.shape
     else:
         return 'object', ()
+
+def safe_len(val):
+    if np.isscalar(val):
+        return 1
+    else:
+        return np.prod(np.shape(val))
+
 
 def round_array(array_in):
     """

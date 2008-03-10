@@ -12,7 +12,7 @@ import flib
 import pymc
 import numpy as np
 from Node import ZeroProbability
-from PyMCObjects import Stochastic
+from PyMCObjects import Stochastic, Deterministic
 from numpy import pi
 import pdb
 
@@ -1730,7 +1730,7 @@ def rwishart(n, Tau):
 
     Return a Wishart random matrix.
     
-    Tau is the inverse of the covariance matrix :math:'C'.
+    Tau is the inverse of the 'covariance' matrix :math:'C'.
     """
 
     p = Tau.shape[0]    
@@ -1760,7 +1760,7 @@ def wishart_like(X, n, Tau):
     wishart_like(X, n, Tau)
 
     Wishart log-likelihood. The Wishart distribution is the probability
-    distribution of the maximum-likelihood estimator (MLE) of the covariance
+    distribution of the maximum-likelihood estimator (MLE) of the precision
     matrix of a multivariate normal distribution. If Tau=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
@@ -2042,7 +2042,9 @@ Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
 DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
 OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
 
-# Children of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
+
+
+# Conjugates of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
 
 def extend_dirichlet(p):
     if len(p.shape)>1:
@@ -2070,6 +2072,8 @@ class Categorical(Stochastic):
     Otherwise parent p's value should sum to 1.
 
     """
+    parent_names = ['p', 'minval', 'step']
+    
     def __init__(self, name, p, minval=0, step=1, value=None, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
         
         if value is not None:
@@ -2102,7 +2106,7 @@ class Multinomial(Stochastic):
     M = Multinomial(name, n, p, trace=True, value=None, 
        rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
 
-    A categorical random variable. Parents are p, minval, step.
+    A multinomial random variable. Parents are p, minval, step.
 
     If parent p is Dirichlet and has length k-1, an implicit k'th
     category is assumed to exist with associated probability 1-sum(p.value).
@@ -2110,6 +2114,9 @@ class Multinomial(Stochastic):
     Otherwise parent p's value should sum to 1.
 
     """
+    
+    parent_names = ['n', 'p']
+    
     def __init__(self, name, n, p, trace=True, value=None, rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0):
 
         if isinstance(p, Dirichlet):
@@ -2121,6 +2128,25 @@ class Multinomial(Stochastic):
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
 
+class CompletedDirichlet(Deterministic):
+    """
+    CD = CompletedDirichlet(name, D, trace=True, cache_depth=2, plot=True, verbose=0)
+    
+    'Completes' the value of D by appending 1-sum(D.value) to the end.
+    """
+    def __init__(self, name, D, trace=True, cache_depth=2, plot=True, verbose=0):
+        
+        def eval_fun(D):
+            N = D.shape[1]
+            out = np.empty((1,N+1))
+            out[0,:N] = D
+            out[0,N] = 1.-np.sum(D)
+            return out
+        
+        Deterministic.__init__(self, eval=eval_fun, name=name, parents={'D': D}, doc='The completed version of %s'%D.__name__,
+         dtype=float, trace=trace, cache_depth=cache_depth, plot=plot, verbose=verbose)
+        
+    
 
 if __name__ == "__main__":
     import doctest

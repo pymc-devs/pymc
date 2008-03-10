@@ -94,7 +94,7 @@ class MCMC(Sampler):
             
         setattr(new_method, '_model', self)
     
-    def _assign_step_methods(self):
+    def assign_step_methods(self):
         """
         Make sure every stochastic variable has a step method. If not, 
         assign a step method from the registry.
@@ -122,7 +122,7 @@ class MCMC(Sampler):
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
         
-        self._assign_step_methods()
+        self.assign_step_methods()
 
         self._iter = int(iter)
         self._burn = int(burn)

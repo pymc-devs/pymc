@@ -328,44 +328,31 @@ class Deterministic(DeterministicBase):
 
 
 class LinearCombination(Deterministic):
-    def __init__(self, name, x, coefs, offset, *args, **kwds):
+    def __init__(self, name, x, y, *args, **kwds):
         doc_str = """
-        L = LinearCombination(name, x, coefs, offsets[, dtype, trace, cache_depth, plot, verbose])
+        L = LinearCombination(name, x, y, [, dtype, trace, cache_depth, plot, verbose])
 
-        A Deterministic returning the sum of A*x+b.
-        Output will be of same shape as b.
+        A Deterministic returning the sum of dot(x[i],y[i]).
 
-        x must be a list or single Stochastic.
-
-        A must be a dictionary of coefficients (matrices or scalars that 
-        can be multiplied by x.value), keyed by element of x, or a single 
-        coefficient.
-
-        b must be a single Stochastic, scalar or array that can be added 
-        to x.value.
+        x and y must be lists or single Stochastics.
         """
         self.x = x
-        self.coefs = coefs
-        self.offset = offset
+        self.y = y
 
-        if not len(self.coefs)==len(self.x) or not isinstance(self.coefs, dict):
-            raise ValueError, 'Argument coefs must a dictionary of the same length as x.'
+        if not len(self.y)==len(self.x):
+            raise ValueError, 'Arguments x and y must be same length.'
 
-        self.coef_list = []
-        for i in xrange(len(self.x)):
-            self.coef_list.append(self.coefs[self.x[i]])
-        
-        def eval_fun(x, coef_list, offset):
-            out = offset
-            for i in xrange(len(x)):
-                out = out + dot(coef_list[i], x[i])
+        def eval_fun(x, y):
+            out = dot(x[0], y[0])
+            for i in xrange(1,len(x)):
+                out = out + dot(x[i], y[i])
             return out
 
         Deterministic.__init__(self,
                                 eval=eval_fun,
                                 doc = doc_str,
                                 name = name,
-                                parents = {'x':self.x, 'coef_list':self.coef_list, 'offset':self.offset},
+                                parents = {'x':x, 'y':y},
                                 *args, **kwds)    
                                 
 
@@ -494,9 +481,10 @@ class Stochastic(StochasticBase):
         # Initialize value, either from value provided or from random function.
         if value is not None:
             if isinstance(value, ndarray):
-                value.flags['W'] = False  
+                value.flags['W'] = False
                 if dtype is not None:
-                    self._value = asarray(value, dtype=dtype)
+                    if not dtype is value.dtype:
+                        self._value = asarray(value, dtype=dtype).view(value.__class__)
                 else:
                     self._value = value
             elif dtype is not None and dtype is not object:
@@ -575,7 +563,8 @@ class Stochastic(StochasticBase):
         if isinstance(value, ndarray):
             value.flags['W'] = False  
             if self.dtype is not None:
-                self._value = asarray(value, dtype=self.dtype)
+                if not self.dtype is value.dtype:
+                    self._value = asarray(value, dtype=self.dtype).view(value.__class__)
             else:
                 self._value = value
         elif self.dtype is not None and self.dtype is not object:
