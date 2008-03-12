@@ -1,26 +1,16 @@
-# Need to assemble full precision matrix, preferably keep it in LIL for 
-# flexible slicing. Bummer. Then take slices, convert to CSR, pass to
-# sparse Cholesky decomposition function.
-# 
-#
-# cvxopt.cholmod.symbolic, numeric to get factor
-# cvxopt.cholmod.solve, spsolve to backsolve (very flexible)
-# cvxopt.base.syrk to square the matrix.
-# 
-# Just need to convert to and from Cholmod matrix.
-# Can make sparse matrices from blocks using cvxopt.
-
-# TODO: non-Gaussian parents need to be added to offset
-# TODO: Make get_offset method.
-# TODO: Fill in actual functionality.
+# TODO: Assemble precision matrix in coordinate format, don't make billions of zero matrices.
+# TODO: Use deterministics to minimize computation.
+# TODO: General optimizations.
+# TODO: Conditional mean and covariance queries.
+# TODO: GaussianModel object. Should subclass Sampler, provide same functionality as NormalApproximation.
+# TODO: Specific submodel factories: DLM, LM.
+# TODO: Real test suite.
 
 from pymc import *
 import numpy as np
 from graphical_utils import *
 import cvxopt as cvx
 from cvxopt import base, cholmod
-# from dict_linalg_utils import *
-
 
 gaussian_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
 

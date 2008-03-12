@@ -15,6 +15,7 @@ from Node import ZeroProbability
 from PyMCObjects import Stochastic, Deterministic
 from numpy import pi
 import pdb
+import utils
 
 if hasattr(flib, 'cov_mvnorm'):
     flib_blas_OK = True
@@ -2127,101 +2128,6 @@ class Multinomial(Stochastic):
             Stochastic.__init__(self, logp=valuewrapper(multinomial_like), doc='A Multinomial random variable', name=name, 
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
-
-class CompletedDirichlet(Deterministic):
-    """
-    CD = CompletedDirichlet(name, D, trace=True, cache_depth=2, plot=True, verbose=0)
-    
-    'Completes' the value of D by appending 1-sum(D.value) to the end.
-    """
-    def __init__(self, name, D, trace=True, cache_depth=2, plot=True, verbose=0):
-        
-        def eval_fun(D):
-            N = D.shape[1]
-            out = np.empty((1,N+1))
-            out[0,:N] = D
-            out[0,N] = 1.-np.sum(D)
-            return out
-        
-        Deterministic.__init__(self, eval=eval_fun, name=name, parents={'D': D}, doc='The completed version of %s'%D.__name__,
-         dtype=float, trace=trace, cache_depth=cache_depth, plot=plot, verbose=verbose)
-        
-class LinearCombination(Deterministic):
-    def __init__(self, name, x, y, *args, **kwds):
-        doc_str = """
-        L = LinearCombination(name, x, y, [, dtype, trace, cache_depth, plot, verbose])
-
-        A Deterministic returning the sum of dot(x[i],y[i]).
-
-        x and y must be lists or single Stochastics.
-        """
-        self.x = x
-        self.y = y
-        self.N = len(self.x)
-
-        if not len(self.y)==len(self.x):
-            raise ValueError, 'Arguments x and y must be same length.'
-
-        def eval_fun(x, y):
-            out = np.dot(x[0], y[0])
-            for i in xrange(1,len(x)):
-                out = out + np.dot(x[i], y[i])
-            return out
-
-        Deterministic.__init__(self,
-                                eval=eval_fun,
-                                doc = doc_str,
-                                name = name,
-                                parents = {'x':x, 'y':y},
-                                *args, **kwds)
-
-        # Tabulate coefficients and offsets of each constituent Stochastic.                        
-        self.coefs = {}
-        self.offsets = {}
-        self.sides = {}
-
-        for s in self.parents.stochastics | self.parents.data_stochastics:
-            self.coefs[s] = []
-            self.offsets[s] = []
-            self.sides[s] = []
-
-        for i in xrange(self.N):
-
-            other_x, other_y = copy(x), copy(y)
-            other_x.pop(i)
-            other_y.pop(i)
-            stochastic_elem = None
-
-            if isinstance(x[i], Stochastic):
-
-                if x[i] is y[i]:
-                    raise ValueError, 'Stochastic %s multiplied by itself in LinearCombination %s.' %(x[i], self)
-
-                stochastic_elem = x[i]
-                self.sides[stochastic_elem].append('L')                
-                this_coef = pymc.lambda_deterministic('%s_coef'%stochastic_elem, lambda c=y[i]: np.asarray(c))
-                self.coefs[stochastic_elem].append(this_coef)
-
-            if isinstance(y[i], Stochastic):
-                
-                stochastic_elem = y[i]
-                self.sides[stochastic_elem].append('R')                
-                this_coef = pymc.lambda_deterministic('%s_coef'%stochastic_elem, lambda c=x[i]: np.asarray(c))
-                self.coefs[stochastic_elem].append(this_coef)
-
-
-            if stochastic_elem is not None:
-                if len(other_x)>0:
-                    offset_fun = lambda x=other_x, y=other_y: np.asarray(np.sum([np.dot(x[i],y[i]) for i in xrange(self.N-1)]))
-                else:
-                    offset_fun = lambda x=other_x, y=other_y: np.array(0)
-                this_offset = pymc.lambda_deterministic('%s_offset'%stochastic_elem, offset_fun)
-                self.offsets[stochastic_elem].append(this_offset)
-                
-            self.offsets = pymc.Container(self.offsets)
-            self.sides = pymc.Container(self.sides)
-            self.coefs = pymc.Container(self.coefs)
-
     
 
 if __name__ == "__main__":

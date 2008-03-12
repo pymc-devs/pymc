@@ -12,7 +12,7 @@ from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from     pymc.decorators import prop
 from copy import copy
-from InstantiationDecorators import lambda_deterministic, deterministic
+from InstantiationDecorators import deterministic
 import pdb
 
 __docformat__='reStructuredText'

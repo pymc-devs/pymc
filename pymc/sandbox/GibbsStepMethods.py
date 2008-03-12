@@ -29,13 +29,6 @@ __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 'Wis
 # ParetoUniform
 # GammaPareto
 
-# TODO: Finish GammaExponential,
-# Bundle quad_term from GammaNormal and WishartMvNormal into StandardGibbs,
-# Factor out GammaX base class,
-# Depth-1 GammaGamma (screw the high-depth extension),
-# Competence functions,
-# Done!
-
 # TODO, long-term: Allow long sequences of LinearCombinations.        
 # TODO, long-term: Allow children to be of different classes, as long as they're all conjugate.
 
@@ -78,7 +71,7 @@ def check_conjugacy(stochastic, target_class):
 
     else:
         for name in stochastic.parents:
-            parent_dict[name] = lambda_deterministic(name, lambda parent = stochastic.parents[name]: parent)
+            parent_dict[name] = Lambda(name, lambda parent = stochastic.parents[name]: parent)
         conjugate = True
         
     return conjugate, parent_dict
@@ -90,6 +83,13 @@ def check_linear_extended_children(stochastic, stepper_class, child_class, paren
     Make sure all extended children are of the required class,
     that correct parent is a LinearCombination, and that stochastic 
     appears only once in LinearCombination's coefficient list.
+    
+    TODO Need to refactor this to allow p.x and p.y to change. In particular
+    p.x and p.y may not contain stochastic all the time.
+    
+    Lambda_deterministics aren't the way to go here because you need to check
+    whether stochastic is in p.x and p.y. Just do everything you can in the
+    init method and do the rest in sum_ld, etc.
     """
     d = []
     coef = []
@@ -110,21 +110,17 @@ def check_linear_extended_children(stochastic, stepper_class, child_class, paren
         elif isinstance(child.parents[parent_key], LinearCombination):
 
             p = child.parents[parent_key]
-            if len(p.x) > 1 or len(p.y) > 1 or ((p.x[0] is stochastic) + (p.y[0] is stochastic) != 1):
-                raise ValueError, 'Stochastic %s must appear only once as a parent of %s,\n \
-and %s must have only two parents, for %s to apply.' \
-                    % (stochastic, p, p, stepper_class)
+            if sum([p.x[i] is stochastic for i in xrange(len(p.x))]) + sum([p.y[i] is stochastic for i in xrange(len(p.y))]) != 1:
+                print [p.x[i] is stochastic for i in xrange(len(p.x))]
+                print [p.y[i] is stochastic for i in xrange(len(p.y))]
+                print len([p.x[i] is stochastic for i in xrange(len(p.x))]) + len([p.y[i] is stochastic for i in xrange(len(p.y))])
+                raise ValueError, 'Stochastic %s must appear only once as a parent of %s for %s to apply.' \
+                    % (stochastic, p, stepper_class)
+
+            coef.append(p.coefs[stochastic])
+            side.append(p.sides[stochastic])
 
 
-            # Record the coefficient of stochastic in LinearCombination.    
-            if p.x[0] is stochastic:
-                coef.append(p.y[0])
-                side.append('L')
-
-            else:
-                coef.append(p.x[0])
-                side.append('R')
-            
             d.append(child)    
             for name in child_class.parent_names:
                 if not name == parent_key:
@@ -167,6 +163,7 @@ class StandardGibbs(Gibbs):
         self.N =  int(np.sum([safe_len(d_now.value) for d_now in self.d]))
         self.N_d = len(self.d)
 
+        # TODO: Do this 'at runtime' somehow to accomodate Index.
         if self.linear_OK:
             # Get distributional parameters from extended children via LinearCombinations.
             self.ld, self.lcoef, self.lside, self.lparent_dict = \
@@ -183,6 +180,29 @@ class StandardGibbs(Gibbs):
         self.sum_d = sum_d
 
         Gibbs.__init__(self, stochastic, verbose)
+    
+    def propose(self):
+        """
+        Checks that the lengths of the linear parents are zero, then calls Gibbs.propose().
+        """
+
+        if self.linear_OK:
+            
+            for i in xraneg(self.N_ld):
+
+                # Check that offsets are zero.
+                lincomb = self.ld[i].parents[self.parent_label]
+                if len(lincomb.x) > 0 or len(lincomb.y) > 0:
+                    raise ValueError, '%s cannot handle stochastic %s: Child %s depends on %s plus a nonzero offset.' % \
+                        (self.__class__.__name__, self.stochastic, self.ld[i], self.stochastic)                    
+
+                # Check that lengths of factor arrays are 1.
+                if len(self.lcoef[i]) > 1:
+                    raise ValueError, '%s cannot handle stochastic %s: Child %s multiplies it by more than one coefficient.' % \
+                        (self.__class__.__name__, self.stochastic, self.ld[i])
+
+        Gibbs.propose(self)
+        
                 
     @classmethod
     def competence(cls, stochastic):
@@ -206,6 +226,7 @@ class StandardGibbs(Gibbs):
             return pymc.conjugate_Gibbs_competence
         else:
             return pymc.nonconjugate_Gibbs_competence
+
 
 # TODO: When allowing mixed conjugacy, allow Categorical children also.
 class DirichletMultinomial(StandardGibbs):            
@@ -270,13 +291,20 @@ class WishartMvNormal(StandardGibbs):
             
         @deterministic
         def like_lin_Tau(N_ld = self.N_ld, ld = self.ld, lparent_dict = self.lparent_dict, lside = self.lside, lcoef = self.lcoef):
+                        
             quad_term = 0.
+
             for i in xrange(N_ld):
-                delta_now =ld[i] - lparent_dict['mu'][i]
-                if lside[i] == 'L':
-                    quad_term += np.dot(np.outer(delta_now, delta_now), lcoef[i])
-                else:
-                    quad_term += np.dot(lcoef[i], np.outer(delta_now, delta_now))
+                                
+                delta_now = ld[i] - lparent_dict['mu'][i]
+
+                if lcoef[i][0] is not None:
+
+                    if lside[i] == 'L':
+                        quad_term += np.dot(np.outer(delta_now, delta_now), lcoef[i][0])
+                    else:
+                        quad_term += np.dot(lcoef[i][0], np.outer(delta_now, delta_now))
+
             return np.asmatrix(quad_term)
             
         self.like_Tau, self.like_lin_Tau = like_Tau, like_lin_Tau
@@ -357,6 +385,7 @@ class BetaBinomial(BetaX):
             return out
         self.like_beta = like_beta
 
+
 class GammaX(StandardGibbs):
     """
     Base class for conjugacy involving Gamma.
@@ -369,12 +398,15 @@ class GammaX(StandardGibbs):
 
         @deterministic
         def sum_ld(N_ld = self.N_ld, ld = self.ld, lcoef = self.lcoef, lside=self.lside):
+            
             out = 0.
             for i in xrange(N_ld):
-                if lside[i] == 'L':
-                    out += np.sum(np.dot(np.transpose(lcoef[i]), ld[i]))
-                else:
-                    out += np.sum(np.dot(ld[i], np.transpose(lcoef[i])))
+                
+                if lcoef[i][0] is not None:
+                    if lside[i] == 'L':
+                        out += np.sum(np.dot(np.transpose(lcoef[i][0]), ld[i]))
+                    else:
+                        out += np.sum(np.dot(ld[i], np.transpose(lcoef[i][0])))
                     
             return out
         self.sum_ld = sum_ld
@@ -443,16 +475,19 @@ class GammaPoisson(GammaX):
         self.stochastic = mu
         GammaX.__init__(self, mu, verbose)
 
-        self.like_alpha = self.sum_d
+        self.like_alpha = Lambda('like_alpha', lambda sum_d = self.sum_d, sum_ld = self.sum_ld: sum_d + sum_ld)
         
         @deterministic
         def like_beta(d = self.ld, lN = self.lN, N = self.N, lcoef = self.lcoef, lside = self.lside):
             out = N
             for i in xrange(lN):
-                if lside[i]=='L':
-                    out += np.sum(np.sum(lcoef[i], axis=1))
-                else:
-                    out += np.sum(np.sum(lcoef[i], axis=0))
+                
+                if lcoef[i][0] is not None:
+                    
+                    if lside[i]=='L':
+                        out += np.sum(np.sum(lcoef[i][0], axis=1))
+                    else:
+                        out += np.sum(np.sum(lcoef[i][0], axis=0))
                     
             return out
         self.like_beta = like_beta
@@ -530,11 +565,14 @@ class GammaNormal(GammaX):
                 quad_term += np.dot(delta_now, delta_now)
             
             for i in xrange(N_ld):
-                delta_now = ld[i] - lparent_dict['mu'][i]
-                if lside[i] == 'L':
-                    quad_term += np.dot(np.dot(delta_now, lcoef[i]), delta_now)
-                else:
-                    quad_term += np.dot(delta_now, np.dot(delta_now, lcoef[i]))
+                
+                if lcoef[i][0] is not None:
+
+                    delta_now = ld[i] - lparent_dict['mu'][i]
+                    if lside[i] == 'L':
+                        quad_term += np.dot(np.dot(delta_now, lcoef[i][0]), delta_now)
+                    else:
+                        quad_term += np.dot(delta_now, np.dot(delta_now, lcoef[i][0]))
             
             return quad_term * .5
         

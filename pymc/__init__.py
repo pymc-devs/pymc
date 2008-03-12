@@ -22,7 +22,8 @@ __modules__ = [ 'Node',
                 'testsuite',
                 'NormalApproximation', 
                 'MCMC',
-                'convergencediagnostics']
+                'convergencediagnostics',
+                'CommonDeterministics']
                 
 __optmodules__ = ['ScipyDistributions',
                   'parallel',

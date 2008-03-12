@@ -299,8 +299,8 @@ class Deterministic(DeterministicBase):
                         verbose=verbose)
         
         self._value.force_compute()
-        if self.value is None:
-            print  "WARNING: Deterministic " + self.__name__ + "'s initial value is None"
+        # if self.value is None:
+        #     print  "WARNING: Deterministic " + self.__name__ + "'s initial value is None"
         
     def gen_lazy_function(self):
         # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)

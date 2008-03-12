@@ -125,7 +125,7 @@ class test_Gibbs(NumpyTestCase):
     
         assert(abs(mean(tau_values)- alpha_real / beta_real)<.05)
         assert(abs(var(tau_values)- alpha_real / beta_real ** 2)<.05)
-
+    
     def check_DirichletMultinomial(self):
         p = Dirichlet('p',ones(10)*3.)
         d_list = []
@@ -173,6 +173,33 @@ class test_Gibbs(NumpyTestCase):
     
         assert(np.abs(np.asarray(delta)/np.asarray(orig_value)).max()<.1)
 
+    def check_ClusterModel(self):
+        mu = Gamma('mu',value=3.,alpha=1.,beta=1.)
+        other_mu = 30.
+        d_list = []
+        indices = []
+        mu_list = []
+        for i in xrange(10):
+            indices.append(randint(2))
+            mu_list.append(Index('mu_list[%i]'%i, x=[mu, other_mu], index=indices[i]))
+            d_list.append(Poisson('d_%i'%i,mu_list[i]))
+
+        beta_real = 1.
+        alpha_real = 1.
+        for i in xrange(len(mu_list)):
+            if mu_list[i].index.value == 0:
+                beta_real += 1.
+                alpha_real += sum(d_list[i].value)
+
+        mu_stepper = GammaPoisson(mu)
+
+        mu_values = empty(10000,dtype=float)
+        for i in xrange(10000):
+            mu_stepper.step()
+            mu_values[i] = mu.value
+
+        assert(abs(mean(mu_values)-alpha_real/beta_real)<.05)
+        assert(abs(var(mu_values) - alpha_real/beta_real**2)<.05)    
         
 if __name__ == '__main__':
     NumpyTest().run()

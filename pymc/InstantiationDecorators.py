@@ -3,7 +3,7 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
-__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'lam_dtrm', 'lambda_deterministic']
+__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data']
 
 import sys, inspect
 from imp import load_dynamic
@@ -204,10 +204,6 @@ def deterministic(__func__ = None, **kwds):
 
 # Shortcut alias
 dtrm = deterministic
-def lambda_deterministic(name, __func__, **kwds):
-    __func__.__name__ = name
-    return deterministic(__func__,**kwds)
-lam_dtrm = lambda_deterministic
 
 def data(obj=None, **kwds):
     """
