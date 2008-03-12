@@ -1,11 +1,11 @@
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
-__all__ = ['extend_children', 'extend_parents', 'ParentDict', 'LinearCombination', 'Stochastic', 'Deterministic', 'Potential']
+__all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Deterministic', 'Potential']
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 import pdb
@@ -325,35 +325,6 @@ class Deterministic(DeterministicBase):
     def _get_extended_children(self):
         return extend_children(self.children)
     extended_children = property(_get_extended_children, doc="All the stochastic variables and factor potentials whose logp attribute depends on self.value")
-
-
-class LinearCombination(Deterministic):
-    def __init__(self, name, x, y, *args, **kwds):
-        doc_str = """
-        L = LinearCombination(name, x, y, [, dtype, trace, cache_depth, plot, verbose])
-
-        A Deterministic returning the sum of dot(x[i],y[i]).
-
-        x and y must be lists or single Stochastics.
-        """
-        self.x = x
-        self.y = y
-
-        if not len(self.y)==len(self.x):
-            raise ValueError, 'Arguments x and y must be same length.'
-
-        def eval_fun(x, y):
-            out = dot(x[0], y[0])
-            for i in xrange(1,len(x)):
-                out = out + dot(x[i], y[i])
-            return out
-
-        Deterministic.__init__(self,
-                                eval=eval_fun,
-                                doc = doc_str,
-                                name = name,
-                                parents = {'x':x, 'y':y},
-                                *args, **kwds)    
                                 
 
 class Stochastic(StochasticBase):

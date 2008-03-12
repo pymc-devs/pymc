@@ -55,7 +55,7 @@ def check_children(stochastic, stepper_class, child_class, parent_key):
             if not isinstance(child, child_class):
                 raise ValueError, 'Stochastic children of %s must all be %s for %s\n \
                                     to be able to handle it.' \
-                                    %(stochastic.__name__, child_class.__name__, stepper_class)
+                                    %(stochastic, child_class.__name__, stepper_class)
             d.append(child)
             for name in child_class.parent_names:
                 if not name == parent_key:
@@ -113,7 +113,7 @@ def check_linear_extended_children(stochastic, stepper_class, child_class, paren
             if len(p.x) > 1 or len(p.y) > 1 or ((p.x[0] is stochastic) + (p.y[0] is stochastic) != 1):
                 raise ValueError, 'Stochastic %s must appear only once as a parent of %s,\n \
 and %s must have only two parents, for %s to apply.' \
-                    % (stochastic.__name__, p.__name__, p.__name__, stepper_class)
+                    % (stochastic, p, p, stepper_class)
 
 
             # Record the coefficient of stochastic in LinearCombination.    
@@ -132,7 +132,7 @@ and %s must have only two parents, for %s to apply.' \
                 
         else:
             raise ValueError, "Child %s's %s parent must be LinearCombination\n or %s itself for %s to apply."\
-                %(child.__name__, parent_key, stochastic.__name__, stepper_class)
+                %(child, parent_key, stochastic, stepper_class)
             
     return d, coef, side, parent_dict
     
@@ -140,7 +140,7 @@ def zap_extended_children(stochastic, cls_name):
     # Raise error if any extended children aren't direct children.
     if len(stochastic.extended_children - stochastic.children) > 0:
         raise ValueError, 'Stochastic %s must have only direct children for %s to apply.'\
-            %(stochastic.__name__, cls_name)
+            %(stochastic, cls_name)
     
 
 

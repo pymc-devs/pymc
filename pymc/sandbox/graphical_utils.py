@@ -84,8 +84,9 @@ def find_children_and_parents(stochastic_list):
     children = []
     parents = []
     for s in stochastic_list:
-        if all([not child in stochastic_list for child in s.extended_children]):
-            children.append(s)
+        if len(s.extended_children) > 0:
+            if all([not child in stochastic_list for child in s.extended_children]):
+                children.append(s)
         if all([not parent in stochastic_list for parent in s.extended_parents]):
             parents.append(s)
         

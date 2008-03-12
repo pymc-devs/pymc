@@ -21,6 +21,7 @@ import cvxopt as cvx
 from cvxopt import base, cholmod
 # from dict_linalg_utils import *
 
+
 gaussian_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
 
 def sp_to_ar(sp):
@@ -34,7 +35,85 @@ def sp_to_ar(sp):
         for j in xrange(shape[1]):
             ar[i,j] = sp[i,j]
     return ar
+    
+def assign_from_sparse(spvec, slices):
+    for slice in slices.iteritems():
+        slice[0].value = spvec[slice[1]]
 
+def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices, stochastic_len):
+
+    mat_list = []
+    Ni = len(stochastics_i)
+    Nj = len(stochastics_j)
+
+    symm = stochastics_i is stochastics_j
+
+    for i in xrange(Ni):
+        mat_list.append([])
+        si = stochastics_i[i]
+        li = stochastic_len[si]
+
+        if symm:
+            # Superdiagonal
+            for j in xrange(i):
+                sj = stochastics_i[j]
+                mat_list[i].append(spmat[slices[sj], slices[si]])
+
+            # Diagonal
+            mat_list[i].append(spmat[slices[si], slices[si]])
+
+            # Subdiagonal
+            for j in xrange(i+1,Ni):
+                sj = stochastics_i[j]
+                lj = stochastic_len[sj]
+                mat_list[i].append(cvx.base.spmatrix([],[],[], (lj,li)))
+
+        else:
+            for j in xrange(Nj):
+                
+                if slices[si].start < slices[stochastics_j[j]].start:
+                    mat_list[i].append(spmat[slices[si], slices[stochastics_j[j]]].trans())
+                
+                else:
+                    mat_list[i].append(spmat[slices[stochastics_j[j]], slices[si]])
+                    
+    return cvx.base.sparse(mat_list)    
+
+def spmat_to_backsolver(spmat, N):
+    # Assemple and factor sliced sparse precision matrix.
+    chol = cvx.cholmod.symbolic(spmat, uplo='U')           
+    cvx.cholmod.numeric(spmat, chol)
+
+    # Find the diagonal part of the P.T L D L.T P factorization
+    inv_sqrt_D = cvx.base.matrix(np.ones(N))
+    cvx.cholmod.solve(chol, inv_sqrt_D, sys=6)
+    inv_sqrt_D = cvx.base.sqrt(inv_sqrt_D)
+    
+    # Make function that backsolves either the Cholesky factor or its transpose
+    # against an input vector or matrix.
+    def backsolver(dev, uplo='U', squared=False, inv_sqrt_D = inv_sqrt_D, chol=chol):
+        
+        if uplo=='U':
+            if squared:
+                cvx.cholmod.solve(chol, dev)
+            else:
+                dev = cvx.base.mul(dev , inv_sqrt_D)
+                cvx.cholmod.solve(chol, dev, sys=5)
+                cvx.cholmod.solve(chol, dev, sys=8)
+
+        elif uplo=='L':
+            if squared:
+                cvx.cholmod.solve(chol, dev)
+            else:
+                cvx.cholmod.solve(chol, dev, sys=7)
+                cvx.cholmod.solve(chol, dev, sys=4)                
+                dev = cvx.base.mul(dev , inv_sqrt_D)                
+
+        return dev
+        
+    return backsolver
+    
+    
 class GaussianSubmodel(ListTupleContainer):
     """
     G = GaussianSubmodel(input)
@@ -76,19 +155,28 @@ class GaussianSubmodel(ListTupleContainer):
         self.stochastic_indices, self.stochastic_len, self.slices, self.len\
          = ravel_submodel(self.stochastic_list)
         
-        self.internal_stochastic_list = []
+        self.changeable_stochastic_list = []
+        self.fixed_stochastic_list = []
         for stochastic in self.stochastic_list:
-            if not stochastic in self.children:
-                self.internal_stochastic_list.append(stochastic)
+            if not stochastic in self.children and not stochastic.isdata:
+                self.changeable_stochastic_list.append(stochastic)
+            else:
+                self.fixed_stochastic_list.append(stochastic)
             
-        self.internal_stochastic_indices, self.internal_stochastic_len, self.internal_slices, self.internal_len\
-        = ravel_submodel(self.internal_stochastic_list)
+        self.changeable_stochastic_indices, self.changeable_stochastic_len, self.changeable_slices, self.changeable_len\
+        = ravel_submodel(self.changeable_stochastic_list)
+        
+        self.fixed_stochastic_indices, self.fixed_stochastic_len, self.fixed_slices, self.fixed_len\
+        = ravel_submodel(self.fixed_stochastic_list)
                 
     
     def compute_diag_chol_facs(self):
         """
         Computes the square root or Cholesky decomposition
         of the precision of each stochastic conditional on its parents.
+        
+        TODO: Use Deterministics, to avoid computing Cholesky factors
+        unnecessarily.
         """
         self.diag_chol_facs = {}
         
@@ -118,26 +206,6 @@ class GaussianSubmodel(ListTupleContainer):
                     chol_now = np.linalg.cholesky(np.linalg.inv(np.dot(parent_vals['sig'], parent_vals['sig'].T)))
     
             self.diag_chol_facs[s] = (diag, np.atleast_1d(chol_now).T)
-            
-            
-    # def compute_canon_mean(self, tau_chol):
-    #     """
-    #     Computes joint precision * joint mean.
-    #     """
-    #     b_vec = empty(self.len)
-    # 
-    #     for s in self.stochastic_list:
-    #         chol_now = self.diag_chol_facs[s]
-    #         
-    #         if isinstance(s, Normal):
-    #             b_vec[self.slices[s]] /= chol_now
-    #             
-    #         else:
-    #             flib.dtrsm_wrap(chol_now, b_vec[self.slices[s]], 'L', 'T', 'L')
-    #         
-    #     self.canon_mean = trisolve(tau_chol, b_vec)
-    #         
-    #         
     
     def get_A(self, stochastic):
         A = {}
@@ -145,19 +213,30 @@ class GaussianSubmodel(ListTupleContainer):
 
             if c.__class__ is LinearCombination:
                 for cc in c.extended_children:
-                    A[cc] = -c.coefs[stochastic]
+                    A[cc] = 0.
+                    for elem in c.coefs[stochastic]:
+                        if c.sides[stochastic] == 'L':
+                            A[cc] -= elem.value.T
+                        else:
+                            A[cc] -= elem.value
+
+
             else:
                 if stochastic is c.parents['mu']:
                     if self.stochastic_len[c] == self.stochastic_len[stochastic]:
                         A[c] = -np.eye(self.stochastic_len[stochastic])
                     else:
                         A[c] = -np.ones(self.stochastic_len[c])
+
         return A
     
     def compute_tau_chol(self):
         """
         Computes Cholesky factor of joint precision matrix, 
         and stores it as a cvxopt sparse matrix.
+        
+        TODO: Assemble tau_chol in coordinate form. All the millions of 
+        empty sparse matrices really bog things down for large N.
         """
         # dtrsm_wrap(a,b,side,transa,uplo)
         # dtrmm_wrap(a,b,side,transa,uplo)
@@ -212,123 +291,117 @@ class GaussianSubmodel(ListTupleContainer):
                 lj = self.stochastic_len[sj]
                 mat_list[i].append(cvx.base.spmatrix([],[],[], (lj, li)))
         
+        # Assemble and square sparse precision matrix.
         self.tau_chol = cvx.base.sparse(mat_list)
         self.tau = cvx.base.spmatrix([],[],[], (self.len,self.len))
-        cvx.base.syrk(self.tau_chol, self.tau, uplo='U', trans='T')
-
-        # self.tau = self.tau_chol.T * self.tau_chol
-
-        # return mat_list
-    
-    def slice_by_stochastics(spmat, stochastics, slices, keep_stochastics):
-        # Need to look into cvxopt fancy slicing.
-        return stochastics, slices, self.len
         
-    def assign_from_sparse(spvec, slices):
-        for slice in slices.iterkeys():
-            slice[0].value = spvec[slice[1]]
-            
+        cvx.cholmod.options['supernodal'] = 1
+        
+        cvx.base.syrk(self.tau_chol, self.tau, uplo='U', trans='T')            
 
-    def tau_slice_chol(self, stochastics):
+    def compute_changeable_mean(self):
+        """
+        Computes joint 'canonical mean' parameter:
+        joint precision matrix times joint mean.
+        """
+        
+        # Assemble mean vector
+        mean = cvx.base.matrix(0.,size=(self.len, 1))
+        
+        for i in xrange(len(self.stochastic_list)-1,-1,-1):
+
+            s = self.stochastic_list[i]
+
+            mu_now = s.parents['mu']
+            
+            # If parent is a Stochastic
+            if isinstance(mu_now, Stochastic):
+                if mu_now.__class__ in gaussian_classes:
+                    # If it's Gaussian, record its mean
+                    mean[self.slices[s]] = mean[self.slices[mu_now]]
+                else:
+                    # Otherwise record its value.
+                    mean[self.slices[s]] = s.parents.value['mu']
+
+            # If parent is a LinearCombination
+            elif isinstance(mu_now, LinearCombination):
+                
+                for j in xrange(len(mu_now.x)):
+
+                    # For those elements that are Gaussian,
+                    # add in the corresponding coefficient times
+                    # the element's mean
+
+                    if mu_now.x[j].__class__ in gaussian_classes:
+                        mean[self.slices[s]] += np.dot(mean[self.slices[mu_now.x[j]]], mu_now.y[j])
+
+                    elif mu_now.y[j].__class__ in gaussian_classes:
+                        mean[self.slices[s]] += np.dot(mu_now.x[j], mean[self.slices[mu_now.y[j]]])
+                        
+                    else:
+                        mean[self.slices[s]] += np.dot(mu_now.x[j], mu_now.y[j])
+            else:
+                mean[self.slices[s]] = s.parents.value['mu']
+        
+        self.mean = mean   
+        
+        # Multiply mean by precision
+        full_eta = cvx.base.matrix(0.,size=(self.len, 1))
+        cvx.base.symv(self.tau, mean, full_eta, uplo='U', alpha=1., beta=0.)
+
+        # Slice canonical eta parameter by changeable stochastics.
+        eta = cvx.base.matrix(0.,size=(self.changeable_len, 1))
+        for s in self.changeable_stochastic_list:
+            eta[self.changeable_slices[s]] = full_eta[self.slices[s]]            
+        
+        # Values of 'data'
+        x = cvx.base.matrix(0.,size=(self.fixed_len, 1))
+        for s in self.fixed_stochastic_list:
+            x[self.fixed_slices[s]] = s.value
+        
+        # Slice tau.
+        tau_offdiag = slice_by_stochastics(self.tau, self.changeable_stochastic_list, 
+            self.fixed_stochastic_list, self.slices, self.stochastic_len)
+
+        # print "WARNING: You're multiplying eta by 0 here because there's a screw-up somewhere upstream."
+        # eta *= 0.
+        # x *= -1.
+
+        # Condition canonical eta parameter.
+        cvx.base.gemv(tau_offdiag, x, eta, alpha=-1., beta=1., trans='T')
+
+        self.x=x
+        self.full_eta = full_eta
+        self.tau_offdiag = tau_offdiag
+
+        self.changeable_mean = np.asarray(self.backsolver(eta, squared=True)).squeeze()
+
+    def compute_changeable_tau_chol(self):
         """
         Compute Cholesky decomposition of self's joint precision,
         sliced for stochastics.
         
         Slicing precision matrices conditions, it doesn't marginalize.
         """
-        pass
-    
-    def draw_conditional(self, tau_slice_chol):
+        cvx.cholmod.options['supernodal'] = 1
+        
+        mat_list = []
+        
+        self.changeable_tau_slice = slice_by_stochastics(self.tau, self.changeable_stochastic_list, self.changeable_stochastic_list, self.slices, self.stochastic_len)
+
+        self.backsolver = spmat_to_backsolver(self.changeable_tau_slice, self.changeable_len)
+        
+    def draw_conditional(self):
         """
         Sets values of stochastics in tau_slice_chol's keys to new
         values drawn conditional on rest of model.
-        
-        This is essentially a manual triangular backsolve, written in 
-        Python. Uses dtrsm.
         """ 
-        pass   
-                
-    # 
-    # 
-    # def _conditional_draw(self, stochastics, partial_slices, tot_len):
-    #     """
-    #     Draws random values for some stochastics conditional on parents
-    #     and children.
-    #     """
-    # 
-    # 
-    # def _unconditional_draw(self, stochastics, partial_slices, tot_len):
-    #     """
-    #     Draws random values for some stochastics conditional on
-    #     parents.
-    #     """
-    # 
-    #     fullvec = np.random.normal(size=self.len)
-    #     fullvec = self.backsolver(fullvec,trans='T')
-    #     
-    #     out_vec = np.empty(tot_len)
-    #     
-    #     for stochastic in stochastics:
-    #         out_vec[partial_slices[stochastic]] = fullvec[self.slices[stochastic]]                
-    # 
-    #     set_ravelled_stochastic_values(out_vec, stochastics, partial_slices)
-    # 
-    # 
-    # def _marginal_covariance(self, stochastics, tot_len):
-    #     """
-    #     Returns the marginal covariance of stochastics.
-    #     
-    #     NB for some reason this is currently returning the covariance 
-    #     of the group given their parents... also useful I guess, but not
-    #     what it's supposed to do.
-    #     """
-    #     cov_out = sp.lil_matrix((tot_len,tot_len))
-    #     back = np.zeros((self.len, tot_len))
-    #     out = np.empty((tot_len,tot_len))
-    #     
-    #     start_sofar = 0
-    #     for stochastic in stochastics:
-    #         back[self.slices[stochastic], start_sofar:start_sofar + self.stochastic_len[stochastic]] \
-    #             = eye(self.stochastic_len[stochastic])
-    #         start_sofar += self.stochastic_len[stochastic]
-    # 
-    #             
-    #     back = self.backsolver(back, trans='T')
-    #     back = dot(back,back.T)
-    #     
-    #     start_sofar = 0
-    #     
-    #     for stochastic in stochastics:
-    #         this_len = self.stochastic_len[stochastic]
-    #         
-    #         other_start_sofar = 0
-    #         for other_stochastic in stochastics:
-    #             other_len = self.stochastic_len[other_stochastic]
-    #             out[start_sofar : start_sofar + this_len, other_start_sofar:other_start_sofar + other_len] =\
-    #             back[self.slices[stochastic], self.slices[other_stochastic]]
-    #             other_start_sofar += other_len
-    #             
-    #         start_sofar += this_len
-    #         
-    #     return out
-    # 
-    # def _internal_tau_chol(self):
-    #     """
-    #     Wrapper for _partial_tau_chol where stochastics is self's
-    #     internal stochastics.
-    #     
-    #     This should be wrapped in a Deterministic eventually.
-    #     """
-    #     self.internal_tau_chol = self._partial_tau_chol(self.internal_stochastic_list, self.internal_slices, self.internal_len)
-    #     
-    #     
-    # def draw_from_prior(self):
-    #     """
-    #     Draw values for all internal stochastics conditional on children.
-    #     """
-    #     self._unconditional_draw(self.internal_stochastic_list, self.internal_slices, self.internal_len)
-    #     
-    #     
+        dev = cvx.base.matrix(np.random.normal(size=self.changeable_len))
+        dev = np.asarray(self.backsolver(dev)).squeeze()
+        dev += self.changeable_mean
+        assign_from_sparse(dev, self.changeable_slices)
+        
+        
     def check_input(self):
         """
         Improve this...
@@ -353,9 +426,15 @@ class GaussianSubmodel(ListTupleContainer):
                 if isinstance(c, Deterministic):
                     if len(c.extended_children) > 0:
                         if c.__class__ is LinearCombination:
-                            if any([val is s for val in c.coefs.values()]) or s is c.offset:
-                                raise ValueError, 'Stochastic %s is considered either a coefficient or an offset by\
-                                                    LinearCombination %s. Must be considered an "x" value.' % (s, c)
+                            for i in xrange(len(c.x)):
+                                
+                                if c.x[i].__class__ in gaussian_classes and c.y[i].__class__ in gaussian_classes:
+                                    raise ValueError, 'Stochastics %s and %s are multiplied in LinearCombination %s. \
+                                                        They cannot be in the same Gassian submodel.' % (c.x[i], c.y[i], c)
+
+                                if sum([x is s for x in c.x]) + sum([y is s for y in c.y]) > 1:
+                                    raise ValueError, 'Stochastic %s cannot appear more than once in the terms of \
+                                                        LinearCombination %s.' % (s,c)
     
                         else:
                             raise ValueError, 'Stochastic %s has a parent %s which is Deterministic, but not\
@@ -365,54 +444,91 @@ class GaussianSubmodel(ListTupleContainer):
         if not all([d.__class__ is LinearCombination for d in self.deterministics]):
             raise ValueError, 'All deterministics must be LinearCombinations.'
 
-        
                                 
 if __name__=='__main__':
     
+    
+    
     from pylab import *
     
-    A = Normal('A',0,1)
-    B = Normal('B',A,2*np.ones(2))
-    C_tau = np.diag([.5,.5])
-    C_tau[0,1] = C_tau[1,0] = .25
-    C = MvNormal('C',B, C_tau, isdata=True)
-    D_mean = LinearCombination('D_mean', x=[C], coefs={C:np.ones((3,2))}, offset=0)
+    import numpy as np
     
-    D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
-    # D = Normal('D',D_mean,.5*np.ones(3))
-    G = GaussianSubmodel([B,C,A,D,D_mean])
-    # G = GaussianSubmodel([A,B,C])
+    # # =========================================
+    # # = Test case 1: Some old smallish model. =
+    # # =========================================
+    # A = Normal('A',1,1)
+    # B = Normal('B',A,2*np.ones(2))
+    # C_tau = np.diag([.5,.5])
+    # C_tau[0,1] = C_tau[1,0] = .25
+    # C = MvNormal('C',B, C_tau,isdata=True)
+    # D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
+    # 
+    # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+    # # D = Normal('D',D_mean,.5*np.ones(3))
+    # G = GaussianSubmodel([B,C,A,D,D_mean])
+    # # G = GaussianSubmodel([A,B,C])
+    # G.compute_diag_chol_facs()
+    # G.compute_tau_chol()
+    # 
+    # G.compute_changeable_tau_chol()
+    # G.compute_changeable_mean()
+    # G.draw_conditional()
+    # 
+    # dense_tau = sp_to_ar(G.changeable_tau_slice)
+    # for i in xrange(dense_tau.shape[0]):
+    #     for j in xrange(i):
+    #         dense_tau[i,j] = dense_tau[j,i]
+    # CC=(dense_tau).I
+    # sig_tau = np.linalg.cholesky(dense_tau)
+    # 
+    
+    # ================================
+    # = Test case 2: Autoregression. =
+    # ================================
+    N = 100
+    W = np.eye(2)*N
+    # W[0,1] = W[1,0] = .5
+    x_list = [MvNormal('x_0',np.ones(2)*3,W,value=np.zeros(2))]
+    for i in xrange(1,N):
+        # L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
+        x_list.append(MvNormal('x_%i'%i,x_list[i-1],W))
+    
+    # W = N
+    # x_list = [Normal('x_0',1.,W,value=0)]
+    # for i in xrange(1,N):
+    #     # L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
+    #     x_list.append(Normal('x_%i'%i,x_list[i-1],W))
+    
+    
+    x_list[-1].value = x_list[-1].value * 0. + 1.
+    x_list[N/2].isdata=True
+    
+    G = GaussianSubmodel(x_list)
+    C = Container(x_list)
     G.compute_diag_chol_facs()
     G.compute_tau_chol()
+    G.compute_changeable_tau_chol()
+    G.compute_changeable_mean()
+    
     dense_tau = sp_to_ar(G.tau)
-    for i in xrange(G.len):
+    for i in xrange(dense_tau.shape[0]):
         for j in xrange(i):
             dense_tau[i,j] = dense_tau[j,i]
     CC=(dense_tau).I
-    # print p
-    # print 
-    print CC
+    sig_tau = np.linalg.cholesky(dense_tau)
     
-    # 
-    # G.compute_diag_chol_facs()
-    # G.compute_tau_chol()
-    # q = G.tau_chol
-    # p=q.todense()
-    # print (p*p.T).I
+    clf()
+    for i in xrange(10):
+        G.draw_conditional()
+        # G.draw_prior()
+        
+        # for x in x_list:
+        #     x.random()
     
-    # W = np.eye(2)
-    # # W[0,1] = W[1,0] = .5
-    # x_list = [MvNormal('x_0',np.zeros(2),W)]
-    # for i in xrange(1,100):
-    #     # L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
-    #     x_list.append(MvNormal('x_%i'%i,x_list[i-1],W))
-    # # q = lam_dtrm('q',lambda x=x_list[999]: x**2)
-    # # h = Gamma('h', alpha=q, beta=1)
-    # G = GaussianSubmodel(x_list)
-    # C = Container(x_list)
-    # clf()
-    # for i in xrange(10):
-    #     G.draw_from_prior()
-    #     # for x in x_list[:-1]:
-    #     #     x.random()
-    #     plot(array(C.value))
+        plot(array(C.value))
+        # plot(hstack(C.value))
+    
+        # dev = np.random.normal(size=2.*N)
+        # plot(np.linalg.solve(sig_tau.T, dev)[::-2])
+        
+    
