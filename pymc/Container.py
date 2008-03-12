@@ -129,6 +129,9 @@ def Container(*args):
     else:
         iterable = args
     
+    if isinstance(iterable, ContainerBase):
+        return iterable
+    
     # Wrap sets
     if isinstance(iterable, set):
         return SetContainer(iterable)
