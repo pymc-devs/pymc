@@ -22,6 +22,8 @@ Each Gibbs step method has a fully conjugate version and a nonconjugate version.
 from pymc import *
 import numpy as np
 
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 'WishartMvNormal', 'DirichletMultinomial', 'BetaBinomial', 'BetaGeometric', 'BernoulliAnything', 'check_children', 'check_linear_extended_children', 'check_conjugacy','StandardGibbs']
 
 
@@ -138,7 +140,16 @@ def zap_extended_children(stochastic, cls_name):
         raise ValueError, 'Stochastic %s must have only direct children for %s to apply.'\
             %(stochastic, cls_name)
     
+try:
+    from GaussianSubmodel import GaussianSubmodel
 
+    __all__.append('NormalNormal')
+    
+    class NormalNormal(Gibbs):
+        pass
+
+except ImportError:
+    pass
 
 class StandardGibbs(Gibbs):
     """

@@ -1,10 +1,13 @@
-# TODO: Assemble precision matrix in coordinate format, don't make billions of zero matrices.
-# TODO: Use deterministics to minimize computation.
-# TODO: General optimizations.
-# TODO: Conditional mean and covariance queries.
-# TODO: GaussianModel object. Should subclass Sampler, provide same functionality as NormalApproximation.
+# TODO: General optimizations. Bottlenecks are tau_chol and changeable_tau_slice -> slice_by_stochastics, by far.
+#                               They're scaling up almost quadratically, apparently.
+# TODO: GaussianModel object. Should subclass Sampler, provide same functionality as NormalApproximation: conditional mean and covariance    queries.
+# TODO: NormalNormal object.
+
 # TODO: Specific submodel factories: DLM, LM.
+
 # TODO: Real test suite.
+
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from pymc import *
 import copy as sys_copy
@@ -12,7 +15,6 @@ import numpy as np
 from graphical_utils import *
 import cvxopt as cvx
 from cvxopt import base, cholmod
-
 
 gaussian_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
 
@@ -416,16 +418,6 @@ class GaussianSubmodel(ListTupleContainer):
             else:
                 mean_dict[s] = mu_now
         
-        # for s in self.stochastic_list:
-        #     @deterministic
-        #     def mean(mu = mean_dict[s], s=s):
-        #         s_shape = np.shape(s)
-        #         if not np.shape(mu) == s_shape:
-        #             return np.resize(mu, s_shape)
-        #         else:
-        #             return mu
-        #     mean_dict[s] = mean
-                        
         self.mean_dict = Container(mean_dict)
         
         @deterministic
@@ -585,26 +577,9 @@ if __name__=='__main__':
     # ================================
     # = Test case 2: Autoregression. =
     # ================================
+
     
-    # N = 500 timings:
-    # - Re-run script: 3.78s
-    # - Simple draw: .07s
-    # - Change W and base_mu, then draw: .78s
-    
-    # N = 100:
-    # -Rerun: .5s
-    # -Simple draw: .02
-    # -Change W and mu then draw: .08
-    
-    # N = 1000:
-    # -Rerun: 10.7s
-    # -Change W and base_mu, then draw: 2.56s
-    # -Simple draw: .14
-    
-    # Not too bad... simple draws are linear, reruns and change W or mu then draw both subquadratic.
-    # But why aren't the latter two linear?
-    
-    N=500
+    N=1000
     W = Uninformative('W',np.eye(2)*N)
     base_mu = Uninformative('base_mu', np.ones(2)*3)
     # W[0,1] = W[1,0] = .5

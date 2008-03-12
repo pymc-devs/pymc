@@ -1,3 +1,5 @@
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 from pymc import *
 
 def find_generations(stochastics):
