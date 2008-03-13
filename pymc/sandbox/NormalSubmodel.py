@@ -1,10 +1,5 @@
-# TODO: General optimizations. Bottlenecks are tau_chol and changeable_tau_slice -> slice_by_stochastics, by far.
-#                               They're scaling up almost quadratically, apparently.
-# TODO: GaussianModel object. Should subclass Sampler, provide same functionality as NormalApproximation: conditional mean and covariance    queries.
-# TODO: NormalNormal object.
-
 # TODO: Specific submodel factories: DLM, LM.
-
+# TODO: Optimization!
 # TODO: Real test suite.
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
@@ -16,7 +11,9 @@ from graphical_utils import *
 import cvxopt as cvx
 from cvxopt import base, cholmod
 
-gaussian_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
+normal_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
+
+__all__ = ['normal_classes', 'sp_to_ar', 'assign_from_sparse', 'slice_by_stochastics', 'spmat_to_backsolver', 'crawl_normal_submodel', 'NormalSubmodel']
 
 def sp_to_ar(sp):
     """
@@ -34,7 +31,9 @@ def assign_from_sparse(spvec, slices):
     for slice in slices.iteritems():
         slice[0].value = spvec[slice[1]]
 
-def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices, stochastic_len, A):
+# TODO: Pass in slices_from and slices_to, do for si in A.iterkeys() instead of for i in xrange(Ni).
+# This should be much faster. It's tricky, though.
+def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, A):
 
     Ni = len(stochastics_i)
     Nj = len(stochastics_j)
@@ -55,21 +54,31 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices, stochastic
         li = stochastic_len[si]
         i_slice = slice(i_index,i_index+li)
         i_index += li
+        
+        i_slice_to = slices_to[si]
+        i_slice_from = slices_from[si]
+        
+        # print i_slice, i_slice_to
 
         if symm:
             Ai = A[si]
             # Superdiagonal
-            for j in xrange(i):
-                sj = stochastics_j[j]
-                lj = stochastic_len[sj]
-                j_slice = slice(j_index, j_index+lj)                
-                j_index += lj
-                
-                if Ai.has_key(sj):
-                    out[j_slice, i_slice] = spmat[slices[sj], slices[si]]
+            
+            for sj in Ai.iterkeys():
+                if slices_to.has_key(sj):
+                    out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
+            
+            # for j in xrange(i):
+            #     sj = stochastics_j[j]
+            #     lj = stochastic_len[sj]
+            #     j_slice = slice(j_index, j_index+lj)                
+            #     j_index += lj
+            #     
+            #     if Ai.has_key(sj):
+            #         out[j_slice, i_slice] = spmat[slices_from[sj], i_slice_from]
 
             # Diagonal
-            out[i_slice,i_slice] = spmat[slices[si], slices[si]]
+            out[i_slice_to,i_slice_to] = spmat[slices_from[si], slices_from[si]]
 
 
         else:
@@ -79,11 +88,11 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices, stochastic
                 j_slice = slice(j_index, j_index+lj)
                 j_index += lj
                 
-                if slices[si].start < slices[stochastics_j[j]].start:
-                    out[j_slice,i_slice] = spmat[slices[si], slices[sj]].trans()
-        
-                else:
-                    out[j_slice,i_slice] = spmat[slices[sj], slices[si]]                
+                if slices_from[si].start < slices_from[stochastics_j[j]].start:
+                    out[j_slice,i_slice] = spmat[slices_from[si], slices_from[sj]].trans()
+                                               
+                else:                          
+                    out[j_slice,i_slice] = spmat[slices_from[sj], slices_from[si]]                
     return out
 
 def spmat_to_backsolver(spmat, N):
@@ -119,11 +128,25 @@ def spmat_to_backsolver(spmat, N):
         return dev
         
     return backsolver
-    
-    
-class GaussianSubmodel(ListTupleContainer):
+
+def crawl_normal_submodel(input):
     """
-    G = GaussianSubmodel(input)
+    Finds the biggest Normal submodel incorporating 'input.'
+    
+    TODO: Make this actually work...
+    """
+    input = Container(input)
+    NormalSubmodel.check_input(input)
+    output = input.stochastics
+    
+    return output
+    
+    
+        
+    
+class NormalSubmodel(ListTupleContainer):
+    """
+    G = NormalSubmodel(input)
     
     Input is a submodel consisting entirely of Normals, MvNormals, 
     MvNormalCovs, MvNormalChols and LinearCombinations. The normals 
@@ -152,8 +175,8 @@ class GaussianSubmodel(ListTupleContainer):
 
     def __init__(self, input):
         ListTupleContainer.__init__(self, input)
-        self.check_input()
         self.stochastic_list = order_stochastic_list(self.stochastics | self.data_stochastics)
+        self.check_input(self.stochastic_list)        
         self.N_stochastics = len(self.stochastic_list)
 
         # Need to figure out children and parents of model.
@@ -258,7 +281,7 @@ class GaussianSubmodel(ListTupleContainer):
                                     
                         this_A[cc] = A
 
-                elif c.__class__ in gaussian_classes:
+                elif c.__class__ in normal_classes:
                     if s is c.parents['mu']:
                         if self.stochastic_len[c] == self.stochastic_len[s]:
                             this_A[c] = -np.eye(self.stochastic_len[s])
@@ -317,23 +340,16 @@ class GaussianSubmodel(ListTupleContainer):
         def tau_chol(A = self.mult_A, diag_chol = self.diag_chol_facs):
             tau_chol = cvx.base.spmatrix([],[],[], (self.len,self.len))
         
-
-            for i in xrange(self.N_stochastics):
-            
-                si = self.stochastic_list[i]
-                li = self.stochastic_len[si]
+            # TODO: for si in A.iterkeys(), etc. instead
+            for si in A.iterkeys():
             
                 this_A = A[si]
             
                 # Append off-diagonals            
-                for j in xrange(i):
-                
-                    sj = self.stochastic_list[j]
-                    lj = self.stochastic_len[sj]
-                
+                for sj in this_A.iterkeys():
+                                    
                     # If j is a parent of s,
-                    if this_A.has_key(sj):                    
-                        tau_chol[self.slices[sj], self.slices[si]] = this_A[sj]
+                    tau_chol[self.slices[sj], self.slices[si]] = this_A[sj]
                     
                 chol_i = diag_chol[si]
                 chol_i_val = chol_i[1]
@@ -373,8 +389,8 @@ class GaussianSubmodel(ListTupleContainer):
             
             # If parent is a Stochastic
             if isinstance(mu_now, Stochastic):
-                if mu_now.__class__ in gaussian_classes:
-                    # If it's Gaussian, record its mean
+                if mu_now.__class__ in normal_classes:
+                    # If it's Normal, record its mean
                     
                     mean_dict[s] = mean_dict[mu_now]
 
@@ -388,17 +404,17 @@ class GaussianSubmodel(ListTupleContainer):
                 mean_terms = []
                 for j in xrange(len(mu_now.x)):
             
-                    # For those elements that are Gaussian,
+                    # For those elements that are Normal,
                     # add in the corresponding coefficient times
                     # the element's mean
             
-                    if mu_now.x[j].__class__ in gaussian_classes:
+                    if mu_now.x[j].__class__ in normal_classes:
                         mean_var = Lambda('mean_var', lambda mu=mean_dict[mu_now.x[j]], s=mu_now.x[j]: np.resize(mu,np.shape(s)))
                             
                         mean_terms.append(Lambda('term', lambda x=mean_var, y=mu_now.coefs[mu_now.x[j]], s=s: 
                                                             np.reshape(np.dot(x,y), np.shape(s))))
             
-                    elif mu_now.y[j].__class__ in gaussian_classes:
+                    elif mu_now.y[j].__class__ in normal_classes:
                         mean_var = Lambda('mean_var', lambda mu=mean_dict[mu_now.y[j]], s=mu_now.y[j]: np.resize(mu,np.shape(s)))
 
                         mean_terms.append(Lambda('term', lambda x=mu_now.coefs[mu_now.y[j]], y=mean_var, s=s: 
@@ -449,7 +465,7 @@ class GaussianSubmodel(ListTupleContainer):
         @deterministic
         def tau_offdiag(tau = self.tau):
             return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.fixed_stochastic_list, self.slices, self.stochastic_len, self.A)
+                self.fixed_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.A)
         self.tau_offdiag = tau_offdiag
         
         # Condition canonical eta parameter.
@@ -481,7 +497,7 @@ class GaussianSubmodel(ListTupleContainer):
         @deterministic
         def changeable_tau_slice(tau = self.tau):
             return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.changeable_stochastic_list, self.slices, self.stochastic_len, self.A)
+                self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.A)
 
         @deterministic
         def backsolver(changeable_tau_slice = changeable_tau_slice):
@@ -500,34 +516,35 @@ class GaussianSubmodel(ListTupleContainer):
         dev += self.changeable_mean.value
         assign_from_sparse(dev, self.changeable_slices)
         
-        
-    def check_input(self):
+    
+    @staticmethod             
+    def check_input(stochastics):
         """
         Improve this...
         """
     
-        if not all([s.__class__ in gaussian_classes for s in self.stochastics]):
+        if not all([s.__class__ in normal_classes for s in stochastics]):
             raise ValueError, 'All stochastics must be Normal, MvNormal, MvNormalCov or MvNormalChol.'
         
-        for s in self.stochastics:
+        for s in stochastics:
             
-            # Make sure all extended children are Gaussian.
+            # Make sure all extended children are Normal.
             for c in s.extended_children:
-                if c.__class__ in gaussian_classes:
+                if c.__class__ in normal_classes:
                     if c in s.children:
                         if not s is c.parents['mu']:
                             raise ValueError, 'Stochastic %s is a non-mu parent of stochastic %s' % (s,c)
                 else:
-                    raise ValueError, 'Stochastic %s has non-Gaussian extended child %s' % (s,c)
+                    raise ValueError, 'Stochastic %s has non-Normal extended child %s' % (s,c)
             
-            # Make sure all children that aren't Gaussian but have extended children are LinearCombinations.
+            # Make sure all children that aren't Normal but have extended children are LinearCombinations.
             for c in s.children:
                 if isinstance(c, Deterministic):
                     if len(c.extended_children) > 0:
                         if c.__class__ is LinearCombination:
                             for i in xrange(len(c.x)):
                                 
-                                if c.x[i].__class__ in gaussian_classes and c.y[i].__class__ in gaussian_classes:
+                                if c.x[i].__class__ in normal_classes and c.y[i].__class__ in normal_classes:
                                     raise ValueError, 'Stochastics %s and %s are multiplied in LinearCombination %s. \
                                                         They cannot be in the same Gassian submodel.' % (c.x[i], c.y[i], c)
 
@@ -540,9 +557,6 @@ class GaussianSubmodel(ListTupleContainer):
                                                 LinearCombination, which has extended children.' % (s,c)
                 
     
-        if not all([d.__class__ is LinearCombination for d in self.deterministics]):
-            raise ValueError, 'All deterministics must be LinearCombinations.'
-
                                 
 if __name__=='__main__':
     
@@ -550,76 +564,76 @@ if __name__=='__main__':
     
     import numpy as np
     
-    # # =========================================
-    # # = Test case 1: Some old smallish model. =
-    # # =========================================
-    # A = Normal('A',1,1)
-    # B = Normal('B',A,2*np.ones(2))
-    # C_tau = np.diag([.5,.5])
-    # C_tau[0,1] = C_tau[1,0] = .25
-    # C = MvNormal('C',B, C_tau,isdata=True)
-    # D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
+    # =========================================
+    # = Test case 1: Some old smallish model. =
+    # =========================================
+    A = Normal('A',1,1)
+    B = Normal('B',A,2*np.ones(2))
+    C_tau = np.diag([.5,.5])
+    C_tau[0,1] = C_tau[1,0] = .25
+    C = MvNormal('C',B, C_tau,isdata=True)
+    D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
+    
+    D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+    # D = Normal('D',D_mean,.5*np.ones(3))
+    G = NormalSubmodel([B,C,A,D,D_mean])
+    # G = NormalSubmodel([A,B,C])
+    G.draw_conditional()
+    
+    dense_tau = sp_to_ar(G.tau.value)
+    for i in xrange(dense_tau.shape[0]):
+        for j in xrange(i):
+            dense_tau[i,j] = dense_tau[j,i]
+    CC=(dense_tau).I
+    sig_tau = np.linalg.cholesky(dense_tau)
+    
+    
+    # # ================================
+    # # = Test case 2: Autoregression. =
+    # # ================================
     # 
-    # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
-    # # D = Normal('D',D_mean,.5*np.ones(3))
-    # G = GaussianSubmodel([B,C,A,D,D_mean])
-    # # G = GaussianSubmodel([A,B,C])
-    # G.draw_conditional()
     # 
-    # dense_tau = sp_to_ar(G.tau.value)
-    # for i in xrange(dense_tau.shape[0]):
-    #     for j in xrange(i):
-    #         dense_tau[i,j] = dense_tau[j,i]
-    # CC=(dense_tau).I
-    # sig_tau = np.linalg.cholesky(dense_tau)
-    
-    
-    # ================================
-    # = Test case 2: Autoregression. =
-    # ================================
-
-    
-    N=1000
-    W = Uninformative('W',np.eye(2)*N)
-    base_mu = Uninformative('base_mu', np.ones(2)*3)
-    # W[0,1] = W[1,0] = .5
-    x_list = [MvNormal('x_0',base_mu,W,value=np.zeros(2))]
-    for i in xrange(1,N):
-        # L = LinearCombination('L', x=[x_list[i-1]], y = [np.eye(2)])
-        x_list.append(MvNormal('x_%i'%i,x_list[i-1],W))
-    
-    # W = N
-    # x_list = [Normal('x_0',1.,W,value=0)]
+    # N=100
+    # W = Uninformative('W',np.eye(2)*N)
+    # base_mu = Uninformative('base_mu', np.ones(2)*3)
+    # # W[0,1] = W[1,0] = .5
+    # x_list = [MvNormal('x_0',base_mu,W,value=np.zeros(2))]
     # for i in xrange(1,N):
-    #     # L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
-    #     x_list.append(Normal('x_%i'%i,x_list[i-1],W))
-    
-    
-    x_list[-1].value = x_list[-1].value * 0. + 1.
-    x_list[N/2].isdata=True
-    
-    G = GaussianSubmodel(x_list)
-    # C = Container(x_list)
-    #     
-    # dense_tau = sp_to_ar(G.tau.value)
-    # for i in xrange(dense_tau.shape[0]):
-    #     for j in xrange(i):
-    #         dense_tau[i,j] = dense_tau[j,i]
-    # CC=(dense_tau).I
-    # sig_tau = np.linalg.cholesky(dense_tau)
+    #     # L = LinearCombination('L', x=[x_list[i-1]], y = [np.eye(2)])
+    #     x_list.append(MvNormal('x_%i'%i,x_list[i-1],W))
     # 
-    # clf()
-    # for i in xrange(10):
-    #     G.draw_conditional()
-    #     # G.draw_prior()
-    #     
-    #     # for x in x_list:
-    #     #     x.random()
+    # # W = N
+    # # x_list = [Normal('x_0',1.,W,value=0)]
+    # # for i in xrange(1,N):
+    # #     # L = LinearCombination('L', x=[x_list[i-1]], coefs = {x_list[i-1]:np.ones((2,2))}, offset=0)
+    # #     x_list.append(Normal('x_%i'%i,x_list[i-1],W))
     # 
-    #     plot(array(C.value))
-    #     # plot(hstack(C.value))
     # 
-    #     # dev = np.random.normal(size=2.*N)
-    #     # plot(np.linalg.solve(sig_tau.T, dev)[::-2])
-    #     
+    # x_list[-1].value = x_list[-1].value * 0. + 1.
+    # x_list[N/2].isdata=True
     # 
+    # G = NormalSubmodel(x_list)
+    # # C = Container(x_list)
+    # #     
+    # # dense_tau = sp_to_ar(G.tau.value)
+    # # for i in xrange(dense_tau.shape[0]):
+    # #     for j in xrange(i):
+    # #         dense_tau[i,j] = dense_tau[j,i]
+    # # CC=(dense_tau).I
+    # # sig_tau = np.linalg.cholesky(dense_tau)
+    # # 
+    # # clf()
+    # # for i in xrange(10):
+    # #     G.draw_conditional()
+    # #     # G.draw_prior()
+    # #     
+    # #     # for x in x_list:
+    # #     #     x.random()
+    # # 
+    # #     plot(array(C.value))
+    # #     # plot(hstack(C.value))
+    # # 
+    # #     # dev = np.random.normal(size=2.*N)
+    # #     # plot(np.linalg.solve(sig_tau.T, dev)[::-2])
+    # #     
+    # # 

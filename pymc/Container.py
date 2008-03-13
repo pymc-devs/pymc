@@ -131,6 +131,9 @@ def Container(*args):
     
     if isinstance(iterable, ContainerBase):
         return iterable
+        
+    if isinstance(iterable, Node):
+        return ListTupleContainer([iterable])
     
     # Wrap sets
     if isinstance(iterable, set):

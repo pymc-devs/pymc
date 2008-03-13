@@ -1,3 +1,5 @@
+__author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
+
 class DPMetropolis(StepMethod):
     """
     Give DPStochastic a new value conditional on parents and children. Always Gibbs.

@@ -100,10 +100,7 @@ class StepMethod(object):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     Externally-accessible attributes:
-      deterministics:    The Deterministics over which self has jurisdiction.
       stochastics:   The Stochastics over which self has jurisdiction which have isdata = False.
-      data:     The Stochastics over which self has jurisdiction which have isdata = True.
-      variables:The Deterministics and Stochastics over which self has jurisdiction.
       children: The combined children of all Variables over which self has jurisdiction.
       parents:  The combined parents of all Nodes over which self has jurisdiction, as a set.
       loglike:  The summed log-probability of self's children conditional on all of self's 
@@ -133,13 +130,7 @@ class StepMethod(object):
         if not hasattr(variables, '__iter__'):
             variables = [variables]
         
-        # Initialize public attributes
-        self.variables = set(variables)
-        if len(self.variables)==0:
-            raise ValueError, 'No variables provided for step method to handle.'
-        self.deterministics = set()
         self.stochastics = set()
-        self.data_stochastics = set()
         self.children = set()
         self.parents = set()
         
@@ -151,19 +142,18 @@ class StepMethod(object):
         self.verbose = verbose
         
         # File away the variables
-        for variable in self.variables:
+        for variable in variables:
             
             # Sort.
-            if isinstance(variable,Deterministic):
-                self.deterministics.add(variable)
-            elif isinstance(variable,Stochastic):
-                if variable.isdata:
-                    self.data_stochastics.add(variable)
-                else:
+            if isinstance(variable,Stochastic):
+                if not variable.isdata:
                     self.stochastics.add(variable)
         
+        if len(self.stochastics)==0:
+            raise ValueError, 'No stochastics provided.'
+        
         # Find children, no need to find parents; each variable takes care of those.
-        for variable in self.variables:
+        for variable in variables:
             self.children |= variable.children
             for parent in variable.parents.itervalues():
                 if isinstance(parent, Variable):

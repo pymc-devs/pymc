@@ -4,6 +4,11 @@ from pymc import *
 from numpy.random import randint
 from pylab import *
 from GibbsStepMethods import *
+try:
+    from NormalSubmodel import *
+    from NormalModel import *
+except:
+    pass
 
 class test_Gibbs(NumpyTestCase):
     
@@ -200,6 +205,30 @@ class test_Gibbs(NumpyTestCase):
 
         assert(abs(mean(mu_values)-alpha_real/beta_real)<.05)
         assert(abs(var(mu_values) - alpha_real/beta_real**2)<.05)    
+
+    def check_NormalNormal(self):
+        A = Normal('A',1,1)
+        B = Normal('B',A,2*np.ones(2))
+        C_tau = np.diag([.5,.5])
+        C_tau[0,1] = C_tau[1,0] = .25
+        C = MvNormal('C',B, C_tau, isdata=True)
+        D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
+
+        D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+        # D = Normal('D',D_mean,.5*np.ones(3))
+        G = NormalSubmodel([B,C,A,D,D_mean])
+        N = NormalModel(G)
+        all_stepper = NormalNormal([A,B,C,D])
+
+        all_values = np.empty((10000,6),dtype=float)
+        for i in xrange(10000):
+            all_stepper.step()
+            for s in G.changeable_stochastic_list:
+                all_values[i,G.changeable_slices[s]]=s.value
+
+        assert(abs(mean(all_values, axis=0) - N.mu[G.changeable_stochastic_list]).max() < .1)
+        assert(abs(var(all_values, axis=0) - np.diag(N.C[G.changeable_stochastic_list])).max() < .1)        
+        
         
 if __name__ == '__main__':
     NumpyTest().run()

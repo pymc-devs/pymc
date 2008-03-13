@@ -26,13 +26,78 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 'WishartMvNormal', 'DirichletMultinomial', 'BetaBinomial', 'BetaGeometric', 'BernoulliAnything', 'check_children', 'check_linear_extended_children', 'check_conjugacy','StandardGibbs']
 
-
 # If we implement Pareto:
 # ParetoUniform
 # GammaPareto
 
 # TODO, long-term: Allow long sequences of LinearCombinations.        
 # TODO, long-term: Allow children to be of different classes, as long as they're all conjugate.
+
+# Wrapped in try block bc NormalSubmodel requires cvxopt.
+try:
+    from NormalSubmodel import NormalSubmodel, crawl_normal_submodel, normal_classes
+
+    __all__.append('NormalNormal')
+    
+    class NormalNormal(Gibbs):
+        """
+        N = NormalNormal(input, verbose=0)
+        
+        Handles all-Normal submodels conditional on 'extremal' stochastics.
+        
+        See NormalSubmodel's docstring.
+        
+        If input is not a NormalSubmodel (a stochastic, list, etc.) then
+        the Normal submodel containing input is found. N will claim the
+        entire submodel.
+        """
+        linear_OK = True
+        child_class = normal_classes
+        parent_label = 'mu'
+        target_class = normal_classes
+        def __init__(self, input, verbose=0):
+            
+            # if input is not a Normal submodel, find maximal Normal submodel incorporating it.
+            if not isinstance(input, NormalSubmodel):
+                # TODO: Uncomment when crawl_... is working
+                # input = NormalSubmodel(crawl_normal_submodel(input))
+                input = NormalSubmodel(input)
+
+            # Otherwise just store the input, which was a Normal submodel.
+            self.NSM = input
+            self.verbose = verbose
+            
+            # Read self.stochastics from Normal submodel.
+            self.stochastics = set(self.NSM.changeable_stochastic_list)
+            
+            self.children = set([])
+            self.parents = set([])
+            for s in self.stochastics:
+                self.children |= s.extended_children
+                self.parents |= s.extended_parents
+
+            # Remove own stochastics from children and parents.
+            self.children -= self.stochastics
+            self.parents -= self.stochastics
+            
+            self.conjugate = True
+                        
+        def propose(self):
+            self.NSM.draw_conditional()
+            
+        @staticmethod
+        def competence(stochastic):
+            test_input = stochastic.extended_children | set([stochastic])
+            try:
+                NormalSubmodel.check_input(test_input)
+                return pymc.conjugate_Gibbs_competence
+            except ValueError:
+                return 0
+            
+
+except ImportError:
+    pass
+
 
 def check_children(stochastic, stepper_class, child_class, parent_key):
     """
@@ -140,16 +205,6 @@ def zap_extended_children(stochastic, cls_name):
         raise ValueError, 'Stochastic %s must have only direct children for %s to apply.'\
             %(stochastic, cls_name)
     
-try:
-    from GaussianSubmodel import GaussianSubmodel
-
-    __all__.append('NormalNormal')
-    
-    class NormalNormal(Gibbs):
-        pass
-
-except ImportError:
-    pass
 
 class StandardGibbs(Gibbs):
     """

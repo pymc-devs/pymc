@@ -445,7 +445,7 @@ class MAP(Model):
 
 class NormApprox(MAP, Sampler):
     """
-    N = NormApprox(input, db='ram', eps=.001, diff_order = 5)
+    N = NormApprox(input, db='ram', eps=.001, diff_order = 5, output_path=None, **kwds)
     
     Normal approximation to the posterior of a model.
     
