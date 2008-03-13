@@ -1,4 +1,4 @@
-from pymc import NormApprox, msqrt
+from pymc import NormApprox
 from pymc.examples import gelman_bioassay
 from pylab import *
 from numpy import *

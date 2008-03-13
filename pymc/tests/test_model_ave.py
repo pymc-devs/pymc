@@ -11,7 +11,8 @@ model posterior probabilities. This'll probably be worse for more complicated
 models. Maybe there's a literature on this problem.
 """
 
-from pymc import weight, Model
+from pymc import Model
+from pymc.MultiModelInference import weight
 from numpy import log
 from pymc.examples import model_1, model_2, model_3
 

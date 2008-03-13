@@ -11,27 +11,31 @@ Required external components: TclTk
 """
 __modules__ = [ 'Node',
                 'Container',
-                'distributions',
                 'PyMCObjects',                
-                'utils',
-                'StepMethods',
                 'Model',
-                'graph',
-                'MultiModelInference',
+                'distributions', 
                 'InstantiationDecorators',
-                'testsuite',
                 'NormalApproximation', 
                 'MCMC',
+                'StepMethods',
                 'convergencediagnostics',
                 'CommonDeterministics']
                 
+__sepmodules__ = [  'utils', 
+                    'testsuite', 
+                    'MultiModelInference']
+                
 __optmodules__ = ['ScipyDistributions',
                   'parallel',
-                  'sandbox']
+                  'sandbox',
+                  'graph']
 #ClosedCapture, OpenCapture   
 
 for mod in __modules__:
     exec "from %s import *" % mod
+    
+for mod in __sepmodules__:
+    exec "import %s" % mod
     
 for mod in __optmodules__:
     try:

@@ -1,5 +1,6 @@
 from pymc import *
 from numpy.testing import *
+from pymc.graph import *
 
 
 def mymodel():

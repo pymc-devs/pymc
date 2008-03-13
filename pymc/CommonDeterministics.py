@@ -4,12 +4,14 @@ from InstantiationDecorators import deterministic
 import numpy as np
 import inspect
 from utils import safe_len
+from flib import logit, invlogit, stukel_logit, stukel_invlogit
 
-__all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm']
+__all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm', 
+            'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit']
 
 class Lambda(Deterministic):
     """
-    L = Lambda(name, lambda p1=p1, p2=p2: f(p1, p2)[, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+    L = Lambda(name, lambda p1=p1, p2=p2: f(p1, p2)[, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
     
     Converts second argument, an anonymous function, into
     Deterministic object with specified name.
@@ -34,13 +36,75 @@ lambda_deterministic = Lambda
 lam_dtrm = Lambda
 
 
+class Logit(Deterministic):
+    """
+    L = Logit(name, theta[, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+    
+    A Deterministic whose value is the logit of parent theta.
+    
+    theta's value must be between 0 and 1.
+    """
+    def __init__(self, name, theta, doc='A logit transformation', *args, **kwds):
+        Deterministic.__init__(self, eval=logit, name=name, parents={'theta': theta}, doc=doc, *args, **kwds)
+
+
+class InvLogit(Deterministic):
+    """
+    P = InvLogit(name, ltheta[, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+    
+    A Deterministic whose value is the inverse logit of parent ltheta.
+    """    
+    def __init__(self, name, ltheta, doc='An inverse logit transformation', *args, **kwds):
+        Deterministic.__init__(self, eval=invlogit, name=name, parents={'ltheta': ltheta}, doc=doc, *args, **kwds)
+
+
+class StukelLogit(Deterministic):
+    """
+    S = StukelLogit(name, theta, a1, a2, [, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+
+    A Deterministic whose value is Stukel's link function with 
+    parameters a1 and a2 applied to theta.
+    
+    theta's value must be between 0 and 1.
+    
+    To see the effects of a1 and a2, try plotting the function stukel_logit
+    on theta=linspace(.1,.9,100)
+    
+    Reference: Therese A. Stukel, 'Generalized Logistic Models',
+    JASA vol 83 no 402, pp.426-431 (June 1988)
+    """
+    def __init__(self, name, theta, a1, a2, doc="Stukel's link function", *args, **kwds):
+        Deterministic.__init__(self, eval=stukel_logit, 
+                    name=name, parents={'theta': theta, 'a1': a1, 'a2': a2}, 
+                    doc=doc, *args, **kwds)
+
+
+class StukelInvLogit(Deterministic):
+    """
+    P = StukelInvLogit(name, ltheta, a1, a2, [, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+
+    A Deterministic whose value is Stukel's inverse link function with 
+    parameters a1 and a2 applied to ltheta.
+    
+    To see the effects of a1 and a2, try plotting the function stukel_invlogit
+    on ltheta=linspace(-5,5,100)
+    
+    Reference: Therese A. Stukel, 'Generalized Logistic Models',
+    JASA vol 83 no 402, pp.426-431 (June 1988)
+    """
+    def __init__(self, name, ltheta, a1, a2, doc="Stukel's inverse link function", *args, **kwds):
+        Deterministic.__init__(self, eval=stukel_invlogit, 
+                    name=name, parents={'ltheta': ltheta, 'a1': a1, 'a2': a2}, 
+                    doc=doc, *args, **kwds)
+                    
+                    
 class CompletedDirichlet(Deterministic):
     """
-    CD = CompletedDirichlet(name, D[, trace=True, cache_depth=2, plot=True, verbose=0])
+    CD = CompletedDirichlet(name, D[, doc, trace=True, cache_depth=2, plot=True, verbose=0])
     
     'Completes' the value of D by appending 1-sum(D.value) to the end.
     """
-    def __init__(self, name, D, trace=True, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=True, verbose=0):
         
         def eval_fun(D):
             N = D.shape[1]
@@ -48,14 +112,17 @@ class CompletedDirichlet(Deterministic):
             out[0,:N] = D
             out[0,N] = 1.-np.sum(D)
             return out
+            
+        if doc is None:
+            doc = 'The completed version of %s'%D.__name__
         
-        Deterministic.__init__(self, eval=eval_fun, name=name, parents={'D': D}, doc='The completed version of %s'%D.__name__,
+        Deterministic.__init__(self, eval=eval_fun, name=name, parents={'D': D}, doc=doc,
          dtype=float, trace=trace, cache_depth=cache_depth, plot=plot, verbose=verbose)        
         
         
 class LinearCombination(Deterministic):
     """
-    L = LinearCombination(name, x, y[, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+    L = LinearCombination(name, x, y[, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
 
     A Deterministic returning the sum of dot(x[i],y[i]).
 
@@ -127,7 +194,7 @@ class LinearCombination(Deterministic):
 
 class Index(LinearCombination):
     """
-    I = Index(name, x, y, index[, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
+    I = Index(name, x, y, index[, doc, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0])
 
     A deterministic returning dot(x[index], y[index]).
 

@@ -9,7 +9,6 @@ import sys, inspect
 from copy import copy
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
-from flib import logit, invlogit, stukel_logit, stukel_invlogit
 
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
@@ -19,7 +18,7 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, vectorize, inf, shape, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','logit','invlogit','stukel_logit','stukel_invlogit','safe_len']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len']
 
 
 def check_list(thing, label):
@@ -397,14 +396,6 @@ def _optimize_binning(x, range, method='Freedman'):
     else:
         raise 'Method must be Scott or Freedman', method
     return int(diff(range)/width)
-
-
-# Logit and inverse-logit functions
-# ============================================================
-# = NB vectorize causes catastrophic memory leaks currently. =
-# ============================================================
-logit = flib.logit
-invlogit = flib.invlogit
 
 def normcdf(x):
     """Normal cumulative density function."""
