@@ -1,3 +1,5 @@
+# TODO: Give C, mu and V attributes to NormalSubmodel, make NormalModel a very thin wrapper in NormalSubModel.py.
+
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 import pymc
@@ -126,6 +128,18 @@ class NormalModel(pymc.Sampler):
         
     def draw(self):
         self.NSM.draw_conditional()
+        
+    def __getattr__(self, attr):
+        try:
+            return object.__getattr__(self, attr)
+        except:
+            return getattr(self.NSM, attr)
+    
+    def __setattr__(self, attr, newval):
+        try:
+            object.__setattr__(self, attr, newval)
+        except:
+            setattr(self.NSM, attr, newval)    
         
 if __name__ == '__main__':
     from pylab import *

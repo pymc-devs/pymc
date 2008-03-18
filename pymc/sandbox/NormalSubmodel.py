@@ -175,13 +175,18 @@ class NormalSubmodel(ListTupleContainer):
 
     def __init__(self, input):
         ListTupleContainer.__init__(self, input)
+        
+        # Need to figure out children and parents of model.
+        self.children, self.parents = find_children_and_parents(self.stochastics | self.data_stochastics)
+
         self.stochastic_list = order_stochastic_list(self.stochastics | self.data_stochastics)
-        self.check_input(self.stochastic_list)        
+        
+        # TODO: Replace check_input with crawl(). If output of crawl is length 0,
+        # THEN raise an error complaining that there are no eligible stochastics here.
+        self.check_input(self.stochastic_list)                
+
         self.N_stochastics = len(self.stochastic_list)
 
-        # Need to figure out children and parents of model.
-        self.children, self.parents = find_children_and_parents(self.stochastic_list)
-        
         self.stochastic_indices, self.stochastic_len, self.slices, self.len\
          = ravel_submodel(self.stochastic_list)
         
