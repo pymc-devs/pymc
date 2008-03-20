@@ -17,7 +17,7 @@ This class serves as a container for probability models and as a base class for 
 
 Models' useful methods are:
 \begin{description}
-    \item[\texttt{draw_from_prior()}:] Sets all stochastic varibales' values to new random values, which would be a sample from the joint distribution if all data and \texttt{Potential} instances' log-probability attributes were set to zero.
+    \item[\texttt{draw_from_prior()}:] Sets all stochastic variables' values to new random values, which would be a sample from the joint distribution if all data and \texttt{Potential} instances' log-probability attributes were set to zero.
     \item[\texttt{seed()}:] Same as \texttt{draw_from_prior}, but only stochastic variables with an \texttt{rseed} attribute are changed.
     \item[\texttt{find_generations():}] Sets the \texttt{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
 \end{description}
@@ -117,9 +117,10 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
     \end{description}
     \item[\texttt{tally()}:] Write all variables' current values to the database.
     \item[\texttt{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \texttt{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values all the stochastic variables in the model).
-    \item[\texttt{save\_state()}:] \textbf{Someone else document this}
-    \item[\texttt{restore\_state()}:] \textbf{Someone else document this}
-    \item[\texttt{plot()}:] \textbf{Someone else document this}
+    \item[\texttt{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling.
+    \item[\texttt{restore\_state()}:] Restores the sampler to the state stored in the database.
+    \item[\texttt{plot()}:] Generates densities (or histograms) and trace plots of all nodes in the sampler.
+	 \item[\textttt{stats()}:] Generate summary statistics for all nodes in the model.
     \item[\texttt{remember(trace\_index)}:] Set all variables' values from frame \texttt{trace\_index} in the database.
 \end{description}
 

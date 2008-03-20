@@ -62,8 +62,8 @@ A stochastic variable has the following additional attributes (you don't need to
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary would be \texttt{'t_l'} and \texttt{'t_h'}. Thanks to Python's dynamic typing, the actual parents (the values of the dictionary) may be of any class or type.
     \item[\texttt{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability.
-    \item[\texttt{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities.
+    \item[\texttt{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
+    \item[\texttt{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
     \item[\texttt{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
     \item[\texttt{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with potentials removed.
     \item[\texttt{markov_blanket}:] A set containing self and self's moral neighbors.
@@ -76,10 +76,10 @@ A stochastic variable has the following additional attributes (you don't need to
 Subclasses of \texttt{Stochastic} include the \texttt{DiscreteStochastic} class, which represents integer-valued variables, and the \texttt{BinaryStochastic} class, which represents Bernoulli or indicator variables. 
 
 \subsection{Instantiation of stochastic variables}
-There are four ways to instantiate stochastic variables, called the `one-liner', `short', `long' and `direct' interfaces.
+There are four ways to instantiate stochastic variables, called the `automatic', `short', `long' and `direct' interfaces.
 
 \begin{description}    
-    \item[One-Liner] Stochastic variables with standard distributions (see chapter \ref{chap:distributions} ) can be instantiated in a single line using special subclasses of \texttt{Stochastic}. Uniformly-distributed variable $s$ could be instantiated using the one-liner interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions (see chapter \ref{chap:distributions} ) can be instantiated in a single line using special subclasses of \texttt{Stochastic}. Uniformly-distributed variable $s$ could be instantiated using the automatic interface as follows:
     \begin{verbatim}
         s = Uniform('s', 1851, 1962, value=1900)
     \end{verbatim}
@@ -190,7 +190,7 @@ Although the data $D$ is represented by a random variable in the model, we have 
 \subsection{Why are data and unknown variables represented by the same object?}
 Since it's represented by a \texttt{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
-This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ as follows:
+This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
     \item Sample $e$, $s$ and $l$ from their priors.
     \item Sample $D$ conditional on these values.
@@ -198,7 +198,7 @@ This point can be counterintuitive at first, as many peoples' instinct is to reg
 Even after we observe the value of $D$, we need to use this process model to make inferences about $e$, $s$ and $l$; it's the only information we have about how the variables are related.
 
 \medskip
-To look at the issue another way, we could in principle have written a model equivalent to (\ref{disastermodel}) in such a way that $D$ depended on nothing and everything else depended on $D$, for example
+To look at the issue another way, we could, in principle, have written a model equivalent to (\ref{disastermodel}) in such a way that $D$ depended on nothing and everything else depended on $D$, for example
 \begin{eqnarray*}
     s|e,l,D\sim\cdot\\
     e|l,D\sim\cdot\\
@@ -211,6 +211,9 @@ This would have felt more natural in some ways, because we would have the unknow
     p(s,e,l|D) = p(s|e, l, D) p(e|l, D) p(l|D),
 \end{eqnarray*}
 and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's more natural to write down the data's dependence on the unknown variables than vice versa.
+
+% ITS MORE THAN THIS, ISNT IT? THE REASON THAT THE ABOVE IS NOT INTERESTING IS THAT WE CANNOT TYPICALLY
+% GET THESE VALUES -- THEY ARE EXACTLY THE POSTERIORS THAT ARE UNKNOWN (CANNOT CALCULATE THEM ANALYTICALLY)
 
 \subsection{Declaring stochastic variables to be data}
 
@@ -226,7 +229,7 @@ def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
             - gammaln(late_rate))
     return logp
 \end{verbatim}
-In the one-liner and direct interfaces, the \texttt{isdata} argument can be simply set to \texttt{True}.
+In the automatic and direct interfaces, the \texttt{isdata} argument can be simply set to \texttt{True}.
 
 
 \section{The \texttt{Deterministic} class}\label{deterministic}
@@ -284,7 +287,7 @@ r = Deterministic(  eval = r_eval,
 The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for the variable, as with stochastic variables.
 \end{description}
 
-There are a handful of \texttt{Deterministic} subclasses with one-liner interfaces, most notably \texttt{LinearCombination}.
+There are a handful of \texttt{Deterministic} subclasses with automatic interfaces, most notably \texttt{LinearCombination}.
 
 Note that deterministic variables have no \texttt{isdata} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
@@ -374,6 +377,10 @@ Each of these attributes is a set containing all the objects of each type in a c
 
 \section{The \texttt{Potential} class (optional)}
 
+% WE PROBABLY NEED TO GIVE A GOOD EXAMPLE OF WHERE A POTENTIAL IS DIFFERENT FROM A DETERMINISTIC;
+% THIS PROBABLY WONT BE CLEAR TO EVERYONE. THE KEY DIFFERENCE IS THAT A POTENTIAL IS PART OF THE
+% JOINT POSTERIOR, NO?
+% 
 
 The joint density corresponding to model (\ref{disastermodel}) can be written as follows:
 \begin{eqnarray*}
@@ -490,7 +497,7 @@ fun(**arguments.value)
 \end{verbatim}
 Note that no arguments need to be passed to \texttt{L.get}; lazy functions memorize their arguments.
 
-Before calling \texttt{fun}, \texttt{L} will check the values of \texttt{arguments.variales} against an internal cache. This comparison is done \emph{by reference}, not by value, and this is part of the reason why stochastic variables' values cannot be updated in-place. If \texttt{arguments.variables}' values match a frame of the cache, the corresponding output value is returned and \texttt{fun} is not called. If a call to \texttt{fun} is needed, \texttt{arguments.variables}' values and the return value replace the oldest frame in the cache. The depth of the cache can be set using the optimal init argument \texttt{cache_depth}, which defaults to 2.
+Before calling \texttt{fun}, \texttt{L} will check the values of \texttt{arguments.variables} against an internal cache. This comparison is done \emph{by reference}, not by value, and this is part of the reason why stochastic variables' values cannot be updated in-place. If \texttt{arguments.variables}' values match a frame of the cache, the corresponding output value is returned and \texttt{fun} is not called. If a call to \texttt{fun} is needed, \texttt{arguments.variables}' values and the return value replace the oldest frame in the cache. The depth of the cache can be set using the optimal init argument \texttt{cache_depth}, which defaults to 2.
 
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parental value configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected.
 
