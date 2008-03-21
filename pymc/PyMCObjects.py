@@ -448,7 +448,7 @@ class Stochastic(StochasticBase):
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.
         self.rseed = rseed
-                
+
         # Initialize value, either from value provided or from random function.
         if value is not None:
             if isinstance(value, ndarray):
@@ -458,8 +458,11 @@ class Stochastic(StochasticBase):
                         self._value = asarray(value, dtype=dtype).view(value.__class__)
                 else:
                     self._value = value
-            elif dtype is not None and dtype is not object:
-                self._value = dtype(value)
+            elif dtype and dtype is not object:
+                try:
+                    self._value = dtype(value)
+                except TypeError:
+                    self._value = asarray(value)
             else:
                 self._value = value
         else:
@@ -538,8 +541,11 @@ class Stochastic(StochasticBase):
                     self._value = asarray(value, dtype=self.dtype).view(value.__class__)
             else:
                 self._value = value
-        elif self.dtype is not None and self.dtype is not object:
-            self._value = self.dtype(value)
+        elif self.dtype and self.dtype is not object:
+            try:
+                self._value = dtype(value)
+            except TypeError:
+                self._value = asarray(value)
         else:
             self._value = value
         
