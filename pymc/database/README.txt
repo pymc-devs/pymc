@@ -88,19 +88,18 @@ hdf5
 The hdf5 backend uses pyTables to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available memory. Data access is also very fast.
 
 
-
-
-==========  ============================================================  ========================
- Backend     Description                                                   External Dependencies
-==========  ============================================================  ========================
- no_trace    Do not tally samples at all. Use only for testing purposes.
- ram         Store samples in memory. 
- txt         Write data to ascii files. 
- pickle      Write data to a pickle file. 
- sqlite      Store samples in a sqlite database.                           sqlite3
- mysql       Store samples in a mysql database.                            MySQLdb
- hdf5        Store samples in the HDF5 format.                             pytables (>2.0), libhdf5
-==========  ============================================================  ========================
+==========  =====================================  =========================
+ Backend     Description                            External Dependencies
+==========  =====================================  =========================
+ no_trace    Do not tally samples at all.        
+             Use only for testing purposes.      
+ ram         Store samples in memory.            
+ txt         Write data to ascii files.          
+ pickle      Write data to a pickle file.        
+ sqlite      Store samples in a sqlite database.    sqlite3
+ mysql       Store samples in a mysql database.     MySQLdb
+ hdf5        Store samples in the HDF5 format.      pytables (>2.0), libhdf5
+==========  =====================================  =========================
 
 
 For more information about individual backends, refer to the `API`_ documentation.

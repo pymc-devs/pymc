@@ -270,7 +270,7 @@ class Plotter:
         plotpath: Specifies location for saving plots (defaults to local directory).
     """
     
-    def __init__(self, format='png', backend=None, plotpath=None):
+    def __init__(self, format='png', backend='TkAgg', plotpath=None):
         # Class initialization
         
         # Specify pylab backend

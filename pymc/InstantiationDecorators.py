@@ -124,11 +124,6 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     :SeeAlso: Stochastic, Deterministic, deterministic, data, Potential, potential, Model, Container
     """
     
-    if binary:
-        __class__ = BinaryStochastic
-    elif discrete:
-        __class__ = DiscreteStochastic
-    
     def instantiate_p(__func__):
         value, parents = _extract(__func__, kwds, keys, 'Stochastic')
         return __class__(value=value, parents=parents, **kwds)  
