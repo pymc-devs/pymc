@@ -1,0 +1,195 @@
+
+
+By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different strategies, from simple ASCII files to compressed binary formats. These strategies are implemented different \emph{database backends}, behaving identically from the user perspective. In the following, the interface to these backends is discussed, and a description of the different backends is given.
+
+
+%___________________________________________________________________________
+
+\hypertarget{accessing-sampled-data-user-interface}{}
+\pdfbookmark[0]{Accessing Sampled Data: User Interface}{accessing-sampled-data-user-interface}
+\section*{Accessing Sampled Data: User Interface}
+\label{accessing-sampled-data-user-interface}
+
+The choice of database backend is made when a Sampler is created using the \titlereference{db} keyword:
+\begin{quote}{\ttfamily \raggedright \noindent
+S~=~Sampler(DisasterSampler,~db='txt',~dirname='test')
+}\end{quote}
+
+This instructs the sampler to tally samples in txt files stored in a directory named \titlereference{test}. Other choices for the database are given in the table below, the default being \titlereference{ram}. When the \titlereference{sample} method is called, a \titlereference{chain} is created storing the sampled variables. The data in this chain can be accessed for each stochastic parameter using its trace object
+\begin{quote}{\ttfamily \raggedright \noindent
+S.e.trace()
+}\end{quote}
+
+When \titlereference{S.db.close()} is called, the data is flushed to disk. That is, directories are created for each chain, with samples from each stochastic variable in a separate file. To access this data during a following session, each database provides a \titlereference{load} function instantiating a \titlereference{Database} object
+\begin{quote}{\ttfamily \raggedright \noindent
+DB~=~Database.txt.load('test')
+}\end{quote}
+
+This object can then be linked to a model definition using
+\begin{quote}{\ttfamily \raggedright \noindent
+S~=~Sampler(DisasterSampler,~db=DB)
+}\end{quote}
+
+For some databases (\titlereference{hdf5}, \titlereference{pickle}), loading an existing database restores the previous state of the sampler. That is, the attribtues of the Sampler, its Stochastic parameters and StepMethods are all set to the value they had at the time \titlereference{D.db.close()} was called.
+
+The \titlereference{trace} object has the following signature .. {[}{\#}{]}:
+\begin{quote}{\ttfamily \raggedright \noindent
+trace(self,~~burn=0,~thin=1,~chain=-1,~slicing=None)
+}\end{quote}
+
+with arguments having the following meaning:
+\begin{description}
+\item[{burn}] \leavevmode (\textbf{int})
+
+Number of initial samples to skip.
+
+\item[{thin}] \leavevmode (\textbf{int})
+
+Number of samples to step.
+
+\item[{chain}] \leavevmode (\textbf{int or None})
+
+Index of the sampling chain to return. Use \titlereference{None} to return all chains. Note that a new chain is created each time \titlereference{sample} is called.
+
+\item[{slicing}] \leavevmode (\textbf{slice})
+
+Slice object used to parse the samples. Overrides burn and thin parameters.
+
+\end{description}
+% [#]: The `trace` attribute of stochastic parameters is in fact an instance of a Trace class, defined for each backend. This class has a method called `gettrace` that returns the trace of the object, and which is called by `trace()` . 
+
+
+%___________________________________________________________________________
+
+\hypertarget{backends-description}{}
+\pdfbookmark[0]{Backends description}{backends-description}
+\section*{Backends description}
+\label{backends-description}
+
+PyMC provides seven different backends with different level of support.
+
+
+%___________________________________________________________________________
+
+\hypertarget{ram}{}
+\pdfbookmark[1]{ram}{ram}
+\subsection*{ram}
+\label{ram}
+
+Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all running applications on your computer.
+
+
+%___________________________________________________________________________
+
+\hypertarget{txt}{}
+\pdfbookmark[1]{txt}{txt}
+\subsection*{txt}
+\label{txt}
+
+The \titlereference{txt} backend is a modified \titlereference{ram} backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, the trace for each variable being stored in a file names`{\textless}stoch name{\textgreater}.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory.
+
+
+%___________________________________________________________________________
+
+\hypertarget{pickle}{}
+\pdfbookmark[1]{pickle}{pickle}
+\subsection*{pickle}
+\label{pickle}
+
+As its name implies, the \titlereference{pickle} database used the \titlereference{Cpickle} module to save the trace objects. Use of this backend is not suggested since the generated files may become unreadable after a Python update.
+
+
+%___________________________________________________________________________
+
+\hypertarget{sqlite}{}
+\pdfbookmark[1]{sqlite}{sqlite}
+\subsection*{sqlite}
+\label{sqlite}
+
+Chris ...
+
+
+%___________________________________________________________________________
+
+\hypertarget{mysql}{}
+\pdfbookmark[1]{mysql}{mysql}
+\subsection*{mysql}
+\label{mysql}
+
+Chris ...
+
+
+%___________________________________________________________________________
+
+\hypertarget{hdf5}{}
+\pdfbookmark[1]{hdf5}{hdf5}
+\subsection*{hdf5}
+\label{hdf5}
+
+The hdf5 backend uses pyTables to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available memory. Data access is also very fast.
+
+\leavevmode
+\begin{table}[c]{lll}
+\hline
+\textbf{
+Backend
+} & \textbf{
+Description
+} & \textbf{
+External Dependencies
+} \\
+\hline
+\endhead
+
+no{\_}trace
+ & 
+Do not tally samples at all. Use only for testing purposes.
+ &  \\
+\hline
+
+ram
+ & 
+Store samples in memory.
+ &  \\
+\hline
+
+txt
+ & 
+Write data to ascii files.
+ &  \\
+\hline
+
+pickle
+ & 
+Write data to a pickle file.
+ &  \\
+\hline
+
+sqlite
+ & 
+Store samples in a sqlite database.
+ & 
+sqlite3
+ \\
+\hline
+
+mysql
+ & 
+Store samples in a mysql database.
+ & 
+MySQLdb
+ \\
+\hline
+
+hdf5
+ & 
+Store samples in the HDF5 format.
+ & 
+pytables ({\textgreater}2.0), libhdf5
+ \\
+\hline
+\end{table}
+
+For more information about individual backends, refer to the \href{docs/API.pdf}{API} documentation.
+
+\

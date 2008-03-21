@@ -120,7 +120,7 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
     \item[\texttt{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling.
     \item[\texttt{restore\_state()}:] Restores the sampler to the state stored in the database.
     \item[\texttt{plot()}:] Generates densities (or histograms) and trace plots of all nodes in the sampler.
-	 \item[\textttt{stats()}:] Generate summary statistics for all nodes in the model.
+	 \item[\texttt{stats()}:] Generate summary statistics for all nodes in the model.
     \item[\texttt{remember(trace\_index)}:] Set all variables' values from frame \texttt{trace\_index} in the database.
 \end{description}
 
@@ -144,8 +144,8 @@ The useful attributes of \texttt{MAP} are:
     \item[\texttt{logp_at_max}:] The maximum joint log-probability of the model.
     \item[\texttt{len}:] The total number of elements in all the stochastic variables in the model with \texttt{isdata=False}.
     \item[\texttt{data_len}:] The total number number of elements in all the stochastic variables in the model with \texttt{isdata=True}.
-    \item[\texttt{AIC}:] Akaike's information criterion for this model \textbf{cite}.
-    \item[\texttt{BIC}:] The Bayesian information criterion for this model \textbf{cite}.
+    \item[\texttt{AIC}:] Akaike's information criterion for this model \cite{Akaike:1973aj,Burnham:2002ic}.
+    \item[\texttt{BIC}:] The Bayesian information criterion for this model \cite{Schwarz:1978ud}.
 \end{description}
 
 One use of the \texttt{MAP} class is finding reasonable initial states for MCMC chains; multiple \texttt{Model} subclasses can handle the same collection of nodes.
@@ -168,12 +168,12 @@ It provides the following additional attributes:
 
 MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
 \begin{description}
-    \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations. \textbf{Cite paper that says it's OK to keep tuning.}
-    \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] See \texttt{Sampler.isample}.
+    \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations, even after burn-in is complete \cite{Haario:2001lr}.
+    \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] Interactive sampling; see \texttt{Sampler.isample}.
     \item[\texttt{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \texttt{method} to handle some stochastic variables. The extra arguments are passed to the init method.
     \item[\texttt{assign_step_methods()}:] Assigns step methods now. This method is called whenever \texttt{sample} or \texttt{isample} is called, but it can be useful to call it directly to see what the default step methods will be.
     \item[\texttt{tune()}:] Each step method's \texttt{tune} method is called. This method is called periodically throughout the sampling loop.
-    \item[\texttt{goodness()}:] \textbf{Someone else document this}
+    \item[\texttt{goodness()}:] Calculates goodness-of-fit (GOF) statistics according to \cite{Brooks:2000il}.
 \end{description}
 
 MCMC samplers' step methods can be accessed via the \texttt{\textbf{step_method_dict}} attribute. \texttt{M.step_method_dict[x]} returns a list of the step methods \texttt{M} will use to handle the stochastic variable \texttt{x}.
