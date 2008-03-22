@@ -302,8 +302,8 @@ class StepMethod(object):
             
             # Increment sum
             sum += child.logp
-        if self.verbose > 0:
-            print '\t' + self._id + 'Current log-likelihood ', sum
+        if self.verbose > 1:
+            print '\t' + self._id + ' Current log-likelihood ', sum
         return sum
     
     # Make get property for retrieving log-probability
@@ -766,8 +766,7 @@ class AdaptiveMetropolis(StepMethod):
         # Call methods to initialize
         self.check_type()
         self.dimension()
-        self.set_cov(cov, scales)           
-        self.update_sig()
+        self.set_cov(cov, scales)     
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
@@ -783,7 +782,6 @@ class AdaptiveMetropolis(StepMethod):
             print "Initialization..."
             print 'Dimension: ', self.dim
             print "C_0: ", self.C
-            print "Sigma: ", self._sig
               
     @staticmethod
     def competence(stochastic):
@@ -897,21 +895,8 @@ class AdaptiveMetropolis(StepMethod):
             print "\tUpdating covariance ...\n", self.C
             print "\tUpdating mean ... ", self.chain_mean
         
-        # Update state
-        self.update_sig()
-        
         self._trace_count += len(self._trace)
         self._trace = []  
-    
-    def update_sig(self):
-        """Compute the Cholesky decomposition of self.C."""
-        # old_sig = self._sig
-
-        try:
-            self._sig = np.linalg.cholesky(self.C)
-        except np.linalg.LinAlgError:
-            print 'Warning, covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value.'
-            # self._sig = old_sig
              
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
@@ -921,8 +906,8 @@ class AdaptiveMetropolis(StepMethod):
         
         .. math::
             C_k & = \frac{1}{k-1} (\sum_{i=1}^k x_i x_i^T - k\bar{x_k}\bar{x_k}^T)
-            C_n & = \frac{1}{n-1} (\sum_{i=1}^k x_i x_i^T + \sum_{i=k+1}^n x_i x_i^T - k\bar{x_n}\bar{x_n}^T)
-                & = \frac{1}{n-1} ((k-1)C_k + k\bar{x_k}\bar{x_k}^T + \sum_{i=k+1}^n x_i x_i^T - k\bar{x_n}\bar{x_n}^T)
+            C_n & = \frac{1}{n-1} (\sum_{i=1}^k x_i x_i^T + \sum_{i=k+1}^n x_i x_i^T - n\bar{x_n}\bar{x_n}^T)
+                & = \frac{1}{n-1} ((k-1)C_k + k\bar{x_k}\bar{x_k}^T + \sum_{i=k+1}^n x_i x_i^T - n\bar{x_n}\bar{x_n}^T)
                 
         :Parameters:
             -  cov : matrix
@@ -948,7 +933,7 @@ class AdaptiveMetropolis(StepMethod):
         t4 = n*np.outer(new_mean, new_mean)
         t5 = epsilon * np.eye(cov.shape[0])
         
-        new_cov =  (k-1)/(n-1)*cov + scaling/(n-1.  ) * (t2 + t3 - t4 + t5)
+        new_cov =  (k-1)/(n-1.)*cov + scaling/(n-1.) * (t2 + t3 - t4 + t5)
         return new_cov, new_mean
         
     def recursive_mean(self, mean, length, chain):
@@ -959,9 +944,9 @@ class AdaptiveMetropolis(StepMethod):
         to recursively estimate the mean. 
         
         .. math::
-            \bar{x_n} & = \frac{1}{n} \sum_{i=1]^n x_i
-                      & = \frac{1}{n} (\sum_{i=1]^j x_i + \sum_{i=j+1]^n x_i)
-                      & = \frac{j\bar{x_j}}{n} + \frac{\sum_{i=j+1]^n x_i}{n}
+            \bar{x_n} & = \frac{1}{n} \sum_{i=1}^n x_i
+                      & = \frac{1}{n} (\sum_{i=1}^j x_i + \sum_{i=j+1}^n x_i)
+                      & = \frac{j\bar{x_j}}{n} + \frac{\sum_{i=j+1}^n x_i}{n}
         
         :Parameters:
             -  mean : array
@@ -983,18 +968,22 @@ class AdaptiveMetropolis(StepMethod):
         The proposal jumps are drawn from a multivariate normal distribution.        
         """
                 
-        #fill_stdnormal(self._proposal_deviate)
-        #arrayjump = np.inner(self._proposal_deviate, self._sig)
+        # Initialize array of means for MV normal
+        means = zeros(self.C.shape[0])
         
-        arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
-        
-        # 4. Update each stochastic individually.
+        # Insert stoch means into appropriate places in array of means
         for stochastic in self.stochastics:
-            jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
+            means[self._slices[stochastic]] = stochastic.value
+            
+        # Proposed values from MV normal centered on current means
+        proposed_values = np.random.multivariate_normal(means, self.C)  
+            
+        # Update values of each stoch in turn
+        for stochastic in self.stochastics:
             if self.isdiscrete[stochastic]:
-                stochastic.value = stochastic.value + round_array(jump)
+                stochastic.value = round_array(proposed_values[self._slices[stochastic]])
             else:
-                stochastic.value = stochastic.value + jump
+                stochastic.value = proposed_values[self._slices[stochastic]]
                 
     def step(self):
         """
@@ -1012,7 +1001,7 @@ class AdaptiveMetropolis(StepMethod):
         self.delay, only accepted jumps are stored in the internal 
         trace to avoid computing singular covariance matrices. 
         """
-
+        
         # Probability and likelihood for stochastic's current value:
         logp = sum([stochastic.logp for stochastic in self.stochastics])
         loglike = self.loglike

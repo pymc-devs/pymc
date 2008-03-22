@@ -198,7 +198,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', output_path=None, plot_backend='TkAgg', reinit_model=True, **kwds):
+    def __init__(self, input=None, db='ram', output_path=None, reinit_model=True, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -210,9 +210,6 @@ class Sampler(Model):
               of the stochastics and deterministics sampled during the MCMC loop.
           - output_path : string
               The place where any output files should be put.
-          - plot_backend : string
-              The graphical backend for the plotter. Defaults to TkAgg; consult Matplotlib documentation
-              for valid backends. Common ones include 'TkAgg', 'WXAgg', 'GTKAgg', 'Cairo'.
           - reinit_model : bool
               Flag for reinitialization of Model superclass.Å
           - **kwds : 
@@ -235,8 +232,6 @@ class Sampler(Model):
         self._iter = None
         
         # Instantiate plotter 
-        # Hardcoding the matplotlib backend raises error in
-        # interactive use. DH
         try:
             from Matplot import Plotter
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')

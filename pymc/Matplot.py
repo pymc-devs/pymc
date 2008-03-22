@@ -265,20 +265,11 @@ class Plotter:
     :Arguments:
         format: Graphic output format (defaults to png).
         
-        backend: Specifies matplotlib graphical toolkit backend (defaults to TkAgg).
-        
         plotpath: Specifies location for saving plots (defaults to local directory).
     """
     
-    def __init__(self, format='png', backend='TkAgg', plotpath=None):
+    def __init__(self, format='png', plotpath=None):
         # Class initialization
-        
-        # Specify pylab backend
-        if backend is not None:
-            try:
-                matplotlib.use(backend)
-            except RuntimeError:
-                print 'Warning: unable to change backend to %s, because matplotlib was already imported this session.' % backend
         
         # Store output format
         self._format = format
