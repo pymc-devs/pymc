@@ -20,10 +20,6 @@ from copy import copy
 from threading import Thread
 from Node import ContainerBase
 from time import sleep
-try:  # Matplotlib is an optional dependency
-	from Matplot import Plotter, show
-except:
-	pass
 	
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -242,6 +238,7 @@ class Sampler(Model):
         # Hardcoding the matplotlib backend raises error in
         # interactive use. DH
         try:
+            from Matplot import Plotter
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
         except:
             self._plotter = 'Could not be instantiated.'        
@@ -330,8 +327,6 @@ class Sampler(Model):
         for variable in self._variables_to_tally:            
             # Plot object
             if variable.plot: self._plotter.plot(variable)
-
-        # show()
         
     def stats(self):
         """

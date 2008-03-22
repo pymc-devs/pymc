@@ -428,6 +428,9 @@ class Metropolis(StepMethod):
                 return 3                
             except:
                 pass
+                
+        if s.dtype is None:
+            return .5
 
         if not s.dtype in float_dtypes:
             # If the stochastic's binary or discrete, I can't do it.
@@ -740,10 +743,12 @@ class AdaptiveMetropolis(StepMethod):
     """
     def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
         
+        # Verbosity flag
         self.verbose = verbose
         
         if isinstance(stochastic, Stochastic):
             stochastic = [stochastic] 
+        # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose)
         
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
@@ -751,11 +756,14 @@ class AdaptiveMetropolis(StepMethod):
         self._state += ['_trace_count', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
         
+        # Number of successful steps before the empirical covariance is computed
         self.delay = delay
-        self.isdiscrete = {}
+        # Interval between covariance updates
         self.interval = interval
+        # Flag for tallying only accepted jumps until delay reached
         self.greedy = greedy
         
+        # Call methods to initialize
         self.check_type()
         self.dimension()
         self.set_cov(cov, scales)           
@@ -792,7 +800,7 @@ class AdaptiveMetropolis(StepMethod):
             return 0
                 
                 
-    def set_cov(self, cov=None, scales=None, trace=2000, scaling=20):
+    def set_cov(self, cov=None, scales={}, trace=2000, scaling=20):
         """Define C, the jump distributioin covariance matrix.
         
         Return:
@@ -802,10 +810,13 @@ class AdaptiveMetropolis(StepMethod):
             - covariance matrix estimated from the stochastics value, scaled by 
                 scaling parameter.
         """
+        
         if cov:
             return cov
         elif scales:
+            # Get array of scales
             ord_sc = self.order_scales(scales)    
+            # Scale identity matrix
             self.C = np.eye(self.dim)*ord_sc
         else:
             try:
@@ -895,6 +906,7 @@ class AdaptiveMetropolis(StepMethod):
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
         # old_sig = self._sig
+
         try:
             self._sig = np.linalg.cholesky(self.C)
         except np.linalg.LinAlgError:
@@ -1064,7 +1076,7 @@ class AdaptiveMetropolis(StepMethod):
             chain.append(np.ravel(stochastic.value))
         self._trace.append(np.concatenate(chain))
         
-    def trace2array(i0,i1):
+    def trace2array(self, i0, i1):
         """Return an array with the trace of all stochastics from index i0 to i1."""
         chain = []
         for stochastic in self.stochastics:
