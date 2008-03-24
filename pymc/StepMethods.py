@@ -767,6 +767,7 @@ class AdaptiveMetropolis(StepMethod):
         self.check_type()
         self.dimension()
         self.set_cov(cov, scales)     
+        self.update_sig()
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
@@ -782,6 +783,7 @@ class AdaptiveMetropolis(StepMethod):
             print "Initialization..."
             print 'Dimension: ', self.dim
             print "C_0: ", self.C
+            print "Sigma: ", self._sig
               
     @staticmethod
     def competence(stochastic):
@@ -895,9 +897,21 @@ class AdaptiveMetropolis(StepMethod):
             print "\tUpdating covariance ...\n", self.C
             print "\tUpdating mean ... ", self.chain_mean
         
+        # Update state
+        self.update_sig()
+        
         self._trace_count += len(self._trace)
         self._trace = []  
-             
+        
+    def update_sig(self):
+        """Compute the Cholesky decomposition of self.C."""
+        # old_sig = self._sig
+ 
+        try:
+            self._sig = np.linalg.cholesky(self.C)
+        except np.linalg.LinAlgError:
+            print 'Warning, covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value.'
+            # self._sig = old_sig        
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.
@@ -968,22 +982,16 @@ class AdaptiveMetropolis(StepMethod):
         The proposal jumps are drawn from a multivariate normal distribution.        
         """
                 
-        # Initialize array of means for MV normal
-        means = zeros(self.C.shape[0])
+        arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
         
-        # Insert stoch means into appropriate places in array of means
+        # Update each stochastic individually.
         for stochastic in self.stochastics:
-            means[self._slices[stochastic]] = stochastic.value
+            jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
             
-        # Proposed values from MV normal centered on current means
-        proposed_values = np.random.multivariate_normal(means, self.C)  
-            
-        # Update values of each stoch in turn
-        for stochastic in self.stochastics:
             if self.isdiscrete[stochastic]:
-                stochastic.value = round_array(proposed_values[self._slices[stochastic]])
+                stochastic.value = stochastic.value + round_array(jump)
             else:
-                stochastic.value = proposed_values[self._slices[stochastic]]
+                stochastic.value = stochastic.value + jump
                 
     def step(self):
         """
