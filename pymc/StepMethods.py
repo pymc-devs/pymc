@@ -13,7 +13,7 @@ from Node import ZeroProbability, Node, Variable, StochasticBase
 from     pymc.decorators import prop
 from copy import copy
 from InstantiationDecorators import deterministic
-import pdb
+import pdb, warnings
 
 __docformat__='reStructuredText'
 
@@ -701,8 +701,6 @@ class BinaryMetropolis(Metropolis):
 
 class AdaptiveMetropolis(StepMethod):
     """
-    S = AdaptiveMetropolis(self, stochastic, cov, delay=1000, interval=100, scale={})
-
     The AdaptativeMetropolis (AM) sampling algorithm works like a regular 
     Metropolis, with the exception that stochastic parameters are block-updated 
     using a multivariate jump distribution whose covariance is tuned during 
@@ -718,12 +716,14 @@ class AdaptiveMetropolis(StepMethod):
             Initial guess for the covariance matrix C. 
             
       - delay : int
-          Number of successful steps before the empirical covariance is computed.
+          Number of steps before the empirical covariance is computed. If greedy 
+          is True, the algorithm waits for delay accepted steps before computing
+          the covariance.
         
-      - scale : dict
+      - scales : dict
           Dictionary containing the scale for each stochastic keyed by name.
           If cov is None, those scales are used to define an initial covariance
-          C_0. If neither cov nor scale is given, the initial covariance is 
+          matrix. If neither cov nor scale is given, the initial covariance is 
           guessed from the objects value (or trace if available).
     
       - interval : int
@@ -736,12 +736,13 @@ class AdaptiveMetropolis(StepMethod):
       
       - verbose : int
           Controls the verbosity level. 
-      
-    Reference: 
+   
+  
+    :Reference: 
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0):
         
         # Verbosity flag
         self.verbose = verbose
@@ -784,7 +785,8 @@ class AdaptiveMetropolis(StepMethod):
             print 'Dimension: ', self.dim
             print "C_0: ", self.C
             print "Sigma: ", self._sig
-              
+
+      
     @staticmethod
     def competence(stochastic):
         """
@@ -800,7 +802,7 @@ class AdaptiveMetropolis(StepMethod):
             return 0
                 
                 
-    def set_cov(self, cov=None, scales={}, trace=2000, scaling=20):
+    def set_cov(self, cov=None, scales={}, trace=2000, scaling=50):
         """Define C, the jump distributioin covariance matrix.
         
         Return:
@@ -898,20 +900,24 @@ class AdaptiveMetropolis(StepMethod):
             print "\tUpdating mean ... ", self.chain_mean
         
         # Update state
-        self.update_sig()
-        
+        try:
+            self.update_sig()
+        except np.linalg.LinAlgError:
+            self.covariance_adjustment(.9)
+
         self._trace_count += len(self._trace)
         self._trace = []  
         
+    def covariance_adjustment(self, f=.9):
+        """Multiply self._sig by a factor f. This is useful when the current _sig is too large and all jumps are rejected.
+        """
+        warnings.warn('covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value. This might mean that no jumps were accepted. In this case, it might be worthwhile to specify an initial covariance matrix with smaller variance. For the moment, _sig will be artificially reduced by a factor .9 each time this happens.')
+        self._sig *= f
+	
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
-        # old_sig = self._sig
- 
-        try:
-            self._sig = np.linalg.cholesky(self.C)
-        except np.linalg.LinAlgError:
-            print 'Warning, covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value.'
-            # self._sig = old_sig        
+        self._sig = np.linalg.cholesky(self.C)
+    
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.

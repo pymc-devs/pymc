@@ -2137,7 +2137,7 @@ cf2py intent(hide) n,k
       end if
       
       do i=1,n
-          match = 0
+          match = .FALSE.
           
           j = int(x(i)-mn/step)+1
           logp = logp + dlog(hist(j))
