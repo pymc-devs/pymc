@@ -5,7 +5,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, dtype
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 import pdb

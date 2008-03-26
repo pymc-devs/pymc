@@ -757,6 +757,8 @@ class AdaptiveMetropolis(StepMethod):
         self._state += ['_trace_count', '_current_iter', 'C', '_sig',
         '_proposal_deviate', '_trace']
         
+        self._sig = None
+        
         # Number of successful steps before the empirical covariance is computed
         self.delay = delay
         # Interval between covariance updates
@@ -987,17 +989,19 @@ class AdaptiveMetropolis(StepMethod):
         
         The proposal jumps are drawn from a multivariate normal distribution.        
         """
-                
+        
         arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
         
         # Update each stochastic individually.
         for stochastic in self.stochastics:
-            jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
-            
+            jump = arrayjump[self._slices[stochastic]]
+            if np.shape(stochastic.value):
+                jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
             if self.isdiscrete[stochastic]:
                 stochastic.value = stochastic.value + round_array(jump)
             else:
                 stochastic.value = stochastic.value + jump
+                
                 
     def step(self):
         """
@@ -1019,7 +1023,7 @@ class AdaptiveMetropolis(StepMethod):
         # Probability and likelihood for stochastic's current value:
         logp = sum([stochastic.logp for stochastic in self.stochastics])
         loglike = self.loglike
-
+        
         # Sample a candidate value              
         self.propose()
         
