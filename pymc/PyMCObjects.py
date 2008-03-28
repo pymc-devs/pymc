@@ -5,7 +5,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, dtype
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase
 import pdb
@@ -543,9 +543,9 @@ class Stochastic(StochasticBase):
                 self._value = value
         elif self.dtype and self.dtype is not object:
             try:
-                self._value = dtype(value)
+                self._value = self.dtype(value)
             except TypeError:
-                self._value = asarray(value)
+                self._value = asarray(value, dtype=self.dtype)
         else:
             self._value = value
         
