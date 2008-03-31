@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
@@ -127,7 +127,7 @@ class StepMethod(object):
     def __init__(self, variables, verbose=0):
         # StepMethod initialization
         
-        if not hasattr(variables, '__iter__'):
+        if not iterable(variables):
             variables = [variables]
         
         self.stochastics = set()
@@ -140,7 +140,7 @@ class StepMethod(object):
         self._rejected = 0.
         self._state = ['_rejected', '_accepted', '_asf']
         self.verbose = verbose
-        
+
         # File away the variables
         for variable in variables:
             
@@ -629,7 +629,7 @@ class BinaryMetropolis(Metropolis):
         # Initialize superclass
         Metropolis.__init__(self, stochastic, dist=dist, verbose=verbose)
         
-        self.state.pop('_sig')
+        self._state.remove('_sig')
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
@@ -747,7 +747,7 @@ class AdaptiveMetropolis(StepMethod):
         # Verbosity flag
         self.verbose = verbose
         
-        if isinstance(stochastic, Stochastic):
+        if not np.iterable(stochastic):
             stochastic = [stochastic] 
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose)
@@ -995,7 +995,7 @@ class AdaptiveMetropolis(StepMethod):
         # Update each stochastic individually.
         for stochastic in self.stochastics:
             jump = arrayjump[self._slices[stochastic]]
-            if np.shape(stochastic.value):
+            if np.iterable(stochastic.value):
                 jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
             if self.isdiscrete[stochastic]:
                 stochastic.value = stochastic.value + round_array(jump)
@@ -1043,7 +1043,7 @@ class AdaptiveMetropolis(StepMethod):
             logp_p = None
             loglike_p = None
             
-        if self.verbose > 2:
+        if (not self._current_iter % self.interval) and self.verbose > 1:
             print "Step ", self._current_iter
             print "\tLogprobability (current, proposed): ", logp, logp_p
             print "\tloglike (current, proposed):      : ", loglike, loglike_p

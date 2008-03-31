@@ -1677,7 +1677,7 @@ def uniform_like(x,lower, upper):
       upper : float
         Upper limit.
     """
-
+    
     return flib.uniform_like(x, lower, upper)
 
 # Weibull--------------------------------------------------

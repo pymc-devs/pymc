@@ -10,7 +10,6 @@ from StepMethods import StepMethodRegistry, assign_method
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
-
 class MCMC(Sampler):
     """
     This class fits probability models using Markov Chain Monte Carlo. Each stochastic variable
@@ -124,6 +123,8 @@ class MCMC(Sampler):
         
         self.assign_step_methods()
 
+        if burn > iter:
+            raise ValueError, 'Burn interval must be smaller than specified number of iterations.'
         self._iter = int(iter)
         self._burn = int(burn)
         self._thin = int(thin)
@@ -198,7 +199,7 @@ class MCMC(Sampler):
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)
             if self.verbose > 1:
-                print 'Tuning step method %s, returned %i' %(step_method._id, tuning_count)
+                print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
 
         if not tuning_count:
             # If no step methods needed tuning, increment count

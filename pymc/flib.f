@@ -930,11 +930,8 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,n
         if (not_scalar_a) alpha_tmp = alpha(i)
         if (not_scalar_b) beta_tmp = beta(i)
-        if ((alpha_tmp .LE. 0.0) .OR. (beta_tmp .LE. 0.0)) then
-          like = -infinity
-          RETURN
-        endif
-        if (x(i) .LE. 0.0) then
+        if ((x(i) .LE. 0.0) .OR. (alpha_tmp .LE. 0.0) .OR. 
+     +(beta_tmp .LE. 0.0)) then
           like = -infinity
           RETURN
         endif
@@ -1321,6 +1318,8 @@ cf2py double precision intent(out) :: like
       INTEGER x(n)
       LOGICAL not_scalar_a, not_scalar_mu
       DOUBLE PRECISION gammln, factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
 
       not_scalar_mu = (nmu .NE. 1)
       not_scalar_a = (na .NE. 1)
@@ -1329,6 +1328,11 @@ cf2py double precision intent(out) :: like
       a_tmp = a(1)
       like = 0.0
       do i=1,n
+        if ((x(i) .LT. 0) .OR. (mu_tmp .LE. 0.0) .OR. 
+     +(mu_tmp .LE. 0.0)) then
+          like = -infinity
+          RETURN
+        endif
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_a) a_tmp=a(i)
         like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
