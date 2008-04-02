@@ -3,8 +3,11 @@ The DisasterMCMC example.
 
 """
 from numpy.testing import *
-from pylab import *
-PLOT=True
+try:
+    from pylab import *
+    PLOT=True
+except:
+    PLOT=False
 
 
 class test_MCMC(NumpyTestCase):

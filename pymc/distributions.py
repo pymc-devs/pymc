@@ -73,8 +73,8 @@ def new_dist_class(*new_class_args):
             parents=parents_default
                         
             # Figure out what argument names are needed.
-            arg_keys = ['name', 'parents', 'value', 'isdata', 'size', 'trace', 'rseed', 'doc', 'debug', 'verbose']
-            arg_vals = [None, parents, None, False, 1, True, True, None, False, 0]
+            arg_keys = ['name', 'parents', 'value', 'isdata', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
+            arg_vals = [None, parents, None, False, 1, True, True, None, False, True, 0]
             
             # No size argument allowed for multivariate distributions.
             if mv:

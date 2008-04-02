@@ -30,7 +30,7 @@ else:
         f_sources.append('lapack/double/'+fname+'.f')
     config.add_extension(name='flib',sources=f_sources)
     
-# Try to compile the Pyrex version of LazyFunction
+# Compile LazyFunction and ContainerValues.
 config.add_extension(name='LazyFunction',sources=['pymc/LazyFunction.c'])
 config.add_extension(name='Container_values', sources='pymc/Container_values.c')
 

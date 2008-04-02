@@ -211,7 +211,7 @@ class Sampler(Model):
           - output_path : string
               The place where any output files should be put.
           - reinit_model : bool
-              Flag for reinitialization of Model superclass.Å
+              Flag for reinitialization of Model superclass.
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """

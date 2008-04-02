@@ -28,16 +28,9 @@ class Node(object):
           -parents : dictionary
               A dictionary containing the parents of this node.
           
-          -trace : boolean
-              A boolean indicating whether this node's value
-              should be traced (in MCMC).
-          
           -cache_depth : integer
               An integer indicating how many of this node's
               value computations should be 'memorized'.
-          
-          - plot (optional) : boolean
-            A flag indicating whether this variable is to be plotted.
           
           - verbose (optional) : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -135,7 +128,7 @@ class Variable(Node):
     The base class for Stochastics and Deterministics.
     """
     def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=True, verbose=0):
-        # print doc, name, parents, cache_depth, trace, dtype, plot, verbose
+
         self.dtype=dtype        
         self.trace=trace
         self._plot=plot

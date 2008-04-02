@@ -1,6 +1,10 @@
 from pymc import NormApprox
 from pymc.examples import gelman_bioassay
-from pylab import *
+try:
+    from pylab import *
+    PLOT=True
+except:
+    PLOT=False
 from numpy import *
 from numpy.testing import * 
 from numpy.linalg import cholesky
@@ -31,10 +35,10 @@ class test_norm_approx(NumpyTestCase):
         N = NormApprox(model)
         N.fit('fmin')
         N.sample(1000)
-
-        plot(N.alpha.trace(),N.beta.trace(),'k.')
-        xlabel(r'$\alpha$')
-        ylabel(r'$\beta$')
+        if PLOT:
+            plot(N.alpha.trace(),N.beta.trace(),'k.')
+            xlabel(r'$\alpha$')
+            ylabel(r'$\beta$')
         
 if __name__=='__main__':
     NumpyTest().run()
