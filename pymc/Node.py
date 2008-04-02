@@ -90,12 +90,6 @@ class Node(object):
     
     parents = property(_get_parents, _set_parents, doc="Self's parents: the variables referred to in self's declaration.")
     
-    def _get_plot(self):
-        # Get plotting flag
-        return self._plot
-    
-    plot = property(_get_plot, doc='A flag indicating whether self should be plotted.')
-    
     def __str__(self):
         return self.__repr__()
     
@@ -104,24 +98,6 @@ class Node(object):
     
     def gen_lazy_function(self):
         pass
-    
-    def stats(self, alpha=0.05):
-        """
-        Generate posterior statistics for node.
-        """
-        from utils import hpd, quantiles
-        from numpy import sqrt
-        
-        trace = self.trace()
-        
-        return {
-            'n': len(trace),
-            'standard deviation': trace.std(0),
-            'mean': trace.mean(0),
-            '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
-            'mc error': trace.std(0) / sqrt(len(trace)),
-            'quantiles': quantiles(trace)
-        }
 
 class Variable(Node):
     """
@@ -136,6 +112,30 @@ class Variable(Node):
 
     def __str__(self):
         return self.__name__
+        
+    def _get_plot(self):
+        # Get plotting flag
+        return self._plot
+
+    plot = property(_get_plot, doc='A flag indicating whether self should be plotted.')
+    
+    def stats(self, alpha=0.05):
+        """
+        Generate posterior statistics for node.
+        """
+        from utils import hpd, quantiles
+        from numpy import sqrt
+    
+        trace = self.trace()
+    
+        return {
+            'n': len(trace),
+            'standard deviation': trace.std(0),
+            'mean': trace.mean(0),
+            '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
+            'mc error': trace.std(0) / sqrt(len(trace)),
+            'quantiles': quantiles(trace)
+        }
         
 class ContainerBase(object):
     """
