@@ -6,6 +6,7 @@ __all__ = ['MCMC']
 
 from Model import Sampler
 from StepMethods import StepMethodRegistry, assign_method
+from distributions import absolute_loss, squared_loss, chi_square_loss
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'

@@ -1300,8 +1300,7 @@ cf2py double precision intent(out) :: like
 
 c Negative binomial log-likelihood function 
 c (alternative parameterization)    
-c Updated 24/01/2007 DH.
-c I don't know how to constrain this one...
+c Updated 1/4/08 CF
 
 cf2py integer dimension(n),intent(in) :: x
 cf2py double precision dimension(na),intent(in) :: a
@@ -1329,15 +1328,15 @@ cf2py double precision intent(out) :: like
       like = 0.0
       do i=1,n
         if ((x(i) .LT. 0) .OR. (mu_tmp .LE. 0.0) .OR. 
-     +(mu_tmp .LE. 0.0)) then
+     +(a_tmp .LE. 0.0)) then
           like = -infinity
           RETURN
         endif
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_a) a_tmp=a(i)
-        like=like+gammln(x(i)+a_tmp)-factln(x(i))-gammln(a_tmp)
-        like=like+x(i)*(dlog(mu_tmp/a_tmp)-dlog(1.0+mu_tmp/a_tmp))
-        like=like-a_tmp * dlog(1.0 + mu_tmp/a_tmp)
+        like=like + gammln(x(i)+a_tmp) - factln(x(i)) - gammln(a_tmp)
+        like=like + x(i)*(dlog(mu_tmp/a_tmp) - dlog(1.0+mu_tmp/a_tmp))
+        like=like - a_tmp*dlog(1.0 + mu_tmp/a_tmp)
       enddo
       return
       END

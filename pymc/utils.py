@@ -645,3 +645,53 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     
     except IndexError:
         print "Too few elements for quantile calculation"
+        
+def coda_output(pymc_object):
+    """Generate output files that are compatible with CODA"""
+    
+    print
+    print "Generating CODA output"
+    print '='*50
+    
+    name = pymc_object.__name__
+    
+    # Open trace file
+    trace_file = open(name+'_coda.out', 'w')
+    
+    # Open index file
+    index_file = open(name+'_coda.ind', 'w')
+    
+    variables = [pymc_object]
+    if hasattr(pymc_object, 'variables'):
+        variables = pymc_object.variables
+    
+    # Initialize index
+    index = 1
+    
+    # Loop over all parameters
+    for v in variables:
+        
+        print "Processing", name
+            
+        index = self._process_trace(trace_file, index_file, variable(trace), name, index)
+    
+    # Close files
+    trace_file.close()
+    index_file.close()
+    
+def _process_trace(trace_file, index_file, trace, name, index):
+    """Support function for coda_output(); writes output to files"""
+    
+    if ndim(trace)>1:
+        trace = swapaxes(trace, 0, 1)
+        for i, seq in enumerate(trace):
+            _name = '%s_%s' % (name, i)
+            index = _process_trace(trace_file, index_file, seq, _name, index)
+    else:
+        index_buffer = '%s\t%s\t' % (name, index)
+        for i, val in enumerate(trace):
+            trace_file.write('%s\t%s\r\n' % (i+1, val))
+            index += 1
+        index_file.write('%s%s\r\n' % (index_buffer, index-1))
+    
+    return index

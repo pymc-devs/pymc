@@ -168,7 +168,7 @@ It provides the following additional attributes:
 
 MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
 \begin{description}
-    \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations, even after burn-in is complete \cite{Haario:2001lr}.
+    \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations, even after burn-in is complete \cite{tuning,Haario:2001lr}.
     \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] Interactive sampling; see \texttt{Sampler.isample}.
     \item[\texttt{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \texttt{method} to handle some stochastic variables. The extra arguments are passed to the init method.
     \item[\texttt{assign_step_methods()}:] Assigns step methods now. This method is called whenever \texttt{sample} or \texttt{isample} is called, but it can be useful to call it directly to see what the default step methods will be.
@@ -198,7 +198,7 @@ Metropolis step methods have the following useful attributes:
 \begin{description}
     \item[\texttt{dist}:] A string indicating which distribution should be used for proposals. Current options are \texttt{'Normal'} and \texttt{'Prior'}.
     \item[\texttt{proposal\_sig}:] Proportional to the standard deviation of the proposal distribution (if it is \texttt{'Normal'}).
-    \item[\texttt{\_asf}:] The `adaptive scale factor'. When \texttt{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \texttt{self.proposal\_sig * self.\_asf}. It is usually OK to keep tuning throughout the MCMC loop even though the resulting chain is not actually Markov \cite{tuning}. 
+    \item[\texttt{\_asf}:] The `adaptive scale factor'. When \texttt{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \texttt{self.proposal\_sig * self.\_asf}. It is usually OK to keep tuning throughout the MCMC loop even though the resulting chain is not actually Markov \cite{tuning,Haario:2001lr}. This attribute is hidden, and should not be altered manually by the user.
 \end{description}
 
 Metropolis step methods can be created as follows:
@@ -208,7 +208,8 @@ M = Metropolis(stochastic, scale=1., sig=None, dist=None, verbose=0)
 The \texttt{scale} and \texttt{sig} arguments determine \texttt{proposal\_sig}. If \texttt{sig} is provided, \texttt{proposal\_sig} is set to \texttt{sig}. Otherwise it is computed from \texttt{scale} as follows:
 \begin{verbatim}
 if all(self.stochastic.value != 0.):
-    self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+    self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) 
+* scale
 else:
     self.proposal_sig = ones(shape(self.stochastic.value)) * scale
 \end{verbatim}
@@ -230,10 +231,9 @@ For scalar-valued variables, \texttt{BinaryMetropolis} behaves like a Gibbs samp
 
 For array-valued variables, \texttt{BinaryMetropolis} can be set to propose from the prior by passing in \texttt{dist="Prior"}. Otherwise, the argument \texttt{p_jump} of the init method specifies how probable a change is when proposing a new value for array-valued variables. Like \texttt{Metropolis}' attribute \texttt{proposal_sig}, \texttt{p_jump} is tuned throughout the sampling loop via \texttt{_asf}.
 
-
 \subsubsection{The \texttt{AdaptiveMetropolis} class} 
-\textbf{Someone else document this}
-
+The AdaptativeMetropolis (AM) sampling algorithm works like a regular Metropolis step method, with the exception that stochastic parameters are block-updated using a multivariate jump distribution whose covariance is tuned during sampling. Although the chain is non-Markovian (\emph{i.e.} the proposal distribution is asymmetric), it has correct ergodic properties (see \cite{Haario:2001lr}).
+ 
 \subsection{Gibbs step methods}
 Conjugate submodels can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \texttt{AdaptiveMetropolis} even when Gibbs step methods for the individual variables are available.
 

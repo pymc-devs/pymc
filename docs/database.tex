@@ -129,7 +129,7 @@ Chris ...
 The hdf5 backend uses pyTables to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available memory. Data access is also very fast.
 
 \leavevmode
-\begin{table}[c]{lll}
+\begin{longtable}[c]{|p{0.133\locallinewidth}|p{0.447\locallinewidth}|p{0.307\locallinewidth}|}
 \hline
 \textbf{
 Backend
@@ -143,7 +143,8 @@ External Dependencies
 
 no{\_}trace
  & 
-Do not tally samples at all. Use only for testing purposes.
+Do not tally samples at all.
+Use only for testing purposes.
  &  \\
 \hline
 
@@ -188,7 +189,7 @@ Store samples in the HDF5 format.
 pytables ({\textgreater}2.0), libhdf5
  \\
 \hline
-\end{table}
+\end{longtable}
 
 For more information about individual backends, refer to the \href{docs/API.pdf}{API} documentation.
 

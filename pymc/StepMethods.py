@@ -13,7 +13,7 @@ from Node import ZeroProbability, Node, Variable, StochasticBase
 from     pymc.decorators import prop
 from copy import copy
 from InstantiationDecorators import deterministic
-import pdb, warnings
+import pdb, warnings, sys
 
 __docformat__='reStructuredText'
 
@@ -23,6 +23,8 @@ __docformat__='reStructuredText'
 
 conjugate_Gibbs_competence = 0
 nonconjugate_Gibbs_competence = 0
+
+class AdaptationError(ValueError): pass
 
 __all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
 
@@ -918,8 +920,10 @@ class AdaptiveMetropolis(StepMethod):
 	
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
-        self._sig = np.linalg.cholesky(self.C)
-    
+        try:
+            self._sig = np.linalg.cholesky(self.C)
+        except Exception:
+            raise AdaptationError, "Cholesky decomposition failed in %s" % self._id 
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.
