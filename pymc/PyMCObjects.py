@@ -607,7 +607,7 @@ class Stochastic(StochasticBase):
         coparents = set()
         for child in self.extended_children:
             coparents |= child.extended_parents
-        coparents.distributionard(self)
+        coparents.add(self)
         return coparents
     coparents = property(_get_coparents, doc="All the variables whose extended children intersect with self's.")
     

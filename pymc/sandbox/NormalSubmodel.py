@@ -1,6 +1,8 @@
 # TODO: Specific submodel factories: DLM, LM.
 # TODO: Optimization!
 # TODO: Real test suite.
+# TODO: Possibly base this on GDAGsim. Would make programming a little
+# easier, but mostly would be a lighter dependency.
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
