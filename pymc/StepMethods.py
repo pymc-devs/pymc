@@ -800,7 +800,9 @@ class AdaptiveMetropolis(StepMethod):
         """
         if not stochastic.dtype in float_dtypes and not stochastic.dtype in integer_dtypes:
             return 0
-        if np.iterable(stochastic.value):
+            # Algorithm is not well-suited to sparse datasets. Dont use if less than
+            # 25 percent of values are nonzero
+        if np.iterable(stochastic.value) and (len(stochastic.value.nonzero()[0]) < 0.25*len(stochastic.value)):
             return 2
         else:
             return 0
