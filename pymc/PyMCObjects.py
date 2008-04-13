@@ -452,7 +452,6 @@ class Stochastic(StochasticBase):
         # Initialize value, either from value provided or from random function.
         if value is not None:
             if isinstance(value, ndarray):
-                value.flags['W'] = False
                 if dtype is not None:
                     if not dtype is value.dtype:
                         self._value = asarray(value, dtype=dtype).view(value.__class__)
@@ -481,6 +480,9 @@ class Stochastic(StochasticBase):
     
         # self._logp.force_compute()                   
         self.zero_logp_error_msg = "Stochastic %s's value is outside its support,\n or it forbids its parents' current values.\nValue: %s\nParents' values:%s" % (self.__name__, self._value, self._parents.value)
+
+        if isinstance(self._value, ndarray):
+            self._value.flags['W'] = False
 
         # Check initial value
         if not isinstance(self.logp, float):

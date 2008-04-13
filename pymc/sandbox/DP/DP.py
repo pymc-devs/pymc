@@ -29,6 +29,8 @@ import numpy as np
 from copy import copy
 from pymc import *
 
+
+
 def draws_to_atoms(draws):
     """
     atoms, n = draws_to_atoms(draws)
@@ -40,7 +42,7 @@ def draws_to_atoms(draws):
     """
     atoms = []
     n = []
-    for element in draws:
+    for element in np.atleast_1d(draws):
         match=False
         for i in xrange(len(atoms)):
             if all(element == atoms[i]):
@@ -51,6 +53,27 @@ def draws_to_atoms(draws):
             atoms.append(element)
             n.append(1)
     return atoms, n
+
+
+
+try:
+
+    import pylab as pl
+
+    def plot_atoms(DPr):
+        """
+        plot_atoms(DPr)
+
+        Plots the atoms of DP realization DPr.
+        Base measure must be over the real line.
+        """
+        for pair in zip(DPr.atoms, DPr.n):
+            plot([pair[0], pair[0]], [0,pair[1]], 'k-')        
+
+except ImportError:
+    pass
+
+
 
 class DPRealization(object):
     """
@@ -70,8 +93,8 @@ class DPRealization(object):
         -   logp(x): Returns the log-probability of x.
     """
 
-
     def __init__(self, basemeas_rand, nu, draws=[], **basemeas_params):
+
         # The base measure and its parameters.
         self.basemeas_rand = basemeas_rand
         self.basemeas_params = basemeas_params
@@ -83,10 +106,10 @@ class DPRealization(object):
             atoms, n = draws_to_atoms(draws)
             
             # The number of draws from each atom.
-            self.n = copy(n)
+            self.n = n
 
             # The values of the atoms.
-            self.atoms = copy(atoms)
+            self.atoms = atoms
 
             # Need to triple-check that this is OK!            
             # The probability masses of the atoms.
@@ -100,14 +123,12 @@ class DPRealization(object):
             for m in self.mass:
                 self.mass_prod *= (1.-m)
             
-
         else:
             self.n = []
             self.atoms = []
             self.mass = []
             self.mass_sofar = 0.
             self.mass_prod = 1.
-        
             
     def logp(self, value):
         """
@@ -118,6 +139,7 @@ class DPRealization(object):
         for continuous base distributions but incorrect for discrete.
         """
         logp_out = 0.
+        value = np.atleast_1d(value)
         for val_now in value:
             match=False
             for i in xrange(len(self.atoms)):
@@ -136,34 +158,38 @@ class DPRealization(object):
         Returns m values from the random probability distribution.
         """
         
-        draws = []
+        draws = np.empty(m, dtype=float)
         
         for i in xrange(m):
+            
 
             # Draw from existing atoms
-            if np.random.random() < self.mass_sofar:
-                atom_index = int(flib.rcat(asarray(self.mass) / self.mass_sofar,0,1,1))
+            if np.random.random()  < self.mass_sofar:
+                atom_index = int(flib.rcat(np.asarray(self.mass) / self.mass_sofar,0,1,1))
                 new_draw = self.atoms[atom_index]
                 self.n[atom_index] += 1
                 
-            # Make new atom    
+            # Make new atom                    
             else:
-
+                
                 new_draw = self.basemeas_rand(**self.basemeas_params)
                 self.atoms.append(new_draw)
-
+            
                 self.n.append(1)
-
+            
                 new_mass = self.mass_prod * rbeta(1, self.nu)
                 self.mass.append(new_mass)
-                self.mass_prod *= new_mass
+                self.mass_prod *= 1.-new_mass
                 self.mass_sofar += new_mass
-
-            draws.append(new_draw)
+            
+            draws[i] = new_draw
             
         if m==1:
             draws = draws[0]
         return draws
+        
+        
+        
         
 class DP(Stochastic):
     """
@@ -175,20 +201,35 @@ class DP(Stochastic):
     Should get intrinsic set of clusters. Step methods will update them with the children.
     A new value should be created conditional on the intrinsic clusters every time a parent is updated.
     """
-    def __init__(self,name, basemeas_rand, basemeas_logp, nu, parents, doc=None, trace=True, value=None, cache_depth=2, plot=False,verbose=0):
+    def __init__(self, 
+                name, 
+                basemeas_rand, 
+                basemeas_logp, 
+                nu, 
+                doc=None, 
+                trace=True, 
+                value=None, 
+                cache_depth=2, 
+                plot=False,
+                verbose=0,
+                **basemeas_params):
         
         self.basemeas_logp = basemeas_logp
         self.basemeas_rand = basemeas_rand
+        self.basemeas_params = basemeas_params
+        
+        parents = {}
         
         parents['basemeas_logp'] = basemeas_logp
         parents['basemeas_rand'] = basemeas_rand
+        parents['basemeas_params'] = basemeas_params
         parents['nu'] = nu
         
         def dp_logp_fun(value, **parents):
             return 0.
             # raise ValueError, 'DPStochastic objects have no logp attribute'
             
-        def dp_random_fun(basemeas_logp, basemeas_rand, nu, **basemeas_params):
+        def dp_random_fun(basemeas_logp, basemeas_rand, nu, basemeas_params):
             return DPRealization(basemeas_rand, nu, **basemeas_params)
         
         # If value argument provided, read off intrinsic clusters.
@@ -198,6 +239,9 @@ class DP(Stochastic):
         Stochastic.__init__(self, logp=dp_logp_fun, random=dp_random_fun, doc=doc, name=name, parents=parents,
                             trace=trace, value=value, dtype=np.object, rseed=True, isdata=False, cache_depth=cache_depth,
                             plot=plot, verbose=verbose)
+
+
+
 
 class DPDraw(Stochastic):
     """
@@ -255,38 +299,56 @@ class DPDraw(Stochastic):
         self.clusters = lam_dtrm('clusters',lambda draws=self: draws_to_atoms(draws))
     
 
-if __name__=='__main__':
-    
-    nu=100
-    
-    # x_d = linspace(-5.,5.,1000)
-    # dx = x_d[1] - x_d[0]
-    # nu = 10
-    # 
-    # p = nu * dx/sqrt(2.*pi)*exp(-x_d**2)
-    # DP_approx = rdirichlet(p).squeeze()
-    # clf()
-    # bar(x_d, DP_approx, width=.01)
-    # 
-    A = DPRealization(rnormal,nu,draws=[1.]*10,mu=0,tau=1)
-    A = DPRealization(rnormal,nu,mu=0,tau=1)
-    A_vals = []
-    for i in xrange(1000):
-        A_vals.append(A.rand())
-    clf()
-    
-    subplot(2,1,1)
-    hist(A_vals,100)
-    # bar(A.atoms, A.mass, width=.01)
-    title('%i clusters '%len(A.atoms))    
-    
-    subplot(2,1,2)
-    hist(A.mass,50)
 
 
-    # S = DP('S', rnormal, normal_like, nu, {'mu':0, 'tau':1})
-    # D = DPDraw('D', S, 10)
+
+
+
+
+
+
+
+
+
+
+from numpy.testing import *
+from pylab import *
+class test_DP(NumpyTestCase):
+
+    def check_correspondence(self):
+        x_d = linspace(-5.,5.,1000)
+        dx = x_d[1] - x_d[0]
+        nu = 10
         
+        p = nu * dx/sqrt(2.*pi)*exp(-x_d**2)
+        DP_approx = rdirichlet(p).squeeze()
+        DP_approx = hstack((DP_approx, 1.-sum(DP_approx)))
+        
+        true_DP = DPRealization(rnormal, nu, mu=0,tau=1)
+        true_DP.rand(1000)
+        
+        clf()
+        subplot(2,1,1)
+        plot(x_d, DP_approx,'k.',markersize=8)
+        subplot(2,1,2)
+        plot_atoms(true_DP)
+    
+    def check_draws(self):
+        D = DPRealization(rnormal,100,mu=-10,tau=.1)
+        draws = D.rand(1000)
+        clf()
+        hist(draws)
+    
+    def check_stochastics(self):
+        S = DP('S', rnormal,normal_like, 100, mu=10, tau=.1)
+        q = DPDraw('q', S, N=1000)
+        clf()
+        hist(q.value)
+        
+
+
+if __name__=='__main__':
+    NumpyTest().run()
 
 """
 Note: If you could get a distribution for the multiplicities of the currently-
