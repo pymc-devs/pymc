@@ -1,0 +1,31 @@
+\documentclass{manual}
+\usepackage{fullpage}
+\usepackage{epsfig}
+\usepackage{amsfonts}
+\begin{document}
+
+\author{Anand Patil}
+\title{The Dirichlet process module}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+
+Dirichlet processes are probability distributions \emph{for} probability distributions. A realization from a Dirichlet process is a random probability distribution. DP's are characterized by a `base' probability distribution and a scalar parameter, often called $\nu$. DP realizations are countably infinite sets of point masses, whose locations are independent draws from the base measure. If $\nu$ is large, the DP realization will allocate mass equitably amongst many clusters. If $\nu$ is small, it will tend to place almost all of its mass in one or a handful of clusters. See \textbf{ref}. Make plots.
+
+This document describes the classes in the DP module, which can be incorporated in PyMC probability models. The core class is called `DPRealization'. DP realizations strive to emulate mathematical the concept of a random probability distribution as closely as possible. In PyMC, probability distributions are represented by pairs of functions: one which evaluates the log-probability or log-density of values, and one which generates random values. DP realizations provide both of these behaviors via the methods logp and rand.
+
+The DP class, which is a subclass of Stochastic, represents Dirichlet process variables. A DP object's value attribute is a DP realization. The DPDraws class, another subclass of Stochastic, represents draws from a Dirichlet process realization. The DP and DPDraws classes allow Dirichlet processes to be incorporated in PyMC probability models.
+
+DP objects cannot be handled by the standard step methods because they are valued as probability distributions rather than numbers or vectors. DPDraws objects can be handled by Metropolis step methods, but the acceptance rate will be zero because the step methods would not take into account the point mass locations. Two specialized step methods are provided to handle these classes, DPStepper and DPDrawStepper. They essentially implement the algorithm provided by \textbf{ref}. Many other step methods for Dirichlet processes are available in the literature, please consider contributing your work if you implement one.
+
+\chapter{Dirichlet process realizations}
+
+\chapter{The DP class}
+
+\chapter{The DPDraws class}
+
+\chapter{The DPStepper class}
+
+\chapter{The DPDrawStepper class}
+\end{document}
