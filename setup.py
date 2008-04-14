@@ -87,7 +87,7 @@ if __name__ == '__main__':
     setup(  version="2.0",
             description = "PyMC version 2.0",
             license="Academic Free License",
-            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/GP"],
+            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/GP", "pymc/GP/cov_funs"],
             url="trichech.us",
             **(config_dict))
 
