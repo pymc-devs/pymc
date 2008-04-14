@@ -1,0 +1,122 @@
+# Copyright (c) Anand Patil, 2007
+
+__docformat__='reStructuredText'
+
+from numpy import *
+from GPutils import regularize_array, trisolve
+from Covariance import Covariance
+from BasisCovariance import BasisCovariance
+
+__all__ = ['Mean']
+
+class Mean(object):
+    """
+    M = Mean(eval_fun, **params)
+    
+    
+    A Gaussian process mean.
+    
+    
+    :Arguments:
+    
+        -   `eval_fun`: A function that takes an argument x of shape  (n,n_dim), where n is 
+            any integer and n_dim is the dimensionality of  the space, or shape (n). In the 
+            latter case n_dim should be assumed to be 1..
+        
+        -   `params`: Parameters to be passed to eval_fun
+    
+    
+    :SeeAlso: Covariance, Realization, Observe
+    """
+    
+    ndim = None
+    observed = False
+    obs_mesh = None
+    base_mesh = None
+    obs_vals = None
+    obs_V = None
+    reg_mat = None
+    obs_len = None
+    mean_under = None
+    Uo = None
+    obs_piv = None
+    
+    def __init__(self, eval_fun, **params):
+
+        self.eval_fun = eval_fun
+        self.params = params      
+        
+    def observe(self, C, obs_mesh_new, obs_vals_new):
+        """
+        Synchronizes self's observation status with C's.
+        Values of observation are given by obs_vals.
+        
+        obs_mesh_new and obs_vals_new should already have 
+        been sliced, as Covariance.observe() does.
+        """
+        
+        self.C = C
+        self.obs_mesh = C.obs_mesh
+        self.obs_len = C.obs_len
+        
+        self.Uo = C.Uo
+    
+        # Evaluate the underlying mean function on the new observation mesh.
+        mean_under_new = C._mean_under_new(self, obs_mesh_new)
+        
+        # If self hasn't been observed yet:
+        if not self.observed:
+            
+            self.dev = (obs_vals_new - mean_under_new)    
+	    
+	    self.basiscov = False
+	    self.reg_mat = C._unobs_reg(self)
+                
+        # If self has been observed already:
+        elif len(obs_vals_new)>0:
+
+            # Rank of old observations.
+            m_old = len(self.dev)
+            
+            # Deviation of new observation from mean without regard to old observations.
+            dev_new = (obs_vals_new - mean_under_new)
+
+
+            # Again, basis covariances get special treatment.
+	    self.reg_mat = C._obs_reg(self, dev_new, m_old)         
+        
+            # Stack deviations of old and new observations from unobserved mean.
+            self.dev = hstack((self.dev, dev_new))        
+        self.observed = True
+
+    def __call__(self, x, observed = True, regularize=True):
+        
+        # Record original shape of x and regularize it.
+        orig_shape = shape(x)
+        if len(orig_shape)>1:
+            orig_shape = orig_shape[:-1]
+        
+        
+        if regularize:
+            x=regularize_array(x)            
+
+        ndimx = x.shape[-1]
+        lenx = x.shape[0]
+        
+        
+        # Safety.
+        if self.ndim is not None:
+            if not self.ndim == ndimx:
+                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."        
+        
+
+        # Evaluate the unobserved mean
+
+        M = self.eval_fun(x,**self.params).squeeze()
+
+        # Condition. Basis covariances get special treatment. See documentation for formulas.
+        if self.observed and observed:
+           
+	    M = self.C._obs_eval(self, M, x)
+        
+        return M.reshape(orig_shape)

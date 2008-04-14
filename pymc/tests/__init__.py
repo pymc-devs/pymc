@@ -11,6 +11,12 @@ __modules__ = [ 'test_MCMCSampler',
                 'test_LazyFunction',
                 'test_graph',
                 'test_norm_approx',
+                "test_mean",
+                "test_cov",
+                "test_realization",
+                "test_observation",
+                "test_basiscov",
+                "test_GP_MCMC"
                 #'test_interactive'
                 ]
 

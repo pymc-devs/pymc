@@ -1,0 +1,23 @@
+digraph G {
+"d" [shape=box];
+"M_b";
+"tau";
+"C_scale";
+"f";
+"C_amp";
+"M_c";
+"M_a";
+"C_diff_degree";
+"C" [shape=invtriangle];
+"M" [shape=invtriangle];
+"f" -> "d" [label=mu];
+"tau" -> "d" [label=tau];
+"C" -> "f" [label=C];
+"M" -> "f" [label=M];
+"C_amp" -> "C" [label=amp];
+"C_diff_degree" -> "C" [label=diff_degree];
+"C_scale" -> "C" [label=scale];
+"M_a" -> "M" [label=a];
+"M_c" -> "M" [label=c];
+"M_b" -> "M" [label=b];
+}

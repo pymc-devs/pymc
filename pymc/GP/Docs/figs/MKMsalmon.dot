@@ -1,0 +1,25 @@
+digraph G {
+"obs_frye" [style=filled];
+"diff_degree";
+"beta_1";
+"frye_tau";
+"scale";
+"beta_0";
+"pink.SR";
+"invtausq";
+"C" [shape=invtriangle];
+"M" [shape=invtriangle];
+"frye_V" [shape=invtriangle];
+"amp" [shape=invtriangle];
+"beta_1" -> "M" [label=beta_1];
+"beta_0" -> "M" [label=beta_0];
+"frye_tau" -> "frye_V" [label=frye_tau];
+"invtausq" -> "amp" [label=invtausq];
+"pink.SR" -> "obs_frye" [label=SR];
+"frye_tau" -> "obs_frye" [label=tau];
+"amp" -> "C" [label=amp];
+"diff_degree" -> "C" [label=diff_degree];
+"scale" -> "C" [label=scale];
+"C" -> "pink.SR" [label=C];
+"M" -> "pink.SR" [label=M];
+}
