@@ -914,7 +914,7 @@ class AdaptiveMetropolis(StepMethod):
         # Update state
         try:
             self.update_sig()
-        except np.linalg.LinAlgError:
+        except AdaptationError:
             self.covariance_adjustment(.9)
 
         self._trace_count += len(self._trace)
