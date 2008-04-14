@@ -360,6 +360,9 @@ class Metropolis(StepMethod):
     
     - scale (optional) : number
             The proposal jump width is set to scale * variable.value.
+            
+    - sig (optional) : number or vector
+            The proposal jump width is set to sig.
     
     - dist (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',

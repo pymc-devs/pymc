@@ -2,50 +2,19 @@
 
 __docformat__='reStructuredText'
 
-from numpy import *
+import numpy as np
 # from numpy.linalg import eigh, solve, cholesky, LinAlgError
-from GPutils import regularize_array
-from linalg_utils import diag_call
-from incomplete_chol import ichol, ichol_continue
+import pymc
+from pymc.GP.GPutils import regularize_array
+from pymc.GP.linalg_utils import diag_call
+from pymc.GP.incomplete_chol import ichol, ichol_continue
 import cvxopt as cvx
 from cvxopt import base, cholmod
 
+import copy
+
 # from taucs_wrap import taucs_factor
 # import scipy.sparse.sparse as sp
-
-def spmat_to_backsolver(spmat, N):
-    # Assemple and factor sliced sparse precision matrix.
-    chol = cvx.cholmod.symbolic(spmat, uplo='U')           
-    cvx.cholmod.numeric(spmat, chol)
-
-    # Find the diagonal part of the P.T L D L.T P factorization
-    inv_sqrt_D = cvx.base.matrix(np.ones(N))
-    cvx.cholmod.solve(chol, inv_sqrt_D, sys=6)
-    inv_sqrt_D = cvx.base.sqrt(inv_sqrt_D)
-    
-    # Make function that backsolves either the Cholesky factor or its transpose
-    # against an input vector or matrix.
-    def backsolver(dev, uplo='U', squared=False, inv_sqrt_D = inv_sqrt_D, chol=chol):
-        
-        if uplo=='U':
-            if squared:
-                cvx.cholmod.solve(chol, dev)
-            else:
-                dev = cvx.base.mul(dev , inv_sqrt_D)
-                cvx.cholmod.solve(chol, dev, sys=5)
-                cvx.cholmod.solve(chol, dev, sys=8)
-
-        elif uplo=='L':
-            if squared:
-                cvx.cholmod.solve(chol, dev)
-            else:
-                cvx.cholmod.solve(chol, dev, sys=7)
-                cvx.cholmod.solve(chol, dev, sys=4)                
-                dev = cvx.base.mul(dev , inv_sqrt_D)                
-
-        return dev
-        
-    return backsolver
 
 
 def cvx_covariance(cov_fun, x, y=None, cutoff=1e-5, **params):
@@ -74,44 +43,55 @@ def cvx_covariance(cov_fun, x, y=None, cutoff=1e-5, **params):
         maxval = bigdiag.max()
         cutoff = maxval * cutoff        
 
-        # Make sure you're passing arrays of the right dimensions into
+        # Make sure you're passing np.arrays of the right dimensions into
         # cov_fun.
         if len(x.shape)>1:
-            singleton_pt = zeros((1,x.shape[1]),dtype=float)
+            singleton_pt = np.zeros((1,x.shape[1]),dtype=float)
         else:
-            singleton_pt = zeros(1,dtype=float)
+            singleton_pt = np.zeros(1,dtype=float)
     
         # Write in rows.
         for i in xrange(m):
             singleton_pt[:] = x[i,:]
-            data_now = cov_fun(singleton_pt, x[i:,:], **params).view(ndarray).ravel()
-            indices_now = where(data_now > cutoff)[0]
+            data_now = cov_fun(singleton_pt, x[i:,:], **params).view(np.ndarray).ravel()
+            indices_now = np.where(data_now > cutoff)[0]
             for j in indices_now:
                 C[i,j+i] = data_now[j]
+                # C[j+i,i] = data_now[j]
                 
             
     else:
         n=y.shape[0]
         C = cvx.base.spmatrix(0., range(m), range(n))
         
-        # Make sure you're passing arrays of the right dimensions into
+        # Make sure you're passing np.arrays of the right dimensions into
         # cov_fun.
         if len(y.shape)>1:
-            singleton_pt = zeros((1,y.shape[1]),dtype=float)
+            singleton_pt = np.zeros((1,y.shape[1]),dtype=float)
         else:
-            singleton_pt = zeros(1,dtype=float)
+            singleton_pt = np.zeros(1,dtype=float)
     
         for i in xrange(n):
             singleton_pt[:] = y[i,:]        
-            data_now = cov_fun(singleton_pt, x, **params).view(ndarray).ravel()
-            indices_now = where(data_now > cutoff)[0]
+            data_now = cov_fun(singleton_pt, x, **params).view(np.ndarray).ravel()
+            indices_now = np.where(data_now > cutoff)[0]
             for j in indices_now:
                 C[i,j] = data_now[j]
     
-    # Convert to CSC matrix and return.    
     return C
         
-
+def symmetrize(spmat):
+    """
+    By default only the upper triangle of covariances is stored.
+    This might be needed to forward-multiply the Cholesky factor by something.
+    """
+    out = copy.copy(spmat)
+    for k in xrange(spmat.I.size[0]):
+        i = spmat.I[k]
+        j = spmat.J[k]
+        # print k, i, j, out.size
+        out[j,i] = spmat.V[k]
+    return out
 
 class SparseCovariance(object):
     
@@ -125,7 +105,7 @@ class SparseCovariance(object):
     
         -   `eval_fun`: A function that takes either a single value x or two values x and y,
             followed by an arbitrary number of keyword parameters. x and y will be of shape 
-            (n,n_dim), where n is any integer and n_dim is the dimensionality of the space, or
+            (n,n_dim), np.where n is any integer and n_dim is the dimensionality of the space, or
             shape (n). In the latter case n_dim should be assumed to be 1.
                     
         -   `params`: Parameters to be passed to eval_fun.
@@ -160,33 +140,25 @@ class SparseCovariance(object):
             return self.eval_fun(xe,xe,**self.params)
 
         self.diag_cov_fun = diag_cov_fun
-
-    
-    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None):
-        """
         
-        U = C.cholesky(x[, observed=True, nugget=None])
     
+    def backsolver(self, x, observed=True, nugget=None):
+        """        
+        B, C_val = C.backsolver(x, observed=True, nugget=None)
+    
+        B is a function that backsolves the Cholesky factor of C against a vector or
+        matrix. B's additional argument, 'uplo', dictates whether the upper-triangular
+        or lower-triangular factor is backsolved.
         
-        {'pivots': piv, 'U': U} = \
-        C.cholesky(x, apply_pivot = False[, observed=True, nugget=None])
-    
-        
-        Computes incomplete Cholesky factorization of self(x,x), without
-        actually evaluating the matrix first.
-    
+        C_val is a symmetrized version of C(x,x). This is needed for drawing
+        realizations. You'll need to multiply the vector of deviates by C(x,x),
+        then backsolve. Actually assembling the Cholesky factor for forward
+        multiplying would often be inefficient.
         
         :Arguments:
     
-            -   `x`: The input array on which to evaluate the covariance.
-    
-            -   `apply_pivot`: A flag. If it's set to 'True', it returns a
-                matrix U (not necessarily triangular) such that U.T*U=C(x,x).
-                If it's set to 'False', the return value is a dictionary.
-                Item 'pivots' is a vector of pivots, and item 'U' is an
-                upper-triangular matrix (not necessarily square) such that
-                U[:,argsort(piv)].T * U[:,argsort(piv)] = C(x,x).
-    
+            -   `x`: The input np.array on which to evaluate the covariance.
+        
             -   `observed`: If 'True', any observations are taken into account
                 when computing the Cholesky factor. If not, the unobserved
                 version of self is used.
@@ -197,58 +169,56 @@ class SparseCovariance(object):
     
         # Number of points in x.
         N_new = x.shape[0]
-    
-        # Special fast version for single points.
-        if N_new==1:
-            U=asmatrix(sqrt(self.__call__(x, regularize = False, observed = observed)))
-            # print U
-            if not apply_pivot:
-                return {'pivots': array([0]), 'U': U}
-            else:
-                return U
-    
-    
-        # Create the diagonal and the get-row function differently depending on whether self
-        # has been observed. If self hasn't been observed, send the calls straight to eval_fun 
-        # to skip the extra formatting.
-        
-    
-        # get-row function
-        def rowfun(i,xpiv,rowvec):
-            """
-            A function that can be used to overwrite an input array with rows.
-            """
-            rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
-        
-        
-        # diagonal
-        diag = self.__call__(x, y=None, regularize=False, observed=observed)
-        
-        
+
+        C=self.__call__(x, x, regularize = False, observed = observed)
         
         if nugget is not None:
-            diag += nugget.ravel()
-    
-    
-        # ==================================
-        # = Call to Fortran function ichol =
-        # ==================================
-        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x)
-        U = asmatrix(U)
+            for i in xrange(N_new):
+                C[i,i] += nugget[i]
+                
+        U = cvx.cholmod.symbolic(C, uplo='U')           
+        cvx.cholmod.numeric(C, U)
+
+        # Find the diagonal part of the P.T L D L.T P factorization
+        inv_sqrt_D = cvx.base.spmatrix(1., range(N_new), range(N_new))
+        cvx.cholmod.spsolve(U, inv_sqrt_D, sys=6)
+        for i in xrange(N_new):
+            inv_sqrt_D[i,i] = np.sqrt(inv_sqrt_D[i,i])
+
+        # Make function that backsolves either the Cholesky factor or its transpose
+        # against an input vector or np.matrix.
+        def backsolver(dev, uplo='U', squared=False, inv_sqrt_D = inv_sqrt_D, U=U):
+
+            if dev.__class__ is cvx.base.spmatrix:
+                cvxsol = cvx.cholmod.spsolve
+            else:
+                def cvxsol(U, dev, sys):
+                    cvx.cholmod.solve(U,dev,sys)
+                    return dev
+
+
+            if uplo=='U':
+                if squared:
+                    dev = cvxsol(U, dev)
+                else:
+                    # dev = cvx.base.mul(dev , inv_sqrt_D)
+                    dev = inv_sqrt_D * dev
+                    dev = cvxsol(U, dev, sys=5)
+                    dev = cvxsol(U, dev, sys=8)
+
+            elif uplo=='L':
+                if squared:
+                    dev = cvxsol(U, dev)
+                else:
+                    dev = cvxsol(U, dev, sys=7)              
+                    dev = cvxsol(U, dev, sys=4)                
+                    # dev = cvx.base.mul(dev, inv_sqrt_D)                
+                    dev = inv_sqrt_D * dev
+
+            return dev
         
-        
-        # Arrange output matrix and return.
-        if m<0:
-            raise ValueError, "Matrix does not appear to be positive semidefinite"
-        
-        if not apply_pivot:
-            # Useful for self.observe and Realization.__call__. U is upper triangular.
-            U = U[:m,:]
-            return {'pivots': piv, 'U': U}
-        
-        else:
-            # Useful for users. U.T*U = C(x,x)
-            return U[:m,argsort(piv)]
+        return backsolver, symmetrize(C)
+            
             
     # def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None):
     #     """
@@ -261,26 +231,26 @@ class SparseCovariance(object):
     #     
     #     
     #     Computes incomplete Cholesky factorization of self(z,z), without
-    #     actually evaluating the matrix first. Here z is the concatenation of x
+    #     actually evaluating the np.matrix first. Here z is the concatenation of x
     #     and x_old. Assumes the Cholesky factorization of self(x_old, x_old) has
     #     already been computed.
     #     
     #     
     #     :Arguments:
     # 
-    #         -   `x`: The input array on which to evaluate the Cholesky factorization.
+    #         -   `x`: The input np.array on which to evaluate the Cholesky factorization.
     #         
-    #         -   `x_old`: The input array on which the Cholesky factorization has been
+    #         -   `x_old`: The input np.array on which the Cholesky factorization has been
     #             computed.
     #           
     #         -   `chol_dict_old`: A dictionary with kbasis_ys ['pivots', 'U']. Would be the
     #             output of either this method or C.cholesky().
     # 
     #         -   `apply_pivot`: A flag. If it's set to 'True', it returns a
-    #             matrix U (not necessarily triangular) such that U.T*U=C(x,x).
+    #             np.matrix U (not necessarily triangular) such that U.T*U=C(x,x).
     #             If it's set to 'False', the return value is a dictionary.
     #             Item 'pivots' is a vector of pivots, and item 'U' is an
-    #             upper-triangular matrix (not necessarily square) such that
+    #             upper-triangular np.matrix (not necessarily square) such that
     #             U[:,argsort(piv)].T * U[:,argsort(piv)] = C(x,x).
     #             
     #         -   `observed`: If 'True', any observations are taken into account
@@ -292,7 +262,7 @@ class SparseCovariance(object):
     #     """
     #     
     #     # Concatenation of the old points and new points.
-    #     xtot = vstack((x_old,x))
+    #     xtot = np.vstack((x_old,x))
     # 
     #     # Extract information from chol_dict_old.
     #     U_old = chol_dict_old['U']
@@ -309,7 +279,7 @@ class SparseCovariance(object):
     #     # get-row function
     #     def rowfun(i,xpiv,rowvec):                
     #         """
-    #         A function that can be used to overwrite an input array with superdiagonal rows.
+    #         A function that can be used to overwrite an input np.array with superdiagonal rows.
     #         """
     #         rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape(1,-1), y=xpiv[i:,:], regularize=False, observed = observed)
     # 
@@ -324,7 +294,7 @@ class SparseCovariance(object):
     # 
     # 
     #     # Arrange U for input to ichol. See documentation.
-    #     U = asmatrix(zeros((N_new + m_old, N_old + N_new), dtype=float))
+    #     U = np.asmatrix(np.zeros((N_new + m_old, N_old + N_new), dtype=float))
     #     U[:m_old, :m_old] = U_old[:,:m_old]
     #     U[:m_old,N_new+m_old:] = U_old[:,m_old:]
     #     
@@ -338,7 +308,7 @@ class SparseCovariance(object):
     #     #   - old_posdef_pivots are the indices of the rows that made it into the Cholesky factor so far.
     #     #   - old_singular_pivots are the indices of the rows that haven't made it into the Cholesky factor so far.
     #     #   - new_pivots are the indices of the rows that are going to be incorporated now.
-    #     piv = zeros(N_new + N_old, dtype=int)
+    #     piv = np.zeros(N_new + N_old, dtype=int)
     #     piv[:m_old] = piv_old[:m_old]
     #     piv[N_new + m_old:] = piv_old[m_old:]
     #     piv[m_old:N_new + m_old] = arange(N_new)+N_old
@@ -350,7 +320,7 @@ class SparseCovariance(object):
     #     m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:])
     # 
     # 
-    #     # Arrange output matrix and return.
+    #     # Arrange output np.matrix and return.
     #     if m<0:
     #         raise ValueError, 'Matrix does not appear positive semidefinite.'
     # 
@@ -474,7 +444,7 @@ class SparseCovariance(object):
     #                                             observed = False,
     #                                             nugget = obs_V)
     #         
-    #         # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
+    #         # Full Cholesky factor of self(obs_mesh, obs_mesh), np.where obs_mesh is the combined observation mesh.
     #         self.full_Uo = obs_dict_new['U']
     #         
     #         # Rank of self(obs_mesh, obs_mesh)
@@ -489,12 +459,12 @@ class SparseCovariance(object):
     #         self.full_piv = piv_new
     #         
     #         # Concatenate old and new observation meshes.
-    #         self.full_obs_mesh = vstack((self.full_obs_mesh, obs_mesh))
+    #         self.full_obs_mesh = np.vstack((self.full_obs_mesh, obs_mesh))
     #         relevant_slice = piv_new[m_old:m_new] - N_old
     #         obs_mesh_new = obs_mesh[relevant_slice,:]
     #         
     #         # Remember obs_mesh_* and corresponding observation variances.
-    #         self.obs_mesh = vstack((self.obs_mesh, obs_mesh[relevant_slice,:]))
+    #         self.obs_mesh = np.vstack((self.obs_mesh, obs_mesh[relevant_slice,:]))
     #         self.obs_V = hstack((self.obs_V, obs_V[relevant_slice]))
     #         
     #         # Length of obs_mesh_*.
@@ -513,7 +483,7 @@ class SparseCovariance(object):
             symm=False
         
         # Remember shape of x, and then 'regularize' it.
-        orig_shape = shape(x)
+        orig_shape = np.shape(x)
         if len(orig_shape)>1:
             orig_shape = orig_shape[:-1]
     
@@ -558,7 +528,7 @@ class SparseCovariance(object):
         else:
             
             # ====================================================================
-            # = If x and y are same array, return triangular-only sparse factor. =
+            # = If x and y are same np.array, return triangular-only sparse factor. =
             # ====================================================================
             if symm:
     
@@ -571,7 +541,7 @@ class SparseCovariance(object):
     
     
             # ======================================
-            # = # If x and y are different arrays: =
+            # = # If x and y are different np.arrays: =
             # ======================================
             else:
                 
@@ -604,29 +574,29 @@ class SparseCovariance(object):
     # 
     # def _unobs_reg(self, M):
     #     # reg_mat = chol(C(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-    #     return asmatrix(trisolve(self.Uo, M.dev.T, uplo='U',transa='T')).T
+    #     return np.asmatrix(trisolve(self.Uo, M.dev.T, uplo='U',transa='T')).T
     # 
     # def _obs_reg(self, M, dev_new, m_old):
     #     # reg_mat = chol(C(obs_mesh_*, obs_mesh_*)).T.I * M.dev        
     #     reg_mat_new = -1.*dot(self.Uo[:m_old,m_old:].T , trisolve(self.Uo[:m_old,:m_old], M.dev, uplo='U', transa='T')).T                    
     #     trisolve(self.Uo[m_old:,m_old:].T, reg_mat_new, 'L', inplace=True)
-    #     reg_mat_new += asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
-    #     return asmatrix(vstack((M.reg_mat,reg_mat_new)))
+    #     reg_mat_new += np.asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
+    #     return np.asmatrix(np.vstack((M.reg_mat,reg_mat_new)))
     # 
     # def _obs_eval(self, M, M_out, x):
     #     Cxo = self(M.obs_mesh, x, observed = False)            
     #     Cxo_Uo_inv = trisolve(M.Uo, Cxo, uplo='U', transa='T')
-    #     M_out += asarray(Cxo_Uo_inv.T* M.reg_mat).squeeze()
+    #     M_out += np.asarray(Cxo_Uo_inv.T* M.reg_mat).squeeze()
     #     return M_out
     # 
     # def _mean_under_new(self, M, obs_mesh_new):
-    #     return asarray(M.eval_fun(obs_mesh_new, **M.params)).ravel()
+    #     return np.asarray(M.eval_fun(obs_mesh_new, **M.params)).ravel()
 
 # def time_trial(L=20, N=4000, with_dense=True):
 #     import time
 #     import Covariance
 #     x = linspace(-L,L,N)
-#     x=asmatrix(vstack((x,x))).T
+#     x=np.asmatrix(np.vstack((x,x))).T
 # 
 #     Cs = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
 #     Cd = Covariance.Covariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
@@ -636,7 +606,7 @@ class SparseCovariance(object):
 #     end = time.time()
 #     smt = start - end
 #     
-#     print 'Shape: ',ms.shape, 'Number of nonzeros: ', len(ms.data), 'Fraction nonzero: ', len(ms.data)/(x.shape[0]*(x.shape[0]+1)/2.)
+#     print 'Shape: ',ms.shape, 'Number of nonnp.zeros: ', len(ms.data), 'Fraction nonzero: ', len(ms.data)/(x.shape[0]*(x.shape[0]+1)/2.)
 #     
 #     if with_dense:
 #         start = time.time()
@@ -646,7 +616,7 @@ class SparseCovariance(object):
 #     else:
 #         dmt = None
 #     
-#     print 'Sparse matrix creation: ', -smt, 'Dense: ', -dmt
+#     print 'Sparse np.matrix creation: ', -smt, 'Dense: ', -dmt
 #     
 #     print 'Starting sparse Cholesky'
 #     start = time.time()
@@ -668,17 +638,44 @@ class SparseCovariance(object):
 #     print 'Sparse Cholesky: ', -sqt, 'Dense: ', -dqt
 
 if __name__ == '__main__':
-    from cov_funs import matern
+    import pylab as pl
+    from pymc.GP.cov_funs import matern
     from numpy.linalg import *
-    from numpy import *
+    import numpy as np
 
-    x = arange(-100,100,1,dtype=float)
-    x=asmatrix(vstack((x,x))).T
-    # q=cvx_covariance(matern.euclidean, x, amp=1, scale=1, diff_degree=1)
+    x = np.arange(-100,100,1,dtype=float)
+    x=np.asmatrix(np.vstack((x,x))).T
+    # q = cvx_covariance(matern.euclidean, x, amp=1, scale=1, diff_degree=1)
     # p = cvx_covariance(matern.euclidean, x, x.copy(), amp=1, scale=1, diff_degree=1)
     C = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
     
-    q = asarray(cvx.base.matrix(C(x,x)), dtype=float)
+    q = np.asarray(cvx.base.matrix(C(x,x)), dtype=float)
+    t = np.linalg.cholesky(q.T).T
+    
+    B = C.backsolver(x)[0]
+    # C_called = C(x,x)
+    # 
+    # U = cvx.cholmod.symbolic(C_called, uplo='U')           
+    # cvx.cholmod.numeric(C_called, U)
+    # 
+    # # Find the diagonal part of the P.T L D L.T P factorization
+    # inv_sqrt_D = cvx.base.spmatrix(1., range(x.shape[0]), range(x.shape[0]))
+    # cvx.cholmod.spsolve(U, inv_sqrt_D, sys=6)
+    # for i in xrange(x.shape[0]):
+    #     inv_sqrt_D[i,i] = np.sqrt(inv_sqrt_D[i,i])
+    # 
+
+    i = cvx.base.spmatrix(1., range(x.shape[0]), range(x.shape[0]))
+    # i = i * inv_sqrt_D
+    # i=cvx.cholmod.spsolve(U, i, sys=5)
+    # pl.close('all')
+    # pl.contourf(np.asarray(cvx.base.matrix(i), dtype=float))
+    # i=cvx.cholmod.spsolve(U, i, sys=8)
+    # pl.figure()
+    # pl.contourf(np.asarray(cvx.base.matrix(i), dtype=float))
+    # i = np.asarray(cvx.base.matrix(i), dtype=float)
+
+    r = np.asarray(cvx.base.matrix(B(i, uplo='L')), dtype=float)
     
     # B=taucs_factor(C(x,x)).todense()
     # D=cholesky(matern.euclidean(x,x, amp=1, scale=1, diff_degree=1))
