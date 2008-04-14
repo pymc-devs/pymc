@@ -7,9 +7,10 @@ __modules__ = [ 'GPutils',
                 'FullRankCovariance', 
                 'NearlyFullRankCovariance', 
                 'Realization', 
-                'cov_funs']
+                'cov_funs',
+                'PyMC_objects']
                 
-__optmodules__ = ['PyMC_objects', 'GP_plots']
+__optmodules__ = ['GP_plots', 'SparseCovariance']
 
 for mod in __modules__:
     exec('from %s import *'%mod)

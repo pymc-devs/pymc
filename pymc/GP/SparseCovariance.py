@@ -3,12 +3,15 @@
 __docformat__='reStructuredText'
 
 from numpy import *
-from numpy.linalg import eigh, solve, cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+# from numpy.linalg import eigh, solve, cholesky, LinAlgError
+# from GPutils import regularize_array, trisolve
 from linalg_utils import diag_call
 from incomplete_chol import ichol, ichol_continue
-from taucs_wrap import taucs_factor
-import scipy.sparse.sparse as sp
+import cvxopt as cvx
+from cvxopt import base, cholmod
+
+# from taucs_wrap import taucs_factor
+# import scipy.sparse.sparse as sp
 
 
 def csc_covariance(cov_fun, x, y=None, cutoff=1e-5, **params):
