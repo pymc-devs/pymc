@@ -4,7 +4,7 @@ __docformat__='reStructuredText'
 
 from numpy import *
 # from numpy.linalg import eigh, solve, cholesky, LinAlgError
-# from GPutils import regularize_array, trisolve
+from GPutils import regularize_array
 from linalg_utils import diag_call
 from incomplete_chol import ichol, ichol_continue
 import cvxopt as cvx
@@ -162,94 +162,94 @@ class SparseCovariance(object):
         self.diag_cov_fun = diag_cov_fun
 
     
-    # def cholesky(self, x, apply_pivot = True, observed=True, nugget=None):
-    #     """
-    #     
-    #     U = C.cholesky(x[, observed=True, nugget=None])
-    # 
-    #     
-    #     {'pivots': piv, 'U': U} = \
-    #     C.cholesky(x, apply_pivot = False[, observed=True, nugget=None])
-    # 
-    #     
-    #     Computes incomplete Cholesky factorization of self(x,x), without
-    #     actually evaluating the matrix first.
-    # 
-    #     
-    #     :Arguments:
-    # 
-    #         -   `x`: The input array on which to evaluate the covariance.
-    # 
-    #         -   `apply_pivot`: A flag. If it's set to 'True', it returns a
-    #             matrix U (not necessarily triangular) such that U.T*U=C(x,x).
-    #             If it's set to 'False', the return value is a dictionary.
-    #             Item 'pivots' is a vector of pivots, and item 'U' is an
-    #             upper-triangular matrix (not necessarily square) such that
-    #             U[:,argsort(piv)].T * U[:,argsort(piv)] = C(x,x).
-    # 
-    #         -   `observed`: If 'True', any observations are taken into account
-    #             when computing the Cholesky factor. If not, the unobserved
-    #             version of self is used.
-    #             
-    #         -   `nugget`: The 'nugget' parameter, which will essentially be 
-    #             added to the diagonal of C(x,x) before Cholesky factorizing.
-    #     """
-    # 
-    #     # Number of points in x.
-    #     N_new = x.shape[0]
-    # 
-    #     # Special fast version for single points.
-    #     if N_new==1:
-    #         U=asmatrix(sqrt(self.__call__(x, regularize = False, observed = observed)))
-    #         # print U
-    #         if not apply_pivot:
-    #             return {'pivots': array([0]), 'U': U}
-    #         else:
-    #             return U
-    # 
-    # 
-    #     # Create the diagonal and the get-row function differently depending on whether self
-    #     # has been observed. If self hasn't been observed, send the calls straight to eval_fun 
-    #     # to skip the extra formatting.
-    #     
-    # 
-    #     # get-row function
-    #     def rowfun(i,xpiv,rowvec):
-    #         """
-    #         A function that can be used to overwrite an input array with rows.
-    #         """
-    #         rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
-    #     
-    #     
-    #     # diagonal
-    #     diag = self.__call__(x, y=None, regularize=False, observed=observed)
-    #     
-    #     
-    #     
-    #     if nugget is not None:
-    #         diag += nugget.ravel()
-    # 
-    # 
-    #     # ==================================
-    #     # = Call to Fortran function ichol =
-    #     # ==================================
-    #     U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x)
-    #     U = asmatrix(U)
-    #     
-    #     
-    #     # Arrange output matrix and return.
-    #     if m<0:
-    #         raise ValueError, "Matrix does not appear to be positive semidefinite"
-    #     
-    #     if not apply_pivot:
-    #         # Useful for self.observe and Realization.__call__. U is upper triangular.
-    #         U = U[:m,:]
-    #         return {'pivots': piv, 'U': U}
-    #     
-    #     else:
-    #         # Useful for users. U.T*U = C(x,x)
-    #         return U[:m,argsort(piv)]
-    #         
+    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None):
+        """
+        
+        U = C.cholesky(x[, observed=True, nugget=None])
+    
+        
+        {'pivots': piv, 'U': U} = \
+        C.cholesky(x, apply_pivot = False[, observed=True, nugget=None])
+    
+        
+        Computes incomplete Cholesky factorization of self(x,x), without
+        actually evaluating the matrix first.
+    
+        
+        :Arguments:
+    
+            -   `x`: The input array on which to evaluate the covariance.
+    
+            -   `apply_pivot`: A flag. If it's set to 'True', it returns a
+                matrix U (not necessarily triangular) such that U.T*U=C(x,x).
+                If it's set to 'False', the return value is a dictionary.
+                Item 'pivots' is a vector of pivots, and item 'U' is an
+                upper-triangular matrix (not necessarily square) such that
+                U[:,argsort(piv)].T * U[:,argsort(piv)] = C(x,x).
+    
+            -   `observed`: If 'True', any observations are taken into account
+                when computing the Cholesky factor. If not, the unobserved
+                version of self is used.
+                
+            -   `nugget`: The 'nugget' parameter, which will essentially be 
+                added to the diagonal of C(x,x) before Cholesky factorizing.
+        """
+    
+        # Number of points in x.
+        N_new = x.shape[0]
+    
+        # Special fast version for single points.
+        if N_new==1:
+            U=asmatrix(sqrt(self.__call__(x, regularize = False, observed = observed)))
+            # print U
+            if not apply_pivot:
+                return {'pivots': array([0]), 'U': U}
+            else:
+                return U
+    
+    
+        # Create the diagonal and the get-row function differently depending on whether self
+        # has been observed. If self hasn't been observed, send the calls straight to eval_fun 
+        # to skip the extra formatting.
+        
+    
+        # get-row function
+        def rowfun(i,xpiv,rowvec):
+            """
+            A function that can be used to overwrite an input array with rows.
+            """
+            rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
+        
+        
+        # diagonal
+        diag = self.__call__(x, y=None, regularize=False, observed=observed)
+        
+        
+        
+        if nugget is not None:
+            diag += nugget.ravel()
+    
+    
+        # ==================================
+        # = Call to Fortran function ichol =
+        # ==================================
+        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x)
+        U = asmatrix(U)
+        
+        
+        # Arrange output matrix and return.
+        if m<0:
+            raise ValueError, "Matrix does not appear to be positive semidefinite"
+        
+        if not apply_pivot:
+            # Useful for self.observe and Realization.__call__. U is upper triangular.
+            U = U[:m,:]
+            return {'pivots': piv, 'U': U}
+        
+        else:
+            # Useful for users. U.T*U = C(x,x)
+            return U[:m,argsort(piv)]
+            
     # def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None):
     #     """
     #     
@@ -669,12 +669,17 @@ class SparseCovariance(object):
 
 if __name__ == '__main__':
     from cov_funs import matern
+    from numpy.linalg import *
+    from numpy import *
 
     x = arange(-100,100,1,dtype=float)
     x=asmatrix(vstack((x,x))).T
-    q=cvx_covariance(matern.euclidean, x, amp=1, scale=1, diff_degree=1)
+    # q=cvx_covariance(matern.euclidean, x, amp=1, scale=1, diff_degree=1)
     # p = cvx_covariance(matern.euclidean, x, x.copy(), amp=1, scale=1, diff_degree=1)
-    # C = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
+    C = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
+    
+    q = asarray(cvx.base.matrix(C(x,x)), dtype=float)
+    
     # B=taucs_factor(C(x,x)).todense()
     # D=cholesky(matern.euclidean(x,x, amp=1, scale=1, diff_degree=1))
     # err_chol = B-D
