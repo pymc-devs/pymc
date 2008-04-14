@@ -48,9 +48,9 @@ def pick_best_methods(stochastic):
         try:
             competence = method.competence(stochastic)
         except:
-            print '\n\tWarning, there was an error while step method %s assessed its competence \n \
-\tto handle stochastic %s. It is being excluded from consideration.\n' \
-                    %(method.__name__, stochastic)
+#             print '\n\tWarning, there was an error while step method %s assessed its competence \n \
+# \tto handle stochastic %s. It is being excluded from consideration.\n' \
+#                     %(method.__name__, stochastic)
             competence = 0
         
         # If better than current best method, promote it
