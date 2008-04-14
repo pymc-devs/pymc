@@ -121,7 +121,7 @@ cf2py q = cov_fun(xe,ndim)
              enddo
 
             V(i) = cov_fun(xe,ndim)
-            print *,xe,cov_fun(xe,ndim)
+!             print *,xe,cov_fun(xe,ndim)
         enddo
         
         return

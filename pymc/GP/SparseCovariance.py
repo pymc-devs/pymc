@@ -86,9 +86,7 @@ def cvx_covariance(cov_fun, x, y=None, cutoff=1e-5, **params):
             singleton_pt[:] = x[i,:]
             data_now = cov_fun(singleton_pt, x[i:,:], **params).view(ndarray).ravel()
             indices_now = where(data_now > cutoff)[0]
-            # print indices_now, data_now.shape
             for j in indices_now:
-                print i, j, data_now.shape, C.size
                 C[i,j+i] = data_now[j]
                 
             
@@ -675,8 +673,8 @@ if __name__ == '__main__':
     x = arange(-100,100,1,dtype=float)
     x=asmatrix(vstack((x,x))).T
     q=cvx_covariance(matern.euclidean, x, amp=1, scale=1, diff_degree=1)
-    p = cvx_covariance(matern.euclidean, x, x.copy(), amp=1, scale=1, diff_degree=1)
-    C = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
+    # p = cvx_covariance(matern.euclidean, x, x.copy(), amp=1, scale=1, diff_degree=1)
+    # C = SparseCovariance(matern.euclidean, amp=1, scale=1, diff_degree=1)
     # B=taucs_factor(C(x,x)).todense()
     # D=cholesky(matern.euclidean(x,x, amp=1, scale=1, diff_degree=1))
     # err_chol = B-D
