@@ -309,19 +309,16 @@ class MCMC(Sampler):
                 self._gof_loss = []
                 
                 # Loop over stochastics
-                for name in self.stochastics:
-                    
-                    # Look up stoch
-                    s = self.stochastics[name]
+                for stochastic in self.stochastics:
                     
                     # Retrieve copy of trace
-                    trace = s.get_trace(burn=burn, thin=thin, chain=chain, composite=composite)
+                    trace = stochastic.trace()
                     
                     # Sample value from trace
                     sample = trace[random_integers(len(trace)) - 1]
                     
                     # Set current value to sampled value
-                    s.set_value(sample)
+                    stochastic.set_value(sample)
                 
                 # Run calculate likelihood with sampled stochastics
                 try:

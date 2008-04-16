@@ -16,7 +16,7 @@ from numpy.linalg import cholesky, eigh, det, inv
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, vectorize, inf, shape, transpose as tr
+    hsplit, argsort, vectorize, inf, shape, ndim, swapaxes, transpose as tr
 
 __all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len']
 
@@ -35,7 +35,7 @@ from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
 from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
-# TODO : Wrap the nd histogramming fortran function.    
+# TODO : Wrap the nd histogramming fortran function.
 
 integer_dtypes = [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
 float_dtypes = [float, single, float_, longfloat]
@@ -581,7 +581,7 @@ def make_indices(dimensions):
         return [tuple(i) for i in indices]
     except TypeError:
         return indices
-        
+
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
     a given width"""
@@ -645,7 +645,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     
     except IndexError:
         print "Too few elements for quantile calculation"
-        
+
 def coda_output(pymc_object):
     """Generate output files that are compatible with CODA"""
     
@@ -671,14 +671,18 @@ def coda_output(pymc_object):
     # Loop over all parameters
     for v in variables:
         
-        print "Processing", name
-            
-        index = self._process_trace(trace_file, index_file, variable(trace), name, index)
+        vname = v.__name__
+        print "Processing", vname
+    
+        try:
+            index = _process_trace(trace_file, index_file, v.trace(), vname, index)
+        except TypeError:
+            pass
     
     # Close files
     trace_file.close()
     index_file.close()
-    
+
 def _process_trace(trace_file, index_file, trace, name, index):
     """Support function for coda_output(); writes output to files"""
     
