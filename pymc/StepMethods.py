@@ -915,9 +915,20 @@ class AdaptiveMetropolis(StepMethod):
             print "\tUpdating mean ... ", self.chain_mean
         
         # Update state
+        adjustmentwarning = '\n'+\
+        'Covariance was not positive definite and _sig cannot be computed by \n'+ \
+        'Cholesky decomposition. The next jumps will be based on the last \n' + \
+        'valid covariance matrix. This situation may have arisen because no \n' + \
+        'jumps were accepted during the last `interval`. One solution is to \n' + \
+        'increase the interval, or specify an initial covariance matrix with \n' + \
+        'a smaller variance. For this simulation, each time a similar error \n' + \
+        'occurs, _sig will be reduced by a factor .9 to reduce the \n' + \
+        'jumps and increase the likelihood of accepted jumps.'
+        
         try:
             self.update_sig()
-        except AdaptationError:
+        except np.linalg.LinAlgError:
+            warnings.warn(adjustmentwarning)
             self.covariance_adjustment(.9)
 
         self._trace_count += len(self._trace)
@@ -926,15 +937,11 @@ class AdaptiveMetropolis(StepMethod):
     def covariance_adjustment(self, f=.9):
         """Multiply self._sig by a factor f. This is useful when the current _sig is too large and all jumps are rejected.
         """
-        warnings.warn('covariance was not positive definite. _sig cannot be computed and next jumps will be based on the last valid value. This might mean that no jumps were accepted. In this case, it might be worthwhile to specify an initial covariance matrix with smaller variance. For the moment, _sig will be artificially reduced by a factor .9 each time this happens.')
         self._sig *= f
 	
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
-        try:
-            self._sig = np.linalg.cholesky(self.C)
-        except Exception:
-            raise AdaptationError, "Cholesky decomposition failed in %s" % self._id 
+        self._sig = np.linalg.cholesky(self.C)
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.
