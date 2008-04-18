@@ -63,7 +63,7 @@ class MCMC(Sampler):
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
-        Sampler.__init__(self, input, db, output_path, **kwds)
+        Sampler.__init__(self, input, db, output_path, calc_deviance=True, **kwds)
 
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -165,6 +165,9 @@ class MCMC(Sampler):
                         print 'Step method %s stepping.' % step_method._id
                     # Step the step method
                     step_method.step()
+                    
+                # Calculate deviance
+                self.deviance.gen_lazy_function()
 
                 if not i % self._thin and i >= self._burn:
                     self.tally()
@@ -242,6 +245,26 @@ class MCMC(Sampler):
         for sm in self.step_methods:
             sm.__dict__.update(sm_state.get(sm._id, {}))
             
+    def dic(self):
+        """Calculates deviance information Criterion"""
+        
+        # Find mean deviance
+        mean_deviance = self.deviance.trace().mean(0)
+        
+        # Set values of all parameters to their mean
+        for stochastic in self.stochastics:
+            
+            # Calculate mean of paramter
+            mean_value = stochastic.trace().mean(0)
+            
+            # Set current value to mean
+            stochastic.set_value(mean_value)
+        
+        # Calculate deviance at the means
+        self.deviance.gen_lazy_function()
+        
+        # Return twice deviance minus deviance at means
+        return 2*mean_deviance - self.deviance.value
         
     def goodness(self, iterations, loss='squared', plot=True, color='b', filename='gof'):
         """

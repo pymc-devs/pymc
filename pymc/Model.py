@@ -20,6 +20,7 @@ from copy import copy
 from threading import Thread
 from Node import ContainerBase
 from time import sleep
+import pdb
 	
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -198,7 +199,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', output_path=None, reinit_model=True, **kwds):
+    def __init__(self, input=None, db='ram', output_path=None, reinit_model=True, calc_deviance=False, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -212,6 +213,8 @@ class Sampler(Model):
               The place where any output files should be put.
           - reinit_model : bool
               Flag for reinitialization of Model superclass.
+          - calc_deviance : bool
+              Flag for calculating model deviance.
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
@@ -220,6 +223,10 @@ class Sampler(Model):
         # Instantiate superclass
         if reinit_model:
             Model.__init__(self, input, output_path)
+            
+        # Initialize deviance, if asked
+        if calc_deviance:
+            self._init_deviance()
         
         # Specify database backend and save its keywords
         self._db_args = kwds        
@@ -239,6 +246,23 @@ class Sampler(Model):
             self._plotter = 'Could not be instantiated.'        
         
         self._state = ['status', '_current_iter', '_iter']
+        
+    def _init_deviance(self):
+        """
+        Initialize deviance variable.
+        """
+        
+        def sum_deviance(variables=self.variables):
+            # Sum deviance from all stochastics
+            return -2*sum([v.get_logp() for v in variables if v.isdata])
+        
+        self.deviance = Deterministic(  eval = sum_deviance, 
+                            name = 'deviance',
+                            parents = {'variables': self.variables},
+                            doc = 'Model deviance',
+                            trace = True,
+                            verbose = 0,
+                            cache_depth = 2)
     
     def sample(self, iter, length=None, verbose=0):
         """
@@ -293,7 +317,7 @@ class Sampler(Model):
 
                 i = self._current_iter
 
-                self.draw()                
+                self.draw()         
                 self.tally()
 
                 if not i % 10000 and self.verbose > 0:
@@ -386,6 +410,9 @@ class Sampler(Model):
                 self._variables_to_tally.add(object)
             else:
                 object.trace = no_trace.Trace()
+                
+        # Add model deviance to backend
+        self._variables_to_tally.add(self.deviance)
 
         # If not already done, load the trace backend from the database 
         # module, and assign a database instance to Model.
