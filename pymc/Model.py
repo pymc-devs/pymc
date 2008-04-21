@@ -247,18 +247,19 @@ class Sampler(Model):
         
         self._state = ['status', '_current_iter', '_iter']
         
+    def _sum_deviance(self):
+        # Sum deviance from all stochastics
+        
+        return -2*sum([v.get_logp() for v in self.data_stochastics])        
+        
     def _init_deviance(self):
         """
         Initialize deviance variable.
-        """
+        """            
         
-        def sum_deviance(variables=self.variables):
-            # Sum deviance from all stochastics
-            return -2*sum([v.get_logp() for v in variables if v.isdata])
-        
-        self.deviance = Deterministic(  eval = sum_deviance, 
+        self.deviance = Deterministic(  eval = self._sum_deviance, 
                             name = 'deviance',
-                            parents = {'variables': self.variables},
+                            parents = {},
                             doc = 'Model deviance',
                             trace = True,
                             verbose = 0,

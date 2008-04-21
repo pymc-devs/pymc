@@ -2,6 +2,10 @@
 # Decorators
 #-------------------------------------------------------------
 
+"""
+TODO: Do we still need the fortranlike_method function? I do not see it used anywhere.
+"""
+
 import numpy as np
 from numpy import inf, random, sqrt
 import string
@@ -29,6 +33,7 @@ def prop(func):
   http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/205183
   """
   return property(doc=func.__doc__, **func())
+  
   
 def fortranlike_method(f, snapshot, mv=False):
     """

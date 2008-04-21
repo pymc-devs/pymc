@@ -6,7 +6,7 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-import os
+import os, pdb
 
 class ZeroProbability(ValueError):
     "Log-likelihood is invalid or negative informationnite"
