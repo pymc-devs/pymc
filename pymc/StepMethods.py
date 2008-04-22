@@ -352,7 +352,7 @@ class Metropolis(StepMethod):
     
     To instantiate a Metropolis called M with jurisdiction over a Stochastic P:
       
-      >>> M = Metropolis(P, scale=1, dist=None)
+      >>> M = Metropolis(P, scale=1, sig=None, dist=None)
     
     :Arguments:
     - s : Stochastic
@@ -1116,6 +1116,12 @@ class AdaptiveMetropolis(StepMethod):
         """Tuning is done during the entire run, independently from the Sampler 
         tuning specifications. """
         return False
+        
+class IIDSStepper(StepMethod):
+    """
+    See written documentation.
+    """
+    pass
 
 # class JointMetropolis(StepMethod):
 #     """
@@ -1199,7 +1205,7 @@ class AdaptiveMetropolis(StepMethod):
 #     
 #     
 #     def __init__(self, variables=None, s=None, epoch=1000, memory=10, delay = 0, scale=.1, oneatatime_scales=None, verbose=0):
-#         print "This StepMethod is deprecated and will be removed from future versions, please use AdaptiveMetropolis."
+#         print "This StepMethod is deprecated and will be removed from future versions, please use g."
 #         self.verbose = verbose
 #         
 #         if s is not None:
