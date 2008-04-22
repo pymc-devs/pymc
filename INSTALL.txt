@@ -139,8 +139,8 @@ Running the test suite
 
 To make sure everything is working correctly, open a python shell and type::
   
-    import PyMC
-    PyMC.test()
+    import pymc
+    pymc.test()
 
 You should see a lot of tests being run, and messages appear if errors are 
 raised or if some tests fail. In case this happens (it shouldn't), please report
