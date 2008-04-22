@@ -19,7 +19,8 @@ __modules__ = [ 'Node',
                 'MCMC',
                 'StepMethods',
                 'convergencediagnostics',
-                'CommonDeterministics']
+                'CommonDeterministics',
+                'testsuite']
                 
 __sepmodules__ = [  'utils', 
                     'testsuite', 
