@@ -38,12 +38,12 @@ These flattened representations are useful for things like cache checking.
 
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase
 from copy import copy
-from numpy import ndarray, array, zeros, shape, arange, where, dtype
+from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
 from Container_values import LTCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
 
-__all__ = ['Container', 'DictContainer', 'ListTupleContainer', 'SetContainer', 'ObjectContainer']
+__all__ = ['Container', 'DictContainer', 'ListTupleContainer', 'SetContainer', 'ObjectContainer', 'IIDSequence']
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -374,6 +374,92 @@ class ObjectContainer(ContainerBase):
         OCValue(self)
         return self._value
     value = property(fget = _get_value, doc=value_doc)
+
+
+class IIDSequence(ContainerBase):
+    """
+    S = IIDSequence(stochastic_class, name='IIDS', N_max = Inf, **parents)
+    
+    IIDSequence objects are generators representing finite or infinite
+    IID sequences of Stochastic objects.
+    """
+    
+    def __init__(self, name, stochastic_class, N_max = Inf, **parents):
+        self.stochastic_class = stochastic_class
+        self.name = name
+        self.N_max = N_max
+        self.parents = parents
+        self._isvalue = False
+        
+        self._s_list = []
+        self._ind_map = {}
+        
+        self._next = 0
+        
+        self._value = copy(self)
+        self._value._isvalue = True
+        
+    def __getitem__(self, i):
+        if i >= self.N_max:
+            raise IndexError, 'IID sequence only %i elements long, %ith element requested.' % (self.N_max, i)
+        if not i in self._ind_map.keys():
+            self._ind_map[i] = len(self._s_list)
+            new_val = self.stochastic_class(self.name + '_%i'%i, trace=False, plot=False, **self.parents)
+            self._s_list.append(new_val)
+            if self._isvalue:
+                return new_val.value
+            return new_val
+        else:
+            if self._isvalue:
+                return self._s_list[self._ind_map[i]].value
+            else:
+                return self._s_list[self._ind_map[i]]
+            
+    def __setitem__(self, i):
+        raise ValueError, 'IIDSequence objects cannot be changed manually. Try the forget() method.'
+    
+    def __getslice__(self, start, stop, step=1):
+        out = []
+        if self._isvalue:
+            for i in xrange(start,stop,step):
+                out.append(self[i].value)
+        else:
+            for i in xrange(start,stop,step):                
+                out.append(self[i])
+        return out
+        
+    def __iter__(self):
+        return self
+        
+    def next(self):
+        self._next = self._next + 1
+
+        if self._next == self.N_max:
+            self._next = -1
+            raise StopIteration
+
+        return self[self._next]
+        
+    def __contains__(self, value):
+        if self.N_max < Inf:
+            for item in self:
+                if item is value:
+                    return True
+            return False
+        else:
+            raise RuntimeError, "Can't search infinite IID sequence."
+    
+    def __setslice__(self, *args, **kwargs):
+        raise ValueError, 'InfiniteIIDSequence objects cannot be changed manually. Try the forget() method.'
+        
+    def _get_value(self):
+        return self._value
+    value=property(_get_value)
+
+    def forget(self, i):
+        self._s_list.pop(self._ind_map[i])
+        self._ind_map.pop(i)
+
 
 class ArrayContainer(ContainerBase, ndarray):
     """

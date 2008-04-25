@@ -80,6 +80,10 @@ Installation and tutorial}
 \label{chap:MCMC} 
 \input{theory}
 
+\chapter{Tutorial}
+\label{chap:tutorial}
+\input{tutorial}
+
 \chapter{Building models}
 \label{chap:modelbuilding} 
 \input{modelbuilding}
@@ -96,22 +100,22 @@ Installation and tutorial}
 \label{chap:analyzing}
 \input{analyzing}
 
-\chapter{Probability distributions and mathematical utilities} 
+\chapter{Probability distributions} 
 \label{chap:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}
-    \item A function that evaluates its log-probability or log-density: \texttt{dist_name_like()}.
-    \item A function that draws random variables: \texttt{rdist_name()}.
-    \item A function that computes the expectation associated with the distribution: \texttt{dist_name_expval()}.
-    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Dist_name}.
+    \item A function that evaluates its log-probability or log-density: \texttt{normal_like()}.
+    \item A function that draws random variables: \texttt{rnormal()}.
+    \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
+    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
 \end{itemize} 
-Also logit, invlogit, stukel\_logit, stukel\_invlogit, other utilities?
+\input{distributions}
+
 
 \chapter{Extending PyMC}
 \label{chap:extending}
 \input{extending}
 
-\input{distributions}
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}

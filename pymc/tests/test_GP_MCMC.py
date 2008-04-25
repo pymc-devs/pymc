@@ -63,3 +63,6 @@ class test_MCMC(NumpyTestCase):
         GPSampler.use_step_method(GPNormal, f=GPSampler.f, obs_mesh=[-.5,.5], obs_V=GPSampler.V, obs_vals=GPSampler.d)
         GPSampler.assign_step_methods()
         GPSampler.sample(iter=500,burn=0,thin=10)
+        
+if __name__ == '__main__':
+    NumpyTest().run()

@@ -5,40 +5,40 @@
 
 \section*{Monte Carlo Methods in Bayesian Analysis}
 
-Bayesian model specification often results in posterior forms that are difficult to manipulate analytically. However, it is often possible to generate simulated values that share the distributional properties of the specified posterior. Such simulations may be summarized in such a way that describes the posterior density. For example, consider the expected value of some integral quantity:
+Bayesian analysis often requires high-dimensional integrals that are intractable using standard finite-element methods. However, it is often possible to compute these integrals by simulating from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
 
 \[
-E[{\bf x}] = \int_{-\infty}^{\infty} {\bf x} f({\bf x}) d{\bf x}, \qquad
+E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
 {\bf x} = \{x_1,...,x_k\}
 \]
 
-\noindent where $k$ is perhaps very large, making the joint distribution of ${\bf x}$ analytically complex. If we can produce random vectors $\{{\bf x_i}\}$, we can use these values to approximate the unknown integral. This process is known as {\emph Monte Carlo integration}. In general, MC integration says that:
+\noindent where $k$ is perhaps very large. If we can produce random vectors $\{{\bf x_i}\}$, we can use these values to approximate the unknown integral. This process is known as {\em Monte Carlo integration}. In general, MC integration allows integrals against probability density functions:
 
 \[
-I[a,b] = \int_a^b h(x) f(x) dx
+I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
 \]
 
-\noindent can be estimated by:
+\noindent to be estimated by finite sums:
 
 \[
-\hat{I}[a,b] = \frac{1}{n}\sum_{i=1}^n h(x_i)
+\hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),
 \]
 
-\noindent This estimate is useful because:
+\noindent where $\mathbf{x}_i$ is a sample from $f$. This estimate is valid and useful because (subject to regularity conditions):
 
 \begin{itemize}
 \item
 By the strong law of large numbers:
-\[\hat{I}[a,b] \rightarrow I[a,b] \mbox{with probability 1}\]
+\[\hat{I} \rightarrow I   \mbox{   with probability 1}\]
 \item
 Simulation error can be measured and controlled:
-\[Var(\hat{I}[a,b]) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(x_i)-\hat{I}[a,b])^2\]
+\[Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\]
 \end{itemize}
 
-Why is this relevant to Bayesian analysis? If we replace $f(x)$ with a posterior, $\pi(\theta|x)$ and make $h(x)$ an interesting function of the unknown parameter, the resulting expectation is that of the posterior of $h(\theta)$:
+Why is this relevant to Bayesian analysis? If we replace $f(\mathbf{x})$ with a posterior, $\pi(\theta|d)$ and make $h(\theta)$ an interesting function of the unknown parameter, the resulting expectation is that of the posterior of $h(\theta)$:
 
 \[
-E[h(\theta|x)] = \int \pi(\theta|x) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
+E[h(\theta)|d] = \int \pi(\theta|d) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
 \]
 
 %___________________________________________________________________________
@@ -99,7 +99,9 @@ A Markov chain is a special type of \emph{stochastic process}. The standard defi
 Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+1} | X_t=x_t)
 \]
 
-\noindent then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a \emph{transition matrix} when dealing with discrete states, or more generally, a \emph{transition kernel}. In the context of Markov chain Monte Carlo, useful to think of the Markovian property as ``mild non-independence''\footnote{In general, for Bayesian analyses, statistical independence is less relevant, relative to classical statistical inference. Instead, we substitute the notion of \emph{exchangeability}, which is a weaker concept, but often just as useful. Exchangeability essentially implies that different permutations (orderings) of a sequence of random variables will have the same marginal distribution. A sequence of random quantities may not be considered independent in a Bayesian sense, but are frequently exchangeable.}. We will see that, while it may be difficult to generate independent samples from a particular posterior distribution, it may be possible to generate dependent samples that may be useful in describing that distribution.
+\noindent then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a \emph{transition matrix} when dealing with discrete states, or more generally, a \emph{transition kernel}. 
+
+\noindent In the context of Markov chain Monte Carlo, useful to think of the Markovian property as ``mild non-independence''\footnote{In general, for Bayesian analyses, statistical independence is less relevant, relative to classical statistical inference. Instead, we substitute the notion of \emph{exchangeability}, which is a weaker concept, but often just as useful. Exchangeability essentially implies that different permutations (orderings) of a sequence of random variables will have the same marginal distribution. A sequence of random quantities may not be considered independent in a Bayesian sense, but are frequently exchangeable.}. MCMC allows us to indirectly generate independent samples from a particular posterior distribution.
 
 %___________________________________________________________________________
 
@@ -110,7 +112,7 @@ Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+
 Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
 
 \begin{itemize}
-\item \emph{Homogeneity}: A Markov chain is homogeneous at step $t$ if the transition probabilities are independent of the state at $t$. The starting point of the chain is almost never homogeneous, as the initial values are either hand-picked or arbitrary.
+\item \emph{Homogeneity}: A Markov chain is homogeneous at step $t$ if the transition probabilities are independent of the state at $t$. MCMC chains are rarely homogeneous.
 \item \emph{Irreducibility}: A Markov chain is irreducible if every state is accessible in one or more steps from any other state. That is, the chain contains no absorbing states. This implies that there is a non-zero probability of eventually reaching state $k$ from any other state in the chain.
 \item \emph{Recurrence}: States which are visited repeatedly are \emph{recurrent}. If the expected time to return to a particular state is bounded, this is known as \emph{positive recurrence}, otherwise the recurrent state is \emph{null recurrent}. Further, a chain is \emph{Harris recurrent} when it visits all states $X \in S$ infinitely often in the limit as $t \to \infty$; this is an important characteristic when dealing with unbounded, continuous state spaces. Whenever a chain ends up in a closed, irreducible set of Harris recurrent states, it stays there forever and visits every state with probability one.
 \item \emph{Stationarity}: A stationary Markov chain produces the same marginal distribution when multiplied by the transition kernel.  Thus, if $P$ is some $n \times n$ transition matrix:
@@ -124,10 +126,10 @@ Before we move on, it is important to define some general properties of Markov c
 \lim_{n \to \infty} Pr^{(n)}(\theta_i,\theta_j) = \pi(\theta_j) \quad \forall \theta_i, \theta_j \in \Theta
 \]
 
-\noindent or in words, the marginal distribution of the chain is the same at one step as at all other steps. This implies that our Markov chain, which we recall is dependent, now generates quantities that are independent. If it means anything to you, ergodicity is the analogue of the strong law of large numbers for Markov chains. For example, take values $\theta_{i+1},\ldots,\theta_{i+n}$ from a chain that has reached an ergodic state. A statistic of interest can then be estimated by:
+\noindent or in words, after many steps the marginal distribution of the chain is the same at one step as at all other steps. This implies that our Markov chain, which we recall is dependent, can generate samples that are independent if we wait long enough between samples. If it means anything to you, ergodicity is the analogue of the strong law of large numbers for Markov chains. For example, take values $\theta_{i+1},\ldots,\theta_{i+n}$ from a chain that has reached an ergodic state. A statistic of interest can then be estimated by:
 
 \[
-\hat{h}(\theta) = \frac{1}{n}\sum_{j=i+1}^{i+n} h(\theta_j) \approx h(\theta)
+\frac{1}{n}\sum_{j=i+1}^{i+n} h(\theta_j) \approx \int f(\theta) h(\theta) d\theta
 \]
 
 \end{itemize}
@@ -140,11 +142,7 @@ Before we move on, it is important to define some general properties of Markov c
 
 Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the parameters of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
 \[
-\int_x Pr(y \mid x) \pi(x) dx = \pi(y),
-\]
-and similarly:
-\[
-\int_y Pr(x \mid y) \pi(y) dy = \pi(x),
+\int_x Pr(y \mid x) \pi(x) dx = \pi(y).
 \]
 
 Invariance is guaranteed for any \textbf{reversible} Markov chain. Consider a Markov chain in reverse sequence: $\{\theta^{(n)},\theta^{(n-1)},...,\theta^{(0)}\}$. This sequence is still Markovian, because:
@@ -180,7 +178,7 @@ Hence, if $\pi$ is of interest, we need only find the reversible Markov chain fo
 \pdfbookmark[0]{Gibbs Sampling}{gibbs-sampling}
 \section*{Gibbs Sampling}
 
-The Gibbs sampler is the simplest and most prevalent MCMC algorithm. It uses samples from conditionally independent distributions to generate a sample from the fully conditional Bayesian posterior. For example, if a posterior has $k$ parameters to be estimated, we may condition each parameter on current values of the other $k-1$ parameters, and sample from the resultant distributional form (usually easier), and repeat this operation on the other parameters in turn. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
+The Gibbs sampler is the simplest and most prevalent MCMC algorithm. If a posterior has $k$ parameters to be estimated, we may condition each parameter on current values of the other $k-1$ parameters, and sample from the resultant distributional form (usually easier), and repeat this operation on the other parameters in turn. This procedure generates samples from the posterior distribution. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
 
 Here is a stereotypical Gibbs sampling algorithm:
 
@@ -203,52 +201,52 @@ Here is a stereotypical Gibbs sampling algorithm:
 
 As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
-Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
-\vspace{1cm}
-\begin{verbatim}
-# Import random number generators
-from numpy import random
-beta = random.beta
-binomial = random.binomial
-
-# Number of iterations
-k=1000
-
-# Prior parameter values
-n=20
-a=1
-b=2
-
-# Some fake data
-data = [6,8,4,9,9,7,12]
-
-# Empty arrays to store output
-plist = []
-ylist = []
-
-# Here's the sampler
-for i in range(k):
-
-     # Sample from beta distribution
-    p = beta(a+sum(data), len(data)*n-sum(data)+b)
-
-    # Sample from binomial distribution
-    y = binomial(n,p)
-
-     # Append samples to lists
-    plist.append(p)
-    ylist.append(y)
-
-# Calculate medians
-plist.sort()
-ylist.sort()
-pmed = (plist[k/2]+plist[k/2+1])/2
-ymed = (ylist[k/2]+ylist[k/2+1])/2
-
-# Print results
-print pmed, ymed
-\end{verbatim}
-\vspace{1cm}
+% Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
+% \vspace{1cm}
+% \begin{verbatim}
+% # Import random number generators
+% from numpy import random
+% beta = random.beta
+% binomial = random.binomial
+% 
+% # Number of iterations
+% k=1000
+% 
+% # Prior parameter values
+% n=20
+% a=1
+% b=2
+% 
+% # Some fake data
+% data = [6,8,4,9,9,7,12]
+% 
+% # Empty arrays to store output
+% plist = []
+% ylist = []
+% 
+% # Here's the sampler
+% for i in range(k):
+% 
+%      # Sample from beta distribution
+%     p = beta(a+sum(data), len(data)*n-sum(data)+b)
+% 
+%     # Sample from binomial distribution
+%     y = binomial(n,p)
+% 
+%      # Append samples to lists
+%     plist.append(p)
+%     ylist.append(y)
+% 
+% # Calculate medians
+% plist.sort()
+% ylist.sort()
+% pmed = (plist[k/2]+plist[k/2+1])/2
+% ymed = (ylist[k/2]+ylist[k/2+1])/2
+% 
+% # Print results
+% print pmed, ymed
+% \end{verbatim}
+% \vspace{1cm}
 
 %___________________________________________________________________________
 
@@ -256,9 +254,9 @@ print pmed, ymed
 \pdfbookmark[0]{The Metropolis-Hastings Algorithm}{the-metropolis-hastings-algorithm}
 \section*{The Metropolis-Hastings Algorithm}
 
-The key to success in applying the Gibbs sampler to the estimation of Bayesian posteriors is being able to specify the form of the complete conditionals of ${\bf \theta}$. In fact, the algorithm cannot be implemented without them. Of course, the posterior conditionals cannot always be neatly specified. The Metropolis-Hastings algorithm, which is implemented by PyMC, rather than generating values from the full set of conditionals, generates candidate state transitions from an alternate distribution, and accepts or rejects each candidate probabilistically according to a specified acceptance ratio.
+The key to success in applying the Gibbs sampler to the estimation of Bayesian posteriors is being able to specify the form of the complete conditionals of ${\bf \theta}$. In fact, the algorithm cannot be implemented without them. Of course, the posterior conditionals cannot always be neatly specified. In contrast to the Gibbs algorithm, the Metropolis-Hastings algorithm generates candidate state transitions from an alternate distribution, and accepts or rejects each candidate probabilistically.
 
-Let us first consider a simple Metropolis-Hastings algorithm for a single parameter, $\theta$. If necessary, we can transform $\theta$ so that its distribution $\pi(\theta)$ has support over the real line, $\theta:S_{\theta} = (-\infty,\infty)\}$, facilitating the use of convenient random variables such as the normal. This sampling distribution will be used to produce candidate variables, and is therefore referred to as the \emph{proposal distribution}, $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
+Let us first consider a simple Metropolis-Hastings algorithm for a single parameter, $\theta$. We will use a standard sampling distribution, referred to as the \emph{proposal distribution}, to produce candidate variables $q_t(\theta^{\prime} | \theta)$. That is, the generated value, $\theta^{\prime}$, is a \emph{possible} next value for $\theta$ at step $t+1$. We also need to be able to calculate the probability of moving back to the original value from the candidate, or $q_t(\theta | \theta^{\prime})$. These probabilistic ingredients are used to define an \emph{acceptance ratio}:
 
 \[
 a(\theta^{\prime},\theta) = \frac{q_t(\theta^{\prime} | \theta) \pi(\theta^{\prime})}{q_t(\theta | \theta^{\prime}) \pi(\theta)}

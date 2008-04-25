@@ -37,7 +37,7 @@ sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
 'inverse_gamma', 'lognormal', 'normal', 'uniform',
 'weibull','skew_normal']
 
-sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical']
+sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
 
 mv_continuous_distributions = ['dirichlet','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
@@ -1644,6 +1644,45 @@ def skew_normal_expval(mu,tau,alpha):
 
 # Uniform--------------------------------------------------
 @randomwrap
+def rdiscrete_uniform(lower, upper, size=1):
+    """
+    rdiscrete_uniform(lower, upper, size=1)
+
+    Random discrete_uniform variates.
+    """
+    return np.random.discrete_uniform(lower, upper, size)
+
+def discrete_uniform_expval(lower, upper):
+    """
+    discrete_uniform_expval(lower, upper)
+
+    Expected value of discrete_uniform distribution.
+    """
+    return (upper - lower) / 2.
+
+def discrete_uniform_like(x,lower, upper):
+    r"""
+    discrete_uniform_like(x, lower, upper)
+
+    discrete_uniform log-likelihood.
+
+    .. math::
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    :Parameters:
+      x : float
+       :math:'lower \geq x \geq upper'
+      lower : float
+        Lower limit.
+      upper : float
+        Upper limit.
+    """
+    
+    return flib.discrete_uniform_like(x, lower, upper)
+
+
+# DiscreteUniform--------------------------------------------------
+@randomwrap
 def runiform(lower, upper, size=1):
     """
     runiform(lower, upper, size=1)
@@ -1677,7 +1716,7 @@ def uniform_like(x,lower, upper):
       upper : float
         Upper limit.
     """
-    
+
     return flib.uniform_like(x, lower, upper)
 
 # Weibull--------------------------------------------------
@@ -2041,6 +2080,7 @@ def one_over_x_like(x):
 
 Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
 DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
+DiscreteUninformative.__name__ = 'DiscreteUninformative'
 OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
 
 
