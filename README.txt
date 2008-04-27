@@ -23,46 +23,69 @@ fit and convergence diagnostics.
 Features
 ========
 
-* Implements the Metropolis-Hastings algorithm so you can focus on your 
-  application instead of on gory numerical algorithms.
+* Fits Bayesian statistical models you create with Markov chain Monte Carlo and 
+  other algorithms.
+  
+* Sampling loops can be paused and tuned manually, or saved and restarted later.
 
-* Define your distribution from 24 well-documented statistical distributions,
+* 24 well-documented statistical distributions.
 
-* Summarize your results in tables and plots.
+* Creates summaries including tables and plots.
 
-* Run convergence diagnostics. 
+* Convergence diagnostics. 
 
+* Traces can be saved to the disk as plain text, pickles, sqlite or MySQL
+  database, or hdf5 archives. The hdf5 option allows traces to be streamed
+  to the disk during sampling, reducing memory usage.
+
+* Extensible: easily incorporates custom step methods and unusual probability 
+  distributions and stochastic processes.
+
+* MCMC loops can be embedded in larger programs, and results can be analyzed 
+  with the full power of Python.
 
 What's new in 2.0
 =================
 
-* Faster internal logic by coding the bottlenecks with Pyrex,
+* New, more flexible object model and syntax.
 
-* Faster distributions by an optimization of the Fortran functions,
+* Reduced redundant computations: only relevant log-probability terms are 
+  computed, and these are cached.
 
-* Added a Joint Metropolis and a Gibbs sampler,
+* Optimized probability distributions.
 
-* Define your problem in a separate file using the Node, Data and Parameter 
-  classes. Use decorators to improve code readability.
+* New adaptive blocked Metropolis step method.
 
-* Save your samples directly to a database. Select one from sqlite, MySQL, HDF5,
-  pickle files, text files or write a custom database backend from a template.
-
-* Run interactive convergence diagnostics,
-
-* Stop a sampling run in the middle, save it's state and restart the sampler 
-  later,
-
-* Seed multiple chains on different processors. 
-
+* Much more!
 
 Usage
 =====
 
+First, define your model in mymodel.py::
+
+   import pymc
+   import numpy
+
+   n = 5*numpy.ones(4,dtype=int)
+   x = numpy.array([-.86,-.3,-.05,.73])
+
+   alpha = pymc.Normal('alpha',mu=0,tau=.01)
+   beta = pymc.Normal('beta',mu=0,tau=.01)   
+
+   @deterministic
+   def theta(a=alpha, b=beta, d=dose):
+       """theta = logit^{-1}(a+b)"""
+       return pymc.invlogit(a+b*d)
+
+
+   d = Binomial('d', n=n, p=theta, value=numpy.array([0.,1.,3.,5.]), isdata=True)
+
 From a python shell, type::
 
-	import PyMC
-	S = PyMC.Sampler(problem_definition, db='pickle')
+	import pymc
+	import mymodel
+	
+	S = pymc.MCMC(mymodel, db='pickle')
 	S.sample(iter=10000, burn=5000, thin=2)
 
 where problem_definition is a module or a dictionary containing Node, Data and 

@@ -154,7 +154,11 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     Return a Stochastic subclass made from a particular distribution.
 
       :Example:
-        >>> Exponential = stochastic_from_dist('exponential')
+        >>> Exponential = stochastic_from_dist('exponential', 
+                                                logp=exponential_like,
+                                                random=rexponential,
+                                                dtype=np.float,
+                                                mv=False)
         >>> A = Exponential(self_name, value, beta)
         
     Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
@@ -1650,7 +1654,7 @@ def rdiscrete_uniform(lower, upper, size=1):
 
     Random discrete_uniform variates.
     """
-    return np.random.discrete_uniform(lower, upper, size)
+    return np.random.randint(lower, upper+1, size)
 
 def discrete_uniform_expval(lower, upper):
     """
@@ -1678,7 +1682,7 @@ def discrete_uniform_like(x,lower, upper):
         Upper limit.
     """
     
-    return flib.discrete_uniform_like(x, lower, upper)
+    return flib.uniform_like(x, lower, upper+1)
 
 
 # DiscreteUniform--------------------------------------------------

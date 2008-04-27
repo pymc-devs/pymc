@@ -132,15 +132,19 @@ Untar the source archive, then move into the resulting source directory in
 the command terminal and type:
 \begin{quote}{\ttfamily \raggedright \noindent
 python~setup.py~build~\\
-sudo~python~setup.py~install
+python~setup.py~install
 }\end{quote}
 
 \end{list}
 
-The \titlereference{sudo} command is required to install PyMC into the Python site-packages
-directory, which should have restricted privileges. You will be prompted for a
-password, and provided you have superuser privileges, the installation will
-proceed.
+The \titlereference{sudo} command will be required to install PyMC into the Python site-packages
+directory if it has restricted privileges:
+\begin{quote}{\ttfamily \raggedright \noindent
+sudo~python~setup.py~install
+}\end{quote}
+
+You will be prompted for a  password, and provided you have superuser privileges,
+the installation will proceed.
 
 
 %___________________________________________________________________________
@@ -165,10 +169,19 @@ Download the source tarball or checkout the subversion repository.
 Untar the package archive, then move to the resulting archive directory and type:
 \begin{quote}{\ttfamily \raggedright \noindent
 python~setup.py~build~\\
-sudo~python~setup.py~install
+python~setup.py~install
 }\end{quote}
 
 \end{list}
+
+The \titlereference{sudo} command will be required to install PyMC into the Python site-packages
+directory if it has restricted privileges:
+\begin{quote}{\ttfamily \raggedright \noindent
+sudo~python~setup.py~install
+}\end{quote}
+
+You will be prompted for a  password, and provided you have superuser privileges,
+the installation will proceed.
 
 
 %___________________________________________________________________________

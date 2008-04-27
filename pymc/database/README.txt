@@ -2,18 +2,18 @@
 Database Backends
 -----------------
 
-By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different strategies, from simple ASCII files to compressed binary formats. These strategies are implemented different *database backends*, behaving identically from the user perspective. In the following, the interface to these backends is discussed, and a description of the different backends is given. 
+By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different strategies, from simple ASCII files to compressed binary formats. These strategies are implemented different *database backends*, behaving identically from the user's perspective. In the following, the interface to these backends is discussed, and a description of the different backends is given. 
 
 
 Accessing Sampled Data: User Interface
 =======================================
 
 
-The choice of database backend is made when a Sampler is created using the `db` keyword::
+The choice of database backend is made when a sampler is created using the `db` keyword::
 
-	S = Sampler(DisasterSampler, db='txt', dirname='test')
+	S = MCMC(DisasterModel, db='txt', dirname='test')
 	
-This instructs the sampler to tally samples in txt files stored in a directory named `test`. Other choices for the database are given in the table below, the default being `ram`. When the `sample` method is called, a `chain` is created storing the sampled variables. The data in this chain can be accessed for each stochastic parameter using its trace object ::
+This instructs the sampler to tally samples in txt files stored in a directory named `test`. Other choices for the database are given in the table below, the default being `ram`. When the `sample` method is called, a `chain` is created storing the sampled variables. The data in this chain can be accessed for each variable using its trace object ::
 
 	S.e.trace()
 
@@ -64,7 +64,7 @@ Used by default, this backend simply holds a copy in memory, with no output writ
 txt
 ---
 
-The `txt` backend is a modified `ram` backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called `Chain_<#>`, the trace for each variable being stored in a file names`<stoch name>.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory. 
+The `txt` backend is a modified `ram` backend, the only difference being that when the database is closed, the data is written to disk in ascii files. More precisely, the data for each chain is stored in a directory called `Chain_<#>`, the trace for each variable being stored in a file names`<variable name>.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory. 
 
 pickle
 ------

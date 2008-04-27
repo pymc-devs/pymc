@@ -24,17 +24,33 @@ fit and convergence diagnostics.
 \label{features}
 \begin{itemize}
 \item {} 
-Implements the Metropolis-Hastings algorithm so you can focus on your
-application instead of on gory numerical algorithms.
+Fits Bayesian statistical models you create with Markov chain Monte Carlo and
+other algorithms.
 
 \item {} 
-Define your distribution from 24 well-documented statistical distributions,
+Sampling loops can be paused and tuned manually, or saved and restarted later.
 
 \item {} 
-Summarize your results in tables and plots.
+24 well-documented statistical distributions.
 
 \item {} 
-Run convergence diagnostics.
+Creates summaries including tables and plots.
+
+\item {} 
+Convergence diagnostics.
+
+\item {} 
+Traces can be saved to the disk as plain text, pickles, sqlite or MySQL
+database, or hdf5 archives. The hdf5 option allows traces to be streamed
+to the disk during sampling, reducing memory usage.
+
+\item {} 
+Extensible: easily incorporates custom step methods and unusual probability
+distributions and stochastic processes.
+
+\item {} 
+MCMC loops can be embedded in larger programs, and results can be analyzed
+with the full power of Python.
 
 \end{itemize}
 
@@ -47,31 +63,20 @@ Run convergence diagnostics.
 \label{what-s-new-in-2-0}
 \begin{itemize}
 \item {} 
-Faster internal logic by coding the bottlenecks with Pyrex,
+New, more flexible object model and syntax.
 
 \item {} 
-Faster distributions by an optimization of the Fortran functions,
+Reduced redundant computations: only relevant log-probability terms are
+computed, and these are cached.
 
 \item {} 
-Added a Joint Metropolis and a Gibbs sampler,
+Optimized probability distributions.
 
 \item {} 
-Define your problem in a separate file using the Node, Data and Parameter
-classes. Use decorators to improve code readability.
+New adaptive blocked Metropolis step method.
 
 \item {} 
-Save your samples directly to a database. Select one from sqlite, MySQL, HDF5,
-pickle files, text files or write a custom database backend from a template.
-
-\item {} 
-Run interactive convergence diagnostics,
-
-\item {} 
-Stop a sampling run in the middle, save it's state and restart the sampler
-later,
-
-\item {} 
-Seed multiple chains on different processors.
+Much more!
 
 \end{itemize}
 
@@ -83,10 +88,32 @@ Seed multiple chains on different processors.
 \section*{Usage}
 \label{usage}
 
+First, define your model in mymodel.py:
+\begin{quote}{\ttfamily \raggedright \noindent
+import~pymc~\\
+import~numpy~\\
+~\\
+n~=~5*numpy.ones(4,dtype=int)~\\
+x~=~numpy.array({[}-.86,-.3,-.05,.73{]})~\\
+~\\
+alpha~=~pymc.Normal('alpha',mu=0,tau=.01)~\\
+beta~=~pymc.Normal('beta',mu=0,tau=.01)~\\
+~\\
+@deterministic~\\
+def~theta(a=alpha,~b=beta,~d=dose):~\\
+~~~~"{}"{}"theta~=~logit{\textasciicircum}{\{}-1{\}}(a+b)"{}"{}"~\\
+~~~~return~pymc.invlogit(a+b*d)~\\
+~\\
+~\\
+d~=~Binomial('d',~n=n,~p=theta,~value=numpy.array({[}0.,1.,3.,5.{]}),~isdata=True)
+}\end{quote}
+
 From a python shell, type:
 \begin{quote}{\ttfamily \raggedright \noindent
-import~PyMC~\\
-S~=~PyMC.Sampler(problem{\_}definition,~db='pickle')~\\
+import~pymc~\\
+import~mymodel~\\
+~\\
+S~=~pymc.MCMC(mymodel,~db='pickle')~\\
 S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 

@@ -98,7 +98,7 @@ class StepMethodMeta(type):
 class StepMethod(object):
     """
     This object knows how to make Stochastics take single MCMC steps.
-    It's sample() method will be called by Model at every MCMC iteration.
+    Its step() method will be called by Model at every MCMC iteration.
     
     :Parameters:
           -variables : list, array or set

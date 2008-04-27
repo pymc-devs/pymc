@@ -103,12 +103,15 @@ To build and install PyMC from source:
    the command terminal and type::
 
        python setup.py build
+       python setup.py install
+
+The `sudo` command will be required to install PyMC into the Python site-packages 
+directory if it has restricted privileges::
+
        sudo python setup.py install
 
-The `sudo` command is required to install PyMC into the Python site-packages 
-directory, which should have restricted privileges. You will be prompted for a 
-password, and provided you have superuser privileges, the installation will 
-proceed.
+You will be prompted for a  password, and provided you have superuser privileges, 
+the installation will proceed.
 
 Linux
 -----
@@ -119,8 +122,15 @@ but it is straightforward to build the package yourself.
 2. Untar the package archive, then move to the resulting archive directory and type::
 
        python setup.py build
+       python setup.py install
+
+The `sudo` command will be required to install PyMC into the Python site-packages 
+directory if it has restricted privileges::
+
        sudo python setup.py install
 
+You will be prompted for a  password, and provided you have superuser privileges, 
+the installation will proceed.
 
 Subversion repository
 =====================

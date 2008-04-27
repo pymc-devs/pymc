@@ -5,14 +5,14 @@
 
 \section*{Monte Carlo Methods in Bayesian Analysis}
 
-Bayesian analysis often requires high-dimensional integrals that are intractable using standard finite-element methods. However, it is often possible to compute these integrals by simulating from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
+Bayesian analysis often requires integrals that are analytically intractable and too high-dimensional do evaluate using standard methods of numerical integration. However, it is often possible to compute these integrals by simulating from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
 
 \[
 E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
 {\bf x} = \{x_1,...,x_k\}
 \]
 
-\noindent where $k$ is perhaps very large. If we can produce random vectors $\{{\bf x_i}\}$, we can use these values to approximate the unknown integral. This process is known as {\em Monte Carlo integration}. In general, MC integration allows integrals against probability density functions:
+\noindent where $k$ is perhaps very large. If we can produce a reasonable number of random vectors $\{{\bf x_i}\}$, we can use these values to approximate the unknown integral. This process is known as {\em Monte Carlo integration}. In general, MC integration allows integrals against probability density functions:
 
 \[
 I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
@@ -24,7 +24,7 @@ I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
 \hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),
 \]
 
-\noindent where $\mathbf{x}_i$ is a sample from $f$. This estimate is valid and useful because (subject to regularity conditions):
+\noindent where $\mathbf{x}_i$ is a sample from $f$. This estimate is valid and useful because:
 
 \begin{itemize}
 \item
@@ -47,7 +47,7 @@ E[h(\theta)|d] = \int \pi(\theta|d) h(\theta) d\theta \approx \frac{1}{n}\sum_{i
 \pdfbookmark[1]{Rejection Sampling}{rejection-sampling}
 \subsection*{Rejection Sampling}
 
-Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
+Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
 \begin{figure}[ht]
         \begin{center}
@@ -80,6 +80,8 @@ g(x) \le  f(x) \qquad\forall x \in (-\infty,\infty)
 \]
 
 Having done this, we can now sample ${x_i}$ from $g(x)$ and accept or reject each of these values based upon $f(x_i)$. Specifically, for each draw $x_i$, we also draw a uniform random variate $u_i$ and accept $x_i$ if $u_i < f(x_i)/kg(x_i)$ (Figure \ref{fig:unbound}). This approach is made more efficient by choosing an enveloping distribution that is ``close'' to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling (see text) which, as the name implies, samples more frequently from important areas of the distribution.
+
+Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions \textbf{ref}.
 
 %___________________________________________________________________________
 

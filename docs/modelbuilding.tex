@@ -22,9 +22,9 @@ A stochastic variable has the following major attributes:
 \end{description}
 A stochastic variable can optionally be endowed with a method called \texttt{\bfseries random}, which draws a value for the variable given the values of its parents. Note that the \texttt{random} method does not provide a Gibbs sample unless the variable has no children.
 
-A stochastic variable has the following additional attributes (you don't need to understand all of these):
+A stochastic variable has the following additional attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary would be \texttt{'t_l'} and \texttt{'t_h'}. Thanks to Python's dynamic typing, the actual parents (the values of the dictionary) may be of any class or type.
+    \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \texttt{'t_l'} and \texttt{'t_h'}. Thanks to Python's dynamic typing, the actual parents (the values of the dictionary) may be of any class or type.
     \item[\texttt{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
     \item[\texttt{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
     \item[\texttt{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
@@ -37,13 +37,11 @@ A stochastic variable has the following additional attributes (you don't need to
     \item[\texttt{__doc__}:] The docstring of the variable.
 \end{description}
 
-Subclasses of \texttt{Stochastic} include the \texttt{DiscreteStochastic} class, which represents integer-valued variables, and the \texttt{BinaryStochastic} class, which represents Bernoulli or indicator variables. 
-
-\subsection{Instantiation of stochastic variables}
+\subsection{Creation of stochastic variables}
 There are four ways to create stochastic variables, called the `automatic', `short', `long' and `direct' interfaces.
 
 \begin{description}    
-    \item[Automatic] Stochastic variables with standard distributions (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of \texttt{Stochastic}. Uniformly-distributed discrete variable $s$ could be created using the automatic interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of \texttt{Stochastic}. Uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
     \begin{verbatim}
         s = DiscreteUniform('s', 1851, 1962, value=1900)
     \end{verbatim}
@@ -63,7 +61,7 @@ There are four ways to create stochastic variables, called the `automatic', `sho
     % \end{description}
     
     
-    \item[Short] Uniformly-distributed discrete stochastic variable $s$ could be created as follows:
+    \item[Short] Uniformly-distributed discrete stochastic variable $s$ in (\ref{disastermodel}) could be created as follows:
     \begin{verbatim}
 @stochastic(dtype=int)
 def s(value=1900, t_l=1851, t_h=1962):
@@ -75,7 +73,7 @@ def s(value=1900, t_l=1851, t_h=1962):
     \end{verbatim}
     The \texttt{Stochastic} object produced by the decorator \texttt{stochastic} will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The names of the function \texttt{s}'s other arguments will become the keys of the stochastic variable \texttt{s}'s \texttt{parents} dictionary. The values of these arguments will become the values of the dictionary.
 
-Stochastic variables may be valued as any object, their parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a real number (float). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables.
+Stochastic variables may be valued as any object and their parents may be any objects as long as their log-probability functions return a real number (NumPy \texttt{float}). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables.
 
     The decorator \texttt{stochastic} can take several arguments: 
     \begin{itemize}
@@ -103,7 +101,7 @@ def s(value=1900, t_l=1851, t_h=1962):
 
     rseed = 1.
     \end{verbatim}
-The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function will be used when \texttt{s.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{David explain rseed} \texttt{rseed} provides a seed for the RNG. The \texttt{value} argument is optional if a \texttt{random} method is provided; if no initial value is provided, it will be drawn using the \texttt{random} method.
+The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function will be used when \texttt{s.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \texttt{rseed} provides a seed for the RNG. The \texttt{value} argument is optional if a \texttt{random} method is provided; if no initial value is provided, it will be drawn using the \texttt{random} method.
 
     \item[Direct] It's possible to instantiate \texttt{Stochastic} directly:
 \begin{verbatim}
@@ -196,9 +194,25 @@ A Deterministic variable has the following additional attributes:
 Deterministic variables have no methods.
 
 
-\subsection*{Instantiation of deterministic variables}
-Deterministic variables are less complicated than stochastic variables, and there are only two ways to create them:
+\subsection*{Creation of deterministic variables}
+Deterministic variables are less complicated than stochastic variables, and there are only three ways to create them:
 \begin{description}
+   \item[Automatic] A handful of functions have been wrapped in Deterministic objects. These are brief enough to list:
+   \begin{description}
+      \item[\texttt{LinearCombination}:] Has two parents $x$ and $y$, both of which must be iterables. Valued as
+      \[
+      \sum_i x_i^T y_i.
+      \]
+      \item[\texttt{Index}:] Has three parents $x$, $y$ and \texttt{index}. $x$ and $y$ must be iterables, \texttt{index} must be valued as an integer. Valued as
+      \[
+      x_{\mathtt{index}}^T y_{\mathtt{index}}.
+      \]
+      \texttt{Index} is useful for implementing `dynamic' models, in which the parent-child connections change.
+      \item[\texttt{Lambda}:] Converts an anonymous function to a \texttt{Deterministic} instance on a single line.
+      \item[\texttt{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k$'th element is determined by the others. \texttt{CompletedDirichlet} appends the $k$'th element to the value of its parent $D$.      
+      \item[\texttt{Logit}, \texttt{InvLogit}, \texttt{StukelLogit}, \texttt{StukelInvLogit}:] Various common link functions for generalized linear models.
+   \end{description}
+   It's a good idea to use these classes when feasible, because certain fitting methods (Gibbs step methods in particular) know how to take them into account.
     \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \texttt{Stochastic}'s short interface:
 \begin{verbatim}
 @deterministic
@@ -229,8 +243,6 @@ r = Deterministic(  eval = r_eval,
 The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for the variable, as with stochastic variables.
 \end{description}
 
-There are a handful of \texttt{Deterministic} subclasses with automatic interfaces, most notably \texttt{LinearCombination}.
-
 Note that deterministic variables have no \texttt{isdata} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
 \hypertarget{container}{}
@@ -247,21 +259,15 @@ $y$ depends on every element of the Markov chain $x$, but we wouldn't want to ma
 
 This situation can be handled in the natural way:
 \begin{verbatim}
-@stochastic
-def x_0(value=0, mu = 0, tau = 1):
-    return normal_like(value, mu, tau)
+x_0 = Normal('x_0', mu=0, tau=1)
 
 x = [x_0]
 last_x = x_0
 
 for i in range(1,N):          
-    @stochastic
-    def x_now(value=0, mu = last_x, tau = 1):
-        return normal_like(value, mu, tau)
-        
-    last_x = x_now
-    
-    x.append(x_now)
+   x_now = Normal('x_%i'%i, mu=last_x, tau=1)        
+   last_x = x_now 
+   x.append(x_now)
 
 @data
 @stochastic
@@ -277,7 +283,7 @@ Containers, like variables, have an attribute called \texttt{value}. This attrib
 
 Containers can currently be constructed from lists, tuples, dictionaries, NumPy arrays, modules, sets and any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
 
-Nodes whose parents are containers make private (shallow) copies of those containers on instantiation. This is done for technical reasons rather than to protect users from accidental misuse.
+Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.
 
 Containers have the following useful attributes in addition to \texttt{value}:
 \begin{itemize}
@@ -310,7 +316,7 @@ In some cases, it's nice to be able to modify the joint density by incorporating
 \begin{eqnarray*}
     p(x_0, x_2, \ldots x_{N-1}) \propto \prod_{i=0}^{N-2} \psi_i(x_i, x_{i+1}).
 \end{eqnarray*}
-Arbitrary factors such as $\psi$ are contributed by objects of class \texttt{Potential} (\cite{dawidmarkov} and \cite{jordangraphical} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields.
+Arbitrary factors such as $\psi$ are contributed by objects of class \texttt{Potential} (\cite{dawidmarkov} and \cite{jordangraphical} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \cite{christakos} 
 
 % Even when there is a definite dependence hierarchy, potentials can provide a useful shorthand. Consider a new example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
 % \begin{eqnarray*}
@@ -345,7 +351,7 @@ Potentials have one important attribute, \texttt{\bfseries logp}, which gives th
 Potentials have no methods. They have no \texttt{trace} attribute, because they are not variables. They cannot serve as parents of variables for the same reason, so they have no \texttt{children} attribute.
 
 
-\subsection*{Instantiation of \texttt{Potential}}
+\subsection*{Creation of \texttt{Potentials}}
 There are two ways to create potentials:
 \begin{description}
     \item[Decorator] A potential can be created via a decorator in a way very similar to \texttt{Stochastic}'s short interface and \texttt{Deterministic}'s decorator interface:
@@ -355,7 +361,7 @@ def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
     return -(xlo - xhi)**2
 \end{verbatim}
-The function supplied should return a floating-point value. Arguments' keys and values are converted into a parent dictionary as with stochastic variable's medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
+The function supplied should return a NumPy \texttt{float}. Arguments' names and values are converted into a parent dictionary as with \texttt{Stochastic}'s medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
@@ -375,7 +381,7 @@ psi_i = Potential(  logp = psi_i_logp,
 \section*{Graphing models} \label{graphical}
 \pdfbookmark[0]{Graphing models}{graphical}
 
-The function \texttt{graph} draws graphical representations of \texttt{Model} (chapter \ref{modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \texttt{graph} draws graphical representations of \texttt{Model} (chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{jordangraphical} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
@@ -412,7 +418,7 @@ The \texttt{logp} attributes of stochastic variables and potentials and the \tex
 \begin{verbatim}
 L = LazyFunction(fun, arguments)
 \end{verbatim}
-The argument \texttt{arguments} is a dictionary container (see section \ref{sub:container}); \texttt{fun} must accept keyword arguments only. When \texttt{L}'s \texttt{get()} method is called, the return value is the same as the call 
+The argument \texttt{arguments} is a dictionary container; \texttt{fun} must accept keyword arguments only. When \texttt{L}'s \texttt{get()} method is called, the return value is the same as the call 
 \begin{verbatim}
 fun(**arguments.value)
 \end{verbatim}
