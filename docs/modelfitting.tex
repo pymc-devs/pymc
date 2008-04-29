@@ -4,9 +4,9 @@ All objects that fit probability models are descended from the \texttt{Model} cl
 
 Currently, PyMC provides three classes that actually fit models:
 \begin{itemize}
+    \item \texttt{MCMC}, which coordinates Markov Chain Monte Carlo algorithms. The actual work of updating stochastic variables conditional on the rest of the model is done by \texttt{StepMethod} instances, which are described in this chapter.
     \item \texttt{MAP}, which computes maximum a posteriori estimates.
     \item \texttt{NormApprox}, which computes the `normal approximation' \cite{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum a posteriori estimate.
-    \item \texttt{MCMC}, which is coordinates Markov Chain Monte Carlo algorithms. The actual work of updating stochastic variables conditional on the rest of the model is done by \texttt{StepMethod} instances, which are described in this chapter.
 \end{itemize}
 This set will hopefully grow in future releases. 
 
@@ -117,7 +117,7 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
         \item[\texttt{halt()}:] Truncate the database and clean up.
     \end{description}
     \item[\texttt{tally()}:] Write all variables' current values to the database.
-    \item[\texttt{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \texttt{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values all the stochastic variables in the model).
+    \item[\texttt{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \texttt{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values of all the stochastic variables in the model).
     \item[\texttt{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling.
     \item[\texttt{restore\_state()}:] Restores the sampler to the state stored in the database.
     \item[\texttt{plot()}:] Generates densities (or histograms) and trace plots of all nodes in the sampler.
@@ -175,7 +175,7 @@ It provides the following additional attributes:
 \pdfbookmark[0]{The MCMC class}{mcmc}
  \texttt{MCMC} is a subclass of \texttt{Sampler}. At the beginning of a sampling loop, it assigns a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
 
-MCMC samplers have the following methods, in addition those of \texttt{Sampler}:
+MCMC samplers have the following methods, in addition to those of \texttt{Sampler}:
 \begin{description}
     \item[\texttt{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] The \texttt{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \texttt{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \texttt{thin} iterations. Tuning will be done each \texttt{tune\_interval} iterations, even after burn-in is complete \cite{tuning,Haario:2001lr}.
     \item[\texttt{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] Interactive sampling; see \texttt{Sampler.isample}.

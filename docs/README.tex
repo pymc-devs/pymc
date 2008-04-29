@@ -63,7 +63,7 @@ with the full power of Python.
 \label{what-s-new-in-2-0}
 \begin{itemize}
 \item {} 
-New, more flexible object model and syntax.
+New flexible object model and syntax (non backward compatible).
 
 \item {} 
 Reduced redundant computations: only relevant log-probability terms are
@@ -118,8 +118,7 @@ S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 
 where problem{\_}definition is a module or a dictionary containing Node, Data and
-Parameter instances defining your problem. Read the \href{docs/pdf/new_interface.pdf}{user guide} for a
-complete description of the package, classes and some examples to get started.
+Parameter instances defining your problem.
 
 
 %___________________________________________________________________________
@@ -129,7 +128,7 @@ complete description of the package, classes and some examples to get started.
 \section*{History}
 \label{history}
 
-PyMC began development in 2003, as an effort to generalize the process of building Metropolis-Hastimgs samplers, with an aim to making Markov chain Monte Carlo more accessible to non-statisticians (particularly ecologists). The choice to develop PyMC as a python module, rather than a standalone application, allowed the use MCMC methods in a larger modeling framework, in contrast to the BUGS environment. By 2005, PyMC was reliable enough for version 1.0 to be released to the public. A small group of regular users, most associated with the University of Georgia, provided much of the feedback necessary for the refinement of PyMC to its current state.
+PyMC began development in 2003, as an effort to generalize the process of building Metropolis-Hastings samplers, with an aim to making Markov chain Monte Carlo more accessible to non-statisticians (particularly ecologists). The choice to develop PyMC as a python module, rather than a standalone application, allowed the use MCMC methods in a larger modeling framework, in contrast to the BUGS environment. By 2005, PyMC was reliable enough for version 1.0 to be released to the public. A small group of regular users, most associated with the University of Georgia, provided much of the feedback necessary for the refinement of PyMC to its current state.
 
 In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development team for PyMC 2.0. This iteration of the software strives for more flexibility, better performance and a better end-user experience than any previous version of PyMC.
 

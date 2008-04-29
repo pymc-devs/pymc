@@ -7,13 +7,13 @@
 \documentclass[]{manual}
 
 % Use utf-8 encoding for foreign characters
-\usepackage[utf8]{inputenc}
+%\usepackage[utf8]{inputenc}
 
 % Setup for fullpage use
 \usepackage{fullpage}
 \usepackage{amsmath}
 \usepackage{epsfig}
-\usepackage{pdfsync} 
+%\usepackage{pdfsync} 
 
 % Flexible citation syntax
 \usepackage{natbib}
@@ -37,7 +37,7 @@
 % This is now the recommended way for checking for PDFLaTeX:
 %\usepackage{ifpdf}
 
-% Enable hyeprlinks
+% Enable hyperlinks
 \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
 %\ifpdf
@@ -45,6 +45,23 @@
 %\else
 %\usepackage{graphicx}
 %\fi
+
+%%% EPYDOC STUFF %%%
+\usepackage{underscore}
+\usepackage[english]{babel}
+\usepackage{alltt, parskip, fancyhdr, boxedminipage}
+\usepackage{makeidx, multirow, longtable, tocbibind, amssymb}
+\usepackage{fullpage}
+\usepackage[usenames]{color}
+\usepackage{ifthen}
+\usepackage{ae}
+\usepackage{aeguill}
+\usepackage{shortvrb}
+\usepackage{ucs}
+\usepackage{tabularx}
+\input{epydocheader}
+%%% END OF EPYDOC STUFF %%%
+
 
 \title{PyMC 2.0 User's Guide \\
 Installation and tutorial}
@@ -58,7 +75,7 @@ Installation and tutorial}
 \newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
 \newcommand{\titlereference}[1]{\textsl{#1}}
 \newlength{\locallinewidth}
-\setlength{\locallinewidth}{.5\textwidth}
+\setlength{\locallinewidth}{7in}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -113,7 +130,7 @@ Several probability distributions are provided in the module \module{distributio
     \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
     \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
 \end{itemize} 
-\input{distributions}
+\input{pdf//distributions-module}
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}

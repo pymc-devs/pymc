@@ -71,12 +71,7 @@ class test_pickle(NumpyTestCase):
         assert_array_equal(S.e.trace(chain=None).shape, (300,))
         assert_equal(S.e.trace.length(None), 300)
         S.db.close()
-##class test_txt(NumpyTestCase):
-##    def check(self):
-##        M = MCMC(DisasterModel, db='txt')
-##        M.sample(300,100,2)
-##        assert_equal(M.e.trace().shape, (150,))
-##
+
 ##class test_mysql(NumpyTestCase):
 ##    def check(self):
 ##        M = MCMC(DisasterModel, db='mysql')
@@ -106,10 +101,6 @@ if hasattr(database, 'sqlite'):
             assert_array_equal(S.e.trace(chain=None).shape, (300,))
             S.db.close()
         
-##class test_hdf5(NumpyTestCase):
-##    def check(self):
-##        M = MCMC(DisasterModel, db='hdf5')
-##        M.sample(300,100,2)
 if hasattr(database, 'hdf5'):
     class test_hdf5(NumpyTestCase):
         def __init__(*args, **kwds):

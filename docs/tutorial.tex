@@ -55,7 +55,7 @@ We can represent model \ref{disastermodel} in a file called \module{DisasterMode
                        3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                        0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim} 
-Now we create the switchpoint variable $s$:
+Next, we create the switchpoint variable $s$:
 \begin{verbatim}
    s = DiscreteUniform('s', lower=0, upper=110)   
 \end{verbatim}
@@ -64,7 +64,7 @@ Now we create the switchpoint variable $s$:
    e = Exponential('e', beta=1)
    l = Exponential('l', beta=1)   
 \end{verbatim}
-Now the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We will create $r$ using the \texttt{deterministic} decorator, which converts the ordinary Python function $r$ into a \texttt{Deterministic} object.
+Now, we define the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We create $r$ using the \texttt{deterministic} decorator, which converts the ordinary Python function $r$ into a \texttt{Deterministic} object.
 \begin{verbatim}
    @deterministic
    def r(s=s, e=e, l=l):
@@ -73,7 +73,7 @@ Now the variable $r$, which selects the early rate $e$ for times before $s$ and 
       out[s:] = l
       return out
 \end{verbatim}
-Now the number of disasters $D$. We have observed the value of $D$, so we provide an initial value for it and set the init argument \texttt{isdata} to \texttt{True}:
+The last step is to define the number of disasters $D$. This is done the same way as for stochastic variables, except that we set the init argument \texttt{isdata} to \texttt{True}. This tells PyMC that this object has a fixed value and does not need to be sampled:
 \begin{verbatim}
    D = Poisson('D', mu=r, value=D_array, isdata=True)
 \end{verbatim}
@@ -190,7 +190,7 @@ Stochastic objects can evaluate their probability mass or density functions at t
    In [12]: l.logp
    Out[12]: -2.6491936762267811
 \end{verbatim}
-Stochastic objects need to call an internal function to compute their \texttt{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \texttt{Stochastic} objects by decorating functions that compute their log-probabilities or densities. See chapter \ref{chap:modelbuilding}. 
+Stochastic objects need to call an internal function to compute their \texttt{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \texttt{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). 
 
 \subsection*{Using \texttt{Variables} as parents of \texttt{Variables}}
 

@@ -35,6 +35,11 @@ dependencies, and all are freely available online.
 * `IPython`_ (optional): A convenient python shell coming with parallel 
   computing facilities. 
 
+* `pyTables`_ (optional): An interface to the HDF5 library for storing datasets
+  in binary format.
+
+
+
 There are prebuilt distributions that include all the needed dependencies. For 
 Mac OS X and Linux users, we recommend the `ActiveState`_ distributions. 
 Windows users should download and install `Enthought Python`_. The Mac OS X 
@@ -66,6 +71,10 @@ tested with PyMC but may work nonetheless.
 
 .. _`IPython`:
    http://ipython.scipy.org/
+
+.. _`pyTables`:
+   http://www.pytables.org/moin
+
 
 Platform-specific instructions
 ==============================
@@ -154,7 +163,7 @@ To make sure everything is working correctly, open a python shell and type::
 
 You should see a lot of tests being run, and messages appear if errors are 
 raised or if some tests fail. In case this happens (it shouldn't), please report
-the problems on the issue tracker, specifying the version you are using and the
+the problems on the `issue tracker`_, specifying the version you are using and the
 environment. Some of the tests require SciPy, if it is not installed on your 
 system, you should not worry too much about failing tests. 
 
@@ -163,4 +172,8 @@ Bugs and feature requests
 =========================
 
 Report problems with the installation, bugs in the code or feature request at 
-the issue tracker at http://code.google.com/p/pymc/issues/list .
+the `issue tracker`_ at http://code.google.com/p/pymc/issues/list .
+
+.. _`issue tracker`:
+   http://code.google.com/p/pymc/issues/list .
+
