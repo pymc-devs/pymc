@@ -21,7 +21,7 @@ parser.add_option('-s', '--start', dest='start', help='Start regexp', default=No
 parser.add_option('-e', '--end', dest='end', help='End regexp', default=None)
 parser.usage = 'extract.py -s start -e end [options]'
 options, args = parser.parse_args(sys.argv[1:])
-print options, args
+#print options, args
 
 ##if len(args) ==0:
 ##    parser.print_usage()
