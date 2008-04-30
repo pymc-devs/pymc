@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
-#epydoc --verbose --debug --config epydoc.conf
-#cp docs/pdf/pymc.distributions-module.tex docs/
+# To run the following correctly, you will need a patched version of docutils to enable support for 
+# math directives. 
+# There is a dummy module in docs named distributions.py that imports all the PyMC likelihoods. 
+# By introspection, epydoc finds the related docstrings and creates a tex output. This way, 
+# we avoid documenting all the stuff that lives in the real pymc.distributions.py
+
+epydoc --verbose --debug --config epydoc.conf
+
 
 # Make manual
 cd docs
-rst2latex ../README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\hypertarget{installation}{} -o README.tex
-rst2latex ../INSTALL.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o INSTALL.tex
-rst2latex ../pymc/database/README.txt | ./extract.py -s \\\\setlength{\\\\locallinewidth}{\\\\linewidth} -e \\end{document} -o database.tex
+cat pdf/distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
+sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
+rst2latex ../README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\hypertarget\{installation\}\{\}' -o README.tex
+rst2latex ../INSTALL.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex
+rst2latex ../pymc/database/README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
 
 mkdir pdf
 pdflatex -output-directory=pdf guide2.0
 bibtex pdf/guide2.0
 pdflatex -output-directory=pdf guide2.0
 pdflatex -output-directory=pdf guide2.0
+cp pdf/guide2.0.pdf .
 cd ..
-

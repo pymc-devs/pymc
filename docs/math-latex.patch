@@ -1,7 +1,7 @@
-Index: docutils/parsers/rst/directives/body.py
+Index: docutils/docutils/parsers/rst/directives/body.py
 ===================================================================
---- docutils/parsers/rst/directives/body.py	(révision 4896)
-+++ docutils/parsers/rst/directives/body.py	(copie de travail)
+--- docutils/docutils/parsers/rst/directives/body.py	(revision 5468)
++++ docutils/docutils/parsers/rst/directives/body.py	(working copy)
 @@ -190,3 +190,22 @@
          node['classes'].extend(classes)
          self.state.nested_parse(self.content, self.content_offset, node)
@@ -25,10 +25,10 @@ Index: docutils/parsers/rst/directives/body.py
 +            node = latex_math(self.block_text, mathml_tree, latex)
 +            return [node]
 +
-Index: docutils/parsers/rst/directives/__init__.py
+Index: docutils/docutils/parsers/rst/directives/__init__.py
 ===================================================================
---- docutils/parsers/rst/directives/__init__.py	(révision 4896)
-+++ docutils/parsers/rst/directives/__init__.py	(copie de travail)
+--- docutils/docutils/parsers/rst/directives/__init__.py	(revision 5468)
++++ docutils/docutils/parsers/rst/directives/__init__.py	(working copy)
 @@ -59,6 +59,7 @@
        'default-role': ('misc', 'DefaultRole'),
        'title': ('misc', 'Title'),
@@ -37,11 +37,11 @@ Index: docutils/parsers/rst/directives/__init__.py
        'restructuredtext-test-directive': ('misc', 'TestDirective'),}
  """Mapping of directive name to (module name, class name).  The
  directive name is canonical & must be lowercase.  Language-dependent
-Index: docutils/parsers/rst/latexparser.py
+Index: docutils/docutils/parsers/rst/latexparser.py
 ===================================================================
---- docutils/parsers/rst/latexparser.py	(révision 0)
-+++ docutils/parsers/rst/latexparser.py	(révision 0)
-@@ -0,0 +1,434 @@
+--- docutils/docutils/parsers/rst/latexparser.py	(revision 0)
++++ docutils/docutils/parsers/rst/latexparser.py	(revision 0)
+@@ -0,0 +1,442 @@
 +# LaTeX to MathML translation stuff:
 +from docutils import nodes  
 +class latex_math(nodes.Element):
@@ -171,6 +171,9 @@ Index: docutils/parsers/rst/latexparser.py
 +class mfrac(math):
 +    nchildren = 2
 +    
++class mbinom(math):
++    nchildren = 2
++
 +class msubsup(math):
 +    nchildren = 3
 +    def __init__(self, children=None, reversed=False):
@@ -251,7 +254,7 @@ Index: docutils/parsers/rst/latexparser.py
 +    # Miscellaneous symbold:
 +    'infty': u'\u221e', 'surd': u'\u221a', 'partial': u'\u2202', 'ddots': u'\u22f1', 'exists': u'\u2203', 'flat': u'\u266d', 'diamondsuit': u'\u2662', 'wp': u'\u2118', 'spadesuit': u'\u2660', 'Re': u'\u211c', 'vdots': u'\u22ee', 'aleph': u'\u2135', 'clubsuit': u'\u2663', 'sharp': u'\u266f', 'angle': u'\u2220', 'prime': u'\u2032', 'natural': u'\u266e', 'ell': u'\u2113', 'neg': u'\xac', 'top': u'\u22a4', 'nabla': u'\u2207', 'bot': u'\u22a5', 'heartsuit': u'\u2661', 'cdots': u'\u22ef', 'Im': u'\u2111', 'forall': u'\u2200', 'imath': u'\u0131', 'hbar': u'\u210f', 'emptyset': u'\u2205',
 +    # Variable-sized symbols:
-+    'bigotimes': u'\u2a02', 'coprod': u'\u2210', 'int': u'\u222b', 'sum': u'\u2211', 'bigodot': u'\u2a00', 'bigcup': u'\u22c3', 'biguplus': u'\u2a04', 'bigcap': u'\u22c2', 'bigoplus': u'\u2a01', 'oint': u'\u222e', 'bigvee': u'\u22c1', 'bigwedge': u'\u22c0', 'prod': u'\u220f',
++    'bigotimes': u'\u2a02', 'coprod': u'\u2210', 'int': u'\u222b', 'iint':'u\222c', 'iiint': u'\u222d', 'sum': u'\u2211', 'bigodot': u'\u2a00', 'bigcup': u'\u22c3', 'biguplus': u'\u2a04', 'bigcap': u'\u22c2', 'bigoplus': u'\u2a01', 'oint': u'\u222e', 'bigvee': u'\u22c1', 'bigwedge': u'\u22c0', 'prod': u'\u220f',
 +    # Braces:
 +    'langle': u'\u2329', 'rangle': u'\u232A'}
 +
@@ -322,7 +325,7 @@ Index: docutils/parsers/rst/latexparser.py
 +            node = node.append(mi(c))
 +        elif c.isdigit():
 +            node = node.append(mn(c))
-+        elif c in '+-/()[]|=<>,.':
++        elif c in '+-/()[]|=<>,.!':
 +            node = node.append(mo(c))
 +        elif c == '_':
 +            child = node.delete_child()
@@ -395,7 +398,7 @@ Index: docutils/parsers/rst/latexparser.py
 +        skip = 1
 +    if name == 'begin':
 +        if not string.startswith('{matrix}'):
-+            raise SyntaxError, 'Expected "\begin{matrix}"!'
++            raise SyntaxError('Expected "\begin{matrix}"!')
 +        skip += 8
 +        entry = mtd()
 +        table = mtable(mtr(entry))
@@ -403,15 +406,15 @@ Index: docutils/parsers/rst/latexparser.py
 +        node = entry
 +    elif name == 'end':
 +        if not string.startswith('{matrix}'):
-+            raise SyntaxError, 'Expected "\end{matrix}"!'
++            raise SyntaxError('Expected "\end{matrix}"!')
 +        skip += 8
 +        node = node.close().close().close()
 +    elif name == 'text':
 +        if string[0] != '{':
-+            raise SyntaxError, 'Expected "\text{...}"!'
++            raise SyntaxError('Expected "\text{...}"!')
 +        i = string.find('}')
 +        if i == -1:
-+            raise SyntaxError, 'Expected "\text{...}"!'
++            raise SyntaxError('Expected "\text{...}"!')
 +        node = node.append(mtext(string[1:i]))
 +        skip += i + 1
 +    elif name == 'sqrt':
@@ -422,12 +425,16 @@ Index: docutils/parsers/rst/latexparser.py
 +        frac = mfrac()
 +        node.append(frac)
 +        node = frac
++    elif name == 'binom':
++        binom = mbinom()
++        node.append(binom)
++        node = binom
 +    elif name == 'left':
 +        for par in ['(', '[', '|', '\\{', '\\langle', '.']:
 +            if string.startswith(par):
 +                break
 +        else:
-+            raise SyntaxError, 'Missing left-brace!'
++            raise SyntaxError('Missing left-brace!')
 +        fenced = mfenced(par)
 +        node.append(fenced)
 +        node = fenced
@@ -437,7 +444,7 @@ Index: docutils/parsers/rst/latexparser.py
 +            if string.startswith(par):
 +                break
 +        else:
-+            raise SyntaxError, 'Missing right-brace!'
++            raise SyntaxError('Missing right-brace!')
 +        node.closepar = par
 +        node = node.close()
 +        skip += len(par)
@@ -446,7 +453,7 @@ Index: docutils/parsers/rst/latexparser.py
 +            if string.startswith(operator):
 +                break
 +        else:
-+            raise SyntaxError, 'Expected something to negate: "\\not ..."!'
++            raise SyntaxError('Expected something to negate: "\\not ..."!')
 +        node = node.append(mo(negatables[operator]))
 +        skip += len(operator)
 +    elif name == 'mathbf':
@@ -455,7 +462,7 @@ Index: docutils/parsers/rst/latexparser.py
 +        node = style
 +    elif name == 'mathbb':
 +        if string[0] != '{' or not string[1].isupper() or string[2] != '}':
-+            raise SyntaxError, 'Expected something like "\mathbb{A}"!'
++            raise SyntaxError('Expected something like "\mathbb{A}"!')
 +        node = node.append(mi(mathbb[string[1]]))
 +        skip += 3
 +    elif name in greek:
@@ -473,13 +480,14 @@ Index: docutils/parsers/rst/latexparser.py
 +            node.append(ovr)
 +            node = ovr
 +        else:
-+            raise SyntaxError, 'Unknown LaTeX command: ' + name
++            raise SyntaxError('Unknown LaTeX command: ' + name)
 +
 +    return node, skip
-Index: docutils/parsers/rst/languages/en.py
++
+Index: docutils/docutils/parsers/rst/languages/en.py
 ===================================================================
---- docutils/parsers/rst/languages/en.py	(révision 4896)
-+++ docutils/parsers/rst/languages/en.py	(copie de travail)
+--- docutils/docutils/parsers/rst/languages/en.py	(revision 5468)
++++ docutils/docutils/parsers/rst/languages/en.py	(working copy)
 @@ -64,6 +64,7 @@
        #'footnotes': 'footnotes',
        #'citations': 'citations',
@@ -497,10 +505,10 @@ Index: docutils/parsers/rst/languages/en.py
 +    'math':'math'}
  """Mapping of English role names to canonical role names for interpreted text.
  """
-Index: docutils/parsers/rst/roles.py
+Index: docutils/docutils/parsers/rst/roles.py
 ===================================================================
---- docutils/parsers/rst/roles.py	(révision 4896)
-+++ docutils/parsers/rst/roles.py	(copie de travail)
+--- docutils/docutils/parsers/rst/roles.py	(revision 5468)
++++ docutils/docutils/parsers/rst/roles.py	(working copy)
 @@ -310,6 +310,25 @@
  
  register_canonical_role('raw', raw_role)
@@ -527,11 +535,11 @@ Index: docutils/parsers/rst/roles.py
  
  ######################################################################
  # Register roles that are currently unimplemented.
-Index: docutils/writers/html4css1/__init__.py
+Index: docutils/docutils/writers/html4css1/__init__.py
 ===================================================================
---- docutils/writers/html4css1/__init__.py	(révision 4896)
-+++ docutils/writers/html4css1/__init__.py	(copie de travail)
-@@ -1488,6 +1488,32 @@
+--- docutils/docutils/writers/html4css1/__init__.py	(revision 5468)
++++ docutils/docutils/writers/html4css1/__init__.py	(working copy)
+@@ -1487,6 +1487,32 @@
  
      def depart_version(self, node):
          self.depart_docinfo_item()
@@ -564,11 +572,11 @@ Index: docutils/writers/html4css1/__init__.py
  
      def unimplemented_visit(self, node):
          raise NotImplementedError('visiting unimplemented node type: %s'
-Index: docutils/writers/latex2e/__init__.py
+Index: docutils/docutils/writers/latex2e/__init__.py
 ===================================================================
---- docutils/writers/latex2e/__init__.py	(révision 4896)
-+++ docutils/writers/latex2e/__init__.py	(copie de travail)
-@@ -2091,6 +2091,18 @@
+--- docutils/docutils/writers/latex2e/__init__.py	(revision 5468)
++++ docutils/docutils/writers/latex2e/__init__.py	(working copy)
+@@ -2172,6 +2172,18 @@
      def depart_warning(self, node):
          self.depart_admonition()
  
@@ -587,18 +595,86 @@ Index: docutils/writers/latex2e/__init__.py
      def unimplemented_visit(self, node):
          raise NotImplementedError('visiting unimplemented node type: %s'
                                    % node.__class__.__name__)
-Index: setup.py
+Index: docutils/setup.py
 ===================================================================
---- setup.py	(révision 4896)
-+++ setup.py	(copie de travail)
-@@ -113,7 +113,9 @@
+--- docutils/setup.py	(revision 5468)
++++ docutils/setup.py	(working copy)
+@@ -113,9 +113,12 @@
                   'tools/rst2latex.py',
                   'tools/rst2newlatex.py',
                   'tools/rst2xml.py',
--                 'tools/rst2pseudoxml.py'],}
-+                 'tools/rst2pseudoxml.py',
-+		 '../sandbox/jensj/latex_math/tools/rst2latexmath.py',
-+		 '../sandbox/jensj/latex_math/tools/rst2mathml.py'],}
++		 #'../sandbox/jensj/latex_math/tools/rst2latexmath.py',
++		 #'../sandbox/jensj/latex_math/tools/rst2mathml.py'],}
+                  'tools/rst2pseudoxml.py',
+                  'tools/rstpep2html.py',
+                  ],}
++
  """Distutils setup parameters."""
  
  classifiers = [
+Index: sandbox/jensj/latex_math/test/test.txt
+===================================================================
+--- sandbox/jensj/latex_math/test/test.txt	(revision 5468)
++++ sandbox/jensj/latex_math/test/test.txt	(working copy)
+@@ -1,48 +1,48 @@
+ Testing MathML
+ --------------
+ 
+-Inline math: :latex-math:`n! + \sin(x_n^2)`.  And displayed math:
++Inline math: :math:`n! + \sin(x_n^2)`.  And displayed math:
+ 
+-.. latex-math::
++.. math::
+ 
+    f(\epsilon) = \frac{1}{1 + \exp\left(\frac{\varepsilon}{k_\text{B}T}\right)}
+ 
+-.. latex-math::
++.. math::
+ 
+    N = \frac{\text{number of apples}}{7}
+ 
+-.. latex-math::
++.. math::
+ 
+    \mathbf{M} = \left(\begin{matrix}a&b\\c&d\end{matrix}\right)
+ 
+-We have :latex-math:`|\mathbf{M}| = ad - bc`.
++We have :math:`|\mathbf{M}| = ad - bc`.
+ 
+-.. latex-math::
++.. math::
+ 
+    \int_0^1 x^n dx = \frac{1}{n + 1}
+ 
+-.. latex-math::
++.. math::
+ 
+    \sum_{n=1}^m n = \frac{m(m+1)}{2}
+ 
+-* tilde: :latex-math:`\tilde{n}`
+-* hat: :latex-math:`\hat{H}`
+-* bar: :latex-math:`\bar{v}`
++* tilde: :math:`\tilde{n}`
++* hat: :math:`\hat{H}`
++* bar: :math:`\bar{v}`
+ 
+ Quantum mechanics:
+ 
+-.. latex-math::
++.. math::
+ 
+    -\frac{1}{2}\nabla^2 \psi + v \psi = \varepsilon \psi
+ 
+ Math split over two lines:
+ 
+-.. latex-math::
++.. math::
+ 
+    g(\alpha) = & (1 + \alpha + \alpha^2 + \alpha^3 + \alpha^4\\
+                & + \alpha^5)
+ 
+-.. latex-math::
++.. math::
+ 
+    f(x) = \left\{
+      \begin{matrix}

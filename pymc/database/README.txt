@@ -90,7 +90,7 @@ The sqlite backend is based on the python module sqlite3. It is not as mature as
 mysql
 -----
 
-The mysql backend is based on the MySQLd python module. It also is not as mature as the other backends. 
+The mysql backend is based on the MySQLdb python module. It also is not as mature as the other backends. 
 
 
 
