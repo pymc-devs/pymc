@@ -285,7 +285,7 @@ class StandardGibbs(Gibbs):
                 junk = check_linear_extended_children(stochastic, cls.__name__, cls.child_class, cls.parent_label)
             else:
                 zap_extended_children(stochastic, cls.__name__)
-        except ValueError:
+        except:
             return 0
         conjugate, junk = check_conjugacy(stochastic, cls.target_class)
         if conjugate:
