@@ -49,8 +49,8 @@
 %%% EPYDOC STUFF %%%
 \usepackage{underscore}
 \usepackage[english]{babel}
-\usepackage{alltt, parskip, fancyhdr, boxedminipage}
-\usepackage{makeidx, multirow, longtable, tocbibind, amssymb}
+\usepackage{alltt, parskip, boxedminipage}
+\usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
 \usepackage{fullpage}
 \usepackage[usenames]{color}
 \usepackage{ifthen}
@@ -130,7 +130,7 @@ Several probability distributions are provided in the module \module{distributio
     \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
     \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
 \end{itemize} 
-\input{pymc.distributions-module}
+\input{distributions-module}
 
 \bibliographystyle{plainnat}
 \bibliography{pymc}
