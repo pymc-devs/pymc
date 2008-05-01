@@ -114,7 +114,7 @@ Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+
 Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
 
 \begin{itemize}
-\item \emph{Homogeneity}: A Markov chain is homogeneous at step $t$ if the transition probabilities are independent of the state at $t$. MCMC chains are rarely homogeneous.
+\item \emph{Homogeneity}: A Markov chain is homogeneous at step $t$ if the transition probabilities are independent of time $t$.
 \item \emph{Irreducibility}: A Markov chain is irreducible if every state is accessible in one or more steps from any other state. That is, the chain contains no absorbing states. This implies that there is a non-zero probability of eventually reaching state $k$ from any other state in the chain.
 \item \emph{Recurrence}: States which are visited repeatedly are \emph{recurrent}. If the expected time to return to a particular state is bounded, this is known as \emph{positive recurrence}, otherwise the recurrent state is \emph{null recurrent}. Further, a chain is \emph{Harris recurrent} when it visits all states $X \in S$ infinitely often in the limit as $t \to \infty$; this is an important characteristic when dealing with unbounded, continuous state spaces. Whenever a chain ends up in a closed, irreducible set of Harris recurrent states, it stays there forever and visits every state with probability one.
 \item \emph{Stationarity}: A stationary Markov chain produces the same marginal distribution when multiplied by the transition kernel.  Thus, if $P$ is some $n \times n$ transition matrix:
@@ -161,10 +161,10 @@ Pr(\theta^{(k)}=y \mid \theta^{(k+1)}=x) &=& \frac{Pr(\theta^{(k+1)}=x \mid \the
 \frac{Pr(\theta^{(k+1)}=x \mid \theta^{(k)}=y) \pi^{(k)}(y)}{\pi^{(k+1)}(x)}
 \]
 
-\noindent Though not homogeneous in general, $\pi$ becomes homogeneous if:
+\noindent Though not homogeneous in general, $\pi$ becomes homogeneous if \textbf{Do you ever call the stationary distribution itself homogeneous?}:
 \begin{itemize}
 \item $n \rightarrow \infty$
-\item $\pi^{(0)}=\pi$ for some $i < k$
+\item $\pi^{(0)}=\pi$ for some $i < k$ \textbf{Is it meant to be $\pi^(i)$, and }
 \end{itemize}
 
 \noindent If this chain is homogeneous it is called reversible, because it satisfies the \textbf{detailed balance equation}:

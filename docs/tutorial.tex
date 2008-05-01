@@ -176,7 +176,7 @@ If you check $r$'s value, you'll see an array whose first $s$ elements are \text
 \end{verbatim}
 To compute its value, $r$ calls the funtion we used to create it, passing in the values of its parents.
 
-Stochastic objects can evaluate their probability mass or density functions at their current values given the values of their parents. The log of a stochastic object's probability mass or density can be accessed via the \texttt{logp} attribute. For vector-valued variables like $D$, the \texttt{logp} attribute returns the log of the joint log-probability or log-density of all elements of the value. Try examining $s$'s and $D$'s log-probabilities and $e$'s and $l$'s log-densities:
+Stochastic objects can evaluate their probability mass or density functions at their current values given the values of their parents. The log of a stochastic object's probability mass or density can be accessed via the \texttt{logp} attribute. For vector-valued variables like $D$, the \texttt{logp} attribute returns the log of the joint probability or density of all elements of the value. Try examining $s$'s and $D$'s log-probabilities and $e$'s and $l$'s log-densities:
 \begin{verbatim}
    In [9]: s.logp
    Out[9]: -4.7095302013123339
