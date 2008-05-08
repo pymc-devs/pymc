@@ -235,7 +235,6 @@ def randomwrap(func):
     mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
 
     def wrapper(*args, **kwds):
-        
         # First transform keyword arguments into positional arguments.
         n = len(args)
         if nkwds > 0:
@@ -1934,34 +1933,22 @@ def random_method_wrapper(f, size, shape):
         return value
     return wrapper
         
-def fortranlike(f, snapshot, mv=False):
+def gofwrapper(f, snapshot):
     """
-    Decorator function for fortran likelihoods
-    ==========================================
+    Goodness-of-fit decorator function for likelihoods
+    ==================================================
+    Generates goodness-of-fit points for data likelihoods.
 
-    Wrap function f(*args, **kwds) where f is a likelihood defined in flib.
+    Wrap function f(*args, **kwds) where f is a likelihood.
 
     Assume args = (x, parameter1, parameter2, ...)
     Before passing the arguments to the function, the wrapper makes sure that
     the parameters have the same shape as x.
-
-    mv: multivariate (True/False)
-
-    Add compatibility with GoF (Goodness of Fit) tests
-    --------------------------------------------------
-    * Add a 'prior' keyword (True/False)
-    * If the keyword gof is given and is True, return the GoF (Goodness of Fit)
-    points instead of the likelihood.
-    * A 'loss' keyword can be given, to specify the loss function used in the
-    computation of the GoF points.
-    * If the keyword random is given and True, return a random variate instead
-    of the likelihood.
     """
-
+    
     name = f.__name__[:-5]
     # Take a snapshot of the main namespace.
-
-
+    
     # Find the functions needed to compute the gof points.
     expval_func = snapshot[name+'_expval']
     random_func = snapshot['r'+name]
@@ -1971,56 +1958,23 @@ def fortranlike(f, snapshot, mv=False):
         This wraps a likelihood.
         """
 
-        # Do we really need the shape manipulations, or does f2py take care of
-        # all of this on its own?
-        # Shape manipulations
-        # if not mv:
-        #     xshape = np.shape(args[0])
-        #     newargs = [np.asarray(args[0])]
-        #     for arg in args[1:]:
-        #         newargs.append(np.resize(arg, xshape))
-        #     for key in kwds.iterkeys():
-        #         kwds[key] = kwds[key]
-        # else:
-        #     """
-# x, mu, Tau
-            # x: (kxN)
-            # mu: (kxN) or (kx1)
-            # Tau: (k,k)
-            # """
-            # 
-            # xshape=np.shape(args[0])
-            # newargs = [np.asarray(args[0])]
-            # newargs.append(np.resize(args[1], xshape))
-            # newargs.append(np.asarray(args[2]))
-
-        if kwds.pop('gof', False) and not kwds.pop('prior', False):
-            """
-Return gof points."""
-
+        if kwds.pop('isdata', False):
+            """Return gof points."""
             loss = kwds.pop('gof', squared_loss)
-            #name = kwds.pop('name', name)
-            expval = expval_func(*newargs[1:], **kwds)
-            y = random_func(*newargs[1:], **kwds)
-            gof_points = GOFpoints(newargs[0],y,expval,loss)
-            return gof_points
-        elif kwds.pop('random', False):
-            return random_func(*newargs[1:], **kwds)
-        else:
-            """
-Return likelihood."""
-
-            # try:
-            return f(*newargs, **kwds)
-            # except ZeroProbability:
-            # return -np.np.Inf
+            expval = expval_func(*args[1:], **kwds)
+            y = random_func(*args[1:], **kwds)
+            f.gof_points = GOFpoints(args[0],y,expval,loss)
+            
+        """Return likelihood."""
+            
+        return f(*args, **kwds)
 
 
     # Assign function attributes to wrapper.
     wrapper.__doc__ = f.__doc__
-    wrapper._pymc = True
     wrapper.__name__ = f.__name__
     wrapper.name = name
+    
     return wrapper
 
 
@@ -2040,7 +1994,7 @@ def local_decorated_likelihoods(obj):
     """
 
     for name, like in likelihoods.iteritems():
-        obj[name+'_like'] = fortranlike(like, snapshot)
+        obj[name+'_like'] = gofwrapper(like, snapshot)
 
 
 #local_decorated_likelihoods(locals())

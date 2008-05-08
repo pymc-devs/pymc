@@ -43,6 +43,7 @@ class Trace(object):
 
     def tally(self,index):
         """Adds current value to trace"""
+        
         size = 1
         try:
             size = len(self._obj.value)
@@ -115,6 +116,11 @@ class Database(pickle.Database):
         self.choose_name('sqlite')
         self.DB = sqlite3.connect(self.filename)
         self.cur = self.DB.cursor()
+    
+    def commit(self):
+        """Commit updates to database"""
+        
+        self.DB.commit()
                    
     def close(self, *args, **kwds):
         """Close database."""

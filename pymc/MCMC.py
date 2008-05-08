@@ -174,6 +174,9 @@ class MCMC(Sampler):
 
                 if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
+                    
+                if not i % 1000:
+                    self.commit()
 
                 self._current_iter += 1
 

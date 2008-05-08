@@ -452,7 +452,13 @@ class Sampler(Model):
        self._cur_trace_index += 1
        if self.verbose > 2:
            print self.__name__ + ' done tallying.'
-
+           
+    def commit(self):
+        """
+        Tell backend database to commit.
+        """
+        
+        self.db.commit()
 
     def isample(self, *args, **kwds):
         """

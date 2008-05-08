@@ -26,6 +26,10 @@ class Trace(object):
     def tally(self, index):
         """Dummy method. Subclass if necessary."""
         pass
+        
+    def commit(self):
+        """Dummy method. Subclass if necessary."""
+        pass
 
     def truncate(self, index):
         """Dummy method. Subclass if necessary."""
@@ -68,6 +72,10 @@ class Database(object):
         """Dummy method. Subclass if necessary."""
         for o in self.model._variables_to_tally:
             o.trace.tally(index)
+            
+    def commit(self):
+        """Dummy method. Subclass if necessary."""
+        pass
             
     def connect(self, model):
         """Link the Database to the Model instance. 
