@@ -291,6 +291,7 @@ def randomwrap(func):
                 return r[0][0]
 
     wrapper.__doc__ = func.__doc__
+    wrapper.__name__ = func.__name__
     return wrapper
     
 def debugwrapper(func, name):
@@ -1628,7 +1629,7 @@ def skew_normal_like(x,mu,tau,alpha):
     Azzalini's skew-normal log-likelihood
     
     .. math::
-        f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{tau}\alpha) \phi(x,\mu,\tau)
+        f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
         
     :Parameters:
       x : float
@@ -2083,7 +2084,7 @@ class Categorical(Stochastic):
     """
     parent_names = ['p', 'minval', 'step']
     
-    def __init__(self, name, p, minval=0, step=1, value=None, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
         
         if value is not None:
             if np.isscalar(value):
@@ -2095,11 +2096,11 @@ class Categorical(Stochastic):
                     
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=mod_categor_like, doc='A Categorical random variable', name=name, 
-                parents={'p':p,'minval':minval,'step':step}, random=bind_size(mod_rcategor, self.size), trace=trace, value=value, dtype=np.float,
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(mod_rcategor, self.size), trace=trace, value=value, dtype=dtype,
                 rseed=rseed, isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
         else:
             Stochastic.__init__(self, logp=valuewrapper(categorical_like), doc='A Categorical random variable', name=name, 
-                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=np.float,
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=dtype,
                 rseed=rseed, isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
 
 
@@ -2137,6 +2138,7 @@ class Multinomial(Stochastic):
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
     
+
 
 if __name__ == "__main__":
     import doctest

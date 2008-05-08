@@ -379,6 +379,9 @@ class Stochastic(StochasticBase):
     - value (optional) : number or array  
             An initial value for this variable
     
+    - dtype (optional) : type
+            A type for this variable.
+            
     - rseed (optional) : integer or rseed
             A seed for this variable's rng. Either value or rseed must
             be given.
@@ -455,6 +458,8 @@ class Stochastic(StochasticBase):
                 if dtype is not None:
                     if not dtype is value.dtype:
                         self._value = asarray(value, dtype=dtype).view(value.__class__)
+                    else:
+                        self._value = value
                 else:
                     self._value = value
             elif dtype and dtype is not object:

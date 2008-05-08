@@ -811,7 +811,11 @@ class AdaptiveMetropolis(StepMethod):
             return 0
             # Algorithm is not well-suited to sparse datasets. Dont use if less than
             # 25 percent of values are nonzero
-        if np.iterable(stochastic.value) and (len(stochastic.value.nonzero()[0]) < 0.25*len(stochastic.value)):
+        if np.alen(stochastic.value) == 1:
+            return 0
+        elif np.alen(stochastic.value) < 5:
+            return 2
+        elif (len(stochastic.value.nonzero()[0]) > 0.25*len(stochastic.value)):
             return 2
         else:
             return 0
@@ -938,7 +942,7 @@ class AdaptiveMetropolis(StepMethod):
         """Multiply self._sig by a factor f. This is useful when the current _sig is too large and all jumps are rejected.
         """
         self._sig *= f
-	
+    
     def update_sig(self):
         """Compute the Cholesky decomposition of self.C."""
         self._sig = np.linalg.cholesky(self.C)
