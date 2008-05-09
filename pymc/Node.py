@@ -7,6 +7,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 import os, pdb
+import numpy as np
 
 class ZeroProbability(ValueError):
     "Log-likelihood is invalid or negative informationnite"
@@ -109,6 +110,12 @@ class Variable(Node):
         self.trace=trace
         self._plot=plot
         Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
+        
+        if self.dtype is None:
+            try:
+                self.dtype = getattr(self._value, 'dtype')
+            except:
+                self.dtype = np.dtype(self._value.__class__)
 
     def __str__(self):
         return self.__name__

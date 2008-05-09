@@ -471,9 +471,6 @@ class Stochastic(StochasticBase):
                 self._value = value
         else:
             self._value = None
- 
-        if dtype is None:
-            dtype = getattr(self._value, 'dtype', None)
                 
         Variable.__init__(  self, 
                         doc=doc, 

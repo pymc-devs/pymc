@@ -64,6 +64,11 @@ def weight(models, iter, priors = None):
     Returns a dictionary keyed by model of the model posterior probabilities.
     """
     
+    print 'WARNING: the weight() function will usually not work well unless\
+        \n the dimension of the parameter space is small. Please do not trust\
+        \n its output unless you check that it has weighted a large number of\
+        \n samples more or less evenly.'
+    
     # TODO: Need to attach a standard error to the return values.
     loglikes = {}
     logpots = {}
