@@ -1017,17 +1017,17 @@ class AdaptiveMetropolis(StepMethod):
         """
         
         arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
-        
+        if self.verbose > 2:
+            print 'Jump :', arrayjump
+            
         # Update each stochastic individually.
         for stochastic in self.stochastics:
             jump = arrayjump[self._slices[stochastic]]
             if np.iterable(stochastic.value):
                 jump = np.reshape(arrayjump[self._slices[stochastic]],np.shape(stochastic.value))
             if self.isdiscrete[stochastic]:
-                stochastic.value = stochastic.value + round_array(jump)
-            else:
-                stochastic.value = stochastic.value + jump
-                
+                jump = round_array(jump)
+            stochastic.value = stochastic.value + jump
                 
     def step(self):
         """
@@ -1049,25 +1049,38 @@ class AdaptiveMetropolis(StepMethod):
         # Probability and likelihood for stochastic's current value:
         logp = sum([stochastic.logp for stochastic in self.stochastics])
         loglike = self.loglike
-        
+        if self.verbose > 1:
+            print 'Current value: ', self.stoch2array()
+            print 'Current likelihood: ', logp+loglike
+            
         # Sample a candidate value              
         self.propose()
-        
+
         # Metropolis acception/rejection test
         accept = False
         try:
             # Probability and likelihood for stochastic's proposed value:
             logp_p = sum([stochastic.logp for stochastic in self.stochastics])
             loglike_p = self.loglike
+            if self.verbose > 2:
+                print 'Current value: ', self.stoch2array()
+                print 'Current likelihood: ', logp+loglike
+
             if np.log(random()) < logp_p + loglike_p - logp - loglike:
                 accept = True
                 self._accepted += 1
+                if self.verbose > 2:
+                    print 'Accepted'
             else:
                 self._rejected += 1
+                if self.verbose > 2:
+                    print 'Rejected'
         except ZeroProbability:
             self._rejected += 1
             logp_p = None
             loglike_p = None
+            if self.verbose > 2:
+                    print 'Rejected with ZeroProbability Error.'
             
         if (not self._current_iter % self.interval) and self.verbose > 1:
             print "Step ", self._current_iter
@@ -1115,6 +1128,14 @@ class AdaptiveMetropolis(StepMethod):
         for stochastic in self.stochastics:
             chain.append(ravel(stochastic.trace.gettrace(slicing=slice(i0,i1))))
         return concatenate(chain)
+    
+    def stoch2array(self):
+        """Return the stochastic objects as an array."""
+        a = np.empty(self.dim)
+        for stochastic in self.stochastics:
+            a[self._slices[stochastic]] = stochastic.value
+        return a
+            
         
     def tune(self, verbose):
         """Tuning is done during the entire run, independently from the Sampler 

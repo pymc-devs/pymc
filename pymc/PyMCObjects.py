@@ -473,15 +473,15 @@ class Stochastic(StochasticBase):
             self._value = None
  
         if dtype is None:
-            self.dtype = getattr(self._value, 'dtype', None)
+            dtype = getattr(self._value, 'dtype', None)
                 
         Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
                         parents=parents, 
-                        dtype=dtype,
                         cache_depth=cache_depth, 
                         trace=trace,
+                        dtype=dtype,
                         plot=plot,
                         verbose=verbose)
     
@@ -548,6 +548,8 @@ class Stochastic(StochasticBase):
             if self.dtype is not None:
                 if not self.dtype is value.dtype:
                     self._value = asarray(value, dtype=self.dtype).view(value.__class__)
+                else:
+                    self._value = value
             else:
                 self._value = value
         elif self.dtype and self.dtype is not object:
