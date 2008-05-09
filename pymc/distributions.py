@@ -809,8 +809,12 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
     Exponentiated Weibull log-likelihood.
 
+    The exponentiated Weibull distribution is a generalization of the Weibull
+    family. It's value lies in being able to model monotone and non-monotone
+    failure rates. 
+
     .. math::
-        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^c})^{\alpha-1} e^{-z^c} z^{k-1} \\
+        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
         z & = \frac{x-loc}{scale}
 
     :Parameters:
@@ -845,7 +849,7 @@ def gamma_expval(alpha, beta):
 
     Expected value of gamma distribution.
     """
-    return asarray(alpha) * beta
+    return asarray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
     r"""
@@ -866,6 +870,10 @@ def gamma_like(x, alpha, beta):
         Shape parameter :math:`\alpha > 0`.
       beta : float
         Scale parameter :math:`\beta > 0`.
+
+    :Note:
+      - :math:`E(X) = \frac{\alpha}{\beta}`
+      - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
     
