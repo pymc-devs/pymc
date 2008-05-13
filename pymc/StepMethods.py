@@ -780,7 +780,7 @@ class AdaptiveMetropolis(StepMethod):
         # Call methods to initialize
         self.check_type()
         self.dimension()
-        self.set_cov(cov, scales)     
+        self.set_cov(cov, scales)
         self.update_sig()
         
         # Keep track of the internal trace length
@@ -853,6 +853,9 @@ class AdaptiveMetropolis(StepMethod):
                     for elem in this_value:
                         ord_sc.append(elem)
                 # print len(ord_sc), self.dim
+                for i in xrange(len(ord_sc)):
+                    if ord_sc[i] == 0:
+                        ord_sc[i] = 1
                 self.C = np.eye(self.dim)*ord_sc/scaling
             
         

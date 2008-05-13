@@ -242,7 +242,7 @@ class centered_envelope(object):
             if self.mass>0.:
                 x = concatenate((xaxis,xaxis[::-1]))
                 y = concatenate((self.lo, self.hi[::-1]))
-                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered CI ' + pformat(self.mass)))
+                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered CI ' + str(self.mass)))
             else:
                 plot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
         else:

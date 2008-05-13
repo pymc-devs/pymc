@@ -127,7 +127,7 @@ def new_dist_class(*new_class_args):
                 # Make sure size argument doesn't conflict with
                 # 'natural' size of variable.
                 elif size > 1: 
-                    test_val = random(**DictContainer(parents).value)
+                    test_val = random(**(pymc.DictContainer(parents).value))
                     if not np.isscalar(test_val):
                         if not np.shape(test_val.squeeze()) == size:
                             raise ValueError, 'Size argument is inconsistent with sizes of parents.'
