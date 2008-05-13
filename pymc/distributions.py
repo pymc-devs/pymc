@@ -127,7 +127,7 @@ def new_dist_class(*new_class_args):
                 # Make sure size argument doesn't conflict with
                 # 'natural' size of variable.
                 elif size > 1: 
-                    test_val = random(**parents)
+                    test_val = random(**DictContainer(parents).value)
                     if not np.isscalar(test_val):
                         if not np.shape(test_val.squeeze()) == size:
                             raise ValueError, 'Size argument is inconsistent with sizes of parents.'
@@ -401,7 +401,7 @@ def rarlognormal(a, sigma, rho, size=1):
             
 
 def arlognormal_like(x, a, sigma, rho):
-    r"""arnormal(x, a, sigma, rho, beta=1)
+    R"""arnormal(x, a, sigma, rho, beta=1)
     
     Autoregressive lognormal log-likelihood.
     
@@ -436,7 +436,7 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    r"""
+    R"""
     bernoulli_like(x, p)
 
     Bernoulli log-likelihood
@@ -486,7 +486,7 @@ def beta_expval(alpha, beta):
 
 
 def beta_like(x, alpha, beta):
-    r"""
+    R"""
     beta_like(x, alpha, beta)
 
     Beta log-likelihood.
@@ -540,7 +540,7 @@ def binomial_expval(n, p):
     return p*n
 
 def binomial_like(x, n, p):
-    r"""
+    R"""
     binomial_like(x, n, p)
 
     Binomial log-likelihood.  The discrete probability distribution of the
@@ -612,7 +612,7 @@ def cauchy_expval(alpha, beta):
 
 # In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
-    r"""
+    R"""
     cauchy_like(x, alpha, beta)
 
     Cauchy log-likelihood. The Cauchy distribution is also known as the
@@ -654,7 +654,7 @@ def chi2_expval(nu):
     return nu
 
 def chi2_like(x, nu):
-    r"""
+    R"""
     chi2_like(x, nu)
 
     Chi-squared :math:`\chi^2` log-likelihood.
@@ -709,7 +709,7 @@ def dirichlet_expval(theta):
     return theta[:-1]/np.sum(theta)
 
 def dirichlet_like(x, theta):
-    r"""
+    R"""
     dirichlet_like(x, theta)
 
     Dirichlet log-likelihood.
@@ -761,7 +761,7 @@ def exponential_expval(beta):
 
 
 def exponential_like(x, beta):
-    r"""
+    R"""
     exponential_like(x, beta)
 
     Exponential log-likelihood.
@@ -804,7 +804,7 @@ def exponweib_expval(alpha, k, loc, scale):
     return 'Not implemented yet.'
 
 def exponweib_like(x, alpha, k, loc=0, scale=1):
-    r"""
+    R"""
     exponweib_like(x,alpha,k,loc=0,scale=1)
 
     Exponentiated Weibull log-likelihood.
@@ -852,7 +852,7 @@ def gamma_expval(alpha, beta):
     return asarray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
-    r"""
+    R"""
     gamma_like(x, alpha, beta)
 
     Gamma log-likelihood.
@@ -903,7 +903,7 @@ def gev_expval(xi, mu=0, sigma=1):
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
 
 def gev_like(x, xi, mu=0, sigma=1):
-    r"""
+    R"""
     gev_like(x, xi, mu=0, sigma=1)
 
     Generalized Extreme Value log-likelihood
@@ -942,7 +942,7 @@ def geometric_expval(p):
     return 1. / p
 
 def geometric_like(x, p):
-    r"""
+    R"""
     geometric_like(x, p)
 
     Geometric log-likelihood. The probability that the first success in a
@@ -986,7 +986,7 @@ def half_normal_expval(tau):
     return np.sqrt(2. * pi / asarray(tau))
 
 def half_normal_like(x, tau):
-    r"""
+    R"""
     half_normal_like(x, tau)
 
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
@@ -1029,7 +1029,7 @@ def hypergeometric_expval(n, m, N):
     return 1. * n * m / N
 
 def hypergeometric_like(x, n, m, N):
-    r"""
+    R"""
     hypergeometric_like(x, n, m, N)
 
     Hypergeometric log-likelihood. Discrete probability distribution that
@@ -1076,7 +1076,7 @@ def inverse_gamma_expval(alpha, beta):
     return 1. / (asarray(beta) * (alpha-1.))
 
 def inverse_gamma_like(x, alpha, beta):
-    r"""
+    R"""
     inverse_gamma_like(x, alpha, beta)
 
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
@@ -1118,7 +1118,7 @@ def lognormal_expval(mu, tau):
     return np.exp(mu + 1./2/tau)
 
 def lognormal_like(x, mu, tau):
-    r"""
+    R"""
     lognormal_like(x, mu, tau)
 
     Log-normal log-likelihood. Distribution of any random variable whose
@@ -1175,7 +1175,7 @@ def multinomial_expval(n,p):
     return asarray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
-    r"""
+    R"""
     multinomial_like(x, n, p)
 
     Multinomial log-likelihood with k-1 bins. Generalization of the binomial
@@ -1244,7 +1244,7 @@ def multivariate_hypergeometric_expval(n, m):
 
 
 def multivariate_hypergeometric_like(x, m):
-    r"""
+    R"""
     multivariate_hypergeometric_like(x, m)
 
     The multivariate hypergeometric describes the probability of drawing x[i] 
@@ -1310,7 +1310,7 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_like(x, mu, tau):
-        r"""
+        R"""
         mv_normal_like(x, mu, tau)
 
         Multivariate normal log-likelihood
@@ -1351,7 +1351,7 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_cov_like(x, mu, C):
-        r"""
+        R"""
         mv_normal_cov_like(x, mu, C)
 
         Multivariate normal log-likelihood
@@ -1411,7 +1411,7 @@ if flib_blas_OK:
         return mu
 
     def mv_normal_chol_like(x, mu, sig):
-        r"""
+        R"""
         mv_normal_like(x, mu, tau)
 
         Multivariate normal log-likelihood
@@ -1453,7 +1453,7 @@ def negative_binomial_expval(mu, alpha):
 
 
 def negative_binomial_like(x, mu, alpha):
-    r"""
+    R"""
     negative_binomial_like(x, mu, alpha)
 
     Negative binomial log-likelihood
@@ -1486,7 +1486,7 @@ def normal_expval(mu, tau):
     return mu
 
 def normal_like(x, mu, tau):
-    r"""
+    R"""
     normal_like(x, mu, tau)
 
     Normal log-likelihood.
@@ -1537,7 +1537,7 @@ def poisson_expval(mu):
 
 
 def poisson_like(x,mu):
-    r"""
+    R"""
     poisson_like(x,mu)
 
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
@@ -1592,7 +1592,7 @@ def truncnorm_expval(mu, sigma, a, b):
     pass
 
 def truncnorm_like(x, mu, sigma, a, b):
-    r"""truncnorm_like(x, mu, sigma, a, b)
+    R"""truncnorm_like(x, mu, sigma, a, b)
     
     Truncated normal log-likelihood.
     
@@ -1632,7 +1632,7 @@ def rskew_normal(mu,tau,alpha,size=1):
     return flib.rskewnorm(size,mu,tau,alpha)
 
 def skew_normal_like(x,mu,tau,alpha):
-    r"""skew_normal_like(x, mu, tau, alpha)
+    R"""skew_normal_like(x, mu, tau, alpha)
     
     Azzalini's skew-normal log-likelihood
     
@@ -1683,7 +1683,7 @@ def discrete_uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def discrete_uniform_like(x,lower, upper):
-    r"""
+    R"""
     discrete_uniform_like(x, lower, upper)
 
     discrete_uniform log-likelihood.
@@ -1722,7 +1722,7 @@ def uniform_expval(lower, upper):
     return (upper - lower) / 2.
 
 def uniform_like(x,lower, upper):
-    r"""
+    R"""
     uniform_like(x, lower, upper)
 
     Uniform log-likelihood.
@@ -1756,7 +1756,7 @@ def weibull_expval(alpha,beta):
     return beta * gammaln((alpha + 1.) / alpha)
 
 def weibull_like(x, alpha, beta):
-    r"""
+    R"""
     weibull_like(x, alpha, beta)
 
     Weibull log-likelihood
@@ -1818,7 +1818,7 @@ def wishart_expval(n, Tau):
     return n * np.asarray(Tau.I)
 
 def wishart_like(X, n, Tau):
-    r"""
+    R"""
     wishart_like(X, n, Tau)
 
     Wishart log-likelihood. The Wishart distribution is the probability
@@ -1869,12 +1869,12 @@ def wishart_cov_expval(n, C):
     return n * np.asarray(C)
 
 def wishart_cov_like(X, n, C):
-    r"""PLEASE CHECK THIS DOCSTRING
+    R"""PLEASE CHECK THIS DOCSTRING
     wishart_like(X, n, C)
 
     Wishart log-likelihood. The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the covariance
-    matrix of a multivariate normal distribution. If Tau=1, the distribution
+    matrix of a multivariate normal distribution. If C=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
     .. math::
