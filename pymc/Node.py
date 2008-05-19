@@ -9,6 +9,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 import os, pdb
 import numpy as np
 
+
 class ZeroProbability(ValueError):
     "Log-likelihood is invalid or negative informationnite"
     pass
@@ -50,8 +51,7 @@ class Node(object):
         # Number of memorized values
         self._cache_depth = cache_depth
         
-        # Initialize sets of children and parents
-        self.children = set()
+        # Initialize
         self.parents = parents
         
         # New lazy function
@@ -100,6 +100,7 @@ class Node(object):
     def gen_lazy_function(self):
         pass
 
+
 class Variable(Node):
     """
     The base class for Stochastics and Deterministics.
@@ -109,6 +110,8 @@ class Variable(Node):
         self.dtype=dtype        
         self.trace=trace
         self._plot=plot
+        self.children = set()
+
         Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
         
         if self.dtype is None:
@@ -144,6 +147,7 @@ class Variable(Node):
             'quantiles': quantiles(trace)
         }
         
+        
 class ContainerBase(object):
     """
     The base class from which containers inherit.
@@ -172,17 +176,20 @@ class ContainerBase(object):
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
+
 class StochasticBase(Variable):
     """
     Abstract base class.
     """
     pass
 
+
 class DeterministicBase(Variable):
     """
     Abstract base class.
     """
     pass
+
 
 class PotentialBase(Node):
     """

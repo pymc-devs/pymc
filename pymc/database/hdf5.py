@@ -16,6 +16,7 @@ import pymc
 from pymc.database import base, pickle
 from copy import copy
 import tables
+import pickle    
 
 class Trace(base.Trace):
     """HDF5 trace
@@ -138,7 +139,8 @@ class Database(pickle.Database):
     def _initialize(self, length):
         """Create group for the current chain."""
         i = len(self._h5file.listNodes('/'))+1
-        self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
+        self._groupname = 'chain%d'%i
+        self._group = self._h5file.createGroup("/", self._groupname, 'Chain #%d'%i)
         
         self._table = self._h5file.createTable(self._group, 'PyMCsamples', \
             self._model_trace_description(), 'PyMC samples from chain %d'%i, \
@@ -273,6 +275,24 @@ def load(filename, mode='a'):
         if k.__class__ is not tables.table.Table:
             setattr(db, k.name, k)
     return db
+
+def save_sampler(sampler):
+    """
+    Dumps a sampler into its database.
+    """
+
+    db = sampler.db
+    
+    fnode = tables.filenode.newnode(db._h5file, where='/', name='__sampler__')
+    pickle.dump(sampler, fn)
+    
+
+def restore_sampler(fname):
+    hf = tables.openFile(fname)
+    fnode = hf.root.__sampler__
+    
+    sampler = pickle.load(fnode)
+    return sampler
         
 ##    groups = db._h5file.root._g_listGroup()[0]
 ##    groups.sort()

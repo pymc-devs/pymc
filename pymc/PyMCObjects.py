@@ -86,7 +86,7 @@ class ParentDict(DictContainer):
     :SeeAlso: DictContainer
     """
     def __init__(self, regular_dict, owner):
-        DictContainer.__init__(self, regular_dict)
+        DictContainer.__init__(self, dict(regular_dict))
         self.owner = owner
 
     def __setitem__(self, key, new_parent):

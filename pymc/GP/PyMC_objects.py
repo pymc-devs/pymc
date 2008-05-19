@@ -504,7 +504,7 @@ class GPMetropolis(pm.Metropolis):
                 print self._id + ' accepting'
 
         if self.verbose:
-            print self._id + ' returning.'        
+            print self._id + ' returning.'
 
 
 

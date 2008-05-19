@@ -59,6 +59,7 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 def bind_size(randfun, size):
     def newfun(*args, **kwargs):
         return randfun(size=size, *args, **kwargs)
+    newfun.scalar_version = randfun
     return newfun
 
 def new_dist_class(*new_class_args):

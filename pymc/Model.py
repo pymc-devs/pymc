@@ -537,7 +537,7 @@ class Sampler(Model):
         Tell the database to save the current state of the sampler.
         """
         try:
-            self.db.savestate(self.get_state())
+            return self.db.savestate(self.get_state())
         except:
             print 'Warning, unable to save state.'
 
@@ -559,8 +559,8 @@ class Sampler(Model):
                 self.s.value = stoch_state[sm.__name__]
             except:
                 pass
-        
-            
+    
+                
     def remember(self, trace_index = None):
         """
         remember(trace_index = randint(trace length to date))

@@ -205,6 +205,9 @@ class Index(LinearCombination):
     Attributes:
       - index
       - x, y, N, coefs, offsets, sides: Same as LinearCombination, but with x = x[index] and y = 1.
+      
+    TODO: Special lazy function for Index that only caches value of parent currently
+    'pointed to'.
     """
     def __init__(self, name, x, index, doc = "Selects one of a list of several variables", *args, **kwds):
         self.index = Lambda('index', lambda i=index: np.int(i))
