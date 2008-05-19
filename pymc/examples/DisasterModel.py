@@ -32,7 +32,3 @@ def r(s=s, e=e, l=l):
   out[s:] = l
   return out
 D = Poisson('D', mu=r, value=D_array, isdata=True)
-
-if __name__ == '__main__':
-    M = MCMC([s,e,l,r,D],db='hdf5')
-    M.sample(1000)

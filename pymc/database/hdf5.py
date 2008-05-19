@@ -278,19 +278,19 @@ def load(filename, mode='a'):
 
 def save_sampler(sampler):
     """
-    Dumps a sampler into its database.
+    Dumps a sampler into its hdf5 database.
     """
-
     db = sampler.db
-    
     fnode = tables.filenode.newnode(db._h5file, where='/', name='__sampler__')
     pickle.dump(sampler, fn)
     
 
 def restore_sampler(fname):
+    """
+    Creates a new sampler from an hdf5 database.
+    """
     hf = tables.openFile(fname)
     fnode = hf.root.__sampler__
-    
     sampler = pickle.load(fnode)
     return sampler
         
