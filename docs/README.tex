@@ -118,8 +118,7 @@ S~=~pymc.MCMC(mymodel,~db='pickle')~\\
 S.sample(iter=10000,~burn=5000,~thin=2)
 }\end{quote}
 
-where problem{\_}definition is a module or a dictionary containing Node, Data and
-Parameter instances defining your problem.
+This will generate a sample of size 10000/2=5000, with the first half discarded as burn-in samples. The sample is stored in a pickle database.
 
 
 %___________________________________________________________________________
