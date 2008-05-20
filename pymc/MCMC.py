@@ -242,11 +242,14 @@ class MCMC(Sampler):
     
     def restore_sm_state(self):
         
-        sm_state = self.db.getstate().get('step_methods', {})
+        sm_state = self.db.getstate()
         
-        # Restore stepping methods state
-        for sm in self.step_methods:
-            sm.__dict__.update(sm_state.get(sm._id, {}))
+        if sm_state is not None:
+            sm_state = sm_state.get('step_methods', {})
+        
+            # Restore stepping methods state
+            for sm in self.step_methods:
+                sm.__dict__.update(sm_state.get(sm._id, {}))
             
     def dic(self):
         """Calculates deviance information Criterion"""
