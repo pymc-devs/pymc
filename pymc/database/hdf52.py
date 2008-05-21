@@ -60,7 +60,8 @@ class Trace(base.Trace):
         When model receives a keyboard interrupt, it tells the traces
         to truncate their values.
         """
-        self._array.truncate(len(self._array))
+        if self.isnum:
+            self._array.truncate(len(self._array))
 
     def gettrace(self, chain=-1):
         """Return the trace (last by default).
@@ -135,7 +136,7 @@ class Database(pickle.Database):
                 open_mode = 'a'
             else:
                 open_mode = self.mode
-            print self.filename, open_mode
+
             self._h5file = tables.openFile(self.filename, open_mode)
 
         # If mode is an integer i, grab the i'th chain to use it.
@@ -155,26 +156,36 @@ class Database(pickle.Database):
         
     def _initialize(self, length):
         """Create group for the current chain."""
-
+        
+        group_counter = 0
+        group_num = 0
+        this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+ descend from a single group, so the traces are split up into several groups.')
+        
         if self.mode.__class__ is str:
         
             # Make EArrays for the numerical- or array-valued variables
             # and VLArrays for the others.
             for o in self.model._variables_to_tally:
-                
-                arr_value = np.asarray(o.value)                
+                group_counter += 1
+                                
+                arr_value = np.asarray(o.value)
                 title = o.__name__ + ': samples from %s' % self._group._v_name
                 self.dtype_dict[o] = arr_value.dtype
                 
                 if arr_value.dtype is od:
-                    self.trace_dict[o] = self._h5file.createVLArray(self._group, o.__name__, tables.ObjectAtom(), 
+                    self.trace_dict[o] = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), 
                         title=title, filters=self.filter) 
                 
                 else:
-                    print o.__name__, arr_value.shape
-                    self.trace_dict[o] = self._h5file.createEArray(self._group, o.__name__, 
+                    self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
                         tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), (0,), title=title, filters=self.filter)
 
+                if group_counter % 4096 == 0:
+                    group_num += 1
+                    this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+ descend from a single group, so the traces are split up into several groups.')
+                    
 
         for object in self.model._variables_to_tally:
             object.trace._initialize(length)
@@ -183,17 +194,25 @@ class Database(pickle.Database):
         # Store data objects
         for o in self.model.data_stochastics:
             if o.trace is True:
+                
+                group_counter += 1
+                
                 arr_value = np.asarray(o.value)
                 title = o.__name__ + ': observed value'
                 
                 if arr_value.dtype is dtype('object'):
-                    va = self._h5file.createVLArray(self._group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
+                    va = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
                     va.append(o.value)
                     
                 else:
-                    ca = self._h5file.createCArray(self._group, o.__name__, tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), 
+                    ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), 
                         (1,), title=title, filters=self.filter)
                     ca[0] = o.value
+                    
+                if group_counter % 4096 == 0:
+                    group_num += 1
+                    this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+descend from a single group, so the traces are split up into several groups.')
                 
     
     def tally(self, index):
