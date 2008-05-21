@@ -47,6 +47,8 @@ def Realization(M, C, *args, **kwargs):
         return StandardRealization(M, C, *args, **kwargs)
 
 
+# TODO: Make subclass FullRankRealization which takes the evaluation of its covariance
+# on its input mesh as an argument. This can be passed in by GPNormal.
 class StandardRealization(object):
     """
     f = Realization(M, C[, init_mesh, init_vals, check_repeats = True, regularize = True])

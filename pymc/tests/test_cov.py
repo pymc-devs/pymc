@@ -1,6 +1,6 @@
 from numpy.testing import *
-from pymc.GP import *
-from pymc.GP.cov_funs import matern
+from pymc.gp import *
+from pymc.gp.cov_funs import matern
 from numpy import *
 from copy import copy
 from test_mean import x, y

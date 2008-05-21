@@ -25,7 +25,7 @@ __modules__ = [ 'Node',
 __sepmodules__ = [  'utils', 
                     'testsuite', 
                     'MultiModelInference',
-                    'GP']
+                    'gp']
                 
 __optmodules__ = ['ScipyDistributions',
                   'parallel',

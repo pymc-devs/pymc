@@ -1,6 +1,6 @@
 from numpy.testing import *
 from numpy import *
-from pymc.GP import Mean
+from pymc.gp import Mean
 from copy import copy
 
 def quadfun(x, a, b, c):
