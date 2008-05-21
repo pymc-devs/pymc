@@ -57,8 +57,8 @@ except:
 
 # Compile linear algebra utilities
 if lapack_info:
-    config.add_extension(name='GP.linalg_utils',sources=['pymc/GP/linalg_utils.f'], extra_info=lapack_info)
-    config.add_extension(name='GP.incomplete_chol',sources=['pymc/GP/incomplete_chol.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.linalg_utils',sources=['pymc/gp/linalg_utils.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.incomplete_chol',sources=['pymc/gp/incomplete_chol.f'], extra_info=lapack_info)
 
 else:
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
@@ -70,16 +70,16 @@ else:
     for fname in ['dpotrs','dpotrf','dpotf2','ilaenv','dlamch','ilaver','ieeeck','iparmq']:
         f_sources.append('lapack/double/'+fname+'.f')
 
-    config.add_extension(name='GP.linalg_utils',sources=['pymc/GP/linalg_utils.f'] + f_sources)
-    config.add_extension(name='GP.incomplete_chol',sources=['pymc/GP/incomplete_chol.f'] + f_sources)
+    config.add_extension(name='gp.linalg_utils',sources=['pymc/gp/linalg_utils.f'] + f_sources)
+    config.add_extension(name='gp.incomplete_chol',sources=['pymc/gp/incomplete_chol.f'] + f_sources)
     
 
 # Compile covariance functions
-config.add_extension(name='GP.cov_funs.isotropic_cov_funs',\
-sources=['pymc/GP/cov_funs/isotropic_cov_funs.f'],\
+config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
+sources=['pymc/gp/cov_funs/isotropic_cov_funs.f'],\
 extra_info=lapack_info)
 
-config.add_extension(name='GP.cov_funs.distances',sources=['pymc/GP/cov_funs/distances.f'], extra_info=lapack_info)
+config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/distances.f'], extra_info=lapack_info)
 
 
 if __name__ == '__main__':
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     setup(  version="2.0",
             description = "PyMC version 2.0",
             license="Academic Free License",
-            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/GP", "pymc/GP/cov_funs"],
-            url="trichech.us",
+            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
+            url="pymc.googlecode.com",
             **(config_dict))
 
