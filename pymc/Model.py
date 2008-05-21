@@ -199,7 +199,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', output_path=None, reinit_model=True, calc_deviance=False, **kwds):
+    def __init__(self, input=None, db='ram', name='Sampler', output_path=None, reinit_model=True, calc_deviance=False, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -222,7 +222,7 @@ class Sampler(Model):
         
         # Instantiate superclass
         if reinit_model:
-            Model.__init__(self, input, output_path)
+            Model.__init__(self, input, name, output_path)
             
         # Initialize deviance, if asked
         if calc_deviance:

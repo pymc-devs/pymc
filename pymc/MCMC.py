@@ -46,7 +46,7 @@ class MCMC(Sampler):
     
     :SeeAlso: Model, Sampler, StepMethod.
     """
-    def __init__(self, input=None, db='ram', output_path=None, **kwds):
+    def __init__(self, input=None, db='ram', name='MCMC', output_path=None, **kwds):
         """Initialize an MCMC instance.
 
         :Parameters:
@@ -63,7 +63,7 @@ class MCMC(Sampler):
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
-        Sampler.__init__(self, input, db, output_path, calc_deviance=True, **kwds)
+        Sampler.__init__(self, input, db, name, output_path, calc_deviance=True, **kwds)
 
         self.step_method_dict = {}
         for s in self.stochastics:
