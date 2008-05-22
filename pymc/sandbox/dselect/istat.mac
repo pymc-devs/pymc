@@ -1,0 +1,5 @@
+
+eq1: m = alpha/(alpha+beta)*scale+loc;
+eq2: v = alpha*beta/(alpha+beta)^2/(alpha+beta+1)*scale^2;
+sol: solve([eq1,eq2], [alpha, beta]);
+

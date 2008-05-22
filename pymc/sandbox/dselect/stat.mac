@@ -1,0 +1,5 @@
+m(alpha, beta) := alpha/(alpha+beta);
+v(alpha, beta) := alpha*beta/(alpha+beta)^2/(alpha+beta+1);
+J: jacobian([m(alpha, beta), v(alpha, beta)], [alpha, beta]);
+dJ: determinant(J);
+fortran(dJ);
