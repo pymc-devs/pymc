@@ -138,14 +138,15 @@ class Variable(Node):
     
         trace = self.trace()
     
-        return {
-            'n': len(trace),
-            'standard deviation': trace.std(0),
-            'mean': trace.mean(0),
-            '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
-            'mc error': trace.std(0) / sqrt(len(trace)),
-            'quantiles': quantiles(trace)
-        }
+        if trace:
+            return {
+                'n': len(trace),
+                'standard deviation': trace.std(0),
+                'mean': trace.mean(0),
+                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
+                'mc error': trace.std(0) / sqrt(len(trace)),
+                'quantiles': quantiles(trace)
+            }
         
         
 class ContainerBase(object):
