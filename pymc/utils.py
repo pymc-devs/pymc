@@ -682,6 +682,9 @@ def coda_output(pymc_object):
     # Close files
     trace_file.close()
     index_file.close()
+    
+# Lazy shortcut
+coda = coda_output
 
 def _process_trace(trace_file, index_file, trace, name, index):
     """Support function for coda_output(); writes output to files"""

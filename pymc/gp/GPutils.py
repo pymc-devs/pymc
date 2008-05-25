@@ -9,7 +9,6 @@ __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', '
 from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
-from pylab import fill, plot, clf, axis
 from linalg_utils import *
 
 try:
@@ -100,7 +99,6 @@ def regularize_array(A):
     else:
         return A
 
-
 def plot_envelope(M,C,mesh):
     """
     plot_envelope(M,C,mesh)
@@ -118,13 +116,19 @@ def plot_envelope(M,C,mesh):
     
         -   `mesh`: The mesh on which to evaluate the mean and cov.
     """
-    x=concatenate((mesh, mesh[::-1]))
-    sig = sqrt(abs(C(mesh)))
-    mean = M(mesh)
-    y=concatenate((mean-sig, (mean+sig)[::-1]))
-    # clf()
-    fill(x,y,facecolor='.8',edgecolor='1.')
-    plot(mesh, mean, 'k-.')    
+    
+    try:
+        from pylab import fill, plot, clf, axis
+        x=concatenate((mesh, mesh[::-1]))
+        sig = sqrt(abs(C(mesh)))
+        mean = M(mesh)
+        y=concatenate((mean-sig, (mean+sig)[::-1]))
+        # clf()
+        fill(x,y,facecolor='.8',edgecolor='1.')
+        plot(mesh, mean, 'k-.')    
+    except ImportError:
+        print "Matplotlib is not installed; plotting is disabled."
+
 
 
 def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate = True):

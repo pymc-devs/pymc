@@ -274,7 +274,7 @@ class Plotter:
         # Store output format
         self._format = format
 
-        self._plotpath = plotpath or ''
+        self._plotpath = plotpath or '.'
         
         # Store fontmap
         self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}

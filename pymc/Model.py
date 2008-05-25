@@ -243,7 +243,8 @@ class Sampler(Model):
             from Matplot import Plotter
             self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
         except:
-            self._plotter = 'Could not be instantiated.'        
+            print 'Plotter could not be instantiated'
+            self._plotter = None        
         
         self._state = ['status', '_current_iter', '_iter']
         
@@ -343,10 +344,13 @@ class Sampler(Model):
         Plots traces and histograms for variables.
         """
 
-        # Loop over nodes
-        for variable in self._variables_to_tally:            
-            # Plot object
-            if variable._plot: self._plotter.plot(variable)
+        if self._plotter:
+            # Loop over nodes
+            for variable in self._variables_to_tally:            
+                # Plot object
+                if variable._plot: self._plotter.plot(variable)
+        else:
+            print 'Plotter not available'
         
     def stats(self):
         """

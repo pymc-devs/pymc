@@ -1,4 +1,3 @@
-from pymc.Matplot import centered_envelope        
 import numpy as np
 from copy import copy
 
@@ -26,28 +25,33 @@ def plot_GP_envelopes(f, x, HPD = [.25, .5, .95], transx = None, transy = None):
         
         -   `transy`: Any transformation of the y-axis.
     """
-    f_trace = f.trace()
-    x = x.ravel()
-    N = len(f_trace)
-    func_stacks = np.zeros((N,len(x)),dtype=float)
-    
-    def identity(y):
-        return y
+    try:
+        from pymc.Matplot import centered_envelope        
         
-    if transy is None:
-        transy = identity
-    if transx is None:
-        transx = identity
+        f_trace = f.trace()
+        x = x.ravel()
+        N = len(f_trace)
+        func_stacks = np.zeros((N,len(x)),dtype=float)
     
-    # Get evaluations
-    for i in range(N):
-        f = copy(f_trace[i])
-        func_stacks[i,:] = transy(f(transx(x)))
+        def identity(y):
+            return y
+        
+        if transy is None:
+            transy = identity
+        if transx is None:
+            transx = identity
     
-    # Plot envelopes
-    HPD = np.sort(HPD)  
-    sorted_func_stack = np.sort(func_stacks,0)
-    for i in range(len(HPD)-1,0,-1):
-        env = centered_envelope(sorted_func_stack, HPD[i])
-        env.display(x, alpha=1.-HPD[i],new=False)
-    centered_envelope(sorted_func_stack, 0.).display(x, alpha=1., new=False)
+        # Get evaluations
+        for i in range(N):
+            f = copy(f_trace[i])
+            func_stacks[i,:] = transy(f(transx(x)))
+    
+        # Plot envelopes
+        HPD = np.sort(HPD)  
+        sorted_func_stack = np.sort(func_stacks,0)
+        for i in range(len(HPD)-1,0,-1):
+            env = centered_envelope(sorted_func_stack, HPD[i])
+            env.display(x, alpha=1.-HPD[i],new=False)
+        centered_envelope(sorted_func_stack, 0.).display(x, alpha=1., new=False)
+    except ImportError:
+        print 'Plotter could not be imported; plotting disabled'
