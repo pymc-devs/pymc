@@ -7,7 +7,7 @@ Plotting module using matplotlib.
 # Import matplotlib functions
 import matplotlib
 import os
-from pylab import bar, hist, plot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
+from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
 from pprint import pformat
 
@@ -155,9 +155,9 @@ class func_sd_envelope(object):
         if self.ndim==1:
             if new:
                 figure()
-            plot(axes,self.lo,'k-.',label=name_str+' mean-sd')
-            plot(axes,self.hi,'k-.',label=name_str+'mean+sd')
-            plot(axes,self.mean,'k-',label=name_str+'mean')
+            pyplot(axes,self.lo,'k-.',label=name_str+' mean-sd')
+            pyplot(axes,self.hi,'k-.',label=name_str+'mean+sd')
+            pyplot(axes,self.mean,'k-',label=name_str+'mean')
             if name:
                 title(name)
 
@@ -244,7 +244,7 @@ class centered_envelope(object):
                 y = concatenate((self.lo, self.hi[::-1]))
                 fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered CI ' + str(self.mass)))
             else:
-                plot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
+                pyplot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
         else:
             if self.mass>0.:
                 subplot(1,2,1)
@@ -258,412 +258,414 @@ class centered_envelope(object):
                 colorbar()
 
 
-class Plotter:
+def plotwrapper(f):
     """
-    Class with methods for generating all summary plots for nodes.
+    This decorator allows for PyMC arguments of various types to be passed to
+    the plotting functions. It identifies the type of object and locates its 
+    trace(s), then passes the data to the wrapped plotting function.
+    
+    """
+    
+    def wrapper(pymc_obj, *args, **kwargs):
+    
+        # Figure out what type of object it is
+        try:
+            # First try Model type
+            for variable in pymc_obj._variables_to_tally:            
+                # Plot object
+                if variable._plot:
+                    data = variable.trace()
+                    name = variable.__name__
+                    f(data, name, *args, **kwargs)
+            return
+        except AttributeError:
+            pass
+            
+        try:
+            # Then try Node type
+            if pymc_obj._plot:
+                data = pymc_obj.trace()
+                name = pymc_obj.__name__
+                f(data, name, *args, **kwargs)
+            return
+        except AttributeError:
+            pass
+            
+        # If others fail, assume that raw data is passed
+        f(pymc_obj, *args, **kwargs)
+    
+    return wrapper
+
+
+@plotwrapper
+def plot(data, name, format='png', suffix='', path='./', new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    """
+    Generates summary plots for nodes of a given PyMC object.
     
     :Arguments:
-        format: Graphic output format (defaults to png).
+        data: array or list
+            A trace from an MCMC sample.
+            
+        name: string
+            The name of the object.
         
-        plotpath: Specifies location for saving plots (defaults to local directory).
+        format (optional): string
+            Graphic output format (defaults to png).
+            
+        suffix (optional): string
+            Filename suffix.
+        
+        path (optional): string
+            Specifies location for saving plots (defaults to local directory).
+            
     """
+        
+    # If there is only one data array, go ahead and plot it ...
+    if rank(data)==1:
+        
+        print 'Plotting', name
+        
+        # If new plot, generate new frame
+        if new:
+            
+            figure(figsize=(10, 6))
+        
+        # Call trace
+        trace(data, name, rows=rows, columns=2, num=num, last=last)
+        # Call histogram
+        histogram(data, name, rows=rows, columns=2, num=num+1, last=last)
+        
+        if last:
+            if not os.path.exists(path):
+                os.mkdir(path)
+                
+            savefig("%s%s%s.%s" % (path, name, suffix, format))
     
-    def __init__(self, format='png', plotpath=None):
-        # Class initialization
+    else:
+        # ... otherwise plot recursively
+        tdata = swapaxes(data, 0, 1)
         
-        # Store output format
-        self._format = format
-
-        self._plotpath = plotpath or '.'
+        # How many rows?
+        _rows = min(4, len(tdata))
         
-        # Store fontmap
-        self.fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
-    
-    def plot(self, node, suffix=''):
-        """ 
-        Plots summary of stochastic/deterministic trace, including trace and histogram.
-        
-        :Arguments:
-            node: PyMCObject
-                An entity that is plottable (i.e. has a trace from an MCMC sample).
+        for i in range(len(tdata)):
             
-            suffix (optional): string
-                Filename suffix.
-                
-            new (optional): boolean
-                Flag indicating if a new figure is to be generated for this plot, 
-                or if the plot is to be added to an existing figure.
-                
-            last (optional): boolean
-                Flag indicating if the current plot is the last in the current
-                figure.
-                
-            rows (optional): integer
-                The number of rows in a composite plot.
-                
-            columns (optional): integer
-                The number of columns in a composite plot.
-                
-            num (optional): integer
-                The number of the current plot within the composite plot.
-        """
-
-        data = node.trace()
-        name = node.__name__
-        
-        # Call plotting logic method
-        self._plot(data, name, suffix=suffix)
-                
-    def _plot(self, data, name, suffix='', new=True, last=True, rows=1, num=1):
-        
-        # If there is only one data array, go ahead and plot it ...
-        if rank(data)==1:
+            # New plot or adding to existing?
+            _new = not i % _rows
+            # Current subplot number
+            _num = i % _rows * 2 + 1
+            # Final subplot of current figure?
+            _last = not (_num + 1) % (_rows * 2)
             
-            print 'Plotting', name
-            
-            # If new plot, generate new frame
-            if new:
-                
-                figure(figsize=(10, 6))
-            
-            # Call trace
-            self.trace(data, name, rows=rows, columns=2, num=num, last=last)
-            # Call histogram
-            self.histogram(data, name, rows=rows, columns=2, num=num+1, last=last)
-            
-            if last:
-                if not os.path.exists(self._plotpath):
-                    os.mkdir(self._plotpath)
-                    
-                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-        
-        else:
-            # ... otherwise plot recursively
-            tdata = swapaxes(data, 0, 1)
-            
-            # How many rows?
-            _rows = min(4, len(tdata))
-            
-            for i in range(len(tdata)):
-                
-                # New plot or adding to existing?
-                _new = not i % _rows
-                # Current subplot number
-                _num = i % _rows * 2 + 1
-                # Final subplot of current figure?
-                _last = not (_num + 1) % (_rows * 2)
-                
-                self._plot(tdata[i], name+'_'+str(i), suffix, new=_new, last=_last, rows=_rows, num=_num)
+            plot(tdata[i], name+'_'+str(i), format=format, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
-    
-    def histogram(self, data, name, nbins=None, suffix='', rows=1, columns=1, num=1, last=True):
+@plotwrapper
+def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
 
-        # Internal histogram specification for handling nested arrays
-        try:
-            
-            # Stand-alone plot or subplot?
-            standalone = rows==1 and columns==1 and num==1
-            if standalone:
-                print 'Generating histogram of', name
-                figure()
-            
-            subplot(rows, columns, num)
-            
-            #Specify number of bins (10 as default)
-            nbins = nbins or int(4 + 1.5*log(len(data)))
-            
-            # Generate histogram
-            hist(data.tolist(), nbins)
-            
-            # Plot options
-            if last:
-                xlabel(name, fontsize='x-small')
-            
-            ylabel("Frequency", fontsize='x-small')
-            
-            # Smaller tick labels
-            tlabels = gca().get_xticklabels()
-            setp(tlabels, 'fontsize', self.fontmap[rows])
-            tlabels = gca().get_yticklabels()
-            setp(tlabels, 'fontsize', self.fontmap[rows])
-            
-            if standalone:
-                if not os.path.exists(self._plotpath):
-                    os.mkdir(self._plotpath)
-                # Save to file
-                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-                #close()
-        
-        except OverflowError:
-            print '... cannot generate histogram'
-
-    
-    def trace(self, data, name, suffix='', rows=1, columns=1, num=1, last=True):
-        # Internal plotting specification for handling nested arrays
+    # Internal histogram specification for handling nested arrays
+    try:
         
         # Stand-alone plot or subplot?
         standalone = rows==1 and columns==1 and num==1
-        
         if standalone:
-            print 'Plotting', name
+            print 'Generating histogram of', name
             figure()
         
         subplot(rows, columns, num)
-        plot(data.tolist())
+        
+        #Specify number of bins (10 as default)
+        nbins = nbins or int(4 + 1.5*log(len(data)))
+        
+        # Generate histogram
+        hist(data.tolist(), nbins)
         
         # Plot options
         if last:
-            xlabel('Iteration', fontsize='x-small')
-        ylabel(name, fontsize='x-small')
+            xlabel(name, fontsize='x-small')
+        
+        ylabel("Frequency", fontsize='x-small')
         
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
-        setp(tlabels, 'fontsize', self.fontmap[rows])
-        
+        setp(tlabels, 'fontsize', fontmap[rows])
         tlabels = gca().get_yticklabels()
-        setp(tlabels, 'fontsize', self.fontmap[rows])
+        setp(tlabels, 'fontsize', fontmap[rows])
         
         if standalone:
-            if not os.path.exists(self._plotpath):
-                os.mkdir(self._plotpath)
+            if not os.path.exists(path):
+                os.mkdir(path)
             # Save to file
-            savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
+            savefig("%s%s%s.%s" % (path, name, suffix, format))
             #close()
     
-    def geweke_plot(self, node, suffix='-diagnostic'):
+    except OverflowError:
+        print '... cannot generate histogram'
 
-        data = node.trace()
-        name = node.__name__
-        
-        # Generate Geweke (1992) diagnostic plots
-        
+
+@plotwrapper
+def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    # Internal plotting specification for handling nested arrays
+    
+    # Stand-alone plot or subplot?
+    standalone = rows==1 and columns==1 and num==1
+    
+    if standalone:
+        print 'Plotting', name
+        figure()
+    
+    subplot(rows, columns, num)
+    pyplot(data.tolist())
+    
+    # Plot options
+    if last:
+        xlabel('Iteration', fontsize='x-small')
+    ylabel(name, fontsize='x-small')
+    
+    # Smaller tick labels
+    tlabels = gca().get_xticklabels()
+    setp(tlabels, 'fontsize', fontmap[rows])
+    
+    tlabels = gca().get_yticklabels()
+    setp(tlabels, 'fontsize', fontmap[rows])
+    
+    if standalone:
+        if not os.path.exists(path):
+            os.mkdir(path)
+        # Save to file
+        savefig("%s%s%s.%s" % (path, name, suffix, format))
+        #close()
+
+@plotwrapper
+def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    
+    # Generate Geweke (1992) diagnostic plots
+    
+    print 'Plotting', name+suffix
+    
+    # Generate new scatter plot
+    figure()
+    x, y = data
+    scatter(x.tolist(), y.tolist())
+    
+    # Plot options
+    xlabel('First iteration', fontsize='x-small')
+    ylabel('Z-score', fontsize='x-small')
+    
+    # Plot lines at +/- 2 sd from zero
+    pyplot((min(x), max(x)), (2, 2), '--')
+    pyplot((min(x), max(x)), (-2, -2), '--')
+    
+    # Set plot bound
+    ylim(min(-2.5, min(y)), max(2.5, max(y)))
+    xlim(0, max(x))
+    
+    # Save to file
+    if not os.path.exists(path):
+        os.mkdir(path)
+    savefig("%s%s%s.%s" % (path, name, suffix, format))
+    #close()
+
+@plotwrapper
+def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    # Generate goodness-of-fit scatter plot
+
+    print 'Plotting', name+suffix
+    
+    # Generate new scatter plot
+    figure()
+    x, y = data
+    scatter(x, y)
+    
+    # Plot x=y line
+    lo = min(ravel(data))
+    hi = max(ravel(data))
+    datarange = hi-lo
+    lo -= 0.1*datarange
+    hi += 0.1*datarange
+    pyplot((lo, hi), (lo, hi))
+    
+    # Plot options
+    xlabel('Observed deviates', fontsize='x-small')
+    ylabel('Simulated deviates', fontsize='x-small')
+    
+    # Save to file
+    if not os.path.exists(path):
+        os.mkdir(path)
+    savefig("%s%s%s.%s" % (path, name, suffix, format))
+    #close()
+
+def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    
+    """Generate bar plot of a series, usually autocorrelation
+    or autocovariance."""
+    
+    # Extract names
+    names = values.keys()
+    names.sort()
+    
+    # Number of plots per page
+    rows = min(len(values), 4)
+    
+    for i,name in enumerate(names):
         print 'Plotting', name+suffix
         
-        # Generate new scatter plot
-        figure()
-        x, y = data
-        scatter(x.tolist(), y.tolist())
+        if not i % rows:
+             # Generate new figure
+            figure(figsize=(10, 6))
+        
+        # New subplot
+        subplot(rows, 1, i - (rows*(i/rows)) + 1)
+        y = values[name]
+        x = arange(len(y))
+        bar(x, y)
+        
+        # Set axis bounds
+        ylim(-1.0, 1.0)
+        xlim(0, len(y))
         
         # Plot options
-        xlabel('First iteration', fontsize='x-small')
-        ylabel('Z-score', fontsize='x-small')
-        
-        # Plot lines at +/- 2 sd from zero
-        plot((min(x), max(x)), (2, 2), '--')
-        plot((min(x), max(x)), (-2, -2), '--')
-        
-        # Set plot bound
-        ylim(min(-2.5, min(y)), max(2.5, max(y)))
-        xlim(0, max(x))
+        ylabel(ylab, fontsize='x-small')
+        tlabels = gca().get_yticklabels()
+        setp(tlabels, 'fontsize', fontmap[rows])
+        tlabels = gca().get_xticklabels()
+        setp(tlabels, 'fontsize', fontmap[rows])
         
         # Save to file
-        if not os.path.exists(self._plotpath):
-            os.mkdir(self._plotpath)
-        savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-        #close()
-    
-    def gof_plot(self, node, suffix='-gof'):
-        # Generate goodness-of-fit scatter plot
-        data = node.trace()
-        name = node.__name__
-
-        print 'Plotting', name+suffix
-        
-        # Generate new scatter plot
-        figure()
-        x, y = data
-        scatter(x, y)
-        
-        # Plot x=y line
-        lo = min(ravel(data))
-        hi = max(ravel(data))
-        datarange = hi-lo
-        lo -= 0.1*datarange
-        hi += 0.1*datarange
-        plot((lo, hi), (lo, hi))
-        
-        # Plot options
-        xlabel('Observed deviates', fontsize='x-small')
-        ylabel('Simulated deviates', fontsize='x-small')
-        
-        # Save to file
-        if not os.path.exists(self._plotpath):
-            os.mkdir(self._plotpath)
-        savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-        #close()
-    
-    def bar_series_plot(self, values, ylab='Y', suffix=''):
-        
-        """Generate bar plot of a series, usually autocorrelation
-        or autocovariance."""
-        
-        # Extract names
-        names = values.keys()
-        names.sort()
-        
-        # Number of plots per page
-        rows = min(len(values), 4)
-        
-        for i,name in enumerate(names):
-            print 'Plotting', name+suffix
+        if not (i+1) % rows or i == len(values)-1:
             
-            if not i % rows:
-                 # Generate new figure
-                figure(figsize=(10, 6))
+            # Label X-axis on last subplot
+            xlabel('Lag', fontsize='x-small')
             
-            # New subplot
-            subplot(rows, 1, i - (rows*(i/rows)) + 1)
-            y = values[name]
-            x = arange(len(y))
-            bar(x, y)
-            
-            # Set axis bounds
-            ylim(-1.0, 1.0)
-            xlim(0, len(y))
-            
-            # Plot options
-            ylabel(ylab, fontsize='x-small')
-            tlabels = gca().get_yticklabels()
-            setp(tlabels, 'fontsize', self.fontmap[rows])
-            tlabels = gca().get_xticklabels()
-            setp(tlabels, 'fontsize', self.fontmap[rows])
-            
-            # Save to file
-            if not (i+1) % rows or i == len(values)-1:
-                
-                # Label X-axis on last subplot
-                xlabel('Lag', fontsize='x-small')
-                
-                if not os.path.exists(self._plotpath):
-                    os.mkdir(self._plotpath)
-                savefig("%s%s%s.%s" % (self._plotpath, name, suffix, self._format))
-                #close()
-    
-    # TODO: make sure pair_posterior works.
-    def pair_posterior(self, nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True):
-        """
-        pair_posterior(nodes, clear=True, mask=None, trueval=None)
+            if not os.path.exists(path):
+                os.mkdir(path)
+            savefig("%s%s%s.%s" % (path, name, suffix, format))
+            #close()
 
-        :Arguments:
-        nodes:       An iterable containing stochastic objects with traces.
-        mask:       A dictionary, indexed by stochastic, of boolean-valued
-                    arrays. If mask[p][index]=False, stochastic p's value
-                    at that index will be included in the plot.
-        trueval:    The true values of stochastics (useful for summarizing
-                    performance with simulated data).
+# TODO: make sure pair_posterior works.
+def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+    """
+    pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
-        Produces a matrix of plots. On the diagonals are the marginal
-        posteriors of the stochastics, subject to the masks. On the
-        off-diagonals are the marginal pairwise posteriors of the
-        stochastics, subject to the masks.
-        """
+    :Arguments:
+    nodes:       An iterable containing stochastic objects with traces.
+    mask:       A dictionary, indexed by stochastic, of boolean-valued
+                arrays. If mask[p][index]=False, stochastic p's value
+                at that index will be included in the plot.
+    trueval:    The true values of stochastics (useful for summarizing
+                performance with simulated data).
 
-        nodes = list(nodes)
+    Produces a matrix of plots. On the diagonals are the marginal
+    posteriors of the stochastics, subject to the masks. On the
+    off-diagonals are the marginal pairwise posteriors of the
+    stochastics, subject to the masks.
+    """
 
-        if mask is not None:
-            mask={}
-            for p in nodes:
-                mask[p] = None
+    nodes = list(nodes)
 
-        if trueval is not None:
-            trueval={}
-            for p in nodes:
-                trueval[p] = None
-
-        np=len(nodes)
-        ns = {}
+    if mask is not None:
+        mask={}
         for p in nodes:
-            if not p.value.shape:
-                ns[p] = 1
-            else:
-                ns[p] = len(p.value.ravel())
+            mask[p] = None
 
-        index_now = -1
-        tracelen = {}
-        ravelledtrace={}
-        titles={}
-        indices={}
-        cum_indices={}
-
-
+    if trueval is not None:
+        trueval={}
         for p in nodes:
+            trueval[p] = None
 
-            tracelen[p] = p.trace().shape[0]
-            ravelledtrace[p] = p.trace().reshape((tracelen[p],-1))
-            titles[p]=[]
-            indices[p] = []
-            cum_indices[p]=[]
+    np=len(nodes)
+    ns = {}
+    for p in nodes:
+        if not p.value.shape:
+            ns[p] = 1
+        else:
+            ns[p] = len(p.value.ravel())
 
-            for j in range(ns[p]):
-                # Should this index be included?
-                if mask[p]:
-                    if not mask[p].ravel()[j]:
-                        indices[p].append(j)
-                        this_index=True
-                    else:
-                        this_index=False
-                else:
+    index_now = -1
+    tracelen = {}
+    ravelledtrace={}
+    titles={}
+    indices={}
+    cum_indices={}
+
+
+    for p in nodes:
+
+        tracelen[p] = p.trace().shape[0]
+        ravelledtrace[p] = p.trace().reshape((tracelen[p],-1))
+        titles[p]=[]
+        indices[p] = []
+        cum_indices[p]=[]
+
+        for j in range(ns[p]):
+            # Should this index be included?
+            if mask[p]:
+                if not mask[p].ravel()[j]:
                     indices[p].append(j)
                     this_index=True
-                # If so:
-                if this_index:
-                    index_now+=1
-                    cum_indices[p].append(index_now)
-                    # Figure out title string
-                    if ns[p]==1:
-                        titles[p].append(p.__name__)
-                    else:
-                        titles[p].append(p.__name__ + get_index_list(p.value.shape,j).__repr__())
+                else:
+                    this_index=False
+            else:
+                indices[p].append(j)
+                this_index=True
+            # If so:
+            if this_index:
+                index_now+=1
+                cum_indices[p].append(index_now)
+                # Figure out title string
+                if ns[p]==1:
+                    titles[p].append(p.__name__)
+                else:
+                    titles[p].append(p.__name__ + get_index_list(p.value.shape,j).__repr__())
 
-        if new:
-            figure(figsize = (10,10))
+    if new:
+        figure(figsize = (10,10))
 
-        n = index_now+1
-        for p in nodes:
-            for j in range(len(indices[p])):
-                # Marginals
-                ax=subplot(n,n,(cum_indices[p][j])*(n+1)+1)
-                setp(ax.get_xticklabels(),fontsize=fontsize)
-                setp(ax.get_yticklabels(),fontsize=fontsize)
-                hist(ravelledtrace[p][:,j],normed=True,fill=False)
-                xlabel(titles[p][j],size=fontsize)
+    n = index_now+1
+    for p in nodes:
+        for j in range(len(indices[p])):
+            # Marginals
+            ax=subplot(n,n,(cum_indices[p][j])*(n+1)+1)
+            setp(ax.get_xticklabels(),fontsize=fontsize)
+            setp(ax.get_yticklabels(),fontsize=fontsize)
+            hist(ravelledtrace[p][:,j],normed=True,fill=False)
+            xlabel(titles[p][j],size=fontsize)
 
-        # Bivariates
-        for i in range(len(nodes)-1):
-            p0 = nodes[i]
-            for j in range(len(indices[p0])):
-                p0_i = indices[p0][j]
-                p0_ci = cum_indices[p0][j]
-                for k in range(i,len(nodes)):
-                    p1=nodes[k]
-                    if i==k:
-                        l_range = range(j+1,len(indices[p0]))
-                    else:
-                        l_range = range(len(indices[p1]))
-                    for l  in l_range:
-                        p1_i = indices[p1][l]
-                        p1_ci = cum_indices[p1][l]
-                        subplot_index = p0_ci*(n) + p1_ci+1
-                        ax=subplot(n, n, subplot_index)
-                        setp(ax.get_xticklabels(),fontsize=fontsize)
-                        setp(ax.get_yticklabels(),fontsize=fontsize)
+    # Bivariates
+    for i in range(len(nodes)-1):
+        p0 = nodes[i]
+        for j in range(len(indices[p0])):
+            p0_i = indices[p0][j]
+            p0_ci = cum_indices[p0][j]
+            for k in range(i,len(nodes)):
+                p1=nodes[k]
+                if i==k:
+                    l_range = range(j+1,len(indices[p0]))
+                else:
+                    l_range = range(len(indices[p1]))
+                for l  in l_range:
+                    p1_i = indices[p1][l]
+                    p1_ci = cum_indices[p1][l]
+                    subplot_index = p0_ci*(n) + p1_ci+1
+                    ax=subplot(n, n, subplot_index)
+                    setp(ax.get_xticklabels(),fontsize=fontsize)
+                    setp(ax.get_yticklabels(),fontsize=fontsize)
 
-                        try:
-                            H, x, y = histogram2d(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i])
-                            contourf(x,y,H,cmap=cm.bone)
-                        except:
-                            print 'Unable to plot histogram for ('+titles[p1][l]+','+titles[p0][j]+'):'
-                            plot(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i],'k.',markersize=1.)
-                            axis('tight')
+                    try:
+                        H, x, y = histogram2d(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i])
+                        contourf(x,y,H,cmap=cm.bone)
+                    except:
+                        print 'Unable to plot histogram for ('+titles[p1][l]+','+titles[p0][j]+'):'
+                        pyplot(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i],'k.',markersize=1.)
+                        axis('tight')
 
-                        xlabel(titles[p1][l],size=fontsize)
-                        ylabel(titles[p0][j],size=fontsize)
+                    xlabel(titles[p1][l],size=fontsize)
+                    ylabel(titles[p0][j],size=fontsize)
 
-        plotname = ''
-        for obj in nodes:
-            plotname += obj.__name__ + ''
-        if not os.path.exists(self._plotpath):
-            os.mkdir(self._plotpath)
-        savefig("%s%s%s.%s" % (self._plotpath, plotname, suffix, self._format))
+    plotname = ''
+    for obj in nodes:
+        plotname += obj.__name__ + ''
+    if not os.path.exists(path):
+        os.mkdir(path)
+    savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 

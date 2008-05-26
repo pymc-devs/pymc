@@ -238,14 +238,6 @@ class Sampler(Model):
         self._current_iter = None
         self._iter = None
         
-        # Instantiate plotter 
-        try:
-            from Matplot import Plotter
-            self._plotter = Plotter(plotpath=output_path or self.__name__ + '_output/')
-        except:
-            print 'Plotter could not be instantiated'
-            self._plotter = None        
-        
         self._state = ['status', '_current_iter', '_iter']
         
     def _sum_deviance(self):
@@ -338,19 +330,6 @@ class Sampler(Model):
         Either draw() or _loop() must be overridden in subclasses of Sampler.
         """
         pass
-    
-    def plot(self):
-        """
-        Plots traces and histograms for variables.
-        """
-
-        if self._plotter:
-            # Loop over nodes
-            for variable in self._variables_to_tally:            
-                # Plot object
-                if variable._plot: self._plotter.plot(variable)
-        else:
-            print 'Plotter not available'
         
     def stats(self):
         """
