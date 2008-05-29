@@ -131,7 +131,7 @@ class MCMC(Sampler):
         self._thin = int(thin)
         self._tune_interval = int(tune_interval)
 
-        length = (iter-burn)/thin
+        length = int(round((1.0*iter-burn)/thin))
         self.max_trace_length = length
 
         # Flags for tuning
