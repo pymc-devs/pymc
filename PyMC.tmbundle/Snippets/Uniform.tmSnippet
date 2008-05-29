@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>content</key>
-	<string>${1:name} = Unifrom('$1', lower=${2:0}, upper=${3:1})$0</string>
+	<string>${1:name} = Uniform('$1', lower=${2:0}, upper=${3:1})$0</string>
 	<key>name</key>
 	<string>Uniform stochastic</string>
 	<key>scope</key>
