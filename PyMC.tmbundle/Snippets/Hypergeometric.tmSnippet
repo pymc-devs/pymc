@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Hypergeometric('$1', n=${2:value}, m=${3:value}, N=${4:value})$0</string>
+	<key>name</key>
+	<string>Hypergeometric stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>hypergeometric</string>
+	<key>uuid</key>
+	<string>23A2B320-525B-4703-81A8-8A2A9D07F628</string>
+</dict>
+</plist>

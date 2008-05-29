@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Cauchy('$1', alpha=${2:value}, beta=${3:value})$0</string>
+	<key>name</key>
+	<string>Cauchy stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>cauchy</string>
+	<key>uuid</key>
+	<string>658F7409-1D15-4A0B-B334-7F4D66F6A713</string>
+</dict>
+</plist>

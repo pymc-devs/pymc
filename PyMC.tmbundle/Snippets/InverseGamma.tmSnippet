@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = InverseGamma('$1', alpha=${2:value}, beta=${3:value})$0</string>
+	<key>name</key>
+	<string>Inverse-gamma stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>inversegamma</string>
+	<key>uuid</key>
+	<string>11064ECC-9E00-432A-8D7A-D326F981E7FA</string>
+</dict>
+</plist>

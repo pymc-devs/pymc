@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Bernoulli('$1', p=${2:value})$0</string>
+	<key>name</key>
+	<string>Bernoulli stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>bernoulli</string>
+	<key>uuid</key>
+	<string>90AAFF22-172C-4DB0-B486-82B44195FD77</string>
+</dict>
+</plist>

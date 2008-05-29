@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Poisson('$1', mu=${2:value})$0</string>
+	<key>name</key>
+	<string>Poisson stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>poisson</string>
+	<key>uuid</key>
+	<string>6E307F9C-B1D1-4CD3-9959-6E56B66B7BF6</string>
+</dict>
+</plist>

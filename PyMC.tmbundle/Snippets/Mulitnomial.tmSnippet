@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Multinomial('$1', n=${2:value}, p=${3:value})$0</string>
+	<key>name</key>
+	<string>Multinomial stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>multinomial</string>
+	<key>uuid</key>
+	<string>7E67BCAD-9EE3-48E1-A978-8FB9A82CF8D2</string>
+</dict>
+</plist>

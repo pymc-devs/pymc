@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Normal('$1', mu=${2:value}, tau=${3:value})$0</string>
+	<key>name</key>
+	<string>Normal stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>normal</string>
+	<key>uuid</key>
+	<string>DA3442D8-4D87-4668-A017-055ECC003D32</string>
+</dict>
+</plist>

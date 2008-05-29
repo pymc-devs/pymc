@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Binomial('$1', n=${2:value}, p=${3:value})$0</string>
+	<key>name</key>
+	<string>Binomial stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>binomial</string>
+	<key>uuid</key>
+	<string>BAE82FE1-29CE-47B5-891B-5A4136A912A6</string>
+</dict>
+</plist>

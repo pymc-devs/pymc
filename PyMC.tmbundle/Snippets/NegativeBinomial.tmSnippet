@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = NegativeBinomial('$1', mu=${2:value}, alpha=${3:value})$0</string>
+	<key>name</key>
+	<string>Negative binomial stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>negativebinomial</string>
+	<key>uuid</key>
+	<string>22708CF6-A695-4594-B8C2-0259EF8031C3</string>
+</dict>
+</plist>

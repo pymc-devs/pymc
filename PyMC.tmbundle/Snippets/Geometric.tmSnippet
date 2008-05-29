@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Geometric('$1', p=${2:value})$0</string>
+	<key>name</key>
+	<string>Geometric stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>geometric</string>
+	<key>uuid</key>
+	<string>1E457263-5A8D-4872-8346-680B9C73C50D</string>
+</dict>
+</plist>

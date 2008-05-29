@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Beta('$1', theta=${2:value})$0</string>
+	<key>name</key>
+	<string>Dirichlet stochastic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>dirichlet</string>
+	<key>uuid</key>
+	<string>C979B1CA-CEFF-4B37-9440-474ECD23A447</string>
+</dict>
+</plist>
