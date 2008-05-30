@@ -47,26 +47,22 @@ def extend_parents(parents):
     nearest conditionally stochastic (Stochastic, not Deterministic) ancestors.
     """
     new_parents = set()
-    need_recursion = False
-    dtrm_parents = set()
     
     for parent in parents:
 
         new_parents.add(parent)
 
         if isinstance(parent, DeterministicBase):
-            dtrm_parents.add(parent)
-            need_recursion = True
-            for grandparent in parent.parents.variables:
-                new_parents.add(grandparent)
+            new_parents.remove(parent)
+            new_parents |= parent.extended_parents
                 
         elif isinstance(parent, ContainerBase):
-            new_parents |= parent.variables
-            need_recursion = True
+            for contained_parent in parent.stochastics:
+                new_parents.add(contained_parent)
+            for contained_parent in parent.deterministics:
+                new_parents |= contained_parent.extended_parents
                     
-    new_parents -= dtrm_parents
-    if need_recursion:
-        new_parents = extend_parents(new_parents)
+
     return new_parents
 
 

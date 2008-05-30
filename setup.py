@@ -75,11 +75,23 @@ else:
     
 
 # Compile covariance functions
-config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
-sources=['pymc/gp/cov_funs/isotropic_cov_funs.f'],\
-extra_info=lapack_info)
+omp = False
+if omp:
+    config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
+    sources=['pymc/gp/cov_funs/omp_isotropic_cov_funs.f'],\
+    libraries = ['gomp'], extra_info=lapack_info)
 
-config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/distances.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/omp_distances.f'],\
+        libraries=['gomp'], extra_info=lapack_info)
+    
+else:
+    config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
+    sources=['pymc/gp/cov_funs/isotropic_cov_funs.f'],\
+    extra_info=lapack_info)
+
+    config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/distances.f'], extra_info=lapack_info)
+    
+
 
 
 if __name__ == '__main__':
