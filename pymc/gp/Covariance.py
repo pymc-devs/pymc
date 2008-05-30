@@ -53,12 +53,11 @@ class Covariance(object):
         self.params = params
         self.relative_precision = relative_precision
         
-        # Sorry... the diagonal calls are done using f2py for speed.
-        def diag_cov_fun(xe):
-            print xe, self.eval_fun(xe,xe,**self.params)
-            return self.eval_fun(xe,xe,**self.params)
-
-        self.diag_cov_fun = diag_cov_fun
+        # # Sorry... the diagonal calls are done using f2py for speed.
+        # def diag_cov_fun(xe):
+        #     return self.eval_fun(xe,xe,**self.params)
+        # 
+        # self.diag_cov_fun = diag_cov_fun
 
     
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True):

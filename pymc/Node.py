@@ -66,25 +66,13 @@ class Node(object):
         
         # Remove from current parents
         if hasattr(self,'_parents'):
-            # Iterate over items in ParentDict
-            for parent in self._parents.itervalues():
-                if isinstance(parent, Variable):
-                    parent.children.discard(self)
-                elif isinstance(parent, ContainerBase):
-                    for variable in parent.variables:
-                        variable.chidren.discard(self)
+            self._parents.detach_children()
         
         # Specify new parents
         self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
         
         # Add self as child of parents
-        for parent in self._parents.itervalues():
-            if isinstance(parent, Variable):
-                parent.children.add(self)
-            elif isinstance(parent, ContainerBase):
-                for variable in parent.variables:
-                    variable.children.add(self)
-        
+        self._parents.attach_parents()
         
         # Get new lazy function
         self.gen_lazy_function()
@@ -111,6 +99,7 @@ class Variable(Node):
         self.trace=trace
         self._plot=plot
         self.children = set()
+        self.extended_children = set()
 
         Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
         

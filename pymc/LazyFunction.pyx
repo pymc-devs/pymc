@@ -7,7 +7,7 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from pymc import Node, ContainerBase, Variable
-from Container import ListTupleContainer
+from Container import ListContainer
 
 cdef extern from "stdlib.h":
     void* malloc(int size)
@@ -72,7 +72,7 @@ cdef class LazyFunction:
     
     cdef public object frame_queue
     
-    def __init__(self, fun, arguments, cache_depth):
+    def __init__(self, fun, arguments, ultimate_args, cache_depth):
         
         cdef object arg, name
         cdef int i
@@ -93,7 +93,7 @@ cdef class LazyFunction:
             # This object is arg.
             arg = arguments[name]
             
-        self.ultimate_args = ListTupleContainer(list(arguments.variables))
+        self.ultimate_args = ListContainer(list(ultimate_args))
         self.N_args = len(self.ultimate_args)
         
         # Initialize caches

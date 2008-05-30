@@ -30,7 +30,8 @@ __sepmodules__ = [  'utils',
 __optmodules__ = ['ScipyDistributions',
                   'parallel',
                   'sandbox',
-                  'graph']
+                  'graph',
+                  'Matplot']
 #ClosedCapture, OpenCapture   
 
 for mod in __modules__:

@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # Plot the covariance function
     subplot(2,2,1)
 
-    imshow(C(x,x),origin='lower',extent=(-1.,1.,-1.,1.))
+    contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.bone)
 
     xlabel('x')
     ylabel('y')
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # Plot a slice of the covariance function
     subplot(2,2,2)
 
-    plot(x,C(x,0),'k-')
+    plot(x,C(x,0).view(ndarray).ravel(),'k-')
     axis([-1,1,0,1])
 
     xlabel('x')

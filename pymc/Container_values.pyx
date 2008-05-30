@@ -5,9 +5,28 @@ from numpy import ndarray, array, zeros, shape, arange, where
 cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
 
-def LTCValue(container):
+def TCValue(container):
     """
-    Fills in a list/tuple container's value.
+    Fills in a tuple container's value'    
+    """
+    cdef int i
+    cdef object _value, isval
+    
+    isval = container.isval
+    _value = tuple()
+    
+    for i from 0 <= i < len(container):
+        if isval[i]:
+            _value = _value + container[i].value
+        else:
+            _value = _value + container[i]
+                
+    return _value
+
+
+def LCValue(container):
+    """
+    Fills in a list container's value.
     
     :SeeAlso: ListTupleContainer
     """

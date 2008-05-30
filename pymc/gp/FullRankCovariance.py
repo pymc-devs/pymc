@@ -43,11 +43,11 @@ class FullRankCovariance(Covariance):
         self.params = params
         self.nugget=nugget
         
-        # Sorry... the diagonal calls are done using f2py for speed.
-        def diag_cov_fun(xe):
-            return self.eval_fun(xe,xe,**self.params)
-
-        self.diag_cov_fun = diag_cov_fun
+        # # Sorry... the diagonal calls are done using f2py for speed.
+        # def diag_cov_fun(xe):
+        #     return self.eval_fun(xe,xe,**self.params)
+        # 
+        # self.diag_cov_fun = diag_cov_fun
         
             
     def cholesky(self, x, observed=True, nugget=None):

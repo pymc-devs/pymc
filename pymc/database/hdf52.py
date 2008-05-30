@@ -69,10 +69,21 @@ class Trace(base.Trace):
         Input:
           - chain (int): The index of the chain to fetch. If None, return all chains.
         """
-        if chain==-1:
-            chain = len(self.db._h5file.listNodes('/')) - 1
-        group = getattr(self.db._h5file.root, 'chain%d'%chain)
-        return getattr(group, self._obj.__name__)
+        if chain is not None:
+            if chain==-1:
+                chain = len(self.db._h5file.listNodes('/')) - 1
+            chain = getattr(self.db._h5file.root, 'chain%d'%chain)
+            ### FIXME How to guarantee that this object is in the same group
+            ### in every chain?
+            group = getattr(chain, self.db.groupnum_dict[self._obj])
+            return getattr(chain, self._obj.__name__)
+        else:
+            chains = []
+            for i in xrange(len(self.db._h5file.listNodes('/'))):
+                chain = getattr(self.db._h5file.root, 'chain%d'%i)
+                group = getattr(chain, self.db.groupnum_dict[self._obj])
+                chains.append(getattr(chain, self._obj.__name__))
+            return chains
                       
     def _finalize(self):
         """Nothing done here."""
@@ -85,7 +96,8 @@ class Trace(base.Trace):
         return the total length of all chains."""
         if chain==-1:
             chain = len(self.db._h5file.listNodes('/')) - 1
-        group = getattr(self.db._h5file.root, 'chain%d'%chain)
+        chain = getattr(self.db._h5file.root, 'chain%d'%chain)
+        group = getattr(chain, self.db.groupnum_dict[self])
         return len(getattr(group, self._obj.__name__))
         
 
@@ -149,6 +161,7 @@ class Database(pickle.Database):
 
             self.dtype_dict = {}
             self.trace_dict = {}
+            self.groupnum_dict = {}
 
             i = len(self._h5file.listNodes('/'))
             self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
@@ -172,6 +185,7 @@ class Database(pickle.Database):
                 arr_value = np.asarray(o.value)
                 title = o.__name__ + ': samples from %s' % self._group._v_name
                 self.dtype_dict[o] = arr_value.dtype
+                self.groupnum_dict[o] = group_counter
                 
                 if arr_value.dtype is od:
                     self.trace_dict[o] = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), 

@@ -1,109 +1,12 @@
 # Copyright (c) Anand Patil, 2007
 
 from numpy import ndarray, asarray, array, matrix, ones, diag, pi
-from distances import euclidean, aniso_geo_rad, paniso_geo_rad
-from distances import geographic as geo_rad
+import wrapped_distances
 import inspect
+import imp
+import pickle
 
-__all__ = ['euclidean', 'geo_rad', 'geo_deg', 'aniso_geo_rad', 'aniso_geo_deg', 'partition_aniso_geo_rad', 'partition_aniso_geo_deg', 'apply_distance', 'covariance_function_bundle']
-
-euclidean.__name__ = 'euclidean'
-euclidean.__doc__ = """
-    D = euclidean(x,y,symm=False)
-
-
-    :Arguments:
-
-        - `x and y` are arrays of points in Euclidean coordinates
-          formatted as follows:
-      
-          [[x_{0,0} ... x_{0,ndim}],
-           [x_{1,0} ... x_{1,ndim}],
-           ...
-           [x_{N,0} ... x_{N,ndim}]]
-
-        - `symm` indicates whether x and y are references to
-          the same array.
-
-      
-    Return value is a matrix D, where D[i,j] gives the Euclidean
-    distance between the point x[i,:] and y[j,:].
-"""
-
-geo_rad.__name__ = 'geo_rad'
-geo_rad.__doc__ = """
-    D = geo_rad(x,y,symm=False)
-
-
-    :Arguments:
-
-        - `x and y` are arrays of points in geographic coordinates
-          formatted as follows:
-
-          [[lon_0, lat_0],
-           [lon_1, lat_1],
-           ...
-           [lon_N, lat_N]]
- 
-          Latitudes and longitudes should be in radians.
-
-        - `symm` indicates whether x and y are references to
-          the same array.
-      
-    Return value is a matrix D, where D[i,j] gives the great-circle 
-    distance between the point x[i,:] and y[j,:] on a sphere of unit
-    radius.
-"""
-
-def geo_deg(x,y,symm=False):
-    return geo_rad(x*pi/180., y*pi/180., symm)*180./pi
-geo_deg.__doc__ = geo_rad.__doc__.replace('radian', 'degree')
-
-aniso_geo_rad.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in radians'}
-aniso_geo_rad.__name__ = 'aniso_geo_rad'
-aniso_geo_rad.__doc__ = """
-    D = aniso_geo_rad(x,y,inc,ecc,symm=False)
-
-
-    :Arguments:
-
-        - `x and y` are arrays of points in geographic coordinates
-          formatted as follows:
-
-          [[lon_0, lat_0],
-           [lon_1, lat_1],
-           ...
-           [lon_N, lat_N]]
-
-          Latitudes and longitudes should be in radians.
-
-        - `inc` gives the eccentricity of the elliptical level sets of distance.
-        
-        - `ecc` gives the angle of inclination of the elliptical level sets of 
-          distance, in radians.
-
-        - `symm` indicates whether x and y are references to
-          the same array.
-  
-    Return value is a matrix D, where D[i,j] gives the great-circle 
-    distance between the point x[i,:] and y[j,:] on a sphere of unit
-    radius.
-"""
-
-def aniso_geo_deg(x,y,inc,ecc,symm=False):
-    return aniso_geo_rad(x*pi/180., y*pi/180., inc*pi/180., ecc, symm)*180./pi
-aniso_geo_deg.__doc__ = geo_deg.__doc__.replace('radian', 'degree')
-aniso_geo_deg.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in degrees'}
-
-def partition_aniso_geo_rad(x,y,ctrs,scals,symm=False):
-    return paniso_geo_rad(x,y,ctrs,scals,symm)
-partition_aniso_geo_rad.extra_parameters = {'ctrs': 'Centers of angular bins, in radians','scals': 'Scales associated with each angular bin'}
-partition_aniso_geo_rad.__doc__ = ""
-
-def partition_aniso_geo_deg(x,y,ctrs,scals,symm=False):
-    return paniso_geo_rad(x*pi/180., y*pi/180., ctrs*pi/180., scals, symm)*180./pi
-partition_aniso_geo_deg.extra_parameters = {'ctrs': 'Centers of angular bins, in radians','scals': 'Scales associated with each angular bin'}
-partition_aniso_geo_deg.__doc__ = ""
+__all__ = ['covariance_wrapper', 'covariance_function_bundle']
 
 def regularize_array(A):
     """
@@ -132,8 +35,9 @@ def regularize_array(A):
     
     else:
         return A
-                
-def apply_distance(cov_fun, distance_fun):
+
+
+class covariance_wrapper(object):
     """
     A wrapper for the Fortran covariance functions that 
     removes the need for worrying about the common arguments
@@ -142,15 +46,66 @@ def apply_distance(cov_fun, distance_fun):
     and easier nonstationary generalizations.
     """
     
+    # Pickle support
+    def __getstate__(self):
+        return (self.cov_fun_name, self.cov_fun_module.__name__, self.extra_cov_params, 
+                self.distance_fun_name, self.distance_fun_module.__name__)
+        
+    def __setstate__(self, state):
+        self.__init__(*state)
+    
+    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, distance_fun_name, distance_fun_module):
+
+        self.cov_fun_name = cov_fun_name
+        self.distance_fun_name = distance_fun_name
+        
+        exec('import %s'%cov_fun_module)
+        cov_fun_module = locals()[cov_fun_module]
+        cov_fun = getattr(cov_fun_module, cov_fun_name)
+        
+        exec('import %s'%distance_fun_module)
+        distance_fun_module = locals()[distance_fun_module]
+        distance_fun = getattr(distance_fun_module, distance_fun_name)
+
+        self.cov_fun_module = cov_fun_module
+        self.cov_fun = cov_fun
+
+        self.distance_fun_module = distance_fun_module        
+        self.distance_fun = distance_fun
+        
+        self.extra_cov_params = extra_cov_params
+        
+        self.__doc__ = cov_fun_name + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
+
+        # Add covariance parameters to function signature
+        for parameter in extra_cov_params.iterkeys():
+            self.__doc__ += ', ' + parameter
+        # Add distance parameters to function signature
+        if hasattr(distance_fun,'extra_parameters'):
+            self.extra_distance_params = distance_fun.extra_parameters
+            for parameter in self.extra_distance_params.iterkeys():
+                self.__doc__ += ', ' + parameter
+        # Document covariance parameters
+        self.__doc__ += covariance_wrapperdoc[1]
+        if hasattr(cov_fun, 'extra_parameters'):
+            for parameter in extra_cov_params.iterkeys():
+                self.__doc__ += "\n\n    - " + parameter + ": " + extra_cov_params[parameter]
+        # Document distance parameters.
+        if hasattr(distance_fun,'extra_parameters'):
+            for parameter in self.extra_distance_params.iterkeys():
+                self.__doc__ += "\n\n    - " + parameter + ": " + self.extra_distance_params[parameter]
+
+        self.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
+
     # Covariance_wrapper takes lots of time in the profiler, but it seems pretty 
     # efficient in that it spends most of its time in distance_fun, cov_fun and
     # the floating-point operations on C.
-    def covariance_wrapper(x,y,amp=1.,scale=1.,*args,**kwargs):
+    def __call__(self,x,y,amp=1.,scale=1.,*args,**kwargs):
         if amp<0. or scale<0.:
             raise ValueError, 'The amp and scale parameters must be positive.'
         symm = (x is y)
         kwargs['symm']=symm
-        
+
         # x = regularize_array(x)
         if symm:
             y=x
@@ -159,54 +114,24 @@ def apply_distance(cov_fun, distance_fun):
 
         # Split off the distance arguments
         distance_arg_dict = {}        
-        if hasattr(distance_fun, 'extra_parameters'):
-            for key in distance_fun.extra_parameters.iterkeys():
+        if hasattr(self.distance_fun, 'extra_parameters'):
+            for key in self.extra_distance_params.iterkeys():
                 if key in kwargs.keys():
                     distance_arg_dict[key] = kwargs.pop(key)
 
         # Form the distance matrix
         distance_arg_dict['symm']=symm
-        C = distance_fun(x,y,**distance_arg_dict).view(matrix)
+        C = self.distance_fun(x,y,**distance_arg_dict).view(matrix)
         C /= scale
 
         # Overwrite the distance matrix using a Fortran covariance function
-        cov_fun(C,*args,**kwargs)
+        self.cov_fun(C,*args,**kwargs)
         C *= amp*amp        
 
         return C
-    
         
-    covariance_wrapper.__doc__ = cov_fun.__name__ + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
-    
-    # Add covariance parameters to function signature
-    if hasattr(cov_fun, 'extra_parameters'):
-        covariance_wrapper.extra_cov_params = cov_fun.extra_parameters
-        for parameter in cov_fun.extra_parameters.iterkeys():
-            covariance_wrapper.__doc__ += ', ' + parameter
-    # Add distance parameters to function signature
-    if hasattr(distance_fun,'extra_parameters'):
-        covariance_wrapper.extra_distance_params = distance_fun.extra_parameters
-        for parameter in distance_fun.extra_parameters.iterkeys():
-            covariance_wrapper.__doc__ += ', ' + parameter
-    # Document covariance parameters
-    covariance_wrapper.__doc__ += covariance_wrapperdoc[1]
-    if hasattr(cov_fun, 'extra_parameters'):
-        for parameter in cov_fun.extra_parameters.iterkeys():
-            covariance_wrapper.__doc__ += "\n\n    - " + parameter + ": " + cov_fun.extra_parameters[parameter]
-    # Document distance parameters.
-    if hasattr(distance_fun,'extra_parameters'):
-        for parameter in distance_fun.extra_parameters.iterkeys():
-            covariance_wrapper.__doc__ += "\n\n    - " + parameter + ": " + distance_fun.extra_parameters[parameter]
-        
-    covariance_wrapper.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
-    
-    # Expose distance and isotropic covariance function
-    covariance_wrapper.distance_fun = distance_fun
-    covariance_wrapper.raw_cov_fun = cov_fun
-
-    
-    return covariance_wrapper
-        
+                
+                
 # Common verbiage in the covariance functions' docstrings
 covariance_wrapperdoc = ["(x,y",""", amp=1., scale=1.)
 
@@ -272,18 +197,23 @@ class covariance_function_bundle(object):
           the output matrix will be symmetric.
     """
     
-    def __init__(self, cov_fun):
+    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params):
         
-        self.raw = cov_fun
-        self.universal(euclidean)
-        self.universal(geo_rad)
-        self.universal(geo_deg)
-        self.universal(aniso_geo_rad)
-        self.universal(aniso_geo_deg)
-        self.universal(partition_aniso_geo_deg)
-        self.universal(partition_aniso_geo_rad)
+        self.cov_fun_name = cov_fun_name
+        self.cov_fun_module = cov_fun_module
+        self.extra_cov_params = extra_cov_params
+        
+        self.universal('euclidean','wrapped_distances')
+        self.universal('geo_rad','wrapped_distances')
+        self.universal('geo_deg','wrapped_distances')
+        self.universal('aniso_geo_rad','wrapped_distances')
+        self.universal('aniso_geo_deg','wrapped_distances')
+        self.universal('partition_aniso_geo_deg','wrapped_distances')
+        self.universal('partition_aniso_geo_rad','wrapped_distances')
+        
+        self.raw = self.euclidean.cov_fun
                 
-    def universal(self, distance_fun):
+    def universal(self, distance_fun_name, distance_fun_module):
         """
         Takes a function that computes a distance matrix for 
         points in some coordinate system and returns self's 
@@ -309,11 +239,12 @@ class covariance_function_bundle(object):
             - `apply_distance()`
         """
         
-        new_fun = apply_distance(self.raw, distance_fun)
-        try:
-            setattr(self, distance_fun.__name__, new_fun)
-        except:
-            pass
+        new_fun = covariance_wrapper(self.cov_fun_name, self.cov_fun_module, self.extra_cov_params, 
+                distance_fun_name, distance_fun_module)
+        # try:
+        setattr(self, distance_fun_name, new_fun)
+        # except:
+        #     pass
         return new_fun
         
     

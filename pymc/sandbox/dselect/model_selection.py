@@ -4,34 +4,35 @@ from numpy import exp, log
 import moments, jacobians, defaults, istat
 import warnings
 
+
 """
-Bayesian Distribution Selection 
-===============================
-
-:author: David Huard
-:date: May 7, 2008
+Bayesian Distribution Selection                 
+===============================                 
+                                                
+:author: David Huard                            
+:date: May 7, 2008                              
 :institution: McGill University, Montreal, Qc, Canada
-
-
-Introduction
-------------
-
+                                                
+                                                
+Introduction                                    
+------------                                    
+ 
 This module implements a function that, given a dataset,  selects the `best` 
 statistical distributions among a set. 
-
+                       
 Finding the statistical distribution best suited for describing a particular 
 dataset is part art part science. Decision trees exist, that can help identify 
 the appropriate distribution by answering to some elementary questions.
 .. image:: figs/decision_tree.jpg
-
-Chi square.
-
+                       
+Chi square.            
+                       
 Of course, simply fitting the Maximum Likelihood parameters and compare the
 likelihoods of different distributions will lead to spurious results since 
 the likelihood is very much dependent on the whole shape of the distribution
 and its number of parameters. 
-
-
+       
+       
 Concept
 -------
 

@@ -7,7 +7,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 from copy import copy
 from numpy import array, ndarray, reshape, Inf, asarray, dot, sum
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
-from Container import DictContainer, ContainerBase
+from Container import DictContainer, ContainerBase, file_items
 import pdb
 
 d_neg_inf = float(-1.79E308)
@@ -25,14 +25,18 @@ def extend_children(children):
     new_children = copy(children)
     need_recursion = False
     dtrm_children = set()
+
     for child in children:
         if isinstance(child,Deterministic):
             new_children |= child.children
             dtrm_children.add(child)
             need_recursion = True
+
     new_children -= dtrm_children
+
     if need_recursion:
         new_children = extend_children(new_children)
+
     return new_children
     
 def extend_parents(parents):
@@ -48,21 +52,17 @@ def extend_parents(parents):
     
     for parent in parents:
 
-        if isinstance(parent, Variable):
-            new_parents.add(parent)
+        new_parents.add(parent)
 
-            if isinstance(parent, DeterministicBase):
-                dtrm_parents.add(parent)
-                need_recursion = True
-                for grandparent in parent.parents.itervalues():
-                    if isinstance(grandparent, Variable):
-                        new_parents.add(grandparent)
-                    elif isinstance(grandparent, ContainerBase):
-                        new_parents |= grandparent.variables
-        
-        elif isinstance(parent, ContainerBase):
+        if isinstance(parent, DeterministicBase):
+            dtrm_parents.add(parent)
             need_recursion = True
+            for grandparent in parent.parents.variables:
+                new_parents.add(grandparent)
+                
+        elif isinstance(parent, ContainerBase):
             new_parents |= parent.variables
+            need_recursion = True
                     
     new_parents -= dtrm_parents
     if need_recursion:
@@ -78,6 +78,8 @@ class ParentDict(DictContainer):
     and adds its owner to the new parent's children set. It then asks
     its owner to generate a new LazyFunction instance using its new
     parents.
+    
+    Also manages the extended_parents attribute of owner.
 
     NB: StepMethod and Model are expecting variables'
     children to be static. If you want to change indedependence structure
@@ -88,30 +90,76 @@ class ParentDict(DictContainer):
     def __init__(self, regular_dict, owner):
         DictContainer.__init__(self, dict(regular_dict))
         self.owner = owner
+        self.owner.extended_parents = extend_parents(self.variables)
+        if isinstance(self.owner, StochasticBase):
+            self.is_stochastic = True
+        else:
+            self.is_stochastic = False
+
+    def detach_parents(self):
+        for parent in self.itervalues():
+            if isinstance(parent, Variable):
+                parent.children.discard(self.owner)
+            elif isinstance(parent, ContainerBase):
+                for variable in parent.variables:
+                    variable.chidren.discard(self.owner)
+                    
+        if self.is_stochastic:
+            self.detach_extended_parents()
+    
+    
+    def detach_extended_parents(self):                
+        for e_parent in self.owner.extended_parents:
+            if isinstance(e_parent, StochasticBase):
+                e_parent.extended_children.discard(self.owner)
+            
+                    
+    def attach_parents(self):
+        for parent in self.itervalues():
+            if isinstance(parent, Variable):
+                parent.children.add(self.owner)
+            elif isinstance(parent, ContainerBase):
+                for variable in parent.variables:
+                    variable.children.add(self.owner)
+                    
+        if self.is_stochastic:
+            self.attach_extended_parents()
+    
+    def attach_extended_parents(self):           
+        for e_parent in self.owner.extended_parents:
+            if isinstance(e_parent, StochasticBase):
+                e_parent.extended_children.add(self.owner)
+        
 
     def __setitem__(self, key, new_parent):
-
         old_parent = self[key]
-
-        # Possibly remove me from old parent's children set.
+        
+        # Possibly remove owner from old parent's children set.
         if isinstance(old_parent, Variable) or isinstance(old_parent, ContainerBase):
+            
+            # Tell all extended parents to forget about owner
+            if self.is_stochastic:
+                self.detach_extended_parents()
+            
             self.val_keys.remove(key)
             self.nonval_keys.append(key)
         
             if isinstance(old_parent, Variable):                
-                # See if I only claim the old parent via this key.
+                # See if owner only claims the old parent via this key.
                 if sum([parent is old_parent for parent in self.itervalues()]) == 1:
                     old_parent.children.remove(self.owner)
-
+        
                 
             if isinstance(old_parent, ContainerBase):
                 for variable in old_parent.variables:
                     if sum([parent is variable for parent in self.itervalues()]) == 1:
                         variable.children.remove(self.owner)
+                        
                     
                 
-        # If the new parent is a variable, add me to its children set.
+        # If the new parent is a variable, add owner to its children set.
         if isinstance(new_parent, Variable) or isinstance(new_parent, ContainerBase):
+        
             self.val_keys.append(key)
             self.nonval_keys.remove(key)
             
@@ -121,9 +169,15 @@ class ParentDict(DictContainer):
             elif isinstance(new_parent, ContainerBase):
                 for variable in new_parent.variables:
                     new_parent.children.add(self.owner)
-
+                    
+        # Totally recompute extended parents
+        self.owner.extended_parents = extend_parents(self.variables)
+        if self.is_stochastic:
+            self.attach_extended_parents()
+        
         dict.__setitem__(self, key, new_parent)
-
+        file_items(self, self)
+        
         # Tell my owner it needs a new lazy function.
         self.owner.gen_lazy_function()
 
@@ -200,7 +254,11 @@ class Potential(PotentialBase):
             raise ValueError, "Potential " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
     def gen_lazy_function(self):
-        self._logp = LazyFunction(fun = self._logp_fun, arguments = self.parents, cache_depth = self._cache_depth)     
+        
+        self._logp = LazyFunction(fun = self._logp_fun, 
+                                    arguments = self.parents, 
+                                    ultimate_args = self.extended_parents, 
+                                    cache_depth = self._cache_depth)     
         self._logp.force_compute()   
 
     def get_logp(self):
@@ -220,12 +278,6 @@ class Potential(PotentialBase):
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
 
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
-    
-    def _get_extended_parents(self):
-        return extend_parents(self.parents.values())
-        
-    extended_parents = property(_get_extended_parents, doc="All the stochastic variables on which self.logp depends.")
-
 
         
 class Deterministic(DeterministicBase):
@@ -299,12 +351,14 @@ class Deterministic(DeterministicBase):
                         verbose=verbose)
         
         self._value.force_compute()
-        # if self.value is None:
-        #     print  "WARNING: Deterministic " + self.__name__ + "'s initial value is None"
         
     def gen_lazy_function(self):
-        # self._value = self.LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)
-        self._value = LazyFunction(fun = self._eval_fun, arguments = self.parents, cache_depth = self._cache_depth)        
+
+        self._value = LazyFunction(fun = self._eval_fun, 
+                                    arguments = self.parents, 
+                                    ultimate_args = self.extended_parents,
+                                    cache_depth = self._cache_depth)
+                                       
         self._value.force_compute()
 
     def get_value(self):
@@ -322,10 +376,6 @@ class Deterministic(DeterministicBase):
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
 
-    def _get_extended_children(self):
-        return extend_children(self.children)
-    extended_children = property(_get_extended_children, doc="All the stochastic variables and factor potentials whose logp attribute depends on self.value")
-                                
 
 class Stochastic(StochasticBase):
     
@@ -513,8 +563,10 @@ class Stochastic(StochasticBase):
         arguments['value'] = self
         arguments = DictContainer(arguments)
         
-        # self._logp = self.LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)        
-        self._logp = LazyFunction(fun = self._logp_fun, arguments = arguments, cache_depth = self._cache_depth)   
+        self._logp = LazyFunction(fun = self._logp_fun, 
+                                    arguments = arguments, 
+                                    ultimate_args = self.extended_parents | set([self]),
+                                    cache_depth = self._cache_depth)   
         
         self._logp.force_compute()             
     
@@ -602,15 +654,7 @@ class Stochastic(StochasticBase):
     
     # Shortcut alias to random
     rand = random
-    
-    def _get_extended_parents(self):
-        return extend_parents(self.parents.values())
-    extended_parents = property(_get_extended_parents, doc="All the stochastic variables on which self.logp depends.")
-    
-    def _get_extended_children(self):
-        return extend_children(self.children)
-    extended_children = property(_get_extended_children, doc="All the stochastic variables and factor potentials whose logp attribute depends on self.value")
-    
+        
     def _get_coparents(self):
         coparents = set()
         for child in self.extended_children:

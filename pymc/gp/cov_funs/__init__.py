@@ -1,6 +1,9 @@
 from isotropic_cov_funs import *
 from cov_utils import *
 from bases import *
+from wrapped_distances import *
+import isotropic_cov_funs
+
 
 extra_parameters = {'gaussian': {'': ''}, 
                 'pow_exp': {'pow': 'The exponent in the exponential.'}, 
@@ -10,8 +13,4 @@ extra_parameters = {'gaussian': {'': ''},
 
 
 for name in extra_parameters.iterkeys():
-    
-    # Wrap the function
-    locals()[name].__name__ = name
-    locals()[name].extra_parameters = extra_parameters[name]
-    locals()[name] = covariance_function_bundle(locals()[name])
+    locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name])

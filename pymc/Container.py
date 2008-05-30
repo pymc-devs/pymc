@@ -39,11 +39,11 @@ These flattened representations are useful for things like cache checking.
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
-from Container_values import LTCValue, DCValue, ACValue, OCValue
+from Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
 
-__all__ = ['Container', 'DictContainer', 'ListTupleContainer', 'SetContainer', 'ObjectContainer']
+__all__ = ['Container', 'DictContainer', 'ListContainer', 'TupleContainer', 'SetContainer', 'ObjectContainer']
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -140,8 +140,11 @@ def Container(*args):
         return SetContainer(iterable)
     
     # Wrap lists and tuples
-    elif isinstance(iterable, tuple) or isinstance(iterable, list):
-        return ListTupleContainer(iterable)
+    elif isinstance(iterable, tuple): 
+        return TupleContainer(iterable)
+        
+    elif isinstance(iterable, list):
+        return ListContainer(iterable)
 
     # Dictionaries
     elif isinstance(iterable, dict):
@@ -208,6 +211,7 @@ def file_items(container, iterable):
 
         # Wrap internal containers
         elif hasattr(item, '__iter__'):
+
             # If this is a non-object-valued ndarray, don't container-ize it.
             if isinstance(item, ndarray):
                 if item.dtype!=dtype('object'):
@@ -221,6 +225,8 @@ def file_items(container, iterable):
                 continue
             if isinstance(container, dict):
                 container.replace(key, new_container)
+            elif isinstance(container, tuple):
+                container = TupleContainer(container[:i] + (new_container,) + container[i+1:])
             else:
                 container.replace(item, new_container, i)
 
@@ -273,14 +279,37 @@ class SetContainer(ContainerBase, set):
         return _value
 
     value = property(fget = get_value, doc=value_doc)
-        
 
-class ListTupleContainer(ContainerBase, list):
+
+class TupleContainer(ContainerBase, tuple):
     """
-    ListContainers are containers that wrap lists and tuples. 
-    They act more like lists than tuples.
+    TupleContainers are containers that wrap tuples. 
+
+    :SeeAlso: Container, ListContainer, DictContainer, ArrayContainer
+    """
+    def __init__(self, iterable):
+        tuple.__init__(self, iterable)
+        ContainerBase.__init__(self, iterable)        
+        file_items(self, iterable)
+
+        self.isval = []
+        for i in xrange(len(self)):
+            if isinstance(self[i], Variable) or isinstance(self[i], ContainerBase):
+                self.isval.append(True)
+            else:
+                self.isvan.append(False)
+
+    def get_value(self):
+        return TCValue(self)
+
+    value = property(fget = get_value, doc=value_doc)
+
+
+class ListContainer(ContainerBase, list):
+    """
+    ListContainers are containers that wrap lists. 
     
-    :SeeAlso: Container, ListTupleContainer, DictContainer, ArrayContainer
+    :SeeAlso: Container, TupleContainer, DictContainer, ArrayContainer
     """
     def __init__(self, iterable):
         list.__init__(self, iterable)
@@ -302,7 +331,7 @@ class ListTupleContainer(ContainerBase, list):
         list.__setitem__(self, i, new_container)
         
     def get_value(self):
-        LTCValue(self)
+        LCValue(self)
         return self._value
 
     value = property(fget = get_value, doc=value_doc)
