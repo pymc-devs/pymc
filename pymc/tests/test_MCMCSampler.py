@@ -4,7 +4,7 @@ The DisasterMCMC example.
 """
 from numpy.testing import *
 try:
-    from pylab import *
+    from pymc.Matplot import plot
     PLOT=True
 except:
     PLOT=False
@@ -30,7 +30,7 @@ class test_MCMC(NumpyTestCase):
         
         if PLOT:
             # Plot samples
-            M.plot()
+            plot(M)
 
 if __name__ == '__main__':
     NumpyTest().run()

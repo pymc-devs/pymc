@@ -17,9 +17,9 @@ def TCValue(container):
     
     for i from 0 <= i < len(container):
         if isval[i]:
-            _value = _value + container[i].value
+            _value = _value + (container[i].value,)
         else:
-            _value = _value + container[i]
+            _value = _value + (container[i],)
                 
     return _value
 
