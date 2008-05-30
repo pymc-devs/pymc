@@ -87,10 +87,10 @@ class ParentDict(DictContainer):
         DictContainer.__init__(self, dict(regular_dict))
         self.owner = owner
         self.owner.extended_parents = extend_parents(self.variables)
-        if isinstance(self.owner, StochasticBase):
-            self.is_stochastic = True
+        if isinstance(self.owner, StochasticBase) or isinstance(self.owner, PotentialBase):
+            self.has_logp = True
         else:
-            self.is_stochastic = False
+            self.has_logp = False
 
     def detach_parents(self):
         for parent in self.itervalues():
@@ -100,7 +100,7 @@ class ParentDict(DictContainer):
                 for variable in parent.variables:
                     variable.chidren.discard(self.owner)
                     
-        if self.is_stochastic:
+        if self.has_logp:
             self.detach_extended_parents()
     
     
@@ -118,7 +118,7 @@ class ParentDict(DictContainer):
                 for variable in parent.variables:
                     variable.children.add(self.owner)
                     
-        if self.is_stochastic:
+        if self.has_logp:
             self.attach_extended_parents()
     
     def attach_extended_parents(self):           
@@ -134,7 +134,7 @@ class ParentDict(DictContainer):
         if isinstance(old_parent, Variable) or isinstance(old_parent, ContainerBase):
             
             # Tell all extended parents to forget about owner
-            if self.is_stochastic:
+            if self.has_logp:
                 self.detach_extended_parents()
             
             self.val_keys.remove(key)
@@ -168,7 +168,7 @@ class ParentDict(DictContainer):
                     
         # Totally recompute extended parents
         self.owner.extended_parents = extend_parents(self.variables)
-        if self.is_stochastic:
+        if self.has_logp:
             self.attach_extended_parents()
         
         dict.__setitem__(self, key, new_parent)
