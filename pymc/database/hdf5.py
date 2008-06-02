@@ -282,7 +282,7 @@ def save_sampler(sampler):
     """
     db = sampler.db
     fnode = tables.filenode.newnode(db._h5file, where='/', name='__sampler__')
-    pickle.dump(sampler, fn)
+    pickle.dump(sampler, fnode)
     
 
 def restore_sampler(fname):
