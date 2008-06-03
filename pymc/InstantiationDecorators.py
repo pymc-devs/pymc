@@ -5,7 +5,7 @@ are defined here, but the actual objects are defined in PyMCObjects.py
 
 __all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data']
 
-import sys, inspect
+import sys, inspect, pdb
 from imp import load_dynamic
 from PyMCObjects import Stochastic, Deterministic, Potential
 from Node import ZeroProbability, ContainerBase, Node

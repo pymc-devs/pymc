@@ -115,8 +115,12 @@ class Variable(Node):
     def _get_plot(self):
         # Get plotting flag
         return self._plot
+        
+    def _set_plot(self, true_or_false):
+        # Set plotting flag
+        self._plot = true_or_false
 
-    plot = property(_get_plot, doc='A flag indicating whether self should be plotted.')
+    plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
     
     def stats(self, alpha=0.05):
         """
@@ -125,9 +129,9 @@ class Variable(Node):
         from utils import hpd, quantiles
         from numpy import sqrt
     
-        trace = self.trace()
-    
-        if trace:
+        trace = self.trace().astype(float)
+        
+        try:
             return {
                 'n': len(trace),
                 'standard deviation': trace.std(0),
@@ -136,6 +140,8 @@ class Variable(Node):
                 'mc error': trace.std(0) / sqrt(len(trace)),
                 'quantiles': quantiles(trace)
             }
+        except:
+            print 'Could not generate output statistics for', self.__name__
         
         
 class ContainerBase(object):

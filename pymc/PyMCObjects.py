@@ -227,7 +227,7 @@ class Potential(PotentialBase):
     
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, verbose=0):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=True, verbose=0):
         
         self.ParentDict = ParentDict
 
@@ -239,6 +239,7 @@ class Potential(PotentialBase):
                         name=name, 
                         parents=parents, 
                         cache_depth = cache_depth,
+                        plot=plot,
                         verbose=verbose)
 
         self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
@@ -487,6 +488,10 @@ class Stochastic(StochasticBase):
 
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
+        
+        # We dont need to plot our data
+        if isdata:
+            plot = False
         
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
