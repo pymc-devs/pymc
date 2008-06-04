@@ -11,16 +11,42 @@ def geweke(x, first=.1, last=.5, intervals=20):
     
     Compare the mean of the first % of series with the mean of the last % of 
     series. x is divided into a number of segments for which this difference is
-    computed. 
+    computed. If the series is converged, this score should oscillate between 
+    -1 and 1.
 
-    :Stochastics:
-      `x` : series of data,
-      `first` : first fraction of series,
-      `last` : last fraction of series to compare with first,
-      `intervals` : number of segments. 
+    Parameters
+    ----------
+    x : array-like
+      The trace of some stochastic parameter.
+    first : float
+      The fraction of series at the beginning of the trace.
+    last : float
+      The fraction of series at the end to be compared with the section
+      at the beginning.
+    intervals : int
+      The number of segments. 
       
-    :Note: Geweke (1992)
-      """
+    Returns
+    -------
+    scores : list [[]]
+      Return a list of [i, score], where i is the starting index for each 
+      interval and score the Geweke score on the interval.
+      
+    Notes
+    -----
+    
+    The Geweke score on some series x is computed by:
+    
+      .. math:: \frac{E[x_s] - E[x_e]}{\sqrt{V[x_s] + V[x_e]}}
+    
+    where :math:`E` stands for the mean, :math:`V` the variance, 
+    :math:`x_s` a section at the start of the series and 
+    :math:`x_e` a section at the end of the series.
+    
+    References
+    ----------
+    Geweke (1992)
+    """
     # Filter out invalid intervals
     if first + last >= 1:
         raise "Invalid intervals for Geweke convergence analysis",(first,last)
@@ -32,7 +58,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
     end = len(x) - 1
     
     # Calculate starting indices
-    sindices = np.arange(0, end/2, step = int((end / 2) / intervals))
+    sindices = np.arange(0, end/2, step = int((end / 2) / (intervals-1)))
     
     # Loop over start indices
     for start in sindices:
@@ -101,7 +127,7 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001):
     return pymc.flib.gibbmain(x, q, r, s, epsilon)
 
 def gelman_rubin(x):
-    pass
+    raise NotImplementedError
 # x contains multiple chains
 # Transform positive or [0,1] variables using a logarithmic/logittranformation.
 # 

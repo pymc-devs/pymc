@@ -2,7 +2,6 @@
 # Decorate fortran functions from pymc.flib to ease argument passing
 #-------------------------------------------------------------------
 # TODO: Add exponweib_expval
-# TODO: Complete docstrings with LaTeX formulas from the tutorial.
 # TODO: categorical, mvhypergeometric
 # TODO: __all__
 

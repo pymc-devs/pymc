@@ -105,6 +105,7 @@ class Trace(object):
 
     def _finalize(self):
         pass
+        #self.commit()
 
     __call__ = gettrace
 
@@ -147,6 +148,7 @@ class Database(pickle.Database):
     def close(self, *args, **kwds):
         """Close database."""
         self.cur.close()
+        self.commit()
         self.DB.close()
 
 # TODO: Code savestate and getstate to enable storing of the model's state.
