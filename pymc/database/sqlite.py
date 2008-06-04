@@ -57,17 +57,15 @@ class Trace(object):
             pass
             
         try:
-            value = self._obj.value.copy()
             # I changed str(x) to '%f'%x to solve a bug appearing due to
             # locale settings. In french for instance, str prints a comma
             # instead of a colon to indicate the decimal, which confuses
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the 
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in value])
-        except AttributeError:
-            value = self._obj.value
-            valstring = str(value)  
+            valstring = ', '.join(['%f'%x for x in self._obj.value])
+        except:
+            valstring = str(self._obj.value)  
             
         # Add value to database
         self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
