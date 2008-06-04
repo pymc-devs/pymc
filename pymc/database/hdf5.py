@@ -9,6 +9,7 @@
 
 # TODO: add a command to save attributes (chain attributes, group attributes)
 
+__all__ = ['Trace', 'Database', 'load']
 
 import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
@@ -17,6 +18,8 @@ from pymc.database import base, pickle
 from copy import copy
 import tables
 import pickle    
+
+
 
 class Trace(base.Trace):
     """HDF5 trace
@@ -103,7 +106,7 @@ class Database(pickle.Database):
         :Parameters:
           filename : string
             Specify the name of the file the results are stored in. 
-          mode : 'a', 'w', 'r'
+          mode : {'a', 'w', 'r'}
             File mode: 'a': append, 'w': overwrite, 'r': read-only.
           complevel : integer (0-9)
             Compression level, 0: no compression.
@@ -120,7 +123,10 @@ class Database(pickle.Database):
         self.filename = filename
         self.Trace = Trace
         self.filter = tables.Filters(complevel=complevel, complib=complib)
-        self.mode = mode
+        if mode in ['a', 'r', 'w']: 
+            self.mode = mode
+        else:
+            raise ValueError, "mode must be one of a, r, w. Got %s" % mode
         
     def connect(self, sampler):
         """Link the Database to the Sampler instance. 

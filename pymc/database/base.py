@@ -4,7 +4,11 @@ Base backend
 Trace and Database classes from the other modules should Subclass the base 
 classes. 
 """
+__all__=['Trace', 'Database']
+
+
 import pymc
+
 
 class Trace(object):
     """Dummy Trace class.

@@ -39,7 +39,7 @@ These flattened representations are useful for things like cache checking.
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
-from Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
+from pymc.Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
 

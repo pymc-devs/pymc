@@ -10,10 +10,10 @@ D[t] ~ Po(e if t <= s, l otherwise)
 """
 __all__ = ['s','e','l','D']
 
-from pymc import *
-from numpy import *
+from pymc import DiscreteUniform, Exponential, deterministic, Poisson
+import numpy as np
 
-D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+D_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                    3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
                    2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
                    1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,

@@ -6,7 +6,7 @@ MySQL trace module
 Created by Chris Fonnesbeck on 2007-02-01.
 Updated by DH on 2007-04-04.
 """
-
+import numpy as np
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
 import base, pickle, ram, pymc
@@ -15,14 +15,17 @@ import pdb
 class Trace(object):
     """SQLite Trace class."""
     
-    def __init__(self, obj=None):
+    def __init__(self, obj=None, name=None):
         """Assign an initial value and an internal PyMC object."""       
         if obj is not None:
             if isinstance(obj, pymc.Variable):
                 self._obj = obj
+                self.name = self._obj.__name__
             else:
                 raise AttributeError, 'Not PyMC object', obj
-                
+        else:
+            self.name = name
+            
     def _initialize(self):
         """Initialize the trace. Create a table.
         """
@@ -32,15 +35,18 @@ class Trace(object):
         except TypeError:
             pass
         
-        self.current_trace = 1
+        # Try to create a new table. If a table of same name exists, simply 
+        # update self.last_trace.
+        
         try:
-            query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY, trace int(5), %s FLOAT)" % (self._obj.__name__, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
+            query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
             self.db.cur.execute(query)
+            self.current_trace = 1
         except Exception:
-            self.db.cur.execute('SELECT MAX(trace) FROM %s' % self._obj.__name__)
+            self.db.cur.execute('SELECT MAX(trace) FROM %s' % self.name)
             last_trace = self.db.cur.fetchall()[0][0]
-            if last_trace: self.current_trace =  last_trace + 1
-
+            self.current_trace =  last_trace + 1
+        
     def tally(self,index):
         """Adds current value to trace"""
         
@@ -52,33 +58,49 @@ class Trace(object):
             
         try:
             value = self._obj.value.copy()
-            valstring = ', '.join([str(x) for x in value])
+            # I changed str(x) to '%f'%x to solve a bug appearing due to
+            # locale settings. In french for instance, str prints a comma
+            # instead of a colon to indicate the decimal, which confuses
+            # the database into thinking that there are more values than there
+            # is.  A better solution would be to use another delimiter than the 
+            # comma. -DH
+            valstring = ', '.join(['%f'%x for x in value])
         except AttributeError:
             value = self._obj.value
             valstring = str(value)  
             
         # Add value to database
-        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self._obj.__name__, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
-
-    def gettrace(self, burn=0, thin=1, chain=None, slicing=None):
+        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
+        
+    def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
         Input:
           - burn (int): The number of transient steps to skip.
           - thin (int): Keep one in thin.
-          - chain (int): The index of the chain to fetch. If None, return all chains.
+          - chain (int): The index of the chain to fetch. If None, return all 
+            chains. By default, the last chain is returned.
           - slicing: A slice, overriding burn and thin assignement.
         """
         if not slicing:
             slicing = slice(burn, None, thin)
-            
-        if not chain:
-            self.db.cur.execute('SELECT MAX(trace) FROM %s' % self._obj.__name__)
-            chain = self.db.cur.fetchall()[0][0]
-            
-        self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self._obj.__name__, chain))
-        trace = transpose(transpose(self.db.cur.fetchall())[2:])
-            
+   
+        # Find the number of traces.
+        self.db.cur.execute('SELECT MAX(trace) FROM %s' % self.name)
+        n_traces = self.db.cur.fetchall()[0][0]
+        
+        # If chain is None, get the data from all chains.
+        if chain is None: 
+            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            trace = self.db.cur.fetchall()
+        else:
+            # Deal with negative chains (starting from the end)
+            if chain < 0:
+                chain = n_traces+chain+1
+            self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
+            trace = self.db.cur.fetchall()
+         
+        trace = np.array(trace)[:,2:]
         return squeeze(trace[slicing])
 
     def _finalize(self):
@@ -156,4 +178,26 @@ def load(filename):
     Return a Database instance.
     """
     db = Database(filename)
+    db.DB = sqlite3.connect(db.filename)
+    db.cur = db.DB.cursor()
+    
+    # Get the name of the objects
+    tables = get_table_list(db.cur)
+    
+    # Create a Trace instance for each object
+    for name in tables:
+        setattr(db, name, Trace(name=name))
+        o = getattr(db, name)
+        setattr(o, 'db', db)
     return db
+
+# Copied form Django.
+def get_table_list(cursor): 
+    """Returns a list of table names in the current database."""
+    # Skip the sqlite_sequence system table used for autoincrement key
+    # generation.
+    cursor.execute("""
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND NOT name='sqlite_sequence'
+        ORDER BY name""")
+    return [row[0] for row in cursor.fetchall()]

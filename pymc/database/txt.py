@@ -3,15 +3,15 @@
 # Trace are stored in memory during sampling and saved to a
 # txt file at the end of sampling. Each object has its own file. 
 ###
-# TODO: Implement state dunp and recovery.
+# TODO: Implement state dump and recovery.
 
 # Changeset
 # Nov. 30, 2007: Implemented load function. DH
 
 import base, ram, no_trace, pickle
 import os, datetime, shutil, re
-import numpy
-from numpy import atleast_2d
+import numpy as np
+
 import string 
 CHAIN_NAME = 'Chain_%d'
 
@@ -28,9 +28,9 @@ class Trace(ram.Trace):
             (self.db.model._burn, self.db.model._thin)
         print >> f, '# Sample shape: %s' % str(arr.shape)
         print >> f, '# Date: %s' % datetime.datetime.now()
-        f.close()
-        aput(arr, path, 'a')
-        
+        #f.close()
+        #aput(arr, path, 'a')
+        np.savetxt(f, arr, delimiter=',')
 
 class Database(pickle.Database):
     """Define the methods that will be assigned to the Model class"""
@@ -91,12 +91,13 @@ class Database(pickle.Database):
     def close(self):
         pass
         
+
 def aput (outarray,fname,writetype='w',delimit=' '):
     """Sends passed 1D or 2D array to an output file and closes the file.
     """
     outfile = open(fname,writetype)
     if outarray.ndim==1:
-        outarray = atleast_2d(outarray).transpose()
+        outarray = np.atleast_2d(outarray).transpose()
     
     if outarray.ndim > 2:
         raise TypeError, "aput() require 1D or 2D arrays.  Otherwise use some kind of pickling."
@@ -151,7 +152,8 @@ def load(dirname, mode='a'):
         files = os.listdir(os.path.join(c))
         for f in files:
             file = os.path.join(c, f)
-            a = readArray(file)
+            #a = readArray(file)
+            a = np.loadtxt(file, delimiter=',')
             data[varname(f)].append(a)
     for k in varnames:
         setattr(db, k, Trace(data[k]))

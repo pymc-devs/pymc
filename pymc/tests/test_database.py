@@ -1,6 +1,6 @@
 """ Test database backends """
 
-from numpy.testing import *
+from numpy.testing import NumpyTestCase, NumpyTest, assert_array_equal, assert_equal
 from pymc import MCMC
 import pymc.database as database
 from pymc.examples import DisasterModel
@@ -52,19 +52,19 @@ class test_pickle(NumpyTestCase):
     def __init__(*args, **kwds):
         NumpyTestCase.__init__(*args, **kwds)
         try: 
-            os.remove('DisasterModel.pickle')
+            os.remove('Disaster.pickle')
         except:
             pass
             
     def check(self):
-        M = MCMC(DisasterModel, db='pickle')
+        M = MCMC(DisasterModel, db='pickle', name='Disaster')
         M.sample(500,100,2)
         assert_array_equal(M.e.trace().shape, (200,))
         assert_equal(M.e.trace.length(), 200)
         M.db.close()
         
     def check_load(self):
-        db = database.pickle.load('DisasterModel.pickle')
+        db = database.pickle.load('Disaster.pickle')
         S = MCMC(DisasterModel, db)
         S.sample(100,0,1)
         assert_equal(len(S.e.trace._trace),2)
@@ -83,23 +83,38 @@ if hasattr(database, 'sqlite'):
         def __init__(*args, **kwds):
             NumpyTestCase.__init__(*args, **kwds)
             try:    
-                os.remove('DisasterModel.sqlite')
-                os.remove('DisasterModel.sqlite-journal')
+                os.remove('Disaster.sqlite')
+                os.remove('Disaster.sqlite-journal')
             except:
                 pass
                 
         def check(self):
-            M = MCMC(DisasterModel, db='sqlite')
+            M = MCMC(DisasterModel, db='sqlite', name='Disaster')
             M.sample(500,100,2)
             assert_array_equal(M.e.trace().shape, (200,))
+            # Test second trace.
+            M.sample(100,0,1)
+            assert_array_equal(M.e.trace().shape, (100,))
+            assert_array_equal(M.e.trace(chain=None).shape, (300,))
+            assert_equal(M.e.trace.length(chain=1), 200)
+            assert_equal(M.e.trace.length(chain=2), 100)
+            assert_equal(M.e.trace.length(chain=None), 300)
+            assert_equal(M.e.trace.length(chain=-1), 100)
+            M.sample(50)
+            assert_equal(M.e.trace.length(), 50)
             M.db.close()
             
+            
         def check_load(self):
-            db = database.sqlite.load('DisasterModel.sqlite')
+            db = database.sqlite.load('Disaster.sqlite')
+            assert_array_equal(db.e.length(chain=1), 200)
+            assert_array_equal(db.e.length(chain=2), 100)
+            assert_array_equal(db.e.length(chain=3), 50)
+            assert_array_equal(db.e.length(chain=None), 350)
             S = MCMC(DisasterModel, db)
             S.sample(100,0,1)
             assert_array_equal(S.e.trace(chain=-1).shape, (100,))
-            assert_array_equal(S.e.trace(chain=None).shape, (300,))
+            assert_array_equal(S.e.trace(chain=None).shape, (400,))
             S.db.close()
         
 if hasattr(database, 'hdf5'):
@@ -107,12 +122,12 @@ if hasattr(database, 'hdf5'):
         def __init__(*args, **kwds):
             NumpyTestCase.__init__(*args, **kwds)        
             try: 
-                os.remove('DisasterModel.hdf5')
+                os.remove('Disaster.hdf5')
             except:
                 pass
         
         def check(self):
-            S = MCMC(DisasterModel, db='hdf5')
+            S = MCMC(DisasterModel, db='hdf5', name='Disaster')
             S.sample(500,100,2)
             assert_array_equal(S.e.trace().shape, (200,))
             assert_equal(S.e.trace.length(), 200)
@@ -120,7 +135,7 @@ if hasattr(database, 'hdf5'):
             S.db.close()
             
         def check_load(self):
-            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            db = database.hdf5.load('Disaster.hdf5', 'a')
             assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
                DisasterModel.D_array)
             assert_array_equal(db.D, DisasterModel.D_array)
@@ -137,7 +152,7 @@ if hasattr(database, 'hdf5'):
             assert(sm._accepted+sm._rejected ==600)
             
         def check_mode(self):
-            S = MCMC(DisasterModel, db='hdf5')
+            S = MCMC(DisasterModel, db='hdf5', name='Disaster', mode='w')
             try:
                 tables = S.db._gettable(None)
             except LookupError:
@@ -146,7 +161,7 @@ if hasattr(database, 'hdf5'):
                 raise 'Mode not working'
             S.sample(100)
             S.db.close()
-            S = MCMC(DisasterModel, db='hdf5', mode='a')
+            S = MCMC(DisasterModel, db='hdf5', name='Disaster', mode='a')
             tables = S.db._gettable(None)
             assert_equal(len(tables), 1)
             S.db.close()
@@ -165,7 +180,7 @@ if hasattr(database, 'hdf5'):
             
         def check_attribute_assignement(self):
             arr = np.array([[1,2],[3,4]])
-            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            db = database.hdf5.load('Disaster.hdf5', 'a')
             db.add_attr('some_list', [1,2,3])
             db.add_attr('some_dict', {'a':5})
             db.add_attr('some_array', arr, array=True)
@@ -174,7 +189,7 @@ if hasattr(database, 'hdf5'):
             assert_array_equal(db.some_array.read(), arr)
             db.close()
             del db
-            db = database.hdf5.load('DisasterModel.hdf5', 'a')
+            db = database.hdf5.load('Disaster.hdf5', 'a')
             assert_array_equal(db.some_list, [1,2,3])
             assert_equal(db.some_dict['a'], 5)
             assert_array_equal(db.some_array, arr)

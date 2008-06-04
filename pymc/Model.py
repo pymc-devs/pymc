@@ -21,7 +21,7 @@ from threading import Thread
 from Node import ContainerBase
 from time import sleep
 import pdb
-	
+
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
@@ -280,7 +280,8 @@ class Sampler(Model):
 
         # Finalize
         if self.status in ['running', 'halt']:
-            print 'Sampling finished normally.'
+            if verbose > 0:      
+                print 'Sampling finished normally.'
             self.status = 'ready'
             
         self.save_state()
@@ -396,7 +397,8 @@ class Sampler(Model):
                 object.trace = no_trace.Trace()
                 
         # Add model deviance to backend
-        self._variables_to_tally.add(self.deviance)
+        if hasattr(self, 'deviance'):
+            self._variables_to_tally.add(self.deviance)
 
         # If not already done, load the trace backend from the database 
         # module, and assign a database instance to Model.

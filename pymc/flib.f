@@ -1472,8 +1472,10 @@ cf2py double precision intent(out) :: like
       DOUBLE PRECISION like
       DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
       DOUBLE PRECISION gammln
-      DOUBLE PRECISION infinity
+      DOUBLE PRECISION infinity, e, zero, one
       PARAMETER (infinity = 1.7976931348623157d308)
+      data e/1.0d-9/, zero/0.0d0/, one/1.0d0/
+      
 
       atmp = alpha(1)
       btmp = beta(1)
@@ -1489,8 +1491,8 @@ cf2py double precision intent(out) :: like
           like = -infinity
           RETURN
         endif
-        like = like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
-        like = like + (atmp-1.0)*dlog(x(i)) + (btmp-1.0)*dlog(1.0-x(i))
+        like =like + (gammln(atmp+btmp) - gammln(atmp) - gammln(btmp))
+        like =like + (atmp-one)*dlog(x(i)) + (btmp-one)*dlog(one-x(i))
       enddo   
 
       return
