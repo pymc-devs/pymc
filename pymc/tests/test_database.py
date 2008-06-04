@@ -114,7 +114,7 @@ if hasattr(database, 'sqlite'):
             S = MCMC(DisasterModel, db)
             S.sample(100,0,1)
             assert_array_equal(S.e.trace(chain=-1).shape, (100,))
-            assert_array_equal(S.e.trace(chain=None).shape, (400,))
+            assert_array_equal(S.e.trace(chain=None).shape, (450,))
             S.db.close()
         
 if hasattr(database, 'hdf5'):
