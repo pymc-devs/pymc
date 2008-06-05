@@ -3,11 +3,13 @@ The DisasterMCMC example.
 
 """
 from numpy.testing import *
+
 try:
     from pymc.Matplot import plot
-    PLOT=True
 except:
-    PLOT=False
+    pass
+
+PLOT=False
 
 
 class test_MCMC(NumpyTestCase):
@@ -26,7 +28,7 @@ class test_MCMC(NumpyTestCase):
         assert_array_equal(M.D.value, DisasterModel.D_array)
         
         # Sample
-        M.sample(20000,10000,verbose=2)
+        M.sample(10000,5000,verbose=0)
         
         if PLOT:
             # Plot samples

@@ -1,11 +1,14 @@
 from numpy.testing import NumpyTest
 from pymc import tests
-
+import warnings
 import os
+
 # Changeset
 # 19/03/2007 -DH- The modules in tests/ are now imported when test is called. 
 
 # TODO: 
+
+warnings.simplefilter('ignore', FutureWarning)
 
 __all__=['test']
 def test():
@@ -14,8 +17,11 @@ def test():
     except:
         pass
     os.chdir('test_results')
-    all_tests_modules = __import__('pymc.tests', [], [], 'pymc.tests.__modules__')        
-    NumpyTest(all_tests_modules).test()
+    all_test_modules = tests.__modules__
+    test_mod = __import__('pymc.tests', fromlist=all_test_modules)
+    for m in all_test_modules:
+        print 'Testing ', m, ' ...'
+        NumpyTest(getattr(test_mod, m)).run()
     os.chdir('..')
 
 if __name__=='__main__':

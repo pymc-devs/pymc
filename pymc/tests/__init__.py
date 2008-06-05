@@ -16,7 +16,8 @@ __modules__ = [ 'test_MCMCSampler',
                 "test_realization",
                 "test_observation",
                 "test_basiscov",
-                "test_GP_MCMC"
+                "test_GP_MCMC",
+                'test_convergence',
                 #'test_interactive'
                 ]
 

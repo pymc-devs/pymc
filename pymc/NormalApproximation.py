@@ -260,22 +260,25 @@ class MAP(Model):
                         epsilon=self.eps, 
                         maxiter=iterlim,
                         callback=callback, 
-                        avextol=tol)
+                        avextol=tol, 
+                        disp=verbose)
 
         elif self.method == 'fmin':
-	    print iterlim
+
             p=fmin( func = self.func, 
                     x0=p, 
                     callback=callback, 
                     maxiter=iterlim,
-                    ftol=tol)
+                    ftol=tol,
+                    disp=verbose)
 
         elif self.method == 'fmin_powell':
             p=fmin_powell(  func = self.func, 
                             x0=p, 
                             callback=callback, 
                             maxiter=iterlim,
-                            ftol=tol)
+                            ftol=tol,
+                            disp=verbose)
 
         elif self.method == 'fmin_cg':
             p=fmin_cg(  f = self.func, x0 = p, 
@@ -283,7 +286,8 @@ class MAP(Model):
                         epsilon=self.eps, 
                         callback=callback, 
                         maxiter=iterlim,
-                        gtol=tol)
+                        gtol=tol,
+                        disp=verbose)
 
         elif self.method == 'fmin_l_bfgs_b':
             p=fmin_l_bfgs_b(func = self.func, 
@@ -291,7 +295,8 @@ class MAP(Model):
                             fprime = self.gradfunc, 
                             epsilon = self.eps, 
                             # callback=callback, 
-                            pgtol=tol)[0]
+                            pgtol=tol,
+                            iprint=verbose-1)[0]
 
         else:
             raise ValueError, 'Method unknown.'

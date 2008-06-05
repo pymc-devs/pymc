@@ -2,12 +2,13 @@ from pymc import NormApprox
 from pymc.examples import gelman_bioassay
 try:
     from pylab import *
-    PLOT=True
 except:
-    PLOT=False
+    pass
+    
 from numpy import *
 from numpy.testing import * 
 from numpy.linalg import cholesky
+PLOT=False
 
 model = gelman_bioassay
 
