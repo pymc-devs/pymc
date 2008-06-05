@@ -25,7 +25,7 @@ s = DiscreteUniform('s', lower=0, upper=110)
 e = Exponential('e', beta=1)
 l = Exponential('l', beta=1)   
 
-@deterministic
+@deterministic(plot=False)
 def r(s=s, e=e, l=l):
   out = np.empty(111)
   out[:s] = e
