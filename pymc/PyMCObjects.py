@@ -239,9 +239,9 @@ class Potential(PotentialBase):
                         name=name, 
                         parents=parents, 
                         cache_depth = cache_depth,
-                        plot=plot,
                         verbose=verbose)
 
+        self._plot = plot
         self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
 
         self._logp.force_compute()

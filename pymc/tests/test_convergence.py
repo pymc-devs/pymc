@@ -11,7 +11,7 @@ import pymc
 import pymc.examples.weibull_fit as model
 
 S = pymc.MCMC(model, 'ram')
-S.sample(2000, 1000)
+S.sample(5000, 2500)
 a = S.a.trace()
 b = S.b.trace()
 
@@ -26,7 +26,7 @@ class test_geweke(NumpyTestCase):
         
 class test_raftery_lewis(NumpyTestCase):
     def check_simple(self):
-        print pymc.raftery_lewis(a, 0.5, .05)
+        pymc.raftery_lewis(a, 0.5, .05)
 
 
 if __name__ == "__main__":
