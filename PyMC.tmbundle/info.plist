@@ -8,11 +8,12 @@
 	<dict>
 	    <key>items</key>
 	    <array>
-	        <string>8F571772-B845-4EEC-AFDD-2D16DB51C8EC</string>
-    		<string>4B37D675-B405-43CC-A66F-CD063D4D51FF</string>
-    		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
-    		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
     		<string>C354FA84-7556-46E4-B267-B1EF83172FF9</string>
+    		<string>3bf9b4f4-a0f2-11dc-8314-0800200c9a66</string>
+    		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
+    		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
+    		<string>4B37D675-B405-43CC-A66F-CD063D4D51FF</string>
+    		<string>8F571772-B845-4EEC-AFDD-2D16DB51C8EC</string>
     		<string>------------------------------------</string>
     		<string>2E583BF0-B262-4463-9720-74EB253F45EA</string>
 	    </array>
@@ -51,11 +52,12 @@
 	<string>PyMC</string>
 	<key>ordering</key>
 	<array>
-		<string>8F571772-B845-4EEC-AFDD-2D16DB51C8EC</string>
-		<string>4B37D675-B405-43CC-A66F-CD063D4D51FF</string>
-		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
-		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
 		<string>C354FA84-7556-46E4-B267-B1EF83172FF9</string>
+		<string>3bf9b4f4-a0f2-11dc-8314-0800200c9a66</string>
+		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
+		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
+		<string>4B37D675-B405-43CC-A66F-CD063D4D51FF</string>
+		<string>8F571772-B845-4EEC-AFDD-2D16DB51C8EC</string>
 		<string>90AAFF22-172C-4DB0-B486-82B44195FD77</string>
         <string>9FD334D9-3883-48B5-8DFB-4C81C1E41815</string>
     	<string>BAE82FE1-29CE-47B5-891B-5A4136A912A6</string>
