@@ -2,6 +2,51 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>description</key>
+	<string>Support for PyMC.</string>
+	<key>mainMenu</key>
+	<dict>
+	    <key>items</key>
+	    <array>
+	        <string>8F571772-B845-4EEC-AFDD-2D16DB51C8EC</string>
+    		<string>4B37D675-B405-43CC-A66F-CD063D4D51FF</string>
+    		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
+    		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
+    		<string>C354FA84-7556-46E4-B267-B1EF83172FF9</string>
+    		<string>------------------------------------</string>
+    		<string>2E583BF0-B262-4463-9720-74EB253F45EA</string>
+	    </array>
+	    <key>submenus</key>
+		<dict>
+		    <key>2E583BF0-B262-4463-9720-74EB253F45EA</key>
+		    <dict>
+		        <key>items</key>
+		        <array>
+		            <string>90AAFF22-172C-4DB0-B486-82B44195FD77</string>
+		            <string>9FD334D9-3883-48B5-8DFB-4C81C1E41815</string>
+                	<string>BAE82FE1-29CE-47B5-891B-5A4136A912A6</string>
+                	<string>658F7409-1D15-4A0B-B334-7F4D66F6A713</string>
+                	<string>B2E60E37-330E-4CD1-9E01-57E688207F65</string>
+                	<string>C979B1CA-CEFF-4B37-9440-474ECD23A447</string>
+                	<string>4FC7D21B-6C6F-4259-B5D1-6ECB9BCBF491</string>
+                	<string>886DD49C-69DA-40C1-AC32-705F30171436</string>
+                	<string>1E457263-5A8D-4872-8346-680B9C73C50D</string>
+                	<string>23A2B320-525B-4703-81A8-8A2A9D07F628</string>
+                	<string>11064ECC-9E00-432A-8D7A-D326F981E7FA</string>
+                	<string>C9EF989E-B0F7-4C40-B868-505CA678D217</string>
+                	<string>7E67BCAD-9EE3-48E1-A978-8FB9A82CF8D2</string>
+                	<string>22708CF6-A695-4594-B8C2-0259EF8031C3</string>
+                	<string>DA3442D8-4D87-4668-A017-055ECC003D32</string>
+                	<string>6E307F9C-B1D1-4CD3-9959-6E56B66B7BF6</string>
+                	<string>776CA581-A66A-4B4F-8D06-0CDC4831005B</string>
+                	<string>46AA594E-ED64-40F7-9FCE-AF1BD81B305C</string>
+                	<string>D2B84F36-7FEA-446A-BABB-FB006CD177DF</string>
+		        </array>
+		        <key>name</key>
+		        <string>Distributions</string>
+		    </dict>
+		</dict>
+	</dict>
 	<key>name</key>
 	<string>PyMC</string>
 	<key>ordering</key>
@@ -11,6 +56,25 @@
 		<string>9AF6E6E1-6F62-4F96-860D-61E13411880C</string>
 		<string>89AF41DD-2963-4BF0-A7E1-5A10E1502374</string>
 		<string>C354FA84-7556-46E4-B267-B1EF83172FF9</string>
+		<string>90AAFF22-172C-4DB0-B486-82B44195FD77</string>
+        <string>9FD334D9-3883-48B5-8DFB-4C81C1E41815</string>
+    	<string>BAE82FE1-29CE-47B5-891B-5A4136A912A6</string>
+    	<string>658F7409-1D15-4A0B-B334-7F4D66F6A713</string>
+    	<string>B2E60E37-330E-4CD1-9E01-57E688207F65</string>
+    	<string>C979B1CA-CEFF-4B37-9440-474ECD23A447</string>
+    	<string>4FC7D21B-6C6F-4259-B5D1-6ECB9BCBF491</string>
+    	<string>886DD49C-69DA-40C1-AC32-705F30171436</string>
+    	<string>1E457263-5A8D-4872-8346-680B9C73C50D</string>
+    	<string>23A2B320-525B-4703-81A8-8A2A9D07F628</string>
+    	<string>11064ECC-9E00-432A-8D7A-D326F981E7FA</string>
+    	<string>C9EF989E-B0F7-4C40-B868-505CA678D217</string>
+    	<string>7E67BCAD-9EE3-48E1-A978-8FB9A82CF8D2</string>
+    	<string>22708CF6-A695-4594-B8C2-0259EF8031C3</string>
+    	<string>DA3442D8-4D87-4668-A017-055ECC003D32</string>
+    	<string>6E307F9C-B1D1-4CD3-9959-6E56B66B7BF6</string>
+    	<string>776CA581-A66A-4B4F-8D06-0CDC4831005B</string>
+    	<string>46AA594E-ED64-40F7-9FCE-AF1BD81B305C</string>
+    	<string>D2B84F36-7FEA-446A-BABB-FB006CD177DF</string>
 	</array>
 	<key>uuid</key>
 	<string>CDC41549-B9B3-4A0D-AF28-9865B1DF10D6</string>
