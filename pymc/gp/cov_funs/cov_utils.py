@@ -101,6 +101,7 @@ class covariance_wrapper(object):
     # efficient in that it spends most of its time in distance_fun, cov_fun and
     # the floating-point operations on C.
     def __call__(self,x,y,amp=1.,scale=1.,*args,**kwargs):
+        
         if amp<0. or scale<0.:
             raise ValueError, 'The amp and scale parameters must be positive.'
         symm = (x is y)

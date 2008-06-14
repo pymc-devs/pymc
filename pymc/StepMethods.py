@@ -412,11 +412,11 @@ class Metropolis(StepMethod):
         # If no dist argument is provided, assign a proposal distribution automatically.
         if not dist:
             
-            # Pick Gaussian, just because
+            # Pick Gaussian by default
             self._dist = "Normal"
             
-            # If self's extended children has no stochastics, proposing from the prior is best.
-            if sum([isinstance(child, StochasticBase) for child in self.children]) == 0:
+            # If self has no children, proposing from the prior is best.
+            if len(self.children) == 0:
                 try:
                     self.stochastic.random()
                     self._dist = "Prior"

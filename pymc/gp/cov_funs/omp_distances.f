@@ -25,7 +25,7 @@ cf2py integer intent(hide), depend(x)::ndx=shape(x,1)
 cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
 
       DOUBLE PRECISION D(nx,ny), x(nx,ndx), y(ny,ndy)
-      integer nx,ny,ndx,ndy,i,j,k
+      integer nx,ny,ndx,ndy,i,j,k,tn
       LOGICAL symm
       DOUBLE PRECISION dist, dev
       INTEGER nt,oppt,nmt,b(2)
@@ -47,18 +47,20 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
       
 
 !$OMP  PARALLEL
-!$OMP& DEFAULT(SHARED) PRIVATE(i,j,k,dist,dev,b)
+!$OMP& DEFAULT(SHARED) PRIVATE(i,j,k,tn,dist,dev,b)
 
       if (symm) then
           
-      j=OMP_GET_THREAD_NUM()
-      CALL set_b(nx,nt,j,b)
+      tn=OMP_GET_THREAD_NUM()
+!       print *,'Hello from thread ',j
+      CALL set_b(nx,nt,tn,b)
           
       do j=b(1),b(2)
         clat2 = dcos(y(j,2))
         D(j,j)=0.0D0            
 
-        do i=1,j-1            
+        do i=1,j-1  
+              print *,'Thread ',tn,'column ',j,'row ',i    
       
             dist = 0.0D0
             do k=1,ndx
@@ -99,12 +101,9 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
 ! Assumes r=1.
 
 cf2py threadsafe
-cf2py double precision intent(out), dimension(nx,ny) :: D
-cf2py double precision intent(in), dimension(nx,2) :: x
-cf2py double precision intent(in), dimension(ny,2) :: y
-cf2py logical intent(in), optional :: symm = 0
-cf2py integer intent(hide), depend(x)::nx=shape(x,0)
-cf2py integer intent(hide), depend(y)::ny=shape(y,0)
+cf2py intent(out) D
+cf2py intent(hide) nx
+cf2py intent(hide) ny
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
       integer nx,ny,j,i,i_hi
