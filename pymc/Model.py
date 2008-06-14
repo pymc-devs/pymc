@@ -317,6 +317,7 @@ class Sampler(Model):
 
                 if not i % 10000 and self.verbose > 0:
                     print 'Iteration ', i, ' of ', self._iter
+                    sys.stdout.flush()
 
                 self._current_iter += 1
 

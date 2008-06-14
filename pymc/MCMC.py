@@ -7,6 +7,7 @@ __all__ = ['MCMC']
 from Model import Sampler
 from StepMethods import StepMethodRegistry, assign_method
 from distributions import absolute_loss, squared_loss, chi_square_loss
+import sys
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -210,6 +211,7 @@ class MCMC(Sampler):
             tuning_count += step_method.tune(verbose=self.verbose)
             if self.verbose > 1:
                 print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
+                sys.stdout.flush()
 
         if not tuning_count:
             # If no step methods needed tuning, increment count
