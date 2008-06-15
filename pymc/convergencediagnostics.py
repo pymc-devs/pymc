@@ -78,7 +78,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return zscores
     
 # From StatLib -- gibbsit.f
-def raftery_lewis(x, q, r, s=.95, epsilon=.001):
+def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     """
     Return the number of iterations needed to achieve a given 
     precision.
@@ -124,7 +124,26 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001):
         
         See the fortran source file `gibbsit.f` for more details and references.
     """
-    return pymc.flib.gibbmain(x, q, r, s, epsilon)
+    output = nmin, kthin, nburn, nprec, kmind = pymc.flib.gibbmain(x, q, r, s, epsilon)
+    
+    if verbose:
+        
+        print "========================"
+        print "Raftery-Lewis Diagnostic"
+        print "========================"
+        print
+        print "%s iterations required (assuming independence) to achieve %s accuracy with %i percent probability." % (nmin, r, 100*s)
+        print
+        print "Thinning factor of %i required to produce a first-order Markov chain." % kthin
+        print
+        print "%i iterations to be discarded at the beginning of the simulation (burn-in)." % nburn
+        print
+        print "%s subsequent iterations required." % nprec
+        print
+        print "Thinning factor of %i required to produce an independence chain." % kmind
+        
+    
+    return output
 
 def gelman_rubin(x):
     raise NotImplementedError

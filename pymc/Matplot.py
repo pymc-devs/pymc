@@ -14,11 +14,11 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace#, interp
 from numpy import arange, log, ravel, rank, swapaxes, concatenate
-from numpy import histogram2d, mean, std, sort, prod, floor, shape
+from numpy import histogram2d, mean, std, sort, prod, floor, shape, transpose
 from numpy import apply_along_axis
 import pdb
 
-__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'Plotter']
+__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'bar_series_plot', 'pair_posterior']
 
 def get_index_list(shape, j):
     """
@@ -445,7 +445,7 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     
     # Generate new scatter plot
     figure()
-    x, y = data
+    x, y = transpose(data)
     scatter(x.tolist(), y.tolist())
     
     # Plot options
