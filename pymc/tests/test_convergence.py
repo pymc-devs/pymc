@@ -24,6 +24,13 @@ class test_geweke(NumpyTestCase):
         # within 2 standard deviations of zero, under standard normal model
         assert(sum(np.abs(np.array(scores)[:,1]) > 1.96) < 2)
         
+        # Plot diagnostics (if plotting is available)
+        try:
+            from pymc.Matplot import geweke_plot as plot
+            plot(scores, 'test_convergence')
+        except ImportError:
+            pass
+        
 class test_raftery_lewis(NumpyTestCase):
     def check_simple(self):
         nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(a, 0.5, .05, verbose=1)
