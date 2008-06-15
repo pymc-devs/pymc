@@ -11,6 +11,23 @@
       END
 
 
+      SUBROUTINE symmetrize(D,n,l,h)
+     
+cf2py intent(hide) n
+cf2py intent(inplace) D
+      
+      DOUBLE PRECISION D(n,n)
+      INTEGER l,h,i,j,n
+      
+      do j=l,h
+          do i=1,j-1
+              D(j,i) = D(i,j)
+          end do
+      end do
+      
+      return
+      END
+
 
       SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,symm)
 
@@ -25,7 +42,7 @@ cf2py integer intent(hide), depend(x)::ndx=shape(x,1)
 cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
 
       DOUBLE PRECISION D(nx,ny), x(nx,ndx), y(ny,ndy)
-      integer nx,ny,ndx,ndy,i,j,k,tn
+      integer nx,ny,ndx,ndy,i,j,k
       LOGICAL symm
       DOUBLE PRECISION dist, dev
       INTEGER nt,oppt,nmt,b(2)
@@ -47,20 +64,18 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
       
 
 !$OMP  PARALLEL
-!$OMP& DEFAULT(SHARED) PRIVATE(i,j,k,tn,dist,dev,b)
+!$OMP& DEFAULT(SHARED) PRIVATE(i,j,k,dist,dev,b)
 
       if (symm) then
           
-      tn=OMP_GET_THREAD_NUM()
-!       print *,'Hello from thread ',j
-      CALL set_b(nx,nt,tn,b)
+      j=OMP_GET_THREAD_NUM()
+      CALL set_b(nx,nt,j,b)
           
       do j=b(1),b(2)
-        clat2 = dcos(y(j,2))
+
         D(j,j)=0.0D0            
 
-        do i=1,j-1  
-              print *,'Thread ',tn,'column ',j,'row ',i    
+        do i=1,j-1            
       
             dist = 0.0D0
             do k=1,ndx
@@ -68,9 +83,10 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
               dist = dist + dev*dev
             enddo
             D(i,j) = dsqrt(dist)
-            D(j,i) = D(i,j)
           enddo
         enddo
+
+      CALL symmetrize(D,nx,b(1),b(2))
 
       else
 
@@ -90,7 +106,9 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
       endif
 
 !$OMP  END PARALLEL
+
       CALL OMP_SET_NUM_THREADS(ntm)
+           
       RETURN
       END
 
@@ -101,9 +119,12 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
 ! Assumes r=1.
 
 cf2py threadsafe
-cf2py intent(out) D
-cf2py intent(hide) nx
-cf2py intent(hide) ny
+cf2py double precision intent(out), dimension(nx,ny) :: D
+cf2py double precision intent(in), dimension(nx,2) :: x
+cf2py double precision intent(in), dimension(ny,2) :: y
+cf2py logical intent(in), optional :: symm = 0
+cf2py integer intent(hide), depend(x)::nx=shape(x,0)
+cf2py integer intent(hide), depend(y)::ny=shape(y,0)
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
       integer nx,ny,j,i,i_hi
@@ -147,11 +168,9 @@ cf2py intent(hide) ny
             sterm = dsqrt(a)
             cterm = dsqrt(1.0D0-a)
             D(i,j) = 2.0D0*DATAN2(sterm,cterm)    
-            if(symm) then                  
-                D(j,i) = D(i,j)
-            end if
         enddo          
       enddo
+      CALL symmetrize(C, nx, b(1), b(2))      
       else
       
 !$OMP DO SCHEDULE(STATIC)
@@ -167,9 +186,7 @@ cf2py intent(hide) ny
             sterm = dsqrt(a)
             cterm = dsqrt(1.0D0-a)
             D(i,j) = 2.0D0*DATAN2(sterm,cterm)    
-            if(symm) then                  
-                D(j,i) = D(i,j)
-            end if
+
         enddo          
       enddo
 !$OMP  END DO NOWAIT
@@ -254,10 +271,11 @@ cf2py intent(hide) ny
                   end if
                 enddo
 1         continue        
-            D(j,i) = D(i,j)
         end if
         enddo
       enddo  
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 !$OMP DO SCHEDULE(STATIC)
@@ -370,9 +388,10 @@ cf2py intent(hide) ny
 
             end if
             
-            D(j,i) = D(i,j)
         enddo          
       enddo
+      
+      CALL symmetrize(C, nx, b(1), b(2))
       
       else
       

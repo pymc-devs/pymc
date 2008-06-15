@@ -13,6 +13,25 @@ c subsequent dimensions iterate over spatial dimensions.
       
       return
       END
+      
+
+      SUBROUTINE symmetrize(D,n,l,h)
+     
+cf2py intent(hide) n
+cf2py intent(inplace) D
+      
+      DOUBLE PRECISION D(n,n)
+      INTEGER l,h,i,j,n
+      
+      do j=l,h
+          do i=1,j-1
+              D(j,i) = D(i,j)
+          end do
+      end do
+      
+      return
+      END
+
          
       SUBROUTINE stein_spatiotemporal
      *(C,Gt,origin_val,
@@ -88,9 +107,11 @@ cf2py logical intent(in), optional:: symm=0
               C(i,j)=prefac * (C(i,j) ** dd_here) * BK(fl+1)
 
             endif
-    1       C(j,i)=C(i,j)
+    1       continue
           enddo
         enddo
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
@@ -206,9 +227,11 @@ cf2py double precision intent(hide), dimension(N+1):: BK
               CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               C(i,j)=prefac*(C(i,j)**diff_degree)*BK(fl+1)
             endif
-           C(j,i)=C(i,j)
+
           enddo
         enddo
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
@@ -230,6 +253,7 @@ cf2py double precision intent(hide), dimension(N+1):: BK
 !$OMP END PARALLEL
 
       CALL OMP_SET_NUM_THREADS(ntm)
+            
       RETURN
       END
 
@@ -278,9 +302,10 @@ cf2py logical intent(in), optional:: symm=0
           C(j,j) = 1.0D0
           do i=1,j-1
             C(i,j) = dexp(-C(i,j)*C(i,j)) 
-            C(j,i) = C(i,j)
           enddo
         enddo
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
@@ -346,9 +371,12 @@ cf2py logical intent(in), optional:: symm=0
           do i=1,j-1
       
             C(i,j) = dexp(-dabs(C(i,j))**pow)
-            C(j,i) = C(i,j)
           enddo
         enddo
+        
+      CALL symmetrize(C, nx, b(1), b(2))
+            
+            
       else
 
 !$OMP DO SCHEDULE(STATIC)
@@ -415,9 +443,11 @@ cf2py logical intent(in), optional:: symm=0
             else
               C(i,j) = 0.0D0
             endif
-            C(j,i) = C(i,j)
+
           enddo
         enddo
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
@@ -488,9 +518,11 @@ cf2py logical intent(in), optional:: symm=0
 
             t=C(i,j)**2
             C(i,j) = 1.0D0-t/(1.0D0+phi*t)
-            C(j,i) = C(i,j)
+
           enddo
         enddo
+
+      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
