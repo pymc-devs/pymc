@@ -102,4 +102,4 @@ class test_LazyFunction(NumpyTestCase):
 
 
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)

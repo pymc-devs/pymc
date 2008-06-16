@@ -35,5 +35,5 @@ class test_MCMC(NumpyTestCase):
             plot(M)
 
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)
     

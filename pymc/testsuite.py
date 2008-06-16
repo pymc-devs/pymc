@@ -17,11 +17,12 @@ def test():
     except:
         pass
     os.chdir('test_results')
+    testmod = __import__('pymc.tests', [], [], tests.__modules__)
     all_test_modules = tests.__modules__
     test_mod = __import__('pymc.tests', fromlist=all_test_modules)
     for m in all_test_modules:
         print 'Testing ', m, ' ...'
-        NumpyTest(getattr(test_mod, m)).run()
+        NumpyTest(getattr(test_mod, m)).test(all=False)
     os.chdir('..')
 
 if __name__=='__main__':

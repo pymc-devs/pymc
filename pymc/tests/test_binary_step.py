@@ -36,5 +36,5 @@ class TestBinary(NumpyTestCase):
     assert(1.0*f.sum()/len(f) > .5)
     
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)
 

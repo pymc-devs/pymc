@@ -44,4 +44,4 @@ class test_model_ave(NumpyTestCase):
         print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])
 
 if __name__=='__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)

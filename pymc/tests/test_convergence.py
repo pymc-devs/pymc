@@ -39,4 +39,4 @@ class test_raftery_lewis(NumpyTestCase):
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 
 if __name__ == "__main__":
-    NumpyTest().testall(level=10, verbosity=10)
+    NumpyTest().test(all=False)

@@ -42,4 +42,4 @@ class test_norm_approx(NumpyTestCase):
             ylabel(r'$\beta$')
         
 if __name__=='__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)

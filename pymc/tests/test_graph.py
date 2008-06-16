@@ -77,4 +77,4 @@ class test_graph(NumpyTestCase):
 
 if __name__ == '__main__':
     os.chdir('../test_results')
-    NumpyTest().run()
+    NumpyTest().test(all=False)

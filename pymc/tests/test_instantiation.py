@@ -86,4 +86,4 @@ class test_instantiation(NumpyTestCase):
         assert(isinstance(l, Stochastic))
         assert(not l.isdata)
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)

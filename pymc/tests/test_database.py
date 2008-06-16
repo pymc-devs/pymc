@@ -196,7 +196,7 @@ if hasattr(database, 'hdf5'):
             db.close()
         
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)
     try:
         S.db.close()
     except:

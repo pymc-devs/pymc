@@ -70,4 +70,4 @@ class test_Container(NumpyTestCase):
 
 
 if __name__ == '__main__':
-    NumpyTest().run()
+    NumpyTest().test(all=False)
