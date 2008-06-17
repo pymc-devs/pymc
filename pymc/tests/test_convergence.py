@@ -34,7 +34,7 @@ class test_geweke(TestCase):
         
 class test_raftery_lewis(TestCase):
     def test_simple(self):
-        nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(a, 0.5, .05, verbose=1)
+        nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(a, 0.5, .05, verbose=0)
         
         # nmin should approximately be the same as nprec/kmind
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)

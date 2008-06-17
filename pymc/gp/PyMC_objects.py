@@ -264,7 +264,8 @@ class GPParentMetropolis(pm.Metropolis):
                 print self._id + ' rejecting'
             self.metro_class.reject(metro_method)
             for f in self.fs:
-                f.value = f.last_value
+                # f.value = f.last_value
+                f.revert()
 
         setattr(self.metro_method, 'reject', types.MethodType(reject_with_realization, self.metro_method, self.metro_class))                
 
@@ -429,7 +430,8 @@ class GPMetropolis(pm.Metropolis):
         """
         if self.verbose:
             print self._id + 'rejecting.'
-        self.f.value = self.f.last_value
+        # self.f.value = self.f.last_value
+        self.f.revert()
     
     def step(self):
         if self.verbose:

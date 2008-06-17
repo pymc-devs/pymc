@@ -602,16 +602,26 @@ class Stochastic(StochasticBase):
                     self._value = value
             else:
                 self._value = value
+                
         elif self.dtype and self.dtype is not object:
             try:
                 self._value = self.dtype(value)
             except TypeError:
                 self._value = asarray(value, dtype=self.dtype)
+       
         else:
             self._value = value
         
 
     value = property(fget=get_value, fset=set_value, doc="Self's current value.")
+    
+
+    def revert(self):
+        """
+        Sets self's value to self's last value. Bypasses the data cleaning in
+        the set_value method.
+        """
+        self._value = self.last_value
 
 
     def get_logp(self):

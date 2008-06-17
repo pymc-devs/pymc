@@ -535,7 +535,8 @@ class Metropolis(StepMethod):
     
     def reject(self):
         # Sets current s value to the last accepted value
-        self.stochastic.value = self.stochastic.last_value
+        # self.stochastic.value = self.stochastic.last_value
+        self.stochastic.revert()
     
     def propose(self):
         """
@@ -1114,7 +1115,8 @@ class AdaptiveMetropolis(StepMethod):
     # Please keep reject() factored out- helps RandomRealizations figure out what to do.
     def reject(self):
         for stochastic in self.stochastics:
-            stochastic.value = stochastic.last_value
+            # stochastic.value = stochastic.last_value
+            stochastic.revert()
     
     def internal_tally(self):
         """Store the trace of stochastics for the computation of the covariance.

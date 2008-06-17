@@ -38,10 +38,16 @@ class test_model_ave(TestCase):
         
         
         posterior = weight([M1,M2,M3],10000)
+
+        # print 'Log posterior probability of changepoint model: ',log(posterior[M1])
+        # print 'Log posterior probability of constant rate model: ',log(posterior[M2])
+        # print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])
+
         
-        print 'Log posterior probability of changepoint model: ',log(posterior[M1])
-        print 'Log posterior probability of constant rate model: ',log(posterior[M2])
-        print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])
+        assert(abs(log(posterior[M1]))<1e-10)
+        assert(abs(log(posterior[M2])+30)<4)
+        assert(abs(log(posterior[M3])+60)<30)
+        
 
 if __name__=='__main__':
     unittest.main()

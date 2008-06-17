@@ -5,7 +5,7 @@ from numpy import mean, exp, Inf, zeros
 
 __all__ = ['sample_likelihood', 'weight']
 
-def sample_likelihood(model, iter):
+def sample_likelihood(model, iter, verbose=0):
     """
     Returns iter samples of 
     
@@ -31,8 +31,9 @@ def sample_likelihood(model, iter):
 
     try:
         for i in xrange(iter):
-            if i % 10000 == 0:
-                print 'Sample ', i, ' of ', iter
+            if verbose>0:
+                if i % 10000 == 0:
+                    print 'Sample ', i, ' of ', iter
 
             model.draw_from_prior()
 
@@ -48,7 +49,7 @@ def sample_likelihood(model, iter):
     
     return loglikes, logpots
 
-def weight(models, iter, priors = None):
+def weight(models, iter, priors = None, verbose=0):
     """
     weight(models, iter, priors = None)
 
@@ -62,20 +63,22 @@ def weight(models, iter, priors = None):
     weight(models = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
 
     Returns a dictionary keyed by model of the model posterior probabilities.
+    
+    WARNING: the weight() function will usually not work well unless
+    the dimension of the parameter space is small. Please do not trust
+    its output unless you check that it has weighted a large number of
+    samples more or less evenly.
     """
     
-    print 'WARNING: the weight() function will usually not work well unless\
-        \n the dimension of the parameter space is small. Please do not trust\
-        \n its output unless you check that it has weighted a large number of\
-        \n samples more or less evenly.'
     
     # TODO: Need to attach a standard error to the return values.
     loglikes = {}
     logpots = {}
     i=0
     for model in models:
-        print 'Model ', i
-        loglikes[model], logpots[model] = sample_likelihood(model, iter)
+        if verbose > 0:
+            print 'Model ', i
+        loglikes[model], logpots[model] = sample_likelihood(model, iter, verbose)
         i+=1
 
     # Find max log-likelihood for regularization purposes

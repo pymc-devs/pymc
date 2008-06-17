@@ -424,7 +424,7 @@ class ArrayContainer(ContainerBase, ndarray):
         ContainerBase.__init__(C, array_in)
                 
         # Ravelled versions of self, self.value, and self._pymc_finder.
-        C._ravelleddata = C.ravel()
+        C._ravelleddata = array(array_in, copy=True).ravel()
         
         # Sort out contents and wrap internal containers.
         file_items(C, C._ravelleddata)

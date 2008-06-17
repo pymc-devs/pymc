@@ -298,7 +298,7 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(data, name, format='png', suffix='', path='./', new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def plot(data, name, format='png', suffix='', path='./', new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
     
@@ -323,7 +323,8 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
     # If there is only one data array, go ahead and plot it ...
     if rank(data)==1:
         
-        print 'Plotting', name
+        if verbose>0:
+            print 'Plotting', name
         
         # If new plot, generate new frame
         if new:
@@ -361,7 +362,7 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
 
 
 @plotwrapper
-def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -369,7 +370,8 @@ def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1
         # Stand-alone plot or subplot?
         standalone = rows==1 and columns==1 and num==1
         if standalone:
-            print 'Generating histogram of', name
+            if verbose>0:
+                print 'Generating histogram of', name
             figure()
         
         subplot(rows, columns, num)
@@ -404,14 +406,15 @@ def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1
 
 
 @plotwrapper
-def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Internal plotting specification for handling nested arrays
     
     # Stand-alone plot or subplot?
     standalone = rows==1 and columns==1 and num==1
     
     if standalone:
-        print 'Plotting', name
+        if verbose>0:
+            print 'Plotting', name
         figure()
     
     subplot(rows, columns, num)
@@ -437,11 +440,11 @@ def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num
         #close()
 
 @plotwrapper
-def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     
     # Generate Geweke (1992) diagnostic plots
     
-    print 'Plotting', name+suffix
+    # print 'Plotting', name+suffix
     
     # Generate new scatter plot
     figure()
@@ -467,10 +470,10 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     #close()
 
 @plotwrapper
-def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit scatter plot
-
-    print 'Plotting', name+suffix
+    if verbose>0:
+        print 'Plotting', name+suffix
     
     # Generate new scatter plot
     figure()
@@ -495,7 +498,7 @@ def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
-def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     
     """Generate bar plot of a series, usually autocorrelation
     or autocovariance."""
@@ -508,7 +511,8 @@ def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontma
     rows = min(len(values), 4)
     
     for i,name in enumerate(names):
-        print 'Plotting', name+suffix
+        if verbose>0:
+            print 'Plotting', name+suffix
         
         if not i % rows:
              # Generate new figure
@@ -543,7 +547,7 @@ def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontma
             #close()
 
 # TODO: make sure pair_posterior works.
-def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}):
+def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
