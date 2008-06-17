@@ -17,7 +17,7 @@ N = Mean(constant, val = 0.)
 x=arange(-1,1,.01)
 y=vstack((x,x)).T
 
-class test_mean(NumpyTestCase):
-    def check(self):
+class test_mean(TestCase):
+    def test(self):
         assert(M(x).shape == x.shape)
         assert(N(y).shape == (y.shape[0],))

@@ -37,8 +37,8 @@ basis = fourier_basis([N,N])
 C = SeparableBasisCovariance(basis,coef_cov,xmin = [-4.,-.4], xmax = [4.,4.])
 
 
-class test_basiscov(NumpyTestCase):
-    def check_sep(self):
+class test_basiscov(TestCase):
+    def test_sep(self):
         
         observe(M, C, obs_mesh = ostack, obs_V = V, obs_vals = data) 
         # clf()
@@ -55,7 +55,7 @@ class test_basiscov(NumpyTestCase):
         # title('Realization')
         # colorbar()
         
-    def check_nonsep(self):
+    def test_nonsep(self):
 
         basis_array = zeros((2*N+1,2*N+1),dtype=object)
         for i in arange(2*N+1):

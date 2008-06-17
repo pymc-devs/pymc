@@ -5,11 +5,11 @@
 # from numpy.testing import *
 # PLOT=True
 # 
-# class test_Joint(NumpyTestCase):
+# class test_Joint(TestCase):
 #     def check(self):
 #         M = MCMC(model_for_joint)
 #         M.sample(iter=30000,burn=0,thin=100)
 #         M.plot()
 #         
 # if __name__ == '__main__':
-#     NumpyTest().run()
+#     unittest.main()

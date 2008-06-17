@@ -3,8 +3,8 @@ from numpy import *
 from pymc.examples import DisasterModel as DM
 from pymc import Container
 
-class test_Container(NumpyTestCase):
-    def check(self):
+class test_Container(TestCase):
+    def test(self):
 
 # Test set container:
 
@@ -70,4 +70,4 @@ class test_Container(NumpyTestCase):
 
 
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

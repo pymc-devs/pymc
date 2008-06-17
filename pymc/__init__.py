@@ -20,7 +20,8 @@ __modules__ = [ 'Node',
                 'StepMethods',
                 'convergencediagnostics',
                 'CommonDeterministics',
-                'testsuite']
+                #'testsuite'
+                ]
                 
 __sepmodules__ = [  'utils', 
                     'testsuite', 

@@ -12,8 +12,8 @@ except:
 PLOT=False
 
 
-class test_MCMC(NumpyTestCase):
-    def check(self):
+class test_MCMC(TestCase):
+    def test(self):
         
         # Import modules
         from pymc import MCMC
@@ -35,5 +35,5 @@ class test_MCMC(NumpyTestCase):
             plot(M)
 
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()
     

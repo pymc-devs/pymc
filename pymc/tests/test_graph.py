@@ -59,15 +59,15 @@ def mymodel():
     
     return locals()
 
-class test_graph(NumpyTestCase):
-    def check_raw(self):
+class test_graph(TestCase):
+    def test_raw(self):
         A = Model(mymodel())
         graph(A, path='../test_results/full.dot', format='raw', prog='dot', consts = True)
         graph(A, path='../test_results/deterministic.dot', format='raw', prog='dot', collapse_deterministics=True, consts = True)
         graph(A, path='../test_results/pot.dot', format='raw', prog='dot', collapse_potentials=True, consts = True)
         graph(A, path='../test_results/deterministic_pot.dot', format='raw', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
         moral_graph(A, path='../test_results/moral.dot', format='raw', prog='dot')
-    def check_pdf(self):
+    def test_pdf(self):
         A = Model(mymodel())    
         graph(A, path='../test_results/full.pdf', format='pdf', prog='dot', consts = True)
         graph(A, path='../test_results/deterministic.pdf', format='pdf', prog='dot', collapse_deterministics=True, consts = True)
@@ -77,4 +77,4 @@ class test_graph(NumpyTestCase):
 
 if __name__ == '__main__':
     os.chdir('../test_results')
-    NumpyTest().test(all=False)
+    unittest.main()

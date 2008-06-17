@@ -9,8 +9,8 @@ M = copy(M)
 C = copy(C)
 
 # Impose observations on the GP
-class test_observation(NumpyTestCase):
-    def check(self):
+class test_observation(TestCase):
+    def test(self):
         
         obs_x = array([-.5,.5])
         V = array([.002,.002])

@@ -1,12 +1,11 @@
-from numpy.testing import NumpyTest
 from pymc import tests
+import unittest
 import warnings
 import os
 
 # Changeset
 # 19/03/2007 -DH- The modules in tests/ are now imported when test is called. 
-
-# TODO: 
+# June 17, 2008 -DH- Switched to unittests since NumpyTest made way to nose framework.
 
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -17,12 +16,16 @@ def test():
     except:
         pass
     os.chdir('test_results')
-    testmod = __import__('pymc.tests', [], [], tests.__modules__)
-    all_test_modules = tests.__modules__
-    test_mod = __import__('pymc.tests', fromlist=all_test_modules)
-    for m in all_test_modules:
-        print 'Testing ', m, ' ...'
-        NumpyTest(getattr(test_mod, m)).test(all=False)
+    
+    # Import all tests modules declared in pymc/tests/__init__.py
+    __import__('pymc.tests', fromlist=tests.__modules__)
+    
+    # Create a test suite from all the tests
+    L = unittest.TestLoader()
+    S = L.loadTestsFromNames(tests.__modules__, tests)
+    
+    # Run the test suite.
+    unittest.TextTestRunner(verbosity=1).run(S)
     os.chdir('..')
 
 if __name__=='__main__':

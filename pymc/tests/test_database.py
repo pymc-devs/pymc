@@ -1,14 +1,15 @@
 """ Test database backends """
 
-from numpy.testing import NumpyTestCase, NumpyTest, assert_array_equal, assert_equal
+from numpy.testing import TestCase, assert_array_equal, assert_equal
+import unittest
 from pymc import MCMC
 import pymc.database as database
 from pymc.examples import DisasterModel
 import os,sys
 import numpy as np
 
-class test_no_trace(NumpyTestCase):
-    def check(self):
+class test_no_trace(TestCase):
+    def test(self):
         M = MCMC(DisasterModel, db='no_trace')
         M.sample(1000,500,2)
         try:
@@ -16,8 +17,8 @@ class test_no_trace(NumpyTestCase):
         except AttributeError:
             pass
         
-class test_ram(NumpyTestCase):
-    def check(self):
+class test_ram(TestCase):
+    def test(self):
         M = MCMC(DisasterModel, db='ram')
         M.sample(500,100,2)
         assert_array_equal(M.e.trace().shape, (200,))
@@ -26,8 +27,8 @@ class test_ram(NumpyTestCase):
         assert_array_equal(M.e.trace().shape, (100,))
         assert_array_equal(M.e.trace(chain=None).shape, (300,))
         
-class test_txt(NumpyTestCase):
-    def check(self):
+class test_txt(TestCase):
+    def test(self):
         try:
             os.removedir('txt_data')
         except:
@@ -37,7 +38,7 @@ class test_txt(NumpyTestCase):
         S.sample(100)
         S.db.close()
     
-    def check_load(self):
+    def test_load(self):
         db = database.txt.load('txt_data')
         assert_equal(len(db.e._trace), 2)
         assert_array_equal(db.e().shape, (100,))
@@ -48,22 +49,22 @@ class test_txt(NumpyTestCase):
         
         
         
-class test_pickle(NumpyTestCase):
+class test_pickle(TestCase):
     def __init__(*args, **kwds):
-        NumpyTestCase.__init__(*args, **kwds)
+        TestCase.__init__(*args, **kwds)
         try: 
             os.remove('Disaster.pickle')
         except:
             pass
             
-    def check(self):
+    def test(self):
         M = MCMC(DisasterModel, db='pickle', name='Disaster')
         M.sample(500,100,2)
         assert_array_equal(M.e.trace().shape, (200,))
         assert_equal(M.e.trace.length(), 200)
         M.db.close()
         
-    def check_load(self):
+    def test_load(self):
         db = database.pickle.load('Disaster.pickle')
         S = MCMC(DisasterModel, db)
         S.sample(100,0,1)
@@ -73,22 +74,22 @@ class test_pickle(NumpyTestCase):
         assert_equal(S.e.trace.length(None), 300)
         S.db.close()
 
-##class test_mysql(NumpyTestCase):
-##    def check(self):
+##class test_mysql(TestCase):
+##    def test(self):
 ##        M = MCMC(DisasterModel, db='mysql')
 ##        M.sample(300,100,2)
 ##    
 if hasattr(database, 'sqlite'):
-    class test_sqlite(NumpyTestCase):
+    class test_sqlite(TestCase):
         def __init__(*args, **kwds):
-            NumpyTestCase.__init__(*args, **kwds)
+            TestCase.__init__(*args, **kwds)
             try:    
                 os.remove('Disaster.sqlite')
                 os.remove('Disaster.sqlite-journal')
             except:
                 pass
                 
-        def check(self):
+        def test(self):
             M = MCMC(DisasterModel, db='sqlite', name='Disaster')
             M.sample(500,100,2)
             assert_array_equal(M.e.trace().shape, (200,))
@@ -105,7 +106,7 @@ if hasattr(database, 'sqlite'):
             M.db.close()
             
             
-        def check_load(self):
+        def test_load(self):
             db = database.sqlite.load('Disaster.sqlite')
             assert_array_equal(db.e.length(chain=1), 200)
             assert_array_equal(db.e.length(chain=2), 100)
@@ -118,15 +119,15 @@ if hasattr(database, 'sqlite'):
             S.db.close()
         
 if hasattr(database, 'hdf5'):
-    class test_hdf5(NumpyTestCase):
+    class test_hdf5(TestCase):
         def __init__(*args, **kwds):
-            NumpyTestCase.__init__(*args, **kwds)        
+            TestCase.__init__(*args, **kwds)        
             try: 
                 os.remove('Disaster.hdf5')
             except:
                 pass
         
-        def check(self):
+        def test(self):
             S = MCMC(DisasterModel, db='hdf5', name='Disaster')
             S.sample(500,100,2)
             assert_array_equal(S.e.trace().shape, (200,))
@@ -134,7 +135,7 @@ if hasattr(database, 'hdf5'):
             assert_array_equal(S.D.value, DisasterModel.D_array)
             S.db.close()
             
-        def check_load(self):
+        def test_load(self):
             db = database.hdf5.load('Disaster.hdf5', 'a')
             assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
                DisasterModel.D_array)
@@ -147,11 +148,11 @@ if hasattr(database, 'hdf5'):
             db.close() # For some reason, the hdf5 file remains open.
             S.db.close()
             
-            # Check that the step method state was correctly restored.
+            # test that the step method state was correctly restored.
             sm = S.step_methods.pop()
             assert(sm._accepted+sm._rejected ==600)
             
-        def check_mode(self):
+        def test_mode(self):
             S = MCMC(DisasterModel, db='hdf5', name='Disaster', mode='w')
             try:
                 tables = S.db._gettable(None)
@@ -166,7 +167,7 @@ if hasattr(database, 'hdf5'):
             assert_equal(len(tables), 1)
             S.db.close()
             
-        def check_compression(self):
+        def test_compression(self):
             try: 
                 os.remove('DisasterModelCompressed.hdf5')
             except:
@@ -178,7 +179,7 @@ if hasattr(database, 'hdf5'):
             S.db.close()
             db.close()
             
-        def check_attribute_assignement(self):
+        def test_attribute_assignement(self):
             arr = np.array([[1,2],[3,4]])
             db = database.hdf5.load('Disaster.hdf5', 'a')
             db.add_attr('some_list', [1,2,3])
@@ -196,7 +197,7 @@ if hasattr(database, 'hdf5'):
             db.close()
         
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()
     try:
         S.db.close()
     except:

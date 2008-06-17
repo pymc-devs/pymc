@@ -7,7 +7,7 @@ We have two parameters:
  * coin : the probability of tail on flipping the coin 
 """
 
-from numpy.testing import NumpyTestCase, NumpyTest
+from numpy.testing import TestCase, unittest
 import pymc
 from pymc import stoch
 import numpy as np
@@ -29,12 +29,13 @@ class BinaryTestModel:
     tail = pymc.Bernoulli('tail', p=coin, value=series, isdata=True)
     
 
-class TestBinary(NumpyTestCase):
-    S = pymc.MCMC(input = BinaryTestModel)
-    S.sample(1000,500)
-    f = S.fair.trace()
-    assert(1.0*f.sum()/len(f) > .5)
+class TestBinary(TestCase):
+    def test(self):
+        S = pymc.MCMC(input = BinaryTestModel)
+        S.sample(1000,500)
+        f = S.fair.trace()
+        assert(1.0*f.sum()/len(f) > .5)
     
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()
 

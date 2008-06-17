@@ -38,8 +38,8 @@ L = C._logp
 C.logp
 acc = True
 
-class test_LazyFunction(NumpyTestCase):
-    def check(self):
+class test_LazyFunction(TestCase):
+    def test(self):
         for i in range(1000):
 
             # Record last values
@@ -102,4 +102,4 @@ class test_LazyFunction(NumpyTestCase):
 
 
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

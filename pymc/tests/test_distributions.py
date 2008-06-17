@@ -247,7 +247,7 @@ def normalization(like, parameters, domain, N=100):
             y.append(f(i))
         return np.trapz(y,x)
 
-class test_arlognormal(NumpyTestCase):
+class test_arlognormal(TestCase):
     def like(self, parameters, r):
         a = parameters[2:]
         sigma = parameters[1]
@@ -255,7 +255,7 @@ class test_arlognormal(NumpyTestCase):
         like = np.array([arlognormal_like(x, a, sigma, rho) for x in r])
         return -like.sum()
             
-    def check_random(self):
+    def test_random(self):
         a = (1,2)
         sigma = .1
         rho = 0
@@ -269,7 +269,7 @@ class test_arlognormal(NumpyTestCase):
         assert_almost_equal(corr, rho, 1)
         assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
     
-    def check_consistency(self):
+    def test_consistency(self):
     
         # 1D case
         a = 1
@@ -288,8 +288,8 @@ class test_arlognormal(NumpyTestCase):
         assert_array_almost_equal(opt, (rho, sigma)+a, 1)
     
 
-class test_bernoulli(NumpyTestCase):
-    def check_consistency(self):
+class test_bernoulli(TestCase):
+    def test_consistency(self):
         N = 5000
         parameters = {'p':.6}
         samples = []
@@ -307,8 +307,8 @@ class test_bernoulli(NumpyTestCase):
         b = flib.bernoulli([0,1,1,0], [.4, .4, .4, .4])
         assert_array_equal(b,a)
 
-class test_beta(NumpyTestCase):
-    def check_consistency(self):
+class test_beta(TestCase):
+    def test_consistency(self):
         parameters ={'alpha':3, 'beta':5}
         hist, like, figdata = consistency(rbeta, flib.beta_like, parameters, nrandom=5000, range=[0,1])
         assert_array_almost_equal(hist, like,1)
@@ -320,20 +320,20 @@ class test_beta(NumpyTestCase):
         b = flib.beta_like([.3,.4,.5], [2,2,2],[3,3,3])
         assert_array_equal(a,b)
 
-    def check_normalization(self):
+    def test_normalization(self):
         parameters ={'alpha':3, 'beta':5}
         integral = normalization(flib.beta_like, parameters, [0,1], 200)
         assert_almost_equal(integral, 1, 3)
 
-class test_binomial(NumpyTestCase):
-    def check_consistency(self):
+class test_binomial(TestCase):
+    def test_consistency(self):
         parameters={'n':7, 'p':.7}
         hist, like, figdata = discrete_consistency(rbinomial, flib.binomial, \
             parameters, nrandom=2000)
         assert_array_almost_equal(hist, like,1)
         if PLOT:
             compare_hist(figname='binomial', **figdata)
-        # Check_normalization
+        # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
 
     def test_calling(self):
@@ -344,8 +344,8 @@ class test_binomial(NumpyTestCase):
         assert_equal(a,c)
 
 
-class test_cauchy(NumpyTestCase):
-    def check_consistency(self):
+class test_cauchy(TestCase):
+    def test_consistency(self):
         parameters={'alpha':0, 'beta':.5}
         hist, like, figdata = consistency(rcauchy, flib.cauchy, parameters, \
         nrandom=5000, range=[-10,10], nbins=21)
@@ -359,15 +359,15 @@ class test_cauchy(NumpyTestCase):
         b = flib.cauchy([3,4], [2,2], [6,6])
         assert_equal(a,b)
 
-    def check_normalization(self):
+    def test_normalization(self):
         parameters={'alpha':0, 'beta':.5}
         integral = normalization(flib.cauchy, parameters, [-100,100], 600)
         assert_almost_equal(integral, 1, 2)
 
-class test_chi2(NumpyTestCase):
+class test_chi2(TestCase):
     """Based on flib.gamma, so no need to make the calling check and
     normalization check."""
-    def check_consistency(self):
+    def test_consistency(self):
         parameters = {'nu':2}
         hist, like, figdata = consistency(rchi2, chi2_like, parameters, range=[0,15])
         if PLOT:
@@ -375,9 +375,9 @@ class test_chi2(NumpyTestCase):
         assert_array_almost_equal(hist, like, 1)
 
 
-class test_dirichlet(NumpyTestCase):
+class test_dirichlet(TestCase):
     """Multivariate Dirichlet distribution"""
-    def check_random(self):
+    def test_random(self):
         theta = np.array([2.,3.,5.])
         rpart = rdirichlet(theta, 2000)
         r = np.hstack((rpart, np.atleast_2d(rpart.sum(1)).T))
@@ -394,7 +394,7 @@ class test_dirichlet(NumpyTestCase):
         assert_array_almost_equal(m,M, 2)
         assert_array_almost_equal(cov_ex, cov_th,1)
 
-    def check_like(self):
+    def test_like(self):
         theta = np.array([2.,3.,5.])
         x = [.4,.2]
         l = flib.dirichlet(x, theta)
@@ -402,7 +402,7 @@ class test_dirichlet(NumpyTestCase):
         assert_almost_equal(l, sum(np.log(f)), 5)
 
     # Disabled vectorization bc got confused... AP
-    # def check_vectorization(self):
+    # def test_vectorization(self):
     #     theta = np.array([[2.,3.], [2,3]])
     #     r = rdirichlet(theta)
     #     a = dirichlet_like(r, theta)
@@ -412,9 +412,9 @@ class test_dirichlet(NumpyTestCase):
     def normalization_2d(self):
         pass
 
-class test_exponential(NumpyTestCase):
+class test_exponential(TestCase):
     """Based on gamma."""
-    def check_consistency(self):
+    def test_consistency(self):
         parameters={'beta':4}
         hist, like, figdata = consistency(rexponential, exponential_like, 
             parameters, nrandom=5000)
@@ -422,8 +422,8 @@ class test_exponential(NumpyTestCase):
             compare_hist(figname='exponential', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-class test_exponweib(NumpyTestCase):
-    def check_consistency(self):
+class test_exponweib(TestCase):
+    def test_consistency(self):
         parameters = {'alpha':2, 'k':2, 'loc':1, 'scale':3}
         hist,like,figdata=consistency(rexponweib, exponweib_like, 
             parameters, nrandom=5000)
@@ -431,20 +431,20 @@ class test_exponweib(NumpyTestCase):
             compare_hist(figname='exponweib', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
-    def check_random(self):
+    def test_random(self):
         r = rexponweib(2, 1, 4, 5, size=1000)
         r.mean(), r.var()
         # scipy.exponweib.stats is buggy. may 17, 2007
 
-    def check_with_scipy(self):
+    def test_with_scipy(self):
         parameters = {'alpha':2, 'k':.3, 'loc':1, 'scale':3}
         r = rexponweib(size=10, **parameters)
         a = exponweib.pdf(r, 2,.3, 1, 3)
         b = exponweib_like(r, **parameters)
         assert_almost_equal(log(a).sum(), b, 6)
 
-class test_gamma(NumpyTestCase):
-    def check_consistency(self):
+class test_gamma(TestCase):
+    def test_consistency(self):
         parameters={'alpha':3, 'beta':2}
         hist, like, figdata = consistency(rgamma, flib.gamma, parameters,\
             nrandom=5000)
@@ -457,14 +457,14 @@ class test_gamma(NumpyTestCase):
         b = flib.gamma(array([4,5],dtype=float), array([3,3],dtype=float),array([2,2],dtype=float))
         assert_equal(a,b)
 
-    def check_normalization(self):
+    def test_normalization(self):
         parameters={'alpha':3, 'beta':2}
         integral = normalization(flib.gamma, parameters, array([.01,20]), 200)
         assert_almost_equal(integral, 1, 2)
 
-class test_geometric(NumpyTestCase):
+class test_geometric(TestCase):
     """Based on gamma."""
-    def check_consistency(self):
+    def test_consistency(self):
         parameters={'p':.6}
         hist, like, figdata = discrete_consistency(rgeometric, geometric_like, parameters,\
             nrandom=5000)
@@ -472,8 +472,8 @@ class test_geometric(NumpyTestCase):
             compare_hist(figname='geometric', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-class test_gev(NumpyTestCase):
-    def check_consistency(self):
+class test_gev(TestCase):
+    def test_consistency(self):
         parameters = dict(xi=.1, mu=4, sigma=3)
         hist, like, figdata = consistency(rgev, flib.gev, parameters,\
             nbins=20, nrandom=5000)
@@ -481,7 +481,7 @@ class test_gev(NumpyTestCase):
             compare_hist(figname='gev', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def check_scipy(self):
+    def test_with_scipy(self):
         x = [1,2,3,4]
         scipy_y = log(genextreme.pdf(x, -.3, 4, 2))
         flib_y = []
@@ -489,13 +489,13 @@ class test_gev(NumpyTestCase):
             flib_y.append(flib.gev(i, .3, 4, 2))
         assert_array_almost_equal(scipy_y,flib_y,5)
 
-    def check_limit(self):
+    def test_limit(self):
         x = [1,2,3]
         a = flib.gev(x, 0.00001, 0, 1)
         b = flib.gev(x, 0, 0, 1)
         assert_almost_equal(a,b,4)
 
-    def check_vectorization(self):
+    def test_vectorization(self):
         a = flib.gev([4,5,6], xi=.2,mu=4,sigma=1)
         b = flib.gev([4,5,6], xi=[.2,.2,.2],mu=4,sigma=1)
         c = flib.gev([4,5,6], xi=.2,mu=[4,4,4],sigma=1)
@@ -504,8 +504,8 @@ class test_gev(NumpyTestCase):
         assert_equal(b,c)
         assert_equal(c,d)
 
-class test_half_normal(NumpyTestCase):
-    def check_consistency(self):
+class test_half_normal(TestCase):
+    def test_consistency(self):
         parameters={'tau':.5}
         hist, like, figdata = consistency(rhalf_normal, flib.hnormal, parameters,\
             nrandom=5000)
@@ -513,18 +513,18 @@ class test_half_normal(NumpyTestCase):
             compare_hist(figname='hnormal', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def normalization(self):
+    def test_normalization(self):
         parameters = {'tau':2.}
         integral = normalization(flib.hnormal, parameters, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
 
-    def check_vectorization(self):
+    def test_vectorization(self):
         a = flib.hnormal([2,3], .5)
         b = flib.hnormal([2,3], tau=[.5,.5])
         assert_equal(a,b)
 
-class test_hypergeometric(NumpyTestCase):
-    def check_consistency(self):
+class test_hypergeometric(TestCase):
+    def test_consistency(self):
         parameters=dict(n=10, m=12, N=20)
         hist, like, figdata = discrete_consistency(rhypergeometric, \
         hypergeometric_like, parameters, nrandom=5000)
@@ -532,8 +532,8 @@ class test_hypergeometric(NumpyTestCase):
             compare_hist(figname='hypergeometric', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-class test_inverse_gamma(NumpyTestCase):
-    def check_consistency(self):
+class test_inverse_gamma(TestCase):
+    def test_consistency(self):
         parameters=dict(alpha=1.5, beta=.5)
         hist, like, figdata = consistency(rinverse_gamma, flib.igamma, parameters,\
             nrandom=5000)
@@ -541,19 +541,19 @@ class test_inverse_gamma(NumpyTestCase):
             compare_hist(figname='inverse_gamma', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def normalization(self):
+    def test_normalization(self):
         parameters=dict(alpha=1.5, beta=.5)
         integral = normalization(flib.igamma, parameters, [0, 10], 200)
         assert_almost_equal(integral, 1, 3)
 
-    def vectorization(self):
+    def test_vectorization(self):
         x = [2,3]
         a = flib.igamma(x, alpha=[1.5, 1.5], beta=.5)
         b = flib.igamma(x, alpha=[1.5, 1.5], beta=[.5, .5])
         assert_almost_equal(a,b,6)
 
-class test_lognormal(NumpyTestCase):
-    def check_consistency(self):
+class test_lognormal(TestCase):
+    def test_consistency(self):
         parameters=dict(mu=3, tau = .5)
         hist, like, figdata = consistency(rlognormal, flib.lognormal, parameters,\
             nrandom=5000)
@@ -561,19 +561,19 @@ class test_lognormal(NumpyTestCase):
             compare_hist(figname='lognormal', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def normalization(self):
+    def test_normalization(self):
         parameters=dict(mu=3, tau = .5)
         integral = normalization(flib.lognormal, parameters, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
         
-    def check_vectorization(self):
+    def test_vectorization(self):
         r = rlognormal(3, .5, 2)
         a = lognormal_like(r, 3, .5)
         b = lognormal_like(r, [3,3], [.5,.5])
         assert_array_equal(a,b)
 
-class test_multinomial(NumpyTestCase):
-    def check_random(self):
+class test_multinomial(TestCase):
+    def test_random(self):
         p = array([.2,.3,.5])
         n = 10
         r = rmultinomial(n=10, p=p, size=5000)
@@ -582,7 +582,7 @@ class test_multinomial(NumpyTestCase):
         rvar = r.var(0)
         assert_array_almost_equal(rvar, n*p*(1-p),1)
     
-    def check_consistency(self):
+    def test_consistency(self):
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
@@ -590,22 +590,22 @@ class test_multinomial(NumpyTestCase):
         b = log(multinomial(x,n,p).prod())
         assert_almost_equal(a,b,4)
 
-    def check_vectorization(self):
+    def test_vectorization(self):
         p = array([[.2,.3,.5], [.2,.3,.5]])
         r = rmultinomial(10, p=p[0], size=2)
         a = multinomial_like(r[:,:-1],10,p[0,:-1])
         b = multinomial_like(r[:,:-1],[10,10],p[:,:-1])
         assert_equal(a,b)
 
-class test_multivariate_hypergeometric(NumpyTestCase):
-    def check_random(self):
+class test_multivariate_hypergeometric(TestCase):
+    def test_random(self):
         m = [10,15]
         N = 200
         n = 6
         r = rmultivariate_hypergeometric(n, m, N)
         assert_array_almost_equal(r.mean(0), multivariate_hypergeometric_expval(n,m),1)
         
-    def check_likelihood(self):
+    def test_likelihood(self):
         m = [10,15]
         x = [3,4]
         a = multivariate_hypergeometric_like(x, m)
@@ -613,9 +613,9 @@ class test_multivariate_hypergeometric(NumpyTestCase):
         assert_almost_equal(a,b,4)
 
 
-class test_mv_normal(NumpyTestCase):
+class test_mv_normal(TestCase):
     
-    def check_random(self):
+    def test_random(self):
         mu = array([3,4])
         C = matrix([[1, .5],[.5,1]])
 
@@ -632,7 +632,7 @@ class test_mv_normal(NumpyTestCase):
         assert_array_almost_equal(mu, rchol.mean(0), 1)
         assert_array_almost_equal(C, np.cov(rchol.T), 1)
             
-    def check_likelihood(self):
+    def test_likelihood(self):
         mu = array([3,4])
         C = matrix([[1, .5],[.5,1]])
         
@@ -653,8 +653,8 @@ class test_mv_normal(NumpyTestCase):
         assert_almost_equal(b,c,6)
 
     
-class test_normal(NumpyTestCase):
-    def check_consistency(self):
+class test_normal(TestCase):
+    def test_consistency(self):
         parameters=dict(mu=3, tau = .5)
         hist, like, figdata = consistency(rnormal, flib.normal, parameters,\
             nrandom=5000)
@@ -662,22 +662,22 @@ class test_normal(NumpyTestCase):
             compare_hist(figname='normal', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def check_vectorization(self):
+    def test_vectorization(self):
         a = flib.normal([3,4,5], mu=3, tau=.5)
         b = flib.normal([3,4,5], mu=[3,3,3], tau=.5)
         c = flib.normal([3,4,5], mu=[3,3,3], tau=[.5,.5,.5])
         assert_equal(a,b)
         assert_equal(b,c)
 
-class test_poisson(NumpyTestCase):
-    def check_consistency(self):
+class test_poisson(TestCase):
+    def test_consistency(self):
         parameters = {'mu':2.}
         hist,like, figdata = discrete_consistency(rpoisson, flib.poisson, parameters, nrandom=5000, range=[0,10])
         if PLOT:
             compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def normalization(self):
+    def test_normalization(self):
         parameters = {'mu':2.}
         integral = normalization(flib.poisson, parameters, [0.1, 20], 200)
         assert_almost_equal(integral, 1, 2)
@@ -687,14 +687,14 @@ class test_poisson(NumpyTestCase):
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
 
-class test_skew_normal(NumpyTestCase):
-    def check_consistency(self):
+class test_skew_normal(TestCase):
+    def test_consistency(self):
         parameters = dict(mu=10, tau=10, alpha=-5)
         hist,like, figdata = consistency(rskew_normal, skew_normal_like, parameters, nrandom=5000)
         compare_hist(figname='truncnorm', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def normalization(self):
+    def test_normalization(self):
         parameters = dict(mu=10, tau=10, alpha=-5)
         integral = normalization(skew_normal_like, parameters, [8.5, 10.5], 200)
         assert_almost_equal(integral, 1, 2)
@@ -709,15 +709,15 @@ class test_skew_normal(NumpyTestCase):
         assert_equal(a,c)
         assert_equal(a,d)
         
-class test_truncnorm(NumpyTestCase):
-    def check_consistency(self):
+class test_truncnorm(TestCase):
+    def test_consistency(self):
         parameters = dict(mu=1, sigma=1, a=0, b=5)
         hist,like, figdata = consistency(rtruncnorm, truncnorm_like, parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='truncnorm', **figdata)
         assert_array_almost_equal(hist, like,1)
         
-    def normalization(self):
+    def test_normalization(self):
         parameters = dict(mu=1, sigma=1, a=0, b=2)
         integral = normalization(truncnorm_like, parameters, [-1, 3], 200)
         assert_almost_equal(integral, 1, 2)
@@ -734,15 +734,15 @@ class test_truncnorm(NumpyTestCase):
         #assert_equal(a,d)
         #assert_equal(a,e)
     
-class test_weibull(NumpyTestCase):
-    def check_consistency(self):
+class test_weibull(TestCase):
+    def test_consistency(self):
         parameters = {'alpha': 2., 'beta': 3.}
         hist,like, figdata = consistency(rweibull, flib.weibull, parameters, nrandom=5000, range=[0,10])
         if PLOT:
             compare_hist(figname='weibull', **figdata)
         assert_array_almost_equal(hist, like,1)
 
-    def check_norm(self):
+    def test_normalization(self):
         parameters = {'alpha': 2., 'beta': 3.}
         integral = normalization(flib.weibull, parameters, [0,10], N=200)
         assert_almost_equal(integral, 1, 2)
@@ -752,7 +752,7 @@ class test_weibull(NumpyTestCase):
         b = flib.weibull([1,2], [2,2], [3,3])
         assert_equal(a,b)
 
-class test_wishart(NumpyTestCase):
+class test_wishart(TestCase):
     """
     There are results out there on the asymptotic distribution of eigenvalues
     of very large Wishart matrices that we could use to make another test case...
@@ -761,7 +761,7 @@ class test_wishart(NumpyTestCase):
                           [  10.88057915,  213.58694978,   11.18453854],
                           [  13.80581557,   11.18453854,  209.89396417]])/100.
   
-    def check_likelihoods(self):
+    def test_likelihoods(self):
 
         from scipy.special import gammaln    
 
@@ -781,7 +781,7 @@ class test_wishart(NumpyTestCase):
             assert_array_almost_equal(wishart_like(W_test,i,self.Tau_test), right_answer, decimal=5)
             assert_array_almost_equal(wishart_cov_like(W_test,i,self.Tau_test.I), right_answer, decimal=5)
     
-    def check_expval(self):
+    def test_expval(self):
 
         n = 1000
         N = 1000
@@ -809,7 +809,7 @@ What to do about this?
 Either change the argument names in flib or in the distributions wrapper.
 -D
 
-class test_hyperg(NumpyTestCase):
+class test_hyperg(TestCase):
     def __init__(self):
         from np.random import poisson
         parameters = {'ngood':2, 'nbad':5, 'nsample':3}
@@ -817,4 +817,4 @@ class test_hyperg(NumpyTestCase):
 """
 
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

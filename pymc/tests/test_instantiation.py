@@ -72,8 +72,8 @@ def G(value = D_array*.5,
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
         
-class test_instantiation(NumpyTestCase):
-    def check_data(self):
+class test_instantiation(TestCase):
+    def test_data(self):
         assert(isinstance(D, Stochastic))
         assert(D.isdata)
         assert(isinstance(E, Stochastic))
@@ -82,8 +82,8 @@ class test_instantiation(NumpyTestCase):
         assert(F.isdata)
         assert(isinstance(G, Stochastic))
         assert(G.isdata)
-    def check_stochastic(self):
+    def test_stochastic(self):
         assert(isinstance(l, Stochastic))
         assert(not l.isdata)
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

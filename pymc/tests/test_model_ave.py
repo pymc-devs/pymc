@@ -17,8 +17,8 @@ from numpy import log
 from pymc.examples import model_1, model_2, model_3
 
 from numpy.testing import *
-class test_model_ave(NumpyTestCase):
-    def check(self):
+class test_model_ave(TestCase):
+    def test(self):
         
         # Changepoint model
         M1 = Model(model_1)
@@ -44,4 +44,4 @@ class test_model_ave(NumpyTestCase):
         print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])
 
 if __name__=='__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

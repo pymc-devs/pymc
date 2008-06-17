@@ -7,8 +7,8 @@ from numpy.testing import *
 from numpy.random import normal
 
 
-class test_MCMC(NumpyTestCase):
-    def check(self):
+class test_MCMC(TestCase):
+    def test(self):
         
         x = arange(-1.,1.,.1)
 
@@ -65,4 +65,4 @@ class test_MCMC(NumpyTestCase):
         GPSampler.sample(iter=500,burn=0,thin=10)
         
 if __name__ == '__main__':
-    NumpyTest().test(all=False)
+    unittest.main()

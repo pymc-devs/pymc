@@ -12,27 +12,27 @@ PLOT=False
 
 model = gelman_bioassay
 
-class test_norm_approx(NumpyTestCase):
-    def check_fmin(self):
+class test_norm_approx(TestCase):
+    def test_fmin(self):
         N = NormApprox(model)
         N.fit('fmin')
-    def check_fmin_l_bfgs_b(self):
+    def test_fmin_l_bfgs_b(self):
         N = NormApprox(model)
         N.fit('fmin_l_bfgs_b')
-    def check_fmin_ncg(self):
+    def test_fmin_ncg(self):
         N = NormApprox(model)
         N.fit('fmin_ncg')
-    def check_fmin_cg(self):
+    def test_fmin_cg(self):
         N = NormApprox(model)
         N.fit('fmin_cg')
-    def check_fmin_powell(self):
+    def test_fmin_powell(self):
         N = NormApprox(model)
         N.fit('fmin_powell')
-    def check_sig(self):
+    def test_sig(self):
         N = NormApprox(model)
         N.fit('fmin')
         assert((abs(N._sig * N._sig.T - N._C) < 1.0e-14).all())        
-    def check_draws(self):
+    def test_draws(self):
         N = NormApprox(model)
         N.fit('fmin')
         N.sample(1000)
@@ -42,4 +42,4 @@ class test_norm_approx(NumpyTestCase):
             ylabel(r'$\beta$')
         
 if __name__=='__main__':
-    NumpyTest().test(all=False)
+    unittest.main()
