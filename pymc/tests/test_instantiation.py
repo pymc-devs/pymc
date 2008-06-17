@@ -85,5 +85,7 @@ class test_instantiation(TestCase):
     def test_stochastic(self):
         assert(isinstance(l, Stochastic))
         assert(not l.isdata)
+
 if __name__ == '__main__':
+    import unittest
     unittest.main()

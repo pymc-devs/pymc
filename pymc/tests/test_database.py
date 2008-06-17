@@ -1,7 +1,6 @@
 """ Test database backends """
 
 from numpy.testing import TestCase, assert_array_equal, assert_equal
-import unittest
 from pymc import MCMC
 import pymc.database as database
 from pymc.examples import DisasterModel
@@ -197,6 +196,7 @@ if hasattr(database, 'hdf5'):
             db.close()
         
 if __name__ == '__main__':
+    import unittest
     unittest.main()
     try:
         S.db.close()

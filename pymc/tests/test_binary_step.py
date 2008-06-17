@@ -7,7 +7,7 @@ We have two parameters:
  * coin : the probability of tail on flipping the coin 
 """
 
-from numpy.testing import TestCase, unittest
+from numpy.testing import TestCase
 import pymc
 from pymc import stoch
 import numpy as np
@@ -37,5 +37,6 @@ class TestBinary(TestCase):
         assert(1.0*f.sum()/len(f) > .5)
     
 if __name__ == '__main__':
+    import unittest
     unittest.main()
 

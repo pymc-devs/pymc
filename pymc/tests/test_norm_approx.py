@@ -42,4 +42,5 @@ class test_norm_approx(TestCase):
             ylabel(r'$\beta$')
         
 if __name__=='__main__':
+    import unittest
     unittest.main()

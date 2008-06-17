@@ -65,4 +65,5 @@ class test_MCMC(TestCase):
         GPSampler.sample(iter=500,burn=0,thin=10)
         
 if __name__ == '__main__':
+    import unittest
     unittest.main()

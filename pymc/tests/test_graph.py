@@ -77,4 +77,5 @@ class test_graph(TestCase):
 
 if __name__ == '__main__':
     os.chdir('../test_results')
+    import unittest
     unittest.main()

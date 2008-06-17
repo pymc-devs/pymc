@@ -50,4 +50,5 @@ class test_model_ave(TestCase):
         
 
 if __name__=='__main__':
+    import unittest
     unittest.main()

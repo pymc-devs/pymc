@@ -40,4 +40,5 @@ class test_raftery_lewis(TestCase):
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 
 if __name__ == "__main__":
+    import unittest
     unittest.main()
