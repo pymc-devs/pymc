@@ -37,7 +37,7 @@ file. Look at template.py for a skeleton, and the other modules for examples.
 #                "Chris Fonnesbeck"]
 #__version__ = "2.0.beta"
 
-__modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5"]
+__modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5", "hdf52"]
 
 
 available_modules = []
