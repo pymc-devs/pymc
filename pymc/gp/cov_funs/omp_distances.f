@@ -11,15 +11,15 @@
       END
 
 
-      SUBROUTINE symmetrize(D,n,l,h)
+      SUBROUTINE symmetrize(D,n)
      
 cf2py intent(hide) n
 cf2py intent(inplace) D
       
       DOUBLE PRECISION D(n,n)
-      INTEGER l,h,i,j,n
+      INTEGER i,j,n
       
-      do j=l,h
+      do j=1,n
           do i=1,j-1
               D(j,i) = D(i,j)
           end do
@@ -86,8 +86,6 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
           enddo
         enddo
 
-      CALL symmetrize(D,nx,b(1),b(2))
-
       else
 
 !$OMP  DO SCHEDULE(STATIC)
@@ -106,6 +104,10 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
       endif
 
 !$OMP  END PARALLEL
+
+      if (symm) then
+        CALL symmetrize(D,nx)
+      end if
 
       CALL OMP_SET_NUM_THREADS(ntm)
            
@@ -170,7 +172,7 @@ cf2py integer intent(hide), depend(y)::ny=shape(y,0)
             D(i,j) = 2.0D0*DATAN2(sterm,cterm)    
         enddo          
       enddo
-      CALL symmetrize(C, nx, b(1), b(2))      
+   
       else
       
 !$OMP DO SCHEDULE(STATIC)
@@ -194,6 +196,11 @@ cf2py integer intent(hide), depend(y)::ny=shape(y,0)
       end if
             
 !$OMP  END PARALLEL
+
+      if (symm) then
+        CALL symmetrize(D,nx)
+      end if
+
       CALL OMP_SET_NUM_THREADS(ntm)
       RETURN
       END
@@ -275,7 +282,6 @@ cf2py intent(hide) ny
         enddo
       enddo  
 
-      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 !$OMP DO SCHEDULE(STATIC)
@@ -313,6 +319,11 @@ cf2py intent(hide) ny
       end if
      
 !$OMP END PARALLEL    
+
+      if (symm) then
+        CALL symmetrize(D,nx)
+      end if
+
       CALL OMP_SET_NUM_THREADS(ntm)
       
       RETURN
@@ -391,7 +402,6 @@ cf2py intent(hide) ny
         enddo          
       enddo
       
-      CALL symmetrize(C, nx, b(1), b(2))
       
       else
       
@@ -430,6 +440,10 @@ cf2py intent(hide) ny
       endif
 
 !$OMP  END PARALLEL      
+
+      if (symm) then
+        CALL symmetrize(D,nx)
+      end if
 
       CALL OMP_SET_NUM_THREADS(ntm)
 

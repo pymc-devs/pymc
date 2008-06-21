@@ -1,5 +1,14 @@
 #/usr/bin/env python
 
+"""
+setup_omp.py
+
+An alternative setup script that compiles the Fortran covariance functions
+with OpenMP.
+
+WARNING: You will probably have to edit this to get it to work on your system.
+"""
+
 try:
     import setuptools
 except ImportError:

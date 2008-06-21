@@ -15,15 +15,15 @@ c subsequent dimensions iterate over spatial dimensions.
       END
       
 
-      SUBROUTINE symmetrize(D,n,l,h)
+      SUBROUTINE symmetrize(D,n)
      
 cf2py intent(hide) n
 cf2py intent(inplace) D
       
       DOUBLE PRECISION D(n,n)
-      INTEGER l,h,i,j,n
+      INTEGER i,j,n
       
-      do j=l,h
+      do j=1,n
           do i=1,j-1
               D(j,i) = D(i,j)
           end do
@@ -111,8 +111,6 @@ cf2py logical intent(in), optional:: symm=0
           enddo
         enddo
 
-      CALL symmetrize(C, nx, b(1), b(2))
-
       else
 
 !$OMP DO SCHEDULE(STATIC)
@@ -151,6 +149,10 @@ cf2py logical intent(in), optional:: symm=0
       endif     
 
 !$OMP END PARALLEL
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
 
       CALL OMP_SET_NUM_THREADS(ntm)
       RETURN
@@ -231,8 +233,6 @@ cf2py double precision intent(hide), dimension(N+1):: BK
           enddo
         enddo
 
-      CALL symmetrize(C, nx, b(1), b(2))
-
       else
 
 !$OMP DO SCHEDULE(STATIC)
@@ -251,6 +251,10 @@ cf2py double precision intent(hide), dimension(N+1):: BK
       endif     
 
 !$OMP END PARALLEL
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
 
       CALL OMP_SET_NUM_THREADS(ntm)
             
@@ -305,8 +309,6 @@ cf2py logical intent(in), optional:: symm=0
           enddo
         enddo
 
-      CALL symmetrize(C, nx, b(1), b(2))
-
       else
 
 !$OMP DO SCHEDULE(STATIC)
@@ -320,6 +322,10 @@ cf2py logical intent(in), optional:: symm=0
       endif
 
 !$OMP END PARALLEL
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
 
       CALL OMP_SET_NUM_THREADS(ntm)
 
@@ -373,8 +379,6 @@ cf2py logical intent(in), optional:: symm=0
             C(i,j) = dexp(-dabs(C(i,j))**pow)
           enddo
         enddo
-        
-      CALL symmetrize(C, nx, b(1), b(2))
             
             
       else
@@ -390,6 +394,11 @@ cf2py logical intent(in), optional:: symm=0
       endif
       
 !$OMP END PARALLEL
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
+
       CALL OMP_SET_NUM_THREADS(ntm)
 
       return
@@ -447,8 +456,6 @@ cf2py logical intent(in), optional:: symm=0
           enddo
         enddo
 
-      CALL symmetrize(C, nx, b(1), b(2))
-
       else
 
 !$OMP DO SCHEDULE(STATIC)
@@ -467,6 +474,11 @@ cf2py logical intent(in), optional:: symm=0
       endif
 
 !$OMP END PARALLEL
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
+
       CALL OMP_SET_NUM_THREADS(ntm)
 
       return
@@ -522,7 +534,6 @@ cf2py logical intent(in), optional:: symm=0
           enddo
         enddo
 
-      CALL symmetrize(C, nx, b(1), b(2))
 
       else
 
@@ -538,6 +549,13 @@ cf2py logical intent(in), optional:: symm=0
       endif
 
 !$OMP END PARALLEL
+
+
+      if (symm) then
+          call symmetrize(C,nx)
+      end if
+
+
       CALL OMP_SET_NUM_THREADS(ntm)
 
       return
