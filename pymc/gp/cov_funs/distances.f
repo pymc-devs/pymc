@@ -1,26 +1,24 @@
 ! Copyright (c) Anand Patil, 2007
 
 
-      SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,symm)
+      SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
 
-cf2py double precision dimension(nx,ny), intent(out)::D
-cf2py double precision dimension(nx,ndx), intent(in)::x
-cf2py double precision dimension(ny,ndy), intent(in)::y 
-cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(hide), depend(x)::nx=shape(x,0)
-cf2py integer intent(hide), depend(y)::ny=shape(y,0)
-cf2py integer intent(hide), depend(x)::ndx=shape(x,1)
-cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py logical intent(optional) :: symm=0
+cf2py intent(hide) nx, ny, ndx, ndy
+cf2py intent(inplace) D
+cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,ndx), y(ny,ndy)
-      integer nx,ny,ndx,ndy,i,j,k
+      integer nx,ny,ndx,ndy,i,j,k,cmin,cmax
       LOGICAL symm
       DOUBLE PRECISION dist, dev
 
 
       if(symm) then         
 
-        do j=1,ny
+        do j=cmin+1,cmax
           D(j,j) = 0.0D0
           do i=1,j-1
             dist = 0.0D0
@@ -29,11 +27,11 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
               dist = dist + dev*dev
             enddo
             D(i,j) = dsqrt(dist)
-            D(j,i) = D(i,j)
+!             D(j,i) = D(i,j)
           enddo
         enddo
       else
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             dist = 0.0D0
             do k=1,ndx
@@ -49,23 +47,23 @@ cf2py integer intent(hide), depend(y)::ndy=shape(y,1)
 
 
 
-      SUBROUTINE geographic(D,x,y,nx,ny,symm)
+      SUBROUTINE geographic(D,x,y,nx,ny,cmin,cmax,symm)
 ! First coordinate is longitude, second is latitude.
 ! Assumes r=1.
 
-cf2py double precision intent(out), dimension(nx,ny) :: D
-cf2py double precision intent(in), dimension(nx,2) :: x
-cf2py double precision intent(in), dimension(ny,2) :: y
-cf2py logical intent(in), optional :: symm = 0
-cf2py integer intent(hide), depend(x)::nx=shape(x,0)
-cf2py integer intent(hide), depend(y)::ny=shape(y,0)
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py logical intent(optional) :: symm=0
+cf2py intent(hide) nx, ny
+cf2py intent(inplace) D
+cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
-      integer nx,ny,j,i,i_hi
+      integer nx,ny,j,i,i_hi,cmin,cmax
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
 
-      do j=1,ny
+      do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
         if(symm) then
             D(j,j)=0.0D0            
@@ -82,22 +80,24 @@ cf2py integer intent(hide), depend(y)::ny=shape(y,0)
             sterm = dsqrt(a)
             cterm = dsqrt(1.0D0-a)
             D(i,j) = 2.0D0*DATAN2(sterm,cterm)    
-            if(symm) then                  
-                D(j,i) = D(i,j)
-            end if
+!             if(symm) then                  
+!                 D(j,i) = D(i,j)
+!             end if
         enddo          
       enddo
       RETURN
       END
 
       
-      SUBROUTINE paniso_geo_rad(D,x,y,nx,ny,ctrs,scals,na,symm)
+      SUBROUTINE paniso_geo_rad(D,x,y,nx,ny,cmin,cmax
+     *,ctrs,scals,na,symm)
 
-cf2py intent(out) D
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm=0
-cf2py intent(hide) na
-cf2py intent(hide) nx
-cf2py intent(hide) ny
+cf2py intent(hide) na, nx, ny
+cf2py threadsafe
       
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)   
       DOUBLE PRECISION ctrs(na), scals(na), w       
@@ -112,7 +112,7 @@ cf2py intent(hide) ny
           ctrs(k) = ctrs(k)/pi
       end do
 
-      do j=1,ny
+      do j=cmin+1,cmax
         if(symm) then
             D(j,j)=0.0D0            
             i_hi = j-1
@@ -143,9 +143,9 @@ cf2py intent(hide) ny
 
   1         continue        
             end if
-            if(symm) then                  
-                D(j,i) = D(i,j)
-            end if  
+!             if(symm) then                  
+!                 D(j,i) = D(i,j)
+!             end if  
         enddo
       enddo  
            
@@ -154,24 +154,27 @@ cf2py intent(hide) ny
       
 
 c
-      SUBROUTINE aniso_geo_rad(D,x,y,nx,ny,inc,ecc,symm)
+      SUBROUTINE aniso_geo_rad(D,x,y,nx,ny,cmin,cmax,inc,ecc,symm)
 ! First coordinate is longitude, second is latitude.
 ! Assumes r=1.
 
-cf2py intent(out) D
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm = 0
 cf2py intent(hide) nx
 cf2py intent(hide) ny
+cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
-      integer nx,ny,i,j
+      integer nx,ny,i,j,cmin,cmax
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
       DOUBLE PRECISION slat1, slat2, inc, ecc, theta, dtheta
 
       if (symm) then
           
-      do j=1,ny
+      do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
         slat2 = dsin(y(j,2))
         D(j,j)=0.0D0            
@@ -199,13 +202,13 @@ cf2py intent(hide) ny
 
             end if
             
-            D(j,i) = D(i,j)
+!             D(j,i) = D(i,j)
         enddo          
       enddo
       
       else
       
-      do j=1,ny
+      do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
         slat2 = dsin(y(j,2))
         D(j,j)=0.0D0            

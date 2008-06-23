@@ -1,5 +1,6 @@
 from distances import euclidean, aniso_geo_rad, paniso_geo_rad
 from distances import geographic as geo_rad
+import numpy as np
 
 __all__ = ['euclidean', 'geo_rad', 'geo_deg', 'aniso_geo_rad', 'aniso_geo_deg', 'partition_aniso_geo_rad', 'partition_aniso_geo_deg']
 
@@ -52,7 +53,7 @@ geo_rad.__doc__ = """
 """
 
 def geo_deg(x,y,symm=False):
-    return geo_rad(x*pi/180., y*pi/180., symm)*180./pi
+    return geo_rad(x*np.pi/180., y*np.pi/180., symm)*180./np.pi
 geo_deg.__doc__ = geo_rad.__doc__.replace('radian', 'degree')
 
 aniso_geo_rad.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in radians'}
@@ -87,7 +88,7 @@ aniso_geo_rad.__doc__ = """
 """
 
 def aniso_geo_deg(x,y,inc,ecc,symm=False):
-    return aniso_geo_rad(x*pi/180., y*pi/180., inc*pi/180., ecc, symm)*180./pi
+    return aniso_geo_rad(x*np.pi/180., y*np.pi/180., inc*np.pi/180., ecc, symm)*180./np.pi
 aniso_geo_deg.__doc__ = geo_deg.__doc__.replace('radian', 'degree')
 aniso_geo_deg.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in degrees'}
 
@@ -97,6 +98,6 @@ partition_aniso_geo_rad.extra_parameters = {'ctrs': 'Centers of angular bins, in
 partition_aniso_geo_rad.__doc__ = ""
 
 def partition_aniso_geo_deg(x,y,ctrs,scals,symm=False):
-    return paniso_geo_rad(x*pi/180., y*pi/180., ctrs*pi/180., scals, symm)*180./pi
+    return paniso_geo_rad(x*np.pi/180., y*np.pi/180., ctrs*np.pi/180., scals, symm)*180./np.pi
 partition_aniso_geo_deg.extra_parameters = {'ctrs': 'Centers of angular bins, in radians','scals': 'Scales associated with each angular bin'}
 partition_aniso_geo_deg.__doc__ = ""

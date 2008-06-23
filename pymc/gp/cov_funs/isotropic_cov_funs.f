@@ -4,31 +4,45 @@ c A collection of covariance functions for Gaussian processes.
 c By convention, the first dimension of each input array iterates over points, and 
 c subsequent dimensions iterate over spatial dimensions.
 
+      SUBROUTINE symmetrize(C,nx)
+cf2py intent(inplace) C
+cf2py intent(hide) nx
+      DOUBLE PRECISION C(nx,nx)
+      INTEGER nx, i, j
+
+      do j=1,nx-1
+          do i=j+1,nx
+              C(j,i) = C(i,j)
+          end do
+      end do
+
+      RETURN
+      END
+
       SUBROUTINE stein_spatiotemporal
      *(C,Gt,origin_val,
-     * nx,ny,symm)
-
-! ============================================================================================================
-! = Todo: Allow differential 'sill's in space and time, so temporal correlation decays to positive constant. =
-! ============================================================================================================
+     * cmin,cmax,nx,ny,symm)
 
 cf2py threadsafe
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
 cf2py intent(inplace) C
 cf2py intent(hide) nx, ny, Bk
 cf2py logical intent(in), optional:: symm=0
+cf2py double precision intent(in),check(origin_val>0)::origin_val
 
       DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
       DOUBLE PRECISION origin_val
       DOUBLE PRECISION rem, dd_here
       DOUBLE PRECISION GA, prefac, snu
-      INTEGER nx, ny, i, j, fl, N, nd
+      INTEGER nx, ny, i, j, fl, N, nd, cmin, cmax
       DOUBLE PRECISION BK(50), DGAMMA
       DOUBLE PRECISION sp_x(nx,2), sp_y(ny,2)
       LOGICAL symm
       
       if (symm) then           
        
-        do j=1,nx       
+        do j=cmin+1,cmax
           
           C(j,j) = 1.0D0
           
@@ -60,13 +74,14 @@ cf2py logical intent(in), optional:: symm=0
               C(i,j)=prefac * (C(i,j) ** dd_here) * BK(fl+1)
 
             endif
-    1       C(j,i)=C(i,j)
+    1 continue        
+!     1       C(j,i)=C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
               
 ! ================================
@@ -104,15 +119,16 @@ cf2py logical intent(in), optional:: symm=0
       END
 
 
-      SUBROUTINE matern(C,diff_degree,nx,ny,symm,BK,N)
+      SUBROUTINE matern(C,diff_degree,nx,ny,cmin,cmax,symm,BK,N)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
-cf2py double precision intent(in),check(diff_degree>0)::diff_degree
-cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-cf2py integer intent(hide),depend(C)::ny=shape(C,1)
+cf2py intent(inplace) C
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py intent(hide) nx,ny,Bk
 cf2py logical intent(in), optional:: symm=0
 cf2py integer intent(hide), depend(diff_degree):: N = floor(diff_degree)
-cf2py double precision intent(hide), dimension(N+1):: BK
+cf2py double precision intent(in),check(diff_degree>0)::diff_degree
+cf2py threadsafe
 
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION diff_degree, rem
@@ -139,7 +155,7 @@ cf2py double precision intent(hide), dimension(N+1):: BK
 
       if (symm) then           
        
-        do j=1,ny
+        do j=cmin+1,cmax
           C(j,j) = 1.0D0
           do i=1,j-1
             if (C(i,j) .EQ. 0.0D0) then
@@ -149,13 +165,13 @@ cf2py double precision intent(hide), dimension(N+1):: BK
               CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               C(i,j)=prefac*(C(i,j)**diff_degree)*BK(fl+1)
             endif
-           C(j,i)=C(i,j)
+!           C(j,i)=C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=1.0D0
@@ -174,33 +190,32 @@ cf2py double precision intent(hide), dimension(N+1):: BK
 
 
             
-      SUBROUTINE gaussian(C,nx,ny,symm)
+      SUBROUTINE gaussian(C,nx,ny,cmin,cmax,symm)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
-cf2py double precision intent(in), optional::scale=1.
-cf2py double precision intent(in), optional::amp=1.
-cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-cf2py integer intent(hide),depend(C)::ny=shape(C,1)
+cf2py intent(inplace) C
+cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py threadsafe
 
-
-      INTEGER nx,ny,i,j
+      INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       LOGICAL symm
 
       if(symm) then
 
-        do j=1,ny
+        do j=cmin+1,cmax
           C(j,j) = 1.0D0
           do i=0,j-1
             C(i,j) = dexp(-C(i,j)*C(i,j)) 
-            C(j,i) = C(i,j)
+!             C(j,i) = C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             C(i,j) = dexp(-C(i,j)*C(i,j)) 
           enddo
@@ -213,16 +228,16 @@ cf2py logical intent(in), optional:: symm=0
       END
 
 
-      SUBROUTINE pow_exp(C,pow,nx,ny,symm)
+      SUBROUTINE pow_exp(C,pow,nx,ny,cmin,cmax,symm)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
-cf2py double precision intent(in),check(pow>0)::pow
-cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-cf2py integer intent(hide),depend(C)::ny=shape(C,1)
+cf2py intent(inplace) C
+cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py threadsafe
 
-
-      INTEGER nx,ny,i,j
+      INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION pow
       LOGICAL symm
@@ -230,17 +245,17 @@ cf2py logical intent(in), optional:: symm=0
 
       if(symm) then
           
-        do j=1,ny
+        do j=cmin+1,cmax
           C(j,j)=1.0D0         
           do i=1,j-1
             C(i,j) = dexp(-dabs(C(i,j))**pow)
-            C(j,i) = C(i,j)
+!             C(j,i) = C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             C(i,j) = dexp(-dabs(C(i,j))**pow) 
           enddo
@@ -253,21 +268,22 @@ cf2py logical intent(in), optional:: symm=0
       END
       
 
-      SUBROUTINE sphere(C,nx,ny,symm)
+      SUBROUTINE sphere(C,nx,ny,cmin,cmax,symm)
 
-cf2py double precision dimension(nx,ny),intent(inplace)::C
-cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-cf2py integer intent(hide),depend(C)::ny=shape(C,1)
+cf2py intent(inplace) C
+cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py threadsafe
 
-
-      INTEGER nx,ny,i,j
+      INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
       LOGICAL symm
 
 
       if(symm) then
-        do j=1,ny
+        do j=cmin+1,cmax
           C(j,j)=1.0D0         
           do i=1,j-1
             t = C(i,j)
@@ -276,13 +292,13 @@ cf2py logical intent(in), optional:: symm=0
             else
               C(i,j) = 0.0D0
             endif
-            C(j,i) = C(i,j)
+!             C(j,i) = C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             t = C(i,j)
             if (t .LT. 1.0D0) then
@@ -298,92 +314,37 @@ cf2py logical intent(in), optional:: symm=0
 
       return
       END
+            
 
+      SUBROUTINE quadratic(C,phi,nx,ny,cmin,cmax,symm)
 
-!       SUBROUTINE wave(C,sinC,lam,nx,ny,symm)
-! 
-! cf2py double precision dimension(nx,ny),intent(inplace)::C
-! cf2py double precision dimension(nx,ny),intent(hide)::sinC
-! cf2py double precision intent(in)::lam
-! cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-! cf2py integer intent(hide),depend(C)::ny=shape(C,1)
-! cf2py logical intent(in), optional:: symm=0
-! 
-!       INTEGER nx,ny,i,j
-!       DOUBLE PRECISION C(nx,ny),lam,pi,arg,sinC(nx,ny)
-!       LOGICAL symm
-!       PARAMETER (pi=3.141592653589793238462643d0)
-! 
-! c Fool F77's bogus dsin function
-!       do i=1,nx
-!         do j=1,ny
-!           C(i,j) = 2.0D0*pi/lam * C(i,j)
-!         enddo
-!       enddo
-!       do i=1,nx
-!         do j=1,ny
-!           sinC(i,j) = dsin(C(i,j))
-!         enddo
-!       enddo
-! 
-!             
-!       if(symm) then
-!         do i=1,nx
-!           C(i,i)=1.0D0         
-!           do j=i+1,ny
-!             if (C(i,j) .EQ. 0.0D0) then
-!               C(i,j) = 1.0D0
-!             else
-!               C(i,j) = sinC(i,j)/C(i,j)*lam*0.5D0/pi
-!               C(j,i) = C(i,j)
-!             endif
-!           enddo
-!         enddo
-!       else
-!         do i=1,nx
-!           do j=1,ny
-!             if (C(i,j) .EQ. 0.0D0) then
-!               C(i,j) = 1.0D0
-!             else
-!               C(i,j) = sinC(i,j)/C(i,j)*lam*0.5D0/pi
-!               C(j,i) = C(i,j)
-!             endif
-!           enddo
-!         enddo
-!       endif
-! 
-!       return
-!       END
-      
-
-      SUBROUTINE quadratic(C,phi,nx,ny,symm)
-
-cf2py double precision dimension(nx,ny),intent(inplace)::C
+cf2py intent(inplace) C
 cf2py double precision intent(in),check(phi>0)::phi
-cf2py integer intent(hide),depend(C)::nx=shape(C,0)
-cf2py integer intent(hide),depend(C)::ny=shape(C,1)
+cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=ny
+cf2py threadsafe
 
-
-      INTEGER nx,ny,i,j
+      INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION phi, t
       LOGICAL symm
 
       if(symm) then
           
-        do j=1,ny
+        do j=cmin+1,cmax
           C(j,j)=1.0D0         
           do i=1,j-2
             t=C(i,j)**2
             C(i,j) = 1.0D0-t/(1.0D0+phi*t)
-            C(j,i) = C(i,j)
+!             C(j,i) = C(i,j)
           enddo
         enddo
 
       else
 
-        do j=1,ny
+        do j=cmin+1,cmax
           do i=1,nx
             t=C(i,j)**2
             C(i,j) = 1.0D0-t/(1.0D0+phi*t)
