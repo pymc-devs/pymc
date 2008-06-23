@@ -3,8 +3,6 @@
 
       SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
 
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
 cf2py logical intent(optional) :: symm=0
 cf2py intent(hide) nx, ny, ndx, ndy
 cf2py intent(inplace) D
@@ -51,8 +49,6 @@ cf2py threadsafe
 ! First coordinate is longitude, second is latitude.
 ! Assumes r=1.
 
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
 cf2py logical intent(optional) :: symm=0
 cf2py intent(hide) nx, ny
 cf2py intent(inplace) D
@@ -92,8 +88,6 @@ cf2py threadsafe
       SUBROUTINE paniso_geo_rad(D,x,y,nx,ny,cmin,cmax
      *,ctrs,scals,na,symm)
 
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
 cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm=0
 cf2py intent(hide) na, nx, ny
@@ -158,8 +152,6 @@ c
 ! First coordinate is longitude, second is latitude.
 ! Assumes r=1.
 
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
 cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm = 0
 cf2py intent(hide) nx

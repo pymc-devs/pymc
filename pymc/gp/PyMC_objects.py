@@ -26,7 +26,7 @@ def GP_array_random(M, U, scale=1.):
 
 class GP(pm.Stochastic):
     """
-    f = GP(M, C, [mesh, doc, name, init_mesh_vals, mesh_eval_isdata, trace, cache_depth, verbose])
+    f = GP('f', M, C, [mesh, doc, init_mesh_vals, mesh_eval_isdata, trace, cache_depth, verbose])
     
     A stochastic variable valued as a Realization object.
     
@@ -51,11 +51,11 @@ class GP(pm.Stochastic):
     :SeeAlso: Realization, pymc.pm.Stochastic, pymc.pm.Deterministic, GPMetropolis, GPNormal
     """
     def __init__(self,
+                 name,
                  M,
                  C,
                  mesh=None,
                  doc="A GP realization-valued stochastic variable",
-                 name="GP",                 
                  init_mesh_vals = None,
                  mesh_eval_isdata = False,
                  trace=True,

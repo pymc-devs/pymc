@@ -11,7 +11,7 @@ cf2py intent(hide) nx
       INTEGER nx, i, j
 
       do j=1,nx-1
-          do i=j+1,nx
+          do i=1,j-1
               C(j,i) = C(i,j)
           end do
       end do

@@ -2165,6 +2165,8 @@ cf2py integer intent(hide),depend(hist) :: k=len(hist)
 
       DOUBLE PRECISION hist(k),s(n),mn,step,sump,u
       INTEGER n,k,i,j
+      
+!       print *,mn,step,k
 
 c repeat for n samples
       do i=1,n
