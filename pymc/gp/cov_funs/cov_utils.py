@@ -137,54 +137,46 @@ class covariance_wrapper(object):
         C_T = C.T
 
         if n_threads <= 1:
-        # if True:
+
+            # Compute full distance matrix
             self.distance_fun(C_T,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
             imul(C_T,1./scale,symm=symm)
-        
-        else:
             
-            def targ(C,x,y, cmin, cmax,symm, *args, **kwargs):
-                self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, *args, **kwargs)
-                imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
-                            
-            dist_threads = []
-        
-            for i in xrange(n_threads):
-                        
-                new_thread= Thread(target=targ, args=(C_T,x,y,bounds[i],bounds[i+1],symm), kwargs=distance_arg_dict)
-                dist_threads.append(new_thread)
-                new_thread.start()
-                
-            [thread.join() for thread in dist_threads]
-        
-        
-        # Overwrite the distance matrix using a Fortran covariance function
-        
-        if n_threads <= 1:
-        # if True:
+            # Compute full covariance matrix
             self.cov_fun(C_T,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
             imul(C_T, amp*amp, cmin=0, cmax=-1, symm=symm)
+
+            # Possibly symmetrize full matrix
             if symm:
                 symmetrize(C_T)
+            
         
         else:
-            cov_threads = []
             
-            def targ(C, cmin, cmax,symm, *args, **kwargs):
-                self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *args, **kwargs)
+            def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
+                
+                # Compute distance for this bit
+                self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
+                imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
+                
+                # Compute covariance for this bit
+                self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
                 imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
+
+                # Possibly symmetrize this bit
                 if symm:
                     symmetrize(C, cmin=cmin, cmax=cmax)
                 
+                            
+            threads = []
         
             for i in xrange(n_threads):
-                
-                new_thread= Thread(target=targ, args=(C_T,bounds[i],bounds[i+1],symm), kwargs=kwargs)
-                cov_threads.append(new_thread)
+                        
+                new_thread= Thread(target=targ, args=(C_T,x,y,bounds[i],bounds[i+1],symm))
+                threads.append(new_thread)
                 new_thread.start()
                 
-            [thread.join() for thread in cov_threads]
-        
+            [thread.join() for thread in threads]        
 
         return C
         
