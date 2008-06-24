@@ -6,7 +6,7 @@ __all__ = ['euclidean', 'geo_rad', 'geo_deg', 'aniso_geo_rad', 'aniso_geo_deg', 
 
 euclidean.__name__ = 'euclidean'
 euclidean.__doc__ = """
-    euclidean(D,x,y,cmin=0,cmax=0,symm=False)
+    euclidean(D,x,y,cmin=0,cmax=y.shape[0],symm=False)
 
 
     :Arguments:
@@ -32,7 +32,7 @@ euclidean.__doc__ = """
 
 geo_rad.__name__ = 'geo_rad'
 geo_rad.__doc__ = """
-    geo_rad(D,x,y,symm=False)
+    geo_rad(D,x,y,cmin=0,cmax=y.shape[0],symm=False)
 
 
     :Arguments:
@@ -47,6 +47,9 @@ geo_rad.__doc__ = """
  
           Latitudes and longitudes should be in radians.
 
+        - `cmin' and `cmax' indicate which columns to compute.
+          These are used for multithreaded evaluation.
+
         - `symm` indicates whether x and y are references to
           the same array.
       
@@ -55,9 +58,7 @@ geo_rad.__doc__ = """
     radius.
 """
 
-def geo_deg(D,x,y,cmin=0,cmax=0,symm=False):
-    if cmax==0:
-        cmax = y.shape[0]
+def geo_deg(D,x,y,cmin=0,cmax=-1,symm=False):
     geo_rad(D,x*np.pi/180., y*np.pi/180., cmin,cmax,symm)
     D *= 180./np.pi
 geo_deg.__doc__ = geo_rad.__doc__.replace('radian', 'degree').replace('rad','deg')
@@ -65,7 +66,7 @@ geo_deg.__doc__ = geo_rad.__doc__.replace('radian', 'degree').replace('rad','deg
 aniso_geo_rad.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in radians'}
 aniso_geo_rad.__name__ = 'aniso_geo_rad'
 aniso_geo_rad.__doc__ = """
-    aniso_geo_rad(D,x,y,inc,ecc,symm=False)
+    aniso_geo_rad(D,x,y,inc,ecc,cmin=0,cmax=y.shape[0],symm=False)
 
 
     :Arguments:
@@ -85,6 +86,9 @@ aniso_geo_rad.__doc__ = """
         - `ecc` gives the angle of inclination of the elliptical level sets of 
           distance, in radians.
 
+        - `cmin' and `cmax' indicate which columns to compute.
+          These are used for multithreaded evaluation.        
+
         - `symm` indicates whether x and y are references to
           the same array.
   
@@ -93,19 +97,19 @@ aniso_geo_rad.__doc__ = """
     radius.
 """
 
-def aniso_geo_deg(D,x,y,inc,ecc,symm=False):
-    aniso_geo_rad(D,x*np.pi/180., y*np.pi/180., inc*np.pi/180., ecc, symm)
+def aniso_geo_deg(D,x,y,inc,ecc,cmin=0,cmax=-1,symm=False):
+    aniso_geo_rad(D,x*np.pi/180., y*np.pi/180., inc*np.pi/180., ecc, cmin, cmax, symm)
     D*=180./np.pi
 aniso_geo_deg.__doc__ = geo_deg.__doc__.replace('radian', 'degree').replace('rad','deg')
 aniso_geo_deg.extra_parameters = {'ecc': 'Eccentricity of level sets of distance', 'inc': 'Angle of inclination, in degrees'}
 
-def partition_aniso_geo_rad(D,x,y,ctrs,scals,symm=False):
-    paniso_geo_rad(D,x,y,ctrs,scals,symm)
+def partition_aniso_geo_rad(D,x,y,ctrs,scals,cmin=0,cmax=-1,symm=False):
+    paniso_geo_rad(D,x,y,ctrs,scals,cmin,cmax,symm)
 partition_aniso_geo_rad.extra_parameters = {'ctrs': 'Centers of angular bins, in radians','scals': 'Scales associated with each angular bin'}
 partition_aniso_geo_rad.__doc__ = ""
 
-def partition_aniso_geo_deg(D,x,y,ctrs,scals,symm=False):
-    paniso_geo_rad(D,x*np.pi/180., y*np.pi/180., ctrs*np.pi/180., scals, symm)
+def partition_aniso_geo_deg(D,x,y,ctrs,scals,cmin=0,cmax=-1,symm=False):
+    paniso_geo_rad(D,x*np.pi/180., y*np.pi/180., ctrs*np.pi/180., scals, cmin,cmax,symm)
     D*=180./np.pi
 partition_aniso_geo_deg.extra_parameters = {'ctrs': 'Centers of angular bins, in radians','scals': 'Scales associated with each angular bin'}
 partition_aniso_geo_deg.__doc__ = ""

@@ -1,20 +1,37 @@
 ! Copyright (c) Anand Patil, 2007
 
+      SUBROUTINE test(D,nx)
 
-      SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
-
-cf2py logical intent(optional) :: symm=0
-cf2py intent(hide) nx, ny, ndx, ndy
 cf2py intent(inplace) D
 cf2py threadsafe
 
+      DOUBLE PRECISION D(nx,nx)
+      INTEGER nx
+
+      RETURN
+      END
+
+
+      SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
+
+cf2py intent(inplace) D
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
+cf2py logical intent(optional) :: symm=0
+cf2py intent(hide) nx, ny,ndx,ndy
+cf2py threadsafe
+
       DOUBLE PRECISION D(nx,ny), x(nx,ndx), y(ny,ndy)
-      integer nx,ny,ndx,ndy,i,j,k,cmin,cmax
+      INTEGER nx,ny,i,j,k,cmin,cmax,ndx,ndy,rmax
       LOGICAL symm
       DOUBLE PRECISION dist, dev
 
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
 
-      if(symm) then         
+      if(symm) then
 
         do j=cmin+1,cmax
           D(j,j) = 0.0D0
@@ -25,7 +42,6 @@ cf2py threadsafe
               dist = dist + dev*dev
             enddo
             D(i,j) = dsqrt(dist)
-!             D(j,i) = D(i,j)
           enddo
         enddo
       else
@@ -50,14 +66,21 @@ cf2py threadsafe
 ! Assumes r=1.
 
 cf2py logical intent(optional) :: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) nx, ny
 cf2py intent(inplace) D
+cf2py threadsafe
 cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
       integer nx,ny,j,i,i_hi,cmin,cmax
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
       do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
@@ -90,7 +113,10 @@ cf2py threadsafe
 
 cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm=0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) na, nx, ny
+cf2py threadsafe
 cf2py threadsafe
       
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)   
@@ -99,6 +125,10 @@ cf2py threadsafe
       LOGICAL symm                                  
       DOUBLE PRECISION a,pi,da,dlon,dlat
       PARAMETER (pi=3.141592653589793238462643d0)   
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
       CALL geographic(D,x,y,nx,ny,symm)      
       w = 0.5D0/real(na)
@@ -154,6 +184,8 @@ c
 
 cf2py intent(inplace) D
 cf2py logical intent(optional) :: symm = 0
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) nx
 cf2py intent(hide) ny
 cf2py threadsafe
@@ -163,6 +195,10 @@ cf2py threadsafe
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
       DOUBLE PRECISION slat1, slat2, inc, ecc, theta, dtheta
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
       if (symm) then
           

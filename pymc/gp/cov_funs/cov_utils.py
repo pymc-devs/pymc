@@ -6,7 +6,7 @@ import inspect
 import imp
 import pickle
 from threading import Thread
-from isotropic_cov_funs import symmetrize
+from isotropic_cov_funs import symmetrize, imul
 from copy import copy
 
 __all__ = ['covariance_wrapper', 'covariance_function_bundle']
@@ -105,14 +105,11 @@ class covariance_wrapper(object):
     # the floating-point operations on C.
     def __call__(self,x,y,amp=1.,scale=1.,n_threads=1,symm=None,*args,**kwargs):
 
-        
         if amp<0. or scale<0.:
             raise ValueError, 'The amp and scale parameters must be positive.'
-
         
-        symm = (x is y)
-        kwargs['symm']=symm
-
+        if symm is None:
+            symm = (x is y)
 
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
@@ -133,63 +130,61 @@ class covariance_wrapper(object):
             for key in self.extra_distance_params.iterkeys():
                 if key in kwargs.keys():
                     distance_arg_dict[key] = kwargs.pop(key)
-        distance_arg_dict['symm']=symm
 
 
         # Form the distance matrix
         C = np.asmatrix(np.empty((nx,ny),dtype=float))
+        C_T = C.T
 
         if n_threads <= 1:
-            self.distance_fun(C,x,y,**distance_arg_dict)
+        # if True:
+            self.distance_fun(C_T,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
+            imul(C_T,1./scale,symm=symm)
         
         else:
-        # if True:
+            
+            def targ(C,x,y, cmin, cmax,symm, *args, **kwargs):
+                self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, *args, **kwargs)
+                imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
+                            
             dist_threads = []
-
+        
             for i in xrange(n_threads):
-                
-                kwds_i = copy(distance_arg_dict)
-                kwds_i['cmin'] = bounds[i]
-                kwds_i['cmax'] = bounds[i+1]
-
-                new_thread= Thread(target=self.distance_fun,
-                    args=(C,x,y),
-                    kwargs=kwds_i)
+                        
+                new_thread= Thread(target=targ, args=(C_T,x,y,bounds[i],bounds[i+1],symm), kwargs=distance_arg_dict)
                 dist_threads.append(new_thread)
                 new_thread.start()
                 
             [thread.join() for thread in dist_threads]
-            
-        C /= scale
-
-
+        
+        
         # Overwrite the distance matrix using a Fortran covariance function
         
         if n_threads <= 1:
-
-            self.cov_fun(C,*args,**kwargs)
-
+        # if True:
+            self.cov_fun(C_T,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
+            imul(C_T, amp*amp, cmin=0, cmax=-1, symm=symm)
+            if symm:
+                symmetrize(C_T)
+        
         else:
             cov_threads = []
-
-            for i in xrange(n_threads):
-                kwds_i = copy(kwargs)
-                kwds_i['cmin'] = bounds[i]
-                kwds_i['cmax'] = bounds[i+1]
+            
+            def targ(C, cmin, cmax,symm, *args, **kwargs):
+                self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *args, **kwargs)
+                imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
+                if symm:
+                    symmetrize(C, cmin=cmin, cmax=cmax)
                 
-                new_thread= Thread(target=self.cov_fun,
-                    args=(C) + args,
-                    kwargs=kwds_i)
+        
+            for i in xrange(n_threads):
+                
+                new_thread= Thread(target=targ, args=(C_T,bounds[i],bounds[i+1],symm), kwargs=kwargs)
                 cov_threads.append(new_thread)
                 new_thread.start()
                 
             [thread.join() for thread in cov_threads]
-
-        C *= amp*amp        
         
-        # Symmetrize output if symmetric        
-        if symm:
-            symmetrize(C)
 
         return C
         

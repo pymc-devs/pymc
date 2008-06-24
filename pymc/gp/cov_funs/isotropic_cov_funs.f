@@ -4,13 +4,68 @@ c A collection of covariance functions for Gaussian processes.
 c By convention, the first dimension of each input array iterates over points, and 
 c subsequent dimensions iterate over spatial dimensions.
 
-      SUBROUTINE symmetrize(C,nx)
+      SUBROUTINE imul(C,a,nx,ny,cmin,cmax,symm)
+
+cf2py intent(inplace) C
+cf2py integer intent(in), optional :: cmin = 0
+cf2py integer intent(in), optional :: cmax = -1
+cf2py intent(hide) nx,ny
+cf2py logical intent(in), optional:: symm=0
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny)
+      DOUBLE PRECISION a
+      INTEGER nx, ny, i, j, cmin, cmax
+      LOGICAL symm
+
+      EXTERNAL DSCAL
+
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+
+      if (symm) then           
+       
+        do j=cmin+1,cmax
+            do i=1,j
+                C(i,j) = C(i,j) * a
+            end do
+!           CALL DSCAL(j,a,C(1,j),1)
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+            do i=1,nx
+                C(i,j) = C(i,j) * a
+            end do
+ !          CALL DSCAL(nx,a,C(1,j),1)
+        enddo
+      endif  
+
+
+      RETURN
+      END
+
+
+
+      SUBROUTINE symmetrize(C,nx,cmin,cmax)
+
 cf2py intent(inplace) C
 cf2py intent(hide) nx
-      DOUBLE PRECISION C(nx,nx)
-      INTEGER nx, i, j
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py threadsafe
 
-      do j=1,nx-1
+
+      DOUBLE PRECISION C(nx,nx)
+      INTEGER nx, i, j, cmin, cmax
+      
+      if (cmax.EQ.-1) then
+          cmax = nx
+      end if
+
+      do j=cmin,cmax
           do i=1,j-1
               C(j,i) = C(i,j)
           end do
@@ -19,13 +74,15 @@ cf2py intent(hide) nx
       RETURN
       END
 
+
+
       SUBROUTINE stein_spatiotemporal
      *(C,Gt,origin_val,
      * cmin,cmax,nx,ny,symm)
 
 cf2py threadsafe
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
 cf2py intent(inplace) C
 cf2py intent(hide) nx, ny, Bk
 cf2py logical intent(in), optional:: symm=0
@@ -39,6 +96,10 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
       DOUBLE PRECISION BK(50), DGAMMA
       DOUBLE PRECISION sp_x(nx,2), sp_y(ny,2)
       LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
       
       if (symm) then           
        
@@ -122,8 +183,8 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
       SUBROUTINE matern(C,diff_degree,nx,ny,cmin,cmax,symm,BK,N)
 
 cf2py intent(inplace) C
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin = 0
+cf2py integer intent(in), optional :: cmax = -1
 cf2py intent(hide) nx,ny,Bk
 cf2py logical intent(in), optional:: symm=0
 cf2py integer intent(hide), depend(diff_degree):: N = floor(diff_degree)
@@ -133,9 +194,16 @@ cf2py threadsafe
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION diff_degree, rem
       DOUBLE PRECISION GA, prefac, snu
-      INTEGER nx, ny, i, j, fl, N
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax
       DOUBLE PRECISION BK(N+1), DGAMMA
       LOGICAL symm
+
+!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+      
+
       
       if (diff_degree .GT. 10.0D0) then
         call gaussian(C,nx,ny,symm)
@@ -195,13 +263,17 @@ cf2py threadsafe
 cf2py intent(inplace) C
 cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
 cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
       if(symm) then
 
@@ -233,14 +305,18 @@ cf2py threadsafe
 cf2py intent(inplace) C
 cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
 cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION pow
       LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
 
       if(symm) then
@@ -273,13 +349,17 @@ cf2py threadsafe
 cf2py intent(inplace) C
 cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
 cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
       LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
 
       if(symm) then
@@ -322,14 +402,18 @@ cf2py intent(inplace) C
 cf2py double precision intent(in),check(phi>0)::phi
 cf2py intent(hide) nx,ny
 cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(optional) :: cmin=0
-cf2py integer intent(optional) :: cmax=ny
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
 cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION phi, t
       LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
 
       if(symm) then
           
