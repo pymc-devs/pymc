@@ -47,6 +47,8 @@ class covariance_wrapper(object):
     amp and scale, and that separates the distance-finding
     from the covariance-evaluating for less code duplication
     and easier nonstationary generalizations.
+    
+    Parallelizes calls of sufficient size.
     """
     
     # pickle support
@@ -72,12 +74,9 @@ class covariance_wrapper(object):
 
         self.cov_fun_module = cov_fun_module
         self.cov_fun = cov_fun
-
         self.distance_fun_module = distance_fun_module        
         self.distance_fun = distance_fun
-        
         self.extra_cov_params = extra_cov_params
-        
         self.__doc__ = cov_fun_name + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
 
         # Add covariance parameters to function signature
@@ -136,16 +135,14 @@ class covariance_wrapper(object):
         if not C.flags['F_CONTIGUOUS']:
             raise ValueError, 'Newly-generated covariance matrix is not Fortran contiguous.'
 
-        if n_threads <= 1:
 
+        if n_threads <= 1:
             # Compute full distance matrix
             self.distance_fun(C,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
             imul(C,1./scale,symm=symm)
-            
             # Compute full covariance matrix
             self.cov_fun(C,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
             imul(C, amp*amp, cmin=0, cmax=-1, symm=symm)
-
             # Possibly symmetrize full matrix
             if symm:
                 symmetrize(C)
@@ -154,28 +151,22 @@ class covariance_wrapper(object):
         else:
             
             def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
-                
                 # Compute distance for this bit
                 self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
                 imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
-                
                 # Compute covariance for this bit
                 self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
                 imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
-
                 # Possibly symmetrize this bit
                 if symm:
                     symmetrize(C, cmin=cmin, cmax=cmax)
                 
                             
             threads = []
-        
             for i in xrange(n_threads):
-                        
                 new_thread= Thread(target=targ, args=(C,x,y,bounds[i],bounds[i+1],symm))
                 threads.append(new_thread)
                 new_thread.start()
-                
             [thread.join() for thread in threads]        
 
         return C
