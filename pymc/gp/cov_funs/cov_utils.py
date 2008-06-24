@@ -114,15 +114,14 @@ class covariance_wrapper(object):
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
         ny = y.shape[0]
-        n_threads = min(n_threads, nx*ny / 50000)        
+        n_threads = min(n_threads, nx*ny / 10000)        
 
         if n_threads > 1:
         # if True:
             if not symm:
                 bounds = np.linspace(0,ny,n_threads+1)
             else:
-                bounds = np.array(np.sqrt(np.linspace(0,ny**2,n_threads+1)),dtype=int)
-
+                bounds = np.array(np.sqrt(np.linspace(0,ny*ny,n_threads+1)),dtype=int)
 
         # Split off the distance arguments
         distance_arg_dict = {}        
@@ -132,23 +131,24 @@ class covariance_wrapper(object):
                     distance_arg_dict[key] = kwargs.pop(key)
 
 
-        # Form the distance matrix
-        C = np.asmatrix(np.empty((nx,ny),dtype=float))
-        C_T = C.T
+        # Allocate the matrix
+        C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
+        if not C.flags['F_CONTIGUOUS']:
+            raise ValueError, 'Newly-generated covariance matrix is not Fortran contiguous.'
 
         if n_threads <= 1:
 
             # Compute full distance matrix
-            self.distance_fun(C_T,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
-            imul(C_T,1./scale,symm=symm)
+            self.distance_fun(C,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
+            imul(C,1./scale,symm=symm)
             
             # Compute full covariance matrix
-            self.cov_fun(C_T,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
-            imul(C_T, amp*amp, cmin=0, cmax=-1, symm=symm)
+            self.cov_fun(C,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
+            imul(C, amp*amp, cmin=0, cmax=-1, symm=symm)
 
             # Possibly symmetrize full matrix
             if symm:
-                symmetrize(C_T)
+                symmetrize(C)
             
         
         else:
@@ -172,7 +172,7 @@ class covariance_wrapper(object):
         
             for i in xrange(n_threads):
                         
-                new_thread= Thread(target=targ, args=(C_T,x,y,bounds[i],bounds[i+1],symm))
+                new_thread= Thread(target=targ, args=(C,x,y,bounds[i],bounds[i+1],symm))
                 threads.append(new_thread)
                 new_thread.start()
                 
