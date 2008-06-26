@@ -108,11 +108,13 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
           C(j,j) = 1.0D0
           
           do i=1,j-1
-            
+                        
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
             dd_here=Gt(i,j)
+            
+
 
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=origin_val / dd_here
@@ -129,10 +131,11 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
               fl = INT(dd_here)
               rem = dd_here - fl
               N = fl
-              
+                            
               C(i,j) = C(i,j) * snu
-              CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)              
               C(i,j)=prefac * (C(i,j) ** dd_here) * BK(fl+1)
+                            
 
             endif
     1 continue        

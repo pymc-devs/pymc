@@ -5,9 +5,10 @@ import wrapped_distances
 import inspect
 import imp
 import pickle
-from threading import Thread
+from threading import Thread, Lock
 from isotropic_cov_funs import symmetrize, imul
 from copy import copy
+import sys
 
 __all__ = ['covariance_wrapper', 'covariance_function_bundle']
 
@@ -104,6 +105,9 @@ class covariance_wrapper(object):
     # the floating-point operations on C.
     def __call__(self,x,y,amp=1.,scale=1.,n_threads=1,symm=None,*args,**kwargs):
 
+        # Thanks to Anne Archibald for handythread.py, the model for the
+        # multithreaded call.
+
         if amp<0. or scale<0.:
             raise ValueError, 'The amp and scale parameters must be positive.'
         
@@ -116,7 +120,6 @@ class covariance_wrapper(object):
         n_threads = min(n_threads, nx*ny / 10000)        
 
         if n_threads > 1:
-        # if True:
             if not symm:
                 bounds = np.linspace(0,ny,n_threads+1)
             else:
@@ -132,9 +135,6 @@ class covariance_wrapper(object):
 
         # Allocate the matrix
         C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
-        if not C.flags['F_CONTIGUOUS']:
-            raise ValueError, 'Newly-generated covariance matrix is not Fortran contiguous.'
-
 
         if n_threads <= 1:
             # Compute full distance matrix
@@ -147,20 +147,30 @@ class covariance_wrapper(object):
             if symm:
                 symmetrize(C)
             
-        
         else:
             
+            iteratorlock = Lock()
+            exceptions=[]
+            
             def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
-                # Compute distance for this bit
-                self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
-                imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
-                # Compute covariance for this bit
-                self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
-                imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
-                # Possibly symmetrize this bit
-                if symm:
-                    symmetrize(C, cmin=cmin, cmax=cmax)
-                
+                try:
+                    # Compute distance for this bit
+                    self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
+                    imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
+                    # Compute covariance for this bit
+                    self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
+                    imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
+                    # Possibly symmetrize this bit
+                    if symm:
+                        symmetrize(C, cmin=cmin, cmax=cmax)
+                        
+                except:
+                    e = sys.exc_info()
+                    iteratorlock.acquire()
+                    try:
+                        exceptions.append(e)
+                    finally:
+                        iteratorlock.release()
                             
             threads = []
             for i in xrange(n_threads):
@@ -168,6 +178,10 @@ class covariance_wrapper(object):
                 threads.append(new_thread)
                 new_thread.start()
             [thread.join() for thread in threads]        
+            
+            if exceptions:
+                a, b, c = exceptions[0]
+                raise a, b, c
 
         return C
         

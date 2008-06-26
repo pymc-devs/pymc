@@ -162,13 +162,12 @@ class Database(pickle.Database):
             self.dtype_dict = {}
             self.trace_dict = {}
             self.groupnum_dict = {}
-
-            i = len(self._h5file.listNodes('/'))
-            self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
     
         
     def _initialize(self, length):
         """Create group for the current chain."""
+        i = len(self._h5file.listNodes('/'))
+        self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
         group_counter = 0
         group_num = 0

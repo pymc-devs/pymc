@@ -1,17 +1,5 @@
 ! Copyright (c) Anand Patil, 2007
 
-      SUBROUTINE test(D,nx)
-
-cf2py intent(inplace) D
-cf2py threadsafe
-
-      DOUBLE PRECISION D(nx,nx)
-      INTEGER nx
-
-      RETURN
-      END
-
-
       SUBROUTINE euclidean(D,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
 
 cf2py intent(inplace) D
@@ -22,7 +10,7 @@ cf2py intent(hide) nx, ny,ndx,ndy
 cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,ndx), y(ny,ndy)
-      INTEGER nx,ny,i,j,k,cmin,cmax,ndx,ndy,rmax
+      INTEGER nx,ny,i,j,k,cmin,cmax,ndx,ndy
       LOGICAL symm
       DOUBLE PRECISION dist, dev
 
@@ -237,20 +225,21 @@ cf2py threadsafe
       else
       
       do j=cmin+1,cmax
+         
         clat2 = dcos(y(j,2))
         slat2 = dsin(y(j,2))
-        D(j,j)=0.0D0            
 
         do i=1,nx
+
             clat1 = dcos(x(i,2))
             slat1 = dsin(x(i,2))
             dlat = (x(i,2)-y(j,2))
             dlon = (x(i,1)-y(j,1))
             a=dsin(dlat*0.5D0)**2 + clat1*clat2*dsin(dlon*0.5D0)**2
+
             sterm = dsqrt(a)
             cterm = dsqrt(1.0D0-a)
             D(i,j) = 2.0D0*DATAN2(sterm,cterm)
-
 
             if (D(i,j).GT.0.0D0) then
 
@@ -263,6 +252,7 @@ cf2py threadsafe
                 D(i,j)=D(i,j)*dsqrt(1.0D0 - dtheta)
 
             end if
+
         enddo          
       enddo
 
