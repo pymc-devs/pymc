@@ -894,12 +894,12 @@ class AdaptiveMetropolis(StepMethod):
         """
         ord_sc = []
         for stochastic in self.stochastics:
-            ord_sc.append(scales[stochastic])
+            ord_sc.append(np.ravel(scales[stochastic]))
         ord_sc = np.concatenate(ord_sc)
         
-        if np.squeeze(ord_sc.shape) != self.dim:
+        if np.squeeze(ord_sc).shape[0] != self.dim:
             raise "Improper initial scales, dimension don't match", \
-                (ord_sc, self.dim)
+                (np.squeeze(ord_sc), self.dim)
         return ord_sc
                 
     def update_cov(self):

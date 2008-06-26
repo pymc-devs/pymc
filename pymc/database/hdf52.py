@@ -48,12 +48,12 @@ class Trace(base.Trace):
             self.isnum = True
         
     
-    def tally(self):
+    def tally(self,index):
         """Adds current value to trace"""
         if not self.isnum:
             self._array.append(self._obj.value)
         else:
-            self._array.append(np.atleast_1d(self._obj.value))
+            self._array[index] = self._obj.value
                        
     def truncate(self, index):
         """
@@ -75,14 +75,14 @@ class Trace(base.Trace):
             chain = getattr(self.db._h5file.root, 'chain%d'%chain)
             ### FIXME How to guarantee that this object is in the same group
             ### in every chain?
-            group = getattr(chain, self.db.groupnum_dict[self._obj])
-            return getattr(chain, self._obj.__name__)
+            group = getattr(chain, 'group%d'%self.db.groupnum_dict[self._obj])
+            return getattr(group, self._obj.__name__)
         else:
             chains = []
             for i in xrange(len(self.db._h5file.listNodes('/'))):
                 chain = getattr(self.db._h5file.root, 'chain%d'%i)
-                group = getattr(chain, self.db.groupnum_dict[self._obj])
-                chains.append(getattr(chain, self._obj.__name__))
+                group = getattr(chain, 'group%d'%self.db.groupnum_dict[self._obj])
+                chains.append(getattr(group, self._obj.__name__))
             return chains
                       
     def _finalize(self):
@@ -97,7 +97,7 @@ class Trace(base.Trace):
         if chain==-1:
             chain = len(self.db._h5file.listNodes('/')) - 1
         chain = getattr(self.db._h5file.root, 'chain%d'%chain)
-        group = getattr(chain, self.db.groupnum_dict[self])
+        group = getattr(chain, 'groud%d'%self.db.groupnum_dict[self])
         return len(getattr(group, self._obj.__name__))
         
 
@@ -153,7 +153,7 @@ class Database(pickle.Database):
 
         # If mode is an integer i, grab the i'th chain to use it.
         if not self.mode.__class__ is str:
-            i = self.mode
+            # i = self.mode
             self._group = self._h5file.getNode('/chain%d'%i)
 
         # If mode is not an integer, initialize a new chain (group)
@@ -184,15 +184,15 @@ class Database(pickle.Database):
                 arr_value = np.asarray(o.value)
                 title = o.__name__ + ': samples from %s' % self._group._v_name
                 self.dtype_dict[o] = arr_value.dtype
-                self.groupnum_dict[o] = group_counter
+                self.groupnum_dict[o] = group_num
                 
                 if arr_value.dtype is od:
                     self.trace_dict[o] = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), 
                         title=title, filters=self.filter) 
                 
                 else:
-                    self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
-                        tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), (0,), title=title, filters=self.filter)
+                    self.trace_dict[o] = self._h5file.createCArray(this_group, o.__name__, 
+                        tables.Atom.from_dtype(arr_value.dtype), (length,) + arr_value.shape, title=title, filters=self.filter)
 
                 if group_counter % 4096 == 0:
                     group_num += 1
@@ -230,7 +230,7 @@ descend from a single group, so the traces are split up into several groups.')
     
     def tally(self, index):
         for o in self.model._variables_to_tally:
-            o.trace.tally()
+            o.trace.tally(index)
         
     def _finalize(self):
         """Close file."""
@@ -255,6 +255,8 @@ descend from a single group, so the traces are split up into several groups.')
         self._h5file.close()
         
     def getstate(self):
+        if not hasattr(self,'_group'):
+            return None
         if self._group.__contains__('__state__'):
             return self._group.__state__[-1]
         else:
