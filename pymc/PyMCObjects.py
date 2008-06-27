@@ -5,7 +5,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase, file_items
 import pdb
@@ -261,15 +261,23 @@ class Potential(PotentialBase):
     def get_logp(self):
         if self.verbose > 1:
             print '\t' + self.__name__ + ': log-probability accessed.'
-        _logp = self._logp.get()
+        logp = self._logp.get()
         if self.verbose > 1:
-            print '\t' + self.__name__ + ': Returning log-probability ', _logp
+            print '\t' + self.__name__ + ': Returning log-probability ', logp
+            
+        try:
+            logp = float(logp)
+        except:
+            raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
+
+        if isnan(logp):
+            raise ValueError, self.__name__ + ': computed log-probability is nan'
 
         # Check if the value is smaller than a double precision infinity:
-        if _logp <= d_neg_inf:
+        if logp <= d_neg_inf:
             raise ZeroProbability, self.zero_logp_error_msg
 
-        return _logp
+        return logp
         
     def set_logp(self,value):      
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
@@ -625,9 +633,19 @@ class Stochastic(StochasticBase):
 
 
     def get_logp(self):
+        
         if self.verbose > 0:
             print '\t' + self.__name__ + ': logp accessed.'
         logp = self._logp.get()
+        
+        try:
+            logp = float(logp)
+        except:
+            raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
+        
+        if isnan(logp):
+            raise ValueError, self.__name__ + ': computed log-probability is nan'
+        
         if self.verbose > 0:
             print '\t' + self.__name__ + ': Returning log-probability ', logp
         
