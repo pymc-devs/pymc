@@ -83,6 +83,12 @@ cf2py integer intent(hide) :: info
 !     C <- cholesky(C)      
       call DPOTRF( 'L', n, C, n, info )
 !       print *, C
+
+!      If cholesky failed, puke.
+       if (info .GT. 0) then
+         like = -infinity
+         RETURN
+       endif
       
 !     Call to chol_mvnorm
       call chol_mvnorm(x,mu,C,n,like,info)
