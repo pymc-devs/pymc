@@ -8,6 +8,7 @@
 
 \RequirePackage{pypaper}
 \RequirePackage{fancybox}
+\RequirePackage{epsfig}
 
 % Change the options here to get a different set of basic options, but only
 % if you have to.  Paper and font size should be adjusted in pypaper.sty.
@@ -36,7 +37,7 @@
 % .sty file is distributed with Python, so you should not need to disable
 % it.  You'd also end up with a mixed page style; uglier than stock LaTeX!
 %
-\RequirePackage[Bjarne]{fncychap}\typeout{Using fancy chapter headings.}
+\RequirePackage[Bjarne]{pymcchap}\typeout{Using fancy chapter headings.}
 % Do horizontal rules it this way to match:
 \newcommand{\py@doHorizontalRule}{\mghrulefill{\RW}}
 %
@@ -79,7 +80,9 @@
     \begin{flushright}%
       {\rm\Huge\py@HeaderFamily \@title \par}%
       {\em\LARGE\py@HeaderFamily \py@release\releaseinfo \par}
-      \vfill
+      %\vfill
+      %\epsfig{file=logo_purple.pdf,width=15cm}
+      %\vfill
       {\LARGE\py@HeaderFamily \@author \par}
       \vfill\vfill
       {\large

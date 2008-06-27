@@ -240,7 +240,7 @@ class covariance_function_bundle(object):
 
     Method: 
 
-        - `universal(distance_fun)`: Takes a function that computes a 
+        - `add_distance_metric(distance_fun)`: Takes a function that computes a 
           distance np.matrix for points in some coordinate system and returns 
           the covariance function wrapped to use that coordinate system.
           
@@ -258,17 +258,17 @@ class covariance_function_bundle(object):
         self.cov_fun_module = cov_fun_module
         self.extra_cov_params = extra_cov_params
         
-        self.universal('euclidean','wrapped_distances')
-        self.universal('geo_rad','wrapped_distances')
-        self.universal('geo_deg','wrapped_distances')
-        self.universal('aniso_geo_rad','wrapped_distances')
-        self.universal('aniso_geo_deg','wrapped_distances')
-        self.universal('partition_aniso_geo_deg','wrapped_distances')
-        self.universal('partition_aniso_geo_rad','wrapped_distances')
+        self.add_distance_metric('euclidean','wrapped_distances')
+        self.add_distance_metric('geo_rad','wrapped_distances')
+        self.add_distance_metric('geo_deg','wrapped_distances')
+        self.add_distance_metric('aniso_geo_rad','wrapped_distances')
+        self.add_distance_metric('aniso_geo_deg','wrapped_distances')
+        self.add_distance_metric('partition_aniso_geo_deg','wrapped_distances')
+        self.add_distance_metric('partition_aniso_geo_rad','wrapped_distances')
         
         self.raw = self.euclidean.cov_fun
                 
-    def universal(self, distance_fun_name, distance_fun_module):
+    def add_distance_metric(self, distance_fun_name, distance_fun_module):
         """
         Takes a function that computes a distance matrix for 
         points in some coordinate system and returns self's 

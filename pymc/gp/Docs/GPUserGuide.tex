@@ -1,20 +1,87 @@
-% Copyright (c) Anand Patil, 2007
+%!TEX TS-program = pdflatex
+%!TEX TS-program = skim
+%
+%  PyMC User's Guide
+%
+%  Created by Chris Fonnesbeck on 2006-05-03.
+%  Copyright (c) 2006 . All rights reserved.
+%
+\documentclass[]{manual}
 
-\documentclass{manual}
+% Use utf-8 encoding for foreign characters
+%\usepackage[utf8]{inputenc}
+
+% Setup for fullpage use
+\usepackage{fullpage}
+\usepackage{amsmath}
 \usepackage{epsfig}
-\usepackage{pdfsync}
-\usepackage{amsfonts}
+\usepackage{pdfsync} 
 
-\release{0.1}
+% Flexible citation syntax
+\usepackage{natbib}
+% Uncomment some of the following if you use the features
+%
 
-\begin{document}
+% Multipart figures
+%\usepackage{subfigure}
 
-\title{Random Realizations\\
-(Gaussian process classes for Python)\\\\
-User Guide
-}
-\author{Anand Patil}
+% More symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+
+% Package for including code in the document
+\usepackage{listings}
+
+% Surround parts of graphics with box
+%\usepackage{boxedminipage}
+
+% This is now the recommended way for checking for PDFLaTeX:
+%\usepackage{ifpdf}
+
+% Enable hyperlinks
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+
+%\ifpdf
+%\usepackage[pdftex]{graphicx}
+%\else
+%\usepackage{graphicx}
+%\fi
+
+%%% EPYDOC STUFF %%%
+\usepackage{underscore}
+\usepackage[english]{babel}
+\usepackage{alltt, parskip, boxedminipage}
+\usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
+\usepackage{fullpage}
+\usepackage[usenames]{color}
+\usepackage{ifthen}
+\usepackage{ae}
+\usepackage{aeguill}
+\usepackage{shortvrb}
+\usepackage{ucs}
+\usepackage{tabularx}
+\input{epydocheader}
+%%% END OF EPYDOC STUFF %%%
+
+
+\title{PyMC Gaussian process module \\User's guide}
+\author{ Anand Patil }
+\pdfoutput=1
+% \date
+% TODO: Logo.
+
+%%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
+\newcommand{\titlereference}[1]{\textsl{#1}}
+\newlength{\locallinewidth}
+\setlength{\locallinewidth}{7in}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document} 
+
 \maketitle
+
 \tableofcontents
 
 \chapter{Introduction}\label{cha:introduction} % (fold)
@@ -23,46 +90,18 @@ Gaussian processes (GPs) are probability distributions for functions. In Bayesia
 
 This package implements Gaussian processes as a set of Python classes that can support many types of usage, from intuitive exploration to embedding in larger probability models and fitting with MCMC.
 
-\section{Prerequisites}\label{sec:prerequisites}
-\begin{itemize}
-    \item Familiarity with \citetitle[www.python.org]{Python}. Several online tutorials can be found by clicking around the Python website, including \citetitle[www.ibiblio.org/obp/thinkCSpy/]{How to think like a computer scientist: Learning with Python} by Downey, Elkner and Meyers. More experienced programmers may prefer \citetitle[docs.python.org/tut/]{another tutorial} by Python's author. Python is generally regarded as having unusually good documentation for open-source software, and it is also considered one of the easiest general-purpose programming languages to learn.
-    \item Familiarity with Numerical Python, or \citetitle[www.scipy.org/numpy]{NumPy}. This package provides array and matrix objects and associated functions that are much faster than their equivalents in pure Python, and also more convenient for scientific and numerical work. If you're familiar with a matrix language such as Matlab or R, learning numpy shouldn't be too difficult. However, there are a few differences that can function as `gotchas' early on. Although numpy itself is available free of charge, its documentation costs \$40 and is available from \citetitle[www.scipy.org/Documentation]{the Scientific Python website}.
-    \item A conceptual understanding of Bayesian statistics. Some familiarity with the normal distribution would help. Gelman et al. \cite{gelman} and Berry \cite{berry} are good general references, as is \citetitle[http://www.ams.ucsc.edu/~draper/draper-BHM-2005.pdf]{Draper's book}. For a colorful online tutorial on the logical aspects of Bayesian statistics, see \citetitle[http://www.yudkowsky.net/bayes/bayes.html]{An Intuitive Explanation of Bayesian Reasoning}.
-\end{itemize}
+% \section{Prerequisites}\label{sec:prerequisites}
+% \begin{itemize}
+%     \item Familiarity with \citetitle[www.python.org]{Python}. Several online tutorials can be found by clicking around the Python website, including \citetitle[www.ibiblio.org/obp/thinkCSpy/]{How to think like a computer scientist: Learning with Python} by Downey, Elkner and Meyers. More experienced programmers may prefer \citetitle[docs.python.org/tut/]{another tutorial} by Python's author. Python is generally regarded as having unusually good documentation for open-source software, and it is also considered one of the easiest general-purpose programming languages to learn.
+%     \item Familiarity with Numerical Python, or \citetitle[www.scipy.org/numpy]{NumPy}. This package provides array and matrix objects and associated functions that are much faster than their equivalents in pure Python, and also more convenient for scientific and numerical work. If you're familiar with a matrix language such as Matlab or R, learning numpy shouldn't be too difficult. However, there are a few differences that can function as `gotchas' early on. Although numpy itself is available free of charge, its documentation costs \$40 and is available from \citetitle[www.scipy.org/Documentation]{the Scientific Python website}.
+%     \item A conceptual understanding of Bayesian statistics. Some familiarity with the normal distribution would help. Gelman et al. \cite{gelman} and Berry \cite{berry} are good general references, as is \citetitle[http://www.ams.ucsc.edu/~draper/draper-BHM-2005.pdf]{Draper's book}. For a colorful online tutorial on the logical aspects of Bayesian statistics, see \citetitle[http://www.yudkowsky.net/bayes/bayes.html]{An Intuitive Explanation of Bayesian Reasoning}.
+% \end{itemize}
 
 % chapter introduction (end)
 
-
-\chapter{Installation}\label{cha:installation} % (fold)
-
-\section{Dependencies}
-\begin{itemize}
-    \item A compiler for Fortran 77 or later.
-    \item \citetitle[www.python.org]{Python version 2.4} or later.
-    \item \citetitle[www.scipy.org/numpy]{numpy}, Numerical Python. The core package for scientific computation, numerical analysis and statistics.
-    \item Optional: \citetitle[www.matplotlib.org]{matplotlib/ pylab}, Matlab-like scientific plotting utilities. Install this to use the graphical functionality described in this manual.
-    \item Optional: \citetitle[trichech.us/?page_id=4]{PyMC}, Bayesian statistics and MCMC support for Python. Install this to embed Gaussian processes in larger probability models.
-\end{itemize} 
-
-\section{How to install}\label{sec:installing}
-
-Type this into a shell:
-\begin{verbatim}
-    python setup.py install
-\end{verbatim}
-To use the Fortran 95 compiler gfortran, type:
-\begin{verbatim}
-    python setup.py install config_fc --fcompiler=gnu95
-\end{verbatim}
-This is the only Fortran compiler that has worked for me on my Mac, but g77 works on my Linux machine.
-
-To test whether the installation was successful, try running \file{testsuite.py}.
-% chapter installation (end)
-
-
 \chapter{Tutorial I: The basics}\label{cha:basics} % (fold)
 
-All the code in the tutorial is in the folder \file{examples}, which is distributed with this package.
+All the code in the tutorial is in the folder \file{pymc/examples/gp} in the PyMC source tree.
 
 \section{Mathematical functions and Python functions}\label{sec:functions}
 A mathematical function is a rule that associates a single output value with each input value in a set \cite{rudin}. Examples are:
@@ -113,7 +152,7 @@ As with any probability distribution, random values can be drawn from a Gaussian
 \subsection{What are Gaussian processes good for?}\label{sub:applications}
 Mathematical functions are ubiquitous in science. A very short list of examples:
 \begin{itemize}
-    \item Deterministic responses in predator-prey dynamics \cite{mathecol}. These functions associate a value for rate of prey capture with each value of predator population size.
+    \item Functional responses in predator-prey dynamics \cite{mathecol}. These functions associate a value for rate of prey capture with each value of predator population size.
     \item Transmission functions in epidemiology \cite{andersonmay}. These functions associate a value for rate of new infections with each value of infected and uninfected population size.
     \item Transfer functions in engineering \cite{duffy}. These functions associate a value for a ratio of Laplace transformed input and output signals with each value of the Laplace input variable $s$.
     \item Utility functions in microeconomics \cite{microecon}. These functions associate a value for a person's satisfaction with each portfolio of goods.
@@ -143,10 +182,10 @@ The first component we will create is a mean function, represented by class \cla
     M(x) = ax^2 + bx + c.
 \end{equation}
 
-The following code will produce an instance of class \class{Mean} called \texttt{M}:
-\verbatiminput{../RandomRealizations/examples/mean.py}
+The following code will produce an instance of class \class{Mean} called M:
+\verbatiminput{../../examples/gp/mean.py}
 
-The first argument to \class{Mean}'s init method is the underlying Python function, in this case \function{quadfun}. The extra arguments \code{a}, \code{b}  and \code{c} will be memorized and passed to \function{quadfun} whenever \texttt{M} is called; the call \texttt{M(x)} in the plotting portion of the script doesn't need to pass them in.
+The first argument to \class{Mean}'s init method is the underlying Python function, in this case \function{quadfun}. The extra arguments \code{a}, \code{b}  and \code{c} will be memorized and passed to \function{quadfun} whenever M is called; the call \texttt{M(x)} in the plotting portion of the script doesn't need to pass them in.
 
 Mean functions broadcast over their arguments in the same way as numpy universal functions \cite{numpybook}, which means that \texttt{M(x)} will return the vector 
 \begin{eqnarray*}
@@ -167,14 +206,14 @@ GP covariance functions are represented by the class \class{Covariance}, which l
 
 You're free to write your own functions to wrap in \class{Covariance} objects. See section \ref{sec:usercov} for more information.
 
-The code in \file{examples/cov.py} will produce an instance of class \class{Covariance} called \texttt{C}.
-\verbatiminput{../RandomRealizations/examples/cov.py}
+The code in \file{examples/cov.py} will produce an instance of class \class{Covariance} called C.
+\verbatiminput{../../examples/gp/cov.py}
 
-The first argument to \class{Covariance}'s init method, \function{eval_fun}, gives the Python function from which the covariance function will be made. In this case, \function{eval_fun} is \function{matern.euclidean}. The extra arguments \code{diff_degree, amp} and \code{scale} will be passed to \function{matern.euclidean} every time \texttt{C} is called.
+The first argument to \class{Covariance}'s init method, \function{eval_fun}, gives the Python function from which the covariance function will be made. In this case, \function{eval_fun} is \function{matern.euclidean}. The extra arguments \code{diff_degree, amp} and \code{scale} will be passed to \function{matern.euclidean} every time C is called.
 
-At this stage, the covariance function \texttt{C} exposes a very simple user interface. In fact, it behaves a lot like the ordinary Python function \texttt{matern.euclidean} it wraps, except that like \texttt{Mean} it `memorizes' the parameters \code{diff_degree, amp} and \code{scale} so that you don't need to pass them in when you call it. Covariance functions' calling conventions are slightly different than ordinary numpy universal functions' \cite{numpybook}:
+At this stage, the covariance function C exposes a very simple user interface. In fact, it behaves a lot like the ordinary Python function \texttt{matern.euclidean} it wraps, except that like \texttt{Mean} it `memorizes' the parameters \code{diff_degree, amp} and \code{scale} so that you don't need to pass them in when you call it. Covariance functions' calling conventions are slightly different than ordinary numpy universal functions' \cite{numpybook}:
 \begin{enumerate}
-    \item Broadcasting works differently. If \texttt{C} were a numpy universal function, \texttt{C(x,y)} would return the following array:
+    \item Broadcasting works differently. If C were a numpy universal function, \texttt{C(x,y)} would return the following array:
     \begin{eqnarray*}
         \begin{array}{ccc}
             \texttt{[C(x[0],y[0])}& \ldots& \texttt{C(x[N-1],y[N-1])]},
@@ -206,8 +245,8 @@ Most of the code in \file{examples/cov.py} is devoted to output, which is shown 
     \label{fig:realizations}
 \end{figure}
 
-Finally, let's generate some realizations (draws) from the Gaussian process defined by \texttt{M} and \texttt{C} and take a look at them. The following code will generate a list of instances of class \class{Realization}:
-\verbatiminput{../RandomRealizations/examples/realizations.py}
+Finally, let's generate some realizations (draws) from the Gaussian process defined by M and C and take a look at them. The following code will generate a list of instances of class \class{Realization}:
+\verbatiminput{../../examples/gp/realizations.py}
 
     The init method of \class{Realization} takes only two required arguments, a \class{Mean} object and a \class{Covariance} object. Each element of \code{f_list} is a Gaussian process realization, which is essentially a randomly-generated Python function. Like \class{Mean} objects, \class{Realization} objects use the same broadcasting rules as numpy universal functions. Typing \texttt{f(x)} will return the vector 
 \begin{eqnarray*}
@@ -215,7 +254,7 @@ Finally, let's generate some realizations (draws) from the Gaussian process defi
 \end{eqnarray*}
     
 
-The plotting portion of the code calls the function \function{plot_envelope}, which summarizes some aspects of the distribution. The dashdot black line in the middle is \texttt{M}, and the gray band is the $\pm 1$ standard deviation envelope for \texttt{f}, generated by \texttt{C}. Each of the three realizations in \texttt{f_list} is a callable function, and they are plotted superimposed on the envelope. The plot output is shown in figure \ref{fig:realizations}. 
+The plotting portion of the code calls the function \function{plot_envelope}, which summarizes some aspects of the distribution. The dashdot black line in the middle is M, and the gray band is the $\pm 1$ standard deviation envelope for f, generated by C. Each of the three realizations in \texttt{f_list} is a callable function, and they are plotted superimposed on the envelope. The plot output is shown in figure \ref{fig:realizations}. 
 
 
 \section{The role of the covariance function}\label{sec:cov} 
@@ -259,7 +298,7 @@ The actual formulas for the covariance functions are given in section \ref{sec:u
 
 These parameters are common to all covariance functions provided by this package, not just \texttt{matern.euclidean}. Please see section \ref{sec:usercov} if you're planning on writing your own covariance functions, as this package provides utilities that will endow them with these parameters.
 
-As mentioned in section \ref{subsub:cov}, the covariance function plotted in figure \ref{fig:cov} resembles a rounded A-frame tent. The width of this tent controls how tightly nearby evaluations of a realization \texttt{f} will be coupled to each other. If the tent is wide, \texttt{f(x)} and \texttt{f(y)} will tend to have similar values when \texttt{x} and \texttt{y} are close to one another. If the tent is narrower, \texttt{f(x)} and \texttt{f(y)} won't be as tightly correlated. The height of the tent controls the overall amplitude of \texttt{f}'s deviation from its mean.
+As mentioned in section \ref{subsub:cov}, the covariance function plotted in figure \ref{fig:cov} resembles a rounded A-frame tent. The width of this tent controls how tightly nearby evaluations of a realization f will be coupled to each other. If the tent is wide, \texttt{f(x)} and \texttt{f(y)} will tend to have similar values when \texttt{x} and \texttt{y} are close to one another. If the tent is narrower, \texttt{f(x)} and \texttt{f(y)} won't be as tightly correlated. The height of the tent controls the overall amplitude of f's deviation from its mean.
 
 The mathematical definition of the covariance function is as follows:
 \begin{equation}
@@ -373,7 +412,7 @@ The following code imposes the observations
     \texttt{f(.5) = 2.9}, & \texttt{V=.002}
 \end{eqnarray*}
 on the GP distribution defined in \file{mean.py} and \file{cov.py}:
-\verbatiminput{../RandomRealizations/examples/observation.py} 
+\verbatiminput{../../examples/gp/observation.py} 
 
 The function \function{observe} takes a covariance \code{C} and a mean \code{M} as arguments, and essentially tells them that their realizations' values on \code{obs_mesh} have been observed to be \code{obs_vals} with variance \code{obs_V}. If \code{obs_V} is \code{None}, \function{observe} assumes that the observation precision was infinite; that is, that the realizations' values on \code{obs_mesh} were observed with no uncertainty. Making (or pretending to make) observations with infinite precision is sometimes called \emph{conditioning}, and can be a valuable tool for modifying GP priors; for example, if a rate function is known to be zero when a population's size is zero.
 
@@ -391,7 +430,7 @@ Munch, Kottas and Mangel \cite{mmk} use Gaussian process priors to infer various
 
 We don't have the tools yet to fully duplicate Munch, Kottas and Mangel' results; that will have to wait for chapter \ref{cha:adv}. However, we can fit a simpler version of their model now by using the \function{observe} function. Specifically, we'll fit the data in figure 6 of their paper \cite{mmk}, which is for three salmonids: chum (\emph{Onchorhynchus keta}), pink (\emph{Onchorhynchus gorbuscha}) and sockeye (\emph{Onchorhynchus nerka}). 
 
-The code is in the script \file{examples/MMKsalmon/regression.py}. The script begins by importing the \class{salmon} class from \file{salmon.py} in the same directory.
+The code is in the script \file{examples/gp/more_examples/MMKsalmon/regression.py}. The script begins by importing the \class{salmon} class from \file{salmon.py} in the same directory.
 The \class{salmon} class does the following:
 \begin{itemize}
     \item Reads data from a csv file.
@@ -401,8 +440,8 @@ The \class{salmon} class does the following:
     \item `Observes' the unknown function's value to be zero at the origin with no uncertainty. No matter what the data are, every draw from the posterior will have \texttt{f(0) = 0}. This isn't really an observation, it's just a convenient way to incorporate the knowledge that if there is no stock, there will be no recruitment.
     \item Provides a \method{plot} method, which just plots the posterior envelope, data and three realizations from the posterior.
 \end{itemize}
-The code in \file{examples/more_examples/MKMsalmon/salmon.py} is shown here: 
-\verbatiminput{../RandomRealizations/examples/more_examples/MKMsalmon/salmon.py}
+% The code in \file{examples/more_examples/MKMsalmon/salmon.py} is shown here: 
+% \verbatiminput{../../examples/gp/more_examples/MKMsalmon/salmon.py}
 
 \begin{figure}
     \centering
@@ -414,8 +453,8 @@ The code in \file{examples/more_examples/MKMsalmon/salmon.py} is shown here:
 \end{figure}
 
 The main script, \file{examples/more_examples/MKMsalmon/salmon.py}, creates three \class{salmon} instances called \texttt{chum}, \texttt{pink} and \texttt{sockeye}, then imposes the data for each species on its prior to obtain its posterior. The observation variance I used was chosen fairly arbitrarily like the prior parameters, and we'll look at inferring it in chapter \ref{cha:adv} also. Finally, each species' \method{plot} method is called. Output is shown in figure \ref{fig:MMKregression}.
-The code in \file{examples/more_examples/MKMsalmon/regression.py} is shown here:
-\verbatiminput{../RandomRealizations/examples/more_examples/MKMsalmon/regression.py}
+% The code in \file{examples/more_examples/MKMsalmon/regression.py} is shown here:
+% \verbatiminput{../../examples/gp/more_examples/MKMsalmon/regression.py}
 
 To reiterate, there are some major drawbacks to this simple model. The observation variance may not actually be known, and we may not be comfortable specifying a single value for each of the prior parameters. Because of these considerations, Munch, Kottas and Mangel opt for a more sophisticated statistical model that has to be fit using MCMC. We will follow them in section \ref{sub:MMKMCMC}. 
 
@@ -423,7 +462,7 @@ To reiterate, there are some major drawbacks to this simple model. The observati
 
 In addition to functions of one variable such as $f(x)$, this package supports Gaussian process priors for functions of many variables such as $f(\mathbf{x})$, where $\mathbf{x}=[x_0\ldots x_{n-1}]$. This is useful for modeling dynamical or biological functions of many variables as well as for spatial statistics.
 
-Any time you pass an array into a \texttt{Mean}, \texttt{Covariance} or \texttt{Realization}'s init method or evaluate one of these objects on an array, the convention is that the array's last index iterates over spatial dimension. To evaluate a covariance \texttt{C} on the ordered pairs \texttt{(0,1)}, \texttt{(2,3)}, \texttt{(4,5)} and \texttt{(6,7)}, you could pass in the following two-dimensional array:
+Any time you pass an array into a \texttt{Mean}, \texttt{Covariance} or \texttt{Realization}'s init method or evaluate one of these objects on an array, the convention is that the array's last index iterates over spatial dimension. To evaluate a covariance C on the ordered pairs \texttt{(0,1)}, \texttt{(2,3)}, \texttt{(4,5)} and \texttt{(6,7)}, you could pass in the following two-dimensional array:
 \begin{verbatim}
 [[0,1]
  [2,3]
@@ -464,6 +503,20 @@ Instances of \class{covariance_function_bundle} have three attributes, \texttt{e
 Note that you can effectively change the radius of the geographic coordinate systems using the \texttt{scale} parameter.
 
 Covariance function bundles are described in more detail in section \ref{sec:usercov}.
+
+\subsection{Multithreading GP operations}
+This package can use multi-core systems to speed up two kinds of computations:
+\begin{itemize}
+	\item filling in covariance matrices,
+	\item linear algebra for observing GP's or drawing realizations.
+\end{itemize}
+If you've built numpy against multithreaded linear algebra libraries, all the linear algebra will be parallelized automatically. The functions contained in covariance function bundles (section \ref{sec:usercov}), which include all the covariance functions distributed with this package, take an argument called \texttt{n_threads} in addition to their parameters. The covariance function in \file{examples/gp/cov.py} can be given 4 threads as follows:
+\begin{verbatim}
+	C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1., n_threads = 4)
+\end{verbatim}
+
+On a quad-core system, evaluating this covariance function on large input vectors will use all the cores. Note that there's no point setting \texttt{n_threads} to 5 on a quad-core system, because only four cores are available.
+
  
 \subsection{A geostatistical example}\label{sub:geostat}
 \begin{figure}
@@ -480,8 +533,8 @@ Covariance function bundles are described in more detail in section \ref{sec:use
     \caption{Two realizations from the posterior distribution of elevation. Elevation is measured in meters.}
     \label{fig:elevreal}
 \end{figure}
-Higher-dimensional usage is demonstrated in the folder \file{examples/more_examples/Elevation}. File \file{getdata.py} extracts latitude, longitude and elevation data from the csv file in that folder and manipulates them into the array format described in section \ref{sec:highdim}. The data are from the Carbon Dioxide Information Analysis Center's \citetitle[http://cdiac.ornl.gov/epubs/ndp/ndp026d/ndp026d.html]{Cloud Climatology for Land Stations Worldwide, 1971-1996}. File \file{makemap.py} interfaces with \citetitle[www.matplotlib.org]{matplotlib}'s \texttt{basemap} toolkit, which draws maps. File \file{regression.py} actually implements the regression:
-\verbatiminput{../RandomRealizations/examples/more_examples/Elevation/regression.py}  
+Higher-dimensional usage is demonstrated in the folder \file{examples/more_examples/Elevation}. File \file{getdata.py} extracts latitude, longitude and elevation data from the csv file in that folder and manipulates them into the array format described in section \ref{sec:highdim}. The data are from the Carbon Dioxide Information Analysis Center's \citetitle[http://cdiac.ornl.gov/epubs/ndp/ndp026d/ndp026d.html]{Cloud Climatology for Land Stations Worldwide, 1971-1996}. File \file{makemap.py} interfaces with \citetitle[www.matplotlib.org]{matplotlib}'s \texttt{basemap} toolkit, which draws maps. File \file{regression.py} actually implements the regression.
+% \verbatiminput{../../examples/gp/more_examples/Elevation/regression.py}  
 
 The output of \file{regression.py} is shown in figures \ref{fig:elev} and \ref{fig:elevreal}. Figure \ref{fig:elev} shows the posterior mean and variance of the elevation. Finding these surfaces is also known as `\citetitle[http://en.wikipedia.org/wiki/Kriging]{kriging}.' Note that it's not possible to visualize the full covariance matrix, because it's now a function of four variables. The surface in figure \ref{fig:elev} is equivalent to the diagonal of the surface in figure \ref{fig:obs}.
 
@@ -548,8 +601,8 @@ For an $N$-dimensional Fourier basis, each of the \texttt{e}'s would be a sine o
 
 \section{Example} 
 
-Once instantiated, a \class{BasisCovariance} or \class{SeparableBasisCovariance} object behaves just like a \class{Covariance} object, but it and any \texttt{Mean} and \texttt{Realization} objects associated with it will take advantage of the efficient basis representation in their internal computations. An example of \class{SeparableBasisCovariance} usage is given in \file{examples/basis_cov.py}, shown below. Compare its output in figure \ref{fig:basiscov} to that of \file{examples/observation.py}. 
-\verbatiminput{../RandomRealizations/examples/basiscov.py}
+Once created, a \class{BasisCovariance} or \class{SeparableBasisCovariance} object behaves just like a \class{Covariance} object, but it and any \texttt{Mean} and \texttt{Realization} objects associated with it will take advantage of the efficient basis representation in their internal computations. An example of \class{SeparableBasisCovariance} usage is given in \file{examples/basis_cov.py}, shown below. Compare its output in figure \ref{fig:basiscov} to that of \file{examples/observation.py}. 
+\verbatiminput{../../examples/gp/basiscov.py}
 
 % chapter basics (end)
 
@@ -567,7 +620,7 @@ The Gaussian process generalizes the multivariate normal distribution from vecto
     \end{array}
 \end{equation}
 
-One of the nice things about all Gaussian distributions is that they're easy to marginalize. For example, each element of a vector with a multivariate normal distribution has a univariate normal distribution:
+One of the nice things about all Gaussian distributions (parameterized by mean and covariance) is that they're easy to marginalize. For example, each element of a vector with a multivariate normal distribution has a univariate normal distribution:
 \begin{eqnarray*}
     \vec y\sim\textup N(\vec \mu,C)\\
     \Rightarrow \vec y_i\sim\textup N(\vec \mu_i,C_{i,i}),
@@ -609,84 +662,84 @@ If $C(o,o)+V$ is singular, some elements of $f(o)$ can be computed from others w
 \end{eqnarray*}
 where $M_{o_*}$ can be computed from the formula above.
 
-In such cases, this package's strategy is to observe $f$ at a subvector $o_*$ of $o$, such that $C(o_*,o_*)+V_*$ is full-rank but if any elements were added to $o_*$ it would become nearly singular. The function \function{predictive_check} optionally checks the remaining data values \texttt{data}_{**} against $M_{o_*}(o_{**})$, and raises an error if the two aren't equal up to a user-defined threshold. 
+In such cases, this package's strategy is to observe $f$ at a subvector $o_*$ of $o$, such that $C(o_*,o_*)+V$ is full-rank but if any elements were added to $o_*$ it would become nearly singular. The function \function{predictive_check} optionally checks the remaining data values $d_{**}$ against $M_{o_*}(o_{**})$, and raises an error if the two aren't equal up to a user-defined threshold. 
 
-This threshold is parameter \code{relative_precision} from \texttt{Covariance}'s init method, multiplied by the largest value on the diagonal of $C(o_*,o_*)+V_*$; intuitively, the maximal variance of $f(o_{**})$ given $f(o_*)$ is a multiple of the maximal variance of $f(o_*)$.
+This threshold is parameter \code{relative_precision} from \texttt{Covariance}'s init method, multiplied by the largest value on the diagonal of $C(o_*,o_*)+V$; intuitively, the maximal variance of $f(o_{**})$ given $f(o_*)$ is a multiple of the maximal variance of $f(o_*)$.
 
 
 \section{Incorporating Gaussian processes in larger probability models with PyMC}\label{sec:PyMC} 
 
-This section will show you how to build and fit statistical models that go beyond simple nonparametric regression. Such extensions can be implemented using PyMC 2.0 and higher, which provides general support for specification and manipulation of Bayesian statistical models, with emphasis on Markov Chain Monte Carlo methods. PyMC is intended to provide at least basic support for many statistical models, and clear avenues for users and contributors to improve that support for specialized submodels. Before proceeding, you should familiarize yourself with the PyMC 2.0 documentation, which will soon be available from the project homepage at \citetitle[trichech.us/?page_id=4]{www.trichech.us}.
+This section will show you how to build and fit statistical models that go beyond simple nonparametric regression.
 
 \subsection{The \class{GP} class}
 \class{GP} is a subclass of the PyMC \class{Stochastic} class whose value attribute is a \class{Realization} instance. Its init method takes the following arguments:
 \begin{description}
-    \item[\texttt{M}:] A mean object or mean-valued deterministic variable.
-    \item[\texttt{C}:] A covariance object or covariance-valued deterministic variable.
+    \item[$M$:] A mean object or mean-valued deterministic variable.
+    \item[$C$:] A covariance object or covariance-valued deterministic variable.
     \item[\texttt{mesh=None}:] An array or an array-valued variable.
     \item[\texttt{init_mesh_vals=None}:] An optional vector of initial values for the value attribute's evaluation on \texttt{mesh}.
     \item[\texttt{mesh_eval_isdata=False}:] If \texttt{True}, the value attribute's evaluation on \texttt{mesh} is fixed at \texttt{init_mesh_vals}.
     \item[\texttt{doc, name, trace, cache_depth, verbose}:] Optional arguments that are passed directly to \code{Stochastic.\_\_init\_\_}. See PyMC's documentation.
 \end{description}
 
-\texttt{GP} instances have a log-probability attribute like any PyMC stochastic variable, but there is an important difference: If the value attribute is a realization called \texttt{f}, the log-probability attribute gives $p(\texttt{f(mesh))}|\texttt{M,C})$. In other words, the log-probability attribute only cares about \texttt{f}'s evaluation on \texttt{mesh}. The reason is simple: it would be expensive and difficult to assign something like a log-density to entire realizations in most cases. 
+\texttt{GP} instances have a log-probability attribute like any PyMC stochastic variable, but there is an important difference: If the value attribute is a realization called $f$, the log-probability attribute gives $p(f\texttt{(mesh))}|M,C)$. In other words, the log-probability attribute only cares about $f$'s evaluation on \texttt{mesh}. The reason is simple: it would be expensive and difficult to assign something like a log-density to entire realizations in most cases. 
 
 \subsection{The \class{GPMetropolis} and \class{GPParentMetropolis} step methods}
 
 The a price of the `cop-out' of computing \texttt{GP}s' log-probabilities based only on their evaluation on a mesh is that the Metropolis-Hastings algorithm doesn't apply. \texttt{GPMetropolis} and \texttt{GPParentMetropolis} employ a strategy that will be described informally here.
 
-Although they're contained in the same object, think about splitting the value \texttt{f} of a \texttt{GP} into two pieces: an array \texttt{f(mesh)}, and a function $\tilde \texttt{f}$ defined on all values not in \texttt{mesh}. Denote the parents of the \class{GP} by \texttt{P} and the children by \texttt{K}.
+Although they're contained in the same object, think about splitting the value $f$ of a \texttt{GP} into two pieces: an array $f$\texttt{(mesh)}, and a function $\tilde f$ defined on all values not in \texttt{mesh}. Denote the parents of the \class{GP} by $P$ and the children by $K$.
 
 \subsubsection{GPMetropolis} 
-The Metropolis-Hastings acceptance ratio for a proposed value $\texttt{f}_p$ can be written as follows:
+The Metropolis-Hastings acceptance ratio for a proposed value $f_p$ can be written as follows:
 \begin{eqnarray*}
-    \frac{p(\texttt{K}|\tilde \texttt{f}_p, \texttt{f}_p(\texttt{mesh}))\ p(\tilde \texttt{f}_p|\texttt{f}_p(\texttt{mesh}), \texttt{P})\ p(\texttt{f}_p(\texttt{mesh}) | \texttt{P})\ q(\tilde \texttt{f}|\texttt{f}(\texttt{mesh}))\ q(\texttt{f}(\texttt{mesh}))}{p(\texttt{K}|\tilde \texttt{f}, \texttt{f}(\texttt{mesh}))\ p(\tilde \texttt{f}|\texttt{f}(\texttt{mesh}), \texttt{P})\ p(\texttt{f}(\texttt{mesh}) | \texttt{P})\ q(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh}))\ q(\texttt{f}_p(\texttt{mesh}))},
+    \frac{p(K|\tilde f_p, f_p(\mathtt{mesh}))\ p(\tilde f_p|f_p(\mathtt{mesh}), P)\ p(f_p(\mathtt{mesh}) | P)\ q(\tilde f|f(\mathtt{mesh}))\ q(f(\mathtt{mesh}))}{p(\mathtt{K}|\tilde f, f(\mathtt{mesh}))\ p(\tilde f|f(\mathtt{mesh}), P)\ p(f(\mathtt{mesh}) | P)\ q(\tilde f_p|f(\mathtt{mesh}))\ q(f_p(\mathtt{mesh}))},
 \end{eqnarray*}
 where $q$ denotes proposal densities. We want to avoid computing all terms with $\tilde f$ or $\tilde f_p$ in the consequent position:
 \begin{eqnarray*}
-    p(\tilde \texttt{f}_p|\texttt{f}_p(\texttt{mesh}), \texttt{P}),\\ q(\tilde \texttt{f}|\texttt{f}(\texttt{mesh})),\\ p(\tilde \texttt{f}|\texttt{f}(\texttt{mesh}), \texttt{P}),\\ q(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh})),
+    p(\tilde f_p|f_p(\texttt{mesh}), P),\\ q(\tilde f|f(\texttt{mesh})),\\ p(\tilde f|f(\texttt{mesh}), P),\\ q(\tilde f_p|f(\texttt{mesh})),
 \end{eqnarray*}
 but all other terms are fine. We can make these terms cancel by choosing our proposal distribution as follows:
 \begin{eqnarray*}
-    q(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh})) = p(\tilde \texttt{f}_p|\texttt{f}_p(\texttt{mesh}), \texttt{P}).
+    q(\tilde f_p|f(\texttt{mesh})) = p(\tilde f_p|f_p(\texttt{mesh}), P).
 \end{eqnarray*}
-In other words, if we propose $\tilde \texttt{f}$ from its prior distribution conditional on $\texttt{f}(\texttt{mesh})$ and its parents whenever we propose $\texttt{f}(\texttt{mesh})$, we don't have to worry about computing the intractable terms. This is what \class{GPMetropolis} does. 
+In other words, if we propose $\tilde f$ from its prior distribution conditional on $f(\texttt{mesh})$ and its parents whenever we propose $f(\texttt{mesh})$, we don't have to worry about computing the intractable terms. This is what \class{GPMetropolis} does. 
 
 \class{GPMetropolis} reports its competence to handle \texttt{GP} instances as \texttt{3}, so it will be chosen as the default handler. Its init method takes the following arguments:
 \begin{description}
     \item[\texttt{stoch}:] The \class{GPMetropolis} instance to be handled.
-    \item[\texttt{scale=.1}:] $f(\texttt{mesh})$ will be proposed from a random-walk multivariate normal distribution with covariance equal to \texttt{C(mesh, mesh * scale * _asf)}, where \texttt{C} is the covariance-valued parent and \texttt{_asf} is the adaptive scaling factor, which is updated when \texttt{self.tune()} is called.
+    \item[\texttt{scale=.1}:] $f(\texttt{mesh})$ will be proposed from a random-walk multivariate normal distribution with covariance equal to \texttt{C(mesh, mesh * scale * _asf)}, where C is the covariance-valued parent and \texttt{_asf} is the adaptive scaling factor, which is updated when \texttt{self.tune()} is called.
     \item[\texttt{verbose = 0}:] An integer from 0 to 3 indicating the preferred verbosity level.
 \end{description}
 
 \subsubsection{GPParentMetropolis} 
-Similarly, the Metropolis-Hastings acceptance ratio for a proposed value $\texttt{P}_p$ of the parents \emph{and} a proposed value $\tilde \texttt{f}_p$ for the function off the mesh is as follows:
+Similarly, the Metropolis-Hastings acceptance ratio for a proposed value $P_p$ of the parents \emph{and} a proposed value $\tilde f_p$ for the function off the mesh is as follows:
 \begin{eqnarray*}
-    \frac{p(\texttt{K}|\tilde \texttt{f}_p)\ p(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh}), \texttt{P}_p)\ p(\texttt{f}(\texttt{mesh}) | \texttt{P}_p)\ q(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh}),\texttt{f}_p, \texttt{P}_p)\ q(\texttt{P})}{p(\texttt{K}|\tilde \texttt{f})\ p(\tilde \texttt{f}|\texttt{f}(\texttt{mesh}), \texttt{P})\ p(\texttt{f}(\texttt{mesh}) | \texttt{P})\ q(\tilde \texttt{f}_p|\texttt{f}(\texttt{mesh}),\texttt{f})\ q(\texttt{P}_p)}
+    \frac{p(K|\tilde f_p)\ p(\tilde f_p|f(\texttt{mesh}), P_p)\ p(f(\texttt{mesh}) | P_p)\ q(\tilde f_p|f(\texttt{mesh}),f_p, P_p)\ q(P)}{p(K|\tilde f)\ p(\tilde f|f(\texttt{mesh}), P)\ p(f(\texttt{mesh}) | P)\ q(\tilde f_p|f(\texttt{mesh}),f)\ q(P_p)}
 \end{eqnarray*}
-By choosing the same proposal distribution for $\tilde \texttt{f}$ as above, we again avoid having to compute the intractable terms. In other words, every time a value is proposed for a \class{GP}'s parent, a value must be proposed for the \class{GP}  conditional on its value's evaluation on its mesh, and the prior probability of the \class{GP}'s children must be included in the acceptance ratio. 
+By choosing the same proposal distribution for $\tilde f$ as above, we again avoid having to compute the intractable terms. In other words, every time a value is proposed for a \class{GP}'s parent, a value must be proposed for the \class{GP}  conditional on its value's evaluation on its mesh, and the prior probability of the \class{GP}'s children must be included in the acceptance ratio. 
 
-To implement this strategy, \class{GPParentMetropolis} wraps an instance of a \class{Metropolis} subclass. It replaces its host class's \texttt{propose} and \texttt{reject} methods with special methods that call the host's native methods, and then propose and reject values for $\tilde \texttt{f}$ conditional on \texttt{f(mesh)}. \class{GPParentMetropolis} also adds the \texttt{GP}'s children to its host method's children, so that the likelihood term $p(\texttt{K}|\tilde \texttt{f})$ is included in the acceptance ratio.
+To implement this strategy, \class{GPParentMetropolis} wraps an instance of a \class{Metropolis} subclass. It replaces its host class's \texttt{propose} and \texttt{reject} methods with special methods that call the host's native methods, and then propose and reject values for $\tilde f$ conditional on \texttt{f(mesh)}. \class{GPParentMetropolis} also adds the \texttt{GP}'s children to its host method's children, so that the likelihood term $p(K|\tilde f)$ is included in the acceptance ratio.
 
 \class{GPParentMetropolis} reports its competence to handle parents of \class{GP} instances as \texttt{3}, so it will be chosen as the default handler. However, its init method will choose the host method by checking the step method registry for a method that would be competent to handle the parent if it had ordinary children. Its init method takes the following arguments: 
 \begin{description}
-    \item[\texttt{stoch}:] The stochastic variable to handle. Must be a parent of a \class{GP} instance.
+    \item[\texttt{stochastic}:] The stochastic variable to handle. Must be a parent of a \class{GP} instance.
     \item[\texttt{scale = 1.}:] This parameter will be passed to the host method's init method.
     \item[\texttt{verbose = 0}:] An integer from 0 to 3 indicating the preferred verbosity level.
 \end{description}
 
-This scheme works if \texttt{K} depends on \texttt{P} and if \texttt{P} has children other than the \class{GP}, though these possibilites aren't included in the rejection ratio above. 
+This scheme works if $K$ depends on $P$ and if $P$ has children other than the \class{GP}, though these possibilites aren't included in the rejection ratio above. 
 
 \subsubsection{Choosing a mesh} A useful mental model for these step methods is as follows: The mesh points of a \class{GP} instance are the points where you `grab' its value to propose it. If the variable's mesh is \texttt{None}, its value will be proposed from its prior, and rejection rates are likely to be quite large. If the mesh is too dense, on the other hand, computation of the log-probability will be expensive (it scales as the cube of the number of points in the mesh). If the mesh is so dense that \texttt{C(mesh, mesh)} is numerically singular, an error will be raised in the init method. This continuum is illustrated in figure \ref{fig:meshpropose}. Finding the happy medium will require some experimentation.
 
-Another important point to bear in mind is that if the \texttt{GP}'s children depend on its value only via its evaluation on the mesh, the likelihood terms $p(\texttt{K}|\tilde \texttt{f}_p)$ and $p(\texttt{K}|\tilde \texttt{f})$ will cancel. In other words, if the mesh is chosen so that $p(\texttt{K}|\texttt{f})=p(\texttt{K}|\texttt{f}(\texttt{mesh}))$ then the proposed value of $\tilde \texttt{f}$ will have no bearing on the acceptance probability of the proposed value of \texttt{f(mesh)} or of the parents \texttt{P}. Such a mesh choice will generally improve the acceptance rate.
+Another important point to bear in mind is that if the \texttt{GP}'s children depend on its value only via its evaluation on the mesh, the likelihood terms $p(K|\tilde f_p)$ and $p(K|\tilde f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(\texttt{mesh}))$ then the proposed value of $\tilde f$ will have no bearing on the acceptance probability of the proposed value of \texttt{f(mesh)} or of the parents P. Such a mesh choice will generally improve the acceptance rate.
 
 \begin{figure}
     \centering
         \epsfig{file=figs/nomeshpropose.pdf,width=9cm}
         \epsfig{file=figs/lightmeshpropose.pdf,width=9cm}
         \epsfig{file=figs/densemeshpropose.pdf,width=9cm}        
-    \caption{Several possible proposals of $\tilde \texttt{f}$ (curves) given proposed values for $\texttt{f}(\texttt{mesh})$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions' envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $\tilde \texttt{f}$ is being proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $\tilde \texttt{f}$, but computing the log-probability will be more expensive.}
+    \caption{Several possible proposals of $\tilde f$ (curves) given proposed values for $f(\texttt{mesh})$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions' envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $\tilde f$ is being proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $\tilde f$, but computing the log-probability will be more expensive.}
     \label{fig:meshpropose}
 \end{figure}
 
@@ -699,9 +752,9 @@ As we've already seen in other contexts, a \class{GP}'s full conditional distrib
 \end{eqnarray*}
 In other words, each of its children $K_i$ is normally distributed with variance $V_i$ and mean equal to $f(o_i)$, where $o_i$ is an arbitrary mesh. 
 
-In this case, a \texttt{GP} instance \texttt{f} can be handled by the Gibbs step method \class{GPNormal}, which will have much better mixing properties that \class{GPMetropolis}. Its init method takes the following parameters:
+In this case, a \texttt{GP} instance $f$ can be handled by the Gibbs step method \class{GPNormal}, which will have much better mixing properties that \class{GPMetropolis}. Its init method takes the following parameters:
 \begin{description}
-    \item[\texttt{f}:] The \texttt{GP} instance to be handled.
+    \item[$f$:] The \texttt{GP} instance to be handled.
     \item[\texttt{obs_mesh:}] An array or array-valued variable giving the observation mesh $o$.
     \item[\texttt{obs_V}:] An array or array-valued variable giving the observation variance $V$. 
     \item[\texttt{obs_vals}:] An array or array-valued variable giving the concatenation of the values of the children $K_i$.
@@ -709,13 +762,13 @@ In this case, a \texttt{GP} instance \texttt{f} can be handled by the Gibbs step
 
 \class{GPNormal} doesn't register itself, so it will never be assigned as a default handler. This may change eventually.
 
-\class{GPNormal} doesn't care about \texttt{f}'s mesh, because it never has to evaluate \texttt{f}'s log-probability. However, a good choice of mesh is important because it will used by the \class{GPParentMetropolis} instances that handle \texttt{f}'s mean and covariance parameters.  
+\class{GPNormal} doesn't care about $f$'s mesh, because it never has to evaluate $f$'s log-probability. However, a good choice of mesh is important because it will used by the \class{GPParentMetropolis} instances that handle $f$'s mean and covariance parameters.  
 
 \subsection{Example: A simple extension of nonparametric regression}\label{sub:BasicMCMC}
 The files \file{examples/PyMCModel.py} and \file{examples/MCMC.py} show \class{GP} and the three step methods listed above in action. The probability model created by \file{examples/PyMCModel.py} is illustrated as a directed acyclic graph in figure \ref{fig:unobservedModel}. If you comment the last line, $f$ will be handled by a default \class{GPMetropolis} instance. If you leave it uncommented, $f$ will be handled by the \class{GPNormal} instance \texttt{S}.  
 
 The main script \file{examples/MCMC.py} is mostly devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput} for both the \class{GPMetropolis} and \class{GPNormal} step methods. Both files are a bit long, so I won't quote them here. 
-% \verbatiminput{../RandomRealizations/examples/PyMCModel.py}
+% \verbatiminput{../../examples/gp/PyMCModel.py}
 
 \begin{figure}
     \centering
@@ -760,22 +813,22 @@ The main script \file{examples/MCMC.py} is mostly devoted to plotting, and its o
     \label{fig:pinkparams}
 \end{figure}
 
-We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we'll use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, \texttt{C} is its covariance and \texttt{M} is its mean.
+We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we'll use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, C is its covariance and M is its mean.
 \begin{equation}
     \label{eqn:MMKModel}
     \begin{array}{ll}
-        \texttt{frye[i]} \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(\texttt{exp(SR(log(abundance[i])))}, \texttt{V}),& \texttt{i=1\ldots n}\\
-        \texttt{SR}\sim \textup{GP}(\texttt{M},\texttt{C})& \\
-        \texttt{M}:\texttt{x}\rightarrow \beta_0+\beta_1 \texttt{log(x)}&\\
-        \texttt{C}:\texttt{x},\texttt{y}\rightarrow \texttt{matern.euclidean}(\texttt{x},\texttt{y};\ \texttt{diff_degree},\texttt{amp},\texttt{scale})&\\
-        \texttt{V},\ \beta_0,\ \beta_1,\ \texttt{diff_degree},\ \texttt{amp},\ \texttt{scale} \sim \texttt{priors}.&
+        \texttt{frye}[i] \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(exp(\mathtt{SR}(\log(\mathtt{abundance}[i]))), V),& i=1\ldots n\\
+        \texttt{SR}\sim \textup{GP}(M,C)& \\
+        M:x\rightarrow \beta_0+\beta_1 \log(x)&\\
+        C:x,y\rightarrow \texttt{matern.euclidean}(x,y;\ \texttt{diff_degree},\texttt{amp},\texttt{scale})&\\
+        V,\ \beta_0,\ \beta_1,\ \texttt{diff_degree},\ \texttt{amp},\ \texttt{scale} \sim \texttt{priors}.&
     \end{array}
 \end{equation} 
 The `priors' can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose based on what seems reasonable to me) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \class{Sampler} subclass called \class{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
 
 Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option. 
 
-The probability model \class{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. Munch, Kottas and Mangel specify priors for $\texttt{amp}^\texttt{-2}$ and $\texttt{V}^\texttt{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
+The probability model \class{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
 
 % \subsection{Example: Ellner, Seifu and Smith's blowfly study}\label{sub:ESSMCMC}
 % 
@@ -829,21 +882,55 @@ The probability model \class{SalmonSampler} creates is visualized as a directed 
 % 
 
 \section{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{sec:usercov} 
-This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
+This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package. 
 
-The \class{covariance_function_bundle} class includes versions of each covariance function in geographic (radian and degree) and Euclidean coordinates. In addition, it exposes two attributes that are included for extensibility: the \texttt{raw} attribute, which exposes the basic Fortran implementation of each function, and \texttt{universal} method, which combines the \texttt{raw} attribute with an arbitrary coordinate system. This section will describe these attributes in more detail. The \texttt{euclidean}, \texttt{geo_rad} and \texttt{geo_deg} attributes are described in \ref{sec:cov}. 
+\bigskip
+Note that you don't need to understand this section; any covariance function that satisfies the calling convention described in section \ref{subsub:cov} will work. The \texttt{cov_funs} module is convenient, but it is admittedly complicated.
 
-\subsection{The distance functions}\label{sub:distances}
-Two distance functions are implemented in Fortran in \file{distances.f}: \function{euclidean} and \function{geographic}. \function{geographic} is wrapped to create two distance functions, \function{geo_rad} and \function{geo_deg}, in \file{cov_utils.py}.
+\bigskip
+The \class{covariance_function_bundle} class includes versions of each covariance function using several different distance metrics. For example, the Euclidean version of the Mat\`ern covariance function is \texttt{matern.euclidean} and the Gaussian covariance function in geographic coordinates (in radians) is \texttt{gaussian.geo_rad}. 
 
-Each distance function takes two arguments, \texttt{x} and \texttt{y}, which are two-dimensional arrays in which the first index iterates over separate points and the second iterates over coordinates as in section \ref{sub:geostat}. For the geographic distance functions, the first coordinate is longitude and the second is latitude. The distance functions also take an optional argument, \texttt{symm}, which indicates whether \texttt{x} and \texttt{y} are in fact references to the same array. The output is a `distance matrix' \texttt{D}, where \texttt{D[i,j]} gives the distance between \texttt{x[i,:]} and \texttt{y[j,:]}.
+In addition, it has two attributes that are included for extensibility: the \texttt{raw} attribute, which exposes the basic Fortran implementation of each function, and \texttt{add_distance_metric} method, which combines the \texttt{raw} attribute with distance metrics. This section will describe these attributes in more detail.
 
-The easiest way to deal with different coordinate systems or to build in anisotropy and nonstationarity using a deformation approach \cite{sampson} is to write your own distance function. See \ref{sub:universal} for information on how to use your distance function with an existing covariance function, or with one of your own devising. 
+Class \texttt{covariance_function_bundle}'s init method takes three arguments: 
+\begin{description}
+	\item[\texttt{cov_fun_name}] The name of the covariance function.
+	\item[\texttt{cov_fun_module}] The name of the module in which the covariance function can be found. This must be somewhere on your \texttt{PYTHONPATH}.
+	\item[\texttt{extra_cov_params}] A dictionary whose keys are the extra parameters the covariance function takes, and whose values are brief sentences explaining the roles of those parameters. This dictionary will be used to generate the docstring of the bundle.
+\end{description}
+The names of the function and module are used rather than the function object itself in order to allow covariance objects to be pickled. This, in turn, allows covariance-valued stochastic variables to be stored in PyMC's \texttt{pickle} and \texttt{hdf52} database backends.
 
-\subsection{The \member{raw} attribute}\label{sub:raw}
-The \member{raw} attribute of each bundle is the underlying covariance function. These functions take distance matrices as arguments and overwrite them in-place as covariance matrices. If you write your own raw covariance function, it should conform to the standard described in this section.
 
-The raw functions are expressed in their simplest forms: they are isotropic and stationary, and their amplitude and input scalings (`sill' and `range') are set to 1. No `nugget' parameter is used in this package for numerical reasons: numerically singular covariances are helpful, because they have low-rank Cholesky factors that can be used for efficient computation. The effect of a nugget can be obtained by adding iid normal variables to realizations. Please email me if this presents a problem.
+\subsection{The components of a covariance function bundle}
+
+\subsubsection{The actual covariance functions}\label{sub:distances}
+The covariance functions contained in a bundle are named by the distance metric they use. The \texttt{matern} bundle, for instance, contains the following covariance functions:
+\begin{itemize}
+	\item \texttt{matern.euclidean}
+	\item \texttt{matern.geo_rad}
+	\item \texttt{matern.geo_deg}
+	\item \texttt{matern.aniso_geo_rad}
+	\item \texttt{matern.aniso_geo_deg}
+	\item \texttt{matern.paniso_geo_rad}	
+	\item \texttt{matern.paniso_geo_deg}
+\end{itemize}
+
+Each covariance function takes at least two arguments, $x$ and $y$, which are two-dimensional arrays in which the first index iterates over separate points and the second iterates over coordinates as in section \ref{sub:geostat}. For the geographic distance functions, the first coordinate is longitude and the second is latitude. Covariance functions also take arguments \texttt{amp} and \texttt{scale}. Finally, they take optional arguments \texttt{n_threads}, which sets the maximum number of threads available for the evaluation of the output matrix, and \texttt{symm}, which indicates whether $x$ and $y$ the same array. 
+
+Some of the covariance functions take extra arguments for the distance metric and/or actual covariance function. For example, \texttt{matern.aniso_geo_rad} takes extra arguments \texttt{inc} and \texttt{ecc} for the distance function and \texttt{diff_degree} for the covariance function.
+
+When \texttt{matern.euclidean}, for example, is called with input locations $x$ and $y$, the following events place:
+\begin{itemize}
+	\item The output matrix is allocated.
+	\item The output matrix is filled with the Euclidean distances between the elements of $x$ and the elements of $y$.
+	\item The output matrix is overwritten with the covariances between the elements of $x$ and the elements of $y$.
+\end{itemize}
+The last two steps will be executed in parallel if \texttt{n_threads} is greater than 1 and the size of the output matrix is sufficiently large.
+
+The easiest way to deal with different coordinate systems or to build in anisotropy and nonstationarity using a deformation approach \cite{sampson} is to write your own distance function and add it to the covariance function by calling the \texttt{add_distance_metric} method. See \ref{sub:add_distance_metric} for information on how to use your distance function with an existing covariance function, or with one of your own devising. See \ref{sub:user_ccs} for the calling conventions required from distance functions.  
+
+\subsubsection{The \member{raw} attribute}\label{sub:raw}
+The \member{raw} attribute of each bundle is the underlying covariance function. These functions take distance matrices as arguments and overwrite them in-place as covariance matrices. If you write your own raw covariance function, it should conform to the standard described in section \ref{sub:user_ccs}.
 
 The following raw functions are implemented in Fortran in \file{isotropic_cov_funs.f} and wrapped as covariance function bundles in \module{cov_funs}. Here $t$ denotes a single element of a distance matrix, $|x_i-y_j|$. Each function is equal to $1$ when $t=0$.
 \begin{description}
@@ -875,54 +962,57 @@ The following raw functions are implemented in Fortran in \file{isotropic_cov_fu
 
 See \citetitle[http://www.statsnetbase.com/ejournals/books/book_summary/summary.asp?id=1285]{Banerjee et al.} \cite{banerjee} , \citetitle[http://www.leg.ufpr.br/mbgbook/]{Diggle and Ribeiro} \cite{diggle} and \citetitle[http://books.google.com/books?id=5n_XuL2Wx1EC&dq=stein+some+theory+for+kriging&printsec=frontcover&source=web&ots=829kgTWuC6&sig=gFu5_Gg4_eZ4yzFT4BBWamSanBA#PPP1,M1]{Stein} \cite{stein}for more discussion of the properties of these covariance functions. The init method of \texttt{covariance_function_bundle} takes just one argument, a raw covariance function.
 
-To be a valid covariance function, a function \texttt{C} of two variables must be:
-\begin{itemize}
-    \item Symmetric, meaning \texttt{C(x[i,:],y[j,:]) = C(y[j,:],x[i,:])} for any two values \texttt{x[i,:]} and \texttt{y[j,:]}.
-    \item Positive semidefinite, meaning \texttt{C(x,x)} is a positive semidefinite matrix for any mesh \texttt{x}.
-\end{itemize}
-The formal test for positive semidefiniteness is Bochner's theorem \cite{stein}, but you can also just check the eigenvalues of \texttt{C(x,x)} for a variety of meshes \texttt{x}. Covariance functions must also conform to the calling conventions outlined in section \ref{sec:cov}. 
-
-\subsection{The \texttt{universal} method and the \texttt{apply_distance} function}\label{sub:universal}
+\subsubsection{The \texttt{add_distance_metric} method and the \texttt{apply_distance} function}\label{sub:add_distance_metric}
 \texttt{apply_distance} takes two arguments, a distance function and a raw covariance function, and returns a covariance function suitable for wrapping in a \class{Covariance} object. 
 
-It endows the new function with a docstring that combines the raw covariance function's information with the distance function's information. It's possible to include information about extra parameters in the auto-generated docstring. To wrap a raw covariance function called \texttt{my_cov_fun} with extra parameters called \texttt{eta} and \texttt{gamma} you could add explanations to \texttt{my_cov_fun} before calling \texttt{apply_distance}:
+It endows the new function with a docstring that combines the raw covariance function's information with the distance function's information. It's possible to include information about extra parameters in the auto-generated docstring. To wrap a raw covariance function with a distance function called \texttt{my_dist_fun} with extra parameters called \texttt{eta} and \texttt{gamma} you could add explanations to \texttt{my_dist_fun} before calling \texttt{apply_distance}:
 \begin{verbatim}
-> my_cov_fun.extra_params = {'eta': 'The eta parameter.', 
-                             'gamma': 'The gamma parameter.'}
+my_dist_fun.extra_params = {'eta': 'The eta parameter.', 
+                            'gamma': 'The gamma parameter.'}
 \end{verbatim}
 The new parameters will be included in the docstring.
 
 Covariance functions generated by \texttt{apply_distance} take the following arguments:
 \begin{itemize}
-    \item Input arrays \texttt{x} and \texttt{y}. These high-level covariance functions are more forgiving than the distance functions; \texttt{x} and \texttt{y} do not actually need to be two-dimensional, the only requirement is that their last index must iterate over coordinates as in section \ref{sub:geostat}. The exception to this rule is if \texttt{x} and \texttt{y} are only one dimensional, in which case they are assumed to have only one coordinate.
-    \item Scaling arguments \texttt{amp} and \texttt{scale}. Stochastic \texttt{amp} is the standard deviation of \texttt{f(x)} for arbitrary \texttt{x}, regardless of coordinate system, before observation (the prior standard deviation). Stochastic \texttt{scale} controls the lengthscale of decay of the correlation, which controls the wiggliness of \texttt{f}. It effectively multiplies distances, so that large values yield quick decay and more wiggliness. These scaling arguments are sometimes referred to as the `sill' and `range' parameters.
-    
-    \item Extra arguments. The covariance function classes that take extra arguments are:
-    \begin{description}
-        \item[\texttt{matern}:] \texttt{diff_degree}.
-        \item[\texttt{pow_exp}:] \texttt{pow}.
-        \item[\texttt{quadratic}:] \texttt{phi}.
-    \end{description}
+    \item Input arrays $x$ and $y$. These high-level covariance functions are more forgiving than the distance functions; $x$ and $y$ do not actually need to be two-dimensional, the only requirement is that their last index must iterate over coordinates as in section \ref{sub:geostat}. The exception to this rule is if $x$ and $y$ are only one dimensional, in which case they are assumed to have only one coordinate.
+    \item Scaling arguments \texttt{amp} and \texttt{scale}. Parameter \texttt{amp} is the standard deviation of $f(x)$ for arbitrary $x$, regardless of coordinate system, before observation (the prior standard deviation). Parameter \texttt{scale} controls the lengthscale of decay of the correlation, which controls the wiggliness of $f$. It effectively multiplies distances, so that large values yield quick decay and more wiggliness. These scaling arguments are sometimes referred to as the `sill' and `range' parameters.
+    \item Extra arguments for the covariance and/or distance functions.
 \end{itemize}
 
-When a function generated by \texttt{apply_distance} is called, the following steps occur:
-\begin{enumerate}
-    \item Input arrays \texttt{x} and \texttt{y} are `regularized' to two-dimensional arrays.
-    \item The regularized \texttt{x} and \texttt{y} are converted to a distance matrix \texttt{C} using the distance function.
-    \item \texttt{C} is multiplied by \texttt{scale}.
-    \item \texttt{C} and any extra arguments are passed to the raw covariance function. \texttt{C} is overwritten.
-    \item \texttt{C} is multiplied by \texttt{amp}$^\texttt{2}$.
-    \item \texttt{C} is returned.
-\end{enumerate}
+The \texttt{add_distance_metric} method of \class{covariance_function_bundle} is just a thin wrapper for the function \texttt{apply_distance}, which is in \file{cov_utils.py}. Since \class{covariance_function_bundle} objects already have a raw covariance function, this method only needs a distance function. 
 
-The \texttt{universal} method of \class{covariance_function_bundle} is just a thin wrapper for the function \texttt{apply_distance}, which is in \file{cov_utils.py}. Since \class{covariance_function_bundle} objects already have a raw covariance function, this method only needs a distance function. 
+
+
+\subsection{Calling conventions for new covariance and distance functions}
+\label{sub:user_ccs}
+
+User-defined covariance and distance functions should always take the following arguments:
+\begin{description}
+	\item[$C$] A Fortran-contiguous (column major) array of dimension (\texttt{x.shape[0]},\texttt{y.shape[0]}). This should be overwritten in-place.
+	\item[$x$, $y$] Arrays of input locations. These will be regularized: they will be two-dimensional, with the first index iterating over points and the second over coordinates.
+	\item[\texttt{cmin}$=0$, \texttt{cmax}$=-1$] Optional arguments. If non-default values are provided, only the slice \texttt{C[:,cmin:cmax]} of $C$ should be overwritten.
+	\item[\texttt{symm=False}] An optional argument indicating whether $x$ and $y$ are the same array. If \texttt{True}, $C$ will be square and only the upper triangle of $C$ should be overwritten. 
+\end{description}
+They can take any other arguments they need, of course. 
+
+If parallel computation is desired, covariance and distance functions must release the \citetitle[http://www.python.org/doc/1.5.2/api/threads.html]{global interpreter lock}. That means they have to be written in Fortran or C. \citetitle[http://cens.ioc.ee/projects/f2py2e/]{f2py} extensions can release the global interpreter lock by simply including the statement \texttt{cf2py threadsafe}; other types of extensions should call the Python C-API macros \texttt{Py_BEGIN_ALLOW_THREADS} and \texttt{Py_END_ALLOW_THREADS}.
+
+The high-level covariance functions produced by \texttt{apply_distance} will be more forgiving than these low-level distance and covariance functions; $x$ and $y$ will not actually need to be two-dimensional, the only requirement is that their last index must iterate over coordinates as in section \ref{sub:geostat}. The exception to this rule is if $x$ and $y$ are only one dimensional, in which case they are assumed to have only one coordinate. These high-level functions will regularize $x$ and $y$ before passing them into your distance and covariance functions.
+
+User-supplied covariance functions should be expressed in their simplest forms: their amplitude and input scalings (`sill' and `range', when applicable) should be set to 1. No `nugget' parameter should be used. Numerically singular covariances are helpful when using \texttt{Covariance} objects, because they have low-rank Cholesky factors that can be used for efficient computation. The effect of a nugget can be obtained by adding iid normal variables to realizations. \texttt{FullRankCovariance} objects take a nugget argument regardless of their underlying covariance functions.
+
+Distance functions should be symmetric, meaning the distance from point $x$ to point $y$ is the same as the distance from $y$ to $x$. Since raw covariance functions overwrite distance matrices, the output of an \texttt{apply_distance}-generated covariance function will be symmetric if its distance function is symmetric.
+
+To be a valid covariance function, an \texttt{apply_distance}-generated covariance function $C$ must be positive semidefinite, meaning $C(x,x)$ is a positive semidefinite matrix for any mesh $x$. The formal test for positive semidefiniteness is Bochner's theorem \cite{stein}, but you can also just check the eigenvalues of $C(x,x)$ for a variety of meshes $x$.
+
+
 
 \subsection{Summary}\label{sec:cookbook}
 \begin{description}
     \item[To use a new functional form:] Write a new raw covariance function and wrap it in a \class{covariance_function_bundle} object.
-    \item[To use a new coordinate system:] Write a new distance function and use the \texttt{universal} method of an existing \class{covariance_function_bundle}.
-    \item[To build in anisotropy/ nonstationarity using a deformation approach] like that of Sampson and Guttorp \cite{sampson}, you can either write a new distance function and use \texttt{universal} or you can actually implement the deformation before passing in the \texttt{x} and \texttt{y} arguments, possibly using PyMC \class{Deterministics}.
-    \item[To use a new functional form \emph{and} a new distance function:] Wrap the covariance function as a \class{covariance_function_bundle} and apply the \texttt{universal} method to the distance function, or just apply \texttt{apply_distance} to both of them at once.
+    \item[To use a new coordinate system:] Write a new distance function and use the \texttt{add_distance_metric} method of an existing \class{covariance_function_bundle}.
+    \item[To build in anisotropy/ nonstationarity using a deformation approach] like that of Sampson and Guttorp \cite{sampson}, you can either write a new distance function and use \texttt{add_distance_metric} or you can actually implement the deformation before passing in the $x$ and $y$ arguments, possibly using PyMC \class{Deterministics}.
+    \item[To use a new functional form \emph{and} a new distance function:] Wrap the covariance function as a \class{covariance_function_bundle} and apply the \texttt{add_distance_metric} method to the distance function, or just apply \texttt{apply_distance} to both of them at once.
 \end{description}
 
 The easiest way to implement a more advanced extension like that of Paciorek and Schervish \cite{pachische} , is to write a new wrapper like \texttt{apply_distance}. You'll probably still be able to take advantage of the raw covariance functions, but not the distance functions. If you do this and don't mind sharing your work, please email me.
@@ -932,7 +1022,7 @@ The easiest way to implement a more advanced extension like that of Paciorek and
 
 \chapter{Numerical utilities}\label{cha:numerics} % (fold)
 
-More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation available from \citetitle[code/google/com/p/random-realizations]{code/google/com/p/random-realizations}.
+More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation.
 
 In addition to numpy's linear algebra support, this package uses some Fortran subroutines wrapped using \citetitle[http://cens.ioc.ee/projects/f2py2e/]{f2py}. They require \citetitle[http://www.netlib.org/blas/]{BLAS} and \citetitle[http://www.netlib.org/lapack/]{LAPACK} libraries (eg, \citetitle[http://math-atlas.sourceforge.net/]{ATLAS}) on your system, and the \file{setup.py} script will attempt to find these. If you don't have optimized BLAS and LAPACK installed, it's a good idea to install them; this package and numpy in general will be much faster. Some operating systems (such as Mac OS X) ship with optimized BLAS and LAPACK libraries included.
 
@@ -940,13 +1030,13 @@ In addition to numpy's linear algebra support, this package uses some Fortran su
 The following low-level linear algebra utility functions are found in the Fortran files \file{linalg_utils.f} and \file{incomplete_chol.f} :
 \begin{description}
 
-    \item[\function{dtrsm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRSM}, which solves triangular systems \texttt{$\alpha$a$^{op}$ x = b} in-place (that is, \texttt{b} is overwritten by \texttt{x}). 
+    \item[\function{dtrsm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRSM}, which solves triangular systems \texttt{$\alpha$a$^{op}$ x = b} in-place (that is, \texttt{b} is overwritten by $x$). 
     \begin{itemize}
         \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
     \end{itemize}
     
-    \item[\function{dtrmm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRMM}, which does the triangular matrix multiplication \texttt{$\alpha$a$^{op}$x = b} in-place (that is, \texttt{b} is overwritten by \texttt{x}).
+    \item[\function{dtrmm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRMM}, which does the triangular matrix multiplication \texttt{$\alpha$a$^{op}$x = b} in-place (that is, \texttt{b} is overwritten by $x$).
     \begin{itemize}
         \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x} is computed. If \texttt{transa='N'}, \texttt{$\alpha$a*x} is computed.
@@ -958,16 +1048,16 @@ The following low-level linear algebra utility functions are found in the Fortra
     
 The arguments are:
     \begin{description}
-        \item[\texttt{diag}:] The diagonal of an \texttt{n} by \texttt{n} covariance matrix \texttt{C}.
+        \item[\texttt{diag}:] The diagonal of an \texttt{n} by \texttt{n} covariance matrix C.
         \item[\texttt{reltol}:] If the ratio of the \texttt{i}'th pivot to the maximum pivot is found to be less than \texttt{reltol}, the \texttt{i}'th pivot is assumed to be zero.
         \item[\texttt{rowfun}:] A Python function. The call \function{rowfun(i,p,rowvec)} should perform the update \texttt{rowvec[i,i+1:]=C[i,p[i+1:]]} in-place.
     \end{description}
 
 The outputs are:
     \begin{description}
-        \item[\texttt{m}:] The rank of \texttt{C}. Note that \texttt{m}$\le$\texttt{n}.
+        \item[M:] The rank of C. Note that M$\le$\texttt{n}.
         \item[\texttt{piv}:] A length-\texttt{n} vector of pivots.
-        \item[\texttt{U}:] An \texttt{m}-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)] = C}.
+        \item[\texttt{U}:] An M-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)] = C}.
     \end{description}
 
 Because the full matrix $C$ does not need to be computed ahead of time, the algorithm is able to factor $C$ in $O(m^2 n)$ operations \cite{incompchol}. The algorithm is implemented in Fortran, but a Python version would be as follows:
@@ -1017,9 +1107,9 @@ def ichol(diag, reltol, rowfun):
 Function \function{ichol} is wrapped by the \class{Covariance} method \method{cholesky}.
 
 \item[\function{m, piv = ichol_continue(U, diag, reltol, rowfun, piv)}:]
-This function computes the Cholesky factorization of an \texttt{n} by \texttt{n} covariance matrix \texttt{C} from the factor of its upper-left \texttt{n}$_*$ by \texttt{n}$_*$ submatrix \texttt{C}$_*$. Its input arguments are as follows:
+This function computes the Cholesky factorization of an \texttt{n} by \texttt{n} covariance matrix C from the factor of its upper-left \texttt{n}$_*$ by \texttt{n}$_*$ submatrix C$_*$. Its input arguments are as follows:
 \begin{description}
-    \item[\texttt{U}:] Unlike \function{ichol}, this function overwrites a matrix in-place. Suppose the Cholesky factor of \texttt{C}$_*$, \texttt{U}$_*$, is of rank \texttt{m}$_*$. On input, \texttt{U} must be an \texttt{[m + (n-n$_*$)]}-by-\texttt{n} matrix arranged like this:
+    \item[\texttt{U}:] Unlike \function{ichol}, this function overwrites a matrix in-place. Suppose the Cholesky factor of C$_*$, \texttt{U}$_*$, is of rank M$_*$. On input, \texttt{U} must be an \texttt{[m + (n-n$_*$)]}-by-\texttt{n} matrix arranged like this:
     \begin{eqnarray*}
         \left[
         \begin{array}{ccc}
@@ -1028,7 +1118,7 @@ This function computes the Cholesky factorization of an \texttt{n} by \texttt{n}
         \end{array}
         \right]
     \end{eqnarray*}
-On exit, \texttt{U} will be an \texttt{m}-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)]=C}.
+On exit, \texttt{U} will be an M-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)]=C}.
     \item[\texttt{piv}:] Denote by \texttt{piv}$_*$ the pivot vector associated with \texttt{U}$_*$ On input, \texttt{piv} must be a length-\texttt{n} vector laid out like this:
     \begin{eqnarray*}
         \begin{array}{ccc}
@@ -1039,13 +1129,13 @@ On exit, \texttt{U} will be an \texttt{m}-by-\texttt{n} upper-triangular matrix 
     \item[\texttt{rowfun}:] The call \function{rowfun(i,p,rowvec)} should perform the update \texttt{rowvec[i,i+1:]} \texttt{=} \texttt{C[i,p[i+1:]]} in-place.
 \end{description}
 
-    The input parameter \texttt{reltol}, as well as the output parameters \texttt{piv} and \texttt{m} and the updated matrix \texttt{U}, should be interpreted just like their counterparts in \function{ichol}. 
+    The input parameter \texttt{reltol}, as well as the output parameters \texttt{piv} and M and the updated matrix \texttt{U}, should be interpreted just like their counterparts in \function{ichol}. 
     
     The algorithm is just like the algorithm in ichol, but the index \texttt{i} iterates over \texttt{range(m$_*$,m$_*$+n-n$_*$)} (and the index of \texttt{diag} is downshifted appropriately).
     
     \function{ichol_continue} is wrapped by the \class{Covariance} method \method{continue_cholesky}, so it should rarely be necessary to call it directly. 
     
-    \item[\function{U, m, piv = ichol_full(c, reltol)}:] Just like \texttt{ichol}, but instead of a diagonal and a `get-row' function a full covariance matrix \texttt{c} is required as an input.
+    \item[\function{U, m, piv = ichol_full(c, reltol)}:] Just like \texttt{ichol}, but instead of a diagonal and a `get-row' function a full covariance matrix C is required as an input.
     
     \item[\function{U, m, piv = ichol_full(basis, nug, reltol)}:] Just like \texttt{ichol}, but the following arguments are required:
     \begin{description}
@@ -1058,18 +1148,18 @@ On exit, \texttt{U} will be an \texttt{m}-by-\texttt{n} upper-triangular matrix 
 The following high-level linear algebra utilities are found in \file{GPutils.py}:
 \begin{description}
 
-    \item[\function{x = trisolve(A,b,uplo='U',transa='N',inplace=False)}:] Solves the triangular system \texttt{$\alpha$a$^{op}$ x = b} using \function{dtrsm_wrap} and returns \texttt{x}. If \texttt{A} is found to be singular, an error is raised. 
+    \item[\function{x = trisolve(A,b,uplo='U',transa='N',inplace=False)}:] Solves the triangular system \texttt{$\alpha$a$^{op}$ x = b} using \function{dtrsm_wrap} and returns $x$. If \texttt{A} is found to be singular, an error is raised. 
     \begin{itemize}
         \item \texttt{A} is assumed upper-triangular if \code{uplo='U'} and lower-triangular if \code{uplo='L'}.
         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
-        \item If \texttt{inplace=True}, \texttt{b} is overwritten with \texttt{x} in-place and returned. If \texttt{inplace=False}, \texttt{b} is not modified.
+        \item If \texttt{inplace=True}, \texttt{b} is overwritten with $x$ in-place and returned. If \texttt{inplace=False}, \texttt{b} is not modified.
     \end{itemize}
 
     \item[\function{b = trimult(A,x,uplo='U',transa='N',inplace=False)}:] Does the triangular multiplication \texttt{$\alpha$a$^{op}$x = b} using \function{dtrmm_wrap} and returns \texttt{b}.
     \begin{itemize}
         \item \texttt{A} is assumed upper-triangular if \code{uplo='U'} and lower-triangular if \code{uplo='L'}.
         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T8x} is computed. If \texttt{transa='N'}, \texttt{$\alpha$a*x} is computed.
-        \item If \texttt{inplace=True}, \texttt{x} is overwritten with \texttt{b} in-place and returned. If \texttt{inplace=False}, \texttt{x} is not modified.
+        \item If \texttt{inplace=True}, $x$ is overwritten with \texttt{b} in-place and returned. If \texttt{inplace=False}, $x$ is not modified.
     \end{itemize}    
 \end{description}
         
@@ -1077,7 +1167,7 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
     
 %     If the return of \texttt{predictive_check} value is \texttt{False}, the values of some observations can be predicted with negligible uncertainty from the values of others, but they don't match their predicted values; in other words, the data are extremely improbable. A \texttt{ZeroProbability} exception is raised with some helpful suggestions if this is the case.
 %     
-%     \item[\function{OK = predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance)} :] Checks the value of \texttt{M} evaluated at \texttt{obs_mesh} sliced at the complement of \texttt{posdef_indices} against the corresponding \texttt{obs_vals}. If any of the differences are greater than \texttt{tolerance}, \texttt{False} is returned. Otherwise \texttt{True} is returned.
+%     \item[\function{OK = predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance)} :] Checks the value of M evaluated at \texttt{obs_mesh} sliced at the complement of \texttt{posdef_indices} against the corresponding \texttt{obs_vals}. If any of the differences are greater than \texttt{tolerance}, \texttt{False} is returned. Otherwise \texttt{True} is returned.
 % \end{description}
 % \section{Object internals}\label{sec:internals}
 % 
@@ -1089,7 +1179,7 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 %     \item[\method{cholesky(x, apply_pivot = True, observed=True)}:] Returns an incomplete Cholesky factor of \texttt{C(x,x)}. The other arguments' meanings are as follows:
 %     \begin{description}
 %         \item[\texttt{apply_pivot}:] If \texttt{True}, the return value is a matrix \texttt{U} such that \texttt{U.T*U = C(x,x)}. If \texttt{False}, the return value is a dictionary. Element \texttt{'pivots'} is a vector of pivots returned by function \function{ichol}, and element \texttt{'U'} is the matrix \texttt{sig} returned by \function{ichol}.
-%         \item[\texttt{observed}:] If \texttt{True}, the matrix \texttt{C(x,x)} is obtained conditional on observations that have been made involving \texttt{C}. If \texttt{False}, the matrix is obtained without regard to those observations.
+%         \item[\texttt{observed}:] If \texttt{True}, the matrix \texttt{C(x,x)} is obtained conditional on observations that have been made involving C. If \texttt{False}, the matrix is obtained without regard to those observations.
 %     \end{description}
 %     
 %         \item[\method{continue_cholesky(x, x_old, chol_dict_old[, apply_pivot, observed])}:] Returns an incomplete Cholesky factor of \texttt{C(concatenate(x_old,x), concatenate(x_old,x))}. Arguments \texttt{apply_pivot} and \texttt{observed} are the same as for \texttt{cholesky}. \texttt{chol_dict_old} should be the incomplete Cholesky factorization of \texttt{C(x_old, x_old)} in the form of a dictionary such as the one produced by \texttt{C.cholesky}. 
@@ -1097,11 +1187,11 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 %         This method returns either a matrix or a dictionary depending on the value of \texttt{apply_pivot}. See \texttt{cholesky}.
 % 
 % 
-%         \item[\method{relevant_slice, obs_mesh_new, U_for_draw = observe(obs_mesh, obs_V=0.)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. This method updates the following attributes of \texttt{C}:
+%         \item[\method{relevant_slice, obs_mesh_new, U_for_draw = observe(obs_mesh, obs_V=0.)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. This method updates the following attributes of C:
 %         \begin{itemize}
 %             \item \texttt{observed}: This flag is set to \texttt{True}.
 %             \item \texttt{obs_U} and \texttt{obs_piv}: The output of \texttt{self.cholesky(obs_mesh, apply_pivot=False, observed=False)}.
-%             \item \texttt{obs_mesh}: The mesh on which self has been observed, sliced by \texttt{obs_piv[:m]}, where \texttt{m} is the rank of \texttt{obs_U}.
+%             \item \texttt{obs_mesh}: The mesh on which self has been observed, sliced by \texttt{obs_piv[:m]}, where M is the rank of \texttt{obs_U}.
 %             \item \texttt{obs_V}: The variances associated with the observations, sliced as \texttt{obs_mesh} is.
 %             \item \texttt{obs_len}: The length of \texttt{obs_V}.
 %         \end{itemize}
@@ -1118,10 +1208,10 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 %     \item[\method{__call__(x[, y, observed])}:] 
 % 
 %     \begin{itemize}
-%         \item If only one argument \texttt{x} is provided, \texttt{C(x,x) = V(f(x))} will be returned conditional on any observations that have been made.
+%         \item If only one argument $x$ is provided, \texttt{C(x,x) = V(f(x))} will be returned conditional on any observations that have been made.
 %         \begin{itemize}
-%             \item If \texttt{C} is unobserved or \texttt{observed = False}, its underlying function \texttt{c} is evaluated at each element of \texttt{x}. The \texttt{i}'th element of the return value is \texttt{c(x_i,x_i)}.
-%             \item If \texttt{C} is observed and \texttt{observed = True}, its underlying function \texttt{c} is evaluated at each element of \texttt{x}. The \texttt{i}'th element of the return value is 
+%             \item If C is unobserved or \texttt{observed = False}, its underlying function C is evaluated at each element of $x$. The \texttt{i}'th element of the return value is \texttt{c(x_i,x_i)}.
+%             \item If C is observed and \texttt{observed = True}, its underlying function C is evaluated at each element of $x$. The \texttt{i}'th element of the return value is 
 %             \begin{eqnarray*}
 %                 \texttt{c(x_i,x_i) - (U.T.I c(o,x_i)).T (U.T.I c(o,x_i))},
 %             \end{eqnarray*}
@@ -1130,8 +1220,8 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 %                 
 %         \item If two arguments \texttt{(x,y)} are provided, \texttt{C(x,y)} will be returned conditional on any observations that have been made. 
 %         \begin{itemize}
-%             \item If \texttt{C} is unobserved, \texttt{c(x,y)} will be returned where \texttt{c} is the underlying function. If \texttt{x} and \texttt{y} are references to the same array, only half the matrix will actually be computed; the other half will be filled in.
-%         \item If \texttt{C} is observed, the return value will be
+%             \item If C is unobserved, \texttt{c(x,y)} will be returned where C is the underlying function. If $x$ and $y$ are references to the same array, only half the matrix will actually be computed; the other half will be filled in.
+%         \item If C is observed, the return value will be
 %         \begin{eqnarray*}
 %             \texttt{c(x,y) - (U.T.I c(o,x)).T (U.T.I c(o,y))}
 %         \end{eqnarray*}
@@ -1146,7 +1236,7 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 % 
 % \section{Mean}\label{sec:meanInt}
 % \begin{description}
-%     \item[\method{observe(C, obs_mesh_new, obs_vals_new)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. Assumes that \texttt{C(obs_mesh_new, obs_mesh_new)} is positive definite; the \emph{function} \function{observe} slices \texttt{obs_vals} according to \texttt{Covariance.observe}'s output value \texttt{relevant_slice} before passing it to \texttt{Mean.observe}. This method updates the following attributes of \texttt{M}:
+%     \item[\method{observe(C, obs_mesh_new, obs_vals_new)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. Assumes that \texttt{C(obs_mesh_new, obs_mesh_new)} is positive definite; the \emph{function} \function{observe} slices \texttt{obs_vals} according to \texttt{Covariance.observe}'s output value \texttt{relevant_slice} before passing it to \texttt{Mean.observe}. This method updates the following attributes of M:
 %     \begin{itemize}
 %         \item \texttt{self.C}: The covariance of the random field (which has self as mean) that was observed. Several of $C$'s attributes are used by this method.
 %         \item \texttt{self.obs_U}: \texttt{C.obs_U}.        
@@ -1154,26 +1244,26 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 %         \item \texttt{obs_V}: \texttt{C.obs_V}.
 %         \item \texttt{obs_len}: \texttt{C.obs_len}.
 %         \item \texttt{self.dev}: \texttt{obs_mesh - self.__call__(obs_mesh, observed=False)}.
-%         \item \texttt{self.reg_vec}: \texttt{self.obs_U[:,:m].T*self.dev}, where \texttt{m} is the rank of \texttt{self.obs_U}.
+%         \item \texttt{self.reg_vec}: \texttt{self.obs_U[:,:m].T*self.dev}, where M is the rank of \texttt{self.obs_U}.
 %     \end{itemize}
 %     
 %     Note that \texttt{Mean.observe} will not cross-validate; if inconsistent observation values are used, it will simply ignore them. You'll need to call \texttt{predictive_check} yourself if you want cross-validation.
 % 
 %     \item[\method{__call__(x[, observed])}:] 
 %     \begin{itemize}
-%         \item If \texttt{M} has not been observed or \texttt{observed = False}, the return value of \texttt{M(x)} will just be \texttt{m(x)} where \texttt{m} is the underlying mean function. 
-%         \item If \texttt{M} has been observed and \texttt{observed = True}, the return value will be 
+%         \item If M has not been observed or \texttt{observed = False}, the return value of \texttt{M(x)} will just be \texttt{m(x)} where M is the underlying mean function. 
+%         \item If M has been observed and \texttt{observed = True}, the return value will be 
 %         \begin{eqnarray*}
 %             \texttt{c(x,o) U.I r},
 %         \end{eqnarray*}
-%         where \texttt{r} is \code{self.reg_vec}, \texttt{U} is \code{self.obs_U} and \texttt{c} is \code{self.cov_fun}, all of which were provided by \function{observe}. 
+%         where \texttt{r} is \code{self.reg_vec}, \texttt{U} is \code{self.obs_U} and C is \code{self.cov_fun}, all of which were provided by \function{observe}. 
 % 
 %     \end{itemize}
 %      
 % \end{description}
 
 % \section{Realization}\label{sec:realInt}
-% A realization \texttt{f} maintains the following attributes:
+% A realization f maintains the following attributes:
 % \begin{itemize}
 %     \item \texttt{x_sofar}: The values at which self has already been evaluated.
 %     \item \texttt{f_sofar}: Self's evaluation at \texttt{x_sofar}.
@@ -1183,11 +1273,11 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 % 
 % When the evaluation \texttt{f(x)} is requested, the following happen:
 % \begin{enumerate}
-%     \item \texttt{x_sofar} is searched for elements of \texttt{x}. If any are found, the corresponding values of \texttt{f} aren't recomputed. Call the remaining elements \texttt{x_new}.
+%     \item \texttt{x_sofar} is searched for elements of $x$. If any are found, the corresponding values of f aren't recomputed. Call the remaining elements \texttt{x_new}.
 %     \item \texttt{C_internal} is observed at \texttt{x_new} with \texttt{obs_V=0}.
 %     \item The output value \texttt{U_for_draw} is used to generate a normal random variable \texttt{f_new} with mean \texttt{M_internal(x_new)} and covariance \texttt{C_internal(x_new, x_new)}.
 %     \item \texttt{M_internal} is observed with \texttt{obs_mesh = x_new}, \texttt{obs_vals = f_new}, \texttt{obs_taus = Inf}.
-%     \item \texttt{f_new} is appropriately combined with \texttt{f}'s evaluation at previously computed values of \texttt{x} and the result is returned.
+%     \item \texttt{f_new} is appropriately combined with f's evaluation at previously computed values of $x$ and the result is returned.
 % \end{enumerate}
 % 
 % If a realization's covariance is an instance of \texttt{BasisCovariance}, the behavior is different. At instantiation, the realization will draw coefficients for the basis terms; calls to the realization will simply be handled by calling the basis.
@@ -1236,6 +1326,6 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 
 \nocite{*} 
 \bibliographystyle{plain} 
-\bibliography{RRBib} 
+\bibliography{gp} 
 
 \end{document}
