@@ -1,7 +1,7 @@
 # Copyright (c) Anand Patil, 2007
 
 __docformat__='reStructuredText'
-__all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh']
+__all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -18,6 +18,75 @@ except ImportError:
         pass
 
 half_log_2pi = .5 * log(2. * pi)
+
+def caching_call(f, x, x_sofar, f_sofar):
+    """
+    Computes f(x) given that f(x_sofar) = x_sofar.
+    returns f(x), and new versions of x_sofar and f_sofar.
+    """
+    lenx = x.shape[0]
+
+    nr,rf,rt,nu,xu,ui = remove_duplicates(x)
+    
+    unique_indices=ui[:nu]
+    x_unique=xu[:nu]
+    repeat_from=rf[:nr]
+    repeat_to=rt[:nr]            
+        
+    # Check which observations have already been made.
+    if x_sofar is not None:
+        
+        f_unique, new_indices, N_new_indices  = check_repeats(x_unique, x_sofar, f_sofar)
+        
+        # If there are any new input points, draw values over them.
+        if N_new_indices>0:
+
+            x_new = x_unique[new_indices[:N_new_indices]]                    
+            f_new = f(x_new)
+
+            f_unique[new_indices[:N_new_indices]] = f_new
+
+            # Record the new values
+            x_sofar = vstack((x_sofar, x_new))
+            f_sofar = hstack((f_sofar, f_new))
+        else:
+            f=f_unique
+
+    # If no observations have been made, don't check.
+    else:
+        f_unique = f(x_unique)
+        x_sofar = x_unique
+        f_sofar = f_unique
+
+    f=empty(lenx)
+    f[unique_indices]=f_unique
+    f[repeat_to]=f[repeat_from]
+        
+    return f, x_sofar, f_sofar
+    
+class caching_callable(object):
+    """
+    F = caching_callable(f[, x_sofar, f_sofar, update_cache=True])
+    
+    f is the function whose output should be cached.
+    x_sofar, if provided, is an initial list of caching locations.
+    f_sofar, if provided, is the value of f at x_sofar.
+    update_cache tells whether x_sofar and f_sofar should be updated as additional calls are made.
+    """
+    def __init__(self, f, x_sofar=None, f_sofar=None, update_cache=True):
+        self.f = f
+        self.x_sofar = x_sofar
+        self.f_sofar = f_sofar
+        self.update_cache = update_cache
+        if self.x_sofar is not None and self.f_sofar is None:
+            junk, self.x_sofar, self.f_sofar = caching_call(self.f, self.x_sofar)
+        
+    def __call__(self, x):
+        f, x_sofar, f_sofar = caching_call(self.f, x, self.x_sofar, self.f_sofar)
+        if self.update_cache:
+            self.x_sofar = x_sofar
+            self.f_sofar = f_sofar
+        return f
 
 def vecs_to_datmesh(x, y):
     """
@@ -66,7 +135,6 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     dtrsm_wrap(a=U,b=x,uplo=uplo,transa=transa,alpha=alpha)
     return x
         
-
 def regularize_array(A):
     """
     Takes an ndarray as an input.
@@ -128,8 +196,6 @@ def plot_envelope(M,C,mesh):
         plot(mesh, mean, 'k-.')    
     except ImportError:
         print "Matplotlib is not installed; plotting is disabled."
-
-
 
 def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate = True):
     """

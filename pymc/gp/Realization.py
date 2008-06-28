@@ -10,7 +10,7 @@ from numpy.linalg import cholesky, eigh, solve
 from Covariance import Covariance
 from BasisCovariance import BasisCovariance
 from Mean import Mean
-from GPutils import observe, trisolve, regularize_array
+from GPutils import observe, trisolve, regularize_array, caching_call
 from linalg_utils import check_repeats, remove_duplicates
 import copy
 
@@ -132,49 +132,10 @@ class StandardRealization(object):
                 raise ValueError, 'Input argument to Realization contains NaNs.'            
             x = regularize_array(x)
 
-        lenx = x.shape[0]
-        
-
         if self.check_repeats:
-            nr,rf,rt,nu,xu,ui = remove_duplicates(x)
+            # use caching_call to save duplicate calls.
+            f, self.x_sofar, self.f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
             
-            unique_indices=ui[:nu]
-            x_unique=xu[:nu]
-            repeat_from=rf[:nr]
-            repeat_to=rt[:nr]            
-            
-            
-            # Check which observations have already been made.
-            if self.x_sofar is not None:
-                
-                f_unique, new_indices, N_new_indices  = check_repeats(x_unique, self.x_sofar, self.f_sofar)
-                
-                # If there are any new input points, draw values over them.
-                if N_new_indices>0:
-
-                    x_new = x_unique[new_indices[:N_new_indices]]                    
-                    f_new = self.draw_vals(x_new)
-
-                    f_unique[new_indices[:N_new_indices]] = f_new
-
-                    # Record the new values
-                    self.x_sofar = vstack((self.x_sofar, x_new))
-                    self.f_sofar = hstack((self.f_sofar, f_new))
-                else:
-                    f=f_unique
-        
-                        
-            # If no observations have been made, don't check.
-            else:
-                f_unique = self.draw_vals(x_unique)
-                self.x_sofar = x_unique
-                self.f_sofar = f_unique
-
-            f=empty(lenx)
-            f[unique_indices]=f_unique
-            f[repeat_to]=f[repeat_from]
-
-        
         else:
             # Call to self.draw_vals.
             f = self.draw_vals(x)

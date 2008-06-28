@@ -60,8 +60,9 @@ class Trace(base.Trace):
         When model receives a keyboard interrupt, it tells the traces
         to truncate their values.
         """
-        if self.isnum:
-            self._array.truncate(len(self._array))
+        pass
+        # if self.isnum:
+        #     self._array.truncate(len(self._array))
 
     def gettrace(self, chain=-1):
         """Return the trace (last by default).
@@ -191,8 +192,9 @@ class Database(pickle.Database):
                         title=title, filters=self.filter) 
                 
                 else:
+                    atom = tables.Atom.from_dtype(arr_value.dtype)
                     self.trace_dict[o] = self._h5file.createCArray(this_group, o.__name__, 
-                        tables.Atom.from_dtype(arr_value.dtype), (length,) + arr_value.shape, title=title, filters=self.filter)
+                        atom=atom, shape=(length,) + arr_value.shape, title=title, filters=self.filter)
 
                 if group_counter % 4096 == 0:
                     group_num += 1
