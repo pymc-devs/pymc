@@ -115,6 +115,7 @@ class Covariance(object):
         
 
         # get-row function
+        # TODO: Forbid threading here due to callbacks.
         def rowfun(i,xpiv,rowvec):
             """
             A function that can be used to overwrite an input array with rows.

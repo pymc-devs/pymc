@@ -930,13 +930,26 @@ cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(bet
       do i=1,n
         if (not_scalar_a) alpha_tmp = alpha(i)
         if (not_scalar_b) beta_tmp = beta(i)
-        if ((x(i) .LE. 0.0) .OR. (alpha_tmp .LE. 0.0) .OR. 
+        if ((x(i) .LT. 0.0) .OR. (alpha_tmp .LE. 0.0) .OR. 
      +(beta_tmp .LE. 0.0)) then
           like = -infinity
           RETURN
         endif
-        like = like - gammln(alpha_tmp) + alpha_tmp*dlog(beta_tmp)
-        like = like + (alpha_tmp - 1.0)*dlog(x(i)) - beta_tmp*x(i)
+        if (x(i).EQ.0.0) then
+
+            if (alpha_tmp.EQ.1.0) then
+                like = like + beta_tmp
+            else if (alpha_tmp.LT.1.0) then
+                like = infinity
+                RETURN
+            else
+                like = -infinity
+                RETURN
+            end if
+        else            
+            like = like - gammln(alpha_tmp) + alpha_tmp*dlog(beta_tmp)
+            like = like + (alpha_tmp - 1.0)*dlog(x(i)) - beta_tmp*x(i)
+        end if
       enddo     
 
       return
@@ -967,7 +980,7 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
 
       alpha_tmp=alpha(1)
       beta_tmp=beta(1)
-      like = 0.0
+      like = 0.0D0
       do i=1,n
         if (na .NE. 1) alpha_tmp=alpha(i)
         if (nb .NE. 1) beta_tmp=beta(i)
@@ -975,12 +988,13 @@ cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
           like = -infinity
           RETURN
         endif
-        if (x(i) .LT. 0.0) then
+        if ((x(i) .LE. 0.0).OR.(alpha_tmp.LE.0.0).OR.
+     +       (beta_tmp.LE.0.0)) then
           like = -infinity
           RETURN
         endif
-        like = like - (gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp))
-        like = like + (-alpha_tmp-1.)*dlog(x(i)) - 1.0D0/x(i)/beta_tmp
+        like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
+        like = like - (alpha_tmp+1.0D0)*dlog(x(i)) - 1.0D0/x(i)/beta_tmp
       enddo
 
       return
@@ -2173,7 +2187,7 @@ c repeat for n samples
 c initialize sum      
         sump = 0.0
 c random draw
-        u = DBLE(rand())
+        call random_number(u)
         j = 0
         
 c find index to value        
@@ -2210,8 +2224,8 @@ C
       DOUBLE PRECISION X, Y, S, ONE, TWO
       DATA ONE /1.0/, TWO /2.0/
 C
-    1 X = DBLE(RAND())
-      Y = DBLE(RAND())
+    1 call random_number(x)
+      call random_number(y)
       X = TWO * X - ONE
       Y = TWO * Y - ONE
       S = X * X + Y * Y
@@ -2364,7 +2378,7 @@ C Returns as a floating-point number an integer value that is a random deviate d
 C a binomial distribution of n trials each of probability pp, using rand as a source 
 C of uniform random deviates. 
       INTEGER j,nold
-      DOUBLE PRECISION am,em,en,g,oldg,p,pc
+      DOUBLE PRECISION am,em,en,g,oldg,p,pc,rn
       DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln
       SAVE nold,pold,pc,plog,pclog,en,oldg 
 C     Arguments from previous calls.
@@ -2384,7 +2398,8 @@ C       Use the direct method while n is not too large. This can
 C       require up to 25 calls to ran1.
         x=0. 
         do 11 j=1,n 
-          if(rand().lt.p) x=x+1. 
+          call random_number(rn)
+          if(rn.lt.p) x=x+1. 
    11   enddo 
       else if (am.lt.1.) then 
 C       If fewer than one event is expected out of 25 or more tri- 
@@ -2392,8 +2407,9 @@ C       als, then the distribution is quite accurately Poisson. Use
 C       direct Poisson method. 
         g=dexp(-am) 
         t=1. 
-        do 12 j=0,n 
-        t=t*rand() 
+        do 12 j=0,n
+        call random_number(rn) 
+        t=t*rn
         if (t.lt.g) goto 1 
    12   enddo  
         j=n 
@@ -2416,7 +2432,8 @@ C         If p has changed, then compute useful quantities.
         sq=sqrt(2.*am*pc) 
 C       The following code should by now seem familiar: rejection 
 C       method with a Lorentzian comparison function.
-    2   y=tan(PI*rand()) 
+        call random_number(rn)
+    2   y=tan(PI*rn) 
         em=sq*y+am 
 C       Reject.
         if (em.lt.0..or.em.ge.en+1.) goto 2  
@@ -2426,7 +2443,8 @@ C       Trick for integer-valued distribution.
         t=1.2*sq*(1.+y**2)*dexp(oldg-gammln(em+1.) 
      +-gammln(en-em+1.)+em*plog+(en-em)*pclog) 
 C       Reject. This happens about 1.5 times per deviate, on average.
-        if (rand().gt.t) goto 2 
+        call random_number(rn)
+        if (rn.gt.t) goto 2 
         x=em 
         endif 
 C     Remember to undo the symmetry transformation. 

@@ -1,7 +1,8 @@
 # Copyright (c) Anand Patil, 2007
 
 __docformat__='reStructuredText'
-__all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable']
+__all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
+            'fast_threaded_copy']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -10,6 +11,8 @@ from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
 from linalg_utils import *
+from threading import Thread, Lock
+import sys
 
 try:
     from PyMC2 import ZeroProbability
@@ -18,6 +21,56 @@ except ImportError:
         pass
 
 half_log_2pi = .5 * log(2. * pi)
+
+def fast_threaded_copy(f, t=None, n_threads=1):
+    """
+    Not any faster than a serial copy so far.
+    """
+    if len(f.shape) > 0:
+        f = ravel(asarray(f))
+    if t is not None:
+        if len(t.shape) > 0:
+            t = ravel(asarray(t))
+    else:
+        t=f.copy()
+    
+    # Figure out how to divide job up between threads.
+    nx = len(f)
+    n_threads = min(n_threads, nx/ 10000)        
+
+    if n_threads > 1:
+        bounds = array(linspace(0,nx,n_threads+1),dtype=int)
+
+    if n_threads <= 1:
+        dcopy_wrap(f,t)
+    else:
+        iteratorlock = Lock()
+        exceptions=[]
+        
+        def targ(cmin, cmax):
+            try:
+                dcopy_wrap(f[cmin:cmax],t[cmin:cmax])
+            except:
+                e = sys.exc_info()
+                iteratorlock.acquire()
+                try:
+                    exceptions.append(e)
+                finally:
+                    iteratorlock.release()
+                        
+        threads = []
+        for i in xrange(n_threads):
+            new_thread= Thread(target=targ, args=(bounds[i],bounds[i+1]))
+            threads.append(new_thread)
+            new_thread.start()
+        [thread.join() for thread in threads]        
+        
+        if exceptions:
+            a, b, c = exceptions[0]
+            raise a, b, c
+    
+def zero_lower_triangle(C):
+    pass
 
 def caching_call(f, x, x_sofar, f_sofar):
     """

@@ -1,6 +1,6 @@
 ! Copyright (c) Anand Patil, 2007
 
-
+! TODO: Multithread zeroing the lower triangle, do it straight from Covariance.
 
       SUBROUTINE remove_duplicates(x,N,Nd,Nr,rf,rt,Nu,xu,ui)
 cf2py intent(out) rt
@@ -106,6 +106,16 @@ cf2py integer intent(out):: N_new_indices
       RETURN
       END
 
+      subroutine dcopy_wrap(x,y,nx)
+cf2py intent(inplace) y
+cf2py intent(hide) nx
+      double precision x(nx), y(nx)
+      external dcopy
+!       dcopy(n,dx,incx,dy,incy)
+
+      CALL dcopy(nx,x,1,y,1)
+      RETURN
+      END
 
       subroutine diag_call(x,n,ndim,V,cov_fun)
 cf2py intent(hide) n

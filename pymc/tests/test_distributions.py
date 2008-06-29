@@ -14,6 +14,7 @@ For each distribution:
 #       Maybe compare the relative error (hist-like)/like. Doesn't work so well.
 #       Tried (hist-like)/sqrt(like), seems to work better.
 
+# FIXME no tests for categorical, discrete_uniform, negative_binomial, uniform.
 
 #from decorators import *
 from pymc.distributions import *
@@ -247,6 +248,9 @@ def normalization(like, parameters, domain, N=100):
             y.append(f(i))
         return np.trapz(y,x)
 
+def discrete_normalization(like, parameters, N):
+    return sum(exp([like(x,**parameters) for x in arange(N)]))
+
 class test_arlognormal(TestCase):
     def like(self, parameters, r):
         a = parameters[2:]
@@ -335,6 +339,10 @@ class test_binomial(TestCase):
             compare_hist(figname='binomial', **figdata)
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
+
+    def test_normalization(self):
+        parameters = {'n':20,'p':.1}
+        summation = discrete_normalization(flib.binomial, parameters, 21)
 
     def test_calling(self):
         a = flib.binomial([3,4,5], 7, .7)
@@ -540,11 +548,28 @@ class test_inverse_gamma(TestCase):
         if PLOT:
             compare_hist(figname='inverse_gamma', **figdata)
         assert_array_almost_equal(hist, like,1)
+        
+    def test_consistency_with_gamma(self):
+        parameters=dict(alpha=1.5, beta=.5)
+        rspecial_gamma = lambda *args, **kwargs: 1./rinverse_gamma(*args, **kwargs)        
+        rspecial_igamma = lambda *args, **kwargs: 1./rgamma(*args, **kwargs)                
+
+        hist, like, figdata = consistency(rspecial_igamma, flib.igamma, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='inverse_gamma', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
+        hist, like, figdata = consistency(rspecial_gamma, flib.gamma, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='gamma', **figdata)
+        assert_array_almost_equal(hist, like,1)
 
     def test_normalization(self):
-        parameters=dict(alpha=1.5, beta=.5)
+        parameters=dict(alpha=1.5, beta=4)
         integral = normalization(flib.igamma, parameters, [0, 10], 200)
-        assert_almost_equal(integral, 1, 3)
+        assert_almost_equal(integral, 1, 2)
 
     def test_vectorization(self):
         x = [2,3]
@@ -562,9 +587,9 @@ class test_lognormal(TestCase):
         assert_array_almost_equal(hist, like,1)
 
     def test_normalization(self):
-        parameters=dict(mu=3, tau = .5)
-        integral = normalization(flib.lognormal, parameters, [0, 20], 200)
-        assert_almost_equal(integral, 1, 3)
+        parameters=dict(mu=1, tau = 1)
+        integral = normalization(flib.lognormal, parameters, [0, 50], 200)
+        assert_almost_equal(integral, 1, 2)
         
     def test_vectorization(self):
         r = rlognormal(3, .5, 2)
@@ -679,8 +704,8 @@ class test_poisson(TestCase):
 
     def test_normalization(self):
         parameters = {'mu':2.}
-        integral = normalization(flib.poisson, parameters, [0.1, 20], 200)
-        assert_almost_equal(integral, 1, 2)
+        summation=discrete_normalization(flib.poisson,parameters,20)
+        assert_almost_equal(summation, 1, 2)
 
     def test_calling(self):
         a = flib.poisson([1,2,3], 2)
@@ -799,22 +824,6 @@ class test_wishart(TestCase):
         A /= N
         delta=A-wishart_cov_expval(n,self.Tau_test.I)
         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
-
-"""
-Hyperg is parameteretrized differently in flib than is hypergeometric in numpy.random.
-numpy.random: good, bad, sample
-flib: red (=bad), d (=sample), total (=good+bad)
-
-What to do about this?
-Either change the argument names in flib or in the distributions wrapper.
--D
-
-class test_hyperg(TestCase):
-    def __init__(self):
-        from np.random import poisson
-        parameters = {'ngood':2, 'nbad':5, 'nsample':3}
-        hist,like, figdata = consistency(poisson, flib.poisson, parameters, nrandom=5000, range=[0,10])
-"""
 
 if __name__ == '__main__':
     unittest.main()
