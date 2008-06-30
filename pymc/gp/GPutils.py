@@ -2,7 +2,7 @@
 
 __docformat__='reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_threaded_copy']
+            'fast_matrix_copy']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -22,52 +22,21 @@ except ImportError:
 
 half_log_2pi = .5 * log(2. * pi)
 
-def fast_threaded_copy(f, t=None, n_threads=1):
+def fast_matrix_copy(f, t=None, n_threads=1):
     """
     Not any faster than a serial copy so far.
     """
-    if len(f.shape) > 0:
-        f = ravel(asarray(f))
-    if t is not None:
-        if len(t.shape) > 0:
-            t = ravel(asarray(t))
-    else:
-        t=f.copy()
+    if not f.flags['F_CONTIGUOUS']:
+        raise RuntimeError, 'This will not be fast unless input array f is Fortran-contiguous.'
+    
+    if t is None:
+        t=asmatrix(empty(f.shape, order='F'))
+    elif not t.flags['F_CONTIGUOUS']:
+        raise RuntimeError, 'This will not be fast unless input array t is Fortran-contiguous.'
     
     # Figure out how to divide job up between threads.
-    nx = len(f)
-    n_threads = min(n_threads, nx/ 10000)        
-
-    if n_threads > 1:
-        bounds = array(linspace(0,nx,n_threads+1),dtype=int)
-
-    if n_threads <= 1:
-        dcopy_wrap(f,t)
-    else:
-        iteratorlock = Lock()
-        exceptions=[]
-        
-        def targ(cmin, cmax):
-            try:
-                dcopy_wrap(f[cmin:cmax],t[cmin:cmax])
-            except:
-                e = sys.exc_info()
-                iteratorlock.acquire()
-                try:
-                    exceptions.append(e)
-                finally:
-                    iteratorlock.release()
-                        
-        threads = []
-        for i in xrange(n_threads):
-            new_thread= Thread(target=targ, args=(bounds[i],bounds[i+1]))
-            threads.append(new_thread)
-            new_thread.start()
-        [thread.join() for thread in threads]        
-        
-        if exceptions:
-            a, b, c = exceptions[0]
-            raise a, b, c
+    dcopy_wrap(ravel(asarray(f.T)),ravel(asarray(t.T)))
+    return t
     
 def zero_lower_triangle(C):
     pass
@@ -163,7 +132,7 @@ def trimult(U,x,uplo='U',transa='N',alpha=1.,inplace=False):
     if inplace:
         b=x
     else:
-        b = x.copy()
+        b = x.copy('F')
     dtrmm_wrap(a=U,b=b,uplo=uplo,transa=transa,alpha=alpha)
     return b
 
@@ -182,7 +151,7 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     if inplace:
         x=b
     else:
-        x = b.copy()
+        x = b.copy('F')
     if U.shape[0] == 0:
         raise ValueError, 'Attempted to solve zero-rank triangular system'
     dtrsm_wrap(a=U,b=x,uplo=uplo,transa=transa,alpha=alpha)
