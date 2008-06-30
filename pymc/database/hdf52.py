@@ -11,7 +11,6 @@
 
 
 import numpy as np
-from numpy import zeros,shape, asarray, hstack, size, dtype
 import pymc
 from pymc.database import base, pickle
 from copy import copy
@@ -53,7 +52,11 @@ class Trace(base.Trace):
         if not self.isnum:
             self._array.append(self._obj.value)
         else:
-            self._array[index] = self._obj.value
+            if len(self._array.shape)==1:
+                self._array.append(np.atleast_1d(self._obj.value))
+            else:
+                self._array.append(np.reshape(self._obj.value, (1,) + self._obj.value.shape))
+
                        
     def truncate(self, index):
         """
@@ -193,8 +196,9 @@ class Database(pickle.Database):
                 
                 else:
                     atom = tables.Atom.from_dtype(arr_value.dtype)
-                    self.trace_dict[o] = self._h5file.createCArray(this_group, o.__name__, 
-                        atom=atom, shape=(length,) + arr_value.shape, title=title, filters=self.filter)
+                    self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
+                        atom=atom, shape=(0,) + arr_value.shape, title=title, 
+                        filters=self.filter, expectedrows=length)
 
                 if group_counter % 4096 == 0:
                     group_num += 1
@@ -215,7 +219,7 @@ class Database(pickle.Database):
                 arr_value = np.asarray(o.value)
                 title = o.__name__ + ': observed value'
                 
-                if arr_value.dtype is dtype('object'):
+                if arr_value.dtype is np.dtype('object'):
                     va = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
                     va.append(o.value)
                     
