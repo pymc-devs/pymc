@@ -77,7 +77,7 @@ cf2py threadsafe
 
 
       SUBROUTINE stein_spatiotemporal
-     *(C,Gt,origin_val,
+     *(C,Gt,origin_val,Bk,
      * cmin,cmax,nx,ny,symm)
 
 cf2py threadsafe

@@ -67,7 +67,7 @@ class Mean(object):
         # If self hasn't been observed yet:
         if not self.observed:
             
-            self.dev = (obs_vals_new - mean_under_new)    
+            self.dev = (obs_vals_new - mean_under_new)
 	    
 	    self.basiscov = False
 	    self.reg_mat = C._unobs_reg(self)
