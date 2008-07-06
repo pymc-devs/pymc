@@ -142,8 +142,56 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
         print
         print "Thinning factor of %i required to produce an independence chain." % kmind
         
-    
     return output
+
+def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
+    """
+    TODO: Use Bayesian CI.
+    
+    Returns the half-width of the frequentist confidence interval
+    (q'th quantile) of the Monte Carlo estimate of E[f(x)]. 
+    
+    :Parameters:
+        x : sequence
+            Sampled series. Must be a one-dimensional array.
+        f : function
+            The MCSE of E[f(x)] will be computed.
+        theta : float between 0 and 1
+            The batch length will be set to len(x) ** theta.
+        q : float between 0 and 1
+            The desired quantile.
+            
+    :Example: 
+        >>>batch_means(x, f=lambda x: x**2, theta=.5, q=.95)
+        
+    :Reference:
+        Flegal, James M. and Haran, Murali and Jones, Galin L. (2007).
+        Markov chain Monte Carlo: Can we trust the third significant figure?
+        <Publication>
+        
+    :Note:
+        Requires SciPy
+    """
+    
+    try:
+        import scipy
+        from scipy import stats
+    except ImportError:
+        raise ImportError, 'SciPy must be installed to use batch_means.'
+    
+    x=x[burn:]
+    
+    n = len(x)
+        
+    b = np.int(n**theta)
+    a = n/b
+    
+    t_quant = stats.t.isf(1-q,a-1)
+    
+    Y = np.array([np.mean(f(x[i*b:(i+1)*b])) for i in xrange(a)])
+    sig = b / (a-1.) * sum((Y - np.mean(f(x))) ** 2)
+    
+    return t_quant * sig / np.sqrt(n)
 
 def gelman_rubin(x):
     raise NotImplementedError

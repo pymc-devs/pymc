@@ -1,5 +1,4 @@
 __docformat__='reStructuredText'
-
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Deterministic', 'Potential']
 
@@ -191,7 +190,7 @@ class Potential(PotentialBase):
 
     Direct instantiation:
 
-    :Arguments:
+    :Parameters:
 
         -logp: function
               The function that computes the potential's value from the values 
@@ -289,54 +288,41 @@ class Deterministic(DeterministicBase):
     """
     A variable whose value is determined by the values of its parents.
 
-    
     Decorator instantiation:
 
     @dtrm(trace=True)
     def A(x = B, y = C):
         return sqrt(x ** 2 + y ** 2)
     
-    Direct instantiation:
-
-    :Arguments:
-
-        -eval: function
-              The function that computes the variable's value from the values 
-              of its parents.
-
-        -doc: string
-              The docstring for this variable.
-
-        -name: string
-              The name of this variable.
-
-        -parents: dictionary
-              A dictionary containing the parents of this variable.
-
-        -trace (optional): boolean
-              A boolean indicating whether this variable's value 
-              should be traced (in MCMC).
-
-        -cache_depth (optional): integer  
-              An integer indicating how many of this variable's
-              value computations should be 'memoized'.
-              
-        - plot (optional) : boolean
-            A flag indicating whether this variable is to be plotted.
-                                    
-        - verbose (optional) : integer
-              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
-
+    :Parameters:
+      eval : function
+        The function that computes the variable's value from the values 
+        of its parents.
+      doc : string
+        The docstring for this variable.
+      name: string
+        The name of this variable.
+      parents: dictionary
+        A dictionary containing the parents of this variable.
+      trace (optional): boolean
+        A boolean indicating whether this variable's value 
+        should be traced (in MCMC).
+      cache_depth (optional): integer  
+        An integer indicating how many of this variable's
+        value computations should be 'memoized'.
+      plot (optional) : boolean
+        A flag indicating whether this variable is to be plotted.
+      verbose (optional) : integer
+        Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
                             
-    Externally-accessible attribute:
-
-        -value: any class
-              Returns the variable's value given its parents' values. Skips
-              computation if possible.
-            
-    No methods.
+    :Attributes:    
+      value : any object
+        Returns the variable's value given its parents' values. Skips
+        computation if possible.
     
-    :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
+    :SeeAlso:
+      Stochastic, Potential, deterministic, MCMC, Lambda,
+      LinearCombination, Index
     """
     def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=True, verbose=0):
 
@@ -408,7 +394,7 @@ class Stochastic(StochasticBase):
     
     Direct instantiation:
 
-    :Arguments:
+    
 
     - logp : function   
             The function that computes the variable's log-probability from

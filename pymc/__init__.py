@@ -26,6 +26,8 @@ __modules__ = [ 'Node',
 __sepmodules__ = [  'utils', 
                     'testsuite', 
                     'MultiModelInference',
+                    'CommonDeterministics',
+                    'distributions',
                     'gp']
                 
 __optmodules__ = ['ScipyDistributions',
@@ -52,7 +54,7 @@ for mod in __optmodules__:
 ##except ImportError:
 ##   print 'For parallel-processing dtrmity install IPython1.'
 
-del mod
+del mod, __modules__, __sepmodules__, __optmodules__
 
 
 

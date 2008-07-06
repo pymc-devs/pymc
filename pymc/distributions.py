@@ -1,3 +1,23 @@
+"""
+pymc.distributions
+
+A collection of common probability distributions. The objects associated
+with a distribution called 'dist' are:
+    
+  dist_like : function
+    The log-likelihood function corresponding to dist. PyMC's convention
+    is to sum the log-likelihoods of multiple input values, so all 
+    log-likelihood functions return a single float.
+  rdist : function
+    The random variate generator corresponding to dist. These take a
+    'size' argument indicating how many variates should be generated.
+  dist_expval : function
+    Computes the expected value of a dist-distributed variable.
+  Dist : Stochastic subclass
+    Instances have dist_like as their log-probability function
+    and rdist as their random function.
+"""
+
 #-------------------------------------------------------------------
 # Decorate fortran functions from pymc.flib to ease argument passing
 #-------------------------------------------------------------------
@@ -15,11 +35,6 @@ from PyMCObjects import Stochastic, Deterministic
 from numpy import pi
 import pdb
 import utils
-
-if hasattr(flib, 'cov_mvnorm'):
-    flib_blas_OK = True
-else:
-    flib_blas_OK = False
 
 # Import utility functions
 import inspect, types
@@ -581,14 +596,28 @@ def categorical_expval(p, minval=0, step=1):
     """
     return np.sum([p*(minval + i*step) for i, p in enumerate(p)])
 
-def categorical_like( x, p, minval=0, step=1):
-    """
-    Categorical log-likelihood.
-    Accepts an array of probabilities associated with the histogram,
-    the minimum value of the histogram (defaults to zero),
-    and a step size (defaults to 1).
-    """
+def categorical_like(x, p, minval=0, step=1):
+    R"""
+    categorical_like(x,p,minval=0,step=1)
     
+    Categorical log-likelihood.
+        
+    ..math::
+        f(x=v_i \mid p, m, s) = p_i
+    ..math::
+        v_i = m + s i,\ i \in 0\ldots k-1
+        
+    :Parameters:
+      x : integer
+        :math: `x \in v`
+        :math: `v_i = m + s_i,\ i \in 0\ldots k-1`
+      p : (k) float
+        :math: `p > 0`
+        :math: `\sum p = 1`
+      minval : integer
+      step : integer
+        :math: `s \ge 1`
+    """    
     return flib.categor(x, p, minval, step)
 
 
@@ -1270,167 +1299,168 @@ def multivariate_hypergeometric_like(x, m):
     return flib.mvhyperg(x, m)
 
 
-if flib_blas_OK:
-    # Multivariate normal--------------------------------------
-    def rmv_normal(mu, tau, size=1):
-        """
-        rmv_normal(mu, tau, size=1)
 
-        Random multivariate normal variates.
-        """
+# Multivariate normal--------------------------------------
+def rmv_normal(mu, tau, size=1):
+    """
+    rmv_normal(mu, tau, size=1)
+
+    Random multivariate normal variates.
+    """
+
+    sig = np.linalg.cholesky(tau)
+    mu_size = mu.shape
+
+    if size==1:
+        out = np.random.normal(size=mu_size)
+        try:
+            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
+        except:
+            out = np.linalg.solve(sig, out)
+        out+=mu    
+        return out
+    else:
+        if not hasattr(size,'__iter__'):
+            size = (size,)
+        tot_size = np.prod(size)
+        out = np.random.normal(size = (tot_size,) + mu_size)
+        for i in xrange(tot_size):
+            try:
+                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
+            except:
+                out[i,:] = np.linalg.solve(sig, out[i,:])
+            out[i,:] += mu
+        return out.reshape(size+mu_size)
+
+def mv_normal_expval(mu, tau):
+    """
+    mv_normal_expval(mu, tau)
+
+    Expected value of multivariate normal distribution.
+    """
+    return mu
+
+def mv_normal_like(x, mu, tau):
+    R"""
+    mv_normal_like(x, mu, tau)
+
+    Multivariate normal log-likelihood
+
+    .. math::
+        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+
+    x: (n,k)
+    mu: (k)
+    tau: (k,k)
+    tau positive definite
+    """
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return np.sum([flib.prec_mvnorm(r,mu,tau) for r in x])
+    else:
+        return flib.prec_mvnorm(x,mu,tau)
     
-        sig = np.linalg.cholesky(tau)
-        mu_size = mu.shape
+# Multivariate normal, parametrized with covariance---------------------------
+def rmv_normal_cov(mu, C, size=1):
+    """
+    rmv_normal_cov(mu, C)
 
-        if size==1:
-            out = np.random.normal(size=mu_size)
+    Random multivariate normal variates.
+    """
+    mu_size = mu.shape
+    if size==1:
+        return np.random.multivariate_normal(mu, C, size).reshape(mu_size)
+    else:
+        return np.random.multivariate_normal(mu, C, size).reshape((size,)+mu_size)
+
+def mv_normal_cov_expval(mu, C):
+    """
+    mv_normal_cov_expval(mu, C)
+
+    Expected value of multivariate normal distribution.
+    """
+    return mu
+
+def mv_normal_cov_like(x, mu, C):
+    R"""
+    mv_normal_cov_like(x, mu, C)
+
+    Multivariate normal log-likelihood
+
+    .. math::
+        f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
+
+    x: (n,k)
+    mu: (k)
+    C: (k,k)
+    C positive definite
+    """
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return np.sum([flib.cov_mvnorm(r,mu,C) for r in x])
+    else:
+        return flib.cov_mvnorm(x,mu,C)
+ 
+
+# Multivariate normal, parametrized with Cholesky factorization.----------
+def rmv_normal_chol(mu, sig, size=1):
+    """
+    rmv_normal(mu, sig)
+
+    Random multivariate normal variates.
+    """
+    mu_size = mu.shape
+
+    if size==1:
+        out = np.random.normal(size=mu_size)
+        try:
+            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
+        except:
+            out = np.dot(sig, out)
+        out+=mu    
+        return out
+    else:
+        if not hasattr(size,'__iter__'):
+            size = (size,)
+        tot_size = np.prod(size)
+        out = np.random.normal(size = (tot_size,) + mu_size)
+        for i in xrange(tot_size):
             try:
-                flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
+                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
             except:
-                out = np.linalg.solve(sig, out)
-            out+=mu    
-            return out
-        else:
-            if not hasattr(size,'__iter__'):
-                size = (size,)
-            tot_size = np.prod(size)
-            out = np.random.normal(size = (tot_size,) + mu_size)
-            for i in xrange(tot_size):
-                try:
-                    flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
-                except:
-                    out[i,:] = np.linalg.solve(sig, out[i,:])
-                out[i,:] += mu
-            return out.reshape(size+mu_size)
-
-    def mv_normal_expval(mu, tau):
-        """
-        mv_normal_expval(mu, tau)
-
-        Expected value of multivariate normal distribution.
-        """
-        return mu
-
-    def mv_normal_like(x, mu, tau):
-        R"""
-        mv_normal_like(x, mu, tau)
-
-        Multivariate normal log-likelihood
-
-        .. math::
-            f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
-
-        x: (n,k)
-        mu: (k)
-        tau: (k,k)
-        tau positive definite
-        """
-        # TODO: Vectorize in Fortran
-        if len(x.shape)>1:
-            return np.sum([flib.prec_mvnorm(r,mu,tau) for r in x])
-        else:
-            return flib.prec_mvnorm(x,mu,tau)
-        
-    # Multivariate normal, parametrized with covariance---------------------------
-    def rmv_normal_cov(mu, C, size=1):
-        """
-        rmv_normal_cov(mu, C)
-
-        Random multivariate normal variates.
-        """
-        mu_size = mu.shape
-        if size==1:
-            return np.random.multivariate_normal(mu, C, size).reshape(mu_size)
-        else:
-            return np.random.multivariate_normal(mu, C, size).reshape((size,)+mu_size)
-
-    def mv_normal_cov_expval(mu, C):
-        """
-        mv_normal_cov_expval(mu, C)
-
-        Expected value of multivariate normal distribution.
-        """
-        return mu
-
-    def mv_normal_cov_like(x, mu, C):
-        R"""
-        mv_normal_cov_like(x, mu, C)
-
-        Multivariate normal log-likelihood
-
-        .. math::
-            f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
-
-        x: (n,k)
-        mu: (k)
-        C: (k,k)
-        C positive definite
-        """
-        # TODO: Vectorize in Fortran
-        if len(x.shape)>1:
-            return np.sum([flib.cov_mvnorm(r,mu,C) for r in x])
-        else:
-            return flib.cov_mvnorm(x,mu,C)
-     
-
-    # Multivariate normal, parametrized with Cholesky factorization.----------
-    def rmv_normal_chol(mu, sig, size=1):
-        """
-        rmv_normal(mu, sig)
-
-        Random multivariate normal variates.
-        """
-        mu_size = mu.shape
-
-        if size==1:
-            out = np.random.normal(size=mu_size)
-            try:
-                flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
-            except:
-                out = np.dot(sig, out)
-            out+=mu    
-            return out
-        else:
-            if not hasattr(size,'__iter__'):
-                size = (size,)
-            tot_size = np.prod(size)
-            out = np.random.normal(size = (tot_size,) + mu_size)
-            for i in xrange(tot_size):
-                try:
-                    flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
-                except:
-                    out[i,:] = np.dot(sig, out[i,:])
-                out[i,:] += mu
-            return out.reshape(size+mu_size)
+                out[i,:] = np.dot(sig, out[i,:])
+            out[i,:] += mu
+        return out.reshape(size+mu_size)
 
 
-    def mv_normal_chol_expval(mu, sig):
-        """
-        mv_normal_expval(mu, sig)
+def mv_normal_chol_expval(mu, sig):
+    """
+    mv_normal_expval(mu, sig)
 
-        Expected value of multivariate normal distribution.
-        """
-        return mu
+    Expected value of multivariate normal distribution.
+    """
+    return mu
 
-    def mv_normal_chol_like(x, mu, sig):
-        R"""
-        mv_normal_like(x, mu, tau)
+def mv_normal_chol_like(x, mu, sig):
+    R"""
+    mv_normal_like(x, mu, tau)
 
-        Multivariate normal log-likelihood
+    Multivariate normal log-likelihood
 
-        .. math::
-            f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
-
-        x: (n,k)
-        mu: (k)
-        sigma: (k,k)
+    .. math::
+        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
+    
+    :Parameters:
+      x : (n,k)
+      mu : (k)
+      sigma : (k,k)
         sigma lower triangular
-        """
-        # TODO: Vectorize in Fortran
-        if len(x.shape)>1:
-            return np.sum([flib.chol_mvnorm(r,mu,sig) for r in x])
-        else:
-            return flib.chol_mvnorm(x,mu,sig)
+      """
+    # TODO: Vectorize in Fortran
+    if len(x.shape)>1:
+        return np.sum([flib.chol_mvnorm(r,mu,sig) for r in x])
+    else:
+        return flib.chol_mvnorm(x,mu,sig)
 
 
 
@@ -2072,26 +2102,81 @@ def extend_dirichlet(p):
     else:
         return np.hstack((p,1.-np.sum(p)))
 
-@valuewrapper
-def mod_categor_like(x,p,minval=0,step=1):
-    return categorical_like(x,extend_dirichlet(p), minval, step)
 
-def mod_rcategor(p,minval,step,size=1):
+def mod_categorical_like(x,p,minval=0,step=1):
+    """
+    mod_categorical_like(x,p,minval=0,step=1)
+    
+    Categorical log-likelihood with parent p of length k-1.
+    
+    An implicit k'th category  is assumed to exist with associated 
+    probability 1-sum(p).
+    
+    ..math::
+        f(x=v_i \mid p, m, s) = p_i,
+    ..math::
+        v_i = m + s i,\ i \in 0\ldots k-1
+        
+    :Parameters:
+      x : integer
+        :math: `x \in v`
+        :math: `v_i = m + s_i,\ i \in 0\ldots k-1`
+      p : (k-1) float
+        :math: `p > 0`
+        :math: `\sum p < 1`
+      minval : integer
+      step : integer
+        :math: `s \ge 1`
+    """
+    return categorical_like(x,extend_dirichlet(p), minval, step)
+    
+
+def mod_categorical_expval(p,minval=0,step=1):
+    """
+    mod_categorical_expval(p, minval=0, step=1)
+
+    Expected value of categorical distribution with parent p of length k-1.
+    
+    An implicit k'th category  is assumed to exist with associated 
+    probability 1-sum(p).
+    """
+    p = extend_dirichlet(p)
+    return np.sum([p*(minval + i*step) for i, p in enumerate(p)])
+    
+
+def rmod_categor(p,minval=0,step=1,size=1):
+    """
+    rmod_categor(p, minval=0, step=1, size=1)
+    
+    Categorical random variates with parent p of length k-1.
+    
+    An implicit k'th category  is assumed to exist with associated 
+    probability 1-sum(p).    
+    """
     return rcategorical(extend_dirichlet(p), minval, step, size)
 
 class Categorical(Stochastic):
-    """
-    C = Categorical(name, p, minval, step[, trace=True, value=None, 
-       rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
-    
-    A categorical random variable. Parents are p, minval, step.
-    
-    If parent p is Dirichlet and has length k-1, an implicit k'th
-    category is assumed to exist with associated probability 1-sum(p.value).
-    
-    Otherwise parent p's value should sum to 1.
+    __doc__ = """
+C = Categorical(name, p, minval, step[, trace=True, value=None, 
+   rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
 
+Stochastic variable with Categorical distribution. 
+Parents are: p, minval, step.
+
+If parent p is Dirichlet and has length k-1, an implicit k'th
+category is assumed to exist with associated probability 1-sum(p.value).
+
+Otherwise parent p's value should sum to 1.
+
+Docstring of categorical_like (case where P is not a Dirichlet):
+    """\
+    + categorical_like.__doc__ +\
     """
+Docstring of mod_categorical_like (case where P is a Dirichlet):
+    """\
+    + mod_categorical_like.__doc__
+
+
     parent_names = ['p', 'minval', 'step']
     
     def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
@@ -2105,8 +2190,8 @@ class Categorical(Stochastic):
             self.size = size
                     
         if isinstance(p, Dirichlet):
-            Stochastic.__init__(self, logp=mod_categor_like, doc='A Categorical random variable', name=name, 
-                parents={'p':p,'minval':minval,'step':step}, random=bind_size(mod_rcategor, self.size), trace=trace, value=value, dtype=dtype,
+            Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A Categorical random variable', name=name, 
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
                 rseed=rseed, isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
         else:
             Stochastic.__init__(self, logp=valuewrapper(categorical_like), doc='A Categorical random variable', name=name, 
@@ -2117,21 +2202,21 @@ class Categorical(Stochastic):
 def mod_rmultinom(n,p):
     return rmultinomial(n,extend_dirichlet(p))
 
-@valuewrapper
+
 def mod_multinom_like(x,n,p):
     return multinomial_like(x,n,extend_dirichlet(p))
 
 class Multinomial(Stochastic):
     """
-    M = Multinomial(name, n, p, trace=True, value=None, 
-       rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
+M = Multinomial(name, n, p, trace=True, value=None, 
+   rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
 
-    A multinomial random variable. Parents are p, minval, step.
+A multinomial random variable. Parents are p, minval, step.
 
-    If parent p is Dirichlet and has length k-1, an implicit k'th
-    category is assumed to exist with associated probability 1-sum(p.value).
+If parent p is Dirichlet and has length k-1, an implicit k'th
+category is assumed to exist with associated probability 1-sum(p.value).
 
-    Otherwise parent p's value should sum to 1.
+Otherwise parent p's value should sum to 1.
 
     """
     
