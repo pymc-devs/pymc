@@ -10,23 +10,27 @@ except:
     
 def moral_graph(model, format='raw', prog='dot', path=None):
     """
-    moral_graph(model,
-                format='raw', 
-                prog='dot', 
-                path=None)
+    moral_graph(model,format='raw', prog='dot', path=None)
 
     Draws the moral graph for this model and writes it to path.
-    If model.__name__ is defined and path is None, the output file is
-    ./'name'.'format'.
-
-    Format is a string. Options are:
-    'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
-    'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
-    'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
-
-    format='raw' outputs a GraphViz dot file.
-    
     Returns the pydot 'dot' object for further user manipulation.
+    
+    GraphViz and PyDot must be installed to use this function. 
+    
+    :Parameters:
+      model : PyMC Model instance
+      format : string
+        'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
+        'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
+        'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
+      prog : string
+        'dot', 'neato'
+      path : string
+        If model.__name__ is defined and path is None, the output file is
+        ./'name'.'format'.
+        
+    :Note:
+      format='raw' outputs a GraphViz dot file.        
     """
     if not pydot_imported:
         raise ImportError, 'PyDot must be installed to use the moral_graph function.\n PyDot is available from http://dkbza.org/pydot.html'
@@ -73,25 +77,29 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             collapse_potentials = False)
 
     Draws the graph for this model and writes it to path.
-    If model.__name__ is defined and path is None, the output file is
-    ./'name'.'format'.
-
-    Format is a string. Options are:
-    'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
-    'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
-    'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
-
-    format='raw' outputs a GraphViz dot file.
-    
-    If consts is True, constant parents are included in the graph; 
-    otherwise they're not.
-    
-    If collapse_deterministics is True, Deterministics (variables that are determined by their
-    parents) are made implicit.
-    
-    If collapse_potentials is True, potentials are displayed as undirected edges.
-
     Returns the pydot 'dot' object for further user manipulation.
+    
+    GraphViz and PyDot must be installed to use this function. 
+    
+    :Parameters:
+      model : PyMC Model instance
+      format : string
+        'ps', 'ps2', 'hpgl', 'pcl', 'mif', 'pic', 'gd', 'gd2', 'gif', 'jpg', 
+        'jpeg', 'png', 'wbmp', 'ismap', 'imap', 'cmap', 'cmapx', 'vrml', 'vtx', 'mp', 
+        'fig', 'svg', 'svgz', 'dia', 'dot', 'canon', 'plain', 'plain-ext', 'xdot'
+      prog : string
+        'dot', 'neato'
+      path : string
+        If model.__name__ is defined and path is None, the output file is
+        ./'name'.'format'.
+      consts : boolean
+        If True, constant parents are included in the graph.
+      legend : boolean
+        If True, a graph legend is created.
+      collapse_deterministics : boolean
+        If True, all deterministic dependencies are collapsed.
+      collapse_potentials : boolean
+        If True, all potentials are converted to undirected edges.        
     """
 
     if not pydot_imported:

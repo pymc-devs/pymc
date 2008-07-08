@@ -79,6 +79,31 @@ def bind_size(randfun, size):
 def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
+    
+    :Parameters:
+      dtype : numpy dtype
+        The dtype values of instances of this class.
+      name : string
+        Name of the new class.
+      parent_names : list of strings
+        The labels of the parents of this class.
+      parents_default : list
+        The default values of parents.
+      docstr : string
+        The docstring of this class.
+      logp : function
+        The log-probability function for this class.
+      random : function
+        The random function for this class.
+      mv : boolean
+        A flag indicating whether this class represents array-valued
+        variables.
+    
+      :Note:
+        stochastic_from_dist provides a higher-level version.
+        
+      :SeeAlso:
+        stochastic_from_dist
     """
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
@@ -168,16 +193,33 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 
-      :Example:
-        >>> Exponential = stochastic_from_dist('exponential', 
-                                                logp=exponential_like,
-                                                random=rexponential,
-                                                dtype=np.float,
-                                                mv=False)
-        >>> A = Exponential(self_name, value, beta)
-        
-    Arguments can be passed in positionally; in this case, argument order is: self_name, parents.
-    value is set to None by default, and can only be provided as a keyword argument.
+    :Parameters:
+      name : string
+        The name of the new class.
+      logp : function
+        The log-probability function.
+      random : function
+        The random function
+      dtype : numpy dtype
+        The dtype of values of instances.
+      mv : boolean
+        A flag indicating whether this class represents
+        array-valued variables.
+
+    :Example:
+      >>> Exponential = stochastic_from_dist('exponential', 
+                                              logp=exponential_like,
+                                              random=rexponential,
+                                              dtype=np.float,
+                                              mv=False)
+      >>> A = Exponential(self_name, value, beta)
+
+    :Note:
+      new_dist_class is a more flexible class factory. Also consider
+      subclassing Stochastic directly.
+    
+    :SeeAlso:
+      new_dist_class
     """
     
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
@@ -841,7 +883,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     Exponentiated Weibull log-likelihood.
 
     The exponentiated Weibull distribution is a generalization of the Weibull
-    family. It's value lies in being able to model monotone and non-monotone
+    family. Its value lies in being able to model monotone and non-monotone
     failure rates. 
 
     .. math::
@@ -1353,6 +1395,9 @@ def mv_normal_like(x, mu, tau):
     mu: (k)
     tau: (k,k)
     tau positive definite
+    
+    :SeeAlso:
+      mv_normal_chol_like, mv_normal_cov_like
     """
     # TODO: Vectorize in Fortran
     if len(x.shape)>1:
@@ -1394,6 +1439,9 @@ def mv_normal_cov_like(x, mu, C):
     mu: (k)
     C: (k,k)
     C positive definite
+    
+    :SeeAlso:
+      mv_normal_like, mv_normal_chol_like
     """
     # TODO: Vectorize in Fortran
     if len(x.shape)>1:
@@ -1454,7 +1502,10 @@ def mv_normal_chol_like(x, mu, sig):
       x : (n,k)
       mu : (k)
       sigma : (k,k)
-        sigma lower triangular
+      sigma lower triangular
+      
+    :SeeAlso:
+      mv_normal_like, mv_normal_cov_like
       """
     # TODO: Vectorize in Fortran
     if len(x.shape)>1:
@@ -2217,7 +2268,6 @@ If parent p is Dirichlet and has length k-1, an implicit k'th
 category is assumed to exist with associated probability 1-sum(p.value).
 
 Otherwise parent p's value should sum to 1.
-
     """
     
     parent_names = ['n', 'p']

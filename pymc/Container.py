@@ -64,7 +64,6 @@ def Container(*args):
     or ndarray), or a module or other object, or just a sequence of objects, 
     in a subclass of ContainerBase and returns it.
     
-    
     Iterable subclasses of ContainerBase strive to emulate the iterables they 
     wrap, with one important difference: They have a value attribute.        
     A container's value attribute behaves like the container itself, but
@@ -121,7 +120,9 @@ def Container(*args):
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
     
-    :SeeAlso: ListTupleContainer, SetContainer, ArrayContainer, DictContainer, ObjectContainer
+    :SeeAlso: 
+      ListContainer, TupleContainer, SetContainer, ArrayContainer, DictContainer, 
+      ObjectContainer
     """
     
     if len(args)==1:
@@ -250,7 +251,33 @@ class SetContainer(ContainerBase, set):
     """
     SetContainers are containers that wrap sets.
     
-    :SeeAlso: Container, ListContainer, DictContainer, ArrayContainer
+    :Parameters:
+      iterable : set.
+      
+    :Attributes:
+      value : set
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, ListContainer, DictContainer, ArrayContainer, TupleContainer,
+      ObjectContainer
     """
     def __init__(self, iterable):
         set.__init__(self, iterable)
@@ -284,8 +311,34 @@ class SetContainer(ContainerBase, set):
 class TupleContainer(ContainerBase, tuple):
     """
     TupleContainers are containers that wrap tuples. 
-
-    :SeeAlso: Container, ListContainer, DictContainer, ArrayContainer
+    
+    :Parameters:
+      iterable : tuple.
+      
+    :Attributes:
+      value : tuple
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
+      ObjectContainer
     """
     def __init__(self, iterable):
         tuple.__init__(self, iterable)
@@ -309,7 +362,33 @@ class ListContainer(ContainerBase, list):
     """
     ListContainers are containers that wrap lists. 
     
-    :SeeAlso: Container, TupleContainer, DictContainer, ArrayContainer
+    :Parameters:
+      iterable : list.
+      
+    :Attributes:
+      value : list
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, TupleContainer, DictContainer, ArrayContainer, SetContainer,
+      ObjectContainer
     """
     def __init__(self, iterable):
         list.__init__(self, iterable)
@@ -342,7 +421,33 @@ class DictContainer(ContainerBase, dict):
     Modules are converted into DictContainers, and variables' and potentials'
     Parents objects are DictContainers also. 
     
-    :SeeAlso: Container, ListTupleContainer, SetContainer, ArrayContainer
+    :Parameters:
+      iterable : dictionary or object with a __dict__.
+      
+    :Attributes:
+      value : dictionary
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, ListContainer, TupleContainer, ArrayContainer, SetContainer,
+      ObjectContainer
     """
     def __init__(self, iterable):
         dict.__init__(self, iterable)
@@ -375,6 +480,34 @@ class ObjectContainer(ContainerBase):
     
     Contents of the input iterable, or attributes of the input object, 
     are exposed as attributes of the object.
+    
+    :Parameters:
+      iterable : dictionary or object with a __dict__.
+      
+    :Attributes:
+      value : object
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
+      TupleContainer
     """
     def __init__(self, input):
 
@@ -411,7 +544,33 @@ class ArrayContainer(ContainerBase, ndarray):
     ndarray subclasses, and should support all of ndarrays' 
     functionality.
     
-    :SeeAlso: Container, SetContainer, ListDictContainer
+    :Parameters:
+      iterable : array.
+      
+    :Attributes:
+      value : array.
+        A copy of self, with all variables replaced with their values.
+      nodes : set
+        All the stochastics, deterministics and potentials self contains.
+      deterministics : set
+        All the deterministics self contains.
+      stochastics : set
+        All the stochastics self contains with isdata=False.
+      potentials : set
+        All the potentials self contains.
+      data_stochastics : set
+        All the stochastics self contains with isdata=True.
+      containers : list
+        All the containers self contains.
+        
+    :Note:
+      - nodes, deterministics, etc. include all the objects in nested 
+        containers.
+      - value replaces objects in nested containers.
+    
+    :SeeAlso: 
+      Container, ListContainer, DictContainer, ObjectContainer, SetContainer,
+      TupleContainer
     """
     
     data=set()

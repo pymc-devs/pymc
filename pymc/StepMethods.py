@@ -917,6 +917,16 @@ class AdaptiveMetropolis(StepMethod):
         # Recursively compute the chain mean 
         self.C, self.chain_mean = self.recursive_cov(self.C, self._trace_count, 
             self.chain_mean, chain, scaling=scaling, epsilon=epsilon)
+            
+        acc_rate = self._accepted / (self._accepted + self._rejected)
+        if acc_rate < .001:
+            self.C *= .01        
+        elif acc_rate < .01:
+            self.C *= .25
+        if acc_rate < .01:
+            print '\tAcceptance rate was',acc_rate,'shrinking covariance'
+        self._accepted = 0.
+        self._rejected = 0.
         
         if self.verbose > 0:
             print "\tUpdating covariance ...\n", self.C
@@ -979,13 +989,12 @@ class AdaptiveMetropolis(StepMethod):
         k = length
         new_mean = self.recursive_mean(mean, length, chain)
         
-        t0 = (k-1) * cov
-        t2 = k * np.outer(mean, mean)
-        t3 = np.dot(chain.T, chain)
-        t4 = n*np.outer(new_mean, new_mean)
-        t5 = epsilon * np.eye(cov.shape[0])
+        t0 = k * np.outer(mean, mean)
+        t1 = np.dot(chain.T, chain)
+        t2 = n*np.outer(new_mean, new_mean)
+        t3 = epsilon * np.eye(cov.shape[0])
         
-        new_cov =  (k-1)/(n-1.)*cov + scaling/(n-1.) * (t2 + t3 - t4 + t5)
+        new_cov =  (k-1)/(n-1.)*cov + scaling/(n-1.) * (t0 + t1 - t2 + t3)
         return new_cov, new_mean
         
     def recursive_mean(self, mean, length, chain):

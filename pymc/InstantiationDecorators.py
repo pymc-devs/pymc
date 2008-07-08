@@ -121,7 +121,9 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     generates a random value from A's distribution conditional on
     its parents' values.
     
-    :SeeAlso: Stochastic, Deterministic, deterministic, data, Potential, potential, Model, Container
+    :SeeAlso: 
+      Stochastic, Deterministic, deterministic, data, Potential, potential, Model,
+      distributions
     """
     
     def instantiate_p(__func__):
@@ -151,7 +153,8 @@ def potential(__func__ = None, **kwds):
     where baz returns the deterministic B's value conditional
     on its parents.
 
-    :SeeAlso: Deterministic, deterministic, Stochastic, Potential, stochastic, data, Model, Container
+    :SeeAlso: 
+      Deterministic, deterministic, Stochastic, Potential, stochastic, data, Model
     """
     def instantiate_pot(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Potential')
@@ -182,7 +185,9 @@ def deterministic(__func__ = None, **kwds):
     where baz returns the variable B's value conditional
     on its parents.
     
-    :SeeAlso: Deterministic, potential, Stochastic, stochastic, data, Model, Container
+    :SeeAlso: 
+      Deterministic, Potential, potential, Stochastic, stochastic, data, Model,
+      CommonDeterministics
     """
     def instantiate_n(__func__):
         junk, parents = _extract(__func__, kwds, keys, 'Deterministic')
@@ -219,7 +224,9 @@ def data(obj=None, **kwds):
         return foo(value, parent_name, ...)
         
     
-    :SeeAlso: stochastic, Stochastic, dtrm, Deterministic, potential, Potential, Model, Container
+    :SeeAlso: 
+      stochastic, Stochastic, dtrm, Deterministic, potential, Potential, Model,
+      distributions
     """
     if obj is not None:
         if isinstance(obj, Stochastic):

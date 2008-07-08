@@ -11,33 +11,33 @@ import numpy as np
 
 
 class ZeroProbability(ValueError):
-    "Log-likelihood is invalid or negative informationnite"
+    "Log-probability is undefined or negative infinity"
     pass
 
 
 class Node(object):
     """
-    The base class from which Stochastic, Deterministic and Potential inherit.
-    Shouldn't need to be instantiated directly.
+    The base class for Stochastic, Deterministic and Potential.
     
     :Parameters:
-          -doc : string
-              The docstring for this node.
-          
-          -name : string
-              The name of this node.
-          
-          -parents : dictionary
-              A dictionary containing the parents of this node.
-          
-          -cache_depth : integer
-              An integer indicating how many of this node's
-              value computations should be 'memorized'.
-          
-          - verbose (optional) : integer
-              Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+      doc : string
+        The docstring for this node.
+      
+      name : string
+        The name of this node.
+      
+      parents : dictionary
+        A dictionary containing the parents of this node.
+      
+      cache_depth : integer
+        An integer indicating how many of this node's
+        value computations should be 'memorized'.
+      
+      verbose (optional) : integer
+        Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
-    :SeeAlso: Stochastic, Deterministic
+    :SeeAlso: 
+      Stochastic, Deterministic, Potential, Variable
     """
     def __init__(self, doc, name, parents, cache_depth, verbose=0):
         
@@ -92,6 +92,38 @@ class Node(object):
 class Variable(Node):
     """
     The base class for Stochastics and Deterministics.
+    
+    :Parameters:
+      doc : string
+        The docstring for this node.
+      
+      name : string
+        The name of this node.
+      
+      parents : dictionary
+        A dictionary containing the parents of this node.
+      
+      cache_depth : integer
+        An integer indicating how many of this node's
+        value computations should be 'memorized'.
+      
+      trace : boolean
+        Indicates whether a trace should be kept for this variable
+        if its model is fit using a Monte Carlo method.
+        
+      plot : boolean
+        Indicates whether summary plots should be prepared for this
+        variable if summary plots of its model are requested.
+        
+      dtype : numpy dtype
+        If the value of this variable's numpy dtype can be known in
+        advance, it is advantageous to specify it here.
+      
+      verbose (optional) : integer
+        Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+    
+    :SeeAlso: 
+      Stochastic, Deterministic, Potential, Node
     """
     def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=True, verbose=0):
 
@@ -146,7 +178,10 @@ class Variable(Node):
         
 class ContainerBase(object):
     """
-    The base class from which containers inherit.
+    Abstract base class.
+    
+    :SeeAlso: 
+      ListContainer, SetContainer, DictContainer, TupleContainer, ArrayContainer
     """
     __name__ = 'container'
     
@@ -176,6 +211,9 @@ class ContainerBase(object):
 class StochasticBase(Variable):
     """
     Abstract base class.
+    
+    :SeeAlso:
+      Stochastic, Variable
     """
     pass
 
@@ -183,6 +221,9 @@ class StochasticBase(Variable):
 class DeterministicBase(Variable):
     """
     Abstract base class.
+    
+    :SeeAlso:
+      Deterministic, Variable
     """
     pass
 
@@ -190,5 +231,8 @@ class DeterministicBase(Variable):
 class PotentialBase(Node):
     """
     Abstract base class.
+    
+    :SeeAlso:
+      Potential, Variable
     """
     pass
