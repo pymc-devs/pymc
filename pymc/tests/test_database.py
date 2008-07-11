@@ -7,6 +7,13 @@ from pymc.examples import DisasterModel
 import os,sys
 import numpy as np
 
+class test_backend_attribution(TestCase):
+    def test_raise(self):
+        self.assertRaises(AttributeError, MCMC, DisasterModel, 'heysugar')
+    def test_import(self):
+        self.assertRaises(ImportError, MCMC, DisasterModel, '__test_import__')
+
+
 class test_no_trace(TestCase):
     def test(self):
         M = MCMC(DisasterModel, db='no_trace')

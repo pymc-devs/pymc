@@ -12,7 +12,7 @@ __all__ = ['find_generations', 'Model', 'Sampler']
 """ Summary"""
 
 from numpy import zeros, floor
-import database
+from pymc import database
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import Container, ObjectContainer
 import sys,os
@@ -404,12 +404,19 @@ class Sampler(Model):
         # If not already done, load the trace backend from the database 
         # module, and assign a database instance to Model.
         if type(db) is str:
-            module = getattr(database, db)
-            self.db = module.Database(**self._db_args)
+            if db in database.available_modules:
+                module = getattr(database, db)
+                self.db = module.Database(**self._db_args)
+            elif db in database.__modules__:
+                raise ImportError, \
+                    'Database backend `%s` is not properly installed. Please see the documentation for instructions.' % db
+            else:
+                raise AttributeError, \
+                    'Database backend `%s` is not defined in pymc.database.'%db
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
-        else:
+        else:   # What is this for? DH. If it's a user defined backend, it doesn't initialize a Database. 
             module = db.__module__
             self.db = db
         
