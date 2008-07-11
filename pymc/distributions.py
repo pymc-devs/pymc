@@ -629,6 +629,8 @@ def rcategorical(p, minval=0, step=1, size=1):
     out = flib.rcat(p, minval, step, size)
     if sum(out.shape) == 1:
         return out.squeeze()
+    else:
+        return out
 
 def categorical_expval(p, minval=0, step=1):
     """
