@@ -917,7 +917,8 @@ class AdaptiveMetropolis(StepMethod):
         # Recursively compute the chain mean 
         self.C, self.chain_mean = self.recursive_cov(self.C, self._trace_count, 
             self.chain_mean, chain, scaling=scaling, epsilon=epsilon)
-            
+        
+        # Shrink covariance if acceptance rate is too small    
         acc_rate = self._accepted / (self._accepted + self._rejected)
         if acc_rate < .001:
             self.C *= .01        
