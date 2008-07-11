@@ -118,7 +118,7 @@ cf2py threadsafe
           cmax = ny
       end if
 
-      CALL geographic(D,x,y,nx,ny,symm)      
+      CALL geographic(D,x,y,nx,ny,cmin,cmax,symm)      
       w = 0.5D0/real(na)
       do k=1,na
           ctrs(k) = ctrs(k)/pi
