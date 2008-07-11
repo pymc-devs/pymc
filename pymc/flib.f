@@ -2187,7 +2187,8 @@ c repeat for n samples
 c initialize sum      
         sump = 0.0
 c random draw
-        call random_number(u)
+!         call random_number(u)
+        u = rand()
         j = 0
         
 c find index to value        
@@ -2224,8 +2225,10 @@ C
       DOUBLE PRECISION X, Y, S, ONE, TWO
       DATA ONE /1.0/, TWO /2.0/
 C
-    1 call random_number(x)
-      call random_number(y)
+!     1 call random_number(x)
+    1 X = rand()
+!       call random_number(y)
+      Y = rand()
       X = TWO * X - ONE
       Y = TWO * Y - ONE
       S = X * X + Y * Y
@@ -2398,7 +2401,8 @@ C       Use the direct method while n is not too large. This can
 C       require up to 25 calls to ran1.
         x=0. 
         do 11 j=1,n 
-          call random_number(rn)
+!           call random_number(rn)
+          rn = rand()
           if(rn.lt.p) x=x+1. 
    11   enddo 
       else if (am.lt.1.) then 
@@ -2408,7 +2412,8 @@ C       direct Poisson method.
         g=dexp(-am) 
         t=1. 
         do 12 j=0,n
-        call random_number(rn) 
+!         call random_number(rn) 
+          rn = rand()
         t=t*rn
         if (t.lt.g) goto 1 
    12   enddo  
@@ -2432,7 +2437,8 @@ C         If p has changed, then compute useful quantities.
         sq=sqrt(2.*am*pc) 
 C       The following code should by now seem familiar: rejection 
 C       method with a Lorentzian comparison function.
-        call random_number(rn)
+!         call random_number(rn)
+          rn = rand()
     2   y=tan(PI*rn) 
         em=sq*y+am 
 C       Reject.
@@ -2443,7 +2449,8 @@ C       Trick for integer-valued distribution.
         t=1.2*sq*(1.+y**2)*dexp(oldg-gammln(em+1.) 
      +-gammln(en-em+1.)+em*plog+(en-em)*pclog) 
 C       Reject. This happens about 1.5 times per deviate, on average.
-        call random_number(rn)
+!         call random_number(rn)
+          rn = rand()
         if (rn.gt.t) goto 2 
         x=em 
         endif 
