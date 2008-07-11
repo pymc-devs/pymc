@@ -109,7 +109,7 @@ cf2py threadsafe
       
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)   
       DOUBLE PRECISION ctrs(na), scals(na), w       
-      integer nx,ny,i,j,na,i_hi                 
+      integer nx,ny,i,j,na,i_hi,cmin,cmax                 
       LOGICAL symm                                  
       DOUBLE PRECISION a,pi,da,dlon,dlat
       PARAMETER (pi=3.141592653589793238462643d0)   
