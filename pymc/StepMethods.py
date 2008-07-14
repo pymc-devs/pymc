@@ -924,8 +924,9 @@ class AdaptiveMetropolis(StepMethod):
             self.C *= .01        
         elif acc_rate < .01:
             self.C *= .25
-        if acc_rate < .01:
-            print '\tAcceptance rate was',acc_rate,'shrinking covariance'
+        if self.verbose > 0:
+            if acc_rate < .01:
+                print '\tAcceptance rate was',acc_rate,'shrinking covariance'
         self._accepted = 0.
         self._rejected = 0.
         

@@ -76,7 +76,7 @@ else:
 
 # Compile covariance functions
 config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
-sources=['pymc/gp/cov_funs/isotropic_cov_funs.f'],\
+sources=['pymc/gp/cov_funs/isotropic_cov_funs.f','blas/BLAS/dscal.f'],\
 extra_info=lapack_info)
 
 config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/distances.f'], extra_info=lapack_info)
