@@ -217,12 +217,15 @@ c increment log-likelihood
       END
 
 c
-      SUBROUTINE RSKEWNORM(x, nx, mu, tau, alph, nmu, ntau, nalph)
+      SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph
 cf2py intent(out) x
+cf2py integer intent(hide), depend(nx):: tnx = 2*nx
+
       DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
       DOUBLE PRECISION U1,U2, mu_now, tau_now, alph_now, d_now
-      INTEGER i, nx, nalph, nmu, ntau
+      DOUBLE PRECISION rn(tnx)
+      INTEGER i, nx, nalph, nmu, ntau,tnx
       LOGICAL vec_mu, vec_tau, vec_alph
       
       vec_mu = (nmu.GT.1)
@@ -244,7 +247,8 @@ cf2py intent(out) x
              tau_now = tau(i)
          end if
          
-         CALL RNORM(U1,U2)
+         U1 = rn(2*i-1)
+         U2 = rn(2*i)
          d_now = alph_now / dsqrt(1.0D0 + alph_now * alph_now)
          
          x(i)=(d_now*dabs(U1)+dsqrt(1.0D0-d_now**2)*U2)
@@ -2050,43 +2054,6 @@ cf2py double precision dimension(n+1),intent(out) :: cx
       return
       end
 
-      double precision function whrand()
-c
-c     Algorithm AS 183 Appl. Statist. (1982) vol.31, no.2
-c
-c     Returns a pseudo-random number rectangularly distributed
-c     between 0 and 1.   The cycle length is 6.95E+12 (See page 123
-c     of Applied Statistics (1984) vol.33), not as claimed in the
-c     original article.
-c
-c     IX, IY and IZ should be set to integer values between 1 and
-c     30000 before the first entry.
-c
-c     Integer arithmetic up to 30323 is required.
-c
-      integer ix, iy, iz
-      common /randc/ ix, iy, iz
-c
-      ix = 171 * mod(ix, 177) - 2 * (ix / 177)
-      iy = 172 * mod(iy, 176) - 35 * (iy / 176)
-      iz = 170 * mod(iz, 178) - 63 * (iz / 178)
-c
-      if (ix .lt. 0) ix = ix + 30269
-      if (iy .lt. 0) iy = iy + 30307
-      if (iz .lt. 0) iz = iz + 30323
-c
-c     If integer arithmetic up to 5212632 is available, the preceding
-c     6 statements may be replaced by:
-c
-c     ix = mod(171 * ix, 30269)
-c     iy = mod(172 * iy, 30307)
-c     iz = mod(170 * iz, 30323)
-c
-      whrand = mod(float(ix) / 30269. + float(iy) / 30307. +
-     +                        float(iz) / 30323., 1.0)
-      return
-      end
-
         double precision function uniform()
 c
 c    Generate uniformly distributed random numbers using the 32-bit
@@ -2167,7 +2134,7 @@ cf2py intent(hide) n,k
       END
               
 
-      SUBROUTINE rcat(hist,mn,step,n,s,k)
+      SUBROUTINE rcat(hist,mn,step,n,s,k,rands)
 
 c Returns n samples from categorical random variable (histogram)
 
@@ -2178,6 +2145,7 @@ cf2py double precision dimension(n),intent(out) :: s
 cf2py integer intent(hide),depend(hist) :: k=len(hist)
 
       DOUBLE PRECISION hist(k),s(n),mn,step,sump,u
+      DOUBLE PRECISION rands(n)
       INTEGER n,k,i,j
       
 !       print *,mn,step,k
@@ -2188,7 +2156,7 @@ c initialize sum
         sump = 0.0
 c random draw
 !         call random_number(u)
-        u = rand()
+        u = rands(i)
         j = 0
         
 c find index to value        
@@ -2204,300 +2172,7 @@ c assign value to array
       END
 
 
-      SUBROUTINE RNORM(U1, U2)
-C
-C     ALGORITHM AS 53.1  APPL. STATIST. (1972) VOL.21, NO.3
-C
-C     Sets U1 and U2 to two independent standardized random normal
-C     deviates.   This is a Fortran version of the method given in
-C     Knuth(1969).
-C
-C     Function RAND must give a result randomly and rectangularly
-C     distributed between the limits 0 and 1 exclusive.
-C     Note- this seems to be faster than Leva's algorithm from
-C     ACM Trans Math Soft, Dec. 1992 - AP
-C
-      DOUBLE PRECISION U1, U2
-c      DOUBLE PRECISION RAND
-C
-C     Local variables
-C
-      DOUBLE PRECISION X, Y, S, ONE, TWO
-      DATA ONE /1.0/, TWO /2.0/
-C
-!     1 call random_number(x)
-    1 X = rand()
-!       call random_number(y)
-      Y = rand()
-      X = TWO * X - ONE
-      Y = TWO * Y - ONE
-      S = X * X + Y * Y
-      IF (S .GT. ONE) GO TO 1
-      S = SQRT(- TWO * dlog(S) / S)
-      U1 = X * S
-      U2 = Y * S
-      RETURN
-      END
 
-      SUBROUTINE WSHRT(D, N, NP, NNP, SB, SA)
-C
-C     ALGORITHM AS 53  APPL. STATIST. (1972) VOL.21, NO.3
-C
-C     Wishart variate generator.  On output, SA is an upper-triangular
-C     matrix of size NP * NP (written in linear form, column ordered)
-C     whose elements have a Wishart(N, SIGMA) distribution.
-C
-C     D is an upper-triangular array such that SIGMA = D'D (see AS 6)
-C
-C     Auxiliary function required: a random no. generator called RAND.
-C     The Wichmann & Hill generator is included here.   It should be
-C     initialized in the calling program.
-
-
-cf2py double precision dimension(NNP),intent(in) :: D
-cf2py double precision dimension(NNP),intent(out) :: SA
-cf2py double precision dimension(NNP),intent(hide) :: SB
-cf2py integer intent(hide),depend(D) :: NNP=len(D)
-cf2py integer intent(in) :: NP
-cf2py integer intent(in) :: N
-
-      INTEGER N, NP, NNP
-      DOUBLE PRECISION D(NNP), SB(NNP), SA(NNP)
-C 
-C     Local variables
-C
-      INTEGER K, NS, I, J, NR, IP, NQ, II
-      DOUBLE PRECISION DF, U1, U2, RN, C
-      DOUBLE PRECISION ZERO, ONE, TWO, NINE
-      DATA ZERO /0.0/, ONE /1.0/, TWO /2.0/, NINE /9.0/
-C
-      K = 1
-    1 CALL RNORM(U1, U2)
-C
-C     Load SB with independent normal (0, 1) variates
-C
-      SB(K) = U1
-      K = K + 1
-      IF (K .GT. NNP) GO TO 2
-      SB(K) = U2
-      K = K + 1
-      IF (K .LE. NNP) GO TO 1
-    2 NS = 0
-C
-C     Load diagonal elements with square root of chi-square variates
-C
-      DO 3 I = 1, NP
-        DF = N - I + 1
-        NS = NS + I
-        U1 = TWO / (NINE * DF)
-        U2 = ONE - U1
-        U1 = SQRT(U1)
-C
-C     Wilson-Hilferty formula for approximating chi-square variates
-C
-        SB(NS) = SQRT(DF * (U2 + SB(NS) * U1)**3)
-    3 CONTINUE
-C
-      RN = N
-      NR = 1
-      DO 5 I = 1, NP
-        NR = NR + I - 1
-        DO 5 J = I, NP
-          IP = NR
-          NQ = (J*J - J) / 2 + I - 1
-          C = ZERO
-          DO 4 K = I, J
-            IP = IP + K - 1
-            NQ = NQ + 1
-            C = C + SB(IP) * D(NQ)
-    4     CONTINUE
-          SA(IP) = C
-    5 CONTINUE
-C
-      DO 7 I = 1, NP
-        II = NP - I + 1
-        NQ = NNP - NP
-        DO 7 J = 1, I
-          IP = (II*II - II) / 2
-          C = ZERO
-          DO 6 K = I, NP
-            IP = IP + 1
-            NQ = NQ + 1
-            C = C + SA(IP) * SA(NQ)
-    6     CONTINUE
-          SA(NQ) = C / RN
-          NQ = NQ - 2 * NP + I + J - 1
-    7 CONTINUE
-C
-      RETURN
-      END
-C
-
-!      SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP,D,SA,SB)
-      SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP)
-cf2py intent(out) SAOUT
-cf2py intent(hide) NP
-cf2py integer intent(hide),depend(NP)::NNP=NP*(NP+1)/2
-      INTEGER N, NP, NNP, i, j, ni
-      DOUBLE PRECISION DIN(NP,NP), SAOUT(NP,NP)
-      DOUBLE PRECISION D(NNP), SA(NNP), SB(NNP)
-      
-      ni=0
-      do i=1,np
-          do j=i,np
-              ni = ni + 1
-              D(ni) = DIN(j,i)
-          end do
-      end do
-      
-      CALL WSHRT(D,N,NP,NNP,SB,SA)
-      
-      print *,D
-      print *,SA
-      
-      ni=0
-      do i=1,np
-          do j=i,np
-              ni = ni + 1
-              SAOUT(i,j) = SA(ni)
-              SAOUT(j,i) = SA(ni)
-          end do
-      end do
-      
-      RETURN
-      END
-
-      SUBROUTINE rbin(n,pp,x) 
-
-cf2py double precision intent(in) :: pp
-cf2py integer intent(in) :: n
-cf2py integer intent(out) :: x  
-
-      INTEGER n,x 
-      DOUBLE PRECISION pp,PI 
-C USES gammln,rand 
-      PARAMETER (PI=3.141592654) 
-C Returns as a floating-point number an integer value that is a random deviate drawn from 
-C a binomial distribution of n trials each of probability pp, using rand as a source 
-C of uniform random deviates. 
-      INTEGER j,nold
-      DOUBLE PRECISION am,em,en,g,oldg,p,pc,rn
-      DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln
-      SAVE nold,pold,pc,plog,pclog,en,oldg 
-C     Arguments from previous calls.
-      DATA nold /-1/, pold /-1./  
-      if(pp.le.0.5)then 
-C       The binomial distribution is invariant under changing pp to 
-C       1.-pp, if we also change the answer to n minus itself; 
-C       we’ll remember to do this below. 
-        p=pp 
-      else 
-        p=1.-pp 
-      endif 
-C     This is the mean of the deviate to be produced. 
-      am=n*p
-      if (n.lt.25) then 
-C       Use the direct method while n is not too large. This can 
-C       require up to 25 calls to ran1.
-        x=0. 
-        do 11 j=1,n 
-!           call random_number(rn)
-          rn = rand()
-          if(rn.lt.p) x=x+1. 
-   11   enddo 
-      else if (am.lt.1.) then 
-C       If fewer than one event is expected out of 25 or more tri- 
-C       als, then the distribution is quite accurately Poisson. Use 
-C       direct Poisson method. 
-        g=dexp(-am) 
-        t=1. 
-        do 12 j=0,n
-!         call random_number(rn) 
-          rn = rand()
-        t=t*rn
-        if (t.lt.g) goto 1 
-   12   enddo  
-        j=n 
-    1   x=j 
-      else 
-C       Use the rejection method. 
-        if (n.ne.nold) then 
-C         If n has changed, then compute useful quantities. 
-          en=n 
-          oldg=gammln(en+1.) 
-          nold=n 
-        endif 
-        if (p.ne.pold) then 
-C         If p has changed, then compute useful quantities. 
-          pc=1.-p 
-          plog=dlog(p) 
-          pclog=dlog(pc) 
-          pold=p 
-        endif 
-        sq=sqrt(2.*am*pc) 
-C       The following code should by now seem familiar: rejection 
-C       method with a Lorentzian comparison function.
-!         call random_number(rn)
-          rn = rand()
-    2   y=tan(PI*rn) 
-        em=sq*y+am 
-C       Reject.
-        if (em.lt.0..or.em.ge.en+1.) goto 2  
-
-C       Trick for integer-valued distribution.
-        em=int(em)
-        t=1.2*sq*(1.+y**2)*dexp(oldg-gammln(em+1.) 
-     +-gammln(en-em+1.)+em*plog+(en-em)*pclog) 
-C       Reject. This happens about 1.5 times per deviate, on average.
-!         call random_number(rn)
-          rn = rand()
-        if (rn.gt.t) goto 2 
-        x=em 
-        endif 
-C     Remember to undo the symmetry transformation. 
-      if (p.ne.pp) x=n-x 
-      return 
-      END 
-
-
-
-      SUBROUTINE fill_stdnormal(array_in,n)
-
-c Fills an input array with standard normals in-place.
-c Created 2/4/07, AP
-
-cf2py double precision dimension(n),intent(inplace) :: array_in
-cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
-
-      INTEGER i, n, n_blocks, index
-      DOUBLE PRECISION U1, U2, array_in(n)
-      LOGICAL iseven
-
-      iseven = (MOD(n,2) .EQ. 0)
-
-      if(iseven) then
-        n_blocks = n/2
-      else 
-        n_blocks = (n-1)/2
-      endif
-
-      do i=1,n_blocks
-        call RNORM(U1,U2)
-        index = 2*(i-1) + 1
-        array_in(index) = U1
-        array_in(index+1) = U2
-      enddo
-
-      if(.NOT.iseven) then
-        call RNORM(U1,U2)
-        array_in(n) = U1
-      endif
-
-
-      return
-      END
-      
-c
       subroutine logit(theta,n,ltheta)
 c Maps (0,1) -> R.
 cf2py intent(hide) n
@@ -2645,3 +2320,342 @@ cf2py intent(copy) ltheta
       
       RETURN
       END      
+
+
+c
+
+!       SUBROUTINE RNORM(U1, U2, rands)
+! C
+! C     ALGORITHM AS 53.1  APPL. STATIST. (1972) VOL.21, NO.3
+! C
+! C     Sets U1 and U2 to two independent standardized random normal
+! C     deviates.   This is a Fortran version of the method given in
+! C     Knuth(1969).
+! C
+! C     Function RAND must give a result randomly and rectangularly
+! C     distributed between the limits 0 and 1 exclusive.
+! C     Note- this seems to be faster than Leva's algorithm from
+! C     ACM Trans Math Soft, Dec. 1992 - AP
+! C
+!       DOUBLE PRECISION U1, U2
+! C
+! C     Local variables
+! C
+!       DOUBLE PRECISION X, Y, S, ONE, TWO
+!       DOUBLE PRECISION rands(2)
+!       DATA ONE /1.0/, TWO /2.0/
+! C
+!     1 X = rands(1)
+!       Y = rands(2)
+!       X = TWO * X - ONE
+!       Y = TWO * Y - ONE
+!       S = X * X + Y * Y
+!       IF (S .GT. ONE) GO TO 1
+!       S = SQRT(- TWO * dlog(S) / S)
+!       U1 = X * S
+!       U2 = Y * S
+!       RETURN
+!       END
+
+! wshrt is not used by anything
+!       SUBROUTINE WSHRT(D, N, NP, NNP, SB, SA, rnorms)
+! C
+! C     ALGORITHM AS 53  APPL. STATIST. (1972) VOL.21, NO.3
+! C
+! C     Wishart variate generator.  On output, SA is an upper-triangular
+! C     matrix of size NP * NP (written in linear form, column ordered)
+! C     whose elements have a Wishart(N, SIGMA) distribution.
+! C
+! C     D is an upper-triangular array such that SIGMA = D'D (see AS 6)
+! C
+! C     Auxiliary function required: a random no. generator called RAND.
+! C     The Wichmann & Hill generator is included here.   It should be
+! C     initialized in the calling program.
+! 
+! 
+! cf2py double precision dimension(NNP),intent(in) :: D
+! cf2py double precision dimension(NNP),intent(out) :: SA
+! cf2py double precision dimension(NNP),intent(hide) :: SB
+! cf2py integer intent(hide),depend(D) :: NNP=len(D)
+! cf2py integer intent(in) :: NP
+! cf2py integer intent(in) :: N
+! 
+!       INTEGER N, NP, NNP
+!       DOUBLE PRECISION D(NNP), SB(NNP), SA(NNP)
+! C 
+! C     Local variables
+! C
+!       INTEGER K, NS, I, J, NR, IP, NQ, II
+!       DOUBLE PRECISION DF, U1, U2, RN, C
+!       DOUBLE PRECISION ZERO, ONE, TWO, NINE
+!       DOUBLE PRECISION rnorms(NNP)
+!       DATA ZERO /0.0/, ONE /1.0/, TWO /2.0/, NINE /9.0/
+! C
+!       K = 1
+! C
+! C     Load SB with independent normal (0, 1) variates
+! C
+! 
+!     1 continue
+!       SB(K) = rnorms(k)
+!       K = K + 1
+!       IF (K .GT. NNP) GO TO 2
+!       SB(K) = rnorsm(k)
+!       K = K + 1
+!       IF (K .LE. NNP) GO TO 1
+!     2 NS = 0
+! C
+! C     Load diagonal elements with square root of chi-square variates
+! C
+!       DO 3 I = 1, NP
+!         DF = N - I + 1
+!         NS = NS + I
+!         U1 = TWO / (NINE * DF)
+!         U2 = ONE - U1
+!         U1 = SQRT(U1)
+! C
+! C     Wilson-Hilferty formula for approximating chi-square variates
+! C
+!         SB(NS) = SQRT(DF * (U2 + SB(NS) * U1)**3)
+!     3 CONTINUE
+! C
+!       RN = N
+!       NR = 1
+!       DO 5 I = 1, NP
+!         NR = NR + I - 1
+!         DO 5 J = I, NP
+!           IP = NR
+!           NQ = (J*J - J) / 2 + I - 1
+!           C = ZERO
+!           DO 4 K = I, J
+!             IP = IP + K - 1
+!             NQ = NQ + 1
+!             C = C + SB(IP) * D(NQ)
+!     4     CONTINUE
+!           SA(IP) = C
+!     5 CONTINUE
+! C
+!       DO 7 I = 1, NP
+!         II = NP - I + 1
+!         NQ = NNP - NP
+!         DO 7 J = 1, I
+!           IP = (II*II - II) / 2
+!           C = ZERO
+!           DO 6 K = I, NP
+!             IP = IP + 1
+!             NQ = NQ + 1
+!             C = C + SA(IP) * SA(NQ)
+!     6     CONTINUE
+!           SA(NQ) = C / RN
+!           NQ = NQ - 2 * NP + I + J - 1
+!     7 CONTINUE
+! C
+!       RETURN
+!       END
+! C
+
+! !      SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP,D,SA,SB)
+!       SUBROUTINE WSHRT_WRAP(DIN,N,NP,SAOUT,NNP)
+! cf2py intent(out) SAOUT
+! cf2py intent(hide) NP
+! cf2py integer intent(hide),depend(NP)::NNP=NP*(NP+1)/2
+!       INTEGER N, NP, NNP, i, j, ni
+!       DOUBLE PRECISION DIN(NP,NP), SAOUT(NP,NP)
+!       DOUBLE PRECISION D(NNP), SA(NNP), SB(NNP)
+!       
+!       ni=0
+!       do i=1,np
+!           do j=i,np
+!               ni = ni + 1
+!               D(ni) = DIN(j,i)
+!           end do
+!       end do
+!       
+!       CALL WSHRT(D,N,NP,NNP,SB,SA)
+!       
+!       print *,D
+!       print *,SA
+!       
+!       ni=0
+!       do i=1,np
+!           do j=i,np
+!               ni = ni + 1
+!               SAOUT(i,j) = SA(ni)
+!               SAOUT(j,i) = SA(ni)
+!           end do
+!       end do
+!       
+!       RETURN
+!       END
+
+! rbin and fill_stdnormal don't seem to be used by anything
+!       SUBROUTINE rbin(n,pp,x) 
+! 
+! cf2py double precision intent(in) :: pp
+! cf2py integer intent(in) :: n
+! cf2py integer intent(out) :: x  
+! 
+!       INTEGER n,x 
+!       DOUBLE PRECISION pp,PI 
+! C USES gammln,rand 
+!       PARAMETER (PI=3.141592654) 
+! C Returns as a floating-point number an integer value that is a random deviate drawn from 
+! C a binomial distribution of n trials each of probability pp, using rand as a source 
+! C of uniform random deviates. 
+!       INTEGER j,nold
+!       DOUBLE PRECISION am,em,en,g,oldg,p,pc,rn
+!       DOUBLE PRECISION pclog,plog,pold,sq,t,y,gammln
+!       SAVE nold,pold,pc,plog,pclog,en,oldg 
+! C     Arguments from previous calls.
+!       DATA nold /-1/, pold /-1./  
+!       if(pp.le.0.5)then 
+! C       The binomial distribution is invariant under changing pp to 
+! C       1.-pp, if we also change the answer to n minus itself; 
+! C       we’ll remember to do this below. 
+!         p=pp 
+!       else 
+!         p=1.-pp 
+!       endif 
+! C     This is the mean of the deviate to be produced. 
+!       am=n*p
+!       if (n.lt.25) then 
+! C       Use the direct method while n is not too large. This can 
+! C       require up to 25 calls to ran1.
+!         x=0. 
+!         do 11 j=1,n 
+! !           call random_number(rn)
+!           rn = 0
+!           if(rn.lt.p) x=x+1. 
+!    11   enddo 
+!       else if (am.lt.1.) then 
+! C       If fewer than one event is expected out of 25 or more tri- 
+! C       als, then the distribution is quite accurately Poisson. Use 
+! C       direct Poisson method. 
+!         g=dexp(-am) 
+!         t=1. 
+!         do 12 j=0,n
+! !         call random_number(rn) 
+!           rn = rand()
+!         t=t*rn
+!         if (t.lt.g) goto 1 
+!    12   enddo  
+!         j=n 
+!     1   x=j 
+!       else 
+! C       Use the rejection method. 
+!         if (n.ne.nold) then 
+! C         If n has changed, then compute useful quantities. 
+!           en=n 
+!           oldg=gammln(en+1.) 
+!           nold=n 
+!         endif 
+!         if (p.ne.pold) then 
+! C         If p has changed, then compute useful quantities. 
+!           pc=1.-p 
+!           plog=dlog(p) 
+!           pclog=dlog(pc) 
+!           pold=p 
+!         endif 
+!         sq=sqrt(2.*am*pc) 
+! C       The following code should by now seem familiar: rejection 
+! C       method with a Lorentzian comparison function.
+! !         call random_number(rn)
+!           rn = rand()
+!     2   y=tan(PI*rn) 
+!         em=sq*y+am 
+! C       Reject.
+!         if (em.lt.0..or.em.ge.en+1.) goto 2  
+! 
+! C       Trick for integer-valued distribution.
+!         em=int(em)
+!         t=1.2*sq*(1.+y**2)*dexp(oldg-gammln(em+1.) 
+!      +-gammln(en-em+1.)+em*plog+(en-em)*pclog) 
+! C       Reject. This happens about 1.5 times per deviate, on average.
+! !         call random_number(rn)
+!           rn = rand()
+!         if (rn.gt.t) goto 2 
+!         x=em 
+!         endif 
+! C     Remember to undo the symmetry transformation. 
+!       if (p.ne.pp) x=n-x 
+!       return 
+!       END 
+! 
+! 
+! 
+!       SUBROUTINE fill_stdnormal(array_in,n)
+! 
+! c Fills an input array with standard normals in-place.
+! c Created 2/4/07, AP
+! 
+! cf2py double precision dimension(n),intent(inplace) :: array_in
+! cf2py integer intent(hide),depend(array_in),check(n>0) :: n=len(array_in)
+! 
+!       INTEGER i, n, n_blocks, index
+!       DOUBLE PRECISION U1, U2, array_in(n)
+!       LOGICAL iseven
+! 
+!       iseven = (MOD(n,2) .EQ. 0)
+! 
+!       if(iseven) then
+!         n_blocks = n/2
+!       else 
+!         n_blocks = (n-1)/2
+!       endif
+! 
+!       do i=1,n_blocks
+!         call RNORM(U1,U2)
+!         index = 2*(i-1) + 1
+!         array_in(index) = U1
+!         array_in(index+1) = U2
+!       enddo
+! 
+!       if(.NOT.iseven) then
+!         call RNORM(U1,U2)
+!         array_in(n) = U1
+!       endif
+! 
+! 
+!       return
+!       END
+
+
+c
+! Commented this out- numpy's rng is much better.
+!       double precision function whrand()
+! c
+! c     Algorithm AS 183 Appl. Statist. (1982) vol.31, no.2
+! c
+! c     Returns a pseudo-random number rectangularly distributed
+! c     between 0 and 1.   The cycle length is 6.95E+12 (See page 123
+! c     of Applied Statistics (1984) vol.33), not as claimed in the
+! c     original article.
+! c
+! c     IX, IY and IZ should be set to integer values between 1 and
+! c     30000 before the first entry.
+! c
+! c     Integer arithmetic up to 30323 is required.
+! c
+!       integer ix, iy, iz
+!       common /randc/ ix, iy, iz
+! c
+!       ix = 171 * mod(ix, 177) - 2 * (ix / 177)
+!       iy = 172 * mod(iy, 176) - 35 * (iy / 176)
+!       iz = 170 * mod(iz, 178) - 63 * (iz / 178)
+! c
+!       if (ix .lt. 0) ix = ix + 30269
+!       if (iy .lt. 0) iy = iy + 30307
+!       if (iz .lt. 0) iz = iz + 30323
+! c
+! c     If integer arithmetic up to 5212632 is available, the preceding
+! c     6 statements may be replaced by:
+! c
+! c     ix = mod(171 * ix, 30269)
+! c     iy = mod(172 * iy, 30307)
+! c     iz = mod(170 * iz, 30323)
+! c
+!       whrand = mod(float(ix) / 30269. + float(iy) / 30307. +
+!      +                        float(iz) / 30323., 1.0)
+!       return
+!       end
+! 

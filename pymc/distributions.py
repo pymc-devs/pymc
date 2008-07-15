@@ -626,7 +626,7 @@ def binomial_like(x, n, p):
 # GOF not working yet, because expval not conform to wrapper spec.
 # @randomwrap
 def rcategorical(p, minval=0, step=1, size=1):
-    out = flib.rcat(p, minval, step, size)
+    out = flib.rcat(p, minval, step, size, np.random.random(size=size))
     if sum(out.shape) == 1:
         return out.squeeze()
     else:
@@ -1714,7 +1714,7 @@ def rskew_normal(mu,tau,alpha,size=1):
     
     Skew-normal random variates.
     """
-    return flib.rskewnorm(size,mu,tau,alpha)
+    return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
 
 def skew_normal_like(x,mu,tau,alpha):
     R"""skew_normal_like(x, mu, tau, alpha)
