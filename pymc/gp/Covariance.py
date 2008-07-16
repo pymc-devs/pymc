@@ -151,7 +151,7 @@ class Covariance(object):
             # Useful for users. U.T*U = C(x,x)
             return U[:m,argsort(piv)]
             
-    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True):
+    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False):
         """
         
         U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
@@ -251,7 +251,16 @@ class Covariance(object):
         # ============================================
         # = Call to Fortran function ichol_continue. =
         # ============================================
-        m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:])
+        if not assume_full_rank:
+            m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:])
+        else:
+            m= m_old + N_new
+            U2 = self.__call__(x,x,observed=True,regularize=False)
+            U2 = cholesky(U2).T
+            offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
+            trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
+            U[m_old:,N_new+m_old:] = offdiag2
+            U[m_old:,m_old:N_new+m_old] = U2
 
 
         # Arrange output matrix and return.
@@ -267,7 +276,7 @@ class Covariance(object):
             # Useful for the user. U.T * U = C(x,x).
             return U[:m,argsort(piv)]
         
-    def observe(self, obs_mesh, obs_V):
+    def observe(self, obs_mesh, obs_V, assume_full_rank=False):
         """
         Observes self at obs_mesh with variance given by obs_V. 
         
@@ -315,7 +324,13 @@ class Covariance(object):
             # Number of observation points so far is 0.
             N_old = 0
 
-            obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False)
+            if not assume_full_rank:
+                obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False)
+            else:
+                C = self.__call__(obs_mesh,obs_mesh,regularize=False)
+                for i in xrange(C.shape[0]):
+                    C[i,i] += obs_V[i]
+                obs_dict = {'U': cholesky(C).T,'pivots': arange(C.shape[0])}
 
             # Rank of self(obs_mesh, obs_mesh)
             m_new = obs_dict['U'].shape[0]
@@ -377,7 +392,8 @@ class Covariance(object):
                                                 apply_pivot = False,
                                                 observed = False,
                                                 regularize=False,
-                                                nugget = obs_V)
+                                                nugget = obs_V,
+                                                assume_full_rank = assume_full_rank)
             
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
             self.full_Uo = obs_dict_new['U']
@@ -520,7 +536,7 @@ class Covariance(object):
     def _obs_eval(self, M, M_out, x):
         Cxo = self(M.obs_mesh, x, observed = False)            
         Cxo_Uo_inv = trisolve(M.Uo, Cxo, uplo='U', transa='T')
-        M_out += asarray(Cxo_Uo_inv.T* M.reg_mat).squeeze()
+        M_out += dot(asarray(M.reg_mat).T,asarray(Cxo_Uo_inv)).squeeze()
         return M_out
 
     def _mean_under_new(self, M, obs_mesh_new):

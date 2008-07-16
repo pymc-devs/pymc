@@ -123,7 +123,7 @@ class NearlyFullRankCovariance(Covariance):
             # Useful for users. U.T*U = C(x,x)
             return U[:m,argsort(piv)]
             
-    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True):
+    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank=False):
         """
         
         U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
@@ -191,7 +191,12 @@ class NearlyFullRankCovariance(Covariance):
             for i in xrange(N_new):
                 C_new[i,i] += nugget[i]
         C_new -= offdiag.T*offdiag
-        U_new, m_new, piv_new = ichol_full(c=C_new, reltol=self.relative_precision)
+        if not assume_full_rank:
+            U_new, m_new, piv_new = ichol_full(c=C_new, reltol=self.relative_precision)
+        else:
+            U_new = cholesky(C_new).T
+            m_new = U_new.shape[0]
+            piv_new = arange(m_new)
         U_new = asmatrix(U_new[:m_new,:])
         U = asmatrix(zeros((m_new + m_old, N_old + N_new), dtype=float))
         

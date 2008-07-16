@@ -83,6 +83,7 @@ class StandardRealization(object):
         # will not affect self.
         M_internal = copy.copy(M)    
         C_internal = copy.copy(C)
+        M_internal.C = C_internal
         
         # If initial values were specified on a mesh:
         if init_mesh is not None:
@@ -163,7 +164,7 @@ class StandardRealization(object):
         f = asarray((M.T+q)).ravel()
 
         # Then observe self's mean using the new values.
-        self.M_internal.observe(self.C_internal, obs_mesh_new, f[relevant_slice])
+        self.M_internal.observe(self.C_internal, obs_mesh_new, f[relevant_slice], mean_under = M[relevant_slice])
 
         return f
 

@@ -20,9 +20,11 @@ def GP_array_logp(value, M, U):
     return pm.flib.chol_mvnorm(value,M,U.T)
 
 def GP_array_random(M, U, scale=1.):
-    b = np.random.normal(size=len(M.ravel()))
-    linalg_utils.dtrmm_wrap(a=U,b=b,uplo='U',transa='T')
-    return M+b*scale
+    b = np.dot(U.T , np.random.normal(size = U.shape[0]))
+    if not scale==1.:
+        return np.asarray(M+b*scale).squeeze()
+    else:
+        return np.asarray(M+b).squeeze()
 
 class GP(pm.Stochastic):
     """
@@ -93,9 +95,10 @@ class GP(pm.Stochastic):
         self._random = random_fun
                 
         if self.mesh is not None:
+            self.mesh = regularize_array(self.mesh)
         
             @pm.deterministic(verbose=verbose-1, cache_depth=cache_depth, trace=False)
-            def M_mesh(M=M, mesh=mesh):
+            def M_mesh(M=M, mesh=self.mesh):
                 """
                 The mean function evaluated on the mesh,
                 cached for speed.
@@ -104,7 +107,7 @@ class GP(pm.Stochastic):
             M_mesh.__name__ = name + '_M_mesh'
         
             @pm.deterministic(verbose=verbose-1, cache_depth=cache_depth, trace=False)
-            def U_mesh(C=C, mesh=mesh):
+            def C_and_U_mesh(C=C, mesh=self.mesh):
                 """
                 The upper-triangular Cholesky factor of the
                 covariance function evaluated on the mesh,
@@ -113,34 +116,44 @@ class GP(pm.Stochastic):
                 # TODO: Will need to change this when sparse covariances
                 # are available. dpotrf doesn't know about sparse covariances.
                 
-                # Putting this here to short-circuit evaluation of the
-                # covariance prevents the seg fault...
-                # return np.eye(mesh.shape[0])
+                C_old = C
+                C = copy.copy(C)
                 
-                U = C(mesh,mesh, regularize=False)
-                info = linalg_utils.dpotrf_wrap(U)
-    
-                if info>0:
+                # Most covariances generate U_mesh automatically when observed,
+                # and after observation they can be used to efficiently construct realizations.
+                junk1, junk2, U = C.observe(mesh, np.zeros(mesh.shape[0]), assume_full_rank=True)
+                
+                # Handle BasisCovariances separately
+                if U is None:
+                    try:
+                        U = np.linalg.cholesky(C_old(mesh,mesh,regularize=False)).T
+                    except np.linalg.LinAlgError:
+                        return np.linalg.LinAlgError
+                        
+                # print U.T*U - C_old(mesh,mesh,regularize=False)
+                
+                if U.shape[0] < U.shape[1]:
                     return np.linalg.LinAlgError
-                return U
-            U_mesh.__name__ = name + '_U_mesh'
+                return U, C
+                
+            C_and_U_mesh.__name__ = name + 'C_and_U_mesh'
         
             self.M_mesh = M_mesh
-            self.U_mesh = U_mesh
+            self.C_and_U_mesh = C_and_U_mesh
             
         def logp_fun(value, M, C):
             if self.mesh is None:
                 if self.verbose > 1:
                     print '\t%s: No mesh, returning 0.' % self.__name__
                 return 0.
-            elif self.U_mesh.value is np.linalg.LinAlgError:
+            elif self.C_and_U_mesh.value is np.linalg.LinAlgError:
                 if self.verbose > 1:
                     print '\t%s: Covariance not positive definite on mesh, returning -infinity.' % self.__name__
                 return -np.Inf
             else:                
                 if self.verbose > 1:
                     print '\t%s: Computing log-probability.' % self.__name__
-                return GP_array_logp(value(self.mesh), self.M_mesh.value, self.U_mesh.value)
+                return GP_array_logp(value(self.mesh), self.M_mesh.value, self.C_and_U_mesh.value[0])
                 
                     
         @pm.deterministic(verbose=verbose-1, cache_depth=cache_depth, trace=False)
@@ -164,8 +177,18 @@ class GP(pm.Stochastic):
                             verbose = verbose)
 
     def random_off_mesh(self):
-        if self.mesh is not None:
-            self.value = Realization(M, C, init_mesh = self.mesh, init_mesh_vals = self.value(self.mesh).ravel(), regularize=False)
+        if self.mesh is not None:            
+            
+            cur_mesh_value = self.value(self.mesh)
+            
+            # Observe the mean on the mesh at variance 0.
+            M_obs = copy.copy(self.parents.value['M'])
+            M_obs.observe(self.C_and_U_mesh.value[1], self.mesh, cur_mesh_value)
+            
+            # Make a cheap realization.
+            self.value = Realization(M_obs, self.C_and_U_mesh.value[1], regularize=False)
+            self.value.x_sofar = self.mesh
+            self.value.f_sofar = cur_mesh_value
         else:
             self.random()
 
@@ -291,11 +314,12 @@ class GPParentMetropolis(pm.Metropolis):
 
             try:
                 for f in self.fs:    
-                    if f.mesh is not None:
-                        f.value = Realization(self.M[f].value,self.C[f].value,init_mesh=f.mesh,
-                                    init_vals=f.value(f.mesh, regularize=False).ravel(), regularize=False)
-                    else:
-                        f.value = Realization(self.M[f].value,self.C[f].value)
+                    f.random_off_mesh()
+                    # if f.mesh is not None:
+                    #     f.value = Realization(self.M[f].value,self.C[f].value,init_mesh=f.mesh,
+                    #                 init_vals=f.value(f.mesh, regularize=False).ravel(), regularize=False)
+                    # else:
+                    #     f.value = Realization(self.M[f].value,self.C[f].value)
             except np.linalg.LinAlgError:
                 self.metro_class.reject(metro_method)
         
@@ -410,16 +434,17 @@ class GPMetropolis(pm.Metropolis):
         if self.f.mesh is not None:
             
             # Generate values for self's value on the mesh.
-            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.U_mesh.value, scale=self.scale)
-            
-            last_value = self.f.value(self.f.mesh, regularize = False)
+            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.C_and_U_mesh.value[0], scale=self.scale)
+
             
             # Generate self's value using those values.
-            self.f.value = Realization( self.M.value, 
-                                        self.C.value, 
-                                        init_mesh=self.f.mesh, 
-                                        init_vals=new_mesh_value,
-                                        regularize=False)
+            C = self.f.C_and_U_mesh.value[1]
+            M_obs = copy.copy(self.M.value)
+            M_obs.observe(C, self.f.mesh, new_mesh_value)
+            
+            self.f.value = Realization(M_obs, C, regularize=False)
+            self.f.value.x_sofar = self.f.mesh
+            self.f.value.f_sofar = new_mesh_value
 
         else:
             self.f.value = Realization(self.M.value, self.C.value)
@@ -526,7 +551,7 @@ class GPNormal(pm.Gibbs):
     :SeeAlso: GPMetropolis, GPParentMetropolis
     """
     
-    def __init__(self, f, obs_mesh, obs_V, obs_vals, offset=None):
+    def __init__(self, f, obs_mesh, obs_V, obs_vals, offset=None, same_mesh=False):
 
         if not isinstance(f, GP):
             raise ValueError, 'GPNormal can only handle GPs, cannot handle '+f.__name__
@@ -534,7 +559,7 @@ class GPNormal(pm.Gibbs):
         pm.StepMethod.__init__(self, variables=[f])
         self.f = f
         self._id = 'GPNormal_'+self.f.__name__
-        
+        self.same_mesh = same_mesh
         
         @pm.deterministic
         def obs_mesh(obs_mesh=obs_mesh):
@@ -575,8 +600,22 @@ class GPNormal(pm.Gibbs):
             M_local = copy.copy(M)
             M_local.observe(C_local[0], obs_mesh_new, obs_vals)
             return M_local
+            
+        if self.same_mesh:
+            @pm.deterministic
+            def U_mesh(C=C_local, mesh=self.f.mesh):
+                return C[0].cholesky(mesh)
+                
+            @pm.deterministic
+            def M_mesh(M=M_local, mesh=self.f.mesh):
+                return M(mesh)
+                
+            self.U_mesh = U_mesh
+            self.M_mesh = M_mesh
         
-        
+        self.obs_mesh = obs_mesh
+        self.obs_vals = obs_vals
+        self.obs_V = obs_V
         self.M_local = M_local
         self.C_local = C_local
 
@@ -585,7 +624,21 @@ class GPNormal(pm.Gibbs):
         Samples self.f's value from its conditional distribution.
         """
         try:
-            self.f.value = Realization(self.M_local.value, self.C_local.value[0])
+            if not self.same_mesh:
+                self.f.value = Realization(self.M_local.value, self.C_local.value[0])
+            else:
+                # Generate values for self's value on the mesh.
+                new_mesh_value = GP_array_random(M=self.M_mesh.value, U=self.U_mesh.value)
+
+                # Generate self's value using those values.
+                C = self.f.C_and_U_mesh.value[1]
+                M_obs = copy.copy(self.f.parents.value['M'])
+                M_obs.observe(C, self.f.mesh, new_mesh_value)
+
+                self.f.value = Realization(M_obs, C, regularize=False)
+                self.f.value.x_sofar = self.f.mesh
+                self.f.value.f_sofar = new_mesh_value
+                
         except np.linalg.LinAlgError:
             print 'Covariance was numerically singular when stepping f, trying again.'
             self.step()

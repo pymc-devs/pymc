@@ -18,7 +18,7 @@ scale = Lognormal('scale', mu=.5, tau=1.)
 # The covariance dtrm C is valued as a Covariance object.                    
 @deterministic
 def C(eval_fun = matern.euclidean, diff_degree=diff_degree, amp=amp, scale=scale):
-    return Covariance(eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
+    return NearlyFullRankCovariance(eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
 
 
 # Prior parameters of M
@@ -36,18 +36,18 @@ def M(eval_fun = linfun, a=a, b=b, c=c):
 
 
 # The GP itself
-fmesh = array([-.5, .5, 0.])
+fmesh = linspace(-pi/3.3,pi/3.3,4)
 f = GP(name="f", M=M, C=C, mesh=fmesh, init_mesh_vals = 0.*fmesh)
 
 
 # Observation precision
 # V = Gamma('V', alpha=3., beta=3./.002, value=.002)
-V = array([10.,.0001, 10.])
+V = .0001
 
 # The data d is just array-valued. It's normally distributed about GP.f(obs_x).
 @data
 @stochastic
-def d(value=array([3.1, 0., 2.7]), mu=f, V=V):
+def d(value=normal(size=len(fmesh)), mu=f, V=V):
     """
     Data
     """

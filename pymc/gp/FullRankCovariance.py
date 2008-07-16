@@ -80,9 +80,10 @@ class FullRankCovariance(Covariance):
                 U[i,i] += nugget[i]
 
         # print self.params, x.shape, observed, nugget
-        info = dpotrf_wrap(U)
-        if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
+        U = cholesky(U).T
+        # info = dpotrf_wrap(U)
+        # if info>0:
+        #     raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
         
         return U
         
@@ -135,14 +136,15 @@ class FullRankCovariance(Covariance):
         U[:N_old, N_old:] = offdiag
         
         U_new -= offdiag.T*offdiag
-        info = dpotrf_wrap(U_new)
-        if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
+        U_new = cholesky(U_new).T
+        # info = dpotrf_wrap(U_new)
+        # if info>0:
+        #     raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
             
         U[N_old:,N_old:] = U_new
         return U
         
-    def observe(self, obs_mesh, obs_V):
+    def observe(self, obs_mesh, obs_V, assume_full_rank=True):
         """
         Observes self at obs_mesh with variance given by obs_V. 
         

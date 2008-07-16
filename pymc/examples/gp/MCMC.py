@@ -8,10 +8,10 @@ x = linspace(-1,1,100)
 GPSampler = MCMC(PyMCmodel)
 
 # Uncomment this to use the GPNormal step method instead of the default GPMetropolis
-GPSampler.use_step_method(GPNormal, f=f, obs_mesh=fmesh, obs_V=V, obs_vals=d)
+# GPSampler.use_step_method(GPNormal, f=f, obs_mesh=fmesh, obs_V=V, obs_vals=d, same_mesh=True)
 
 # Uncomment this for a long run.
-GPSampler.isample(iter=5000,burn=1000,thin=100)
+GPSampler.sample(iter=5000,burn=1000,thin=100)
 
 # Uncomment this for a medium run.
 # GPSampler.isample(iter=500,burn=0,thin=10)
@@ -57,9 +57,9 @@ if __name__ == '__main__':
     plot(GPSampler.scale.trace())
     title("X-axis scaling of f")
     
-    subplot(2,2,4)
-    plot(GPSampler.V.trace())
-    title('Observation precision')
+    # subplot(2,2,4)
+    # plot(GPSampler.V.trace())
+    # title('Observation precision')
     
     
     # Plot posterior of M
