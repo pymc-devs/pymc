@@ -218,14 +218,14 @@ c increment log-likelihood
 
 c
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
-cf2py intent(hide) nmu, ntau, nalph
+cf2py intent(hide) nmu, ntau, nalph, tnx
 cf2py intent(out) x
-cf2py integer intent(hide), depend(nx):: tnx = 2*nx
+
 
       DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
       DOUBLE PRECISION U1,U2, mu_now, tau_now, alph_now, d_now
       DOUBLE PRECISION rn(tnx)
-      INTEGER i, nx, nalph, nmu, ntau,tnx
+      INTEGER i, nx, nalph, nmu, ntau
       LOGICAL vec_mu, vec_tau, vec_alph
       
       vec_mu = (nmu.GT.1)
