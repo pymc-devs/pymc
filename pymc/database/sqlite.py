@@ -39,7 +39,7 @@ class Trace(object):
         # update self.last_trace.
         
         try:
-            query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
+            query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
             self.db.cur.execute(query)
             self.current_trace = 1
         except Exception:

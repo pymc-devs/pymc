@@ -7,7 +7,7 @@ __all__ = ['MCMC']
 from Model import Sampler
 from StepMethods import StepMethodRegistry, assign_method
 from distributions import absolute_loss, squared_loss, chi_square_loss
-import sys
+import sys, time, pdb
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -145,6 +145,8 @@ class MCMC(Sampler):
         # Set status flag
         self.status='running'
 
+        # Record start time
+        start = time.time()
 
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
@@ -173,8 +175,12 @@ class MCMC(Sampler):
                 if not i % self._thin and i >= self._burn:
                     self.tally()
 
-                if not i % 10000 and self.verbose > 0:
-                    print 'Iteration ', i, ' of ', self._iter
+                if not i % 10000 and i and self.verbose > 0:
+                    per_step = (time.time() - start)/i
+                    remaining = self._iter - i
+                    time_left = remaining * per_step
+                    
+                    print "Iteration %i of %i (%i:%02d remaining)" % (i, self._iter, time_left/3600, (time_left%3600)/60)
                     
                 if not i % 1000:
                     self.commit()

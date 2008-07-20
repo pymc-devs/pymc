@@ -4,7 +4,7 @@ from numpy.testing import TestCase, assert_array_equal, assert_equal
 from pymc import MCMC
 import pymc.database as database
 from pymc.examples import DisasterModel
-import os,sys
+import os,sys, pdb
 import numpy as np
 
 class test_backend_attribution(TestCase):
@@ -80,11 +80,39 @@ class test_pickle(TestCase):
         assert_equal(S.e.trace.length(None), 300)
         S.db.close()
 
-##class test_mysql(TestCase):
-##    def test(self):
-##        M = MCMC(DisasterModel, db='mysql')
-##        M.sample(300,100,2)
-##    
+
+if hasattr(database, 'mysql'):
+    class test_mysql(TestCase):
+        
+        def test(self):
+            M = MCMC(DisasterModel, db='mysql', name='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
+            M.sample(50,10,thin=2)
+            assert_array_equal(M.e.trace().shape, (20,))
+            # Test second trace.
+            M.sample(10)
+            assert_array_equal(M.e.trace().shape, (10,))
+            assert_array_equal(M.e.trace(chain=None).shape, (30,))
+            assert_equal(M.e.trace.length(chain=1), 20)
+            assert_equal(M.e.trace.length(chain=2), 10)
+            assert_equal(M.e.trace.length(chain=None), 30)
+            assert_equal(M.e.trace.length(chain=-1), 10)
+            M.sample(5)
+            assert_equal(M.e.trace.length(), 5)
+            M.db.close()
+
+        def test_load(self):
+            db = database.mysql.load(dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
+            assert_array_equal(db.e.length(chain=1), 20)
+            assert_array_equal(db.e.length(chain=2), 10)
+            assert_array_equal(db.e.length(chain=3), 5)
+            assert_array_equal(db.e.length(chain=None), 35)
+            S = MCMC(DisasterModel, db='mysql', name='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
+            S.sample(10)
+            assert_array_equal(S.e.trace(chain=-1).shape, (10,))
+            assert_array_equal(S.e.trace(chain=None).shape, (45,))
+            S.db.clean()
+            S.db.close()
+            
 if hasattr(database, 'sqlite'):
     class test_sqlite(TestCase):
         def __init__(*args, **kwds):
