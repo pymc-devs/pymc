@@ -216,7 +216,7 @@ c increment log-likelihood
       return
       END
 
-c
+
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph, tnx
 cf2py intent(out) x
@@ -225,7 +225,7 @@ cf2py intent(out) x
       DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
       DOUBLE PRECISION U1,U2, mu_now, tau_now, alph_now, d_now
       DOUBLE PRECISION rn(tnx)
-      INTEGER i, nx, nalph, nmu, ntau
+      INTEGER i, nx, nalph, nmu, ntau, tnx
       LOGICAL vec_mu, vec_tau, vec_alph
       
       vec_mu = (nmu.GT.1)
@@ -463,7 +463,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
 
-	  IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER n, i, nmu
       INTEGER x(n)
       DOUBLE PRECISION mu(nmu), like
