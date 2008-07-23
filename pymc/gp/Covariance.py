@@ -7,7 +7,7 @@ __all__ = ['Covariance']
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
 from GPutils import regularize_array, trisolve
-from linalg_utils import diag_call
+from linalg_utils import diag_call, dpotrf_wrap
 from incomplete_chol import ichol, ichol_continue
 
 
@@ -33,32 +33,25 @@ class Covariance(object):
         
     :SeeAlso: Mean, BasisCovariance, SeparableBasisCovariance, Realization, observe
     """
-
-    ndim = None
-    observed = False
-    obs_mesh = None
-    obs_V = None 
-    Uo = None
-    obs_piv = None
-    obs_len = None
-    RF = None
-    S_unobs = None
-    full_piv = None
-    full_obs_mesh = None
-    basiscov = False
+        
         
     def __init__(self, eval_fun, relative_precision = 1.0E-15, **params):
-
+        
+        self.ndim = None
+        self.observed = False
+        self.obs_mesh = None
+        self.obs_V = None 
+        self.Uo = None
+        self.obs_piv = None
+        self.obs_len = None
+        self.full_piv = None
+        self.full_obs_mesh = None
+        self.basiscov = False
+        
         self.eval_fun = eval_fun
         self.params = params
         self.relative_precision = relative_precision
-        
-        # # Sorry... the diagonal calls are done using f2py for speed.
-        # def diag_cov_fun(xe):
-        #     return self.eval_fun(xe,xe,**self.params)
-        # 
-        # self.diag_cov_fun = diag_cov_fun
-
+    
     
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True):
         """
@@ -108,7 +101,6 @@ class Covariance(object):
             else:
                 return U
 
-
         # Create the diagonal and the get-row function differently depending on whether self
         # has been observed. If self hasn't been observed, send the calls straight to eval_fun 
         # to skip the extra formatting.
@@ -123,12 +115,12 @@ class Covariance(object):
             rowvec[i:]=self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
             
         
-
         # diagonal
         diag = self.__call__(x, y=None, regularize=False, observed=observed)
         
         if nugget is not None:
             diag += nugget.ravel()
+ 
  
         # ==================================
         # = Call to Fortran function ichol =
@@ -145,11 +137,11 @@ class Covariance(object):
         if not apply_pivot:
             # Useful for self.observe and Realization.__call__. U is upper triangular.
             U = U[:m,:]
-            return {'pivots': piv, 'U': U}
-        
+            return {'pivots': piv, 'U': U}   
         else:
             # Useful for users. U.T*U = C(x,x)
             return U[:m,argsort(piv)]
+            
             
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False):
         """
@@ -276,6 +268,7 @@ class Covariance(object):
             # Useful for the user. U.T * U = C(x,x).
             return U[:m,argsort(piv)]
         
+        
     def observe(self, obs_mesh, obs_V, assume_full_rank=False):
         """
         Observes self at obs_mesh with variance given by obs_V. 
@@ -330,7 +323,10 @@ class Covariance(object):
                 C = self.__call__(obs_mesh,obs_mesh,regularize=False)
                 for i in xrange(C.shape[0]):
                     C[i,i] += obs_V[i]
-                obs_dict = {'U': cholesky(C).T,'pivots': arange(C.shape[0])}
+                info = dpotrf_wrap(C)
+                if info>0:
+                    raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." %info
+                obs_dict = {'U': C,'pivots': arange(C.shape[0])}
 
             # Rank of self(obs_mesh, obs_mesh)
             m_new = obs_dict['U'].shape[0]
@@ -423,8 +419,7 @@ class Covariance(object):
         
         self.observed = True
         return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]]
-    
-    
+        
     
     def __call__(self, x, y=None, observed=True, regularize=True):
 

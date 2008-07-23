@@ -33,7 +33,7 @@ def Realization(M, C, *args, **kwargs):
         
         -   `init_vals`: An ndarray giving the value of f over init_mesh.
         
-        -   `regularize`: If init_mesh is not shaped as (n, n_dim), where n_dim is the dimension of 
+        -   `regularize`: If init_mesh is not shaped as (n, ndim), where ndim is the dimension of 
             the space, regularize should be True.
         
         -   `check_repeats: Determines whether calls to the GP realization will be checked against 
@@ -68,7 +68,7 @@ class StandardRealization(object):
         
         -   `init_vals`: An ndarray giving the value of f over init_mesh.
         
-        -   `regularize`: If init_mesh is not shaped as (n, n_dim), where n_dim is the dimension 
+        -   `regularize`: If init_mesh is not shaped as (n, ndim), where ndim is the dimension 
             of the space, regularize should be True.
         
         -   `check_repeats: Determines whether calls to the GP realization will be checked against 
@@ -133,6 +133,9 @@ class StandardRealization(object):
                 raise ValueError, 'Input argument to Realization contains NaNs.'            
             x = regularize_array(x)
 
+        if x is self.x_sofar:
+            return self.f_sofar
+
         if self.check_repeats:
             # use caching_call to save duplicate calls.
             f, self.x_sofar, self.f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
@@ -187,7 +190,7 @@ class BasisRealization(StandardRealization):
         
         -   `init_vals`: An ndarray giving the value of f over init_mesh.
         
-        -   `regularize`: If init_mesh is not shaped as (n, n_dim), where n_dim is the dimension of the
+        -   `regularize`: If init_mesh is not shaped as (n, ndim), where ndim is the dimension of the
             space, regularize should be True.
         
         -   `check_repeats: Determines whether calls to the GP realization will be checked against 

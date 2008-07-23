@@ -102,9 +102,17 @@ class caching_callable(object):
         self.update_cache = update_cache
         if self.x_sofar is not None and self.f_sofar is None:
             junk, self.x_sofar, self.f_sofar = caching_call(self.f, self.x_sofar)
+        self.last_x = x_sofar
+        self.last_f = f_sofar
         
     def __call__(self, x):
+        if x is self.x_sofar:
+            return self.f_sofar
+        elif x is self.last_x:
+            return self.last_f
         f, x_sofar, f_sofar = caching_call(self.f, x, self.x_sofar, self.f_sofar)
+        self.last_x = x
+        self.last_f = f
         if self.update_cache:
             self.x_sofar = x_sofar
             self.f_sofar = f_sofar
@@ -174,7 +182,7 @@ def regularize_array(A):
     # Make sure A is an array.
     if not isinstance(A,ndarray):
         A = array(A, dtype=float)
-    else:
+    elif A.__class__ is not ndarray:
         A = asarray(A, dtype=float)
     
     # If A is one-dimensional, interpret it as an array of points on the line.
@@ -183,7 +191,7 @@ def regularize_array(A):
         
     # Otherwise, interpret it as an array of n-dimensional points, where n
     # is the size of A along its last index.
-    elif A.shape[-1]>1:
+    elif A.shape[-1]>1 and len(A.shape) > 2:
         return A.reshape(-1, A.shape[-1])
     
     else:

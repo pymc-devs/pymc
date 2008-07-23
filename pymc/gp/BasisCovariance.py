@@ -47,24 +47,23 @@ class BasisCovariance(Covariance):
     :SeeAlso: Mean, Realization, Covariance, SeparableBasisCovariance, observe
     """
     
-    observed = False
-    obs_mesh = None
-    obs_V = None 
-    Uo = None
-    obs_piv = None
-    obs_len = None
-    RF = None
-    S_unobs = None
-    full_piv = None
-    full_obs_mesh = None
-    basiscov=True
         
     def __init__(self, basis, coef_cov, relative_precision = 1.0E-15, **params):
+
+        self.observed = False
+        self.obs_mesh = None
+        self.obs_V = None 
+        self.Uo = None
+        self.obs_piv = None
+        self.obs_len = None
+        self.full_piv = None
+        self.full_obs_mesh = None
+        self.basiscov=True
 
         self.basis = ravel(basis)
         self.shape = self.get_shape_from_basis(basis)
         self.n = prod(self.shape)
-        self.n_dim = len(self.shape)
+        self.ndim = len(self.shape)
         
         
         self.relative_precision = relative_precision
@@ -338,8 +337,8 @@ class SeparableBasisCovariance(BasisCovariance):
     :Arguments:
     
         -   `basis`: An n-dimensional array of functions. Each should take an argument x
-            of shape  (n,n_dim), where n is any integer and n_dim is the dimensionality of 
-            the space, or shape (n). In the latter case n_dim should be assumed to be 1.
+            of shape  (n,ndim), where n is any integer and ndim is the dimensionality of 
+            the space, or shape (n). In the latter case ndim should be assumed to be 1.
                         
         -   `coef_cov`: An array of shape (i[1],...,i[n]) or (i[1],...,i[n])*2 (tuple multiplication). If 
             shape=basis.shape, the coefficients are assumed to be independent. Otherwise
@@ -357,7 +356,7 @@ class SeparableBasisCovariance(BasisCovariance):
         BasisCovariance.__init__(self, basis, coef_cov, relative_precision, **params)
         self.basis = basis
         self.n_per_dim = []
-        for i in xrange(self.n_dim):
+        for i in xrange(self.ndim):
             self.n_per_dim.append(len(self.basis[i]))
 
     def get_shape_from_basis(self, basis):
@@ -382,7 +381,7 @@ class SeparableBasisCovariance(BasisCovariance):
 
         # Evaluate the basis factors
         basis_factors = []
-        for i in xrange(self.n_dim):
+        for i in xrange(self.ndim):
             basis_factors.append([])
             for j in xrange(self.n_per_dim[i]):
                 basis_factors[i].append(self.basis[i][j](x, **self.params))
@@ -391,7 +390,7 @@ class SeparableBasisCovariance(BasisCovariance):
         out_reshaped = out.reshape(self.shape + (x.shape[0],))
 
         for ind in ndindex(self.shape):
-            for dim in xrange(self.n_dim):
+            for dim in xrange(self.ndim):
                 out_reshaped[ind] *= basis_factors[dim][ind[dim]]
                 
         return out

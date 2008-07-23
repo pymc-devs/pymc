@@ -39,6 +39,17 @@ class FullRankCovariance(Covariance):
         
     def __init__(self, eval_fun, nugget=None, **params):
 
+        self.ndim = None
+        self.observed = False
+        self.obs_mesh = None
+        self.obs_V = None 
+        self.Uo = None
+        self.obs_piv = None
+        self.obs_len = None
+        self.full_piv = None
+        self.full_obs_mesh = None
+        self.basiscov = False
+
         self.eval_fun = eval_fun
         self.params = params
         self.nugget=nugget
@@ -80,10 +91,10 @@ class FullRankCovariance(Covariance):
                 U[i,i] += nugget[i]
 
         # print self.params, x.shape, observed, nugget
-        U = cholesky(U).T
-        # info = dpotrf_wrap(U)
-        # if info>0:
-        #     raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
+
+        info = dpotrf_wrap(U)
+        if info>0:
+            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
         
         return U
         
@@ -136,10 +147,10 @@ class FullRankCovariance(Covariance):
         U[:N_old, N_old:] = offdiag
         
         U_new -= offdiag.T*offdiag
-        U_new = cholesky(U_new).T
-        # info = dpotrf_wrap(U_new)
-        # if info>0:
-        #     raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
+
+        info = dpotrf_wrap(U_new)
+        if info>0:
+            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
             
         U[N_old:,N_old:] = U_new
         return U

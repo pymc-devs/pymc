@@ -36,19 +36,6 @@ class NearlyFullRankCovariance(Covariance):
         
     :SeeAlso: Mean, BasisCovariance, SeparableBasisCovariance, Realization, observe
     """
-
-    ndim = None
-    observed = False
-    obs_mesh = None
-    obs_V = None 
-    Uo = None
-    obs_piv = None
-    obs_len = None
-    RF = None
-    S_unobs = None
-    full_piv = None
-    full_obs_mesh = None
-    basiscov = False
     
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True):
         """

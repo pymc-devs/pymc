@@ -246,6 +246,67 @@ cf2py integer intent(out)::info
       
       return
       END
+
+      SUBROUTINE gp_array_logp(x, mu, sig, n, like, info)
+
+cf2py intent(in) x, mu
+cf2py intent(in) sig
+cf2py intent(out) like
+cf2py intent(hide) info, n
+
+      DOUBLE PRECISION sig(n,n), x(n), mu(n), like
+      INTEGER n, info, i
+      DOUBLE PRECISION twopi_N, log_detC, gd
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+
+      EXTERNAL DTRSV
+! DTRSV ( UPLO, TRANS, DIAG, N, A, LDA, X, INCX )
+!       EXTERNAL DPOTRS
+! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
+      EXTERNAL DAXPY
+! DAXPY(N,DA,DX,INCX,DY,INCY) Adding vectors
+      EXTERNAL DCOPY
+! DCOPY(N,DX,INCX,DY,INCY) copies x to y
+! NB DDOT from ATLAS, compiled with gfortran 4.2 on Ubuntu Gutsy,
+! was producing bad output- hence the manual dot product.
+      
+!     x <- (x-mu)      
+      call DAXPY(n, -1.0D0, mu, 1, x, 1)
+
+!       mu <- x
+!       call DCOPY(n,x,1,mu,1)
+      
+!     x <- sig ^-1 * x
+!       call DPOTRS('L',n,1,sig,n,x,n,info)
+      call DTRSV('U','T','N',n,sig,n,x,1)
+
+      gd=0.0D0
+      do i=1,n
+          gd=gd+x(i)*x(i)
+      end do
+      
+!     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
+      like = -0.5D0 * gd
+!       print *, like
+      
+      twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
+!       print *, twopi_N
+      
+      log_detC = 0.0D0
+      do i=1,n
+        log_detC = log_detC + log(sig(i,i))
+      enddo
+!       print *, log_detC
+      
+      like = like - twopi_N - log_detC
+      
+      return
+      END
+
+
 c
 ! 
 !       SUBROUTINE dpotrs_wrap(chol_fac, b, info, n, m, uplo)

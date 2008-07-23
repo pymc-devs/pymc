@@ -19,29 +19,29 @@ class Mean(object):
     
     :Arguments:
     
-        -   `eval_fun`: A function that takes an argument x of shape  (n,n_dim), where n is 
-            any integer and n_dim is the dimensionality of  the space, or shape (n). In the 
-            latter case n_dim should be assumed to be 1..
+        -   `eval_fun`: A function that takes an argument x of shape  (n,ndim), where n is 
+            any integer and ndim is the dimensionality of  the space, or shape (n). In the 
+            latter case ndim should be assumed to be 1..
         
         -   `params`: Parameters to be passed to eval_fun
     
     
     :SeeAlso: Covariance, Realization, Observe
     """
-    
-    ndim = None
-    observed = False
-    obs_mesh = None
-    base_mesh = None
-    obs_vals = None
-    obs_V = None
-    reg_mat = None
-    obs_len = None
-    mean_under = None
-    Uo = None
-    obs_piv = None
-    
+        
     def __init__(self, eval_fun, **params):
+        
+        self.ndim = None
+        self.observed = False
+        self.obs_mesh = None
+        self.base_mesh = None
+        self.obs_vals = None
+        self.obs_V = None
+        self.reg_mat = None
+        self.obs_len = None
+        self.mean_under = None
+        self.Uo = None
+        self.obs_piv = None
 
         self.eval_fun = eval_fun
         self.params = params      

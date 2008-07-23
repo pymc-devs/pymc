@@ -2,7 +2,7 @@
 
 __docformat__ = 'reStructuredText'
 
-__all__ = ['GP_array_logp', 'GP_array_random', 'GP', 'GPMetropolis', 'GPNormal', 'GPParentMetropolis']
+__all__ = ['GP_array_random', 'GP', 'GPMetropolis', 'GPNormal', 'GPParentMetropolis']
 
 import pymc as pm
 import linalg_utils
@@ -16,15 +16,9 @@ from Covariance import Covariance
 from GPutils import observe, regularize_array
 
 
-def GP_array_logp(value, M, U):
-    return pm.flib.chol_mvnorm(value,M,U.T)
-
 def GP_array_random(M, U, scale=1.):
     b = np.dot(U.T , np.random.normal(size = U.shape[0]))
-    if not scale==1.:
-        return np.asarray(M+b*scale).squeeze()
-    else:
-        return np.asarray(M+b).squeeze()
+    return np.asarray(M+b*scale).squeeze()
 
 class GP(pm.Stochastic):
     """
@@ -121,7 +115,10 @@ class GP(pm.Stochastic):
                 
                 # Most covariances generate U_mesh automatically when observed,
                 # and after observation they can be used to efficiently construct realizations.
-                junk1, junk2, U = C.observe(mesh, np.zeros(mesh.shape[0]), assume_full_rank=True)
+                try:
+                    junk1, junk2, U = C.observe(mesh, np.zeros(mesh.shape[0]), assume_full_rank=True)
+                except np.linalg.LinAlgError:
+                    return np.linalg.LinAlgError
                 
                 # Handle BasisCovariances separately
                 if U is None:
@@ -153,7 +150,7 @@ class GP(pm.Stochastic):
             else:                
                 if self.verbose > 1:
                     print '\t%s: Computing log-probability.' % self.__name__
-                return GP_array_logp(value(self.mesh), self.M_mesh.value, self.C_and_U_mesh.value[0])
+                return linalg_utils.gp_array_logp(value(self.mesh), self.M_mesh.value, self.C_and_U_mesh.value[0])
                 
                     
         @pm.deterministic(verbose=verbose-1, cache_depth=cache_depth, trace=False)
@@ -434,8 +431,7 @@ class GPMetropolis(pm.Metropolis):
         if self.f.mesh is not None:
             
             # Generate values for self's value on the mesh.
-            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.C_and_U_mesh.value[0], scale=self.scale)
-
+            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.C_and_U_mesh.value[0], scale=self.scale * self._asf)
             
             # Generate self's value using those values.
             C = self.f.C_and_U_mesh.value[1]
@@ -560,6 +556,8 @@ class GPNormal(pm.Gibbs):
         self.f = f
         self._id = 'GPNormal_'+self.f.__name__
         self.same_mesh = same_mesh
+        if self.same_mesh:
+            obs_mesh = self.f.mesh
         
         @pm.deterministic
         def obs_mesh(obs_mesh=obs_mesh):
