@@ -6,6 +6,7 @@ MySQL trace module
 Created by Chris Fonnesbeck on 2007-02-01.
 Updated by CF 2008-07-13.
 """
+# TODO: Commit multiple tallies with single database call.
 
 from numpy import zeros, shape, squeeze, transpose
 import base, pickle, ram, pymc, sqlite

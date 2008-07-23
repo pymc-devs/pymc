@@ -6,10 +6,11 @@ from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, a
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
+from numpy.random import poisson as rpoisson
 from PyMCObjects import Stochastic, Potential, Deterministic
 from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
-from     pymc.decorators import prop
+from pymc.decorators import prop
 from copy import copy
 from InstantiationDecorators import deterministic
 import pdb, warnings, sys
@@ -597,7 +598,7 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
     
-    def __init__(self, stochastic, scale=1., sig=None, dist=None):
+    def __init__(self, stochastic, scale=1., sig=None, dist=None, positive=False):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
@@ -605,6 +606,9 @@ class DiscreteMetropolis(Metropolis):
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
+        
+        # Flag for positive-only values
+        self._positive = positive
     
     @staticmethod
     def competence(stochastic):
@@ -621,10 +625,19 @@ class DiscreteMetropolis(Metropolis):
         # Propose new values using normal distribution
         
         if self._dist == "Normal":
-            new_val = rnormal(self.stochastic.value,self._asf * self._sig)
-            self.stochastic.value = round_array(new_val)
+            #new_val = rnormal(self.stochastic.value,self._asf * self._sig)
+            #self.stochastic.value = round_array(new_val)
+            k = shape(self.stochastic.value)
+            # Add or subtract (equal probability) Poisson sample 
+            new_val = self.stochastic.value + rpoisson(self._asf * self._sig) * ones(k) + (-2*(random(k)>0.5))
+            if self._positive:
+                # Enforce positive values
+                self.stochastic.value = abs(new_val)
+            else:
+                self.stochastic.value = new_val
         elif self._dist == "Prior":
             self.stochastic.random()
+
 
 
 class BinaryMetropolis(Metropolis):
