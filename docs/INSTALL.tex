@@ -42,9 +42,9 @@ in binary format.
 \end{itemize}
 
 There are prebuilt distributions that include all the needed dependencies. For
-Mac OSX users, we recommend the \href{http://www.activestate.com/Products/ActivePython/}{MacPython} distribution, or Python 2.5.1 that
-ships with OSX 10.5 (Leopard). Windows users should download and install
-\href{http://code.enthought.com/enthon/}{Enthought Python}. The Mac OS X binary distribution of PyMC comes bundled with
+Mac OSX users, we recommend the \href{http://www.activestate.com/Products/ActivePython/}{MacPython} distribution, the \href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}, or Python 2.5.1 that
+ships with OSX 10.5 (Leopard). Windows users should download and install the
+\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}. The Enthought Python Distribution comes bundled with
 these prerequisites.
 
 If instead of installing the prebuilt binaries you prefer (or have) to build PyMC
@@ -98,22 +98,16 @@ change the -{}-compiler argument accordingly.
 \pdfbookmark[1]{Mac OS X}{mac-os-x}
 \subsection*{Mac OS X}
 \label{mac-os-x}
-\setcounter{listcnt0}{0}
-\begin{list}{\arabic{listcnt0}.}
-{
-\usecounter{listcnt0}
-\setlength{\rightmargin}{\leftmargin}
-}
-\item {} 
-Download the prebuilt binary installer from the \href{http://code.google.com/p/pymc/downloads/list}{PyMC download page}
 
-\item {} 
-Double-click the installer package. Your archive utility will usually expand
-the installer from its archive. From here, the prerequisite packages can be
-installed (by double-clicking the installers and following the on-screen
-instructions), followed by the PyMC package itself.
+Mac binaries are installed using \href{http://peak.telecommunity.com/DevCenter/EasyInstall}{EasyInstall}, part of the setuptools suite.
+Once EasyInstall is on your system, simply type:
+\begin{quote}{\ttfamily \raggedright \noindent
+sudo~easy{\_}install~-Z~-i~http://drop.io/superpack~pymc
+}\end{quote}
 
-\end{list}
+The \titlereference{sudo} command will be required to install PyMC into the Python site-packages
+directory if it has restricted privileges. You will be prompted for a  password, and
+provided you have superuser privileges, the installation will proceed.
 
 To build and install PyMC from source:
 \setcounter{listcnt0}{0}
@@ -130,19 +124,10 @@ Untar the source archive, then move into the resulting source directory in
 the command terminal and type:
 \begin{quote}{\ttfamily \raggedright \noindent
 python~setup.py~build~\\
-python~setup.py~install
-}\end{quote}
-
-\end{list}
-
-The \titlereference{sudo} command will be required to install PyMC into the Python site-packages
-directory if it has restricted privileges:
-\begin{quote}{\ttfamily \raggedright \noindent
 sudo~python~setup.py~install
 }\end{quote}
 
-You will be prompted for a  password, and provided you have superuser privileges,
-the installation will proceed.
+\end{list}
 
 
 %___________________________________________________________________________
@@ -207,8 +192,8 @@ Previous versions are available in the /tags/ directory.
 
 To make sure everything is working correctly, open a python shell and type:
 \begin{quote}{\ttfamily \raggedright \noindent
-import~pymc~\\
-pymc.test()
+from~pymc~import~testsuite~\\
+testsuite.test()
 }\end{quote}
 
 You should see a lot of tests being run, and messages appear if errors are
