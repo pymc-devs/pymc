@@ -1,11 +1,11 @@
-%___________________________________________________________________________
+%!TEX root = guide2.0.tex
 
 \hypertarget{monte-carlo-methods-in-bayesian-analysis}{}
 \pdfbookmark[0]{Monte Carlo Methods in Bayesian Analysis}{monte-carlo-methods-in-bayesian-analysis}
 
 \section*{Monte Carlo Methods in Bayesian Analysis}
 
-Bayesian analysis often requires integrals that are analytically intractable and too high-dimensional do evaluate using standard methods of numerical integration. However, it is often possible to compute these integrals by simulating from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
+Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
 
 \[
 E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
@@ -81,7 +81,7 @@ g(x) \le  f(x) \qquad\forall x \in (-\infty,\infty)
 
 Having done this, we can now sample ${x_i}$ from $g(x)$ and accept or reject each of these values based upon $f(x_i)$. Specifically, for each draw $x_i$, we also draw a uniform random variate $u_i$ and accept $x_i$ if $u_i < f(x_i)/kg(x_i)$ (Figure \ref{fig:unbound}). This approach is made more efficient by choosing an enveloping distribution that is ``close'' to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
 
-Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions \textbf{ref}.
+Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions \citep{Gamerman:1997tb}.
 
 %___________________________________________________________________________
 
@@ -203,55 +203,6 @@ Here is a stereotypical Gibbs sampling algorithm:
 
 As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
-% Implementing a simple Gibbs sampler can be done easily in Python. Lets build a Gibbs sampler for estimating a single parameter; for example, simulating from a binomial distribution with a beta prior for $p$ (we assume $n$ is known). We just need a random number generator and a simple loop to iterate over each parameter:
-% \vspace{1cm}
-% \begin{verbatim}
-% # Import random number generators
-% from numpy import random
-% beta = random.beta
-% binomial = random.binomial
-% 
-% # Number of iterations
-% k=1000
-% 
-% # Prior parameter values
-% n=20
-% a=1
-% b=2
-% 
-% # Some fake data
-% data = [6,8,4,9,9,7,12]
-% 
-% # Empty arrays to store output
-% plist = []
-% ylist = []
-% 
-% # Here's the sampler
-% for i in range(k):
-% 
-%      # Sample from beta distribution
-%     p = beta(a+sum(data), len(data)*n-sum(data)+b)
-% 
-%     # Sample from binomial distribution
-%     y = binomial(n,p)
-% 
-%      # Append samples to lists
-%     plist.append(p)
-%     ylist.append(y)
-% 
-% # Calculate medians
-% plist.sort()
-% ylist.sort()
-% pmed = (plist[k/2]+plist[k/2+1])/2
-% ymed = (ylist[k/2]+ylist[k/2+1])/2
-% 
-% # Print results
-% print pmed, ymed
-% \end{verbatim}
-% \vspace{1cm}
-
-%___________________________________________________________________________
-
 \hypertarget{the-metropolis-hastings-algorithm}{}
 \pdfbookmark[0]{The Metropolis-Hastings Algorithm}{the-metropolis-hastings-algorithm}
 \section*{The Metropolis-Hastings Algorithm}
@@ -311,4 +262,4 @@ a(\theta^{\prime},\theta) = \frac{\pi(\theta^{\prime})}{\pi(\theta)}
 
 The choice of the random walk distribution for $\epsilon_t$ is frequently a normal or Student's $t$ density, but it may be any distribution that generates an irreducible proposal chain.
 
-An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation.
+An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation \citep{Gamerman:1997tb}.
