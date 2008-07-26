@@ -138,6 +138,12 @@ class Database(pickle.Database):
         self.filter = tables.Filters(complevel=complevel, complib=complib)
         self.mode = mode
         
+        # If mode='a', link the h5file and group right now.
+        if not self.mode.__class__ is str:
+            self._h5file = tables.openFile(self.filename, 'a')
+            i = self.mode
+            self._group = getattr(self._h5file.root, 'chain%d'%i)
+        
     def connect(self, sampler):
         """Link the Database to the Sampler instance. 
         
@@ -145,92 +151,98 @@ class Database(pickle.Database):
         to their stored value, if a new database is created, instantiate
         a Trace for the nodes to tally.
         """
+
         base.Database.connect(self, sampler)
         self.choose_name('hdf5')
         if not hasattr(self, '_h5file'):
-            if not self.mode.__class__ is str:
-                open_mode = 'a'
-            else:
+            if self.mode.__class__ is str:
                 open_mode = self.mode
+                self._h5file = tables.openFile(self.filename, open_mode)
 
-            self._h5file = tables.openFile(self.filename, open_mode)
-
-        # If mode is an integer i, grab the i'th chain to use it.
-        if not self.mode.__class__ is str:
-            # i = self.mode
-            self._group = self._h5file.getNode('/chain%d'%i)
-
-        # If mode is not an integer, initialize a new chain (group)
-        else:
-
-            self.dtype_dict = {}
-            self.trace_dict = {}
-            self.groupnum_dict = {}
+        self.dtype_dict = {}
+        self.trace_dict = {}
+        self.groupnum_dict = {}
     
         
     def _initialize(self, length):
-        """Create group for the current chain."""
-        i = len(self._h5file.listNodes('/'))
-        self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
         
-        group_counter = 0
-        group_num = 0
-        this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
- descend from a single group, so the traces are split up into several groups.')
-        
-        if self.mode.__class__ is str:
-        
-            # Make EArrays for the numerical- or array-valued variables
-            # and VLArrays for the others.
+        if not self.mode.__class__ is str:
             for o in self.model._variables_to_tally:
-                group_counter += 1
-                                
+                print o.__name__
                 arr_value = np.asarray(o.value)
-                title = o.__name__ + ': samples from %s' % self._group._v_name
                 self.dtype_dict[o] = arr_value.dtype
-                self.groupnum_dict[o] = group_num
+                for group_num in xrange(len(self._h5file.listNodes(self._group))):
+                    g = getattr(self._group, 'group%d'%group_num)
+                    if any([t._v_name == o.__name__ for t in self._h5file.listNodes(g)]):
+                        self.groupnum_dict[o] = group_num
+                        self.trace_dict[o] = getattr(g, o.__name__)
+                        
+            for object in self.model._variables_to_tally:
+                object.trace._initialize(length)
                 
-                if arr_value.dtype is od:
-                    self.trace_dict[o] = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), 
-                        title=title, filters=self.filter) 
+        else:
+            """Create group for the current chain."""
+            i = len(self._h5file.listNodes('/'))
+            self._group = self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i)
+        
+            group_counter = 0
+            group_num = 0
+            this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+descend from a single group, so the traces are split up into several groups.')
+        
+            if self.mode.__class__ is str:
+        
+                # Make EArrays for the numerical- or array-valued variables
+                # and VLArrays for the others.
+                for o in self.model._variables_to_tally:
+                    group_counter += 1
+                                
+                    arr_value = np.asarray(o.value)
+                    title = o.__name__ + ': samples from %s' % self._group._v_name
+                    self.dtype_dict[o] = arr_value.dtype
+                    self.groupnum_dict[o] = group_num
                 
-                else:
-                    atom = tables.Atom.from_dtype(arr_value.dtype)
-                    self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
-                        atom=atom, shape=(0,) + arr_value.shape, title=title, 
-                        filters=self.filter, expectedrows=length)
+                    if arr_value.dtype is od:
+                        self.trace_dict[o] = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), 
+                            title=title, filters=self.filter) 
+                
+                    else:
+                        atom = tables.Atom.from_dtype(arr_value.dtype)
+                        self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
+                            atom=atom, shape=(0,) + arr_value.shape, title=title, 
+                            filters=self.filter, expectedrows=length)
 
-                if group_counter % 4096 == 0:
-                    group_num += 1
-                    this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
- descend from a single group, so the traces are split up into several groups.')
+                    if group_counter % 4096 == 0:
+                        group_num += 1
+                        this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+descend from a single group, so the traces are split up into several groups.')
                     
 
-        for object in self.model._variables_to_tally:
-            object.trace._initialize(length)
+            for object in self.model._variables_to_tally:
+                object.trace._initialize(length)
 
             
-        # Store data objects
-        for o in self.model.data_stochastics:
-            if o.trace is True:
+            # Store data objects
+            for o in self.model.data_stochastics:
+                if o.trace is True:
                 
-                group_counter += 1
+                    group_counter += 1
                 
-                arr_value = np.asarray(o.value)
-                title = o.__name__ + ': observed value'
+                    arr_value = np.asarray(o.value)
+                    title = o.__name__ + ': observed value'
                 
-                if arr_value.dtype is np.dtype('object'):
-                    va = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
-                    va.append(o.value)
+                    if arr_value.dtype is np.dtype('object'):
+                        va = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
+                        va.append(o.value)
                     
-                else:
-                    ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), 
-                        (1,), title=title, filters=self.filter)
-                    ca[0] = o.value
+                    else:
+                        ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), 
+                            (1,), title=title, filters=self.filter)
+                        ca[0] = o.value
                     
-                if group_counter % 4096 == 0:
-                    group_num += 1
-                    this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
+                    if group_counter % 4096 == 0:
+                        group_num += 1
+                        this_group = self._h5file.createGroup(self._group, 'group%d'%group_num, 'PyTables requires that at most 4096 nodes\
 descend from a single group, so the traces are split up into several groups.')
                 
     
@@ -247,6 +259,8 @@ descend from a single group, so the traces are split up into several groups.')
         StepMethods."""
         if not self._group.__contains__('__state__'):
             va = self._h5file.createVLArray(self._group, '__state__', tables.ObjectAtom(), title='The state of the sampler', filters=self.filter)
+        else:
+            va = self._group.__state__
         va.append(state)
             
     def _check_compatibility(self):

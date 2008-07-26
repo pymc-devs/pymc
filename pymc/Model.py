@@ -549,9 +549,9 @@ class Sampler(Model):
         stoch_state = state.get('stochastics', {})
         for sm in self.stochastics:
             try:
-                self.s.value = stoch_state[sm.__name__]
+                sm.value = stoch_state[sm.__name__]
             except:
-                pass
+                print 'Warning, failed to restore state of stochastic %s' % sm.__name__
         
             
     def remember(self, trace_index = None):
