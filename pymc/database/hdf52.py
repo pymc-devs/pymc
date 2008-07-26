@@ -168,11 +168,13 @@ class Database(pickle.Database):
         
         if not self.mode.__class__ is str:
             for o in self.model._variables_to_tally:
-                print o.__name__
                 arr_value = np.asarray(o.value)
                 self.dtype_dict[o] = arr_value.dtype
                 for group_num in xrange(len(self._h5file.listNodes(self._group))):
-                    g = getattr(self._group, 'group%d'%group_num)
+                    try:
+                        g = getattr(self._group, 'group%d'%group_num)
+                    except:
+                        continue
                     if any([t._v_name == o.__name__ for t in self._h5file.listNodes(g)]):
                         self.groupnum_dict[o] = group_num
                         self.trace_dict[o] = getattr(g, o.__name__)
