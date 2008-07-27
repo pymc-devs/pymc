@@ -216,6 +216,7 @@ Deterministic variables are less complicated than stochastic variables, and have
       \item[\texttt{Logit}, \texttt{InvLogit}, \texttt{StukelLogit}, \texttt{StukelInvLogit}:] Various common link functions for generalized linear models.
    \end{description}
    It's a good idea to use these classes when feasible, because certain fitting methods (Gibbs step methods in particular) implicitly know how to take them into account.
+
     \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \texttt{Stochastic}'s decorator interface:
 \begin{verbatim}
 @deterministic
@@ -226,10 +227,11 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-The function supplied should return a new value (which may be any object) for the variable. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The \texttt{deterministic} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
+Notice that rather than returning the log-probability, as is the case for Stochastic objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The \texttt{deterministic} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
 
 Of course, since deterministic nodes are not expected to generate random variates, the longer implementation of the decorator interface available to \texttt{Stochastic} objects is not relevant here.
-    \item[Direct] The same variable could be created directly as follows:
+
+    \item[Direct] Deterministic objects can also be instantiated directly, by passing the evaluation function to the Deterministic class as an argument:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
     value = zeros(N)
@@ -254,23 +256,24 @@ Note that deterministic variables have no \texttt{isdata} flag. If a determinist
 \section*{Containers} \label{container}
 \pdfbookmark[0]{Containers}{container}
 
-In the following situation, it would be inconvenient to assign a unique label to each parent of $y$:
+In some situations, such as a state-space model, it would be inconvenient to assign a unique label to each parent of $y$:
 \begin{eqnarray*}
-    x_0 \sim \textup N(0,\tau_x)\\
-    x_{i+1}|x_i\sim\textup{N}(x_i, \tau_x),& i=0\ldots N-2\\
-    y|x \sim \textup N\left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right).
+    x_0 &\sim& \textup N(0,\tau_x)\\
+    x_{i+1}|x_i &\sim& \textup{N}(x_i, \tau_x)\\
+    y|x &\sim& \textup N\left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)\\
+	&&i=0,\ldots, N-2
 \end{eqnarray*}
-$y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \texttt{'x_0'}, \texttt{'x_1'}, etc.
+Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \texttt{`x_0'}, \texttt{`x_1'}, etc.
 
-This situation can be handled in the natural way:
+This situation can be handled naturally in PyMC:
 \begin{verbatim}
-x_0 = Normal('x_0', mu=0, tau=1)
+x_0 = Normal(`x_0', mu=0, tau=1)
 
 x = [x_0]
 last_x = x_0
 
 for i in range(1,N):          
-   x_now = Normal('x_%i'%i, mu=last_x, tau=1)        
+   x_now = Normal(`x_%i' % i, mu=last_x, tau=1)        
    last_x = x_now 
    x.append(x_now)
 
@@ -282,13 +285,11 @@ def y(value = 1, mu = x, tau = 100):
         mu_sum += mu[i] ** 2
     return normal_like(value, mu_sum, tau)
 \end{verbatim}
-The list \texttt{x} is transparently wrapped in an appropriate container class by the function \texttt{Container}.
+PyMC automatically wraps list \texttt{x} in an appropriate \texttt{Container} class. The python expression \texttt{`x_\%i' \% i} labels each Normal object in the container with the appropriate index $i$.
 
-Containers, like variables, have an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with \emph{its} value. 
+Containers, like variables, have an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with its corresponding value. 
 
-Containers can currently be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets and any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
-
-Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.
+Containers can currently be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets or any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested\footnote{Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.}. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
 
 Containers have the following useful attributes in addition to \texttt{value}:
 \begin{itemize}
@@ -321,52 +322,46 @@ In some cases, it's nice to be able to modify the joint density by incorporating
 \begin{eqnarray*}
     p(x_0, x_2, \ldots x_{N-1}) \propto \prod_{i=0}^{N-2} \psi_i(x_i, x_{i+1}).
 \end{eqnarray*}
-Arbitrary factors such as $\psi$ are contributed by objects of class \texttt{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \cite{christakos} 
+Arbitrary factors such as $\psi$ are contributed by objects of class \texttt{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \citep{Christakos:2002p5506}.
 
-% Even when there is a definite dependence hierarchy, potentials can provide a useful shorthand. Consider a new example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
-% \begin{eqnarray*}
-%     t_i|S_i \sim \textup{Geometric}(S_i), & i=1\ldots N\\
-%     S_i = \textup{logit}^{-1}(\beta x_i), &i=1\ldots N\\
-%     \beta\sim \textup{N}(\mu_\beta, V_\beta).
-% \end{eqnarray*}
-% So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be before seeing the data. It's not obvious how to work this prior information in, because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
-% \begin{itemize}
-%     \item Work the prior information into the prior on $\beta$.
-%     \item Incorporate the data from the previous experiments explicitly into the model.
-%     \item Refactor the model so that $S$ is at the bottom of the hierarchy, and assign the prior directly.
-% \end{itemize}
-% 
-% Factor potentials provide a convenient way to incorporate the prior information without the need for such major modifications. We can simply modify the joint distribution from
-% \begin{eqnarray*}
-%     p(t|S(x,\beta)) p(\beta)
-% \end{eqnarray*}
-% to
-% \begin{eqnarray*}
-%     \gamma(S,a,b) p(t|S(x,\beta)) p(\beta),
-% \end{eqnarray*}
-% where $\gamma$ expresses the prior information. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ commented out.
+Even when there is a definite dependence hierarchy, potentials can provide a useful shorthand. Consider a new example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
+\begin{eqnarray*}
+    t_i|S_i \sim \textup{Geometric}(S_i), & i=1\ldots N\\
+    S_i = \textup{logit}^{-1}(\beta x_i), &i=1\ldots N\\
+    \beta\sim \textup{N}(\mu_\beta, V_\beta).
+\end{eqnarray*}
+So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be before seeing the data. It's not obvious how to work this prior information in, because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
+\begin{itemize}
+    \item Work the prior information into the prior on $\beta$.
+    \item Incorporate the data from the previous experiments explicitly into the model.
+    \item Refactor the model so that $S$ is at the bottom of the hierarchy, and assign the prior directly.
+\end{itemize}
+
+Factor potentials provide a convenient way to incorporate the prior information without the need for such major modifications. We can simply modify the joint distribution from
+\begin{eqnarray*}
+    p(t|S(x,\beta)) p(\beta)
+\end{eqnarray*}
+to
+\begin{eqnarray*}
+    \gamma(S,a,b) p(t|S(x,\beta)) p(\beta),
+\end{eqnarray*}
+where $\gamma$ expresses the prior information. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed.
 
 \bigskip
-Potentials have one important attribute, \texttt{\bfseries logp}, which gives the log of their current probability or probability density value given the values of their parents. They have the following additional attributes:
-\begin{description}
-    \item[\texttt{parents}:] A dictionary containing the potential's parents. The keys of the dictionary correspond to the names assigned to the potential's parents by the potential, and the values correspond to the actual parents. Thanks to Python's dynamic typing, parents may be of any class or type.
-    \item[\texttt{__name__}:] The name of the potential, should be unique.
-    \item[\texttt{__doc__}:] The docstring of the potential.
-\end{description}
-Potentials have no methods. They have no \texttt{trace} attribute, because they are not variables. They cannot serve as parents of variables for the same reason, so they have no \texttt{children} attribute.
+Potentials have one important attribute, \texttt{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is \texttt{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \texttt{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \texttt{children} attribute.
 
 
 \subsection*{Creation of \texttt{Potentials}}
 There are two ways to create potentials:
 \begin{description}
-    \item[Decorator] A potential can be created via a decorator in a way very similar to \texttt{Stochastic}'s short interface and \texttt{Deterministic}'s decorator interface:
+    \item[Decorator] A potential can be created via a decorator in a way very similar to \texttt{Deterministic}'s decorator interface:
 \begin{verbatim}
 @potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
     return -(xlo - xhi)**2
 \end{verbatim}
-The function supplied should return a Numpy \texttt{float}. Arguments' names and values are converted into a parent dictionary as with \texttt{Stochastic}'s medium interface. The function's \texttt{__name__} is passed on to the potential. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
+The function supplied should return a Numpy \texttt{float}. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
@@ -386,7 +381,7 @@ psi_i = Potential(  logp = psi_i_logp,
 \section*{Graphing models} \label{graphical}
 \pdfbookmark[0]{Graphing models}{graphical}
 
-The function \texttt{graph} draws graphical representations of \texttt{Model} (chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \texttt{graph} draws graphical representations of \texttt{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot (if they are installed). See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
@@ -433,4 +428,4 @@ Before calling \texttt{fun}, \texttt{L} will check the values of \texttt{argumen
 
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parental value configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected.
 
-Lazy functions are implemented in C via Pyrex.
+Lazy functions are implemented in C using Pyrex, a language for writing Python extensions.
