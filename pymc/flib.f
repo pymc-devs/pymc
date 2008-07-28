@@ -222,10 +222,10 @@ cf2py intent(hide) nmu, ntau, nalph, tnx
 cf2py intent(out) x
 
 
+      INTEGER i, nx, nalph, nmu, ntau, tnx
       DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
       DOUBLE PRECISION U1,U2, mu_now, tau_now, alph_now, d_now
       DOUBLE PRECISION rn(tnx)
-      INTEGER i, nx, nalph, nmu, ntau, tnx
       LOGICAL vec_mu, vec_tau, vec_alph
       
       vec_mu = (nmu.GT.1)
