@@ -87,5 +87,6 @@ class Database(base.Database):
     """
     def __init__(self):
         """Get the Trace from the local scope."""
+        self.__name__ = 'ram'
         self.Trace = Trace
     

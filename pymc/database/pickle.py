@@ -34,6 +34,7 @@ class Database(base.Database):
     def __init__(self, filename=None):
         """Assign a name to the file the database will be saved in.
         """
+        self.__name__ = 'pickle'
         self.filename = filename
         self.Trace = Trace
 

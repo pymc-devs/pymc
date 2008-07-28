@@ -118,6 +118,7 @@ class Database(pickle.Database):
     def __init__(self, filename=None):
         """Assign a name to the file the database will be saved in.
         """
+        self.__name__ = 'sqlite'
         self.filename = filename
         self.Trace = Trace
     

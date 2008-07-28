@@ -120,6 +120,7 @@ class Database(pickle.Database):
             ratio. 
           - bzip2 has an excellent compression ratio but requires more CPU. 
         """
+        self.__name__ = 'hdf5'
         self.filename = filename
         self.Trace = Trace
         self.filter = tables.Filters(complevel=complevel, complib=complib)

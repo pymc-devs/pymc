@@ -35,6 +35,7 @@ class Trace(ram.Trace):
 class Database(pickle.Database):
     """Define the methods that will be assigned to the Model class"""
     def __init__(self, dirname=None, mode='w'):
+        self.__name__ = 'txt'
         self.filename = dirname
         self.Trace = Trace
         self.mode = mode

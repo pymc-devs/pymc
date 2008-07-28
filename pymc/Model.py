@@ -551,7 +551,7 @@ class Sampler(Model):
             try:
                 sm.value = stoch_state[sm.__name__]
             except:
-                print 'Warning, failed to restore state of stochastic %s' % sm.__name__
+                print 'Warning, failed to restore state of stochastic %s from %s backend' % (sm.__name__, self.db.__name__)
         
             
     def remember(self, trace_index = None):

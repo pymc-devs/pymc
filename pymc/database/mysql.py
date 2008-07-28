@@ -67,6 +67,8 @@ class Database(pickle.Database):
     """Define the methods that will be assigned to the Model class"""
     def __init__(self, dbuser='', dbpass='', dbhost='localhost', dbport=3306):
         
+        self.__name__ = 'mysql'
+        
         self._user = dbuser
         self._passwd = dbpass
         self._host = dbhost

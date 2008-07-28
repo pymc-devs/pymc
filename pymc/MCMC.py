@@ -180,7 +180,7 @@ class MCMC(Sampler):
                     remaining = self._iter - i
                     time_left = remaining * per_step
                     
-                    print "Iteration %i of %i (%i:%02d remaining)" % (i, self._iter, time_left/3600, (time_left%3600)/60)
+                    print "Iteration %i of %i (%i:%02d:%02d remaining)" % (i, self._iter, time_left/3600, (time_left%3600)/60, (time_left%60))
                     
                 if not i % 1000:
                     self.commit()
