@@ -1749,7 +1749,7 @@ def skew_normal_expval(mu,tau,alpha):
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
 
-# Uniform--------------------------------------------------
+# DiscreteUniform--------------------------------------------------
 @randomwrap
 def rdiscrete_uniform(lower, upper, size=1):
     """
@@ -1788,7 +1788,7 @@ def discrete_uniform_like(x,lower, upper):
     return flib.uniform_like(x, lower, upper+1)
 
 
-# DiscreteUniform--------------------------------------------------
+# Uniform--------------------------------------------------
 @randomwrap
 def runiform(lower, upper, size=1):
     """

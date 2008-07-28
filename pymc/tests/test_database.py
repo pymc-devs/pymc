@@ -166,14 +166,14 @@ if hasattr(database, 'hdf5'):
             S.sample(500,100,2)
             assert_array_equal(S.e.trace().shape, (200,))
             assert_equal(S.e.trace.length(), 200)
-            assert_array_equal(S.D.value, DisasterModel.D_array)
+            assert_array_equal(S.D.value, DisasterModel.disasters_array)
             S.db.close()
             
         def test_load(self):
             db = database.hdf5.load('Disaster.hdf5', 'a')
             assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
-               DisasterModel.D_array)
-            assert_array_equal(db.D, DisasterModel.D_array)
+               DisasterModel.disasters_array)
+            assert_array_equal(db.D, DisasterModel.disasters_array)
             S = MCMC(DisasterModel, db)
             
             S.sample(100,0,1)

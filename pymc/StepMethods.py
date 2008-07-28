@@ -629,7 +629,7 @@ class DiscreteMetropolis(Metropolis):
             #self.stochastic.value = round_array(new_val)
             k = shape(self.stochastic.value)
             # Add or subtract (equal probability) Poisson sample 
-            new_val = self.stochastic.value + rpoisson(self._asf * self._sig) * ones(k) + (-2*(random(k)>0.5))
+            new_val = self.stochastic.value + rpoisson(self._asf * self._sig) * (-ones(k))**(random(k)>0.5)
             if self._positive:
                 # Enforce positive values
                 self.stochastic.value = abs(new_val)

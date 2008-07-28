@@ -25,7 +25,7 @@ class test_MCMC(TestCase):
         # Check stochastic arrays
         assert_equal(len(M.stochastics), 3)
         assert_equal(len(M.data_stochastics),1)
-        assert_array_equal(M.D.value, DisasterModel.D_array)
+        assert_array_equal(M.D.value, DisasterModel.disasters_array)
         
         # Sample
         M.sample(10000,5000,verbose=0)
