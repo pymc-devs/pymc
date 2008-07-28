@@ -68,8 +68,8 @@ Next, we define the variable $r$, which selects the early rate $e$ for times bef
 \begin{verbatim}
    @deterministic
    def r(s=s, e=e, l=l):
-      # Create an empty array of size 110
-      out = np.empty(110)
+      # Create an empty array of size 111
+      out = np.empty(111)
       # Assign e to the first s elements
       out[:s] = e
       # ... and l to the rest.
@@ -199,8 +199,8 @@ Let's take a closer look at our definition of $r$:
 \begin{verbatim}
    @deterministic
    def r(s=s, e=e, l=l):
-      # Create an empty array of size 110
-      out = np.empty(110)
+      # Create an empty array of size 111
+      out = np.empty(111)
       # Assign e to the first s elements
       out[:s] = e
       # ... and l to the rest.
