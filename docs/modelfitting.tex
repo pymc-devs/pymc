@@ -126,7 +126,7 @@ In addition, the sampler attribute \texttt{deviance} is a deterministic variable
 
 \hypertarget{MAP}{}
 \section*{Maximum a posteriori estimates} \label{sec:MAP}
-\pdfbookmark[0]{Maximum a posteriori estimates}{model}
+\pdfbookmark[1]{Maximum a posteriori estimates}{model}
 
 The \texttt{MAP} class sets all stochastic variables to their maximum a posteriori values using functions in SciPy's \texttt{optimize} package. SciPy must be installed to use it. A \texttt{MAP} instance \texttt{M} can be created as follows:
 \begin{verbatim}
@@ -154,7 +154,7 @@ One use of the \texttt{MAP} class is finding reasonable initial states for MCMC 
 
 \hypertarget{norm-approx}{}
 \section*{Normal approximations} \label{sec:norm-approx}
-\pdfbookmark[0]{Normal approximations}{norm-approx}
+\pdfbookmark[1]{Normal approximations}{norm-approx}
 
 The \texttt{NormApprox} class extends the \texttt{MAP} class by approximating the posterior covariance of the model using the Fisher information matrix, or the Hessian of the joint log probability at the maximum. In addition to the methods and attributes of \texttt{MAP}, it provides the following methods inherited from \texttt{Sampler}:
 \begin{description}
@@ -169,7 +169,7 @@ It provides the following additional attributes:
 
 \hypertarget{mcmc}{}
 \section*{Markov chain Monte Carlo: the \texttt{MCMC} class} \label{sec:mcmc}
-\pdfbookmark[0]{The MCMC class}{mcmc}
+\pdfbookmark[1]{The MCMC class}{mcmc}
  \texttt{MCMC} is a subclass of \texttt{Sampler}. At the beginning of a sampling loop, it assigns a \texttt{StepMethod} instance (section \ref{sec:stepmethod}) to each stochastic variable for which the user has not created one. Step methods are assigned as follows: each \texttt{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
 
 MCMC samplers have the following methods, in addition to those of \texttt{Sampler}:
