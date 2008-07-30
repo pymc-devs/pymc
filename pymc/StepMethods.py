@@ -625,16 +625,25 @@ class DiscreteMetropolis(Metropolis):
         # Propose new values using normal distribution
         
         if self._dist == "Normal":
-            #new_val = rnormal(self.stochastic.value,self._asf * self._sig)
-            #self.stochastic.value = round_array(new_val)
+            
+            # New normal deviate, centred on current value
+            new_val = rnormal(self.stochastic.value, self._asf * self._sig)
+            
+            # Round before setting proposed value
+            self.stochastic.value = round_array(new_val)
+            
+        elif self._dist == "Poisson":
+            
             k = shape(self.stochastic.value)
             # Add or subtract (equal probability) Poisson sample 
             new_val = self.stochastic.value + rpoisson(self._asf * self._sig) * (-ones(k))**(random(k)>0.5)
+            
             if self._positive:
                 # Enforce positive values
                 self.stochastic.value = abs(new_val)
             else:
                 self.stochastic.value = new_val
+                
         elif self._dist == "Prior":
             self.stochastic.random()
 
