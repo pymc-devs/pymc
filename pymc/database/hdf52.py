@@ -239,9 +239,9 @@ descend from a single group, so the traces are split up into several groups.')
                         va.append(o.value)
                     
                     else:
-                        ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype, arr_value.shape), 
-                            (1,), title=title, filters=self.filter)
-                        ca[0] = o.value
+                        ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype), 
+                            shape = arr_value.shape, title=title, filters=self.filter)
+                        ca[:] = o.value
                     
                     if group_counter % 4096 == 0:
                         group_num += 1

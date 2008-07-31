@@ -2,7 +2,7 @@
 
 __docformat__='reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy']
+            'fast_matrix_copy', 'point_predict']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -304,3 +304,21 @@ def predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance):
             return False
     
     return True
+    
+def point_predict(f, x, size=1, nugget=None):
+    """
+    point_predict(f, x[, size, nugget])
+
+    Makes 'size' simulations for f(x) + N(0,nugget).
+    Simulated values of f(x_i) are uncorrelated for different i.
+    Useful for geostatistical predictions.
+    """
+    orig_shape = x.shape
+    x = regularize_array(x)
+
+    mu = f.M_internal(x, regularize=False)
+    V = f.C_internal(x, regularize=False)
+    if nugget is not None:
+        V += nugget
+    out= random.normal(size=(size, x.shape[0])) * sqrt(V) + mu
+    return out.reshape((size,)+ orig_shape[:-1]).squeeze()
