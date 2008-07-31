@@ -565,4 +565,5 @@ class Sampler(Model):
             trace_index = randint(self.cur_trace_index)
 
         for variable in self._variables_to_tally:
-            variable.value = variable.trace()[trace_index]
+            if isinstance(variable, Stochastic):
+                variable.value = variable.trace()[trace_index]
