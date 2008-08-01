@@ -155,6 +155,15 @@ class FullRankCovariance(Covariance):
         U[N_old:,N_old:] = U_new
         return U
         
+    def __call__(self, x, y=None, observed=True, regularize=True):
+        out = Covariance.__call__(self,x,y,observed,regularize)
+        if x is y:
+            for i in xrange(out.shape[0]):
+                out[i,i] += self.nugget
+        elif y is None:
+            out += self.nugget
+        return out
+        
     def observe(self, obs_mesh, obs_V, assume_full_rank=True):
         """
         Observes self at obs_mesh with variance given by obs_V. 
