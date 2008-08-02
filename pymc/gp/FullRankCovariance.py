@@ -157,6 +157,8 @@ class FullRankCovariance(Covariance):
         
     def __call__(self, x, y=None, observed=True, regularize=True):
         out = Covariance.__call__(self,x,y,observed,regularize)
+        if self.nugget is None:
+            return out
         if x is y:
             for i in xrange(out.shape[0]):
                 out[i,i] += self.nugget
