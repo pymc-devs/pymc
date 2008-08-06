@@ -274,6 +274,7 @@ cf2py threadsafe
       DOUBLE PRECISION C(nx,ny)
       LOGICAL symm
       
+      
       if (cmax.EQ.-1) then
           cmax = ny
       end if
@@ -282,7 +283,7 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           C(j,j) = 1.0D0
-          do i=0,j-1
+          do i=1,j-1
             C(i,j) = dexp(-C(i,j)*C(i,j)) 
           enddo
         enddo

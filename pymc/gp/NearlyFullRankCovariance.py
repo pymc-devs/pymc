@@ -10,6 +10,7 @@ from GPutils import regularize_array, trisolve
 from linalg_utils import diag_call
 from incomplete_chol import ichol_full
 from Covariance import Covariance
+from IPython.Debugger import Pdb
 
 
 class NearlyFullRankCovariance(Covariance):
@@ -149,7 +150,6 @@ class NearlyFullRankCovariance(Covariance):
             -   `nugget`: The 'nugget' parameter, which will essentially be 
                 added to the diagonal of C(x,x) before Cholesky factorizing.
         """
-        
         if regularize:
             x=regularize_array(x)
         
@@ -166,7 +166,6 @@ class NearlyFullRankCovariance(Covariance):
         
         # Number of new points.
         N_new = x.shape[0]
-
 
         # Compute off-diagonal part of Cholesky factor
         offdiag = self.__call__(x=x_old[piv_old[:m_old],:], y=x, observed=observed, regularize=False)
@@ -186,7 +185,6 @@ class NearlyFullRankCovariance(Covariance):
             piv_new = arange(m_new)
         U_new = asmatrix(U_new[:m_new,:])
         U = asmatrix(zeros((m_new + m_old, N_old + N_new), dtype=float))
-        
         
         # Top portion of U
         U[:m_old, :m_old] = U_old[:,:m_old]
@@ -213,11 +211,12 @@ class NearlyFullRankCovariance(Covariance):
 
         if not apply_pivot:
             # Useful for self.observe. U is upper triangular.
-            return {'pivots': piv, 'U': U}
+            return {'pivots': piv, 'U': U}            
 
         else:
             # Useful for the user. U.T * U = C(x,x).
             return U[:,argsort(piv)]
+
             
 # def clean_array(A):
 #     for i in xrange(A.shape[0]):
