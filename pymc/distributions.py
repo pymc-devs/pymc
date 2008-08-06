@@ -824,7 +824,7 @@ def rexponential(beta, size=1):
     Exponential random variates.
     """
 
-    return np.random.exponential(beta,size)
+    return np.random.exponential(1./beta,size)
 
 def exponential_expval(beta):
     """
@@ -832,7 +832,7 @@ def exponential_expval(beta):
 
     Expected value of exponential distribution.
     """
-    return beta
+    return 1./beta
 
 
 def exponential_like(x, beta):
@@ -858,7 +858,7 @@ def exponential_like(x, beta):
       - :math:`Var(X) = \beta^2`
     """
     
-    return flib.gamma(x, 1, .1/beta)
+    return flib.gamma(x, 1, beta)
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap

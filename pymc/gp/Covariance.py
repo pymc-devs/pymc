@@ -249,10 +249,13 @@ class Covariance(object):
             m= m_old + N_new
             U2 = self.__call__(x,x,observed=True,regularize=False)
             U2 = cholesky(U2).T
-            offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
-            trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
-            U[m_old:,N_new+m_old:] = offdiag2
             U[m_old:,m_old:N_new+m_old] = U2
+            
+            if m_old < N_old:
+                offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
+                trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
+                U[m_old:,N_new+m_old:] = offdiag2
+
 
 
         # Arrange output matrix and return.

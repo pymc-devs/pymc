@@ -284,7 +284,6 @@ cf2py threadsafe
           C(j,j) = 1.0D0
           do i=0,j-1
             C(i,j) = dexp(-C(i,j)*C(i,j)) 
-!             C(j,i) = C(i,j)
           enddo
         enddo
 
