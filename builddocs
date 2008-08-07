@@ -10,7 +10,7 @@ epydoc --verbose --debug --config epydoc.conf
 
 # Make manual
 cd docs
-cat pdf/distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
+cat distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
 sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
 rst2latex ../README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\hypertarget\{installation\}\{\}' -o README.tex
 rst2latex ../INSTALL.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex

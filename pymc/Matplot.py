@@ -267,6 +267,10 @@ def plotwrapper(f):
     """
     
     def wrapper(pymc_obj, *args, **kwargs):
+        
+        start = 0
+        if kwargs.has_key('start'):
+            start = kwargs.pop('start')
     
         # Figure out what type of object it is
         try:
@@ -274,7 +278,7 @@ def plotwrapper(f):
             for variable in pymc_obj._variables_to_tally:            
                 # Plot object
                 if variable._plot:
-                    data = variable.trace()
+                    data = variable.trace()[start:]
                     name = variable.__name__
                     f(data, name, *args, **kwargs)
             return
@@ -284,7 +288,7 @@ def plotwrapper(f):
         try:
             # Then try Node type
             if pymc_obj._plot:
-                data = pymc_obj.trace()
+                data = pymc_obj.trace()[start:]
                 name = pymc_obj.__name__
                 f(data, name, *args, **kwargs)
             return

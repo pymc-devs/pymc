@@ -154,14 +154,14 @@ class Variable(Node):
 
     plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
     
-    def stats(self, alpha=0.05):
+    def stats(self, alpha=0.05, start=0):
         """
         Generate posterior statistics for node.
         """
         from utils import hpd, quantiles
         from numpy import sqrt
     
-        trace = self.trace().astype(float)
+        trace = self.trace().astype(float)[start:]
         
         try:
             return {

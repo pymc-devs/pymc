@@ -16,9 +16,9 @@ Purpose
 
 PyMC is a python module that implements Bayesian statistical models and
 fitting algorithms, including Markov chain Monte Carlo, using Python classes. 
-It is extremely flexible and applicable to a large suite of problems. It 
-includes methods for summarizing output, plotting, goodness-of- fit and 
-convergence diagnostics. 
+Its flexibility makes it applicable to a large suite of problems. Along with 
+core sampling functionality, PyMC includes methods for summarizing output, plotting, 
+goodness-of- fit and convergence diagnostics. 
 
 
 Features
@@ -29,13 +29,13 @@ Features
   
 * Sampling loops can be paused and tuned manually, or saved and restarted later.
 
-* 24 well-documented statistical distributions.
+* Large suite of well-documented statistical distributions.
 
 * Creates summaries including tables and plots.
 
 * Convergence diagnostics. 
 
-* Traces can be saved to the disk as plain text, pickles, sqlite or MySQL
+* Traces can be saved to the disk as plain text, Python pickles, SQLite or MySQL
   database, or hdf5 archives. The hdf5 option allows traces to be streamed
   to the disk during sampling, reducing memory usage.
 
@@ -62,26 +62,30 @@ What's new in 2.0
 Usage
 =====
 
-First, define your model in mymodel.py::
+First, define your model in a file, say mymodel.py (with comments, of course!)::
 
+   # Import relevant modules
    import pymc
    import numpy
 
+   # Some data
    n = 5*numpy.ones(4,dtype=int)
    x = numpy.array([-.86,-.3,-.05,.73])
 
+   # Priors on unknown parameters
    alpha = pymc.Normal('alpha',mu=0,tau=.01)
    beta = pymc.Normal('beta',mu=0,tau=.01)   
 
+   # Arbitrary deterministic function of parameters
    @deterministic
    def theta(a=alpha, b=beta, d=dose):
        """theta = logit^{-1}(a+b)"""
        return pymc.invlogit(a+b*d)
 
-
+   # Binomial likelihood for data
    d = Binomial('d', n=n, p=theta, value=numpy.array([0.,1.,3.,5.]), isdata=True)
 
-From a python shell, type::
+From a python shell (or another file), call::
 
 	import pymc
 	import mymodel
@@ -89,8 +93,7 @@ From a python shell, type::
 	S = pymc.MCMC(mymodel, db='pickle')
 	S.sample(iter=10000, burn=5000, thin=2)
 
-where problem_definition is a module or a dictionary containing Node, Data and 
-Parameter instances defining your problem. 
+This will generate 10000 posterior samples, with the first half discarded as burn-in. The sample is stored in a Python serialization (pickle) database.
 
 
 History

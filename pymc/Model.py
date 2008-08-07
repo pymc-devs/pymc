@@ -333,7 +333,7 @@ class Sampler(Model):
         """
         pass
         
-    def stats(self):
+    def stats(self, alpha=0.05, start=0):
         """
         Statistical output for variables
         """
@@ -343,7 +343,7 @@ class Sampler(Model):
         # Loop over nodes
         for variable in self._variables_to_tally:            
             # Plot object
-            stat_dict[variable.__name__] = variable.stats()
+            stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start)
             
         return stat_dict
         
