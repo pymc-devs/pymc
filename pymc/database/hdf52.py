@@ -265,6 +265,7 @@ descend from a single group, so the traces are split up into several groups.')
         else:
             va = self._group.__state__
         va.append(state)
+        self._h5file.flush()
             
     def _check_compatibility(self):
         """Make sure the next objects to be tallied are compatible with the 

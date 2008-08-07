@@ -340,7 +340,7 @@ class NoStepper(StepMethod):
     """
     def step(self):
         pass
-    def tune(self):
+    def tune(self, *args, **kwargs):
         pass
 
 # The default StepMethod, which Model uses to handle singleton stochastics.
@@ -743,10 +743,10 @@ class AdaptiveMetropolis(StepMethod):
     
     :Parameters:
       - stochastic : PyMC objects
-            Stochastic objects to be handled by the AM algorith,
+          Stochastic objects to be handled by the AM algorith,
             
       - cov : array
-            Initial guess for the covariance matrix C. 
+          Initial guess for the covariance matrix C. 
             
       - delay : int
           Number of steps before the empirical covariance is computed. If greedy 
@@ -766,6 +766,16 @@ class AdaptiveMetropolis(StepMethod):
           If True, only the accepted jumps are tallied in the internal trace 
           until delay is reached. This is useful to make sure that the empirical 
           covariance has a sensible structure. 
+          
+      - shrink_if_necessary : bool
+          If True, the acceptance rate is checked when the step method tunes. If 
+          the acceptance rate is small, the proposal covariance is shrunk according 
+          to the folllowing rule:
+          
+          if acc_rate < .001:
+              self.C *= .01        
+          elif acc_rate < .01:
+              self.C *= .25
       
       - verbose : int
           Controls the verbosity level. 
@@ -775,7 +785,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=0):
         
         # Verbosity flag
         self.verbose = verbose

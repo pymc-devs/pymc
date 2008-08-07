@@ -177,6 +177,7 @@ class Database(pickle.Database):
         """Store a dictionnary containing the state of the Model and its 
         StepMethods."""
         self.add_attr('_state_', state, 'Final state of the sampler.')
+        self._h5file.flush()
             
     def _model_trace_description(self):
         """Return a description of the table to be created in terms of PyTables columns."""

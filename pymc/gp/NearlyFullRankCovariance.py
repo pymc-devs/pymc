@@ -194,7 +194,7 @@ class NearlyFullRankCovariance(Covariance):
         
         # Lower portion of U
         U[m_old:,m_old:m_old+N_new] = U_new
-        if m_old < N_old:
+        if m_old < N_old and m_new > 0:
             offdiag_lower = self.__call__(  x=x[piv_new[:m_new],:], 
                                             y=x_old[piv_old[m_old:],:], observed=observed, regularize=False)
             offdiag_lower -= offdiag[:,:m_new].T*U[:m_old,m_old+N_new:]

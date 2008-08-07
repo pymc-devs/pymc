@@ -116,9 +116,9 @@ class MCMC(Sampler):
 
         self.restore_sm_state()
 
-    def sample(self, iter, burn=0, thin=1, tune_interval=1000, verbose=0):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000, save_interval=None, verbose=0):
         """
-        sample(iter, burn, thin, tune_interval)
+        sample(iter, burn, thin, tune_interval, save_interval, verbose)
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
@@ -131,6 +131,7 @@ class MCMC(Sampler):
         self._burn = int(burn)
         self._thin = int(thin)
         self._tune_interval = int(tune_interval)
+        self._save_interval = save_interval
 
         length = int(round((1.0*iter-burn)/thin))
         self.max_trace_length = length
@@ -172,8 +173,12 @@ class MCMC(Sampler):
                 # Calculate deviance
                 self.deviance.gen_lazy_function()
 
-                if not i % self._thin and i >= self._burn:
+                if i % self._thin == 0 and i >= self._burn:
                     self.tally()
+                
+                if self._save_interval is not None:
+                    if i % self._save_interval:
+                        self.save_state()
 
                 if not i % 10000 and i and self.verbose > 0:
                     per_step = (time.time() - start)/i

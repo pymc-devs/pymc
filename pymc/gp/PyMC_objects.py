@@ -15,6 +15,8 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
+from IPython.Debugger import Pdb
+
 
 def GP_array_random(M, U, scale=1.):
     b = np.dot(U.T , np.random.normal(size = U.shape[0]))
@@ -176,18 +178,31 @@ class GP(pm.Stochastic):
     def random_off_mesh(self):
         if self.mesh is not None:            
             
-            cur_mesh_value = self.value(self.mesh)
+            cur_mesh_value = self.value(self.mesh).copy()
             
             # Observe the mean on the mesh at variance 0.
             M_obs = copy.copy(self.parents.value['M'])
-            M_obs.observe(self.C_and_U_mesh.value[1], self.mesh, cur_mesh_value)
+            C_obs = copy.copy(self.C_and_U_mesh.value[1])
+            M_obs.observe(C_obs, self.mesh, cur_mesh_value)
             
             # Make a cheap realization.
-            self.value = Realization(M_obs, self.C_and_U_mesh.value[1], regularize=False)
-            self.value.x_sofar = self.mesh
-            self.value.f_sofar = cur_mesh_value
+            new_value = Realization(M_obs, C_obs, regularize=False)
+            new_value.x_sofar = self.mesh
+            new_value.f_sofar = cur_mesh_value
+            
+            self.value = new_value
+            
         else:
             self.random()
+            
+    def _set_value(self, v):
+        # Pdb(color_scheme='Linux').set_trace()
+        # print self._value, v, v.f_sofar
+        self.last_value = self._value
+        self._value = v
+    def _get_value(self):
+        return self._value
+    value = property(_get_value, _set_value)
 
 class GPParentMetropolis(pm.Metropolis):
 
@@ -284,7 +299,6 @@ class GPParentMetropolis(pm.Metropolis):
                 print self._id + ' rejecting'
             self.metro_class.reject(metro_method)
             for f in self.fs:
-                # f.value = f.last_value
                 f.revert()
 
         setattr(self.metro_method, 'reject', types.MethodType(reject_with_realization, self.metro_method, self.metro_class))                
@@ -299,26 +313,21 @@ class GPParentMetropolis(pm.Metropolis):
             if self.verbose:
                 print self._id + ' proposing'
             self.metro_class.propose(metro_method)
-
-            # Don't attempt to generate a realization if the parent jump was to an
-            # illegal value
+            
+            # First make sure the proposed values are OK with f's current value
+            # on its mesh, as that will not be changed here.
             try:
-                for stochastic in self.metro_method.stochastics:
-                    stochastic.logp
+                # FIRST make sure none of the stochastics handled by metro_method forbid their current values.
+                for s in self.metro_method.stochastics:
+                    s.logp
+                for f in self.fs:
+                    f.logp
             except pm.ZeroProbability:
                 self.metro_class.reject(metro_method)
                 return
 
-            try:
-                for f in self.fs:    
-                    f.random_off_mesh()
-                    # if f.mesh is not None:
-                    #     f.value = Realization(self.M[f].value,self.C[f].value,init_mesh=f.mesh,
-                    #                 init_vals=f.value(f.mesh, regularize=False).ravel(), regularize=False)
-                    # else:
-                    #     f.value = Realization(self.M[f].value,self.C[f].value)
-            except np.linalg.LinAlgError:
-                self.metro_class.reject(metro_method)
+            for f in self.fs:
+                f.random_off_mesh()                    
         
         setattr(self.metro_method, 'propose', types.MethodType(propose_with_realization, self.metro_method, self.metro_class))
     
@@ -374,6 +383,7 @@ class GPParentMetropolis(pm.Metropolis):
         if self.verbose:
             print 
             print self._id + ' stepping.'
+            
         self.metro_method.step()
             
             
