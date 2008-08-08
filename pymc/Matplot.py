@@ -6,6 +6,7 @@ Plotting module using matplotlib.
 
 # Import matplotlib functions
 import matplotlib
+import pymc
 import os
 from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
@@ -64,7 +65,10 @@ def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
     # For very large objects, this will be rather long. 
     # Too get the length of the table, use obj.trace.length()
     
-    func_stacks = node.trace()
+    if isinstance(node, pymc.Variable):
+        func_stacks = node.trace()
+    else:
+        func_stacks = node
 
     if any(qlist<0.) or any(qlist>1.):
         raise TypeError, 'The elements of qlist must be between 0 and 1'
@@ -105,7 +109,10 @@ def func_envelopes(node, CI=[.25, .5, .95]):
     :SeeAlso: centered_envelope, func_quantiles, func_hist, weightplot
     """
 
-    func_stacks = node.trace()
+    if isinstance(node, pymc.Variable):
+        func_stacks = node.trace()
+    else:
+        func_stacks = node
 
     func_stacks = func_stacks.copy()
     func_stacks.sort(axis=0)
@@ -131,7 +138,10 @@ class func_sd_envelope(object):
 
     def __init__(self, node, format='pdf', plotpath='', suffix=''):
 
-        func_stacks = node.trace()
+        if isinstance(node, pymc.Variable):
+            func_stacks = node.trace()
+        else:
+            func_stacks = node
         self.name = node.__name__
         self._format=format
         self._plotpath=plotpath

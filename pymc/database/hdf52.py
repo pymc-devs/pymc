@@ -141,7 +141,7 @@ class Database(pickle.Database):
         
         # If mode='a', link the h5file and group right now.
         if not self.mode.__class__ is str:
-            self._h5file = tables.openFile(self.filename, 'a')
+            self._h5file = tables.openFile(self.filename, 'a', filters=self.filter)
             i = self.mode
             self._group = getattr(self._h5file.root, 'chain%d'%i)
         

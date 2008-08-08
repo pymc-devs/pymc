@@ -177,7 +177,7 @@ class MCMC(Sampler):
                     self.tally()
                 
                 if self._save_interval is not None:
-                    if i % self._save_interval:
+                    if i % self._save_interval==0:
                         self.save_state()
 
                 if not i % 10000 and i and self.verbose > 0:

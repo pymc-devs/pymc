@@ -44,14 +44,13 @@ def sample_likelihood(model, iter, verbose=0):
                     logpots[i] += pot.logp
 
     except KeyboardInterrupt:
-        print 'Sample ', i, ' of ', iter
-        raise KeyboardInterrupt
+        print 'Halted at sample ', i, ' of ', iter
     
-    return loglikes, logpots
+    return loglikes[:i], logpots[:i]
 
 def weight(models, iter, priors = None, verbose=0):
     """
-    weight(models, iter, priors = None)
+    posteriors, loglikes, logpots = weight(models, iter, priors = None)
 
     models is a list of Models, iter is the number of samples to use, and
     priors is a dictionary of prior weights keyed by model.
@@ -60,9 +59,11 @@ def weight(models, iter, priors = None, verbose=0):
 
     M1 = Model(model_1)
     M2 = Model(model_2)
-    weight(models = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
+    p, ll, lp = weight(models = [M1,M2], iter = 100000, priors = {M1: .8, M2: .2})
 
-    Returns a dictionary keyed by model of the model posterior probabilities.
+    Returns a dictionary keyed by model of the model posterior probabilities,
+    and two similar dictionaries containing the log-likelihoods and log-potentials
+    sampled over the course of the estimation.
     
     WARNING: the weight() function will usually not work well unless
     the dimension of the parameter space is small. Please do not trust
@@ -110,4 +111,4 @@ def weight(models, iter, priors = None, verbose=0):
     for model in models:
         posteriors[model] /= sumpost
 
-    return posteriors
+    return posteriors, loglikes, logpots
