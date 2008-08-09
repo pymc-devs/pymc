@@ -241,7 +241,6 @@ class Potential(PotentialBase):
                         verbose=verbose)
 
         self._plot = plot
-        self.zero_logp_error_msg = "Potential " + self.__name__ + "forbids its parents' current values."
 
         self._logp.force_compute()
 
@@ -274,7 +273,7 @@ class Potential(PotentialBase):
 
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
-            raise ZeroProbability, self.zero_logp_error_msg
+            raise ZeroProbability, , "Potential %s forbids its parents' current values: %s" % (self.__name__, self._parents.value)
 
         return logp
         
@@ -528,7 +527,6 @@ class Stochastic(StochasticBase):
                         verbose=verbose)
     
         # self._logp.force_compute()                   
-        self.zero_logp_error_msg = "Stochastic %s's value is outside its support,\n or it forbids its parents' current values.\nValue: %s\nParents' values:%s" % (self.__name__, self._value, self._parents.value)
 
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
@@ -637,7 +635,7 @@ class Stochastic(StochasticBase):
         
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
-            raise ZeroProbability, self.zero_logp_error_msg
+            raise ZeroProbability, "Stochastic %s's value is outside its support,\n or it forbids its parents' current values.\nValue: %s\nParents' values:%s" % (self.__name__, self._value, self._parents.value)
     
         return logp
 
