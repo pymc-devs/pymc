@@ -171,7 +171,7 @@ class MCMC(Sampler):
                     step_method.step()
                     
                 # Calculate deviance
-                self.deviance.gen_lazy_function()
+                self.deviance._value.force_compute()
 
                 if i % self._thin == 0 and i >= self._burn:
                     self.tally()
@@ -280,10 +280,10 @@ class MCMC(Sampler):
             mean_value = stochastic.trace().mean(0)
             
             # Set current value to mean
-            stochastic.set_value(mean_value)
+            stochastic.value = mean_value
         
         # Calculate deviance at the means
-        self.deviance.gen_lazy_function()
+        self.deviance._value.force_compute()
         
         # Return twice deviance minus deviance at means
         return 2*mean_deviance - self.deviance.value
@@ -363,7 +363,7 @@ class MCMC(Sampler):
                     sample = trace[random_integers(len(trace)) - 1]
                     
                     # Set current value to sampled value
-                    stochastic.set_value(sample)
+                    stochastic.value = sample
                 
                 # Run calculate likelihood with sampled stochastics
                 try:

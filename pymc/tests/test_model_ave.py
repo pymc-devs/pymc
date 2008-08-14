@@ -37,7 +37,7 @@ class test_model_ave(TestCase):
         # print model_3.__doc__
         
         
-        posterior = weight([M1,M2,M3],10000)
+        posterior = weight([M1,M2,M3],10000)[0]
 
         # print 'Log posterior probability of changepoint model: ',log(posterior[M1])
         # print 'Log posterior probability of constant rate model: ',log(posterior[M2])

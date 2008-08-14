@@ -273,7 +273,7 @@ class Potential(PotentialBase):
 
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
-            raise ZeroProbability, , "Potential %s forbids its parents' current values: %s" % (self.__name__, self._parents.value)
+            raise ZeroProbability, "Potential %s forbids its parents' current values: %s" % (self.__name__, self._parents.value)
 
         return logp
         

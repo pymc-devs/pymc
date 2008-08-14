@@ -1235,9 +1235,9 @@ def rmultinomial(n,p,size=None): # Leaving size=None as the default means return
 
     # Multiple values for p:
     if np.isscalar(n):
-        n = n * np.ones(p.shape[0],dtype=np.int)
-    out = np.empty(p.shape)
-    for i in xrange(p.shape[0]):
+        n = n * np.ones(np.shape(p)[0],dtype=np.int)
+    out = np.empty(np.shape(p))
+    for i in xrange(np.shape(p)[0]):
         out[i,:] = np.random.multinomial(n[i],p[i,:],size)
     return out
 
@@ -1402,7 +1402,7 @@ def mv_normal_like(x, mu, tau):
       mv_normal_chol_like, mv_normal_cov_like
     """
     # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
+    if len(np.shape(x))>1:
         return np.sum([flib.prec_mvnorm(r,mu,tau) for r in x])
     else:
         return flib.prec_mvnorm(x,mu,tau)
@@ -1446,7 +1446,7 @@ def mv_normal_cov_like(x, mu, C):
       mv_normal_like, mv_normal_chol_like
     """
     # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
+    if len(np.shape(x))>1:
         return np.sum([flib.cov_mvnorm(r,mu,C) for r in x])
     else:
         return flib.cov_mvnorm(x,mu,C)
@@ -1510,7 +1510,7 @@ def mv_normal_chol_like(x, mu, sig):
       mv_normal_like, mv_normal_cov_like
       """
     # TODO: Vectorize in Fortran
-    if len(x.shape)>1:
+    if len(np.shape(x))>1:
         return np.sum([flib.chol_mvnorm(r,mu,sig) for r in x])
     else:
         return flib.chol_mvnorm(x,mu,sig)
@@ -1525,7 +1525,8 @@ def rnegative_binomial(mu, alpha, size=1):
 
     Random negative binomial variates.
     """
-
+    # Using gamma-poisson mixture rather than numpy directly
+    # because numpy apparently rou
     return np.random.negative_binomial(alpha, alpha / (mu + alpha), size)
 
 def negative_binomial_expval(mu, alpha):
@@ -1544,9 +1545,19 @@ def negative_binomial_like(x, mu, alpha):
     Negative binomial log-likelihood
 
     .. math::
-        f(x \mid r, p) = \frac{(x+r-1)!}{x! (r-1)!} p^r (1-p)^x
+        f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
     x > 0, mu > 0, alpha > 0
+    
+    :Note:
+      In Wikipedia's parameterization,
+        :math: r=\alpha
+        :math: p=\alpha/(\mu+\alpha)
+        :math: \mu=r(1-p)/p
+
+      This parameterization is convenient in the Gamma-Poisson mixture interpretation
+      of the negative binomial distribution. In that case the expectation of the rate
+      is equal to :math: \mu.
     """
     
     
@@ -2150,7 +2161,7 @@ OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
 # Conjugates of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
 
 def extend_dirichlet(p):
-    if len(p.shape)>1:
+    if len(np.shape(p))>1:
         return np.hstack((p, np.atleast_2d(1.-np.sum(p))))
     else:
         return np.hstack((p,1.-np.sum(p)))
