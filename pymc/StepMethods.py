@@ -864,8 +864,8 @@ class AdaptiveMetropolis(StepMethod):
                 scaling parameter.
         """
         
-        if cov:
-            return cov
+        if cov is not None:
+            self.C = cov
         elif scales:
             # Get array of scales
             ord_sc = self.order_scales(scales)    

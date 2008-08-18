@@ -8,6 +8,7 @@ from Model import Sampler
 from StepMethods import StepMethodRegistry, assign_method
 from distributions import absolute_loss, squared_loss, chi_square_loss
 import sys, time, pdb
+import numpy as np
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -271,13 +272,13 @@ class MCMC(Sampler):
         """Calculates deviance information Criterion"""
         
         # Find mean deviance
-        mean_deviance = self.deviance.trace().mean(0)
+        mean_deviance = np.mean(self.deviance.trace(), axis=0)
         
         # Set values of all parameters to their mean
         for stochastic in self.stochastics:
             
             # Calculate mean of paramter
-            mean_value = stochastic.trace().mean(0)
+            mean_value = np.mean(stochastic.trace(), axis=0)
             
             # Set current value to mean
             stochastic.value = mean_value

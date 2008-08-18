@@ -13,8 +13,7 @@ from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
 from pprint import pformat
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes, linspace#, interp
-from numpy import arange, log, ravel, rank, swapaxes, concatenate
+from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, transpose
 from numpy import apply_along_axis
 import pdb
@@ -110,7 +109,7 @@ def func_envelopes(node, CI=[.25, .5, .95]):
     """
 
     if isinstance(node, pymc.Variable):
-        func_stacks = node.trace()
+        func_stacks = asarray(node.trace())
     else:
         func_stacks = node
 
