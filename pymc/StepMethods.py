@@ -288,7 +288,8 @@ class StepMethod(object):
         # Warning: self.stochastic is not defined above. The following assumes
         # that the class has created this value, which is a bit fragile. DH
         if verbose > 0 or self.verbose > 0:
-            print '\t\tvalue:', self.stochastic.value
+            if hasattr(self, 'stochastic'):
+                print '\t\tvalue:', self.stochastic.value
             print '\t\tacceptance rate:', acc_rate
             print '\t\tadaptive scale factor:', self._asf
             print

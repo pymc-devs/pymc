@@ -155,6 +155,13 @@ cdef class LazyFunction:
         self.cached_values[cur_frame] = value
         for j from 0 <= j < self.N_args:
             self.cached_args[cur_frame * self.N_args + j] = self.ultimate_arg_values[j]
+            
+    def force_cache(self, value):
+        """
+        Forces an arbitrary value into the cache, associated with
+        self's current input arguments. Use with caution!
+        """
+        self.cache(value)
     
     def force_compute(self):
         """
