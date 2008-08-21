@@ -390,7 +390,7 @@ class GPParentMetropolis(pm.Metropolis):
         self.metro_method.step()
         
     def tune(self, verbose=0):
-        self.metro_method.tune(verbose=verbose)
+        return self.metro_method.tune(verbose=verbose)
             
             
 class GPMetropolis(pm.Metropolis):
