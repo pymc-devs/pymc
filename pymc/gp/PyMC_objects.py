@@ -324,6 +324,9 @@ class GPParentMetropolis(pm.Metropolis):
                     f.logp
             except pm.ZeroProbability:
                 self.metro_class.reject(metro_method)
+                # TODO: This is a hack. Come up with a better fix for it.
+                self.metro_method._rejected += 1
+                self.metro_method._accepted -= 1
                 return
 
             for f in self.fs:
@@ -385,6 +388,9 @@ class GPParentMetropolis(pm.Metropolis):
             print self._id + ' stepping.'
             
         self.metro_method.step()
+        
+    def tune(self):
+        self.metro_method.tune()
             
             
 class GPMetropolis(pm.Metropolis):
