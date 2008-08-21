@@ -227,7 +227,7 @@ class GPParentMetropolis(pm.Metropolis):
         
     :SeeAlso: GPMetropolis, GPNormal
     """
-    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None):
+    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None, min_asf=0):
         
         if (stochastic is None and metro_method is None) or (stochastic is not None and metro_method is not None):
             raise ValueError, 'Either stochastic OR metro_method should be provided, not both.'
@@ -252,7 +252,7 @@ class GPParentMetropolis(pm.Metropolis):
         
         # Call to pm.StepMethod's init method.
         pm.StepMethod.__init__(self, stochastics, verbose=verbose)
-
+        self.min_asf=min_asf
 
         # Extend self's children through the GP-valued stochastics
         # and add them to the wrapped method's children.
@@ -298,8 +298,9 @@ class GPParentMetropolis(pm.Metropolis):
             if self.verbose:
                 print self._id + ' rejecting'
             self.metro_class.reject(metro_method)
-            for f in self.fs:
-                f.revert()
+            if self._need_to_reject_f:
+                for f in self.fs:
+                    f.revert()
 
         setattr(self.metro_method, 'reject', types.MethodType(reject_with_realization, self.metro_method, self.metro_class))                
 
@@ -323,14 +324,14 @@ class GPParentMetropolis(pm.Metropolis):
                 for f in self.fs:
                     f.logp
             except pm.ZeroProbability:
-                self.metro_class.reject(metro_method)
-                # TODO: This is a hack. Come up with a better fix for it.
-                self.metro_method._rejected += 1
-                self.metro_method._accepted -= 1
+                self._need_to_reject_f = False
                 return
 
+            # If the jump isn't obviously bad, propose foff its mesh from its prior.
+            self._need_to_reject_f = True
             for f in self.fs:
-                f.random_off_mesh()                    
+                f.random_off_mesh()
+
         
         setattr(self.metro_method, 'propose', types.MethodType(propose_with_realization, self.metro_method, self.metro_class))
     
@@ -390,7 +391,12 @@ class GPParentMetropolis(pm.Metropolis):
         self.metro_method.step()
         
     def tune(self, verbose=0):
-        return self.metro_method.tune(verbose=verbose)
+        if self.metro_method._asf > self.min_asf:
+            return self.metro_method.tune(verbose=verbose)
+        else:
+            if verbose > 0:
+                print self._id + " metro_method's asf is less than min_asf, not tuning it."
+            return False
             
             
 class GPMetropolis(pm.Metropolis):
