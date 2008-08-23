@@ -29,9 +29,11 @@ class Trace(base.Trace):
         """Create an array of zeros with shape (length, shape(obj)), where 
         obj is the internal PyMC Stochastic or Deterministic.
         """
-        
         # First, see if the object has an explicit dtype.
-        if self._obj.dtype is not None:
+        if self._obj.dtype is object:
+            self._trace.append( zeros(length, dtype=object) )
+        
+        elif self._obj.dtype is not None:
             self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.dtype) )
             
         # Otherwise, if it's an array, read off its value's dtype.
@@ -42,6 +44,7 @@ class Trace(base.Trace):
         # corresponding type. Otherwise it'll be an object array.
         else:
             self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=self._obj.value.__class__))           
+
         
     def tally(self, index, chain=-1):
         """Store current value."""

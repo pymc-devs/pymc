@@ -19,8 +19,7 @@ __modules__ = [ 'Node',
                 'MCMC',
                 'StepMethods',
                 'convergencediagnostics',
-                'CommonDeterministics',
-                #'testsuite'
+                'CommonDeterministics'
                 ]
                 
 __sepmodules__ = [  'utils', 
@@ -35,7 +34,13 @@ __optmodules__ = ['ScipyDistributions',
                   'sandbox',
                   'graph',
                   'Matplot']
-#ClosedCapture, OpenCapture   
+#ClosedCapture, OpenCapture
+
+try:
+    from testsuite import *   
+except:
+    def test():
+        print 'Testsuite requires NumPy 1.2 or later'
 
 for mod in __modules__:
     exec "from %s import *" % mod
