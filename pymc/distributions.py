@@ -626,7 +626,7 @@ def binomial_like(x, n, p):
 # GOF not working yet, because expval not conform to wrapper spec.
 # @randomwrap
 def rcategorical(p, minval=0, step=1, size=1):
-    out = flib.rcat(p, minval, step, size, np.random.random(size=size))
+    out = flib.rcat(p, minval, step, np.random.random(size=size))
     if sum(out.shape) == 1:
         return out.squeeze()
     else:
