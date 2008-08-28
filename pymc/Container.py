@@ -210,6 +210,9 @@ def file_items(container, iterable):
         elif isinstance(item, PotentialBase):
             container.potentials.add(item)
 
+        elif isinstance(item, ContainerBase):
+            container.containers.append(item)
+
         # Wrap internal containers
         elif hasattr(item, '__iter__'):
 
@@ -227,7 +230,7 @@ def file_items(container, iterable):
             if isinstance(container, dict):
                 container.replace(key, new_container)
             elif isinstance(container, tuple):
-                container = TupleContainer(container[:i] + (new_container,) + container[i+1:])
+                return iterable[:i] + (new_container,) + iterable[i+1:]
             else:
                 container.replace(item, new_container, i)
 
@@ -341,16 +344,16 @@ class TupleContainer(ContainerBase, tuple):
       ObjectContainer
     """
     def __init__(self, iterable):
-        tuple.__init__(self, iterable)
-        ContainerBase.__init__(self, iterable)        
-        file_items(self, iterable)
+        tuple.__init__(self, file_items(self, iterable))
+        # ContainerBase.__init__(self, iterable)        
+        # file_items(self, iterable)
 
         self.isval = []
         for i in xrange(len(self)):
             if isinstance(self[i], Variable) or isinstance(self[i], ContainerBase):
                 self.isval.append(True)
             else:
-                self.isvan.append(False)
+                self.isval.append(False)
 
     def get_value(self):
         return TCValue(self)
