@@ -101,7 +101,7 @@ class Trace(base.Trace):
         if chain==-1:
             chain = len(self.db._h5file.listNodes('/')) - 1
         chain = getattr(self.db._h5file.root, 'chain%d'%chain)
-        group = getattr(chain, 'groud%d'%self.db.groupnum_dict[self])
+        group = getattr(chain, 'groud%d'%self.db.groupnum_dict[self._obj])
         return len(getattr(group, self._obj.__name__))
         
 
@@ -133,17 +133,24 @@ class Database(pickle.Database):
             ratio. 
           - bzip2 has an excellent compression ratio but requires more CPU. 
         """
+        
+        
         self.__name__ = 'hdf5'
         self.filename = filename
         self.Trace = Trace
-        self.filter = tables.Filters(complevel=complevel, complib=complib)
+        if mode == 'w':
+            self.filter = tables.Filters(complevel=complevel, complib=complib)
+        else: 
+            if mode == 'r':
+                self._h5file = tables.openFile(self.filename, 'r')
+            else:
+                self._h5file = tables.openFile(self.filename, 'a')
+                if mode != 'a':
+                    self._group = getattr(self._h5file.root, 'chain%d'%mode)
+            self.filter = self._h5file.filters
+            
         self.mode = mode
         
-        # If mode='a', link the h5file and group right now.
-        if not self.mode.__class__ is str:
-            self._h5file = tables.openFile(self.filename, 'a', filters=self.filter)
-            i = self.mode
-            self._group = getattr(self._h5file.root, 'chain%d'%i)
         
     def connect(self, sampler):
         """Link the Database to the Sampler instance. 
@@ -271,9 +278,9 @@ descend from a single group, so the traces are split up into several groups.')
         """Make sure the next objects to be tallied are compatible with the 
         stored trace."""
         for o in self.model._variables_to_tally:
-            if not np.asarray(o.value).dtype == self.dtype_dict[0]:
+            if not np.asarray(o.value).dtype == self.dtype_dict[o]:
                 raise ValueError, "Variable %s's current dtype, '%s', is different from trace dtype '%s'. Cannot tally it." \
-                    % (o.__name__, np.asarray(o.value).dtype.name, self.dtype_dict[0].name)
+                    % (o.__name__, np.asarray(o.value).dtype.name, self.dtype_dict[o].name)
         
     def close(self):
         self._h5file.close()
