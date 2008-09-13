@@ -43,7 +43,7 @@ from pymc.Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 
 
-__all__ = ['Container', 'DictContainer', 'ListContainer', 'TupleContainer', 'SetContainer', 'ObjectContainer']
+__all__ = ['Container', 'DictContainer', 'ListContainer', 'TupleContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -154,7 +154,7 @@ def Container(*args):
     # Arrays of dtype=object
     elif isinstance(iterable, ndarray):
         if iterable.dtype == dtype('object'):
-            return ArrayContainer(iterable) 
+            return ArrayContainer(iterable)
     
     # Wrap modules
     elif isinstance(iterable, ModuleType):
@@ -181,7 +181,6 @@ def file_items(container, iterable):
     container.potentials = set()
     container.data_stochastics = set()
 
-    
     # containers needs to be a list to hold unhashable items.
     container.containers = []
     
@@ -211,6 +210,7 @@ def file_items(container, iterable):
             container.potentials.add(item)
 
         elif isinstance(item, ContainerBase):
+            container.assimilate(item)
             container.containers.append(item)
 
         # Wrap internal containers
@@ -236,15 +236,7 @@ def file_items(container, iterable):
 
             # Update all of container's variables, potentials, etc. with the new wrapped
             # iterable's. This process recursively unpacks nested iterables.
-            container.containers.append(new_container)
-            container.variables.update(new_container.variables)
-            container.stochastics.update(new_container.stochastics)
-            container.potentials.update(new_container.potentials)
-            container.deterministics.update(new_container.deterministics)
-            container.data_stochastics.update(new_container.data_stochastics)
-
-
-
+            container.assimilate(new_container)
 
     container.nodes = container.potentials | container.variables
     

@@ -200,6 +200,14 @@ class ContainerBase(object):
             except:
                 self.__name__ = 'container'
     
+    def assimilate(self, new_container):
+        self.containers.append(new_container)
+        self.variables.update(new_container.variables)
+        self.stochastics.update(new_container.stochastics)
+        self.potentials.update(new_container.potentials)
+        self.deterministics.update(new_container.deterministics)
+        self.data_stochastics.update(new_container.data_stochastics)        
+    
     def _get_logp(self):
         # Return total log-probabilities from all elements
         return sum(obj.logp for obj in self.stochastics | self.potentials | self.data_stochastics)

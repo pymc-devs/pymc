@@ -24,7 +24,10 @@ import numpy as np
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-__all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 'WishartMvNormal', 'DirichletMultinomial', 'BetaBinomial', 'BetaGeometric', 'BernoulliAnything', 'check_children', 'check_linear_extended_children', 'check_conjugacy','StandardGibbs']
+__all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma', 
+            'WishartMvNormal', 'DirichletMultinomial', 'BetaBinomial', 'BetaGeometric', 
+            'BernoulliAnything', 'check_children', 'check_linear_extended_children', 
+            'check_conjugacy','StandardGibbs']
 
 # If we implement Pareto:
 # ParetoUniform
@@ -38,7 +41,7 @@ try:
     from NormalSubmodel import NormalSubmodel, crawl_normal_submodel, normal_classes
 
     __all__.append('NormalNormal')
-    
+
     class NormalNormal(Gibbs):
         """
         N = NormalNormal(input, verbose=0)

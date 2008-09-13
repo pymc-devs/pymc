@@ -195,7 +195,7 @@ if __name__ == '__main__':
     close('all')
     figure()
     subplot(1,2,1)
-    contourf(N.C[x_list])
+    contourf(N.C[x_list][::2,::2].view(ndarray))
     subplot(1,2,2)
     plot(N.mu[x_list][::2])
     plot(N.mu[x_list][1::2])

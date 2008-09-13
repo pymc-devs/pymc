@@ -11,6 +11,7 @@ equivalent functionality.
 __docformat__='reStructuredText'
 
 import PyMCObjects as pm
+from Container import Container
 from InstantiationDecorators import deterministic
 import numpy as np
 import inspect
@@ -285,7 +286,7 @@ class LinearCombination(pm.Deterministic):
             out = np.dot(x[0], y[0])
             for i in xrange(1,len(x)):
                 out = out + np.dot(x[i], y[i])
-            return out
+            return np.asarray(out).squeeze()
 
         pm.Deterministic.__init__(self,
                                 eval=eval_fun,
@@ -324,8 +325,8 @@ class LinearCombination(pm.Deterministic):
                 self.coefs[stochastic_elem].append(this_coef)
 
                 
-        self.sides = pymc.Container(self.sides)
-        self.coefs = pymc.Container(self.coefs)
+        self.sides = Container(self.sides)
+        self.coefs = Container(self.coefs)
 
 
 class Index(LinearCombination):
@@ -395,5 +396,5 @@ class Index(LinearCombination):
             self.coefs[s] = [coef]
             self.sides[s] = ['L']
      
-        self.sides = pymc.Container(self.sides)
-        self.coefs = pymc.Container(self.coefs)
+        self.sides = pm.Container(self.sides)
+        self.coefs = pm.Container(self.coefs)

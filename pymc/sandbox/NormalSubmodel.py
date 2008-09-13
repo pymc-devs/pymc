@@ -95,6 +95,16 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
                                                
                 else:                          
                     out[j_slice,i_slice] = spmat[slices_from[sj], slices_from[si]]                
+
+    print
+    print 'slices_from:'
+    for item in slices_from.iteritems():
+        print '\t',item[0], item[1]
+    print 'slices_to:'
+    for item in slices_to.iteritems():
+        print '\t',item[0], item[1]    
+    print 'This should be all zeros when slices_from is the same as slices_to.'                
+    print np.array(cvx.base.matrix(spmat - out))
     return out
 
 def spmat_to_backsolver(spmat, N):
@@ -146,7 +156,7 @@ def crawl_normal_submodel(input):
     
         
     
-class NormalSubmodel(ListTupleContainer):
+class NormalSubmodel(ListContainer):
     """
     G = NormalSubmodel(input)
     
@@ -176,7 +186,7 @@ class NormalSubmodel(ListTupleContainer):
     """
 
     def __init__(self, input):
-        ListTupleContainer.__init__(self, input)
+        ListContainer.__init__(self, input)
         
         # Need to figure out children and parents of model.
         self.children, self.parents = find_children_and_parents(self.stochastics | self.data_stochastics)
@@ -210,12 +220,9 @@ class NormalSubmodel(ListTupleContainer):
         self.get_A()
         self.get_mult_A()
         self.get_tau()       
-        self.get_changeable_tau() 
-        self.get_changeable_mean()
-        
-        for i in xrange(2):
-            self.draw_conditional()
-    
+        self.get_changeable_tau()
+        # self.get_changeable_mean()
+            
     def get_diag_chol_facs(self):
         """
         Creates self.diag_chol_facs, which is a list.
@@ -273,8 +280,8 @@ class NormalSubmodel(ListTupleContainer):
             for c in s.children:
 
                 if c.__class__ is LinearCombination:
-                    for cc in c.extended_children:
-                    
+                    for cc in c.children:
+
                         @deterministic
                         def A(coefs = c.coefs[s], side = c.sides[s]):
                             A = 0.
@@ -285,7 +292,7 @@ class NormalSubmodel(ListTupleContainer):
                                 else:
                                     A -= elem
                             return A
-                                    
+                            
                         this_A[cc] = A
 
                 elif c.__class__ in normal_classes:
@@ -505,6 +512,7 @@ class NormalSubmodel(ListTupleContainer):
         def changeable_tau_slice(tau = self.tau):
             return slice_by_stochastics(tau, self.changeable_stochastic_list, 
                 self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.A)
+        self.changeable_tau_slice = changeable_tau_slice
 
         @deterministic
         def backsolver(changeable_tau_slice = changeable_tau_slice):
@@ -562,8 +570,6 @@ class NormalSubmodel(ListTupleContainer):
                         else:
                             raise ValueError, 'Stochastic %s has a parent %s which is Deterministic, but not\
                                                 LinearCombination, which has extended children.' % (s,c)
-                
-    
                                 
 if __name__=='__main__':
     
