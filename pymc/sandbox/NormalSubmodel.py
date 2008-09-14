@@ -36,7 +36,7 @@ def assign_from_sparse(spvec, slices):
 
 # TODO: Pass in slices_from and slices_to, do for si in A.iterkeys() instead of for i in xrange(Ni).
 # This should be much faster. It's tricky, though.
-def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, A):
+def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, mn):
 
     Ni = len(stochastics_i)
     Nj = len(stochastics_j)
@@ -49,10 +49,17 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
     symm = stochastics_i is stochastics_j
 
     i_index = 0
+    if not symm:
+        j_index = 0
+        j_slices = {}
+        for j in xrange(Nj):
+            sj = stochastics_j[j]
+            lj = stochastic_len[sj]
+            j_slices[sj] = slice(j_index, j_index+lj)
+            j_index += lj
 
     for i in xrange(Ni):
 
-        j_index = 0
         si = stochastics_i[i]
         li = stochastic_len[si]
         i_slice = slice(i_index,i_index+li)
@@ -61,14 +68,10 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
         i_slice_to = slices_to[si]
         i_slice_from = slices_from[si]
         
-        # print i_slice, i_slice_to
-        
-        symm=False
         if symm:
-            Ai = A[si]
 
             # Superdiagonal                        
-            for sj in Ai.iterkeys():
+            for sj in mn[si]:
                 if slices_to.has_key(sj):
                     out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
             
@@ -77,47 +80,19 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
 
 
         else:
-            for j in xrange(Nj):
-                sj = stochastics_j[j]
-                lj = stochastic_len[sj]
-                j_slice = slice(j_index, j_index+lj)
+            # for j in xrange(Nj):
+            #     sj = stochastics_j[j]
+            for sj in mn[si]:
+                if sj not in stochastics_j:
+                    continue
                 j_slice_from = slices_from[sj]
-                j_index += lj
                 
                 if i_slice_from.start < j_slice_from.start:
-                    out[j_slice,i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
+                    out[j_slices[sj],i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
 
-                    # this_slice = spmat[i_slice_from, j_slice_from]
-                    # if np.prod(this_slice.CCS[1].size) > 0:
-                    #     out[j_slice,i_slice] = this_slice.trans()
-                    #     # out[i_slice, j_slice] = this_slice
                 else:                          
-                    out[j_slice,i_slice] = spmat[j_slice_from, i_slice_from]                
+                    out[j_slices[sj],i_slice] = spmat[j_slice_from, i_slice_from]                
     
-    # for i in xrange(Ni):
-    #     for j in xrange(i):
-    #         print i,j,spmat[i,j]
-    if symm:
-        Pdb(color_scheme='Linux').set_trace()        
-        print
-        for s in stochastics_i:
-            print s
-        print
-        for s in stochastics_j:
-            print s
-        print
-        print 'slices_from:'
-        for item in slices_from.iteritems():
-            print '\t',item[0], item[1]
-        print 'slices_to:'
-        for item in slices_to.iteritems():
-            print '\t',item[0], item[1]    
-
-        print 'This should be all zeros when slices_from is the same as slices_to.'                
-        print sp_to_ar(spmat)
-        print np.where(np.abs(sp_to_ar(out))==200)
-    # print sp_to_ar(spmat)
-
     return out
 
 def spmat_to_backsolver(spmat, N):
@@ -492,7 +467,7 @@ class NormalSubmodel(ListContainer):
         @deterministic
         def tau_offdiag(tau = self.tau):
             return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.fixed_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.A)
+                self.fixed_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
         self.tau_offdiag = tau_offdiag
         
         # Condition canonical eta parameter.
@@ -524,7 +499,7 @@ class NormalSubmodel(ListContainer):
         @deterministic
         def changeable_tau_slice(tau = self.tau):
             return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.A)
+                self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
         self.changeable_tau_slice = changeable_tau_slice
 
         @deterministic
@@ -590,28 +565,28 @@ if __name__=='__main__':
     
     import numpy as np
     
-    # =========================================
-    # = Test case 1: Some old smallish model. =
-    # =========================================
-    A = Normal('A',1,1)
-    B = Normal('B',A,2*np.ones(2))
-    C_tau = np.diag([.5,.5])
-    C_tau[0,1] = C_tau[1,0] = .25
-    C = MvNormal('C',B, C_tau,isdata=True)
-    D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
-    
-    D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
-    # D = Normal('D',D_mean,.5*np.ones(3))
-    G = NormalSubmodel([B,C,A,D,D_mean])
-    # G = NormalSubmodel([A,B,C])
-    G.draw_conditional()
-    
-    dense_tau = sp_to_ar(G.tau.value)
-    for i in xrange(dense_tau.shape[0]):
-        for j in xrange(i):
-            dense_tau[i,j] = dense_tau[j,i]
-    CC=(dense_tau).I
-    sig_tau = np.linalg.cholesky(dense_tau)
+    # # =========================================
+    # # = Test case 1: Some old smallish model. =
+    # # =========================================
+    # A = Normal('A',1,1)
+    # B = Normal('B',A,2*np.ones(2))
+    # C_tau = np.diag([.5,.5])
+    # C_tau[0,1] = C_tau[1,0] = .25
+    # C = MvNormal('C',B, C_tau,isdata=True)
+    # D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
+    # 
+    # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
+    # # D = Normal('D',D_mean,.5*np.ones(3))
+    # G = NormalSubmodel([B,C,A,D,D_mean])
+    # # G = NormalSubmodel([A,B,C])
+    # G.draw_conditional()
+    # 
+    # dense_tau = sp_to_ar(G.tau.value)
+    # for i in xrange(dense_tau.shape[0]):
+    #     for j in xrange(i):
+    #         dense_tau[i,j] = dense_tau[j,i]
+    # CC=(dense_tau).I
+    # sig_tau = np.linalg.cholesky(dense_tau)
     
     
     # # ================================

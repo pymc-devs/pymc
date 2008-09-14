@@ -240,6 +240,14 @@ def file_items(container, iterable):
 
     container.nodes = container.potentials | container.variables
     
+    # 'Freeze' markov blanket, moral neighbors, coparents of all constituent stochastics
+    # for future use
+    for attr in ['moral_neighbors', 'markov_blanket', 'coparents']:
+        setattr(container, attr, {})
+    for s in container.stochastics:
+        for attr in ['moral_neighbors', 'markov_blanket', 'coparents']:        
+            getattr(container, attr)[s] = getattr(s, attr)
+    
 value_doc = 'A copy of self, with all variables replaced by their values.'    
 
 class SetContainer(ContainerBase, set):
