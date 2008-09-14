@@ -12,6 +12,7 @@ import numpy as np
 from graphical_utils import *
 import cvxopt as cvx
 from cvxopt import base, cholmod
+from IPython.Debugger import Pdb
 
 normal_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
 
@@ -61,26 +62,18 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
         i_slice_from = slices_from[si]
         
         # print i_slice, i_slice_to
-
+        
+        symm=False
         if symm:
             Ai = A[si]
-            # Superdiagonal
-            
+
+            # Superdiagonal                        
             for sj in Ai.iterkeys():
                 if slices_to.has_key(sj):
                     out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
             
-            # for j in xrange(i):
-            #     sj = stochastics_j[j]
-            #     lj = stochastic_len[sj]
-            #     j_slice = slice(j_index, j_index+lj)                
-            #     j_index += lj
-            #     
-            #     if Ai.has_key(sj):
-            #         out[j_slice, i_slice] = spmat[slices_from[sj], i_slice_from]
-
             # Diagonal
-            out[i_slice_to,i_slice_to] = spmat[slices_from[si], slices_from[si]]
+            out[i_slice_to,i_slice_to] = spmat[i_slice_from, i_slice_from]
 
 
         else:
@@ -88,23 +81,43 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
                 sj = stochastics_j[j]
                 lj = stochastic_len[sj]
                 j_slice = slice(j_index, j_index+lj)
+                j_slice_from = slices_from[sj]
                 j_index += lj
                 
-                if slices_from[si].start < slices_from[stochastics_j[j]].start:
-                    out[j_slice,i_slice] = spmat[slices_from[si], slices_from[sj]].trans()
-                                               
-                else:                          
-                    out[j_slice,i_slice] = spmat[slices_from[sj], slices_from[si]]                
+                if i_slice_from.start < j_slice_from.start:
+                    out[j_slice,i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
 
-    print
-    print 'slices_from:'
-    for item in slices_from.iteritems():
-        print '\t',item[0], item[1]
-    print 'slices_to:'
-    for item in slices_to.iteritems():
-        print '\t',item[0], item[1]    
-    print 'This should be all zeros when slices_from is the same as slices_to.'                
-    print np.array(cvx.base.matrix(spmat - out))
+                    # this_slice = spmat[i_slice_from, j_slice_from]
+                    # if np.prod(this_slice.CCS[1].size) > 0:
+                    #     out[j_slice,i_slice] = this_slice.trans()
+                    #     # out[i_slice, j_slice] = this_slice
+                else:                          
+                    out[j_slice,i_slice] = spmat[j_slice_from, i_slice_from]                
+    
+    # for i in xrange(Ni):
+    #     for j in xrange(i):
+    #         print i,j,spmat[i,j]
+    if symm:
+        Pdb(color_scheme='Linux').set_trace()        
+        print
+        for s in stochastics_i:
+            print s
+        print
+        for s in stochastics_j:
+            print s
+        print
+        print 'slices_from:'
+        for item in slices_from.iteritems():
+            print '\t',item[0], item[1]
+        print 'slices_to:'
+        for item in slices_to.iteritems():
+            print '\t',item[0], item[1]    
+
+        print 'This should be all zeros when slices_from is the same as slices_to.'                
+        print sp_to_ar(spmat)
+        print np.where(np.abs(sp_to_ar(out))==200)
+    # print sp_to_ar(spmat)
+
     return out
 
 def spmat_to_backsolver(spmat, N):
@@ -221,7 +234,7 @@ class NormalSubmodel(ListContainer):
         self.get_mult_A()
         self.get_tau()       
         self.get_changeable_tau()
-        # self.get_changeable_mean()
+        self.get_changeable_mean()
             
     def get_diag_chol_facs(self):
         """

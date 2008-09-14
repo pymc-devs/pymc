@@ -20,7 +20,7 @@ def sample_likelihood(model, iter, verbose=0):
     likelihood, p(data|self).
     """
     
-    model.generations = find_generations(model)
+    model._generations = find_generations(model)
     
     loglikes = zeros(iter)
 

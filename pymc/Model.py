@@ -132,12 +132,15 @@ class Model(ObjectContainer):
             self.__name__ = name
         self.verbose = 0
         
-        self.generations = []
         self.output_path = output_path
-        
-        if not hasattr(self, 'generations'):
-            self.generations = find_generations(self)
-                        
+    
+    def _get_generations(self):
+        if not hasattr(self, '_generations'):
+            self._generations = find_generations(self)
+        else:
+            return self._generations
+    generations = property(_get_generations)
+                                
     def draw_from_prior(self):
         """
         Sets all variables to random values drawn from joint 'prior', meaning contributions 
@@ -152,6 +155,7 @@ class Model(ObjectContainer):
         """
         Seed new initial values for the stochastics.
         """
+        
         for generation in self.generations:
             for s in generation:
                 try:

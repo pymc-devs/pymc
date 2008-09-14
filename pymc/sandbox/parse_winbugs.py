@@ -18,7 +18,12 @@ Replace '.' with '_'
 
 Note will allow some disallowed WinBugs syntax because 'compiles' to Python.
 
-Pass S-plus structures to rpy... but note WinBugs is row-major, S-Plus is column-major.
+Need to deal with constructions like
+z <- sqrt(y)
+z <- dnorm(mu, tau)
+which are allowed only if z is data and if 'sqrt' is invertible.
+
+In datafile parser: Pass S-plus structures to rpy... but note WinBugs is row-major, S-Plus is column-major.
 
 Need to extract model definition from compound document.
 
@@ -145,7 +150,7 @@ Bugs1dSlice = pp.Group(pp.delimitedList(pp.Optional(BugsExpr),':'))
 # Convert to tuple of whatever Bugs1dSlice is
 BugsSlice << pp.Group(sl('[') + pp.delimitedList(Bugs1dSlice) + sl(']'))
 
-# Convert to Stochastic subclass.
+# Convert to Stochastic subclass or submodel class.
 BugsDistribution = (sl('d') + pp.Word(pp.alphas).setResultsName('dist') + sl('(') + pp.delimitedList(BugsExpr).setResultsName('args') + sl(')'))\
     .setParseAction(lambda s, l, toks: check_distribution(toks))
 
@@ -158,13 +163,13 @@ BugsExpr << pp.operatorPrecedence(BugsFunction ^ BugsAtom,
                                     (pp.oneOf('* /'),2, pp.opAssoc.LEFT),
                                     (pp.oneOf('- +'), 2, pp.opAssoc.LEFT)])
 
-# Convert to Stochastic instance
+# Convert to Stochastic instance or to submodel.
 BugsStochastic = pp.Group(BugsVar.setResultsName('lhs') + sl('~') + BugsDistribution.setResultsName('rhs'))
 
 # RHS should be Deterministic instance already, change it as needed.
 BugsDeterministic = pp.Group(BugsVar.setResultsName('lhs') + sl('<-') + (BugsFunction | BugsExpr).setResultsName('rhs'))
 
-# Convert to PyMC submodel
+# Convert to PyMC submodel.
 BugsSubModel = pp.OneOrMore(BugsStochastic ^ BugsDeterministic)
 
 
