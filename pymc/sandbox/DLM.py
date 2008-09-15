@@ -240,7 +240,6 @@ if __name__ == '__main__':
     F, G = F_f, G_f
     
     comps = G.keys()
-    V ={}
     W = {}
     m_0 = {}
     C_0 = {}
@@ -254,9 +253,10 @@ if __name__ == '__main__':
         W[comp] = [np.ones(this_sh)*1e1]*T
         m_0[comp] = np.ones(this_sh)*.1
         C_0[comp] = np.ones(this_sh)
-    V = [100.]*(T+1)    
+    p = (linspace(0,1,T+1))
+    V = 1/(10*abs(p-.5)+.1)**2
     
-    D = DLM(F,G,V,W,m_0,C_0)#, np.zeros(T+1))
+    D = DLM(F,G,V,W,m_0,C_0, np.zeros(T+1))
     old_value = D.theta.value
     
     # N = pymc.sandbox.GibbsStepMethods.NormalNormal(list(D.variables))

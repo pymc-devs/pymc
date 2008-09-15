@@ -2,6 +2,7 @@
 # the Cholesky factor based on stochastics (not much to do about this); and tau_offdiag / 
 # changeable_tau, which doesn't yet slice efficiently with irregular strides. Hopefully
 # the post to scipy gives some ideas.
+# May want to construct sparse matrices directly in coordinate format in Pyrex in the future.
 #
 # TODO: Real test suite.
 # TODO: Possibly base this on GDAGsim. Would make programming a little
@@ -33,9 +34,9 @@ def sp_to_ar(sp):
             ar[i,j] = sp[i,j]
     return ar
     
-def assign_from_sparse(spvec, slices):
-    for slice in slices.iteritems():
-        slice[0].value = spvec[slice[1]]
+def assign_from_sparse(spvec, stochastics, slices):
+    for i in xrange(len(slices)):
+        stochastics[i].value = spvec[slices[i]]
         
 def greedy_slices(x, y):
     """
@@ -81,9 +82,9 @@ def contiguize_slices(s_list, slices_from, slices_to):
     # Find all indices needed
     ind_from = []
     ind_to = []
-    for s in s_list:
-        sf = slices_from[s]
-        st = slices_to[s]
+    for i in xrange(len(s_list)):
+        sf = slices_from[i]
+        st = slices_to[i]
         ind_from.extend(range(sf.start, sf.stop, none_to_1(sf.step)))
         ind_to.extend(range(st.start, st.stop, none_to_1(st.step)))
     ind_from = np.array(ind_from)
@@ -92,75 +93,75 @@ def contiguize_slices(s_list, slices_from, slices_to):
     # Greedily break indices into chunks
     return greedy_slices(ind_from, ind_to)
 
-def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, mn):
-    """
-    Arguments:
-    
-      - spmat : cvxopt sparse matrix
-        Matrix to be sliced
-      - stochastics_i : list
-        Stochastics determining row-indices of slice, in order.
-      - stochastics_j : list
-        Stochastics determining column-indices of slice, in order.
-      - slices_from : dictionary
-        spmat[slices_from[s1], slices_from[s2]] will give the slice of the precision
-        matrix corresponding to s1 and s2.
-      - slices_to : dictionary
-        Only used if not symm. Saves figuring out how to pack the output matrix
-        from stochastic_i and stochastic_j.
-      - stochastic_len : dictionary
-        stochastic_len[s] gives the length of s.
-      - mn : dictionary
-        mn[s] gives the moral neighbors of s. The only nonzero entries in the
-        precision matrix correspond to moral neighbors, so this can be used to
-        speed up the slicing.
-    """
-    Ni = len(stochastics_i)
-    Nj = len(stochastics_j)
-    
-    m = sum([stochastic_len[s] for s in stochastics_i])
-    n = sum([stochastic_len[s] for s in stochastics_j])
-
-    out = cvx.base.spmatrix([],[],[], (n,m))
-
-    symm = stochastics_i is stochastics_j
-
-    i_index = 0
-    if not symm:
-        j_index = 0
-        j_slices = {}
-        for j in xrange(Nj):
-            sj = stochastics_j[j]
-            lj = stochastic_len[sj]
-            j_slices[sj] = slice(j_index, j_index+lj)
-            j_index += lj
-
-    for i in xrange(Ni):
-        si = stochastics_i[i]
-        li = stochastic_len[si]
-        i_slice = slice(i_index,i_index+li)
-        i_index += li
-        i_slice_to = slices_to[si]
-        i_slice_from = slices_from[si]
-        
-        if symm:
-            # Superdiagonal                        
-            for sj in mn[si]:
-                if slices_to.has_key(sj):
-                    out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
-            # Diagonal
-            out[i_slice_to,i_slice_to] = spmat[i_slice_from, i_slice_from]
-        else:
-            for sj in mn[si]:
-                if sj not in stochastics_j:
-                    continue
-                j_slice_from = slices_from[sj]
-                if i_slice_from.start < j_slice_from.start:
-                    out[j_slices[sj],i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
-                else:                          
-                    out[j_slices[sj],i_slice] = spmat[j_slice_from, i_slice_from]                
-    
-    return out
+# def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, mn):
+#     """
+#     Arguments:
+#     
+#       - spmat : cvxopt sparse matrix
+#         Matrix to be sliced
+#       - stochastics_i : list
+#         Stochastics determining row-indices of slice, in order.
+#       - stochastics_j : list
+#         Stochastics determining column-indices of slice, in order.
+#       - slices_from : dictionary
+#         spmat[slices_from[s1], slices_from[s2]] will give the slice of the precision
+#         matrix corresponding to s1 and s2.
+#       - slices_to : dictionary
+#         Only used if not symm. Saves figuring out how to pack the output matrix
+#         from stochastic_i and stochastic_j.
+#       - stochastic_len : dictionary
+#         stochastic_len[s] gives the length of s.
+#       - mn : dictionary
+#         mn[s] gives the moral neighbors of s. The only nonzero entries in the
+#         precision matrix correspond to moral neighbors, so this can be used to
+#         speed up the slicing.
+#     """
+#     Ni = len(stochastics_i)
+#     Nj = len(stochastics_j)
+#     
+#     m = sum([stochastic_len[s] for s in stochastics_i])
+#     n = sum([stochastic_len[s] for s in stochastics_j])
+# 
+#     out = cvx.base.spmatrix([],[],[], (n,m))
+# 
+#     symm = stochastics_i is stochastics_j
+# 
+#     i_index = 0
+#     if not symm:
+#         j_index = 0
+#         j_slices = {}
+#         for j in xrange(Nj):
+#             sj = stochastics_j[j]
+#             lj = stochastic_len[sj]
+#             j_slices[sj] = slice(j_index, j_index+lj)
+#             j_index += lj
+# 
+#     for i in xrange(Ni):
+#         si = stochastics_i[i]
+#         li = stochastic_len[si]
+#         i_slice = slice(i_index,i_index+li)
+#         i_index += li
+#         i_slice_to = slices_to[si]
+#         i_slice_from = slices_from[si]
+#         
+#         if symm:
+#             # Superdiagonal                        
+#             for sj in mn[si]:
+#                 if slices_to.has_key(sj):
+#                     out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
+#             # Diagonal
+#             out[i_slice_to,i_slice_to] = spmat[i_slice_from, i_slice_from]
+#         else:
+#             for sj in mn[si]:
+#                 if sj not in stochastics_j:
+#                     continue
+#                 j_slice_from = slices_from[sj]
+#                 if i_slice_from.start < j_slice_from.start:
+#                     out[j_slices[sj],i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
+#                 else:                          
+#                     out[j_slices[sj],i_slice] = spmat[j_slice_from, i_slice_from]                
+#     
+#     return out
 
 def spmat_to_backsolver(spmat, N):
     # Assemple and factor sliced sparse precision matrix.
@@ -251,9 +252,16 @@ class NormalSubmodel(ListContainer):
         self.check_input(self.stochastic_list)                
 
         self.N_stochastics = len(self.stochastic_list)
+        self.stochastic_list_numbers = {}
+        for i in xrange(self.N_stochastics):
+            self.stochastic_list_numbers[self.stochastic_list[i]] = i
 
         self.stochastic_indices, self.stochastic_len, self.slices, self.len\
          = ravel_submodel(self.stochastic_list)
+        
+        self.slice_dict = {}
+        for i in xrange(self.N_stochastics):
+            self.slice_dict[self.stochastic_list[i]] = self.slices[i]
         
         self.changeable_stochastic_list = []
         self.fixed_stochastic_list = []
@@ -288,7 +296,8 @@ class NormalSubmodel(ListContainer):
         """
         self.diag_chol_facs = {}
         
-        for s in self.stochastic_list:
+        for i in xrange(self.N_stochastics):
+            s = self.stochastic_list[i]
             parent_vals = s.parents.value
             
             # Diagonal precision
@@ -313,7 +322,7 @@ class NormalSubmodel(ListContainer):
                 elif isinstance(s, MvNormalChol):
                     chol_now = Lambda('chol_now', lambda sig=s.parents['sig']: np.linalg.cholesky(np.linalg.inv(np.dot(sig, sig.T))).T)
     
-            self.diag_chol_facs[s] = [diag, chol_now]
+            self.diag_chol_facs[i] = [diag, chol_now]
             
         self.diag_chol_facs = Container(self.diag_chol_facs)
     
@@ -325,10 +334,11 @@ class NormalSubmodel(ListContainer):
           -1 times the coefficient of si in the mean of sj.
         """
 
-        self.A = {}
-        for s in self.stochastic_list:
-            self.A[s] = {}
-            this_A = self.A[s]
+        self.A = np.zeros(self.N_stochastics, dtype=object)
+        for i in xrange(self.N_stochastics):
+            s = self.stochastic_list[i]
+            self.A[i] = []
+            this_A = self.A[i]
             for c in s.children:
 
                 if c.__class__ is LinearCombination:
@@ -344,14 +354,14 @@ class NormalSubmodel(ListContainer):
                                     A -= elem
                             return A
                             
-                        this_A[cc] = A
+                        this_A.append((self.stochastic_list_numbers[cc],(A)))
 
                 elif c.__class__ in normal_classes:
                     if s is c.parents['mu']:
                         if self.stochastic_len[c] == self.stochastic_len[s]:
-                            this_A[c] = -np.eye(self.stochastic_len[s])
+                            this_A.append((self.stochastic_list_numbers[c],-np.eye(self.stochastic_len[s])))
                         else:
-                            this_A[c] = -np.ones(self.stochastic_len[c])
+                            this_A.append((self.stochastic_list_numbers[c],-np.ones(self.stochastic_len[c])))
         
         self.A = Container(self.A)
     
@@ -361,32 +371,29 @@ class NormalSubmodel(ListContainer):
         self.mult_A[si][sj] = self.diag_chol_facs[sj][1] * self.A[si][sj]
         """
 
-        self.mult_A = {}    
+        self.mult_A = np.zeros(self.N_stochastics, dtype=object)
         for i in xrange(self.N_stochastics):
             si = self.stochastic_list[i]
-            this_A = self.A[si]
-            self.mult_A[si] = {}
-            this_mult_A = self.mult_A[si]
+            this_A = self.A[i]
+            self.mult_A[i] = []
+            this_mult_A = self.mult_A[i]
             
-            for j in xrange(i):
-                sj = self.stochastic_list[j]
-                # If j is a parent of s,
-                if this_A.has_key(sj):
-                    chol_j = self.diag_chol_facs[sj]
-                    
-                    @deterministic
-                    def mult_A(diag = chol_j[0], chol_j = chol_j[1], A = this_A[sj]):                        
-                        # If this parent's precision matrix is diagonal
-                        if diag:
-                            out = (chol_j * A.T).T
-                        # If this parent's precision matrix is not diagonal
-                        else:
-                            out = copy(A)
-                            flib.dtrmm_wrap(chol_j, out, side='L', transa='N', uplo='U')
+            for j, A_elem in this_A:
+                chol_j = self.diag_chol_facs[j]
+                
+                @deterministic
+                def mult_A(diag = chol_j[0], chol_j = chol_j[1], A = A_elem):                        
+                    # If this parent's precision matrix is diagonal
+                    if diag:
+                        out = (chol_j * A.T).T
+                    # If this parent's precision matrix is not diagonal
+                    else:
+                        out = copy(A)
+                        flib.dtrmm_wrap(chol_j, out, side='L', transa='N', uplo='U')
 
-                        return out
-                        
-                    this_mult_A[sj] = mult_A
+                    return out
+                    
+                this_mult_A.append((j, mult_A))
         
         self.mult_A = Container(self.mult_A)
     
@@ -397,23 +404,16 @@ class NormalSubmodel(ListContainer):
         stored as cvxopt sparse matrices.
         """
         
-        self.stochastics_with_nontriv_A = []
-        self.stochastics_with_triv_A = []
-        for si in self.mult_A.iterkeys():
-            if len(self.mult_A[si])>0:
-                self.stochastics_with_nontriv_A.append(si)
-            else:
-                self.stochastics_with_triv_A.append(si)
-        
         @deterministic
         def tau_chol(A = self.mult_A, diag_chol = self.diag_chol_facs):
             tau_chol = cvx.base.spmatrix([],[],[], (self.len,self.len))
     
-            for si in self.stochastic_list:
-                i_slice = self.slices[si]
-                this_A = A[si]
+            for i in xrange(self.N_stochastics):
+                si = self.stochastic_list[i]
+                i_slice = self.slices[i]
+                this_A = A[i]
 
-                chol_i = diag_chol[si]
+                chol_i = diag_chol[i]
                 chol_i_val = chol_i[1]
 
                 # Write diagonal
@@ -423,12 +423,10 @@ class NormalSubmodel(ListContainer):
                 else:
                     tau_chol[i_slice, i_slice] = cvx.base.matrix(chol_i_val)
 
-            for si in self.stochastics_with_nontriv_A:
-
                 # Append off-diagonals            
-                for sj, A_elem in A[si].iteritems(): 
+                for j, A_elem in this_A: 
                     # If j is a parent of s,
-                    tau_chol[self.slices[sj], self.slices[si]] = A_elem                    
+                    tau_chol[self.slices[j], i_slice] = A_elem                    
     
 
             return tau_chol
@@ -457,7 +455,7 @@ class NormalSubmodel(ListContainer):
         """
         mean_dict = {}
         
-        # for i in xrange(len(self.stochastic_list)-1,-1,-1):
+        # for i in xrange(self.N_stochastics-1,-1,-1):
         for s in self.stochastic_list:
         
             mu_now = s.parents['mu']
@@ -465,7 +463,7 @@ class NormalSubmodel(ListContainer):
             # If parent is in normal submodel
             if mu_now.__class__ in normal_classes:        
                 if mu_now in self.stochastic_list:
-                    mean_dict[s] = ('n',self.slices[mu_now])
+                    mean_dict[s] = ('n',self.slice_dict[mu_now])
             
             # If parent is a LinearCombination
             elif isinstance(mu_now, LinearCombination):
@@ -478,11 +476,11 @@ class NormalSubmodel(ListContainer):
                     # the element's mean
                     if mu_now.x[j].__class__ in normal_classes:
                         if mu_now.x[j] in self.stochastic_list:
-                            mean_terms.append(('l', self.slices[mu_now.x[j]], mu_now.y[j]))
+                            mean_terms.append(('l', self.slice_dict[mu_now.x[j]], mu_now.y[j]))
 
                     if mu_now.y[j].__class__ in normal_classes:            
                         if mu_now.y[j] in self.stochastic_list:
-                            mean_terms.append(('r', mu_now.x[j], self.slices[mu_now.y[j]]))
+                            mean_terms.append(('r', mu_now.x[j], self.slice_dict[mu_now.y[j]]))
                         
                     else:
                         mean_terms.append(('n', mu_now.x[j], mu_now.y[j]))
@@ -504,9 +502,9 @@ class NormalSubmodel(ListContainer):
         def mean(mean_dict = self.mean_dict):
             mean = cvx.base.matrix(0.,size=(self.len, 1))
             
-            for i in xrange(len(self.stochastic_list)-1,-1,-1):
+            for i in xrange(self.N_stochastics-1,-1,-1):
                 s = self.stochastic_list[i]
-                sl = self.slices[s]
+                sl = self.slices[i]
                 case, info = mean_dict[s]
                 
                 # Constant-parent case
@@ -545,8 +543,8 @@ class NormalSubmodel(ListContainer):
         @deterministic
         def x(stochastics = self.fixed_stochastic_list):
             x = cvx.base.matrix(0.,size=(self.fixed_len, 1))
-            for s in self.fixed_stochastic_list:
-                x[self.fixed_slices[s]] = s.value
+            for i in xrange(len(self.fixed_stochastic_list)):
+                x[self.fixed_slices[i]] = self.fixed_stochastic_list[i].value
             return x
         self.x = x
         
@@ -608,8 +606,17 @@ class NormalSubmodel(ListContainer):
         self.changeable_tau_slice.
         """
         
-        self.changeable_slices_from, self.changeable_slices_to = contiguize_slices(self.changeable_stochastic_list, self.slices, self.changeable_slices)
-        self.fixed_slices_from, self.fixed_slices_to = contiguize_slices(self.fixed_stochastic_list, self.slices, self.fixed_slices)            
+        changeable_slices_from = []
+        fixed_slices_from = []
+        for s in self.changeable_stochastic_list:
+            changeable_slices_from.append(self.slices[self.stochastic_list_numbers[s]])
+        for s in self.fixed_stochastic_list:
+            fixed_slices_from.append(self.slices[self.stochastic_list_numbers[s]])            
+        
+        self.changeable_slices_from, self.changeable_slices_to = \
+            contiguize_slices(self.changeable_stochastic_list, changeable_slices_from, self.changeable_slices)
+        self.fixed_slices_from, self.fixed_slices_to = \
+            contiguize_slices(self.fixed_stochastic_list, fixed_slices_from, self.fixed_slices)            
         
         @deterministic
         def changeable_tau_slice(tau = self.tau):
@@ -642,7 +649,7 @@ class NormalSubmodel(ListContainer):
         dev = cvx.base.matrix(np.random.normal(size=self.changeable_len))
         dev = np.asarray(self.backsolver.value(dev)).squeeze()
         dev += self.changeable_mean.value
-        assign_from_sparse(dev, self.changeable_slices)
+        assign_from_sparse(dev, self.changeable_stochastic_list, self.changeable_slices)
         
     
     @staticmethod             

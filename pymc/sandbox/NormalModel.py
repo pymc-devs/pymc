@@ -4,7 +4,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 import pymc
 import numpy as np
-from NormalSubmodel import NormalSubmodel, slice_by_stochastics, cvx, sp_to_ar
+from NormalSubmodel import NormalSubmodel, cvx, sp_to_ar
 
 __all__ = ['NormalModel', 'NormalModelMu', 'NormalModelC']
 

@@ -56,8 +56,8 @@ def ravel_submodel(stochastic_list):
 
     N_stochastics = len(stochastic_list)
     stochastic_indices = []
-    stochastic_len = {}
-    slices = {}
+    stochastic_len = np.zeros(N_stochastics, dtype=int)
+    slices = np.zeros(N_stochastics, dtype=object)
 
     _len = 0
     for i in xrange(len(stochastic_list)):
@@ -66,11 +66,11 @@ def ravel_submodel(stochastic_list):
 
         # Inspect shapes of all stochastics and create stochastic slices.
         if isinstance(stochastic.value, np.ndarray):
-            stochastic_len[stochastic] = len(np.ravel(stochastic.value))
+            stochastic_len[i] = len(np.ravel(stochastic.value))
         else:
-            stochastic_len[stochastic] = 1
-        slices[stochastic] = slice(_len, _len + stochastic_len[stochastic])
-        _len += stochastic_len[stochastic]
+            stochastic_len[i] = 1
+        slices[i] = slice(_len, _len + stochastic_len[i])
+        _len += stochastic_len[i]
 
         # Record indices that correspond to each stochastic.
         for j in xrange(len(np.ravel(stochastic.value))):
