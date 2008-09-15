@@ -1769,14 +1769,15 @@ def poisson_like(x,mu):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncnorm(mu, sigma, a, b, size=1):
-    """rtruncnorm(mu, sigma, a, b, size=1)
+def rtruncnorm(mu, tau, a, b, size=1):
+    """rtruncnorm(mu, tau, a, b, size=1)
     
     Random truncated normal variates.
     """
+    sigma = 1./tau
     
-    na = pymc.utils.normcdf((a-mu)/float(sigma))
-    nb = pymc.utils.normcdf((b-mu)/float(sigma))
+    na = pymc.utils.normcdf((a-mu)/sigma)
+    nb = pymc.utils.normcdf((b-mu)/sigma)
     
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
@@ -1787,24 +1788,24 @@ def rtruncnorm(mu, sigma, a, b, size=1):
     return R*sigma + mu
 
 # TODO: code this.
-def truncnorm_expval(mu, sigma, a, b):
-    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable."""
+def truncnorm_expval(mu, tau, a, b):
+    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma. """
     pass
 
-def truncnorm_like(x, mu, sigma, a, b):
-    R"""truncnorm_like(x, mu, sigma, a, b)
+def truncnorm_like(x, mu, tau, a, b):
+    R"""truncnorm_like(x, mu, tau, a, b)
     
     Truncated normal log-likelihood.
     
     .. math::
-        f(x \mid \mu, \sigma, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},
+        f(x \mid \mu, \tau, a, b) = \frac{\phi(\tau (x-\mu))} {\Phi(\tau (b-\mu)) - \Phi(\tau (a-\mu)},
     
     """
     x = np.atleast_1d(x)
     a = np.atleast_1d(a)
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
-    sigma = np.atleast_1d(sigma)
+    sigma = 1./np.atleast_1d(tau)
     if (x < a).any() or (x>b).any():
         return -np.inf
     else:

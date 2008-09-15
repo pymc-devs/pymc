@@ -469,7 +469,7 @@ class test_exponweib(TestCase):
         r = rexponweib(size=10, **parameters)
         a = exponweib.pdf(r, 2,.3, 1, 3)
         b = exponweib_like(r, **parameters)
-        assert_almost_equal(log(a).sum(), b, 6)
+        assert_almost_equal(log(a).sum(), b, 5)
 
 class test_gamma(TestCase):
     def test_consistency(self):
@@ -756,7 +756,7 @@ class test_skew_normal(TestCase):
         
 class test_truncnorm(TestCase):
     def test_consistency(self):
-        parameters = dict(mu=1, sigma=1, a=0, b=5)
+        parameters = dict(mu=1, tau=1, a=0, b=5)
         hist,like, figdata = consistency(rtruncnorm, truncnorm_like, parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='truncnorm', **figdata)
@@ -764,12 +764,12 @@ class test_truncnorm(TestCase):
         
         
     def test_random(self):
-        r = rtruncnorm(mu=-1,sigma=10,a=-20,b=20,size=10000)
+        r = rtruncnorm(mu=-1,tau=.1,a=-20,b=20,size=10000)
         assert (r > -20).all()
         assert (r < 20).all()
         
     def test_normalization(self):
-        parameters = dict(mu=1, sigma=1, a=0, b=2)
+        parameters = dict(mu=1, tau=1, a=0, b=2)
         integral = normalization(truncnorm_like, parameters, [-1, 3], 200)
         assert_almost_equal(integral, 1, 2)
         
