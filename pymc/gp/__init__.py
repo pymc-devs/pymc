@@ -12,11 +12,22 @@ __modules__ = [ 'GPutils',
                 
 __optmodules__ = ['GP_plots', 'SparseCovariance']
 
-for mod in __modules__:
-    exec('from %s import *'%mod)
+from GPutils import *
+from Mean import *
+from Covariance import *
+from BasisCovariance import *
+from FullRankCovariance import *
+from NearlyFullRankCovariance import *
+from Realization import *
+from cov_funs import *
+from PyMC_objects import *
 
-for mod in __optmodules__:
-    try:
-        exec('from %s import *'%mod)
-    except ImportError:
-        pass
+try:
+    import GP_plots
+except ImportError:
+    pass
+
+try:
+    import SparseCovariance
+except ImportError:
+    pass
