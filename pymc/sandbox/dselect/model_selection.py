@@ -30,7 +30,7 @@ Chi square.
 Of course, simply fitting the Maximum Likelihood parameters and compare the
 likelihoods of different distributions will lead to spurious results since 
 the likelihood is very much dependent on the whole shape of the distribution
-and its number of parameters. 
+and the number of parameters. 
        
        
 Concept
@@ -51,15 +51,35 @@ this equation is by inserting the distribution parameters as latent variables:
                     & = \int p(data | M_i, \theta_i) \pi(\theta_i | I).
      
 Now :math:`p(data | M_i, \theta_i)` is simply the likelihood, but we still
-need to define :math:`\pi(\theta | I)`. The way this is done here is by defining
-a prior distribution on X :math:`I : \pi(x)`. This pdf is used to evaluate the 
-probability of the parameters :math:`\theta_i` by the following manner: 
+need to define :math:`\pi(\theta | I)`.
+
+The way this is done here is by defining a prior distribution on 
+X :math:`I : \pi(x)`. The problem now boils down to finding `\pi(\theta_i | I)`
+such that 
+
+.. math:: 
+
+   \int p( x | M_i, \theta_i) \pi(\theta_i | I) d\theta_i = \pi(x).
+
+ 
+This is problematic because there won't, in general, exist a unique solution for 
+`\pi(\theta_i | I)`. We need another constraint to define a unique solution. 
+One such constraint is entropy. We will hence define `\pi(\theta_i | I)` as the
+distribution that satisfies the previous equation and maximizes the entropy. 
+
+The question now is: how to draw samples `\theta_i^j` that satisfy those 
+constraints ?
+
+Here is a potential solution, I don't really know if it works. 
  
  1. N random values (r) are drawn from distribution :math:`M_i` using 
     :math:`\theta_i`.
  2. The likelihood of `r` is evaluated using :math:`\pi(r)` and assigned to 
     the parameters :math:`\theta_i`. 
 
+In nature, systems tend to increase their entropy. So I kinda expect the same
+thing to happen here. With time, the parameter distribution should increase its
+entropy. Magical thinking !
 
 The whole procedure can be implemented easily using pymc's MCMC algorithms. 
 The MCMC sampler will explore the parameter space and return a trace that 
@@ -106,7 +126,7 @@ def builder(data, distributions, xprior, initial_params={}):
         if d.__module__ == 'pymc.distributions':
             random = getattr(pymc, 'r%s'%name)
             logp = getattr(pymc, name+'_like')
-            initial_values = istat.guess_params_from_sample(data, name)
+            initial_values = guess_params_from_sample(data, name)
             
         elif d.__module__ == 'pymc.ScipyDistributions':
             raise ValueError, 'Scipy distributions not yet supported.'
@@ -127,34 +147,26 @@ def builder(data, distributions, xprior, initial_params={}):
         random_f[name] = random
         logp_f[name] = logp
         init_val[name] = initial_values
-        init_val.update(initial_params)
-        
+    init_val.update(initial_params)
+    print random_f, logp_f, init_val
+
     # 2. Define the various latent variables and their priors
     nr = 10
-    latent= {}
+    latent= {}	
     for name in names:
-        def prior(value):
-            """Prior density for the parameters.
-            This function draws random values from the distribution 
-            parameterized with values. The probability of these random values
-            is then computed using xprior."""
-            r = random_f[name](size=nr, *value)
-            if np.any(np.isnan(r)):
-                return -np.inf
-            lp = xprior(r)
-            return lp
-            
-        value = np.array(init_val[name])
-        try:
-            latent['%s_params'%name] = pymc.Stochastic(logp = prior,
-                doc = 'Prior for the parameters of the %s distribution'%name,
-                name = '%s_params'%name,
-                parents = {},
-                value = value,
-                )
-        except ValueError:
-            raise ValueError, 'It seems that the initial parameters for distribution %s yield a zero probability according to prior_x.'%name
-
+        prior_distribution = lambda value: xprior(random_f[name](size=nr, *value))
+        prior_distribution.__doc__ = \
+        """Prior density for the parameters.
+        This function draws random values from the distribution 
+        parameterized with values. The probability of these random values
+        is then computed using xprior."""
+        latent['%s_params'%name] = pymc.Stochastic(logp = prior_distribution,
+            doc = 'Prior for the parameters of the %s distribution'%name,
+            name = '%s_params'%name,
+            parents = {},
+            value = np.atleast_1d(init_val[name]),
+            )
+      
     # 3. Compute the probability for each model
     lprob = {}
     for name in names:
@@ -169,13 +181,21 @@ def builder(data, distributions, xprior, initial_params={}):
     
     input = latent
     input.update(lprob)
-    input[names] = names
+    input['names'] = names
     M = pymc.MCMC(input=input)
     #for name in names:
         #M.use_step_method(pymc.AdaptiveMetropolis, input['%s_params'%name], verbose=3)
     return M
         
         
+def guess_params_from_sample(r, dist):
+    stats = istat.describe(r)
+    try:
+        f = getattr(istat, dist)
+        return np.atleast_1d(f(**stats))
+    except (NotImplementedError, AttributeError):
+        return defaults.pymc_default_list(dist)
+
 def select_distribution(data, distributions, xprior, weights=None, initial_params={}):
 
     # 1. Define the prior for the distributions. 
@@ -187,6 +207,7 @@ def select_distribution(data, distributions, xprior, weights=None, initial_param
        
     # 2. Create the MCMC sampler and sample
     M = builder(data, distributions, xprior, initial_params)
+    return M
     iter = 10000*N
     tune = iter/5
     M.sample(iter, tune)
@@ -203,20 +224,22 @@ def select_distribution(data, distributions, xprior, weights=None, initial_param
 
 def test_builder():
     from numpy import random
-    return builder(random.normal(3,4,10), [pymc.Beta, pymc.Normal], lambda x: pymc.uniform_like(x, 0, 100), initial_params={'normal':np.array([50.,1.])})
+    data = random.normal(3,.1,20)
+    return builder(data, [pymc.Lognormal, pymc.Normal], lambda x: pymc.uniform_like(x, 0, 100), initial_params={'normal':np.array([50.,1.])})
 
 def test_selection():
     N = 40
     r = pymc.rexponential(2.0, size=N)
-    def prior_x(x, L=5):
+    def prior_x(x):
         """Triangle distribution.
         A = h*L/2 = 1
         """
+        L=5
         h = 2./L
         if np.all(0.< x) and np.all(x < L):
             return np.sum(log(h - h/L *x))
         else:
             return -np.inf
         
-    W = select_distribution(r, [pymc.Exponential, pymc.Weibull, pymc.Cauchy, pymc.Chi2, pymc.Exponential, pymc.Exponweib], prior_x)
+    W = select_distribution(r, [pymc.Exponweib, pymc.Exponential, pymc.Weibull, pymc.Chi2], prior_x)
     return W

@@ -10,7 +10,7 @@ def beta(**kwds):
     """Return the parameters of the beta distribution (alpha, beta) given the
     mean and variance."""
     mean = kwds['mean']
-    var = kwds['var']
+    var = kwds['variance']
     
     alpha = -(mean*var + mean**3 - mean**2) / var
     beta = ((mean-1)*var + mean**3 - 2*mean**2 + mean) / var
@@ -31,13 +31,13 @@ def chi2(**kwds):
 def exponential(**kwds):
     """Return the parameter of the exponential distribution (beta) given the
     mean."""
-    return kwds['mean']
+    return 1./kwds['mean']
     
 def exponweib(**kwds):
     """Return the parameters of the exponweib distribution (alpha, k, loc, 
     scale) given the mean and variance."""
     # Here we need to optimize based on the theoretica moments
-    pass
+    raise NotImplementedError
 
 
 def gamma(**kwds):
@@ -59,18 +59,11 @@ def weibull(**kwds):
     mode = kwds['mode']
     raise NotImplementedError
     
-    
-def guess_params_from_sample(r, dist):
-    stats = describe(r)
-    try:
-        return locals()[dist](stats)
-    except:
-        return defaults.pymc_default_list(dist)
-    
-    
+        
 def entropy(r):
     """Compute a naive estimator of the Shannon entropy."""
     p, b = pymc.utils.histogram(r, 'scott', normed=True)
+    p[p==0] += p.mean()*1e-10
     return -(p * np.log(p)).sum()
     
 def mode(r):
@@ -86,7 +79,7 @@ def describe(r):
     stats = {}
     stats['mean'] = r.mean()
     stats['variance'] = r.var()
-    stats['skewn'] = skew(r)
+    stats['skew'] = skew(r)
     stats['kurtosis'] = kurtosis(r)
     stats['median'] = np.median(r)
     stats['entropy'] = entropy(r)

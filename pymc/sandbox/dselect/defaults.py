@@ -13,7 +13,7 @@ pymc_default_parameters = {
     'dirichlet': None, 
     'discrete_uniform': dict(lower=-10000, upper=10000),
     'exponential': dict(beta=1.), 
-    'exponweib': dict(alpha=1., k=1., loc=0., scale=0.),
+    'exponweib': dict(alpha=1., k=1., loc=0., scale=1.),
     'gamma': dict(alpha=.5, beta=.5), 
     'geometric': dict(p=.5), 
     'gev': dict(xi=1., mu=0., sigma=1.), 
