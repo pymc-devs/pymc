@@ -439,6 +439,16 @@ class test_laplace(TestCase):
         if PLOT:
             compare_hist(figname='laplace', **figdata)
         assert_array_almost_equal(hist, like,1)
+        
+class test_logistic(TestCase):
+    """Based on gamma."""
+    def test_consistency(self):
+        parameters={'mu':1, 'tau':0.5}
+        hist, like, figdata = consistency(rlogistic, logistic_like, 
+            parameters, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='logistic', **figdata)
+        assert_array_almost_equal(hist, like,1)
 
 class test_exponweib(TestCase):
     def test_consistency(self):

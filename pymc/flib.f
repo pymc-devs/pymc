@@ -638,6 +638,47 @@ c kernel of distribution
       END
       
       
+      SUBROUTINE logistic(x, mu, tau, n, nmu, ntau, like)
+
+c Logistic log-likelihood function      
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION like
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+        if (tau_tmp .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + dlog(tau_tmp) - tau_tmp * (x(i)-mu_tmp)
+        like = like - 2.0*dlog(1.0 + dexp(-tau_tmp * (x(i)-mu_tmp)))
+      enddo
+      return
+      END
+      
+      
       SUBROUTINE normal(x,mu,tau,n,nmu, ntau, like)
 
 c Normal log-likelihood function      
