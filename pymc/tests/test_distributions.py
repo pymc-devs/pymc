@@ -264,7 +264,7 @@ class test_arlognormal(TestCase):
         sigma = .1
         rho = 0
         r = rarlognormal(a, sigma, rho, size=1000) 
-        assert_array_almost_equal(np.median(r), [1,2],1)
+        assert_array_almost_equal(np.median(r, axis=0), [1,2],1)
         
         rho =.8
         sigma = .1
