@@ -1,4 +1,3 @@
-# TODO: Specific submodel factories: DLM, LM.
 # TODO: Optimization!
 # TODO: Real test suite.
 # TODO: Possibly base this on GDAGsim. Would make programming a little
@@ -34,10 +33,29 @@ def assign_from_sparse(spvec, slices):
     for slice in slices.iteritems():
         slice[0].value = spvec[slice[1]]
 
-# TODO: Pass in slices_from and slices_to, do for si in A.iterkeys() instead of for i in xrange(Ni).
-# This should be much faster. It's tricky, though.
 def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, mn):
-
+    """
+    Arguments:
+    
+      - spmat : cvxopt sparse matrix
+        Matrix to be sliced
+      - stochastics_i : list
+        Stochastics determining row-indices of slice, in order.
+      - stochastics_j : list
+        Stochastics determining column-indices of slice, in order.
+      - slices_from : dictionary
+        spmat[slices_from[s1], slices_from[s2]] will give the slice of the precision
+        matrix corresponding to s1 and s2.
+      - slices_to : dictionary
+        Only used if not symm. Saves figuring out how to pack the output matrix
+        from stochastic_i and stochastic_j.
+      - stochastic_len : dictionary
+        stochastic_len[s] gives the length of s.
+      - mn : dictionary
+        mn[s] gives the moral neighbors of s. The only nonzero entries in the
+        precision matrix correspond to moral neighbors, so this can be used to
+        speed up the slicing.
+    """
     Ni = len(stochastics_i)
     Nj = len(stochastics_j)
     
@@ -59,37 +77,27 @@ def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slice
             j_index += lj
 
     for i in xrange(Ni):
-
         si = stochastics_i[i]
         li = stochastic_len[si]
         i_slice = slice(i_index,i_index+li)
         i_index += li
-        
         i_slice_to = slices_to[si]
         i_slice_from = slices_from[si]
         
         if symm:
-
             # Superdiagonal                        
             for sj in mn[si]:
                 if slices_to.has_key(sj):
                     out[slices_to[sj], i_slice_to] = spmat[slices_from[sj], i_slice_from]
-            
             # Diagonal
             out[i_slice_to,i_slice_to] = spmat[i_slice_from, i_slice_from]
-
-
         else:
-            # for j in xrange(Nj):
-            #     sj = stochastics_j[j]
             for sj in mn[si]:
                 if sj not in stochastics_j:
                     continue
                 j_slice_from = slices_from[sj]
-                
                 if i_slice_from.start < j_slice_from.start:
                     out[j_slices[sj],i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
-
                 else:                          
                     out[j_slices[sj],i_slice] = spmat[j_slice_from, i_slice_from]                
     
@@ -181,8 +189,6 @@ class NormalSubmodel(ListContainer):
 
         self.stochastic_list = order_stochastic_list(self.stochastics | self.data_stochastics)
         
-        # TODO: Replace check_input with crawl(). If output of crawl is length 0,
-        # THEN raise an error complaining that there are no eligible stochastics here.
         self.check_input(self.stochastic_list)                
 
         self.N_stochastics = len(self.stochastic_list)
@@ -209,6 +215,7 @@ class NormalSubmodel(ListContainer):
         self.get_mult_A()
         self.get_tau()       
         self.get_changeable_tau()
+        self.get_mean_dict()
         self.get_changeable_mean()
             
     def get_diag_chol_facs(self):
@@ -223,13 +230,11 @@ class NormalSubmodel(ListContainer):
         self.diag_chol_facs = {}
         
         for s in self.stochastic_list:
-    
             parent_vals = s.parents.value
             
             # Diagonal precision
             if isinstance(s, Normal):
                 diag = True
-                
                 @deterministic
                 def chol_now(tau=s.parents['tau'], d=s):
                     out = np.empty(np.atleast_1d(d).shape)
@@ -273,7 +278,6 @@ class NormalSubmodel(ListContainer):
                         @deterministic
                         def A(coefs = c.coefs[s], side = c.sides[s]):
                             A = 0.
-                        
                             for elem in coefs:
                                 if side == 'L':
                                     A -= elem.T
@@ -306,12 +310,9 @@ class NormalSubmodel(ListContainer):
             this_mult_A = self.mult_A[si]
             
             for j in xrange(i):
-        
                 sj = self.stochastic_list[j]
-        
                 # If j is a parent of s,
                 if this_A.has_key(sj):
-
                     chol_j = self.diag_chol_facs[sj]
                     
                     @deterministic
@@ -319,7 +320,6 @@ class NormalSubmodel(ListContainer):
                         # If this parent's precision matrix is diagonal
                         if diag:
                             out = (chol_j * A.T).T
-            
                         # If this parent's precision matrix is not diagonal
                         else:
                             out = copy(A)
@@ -342,26 +342,23 @@ class NormalSubmodel(ListContainer):
         def tau_chol(A = self.mult_A, diag_chol = self.diag_chol_facs):
             tau_chol = cvx.base.spmatrix([],[],[], (self.len,self.len))
         
-            # TODO: for si in A.iterkeys(), etc. instead
             for si in A.iterkeys():
-            
                 this_A = A[si]
-            
+                
                 # Append off-diagonals            
-                for sj in this_A.iterkeys():
-                                    
+                for sj in this_A.iterkeys(): 
                     # If j is a parent of s,
                     tau_chol[self.slices[sj], self.slices[si]] = this_A[sj]
-                    
                 chol_i = diag_chol[si]
                 chol_i_val = chol_i[1]
-
+                
                 # Write diagonal
                 if chol_i[0]:
                     tau_chol[self.slices[si], self.slices[si]] = \
                       cvx.base.spmatrix(chol_i_val, range(len(chol_i_val)), range(len(chol_i_val)))
                 else:
                     tau_chol[self.slices[si], self.slices[si]] = cvx.base.matrix(chol_i_val)
+
             return tau_chol
                 
         
@@ -374,78 +371,96 @@ class NormalSubmodel(ListContainer):
             
         self.tau, self.tau_chol = tau, tau_chol
 
-    def get_changeable_mean(self):
+    def get_mean_dict(self):
         """
-        Computes joint 'canonical mean' parameter:
-        joint precision matrix times joint mean.
+        Forms self.mean_dict, which is a dictionary. self.mean_dict[x] for stochastic x is:
+        - A constant or PyMC object if x is in the first generation of the normal submodel.
+        - self.slices[x.parents['mu']] if x's direct parent is normal and in the normal
+          submodel.
+        - A list of (constant or PyMC object, slice) or 
+          (constant or PyMC object, constant or PyMC object) tuples if x's direct parent is a 
+          LinearCombination. In this case, in each element the slice corresponds to x's 
+          extended parent that is in the normal submodel (there should only be one per tuple), 
+          and the constant or PyMC object that multiplies that parent.
         """
-        
-        # Assemble mean vector
         mean_dict = {}
         
-        for i in xrange(len(self.stochastic_list)-1,-1,-1):
-
-            s = self.stochastic_list[i]
-
+        # for i in xrange(len(self.stochastic_list)-1,-1,-1):
+        for s in self.stochastic_list:
+        
             mu_now = s.parents['mu']
-            
-            # If parent is a Stochastic
-            if isinstance(mu_now, Stochastic):
-                if mu_now.__class__ in normal_classes:
-                    # If it's Normal, record its mean
-                    
-                    mean_dict[s] = mean_dict[mu_now]
-
-                else:
-                    # Otherwise record its value.
-                    mean_dict[s] = mu_now
+        
+            # If parent is in normal submodel
+            if mu_now.__class__ in normal_classes:        
+                if mu_now in self.stochastic_list:
+                    mean_dict[s] = ('n',self.slices[mu_now])
             
             # If parent is a LinearCombination
             elif isinstance(mu_now, LinearCombination):
-                
+        
                 mean_terms = []
                 for j in xrange(len(mu_now.x)):
             
                     # For those elements that are Normal,
                     # add in the corresponding coefficient times
                     # the element's mean
-            
                     if mu_now.x[j].__class__ in normal_classes:
-                        mean_var = Lambda('mean_var', lambda mu=mean_dict[mu_now.x[j]], s=mu_now.x[j]: np.resize(mu,np.shape(s)))
-                            
-                        mean_terms.append(Lambda('term', lambda x=mean_var, y=mu_now.coefs[mu_now.x[j]], s=s: 
-                                                            np.reshape(np.dot(x,y), np.shape(s))))
-            
-                    elif mu_now.y[j].__class__ in normal_classes:
-                        mean_var = Lambda('mean_var', lambda mu=mean_dict[mu_now.y[j]], s=mu_now.y[j]: np.resize(mu,np.shape(s)))
+                        if mu_now.x[j] in self.stochastic_list:
+                            mean_terms.append(('l', self.slices[mu_now.x[j]], mu_now.y[j]))
 
-                        mean_terms.append(Lambda('term', lambda x=mu_now.coefs[mu_now.y[j]], y=mean_var, s=s: 
-                                                            np.reshape(np.dot(x,y), np.shape(s))))
+                    if mu_now.y[j].__class__ in normal_classes:            
+                        if mu_now.y[j] in self.stochastic_list:
+                            mean_terms.append(('r', mu_now.x[j], self.slices[mu_now.y[j]]))
                         
                     else:
-                        mean_terms.append(np.dot(mu_now.x[j], mu_now.y[j]))
+                        mean_terms.append(('n', mu_now.x[j], mu_now.y[j]))
                 
-                @deterministic
-                def this_mean(mean_terms = mean_terms):
-                    this_mean = 0.
-                    for i in xrange(len(mean_terms)):
-                        this_mean += mean_terms[i]
-                    return this_mean
-                mean_dict[s] = this_mean
+                mean_dict[s] = ('l',mean_terms)
                 
             else:
-                mean_dict[s] = mu_now
+                mean_dict[s] = ('c',mu_now)
         
-        self.mean_dict = Container(mean_dict)
+        self.mean_dict = mean_dict        
+
+    def get_changeable_mean(self):
+        """
+        Computes joint 'canonical mean' parameter:
+        joint precision matrix times joint mean.
+        """
         
         @deterministic
         def mean(mean_dict = self.mean_dict):
             mean = cvx.base.matrix(0.,size=(self.len, 1))
-            for s in self.stochastic_list:
-                mean[self.slices[s]] = mean_dict[s]
-            return mean
-        self.mean = mean
+            
+            for i in xrange(len(self.stochastic_list)-1,-1,-1):
+                s = self.stochastic_list[i]
+                sl = self.slices[s]
+                case, info = mean_dict[s]
                 
+                # Constant-parent case
+                if case=='c':
+                    mean[sl] = np.ravel(info)
+                # Parent in normal submodel
+                elif case=='n':
+                    mean[sl] = mean[info]
+                # Parent is LinearCombination
+                else:
+                    this_mean = np.zeros(sl.stop - sl.start)
+                    for pair in info:
+                        # Left-hand member is in normal submodel
+                        if pair[0]=='l':
+                            this_mean += np.ravel(np.dot(mean[pair[1]], pair[2]))                        
+                        # Right-hand member is in normal submodel
+                        if pair[0]=='r':
+                            this_mean += np.ravel(np.dot(pair[1], mean[pair[2]]))
+                        # Neither member is in normal submodel
+                        else:
+                            this_mean += np.ravel(np.dot(pair[1], pair[2]))
+                    mean[sl] = this_mean
+            return mean
+            
+        self.mean = mean
+        
         # Multiply mean by precision
         @deterministic
         def full_eta(tau = self.tau, mean = mean):
@@ -454,7 +469,7 @@ class NormalSubmodel(ListContainer):
             return full_eta
         self.full_eta = full_eta
         
-        # Values of 'data'. This is a hack... fix it sometime.
+        # FIXME: Values of 'data'. This is a hack... fix it sometime.
         @deterministic
         def x(stochastics = self.fixed_stochastic_list):
             x = cvx.base.matrix(0.,size=(self.fixed_len, 1))
