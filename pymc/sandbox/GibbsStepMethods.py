@@ -33,7 +33,7 @@ __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma',
 # ParetoUniform
 # GammaPareto
 
-# TODO, long-term: Allow long sequences of LinearCombinations.        
+# TODO, long-term: Allow long sequences of LinearCombinations.     
 # TODO, long-term: Allow children to be of different classes, as long as they're all conjugate.
 
 # Wrapped in try block bc NormalSubmodel requires cvxopt.

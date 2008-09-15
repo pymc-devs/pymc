@@ -1,11 +1,5 @@
 """
 Syntax needed:
-
-functions abs, cloglog, cos, cut, equals, exp, inprod, interp.lin, inverse, log, logdet, logfact, 
-        loggam, logit, max, mean, min, phi, pow, sin, sqrt, rank, ranked, round, sd, step, sum, trunc
-
-distributions dbern, dbin, dcat, dnegbin, dpois, dbeta, dchisqr, ddexp, dexp, dgamma, gen.gamma,
-    dlnorm, dlogis, dnorm, dpar, dt, dunif, dweib, dmulti, ddirch, dmnorm, dmt, dwish
         
 arrays: x[n:m], x[], x[,3] just translate straight to numpy arrays
 
@@ -178,7 +172,7 @@ if __name__ == '__main__':
     st = """
     x[3] ~ dnorm(2, 5+3)
     y ~ dnorm(x[18:23,5,], 4)
-    z[] <- blog(exp(x+y)/k, y)
+    z[] <- log(exp(x+y)/k, y)
     w <- x + (y + z) * x
     """
 

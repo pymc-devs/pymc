@@ -230,12 +230,14 @@ class DLM(NormalSubmodel):
 if __name__ == '__main__':
     from NormalModel import NormalModel
     # F, G, V, W, m_0, C_0
-    T=50
+    # 500: .738 tau_chol, .137 slice_by_stochastics
+    # 1000: 3.619 tau_chol, 1.078 slice_by_stochastics
+    T=100
     o=.1
     F_f, G_f = fourier_components(np.arange(1,3)*o, T)
-    F_p, G_p = polynomial_components(np.arange(1,2),T)
-    F, G = combine_components((F_f, F_p), (G_f, G_p))
-    # F, G = F_f, G_f
+    # F_p, G_p = polynomial_components(np.arange(1,2),T)
+    # F, G = combine_components((F_f, F_p), (G_f, G_p))
+    F, G = F_f, G_f
     
     comps = G.keys()
     V ={}
@@ -250,7 +252,7 @@ if __name__ == '__main__':
         comp = comps[i]
         this_sh = F[comp][0].shape
         W[comp] = [np.ones(this_sh)*1e1]*T
-        m_0[comp] = np.zeros(this_sh)
+        m_0[comp] = np.ones(this_sh)*.1
         C_0[comp] = np.ones(this_sh)
     V = [100.]*(T+1)    
     

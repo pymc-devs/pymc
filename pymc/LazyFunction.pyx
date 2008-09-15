@@ -2,14 +2,11 @@
 Class LazyFunction is defined here.
 """
 
-# TODO: Experimental 'threading' mode that computes value in a separate thread.
-# That way thread-safe evaluation functions can release the GIL.
-
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-from pymc import Node, ContainerBase, Variable
+from PyMCObjects import Node, ContainerBase, Variable
 from Container import ListContainer
 
 cdef extern from "stdlib.h":

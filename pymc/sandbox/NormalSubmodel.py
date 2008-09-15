@@ -1,4 +1,8 @@
-# TODO: Optimization!
+# Bottleneck is now slicing in two places: tau_chol, which fetches from 'A' and places into 
+# the Cholesky factor based on stochastics (not much to do about this); and tau_offdiag / 
+# changeable_tau, which doesn't yet slice efficiently with irregular strides. Hopefully
+# the post to scipy gives some ideas.
+#
 # TODO: Real test suite.
 # TODO: Possibly base this on GDAGsim. Would make programming a little
 # easier, but mostly would be a lighter dependency.
@@ -32,6 +36,61 @@ def sp_to_ar(sp):
 def assign_from_sparse(spvec, slices):
     for slice in slices.iteritems():
         slice[0].value = spvec[slice[1]]
+        
+def greedy_slices(x, y):
+    """
+    x and y must be the same length. Will try to match long contiguous or strided blocks
+    in x with long contiguous or strided blocks in y. Return value will be a tuple consisting
+    of two lists of slices.
+    """
+    
+    if len(x)==0:
+        return ([slice(0,0)], [slice(0,0)])
+    
+    slices_x = []
+    slices_y = []
+    sx = x[0]
+    sy = y[0]
+    csx = x[1]-x[0]
+    csy = y[1]-y[0]
+    
+    for i in xrange(1,len(x)):
+        
+        # Break current slice if x or y breaks stride
+        if not (x[i]-x[i-1]==csx and y[i]-y[i-1]==csy):
+            slices_x.append(slice(sx, x[i-1]+1, csx))                
+            slices_y.append(slice(sy, y[i-1]+1, csy))   
+            csx = x[i+1]-x[i]
+            csy = y[i+1]-y[i]                                   
+            sx = x[i]
+            sy = y[i]
+    
+    # Append final slice
+    slices_x.append(slice(sx, x[-1]+1, csx))
+    slices_y.append(slice(sy, y[-1]+1, csy))    
+    return (slices_x, slices_y)
+
+def contiguize_slices(s_list, slices_from, slices_to):
+    
+    def none_to_1(x):
+        if x is None:
+            return 1
+        else:
+            return x
+    
+    # Find all indices needed
+    ind_from = []
+    ind_to = []
+    for s in s_list:
+        sf = slices_from[s]
+        st = slices_to[s]
+        ind_from.extend(range(sf.start, sf.stop, none_to_1(sf.step)))
+        ind_to.extend(range(st.start, st.stop, none_to_1(st.step)))
+    ind_from = np.array(ind_from)
+    ind_to = np.array(ind_to)
+    
+    # Greedily break indices into chunks
+    return greedy_slices(ind_from, ind_to)
 
 def slice_by_stochastics(spmat, stochastics_i, stochastics_j, slices_from, slices_to, stochastic_len, mn):
     """
@@ -338,26 +397,39 @@ class NormalSubmodel(ListContainer):
         stored as cvxopt sparse matrices.
         """
         
+        self.stochastics_with_nontriv_A = []
+        self.stochastics_with_triv_A = []
+        for si in self.mult_A.iterkeys():
+            if len(self.mult_A[si])>0:
+                self.stochastics_with_nontriv_A.append(si)
+            else:
+                self.stochastics_with_triv_A.append(si)
+        
         @deterministic
         def tau_chol(A = self.mult_A, diag_chol = self.diag_chol_facs):
             tau_chol = cvx.base.spmatrix([],[],[], (self.len,self.len))
-        
-            for si in A.iterkeys():
+    
+            for si in self.stochastic_list:
+                i_slice = self.slices[si]
                 this_A = A[si]
-                
-                # Append off-diagonals            
-                for sj in this_A.iterkeys(): 
-                    # If j is a parent of s,
-                    tau_chol[self.slices[sj], self.slices[si]] = this_A[sj]
+
                 chol_i = diag_chol[si]
                 chol_i_val = chol_i[1]
-                
+
                 # Write diagonal
                 if chol_i[0]:
-                    tau_chol[self.slices[si], self.slices[si]] = \
+                    tau_chol[i_slice, i_slice] = \
                       cvx.base.spmatrix(chol_i_val, range(len(chol_i_val)), range(len(chol_i_val)))
                 else:
-                    tau_chol[self.slices[si], self.slices[si]] = cvx.base.matrix(chol_i_val)
+                    tau_chol[i_slice, i_slice] = cvx.base.matrix(chol_i_val)
+
+            for si in self.stochastics_with_nontriv_A:
+
+                # Append off-diagonals            
+                for sj, A_elem in A[si].iteritems(): 
+                    # If j is a parent of s,
+                    tau_chol[self.slices[sj], self.slices[si]] = A_elem                    
+    
 
             return tau_chol
                 
@@ -478,11 +550,32 @@ class NormalSubmodel(ListContainer):
             return x
         self.x = x
         
+        
+        # j_slice_from = slices_from[sj]
+        # if i_slice_from.start < j_slice_from.start:
+        #     out[j_slices[sj],i_slice] = spmat[i_slice_from, j_slice_from].trans()                    
+        # else:                          
+        #     out[j_slices[sj],i_slice] = spmat[j_slice_from, i_slice_from]                
+        
         # Slice tau.
         @deterministic
         def tau_offdiag(tau = self.tau):
-            return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.fixed_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
+            out = cvx.base.spmatrix([],[],[], (self.fixed_len, self.changeable_len))
+            Nc = len(self.changeable_slices_from)
+            Nf = len(self.fixed_slices_from)
+            for i in xrange(Nc):
+                sfi = self.changeable_slices_from[i]
+                sti = self.changeable_slices_to[i]                
+                for j in xrange(1, Nf):
+                    sfj = self.fixed_slices_from[j]
+                    stj = self.fixed_slices_to[j]                    
+                    if sfi.start < sfj.start:
+                        out[stj, sti] = tau[sfi,sfj].trans()
+                    else:
+                        out[stj, sti] = tau[sfj, sfi]
+            return out
+            # return slice_by_stochastics(tau, self.changeable_stochastic_list, 
+            #     self.fixed_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
         self.tau_offdiag = tau_offdiag
         
         # Condition canonical eta parameter.
@@ -490,8 +583,12 @@ class NormalSubmodel(ListContainer):
         @deterministic(cache_depth=2)
         def eta(full_eta = full_eta, x=x, tau_offdiag = tau_offdiag):
             eta = cvx.base.matrix(0.,size=(self.changeable_len, 1))
-            for s in self.changeable_stochastic_list:
-                eta[self.changeable_slices[s]] = full_eta[self.slices[s]]            
+            for i in xrange(len(self.changeable_slices_from)):
+                sfi = self.changeable_slices_from[i]
+                sti = self.changeable_slices_to[i]
+                eta[sti] = full_eta[sfi]
+            # for s in self.changeable_stochastic_list:
+            #     eta[self.changeable_slices[s]] = full_eta[self.slices[s]]            
             cvx.base.gemv(tau_offdiag, x, eta, alpha=-1., beta=1., trans='T')
             return eta
 
@@ -511,10 +608,23 @@ class NormalSubmodel(ListContainer):
         self.changeable_tau_slice.
         """
         
+        self.changeable_slices_from, self.changeable_slices_to = contiguize_slices(self.changeable_stochastic_list, self.slices, self.changeable_slices)
+        self.fixed_slices_from, self.fixed_slices_to = contiguize_slices(self.fixed_stochastic_list, self.slices, self.fixed_slices)            
+        
         @deterministic
         def changeable_tau_slice(tau = self.tau):
-            return slice_by_stochastics(tau, self.changeable_stochastic_list, 
-                self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
+            out = cvx.base.spmatrix([],[],[], (self.changeable_len, self.changeable_len))
+            N = len(self.changeable_slices_from)
+            for i in xrange(N):
+                sfi = self.changeable_slices_from[i]
+                sti = self.changeable_slices_to[i]                
+                for j in xrange(i, N):
+                    sfj = self.changeable_slices_from[j]
+                    stj = self.changeable_slices_to[j]                    
+                    out[sti, stj] = tau[sfi,sfj]
+            return out
+            # return slice_by_stochastics(tau, self.changeable_stochastic_list, 
+            #     self.changeable_stochastic_list, self.slices, self.changeable_slices, self.stochastic_len, self.moral_neighbors)
         self.changeable_tau_slice = changeable_tau_slice
 
         @deterministic

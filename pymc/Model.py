@@ -137,8 +137,7 @@ class Model(ObjectContainer):
     def _get_generations(self):
         if not hasattr(self, '_generations'):
             self._generations = find_generations(self)
-        else:
-            return self._generations
+        return self._generations
     generations = property(_get_generations)
                                 
     def draw_from_prior(self):
@@ -155,7 +154,7 @@ class Model(ObjectContainer):
         """
         Seed new initial values for the stochastics.
         """
-        
+
         for generation in self.generations:
             for s in generation:
                 try:
