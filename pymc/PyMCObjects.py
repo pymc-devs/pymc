@@ -339,7 +339,7 @@ class Deterministic(DeterministicBase):
                         trace=trace,
                         plot=plot,
                         verbose=verbose)
-        
+                        
         self._value.force_compute()
         
     def gen_lazy_function(self):

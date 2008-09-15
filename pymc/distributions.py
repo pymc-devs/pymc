@@ -48,7 +48,7 @@ class ArgumentError(AttributeError):
 
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'lognormal', 'normal', 'uniform',
+'inverse_gamma', 'laplace', 'lognormal', 'normal', 'uniform',
 'weibull','skew_normal']
 
 sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
@@ -859,6 +859,60 @@ def exponential_like(x, beta):
     """
     
     return flib.gamma(x, 1, beta)
+    
+# Double exponential (Laplace)--------------------------------------------
+@randomwrap
+def rlaplace(mu, tau, size=1):
+    """
+    rlaplace(beta)
+
+    Laplace (double exponential) random variates.
+    """
+
+    u = np.random.uniform(-0.5, 0.5, size)
+    return mu - np.sign(u)*np.log(1 - 2*np.abs(u))/tau
+    
+rdexponential = rlaplace
+
+def laplace_expval(mu, tau):
+    """
+    laplace_expval(beta)
+
+    Expected value of Laplace (double exponential) distribution.
+    """
+    return mu
+
+dexponential_expval = laplace_expval
+
+def laplace_like(x, mu, tau):
+    R"""
+    laplace_like(x, mu, tau)
+
+    Laplace (doubel exponential) log-likelihood.
+
+    The Laplace (or double eexponential) distribution describes the
+    difference between two independent, identically distributed exponential
+    events. It is often used as a heavier-tailed alternative to the normal.
+
+    .. math::
+        f(x \mid \mu, tau) = \frac{\tau}{2}e^{-\tau\abs{x-\mu}}
+
+    :Parameters:
+      x : float
+        :math:`-\infty < x < \infty`
+      mu : float
+        Location parameter :math: `-\infty < mu < \infty`
+      tau : float
+        Scale parameter :math:`\tau > 0`
+
+    :Note:
+      - :math:`E(X) = \mu`
+      - :math:`Var(X) = \frac{2}{\tau^2}`
+    """
+    
+    return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
+    
+dexponential_like = laplace_like
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap

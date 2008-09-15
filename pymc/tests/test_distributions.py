@@ -429,6 +429,16 @@ class test_exponential(TestCase):
         if PLOT:
             compare_hist(figname='exponential', **figdata)
         assert_array_almost_equal(hist, like,1)
+        
+class test_laplace(TestCase):
+    """Based on gamma."""
+    def test_consistency(self):
+        parameters={'mu':1, 'tau':0.5}
+        hist, like, figdata = consistency(rlaplace, laplace_like, 
+            parameters, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='laplace', **figdata)
+        assert_array_almost_equal(hist, like,1)
 
 class test_exponweib(TestCase):
     def test_consistency(self):

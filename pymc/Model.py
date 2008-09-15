@@ -252,7 +252,7 @@ class Sampler(Model):
     def _init_deviance(self):
         """
         Initialize deviance variable.
-        """            
+        """           
         
         self.deviance = Deterministic(  eval = self._sum_deviance, 
                             name = 'deviance',
@@ -260,7 +260,7 @@ class Sampler(Model):
                             doc = 'Model deviance',
                             trace = True,
                             verbose = 0,
-                            cache_depth = 2)
+                            cache_depth = 0)
     
     def sample(self, iter, length=None, verbose=0):
         """

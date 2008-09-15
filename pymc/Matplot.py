@@ -1,4 +1,4 @@
-# FIXME: PlotFactory methods plot, geweke_plot, bar_series_plot, gof_plot not working.
+# FIXME: PlotFactory methods plot, geweke_plot, autocorr_plot, gof_plot not working.
 
 """
 Plotting module using matplotlib.
@@ -18,7 +18,7 @@ from numpy import histogram2d, mean, std, sort, prod, floor, shape, transpose
 from numpy import apply_along_axis
 import pdb
 
-__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'bar_series_plot', 'pair_posterior']
+__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior']
 
 def get_index_list(shape, j):
     """
@@ -511,19 +511,36 @@ def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
-def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def autocorr_plot(data, name, format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    """
+    Generate bar plot of a series, usually autocorrelation
+    or autocovariance.
     
-    """Generate bar plot of a series, usually autocorrelation
-    or autocovariance."""
+    :Arguments:
+        data: array or list
+            A trace from an MCMC sample.
+            
+        name: string
+            The name of the object.
+        
+        format (optional): string
+            Graphic output format (defaults to png).
+            
+        suffix (optional): string
+            Filename suffix.
+        
+        path (optional): string
+            Specifies location for saving plots (defaults to local directory).
+    """
     
-    # Extract names
-    names = values.keys()
-    names.sort()
+    # If there is just one data series, wrap it in a list
+    if rank(data)==1:
+        data = [data]
     
     # Number of plots per page
-    rows = min(len(values), 4)
+    rows = min(len(data), 4)
     
-    for i,name in enumerate(names):
+    for i,values in enumerate(data):
         if verbose>0:
             print 'Plotting', name+suffix
         
@@ -533,7 +550,7 @@ def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontma
         
         # New subplot
         subplot(rows, 1, i - (rows*(i/rows)) + 1)
-        y = values[name]
+        y = values
         x = arange(len(y))
         bar(x, y)
         
@@ -542,7 +559,7 @@ def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontma
         xlim(0, len(y))
         
         # Plot options
-        ylabel(ylab, fontsize='x-small')
+        ylabel(name, fontsize='x-small')
         tlabels = gca().get_yticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
         tlabels = gca().get_xticklabels()
@@ -556,6 +573,9 @@ def bar_series_plot(values, ylab='Y', format='png', suffix='', path='./', fontma
             
             if not os.path.exists(path):
                 os.mkdir(path)
+            if rows>4:
+                # Append plot number to suffix, if there will be more than one
+                suffix += '_%i' % i
             savefig("%s%s%s.%s" % (path, name, suffix, format))
             #close()
 
