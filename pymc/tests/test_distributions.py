@@ -762,6 +762,12 @@ class test_truncnorm(TestCase):
             compare_hist(figname='truncnorm', **figdata)
         assert_array_almost_equal(hist, like,1)
         
+        
+    def test_random(self):
+        r = rtruncnorm(mu=-1,sigma=10,a=-20,b=20,size=10000)
+        assert (r > -20).all()
+        assert (r < 20).all()
+        
     def test_normalization(self):
         parameters = dict(mu=1, sigma=1, a=0, b=2)
         integral = normalization(truncnorm_like, parameters, [-1, 3], 200)

@@ -1775,8 +1775,8 @@ def rtruncnorm(mu, sigma, a, b, size=1):
     Random truncated normal variates.
     """
     
-    na = pymc.utils.normcdf((a-mu)/sigma)
-    nb = pymc.utils.normcdf((b-mu)/sigma)
+    na = pymc.utils.normcdf((a-mu)/float(sigma))
+    nb = pymc.utils.normcdf((b-mu)/float(sigma))
     
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
