@@ -7,6 +7,8 @@ from numpy import zeros,shape
 import base
 import pymc
 
+__all__ = ['Trace', 'Database']
+
 class Trace(base.Trace):
     """The no-trace backend provides a minimalistic backend where no
     trace of the values sampled is kept. This may be useful for testing 

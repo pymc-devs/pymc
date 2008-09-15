@@ -407,7 +407,7 @@ class Sampler(Model):
         # If not already done, load the trace backend from the database 
         # module, and assign a database instance to Model.
         if type(db) is str:
-            if db in database.available_modules:
+            if db in dir(database):
                 module = getattr(database, db)
                 self.db = module.Database(**self._db_args)
             elif db in database.__modules__:

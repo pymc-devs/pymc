@@ -9,8 +9,6 @@
 
 # TODO: add a command to save attributes (chain attributes, group attributes)
 
-__all__ = ['Trace', 'Database', 'load']
-
 import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
 import pymc
@@ -19,6 +17,8 @@ from copy import copy
 import tables
 import pickle    
 
+
+__all__ = ['Trace', 'Database', 'load']
 
 
 class Trace(base.Trace):

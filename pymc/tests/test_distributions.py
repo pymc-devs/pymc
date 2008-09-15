@@ -26,9 +26,10 @@ from numpy import *
 from numpy.linalg import cholesky
 import os, pdb
 PLOT=True
+DIR = 'test_distributions'
 if PLOT is True:
     try:
-        os.mkdir('figs')
+        os.mkdir(DIR)
     except:
         pass
 try:
@@ -221,7 +222,7 @@ def compare_hist(hist, bins, like, x, figname, discrete=False):
         ax.plot(x, like, 'k', linestyle='steps')
     else:
         ax.plot(x, like, 'k')
-    P.savefig('figs/' + figname)
+    P.savefig(os.path.join(DIR, figname))
     P.close()
 
 def normalization(like, parameters, domain, N=100):

@@ -12,6 +12,8 @@ from numpy import zeros, shape, squeeze, transpose
 import base, pickle, ram, pymc, sqlite
 import MySQLdb, pdb
 
+__all__ = ['Trace', 'Database', 'load']
+
 class Trace(sqlite.Trace):
     """MySQL Trace class."""
     

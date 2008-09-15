@@ -1,4 +1,3 @@
-from pymc import tests
 import unittest
 import warnings
 import os
@@ -10,21 +9,22 @@ import os
 warnings.simplefilter('ignore', FutureWarning)
 
 __all__=['test']
+
 def test():
-    import nose
-    
+    """Change directory to `test_results`, run the test suite and return to 
+    the current directory."""
+    import tests 
     try:
         os.mkdir('test_results')
     except:
         pass
     os.chdir('test_results')
     
-    nose.main()
+    tests.test()
     
     os.chdir('..')
 
 if __name__=='__main__':
-    import nose
-    nose.main()
+    test()
     
     

@@ -16,6 +16,8 @@ from pymc.database import base, pickle
 from copy import copy
 import tables
 
+__all__ = ['Trace', 'Database', 'load']
+
 od = np.dtype('object')
 
 

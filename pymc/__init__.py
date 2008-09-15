@@ -9,58 +9,53 @@ Pre-requisite modules: numpy, matplotlib
 Required external components: TclTk
 
 """
-__modules__ = [ 'Node',
-                'Container',
-                'PyMCObjects',                
-                'Model',
-                'distributions', 
-                'InstantiationDecorators',
-                'NormalApproximation', 
-                'MCMC',
-                'StepMethods',
-                'convergencediagnostics',
-                'CommonDeterministics'
-                ]
-                
-__sepmodules__ = [  'utils', 
-                    'testsuite', 
-                    'MultiModelInference',
-                    'CommonDeterministics',
-                    'distributions',
-                    'gp']
-                
-__optmodules__ = ['ScipyDistributions',
-                  'parallel',
-                  'sandbox',
-                  'graph',
-                  'Matplot']
-#ClosedCapture, OpenCapture
+
+
+# Core modules
+from Node import *
+from Container import *
+from PyMCObjects import *
+from Model import *
+from distributions import *
+from InstantiationDecorators import *
+from NormalApproximation import *
+from MCMC import *
+from StepMethods import *
+from convergencediagnostics import *
+from CommonDeterministics import *
+
+from testsuite import test
+
+# Utilities modules
+import utils
+import MultiModelInference
+import CommonDeterministics
+import distributions
+import gp
+
+# Optional modules
+try:
+    import ScipyDistributions
+except ImportError:
+    pass
 
 try:
-    from testsuite import *   
-except:
-    def test():
-        print 'Testsuite requires NumPy 1.2 or later'
-
-for mod in __modules__:
-    exec "from %s import *" % mod
+    import parallel
+except ImportError:
+    pass
     
-for mod in __sepmodules__:
-    exec "import %s" % mod
-    
-for mod in __optmodules__:
-    try:
-      exec "import %s" % mod
-    except ImportError:
-        pass
+try:
+    import sandbox
+except ImportError:
+    pass
 
-##try:
-##   import parallel
-##except ImportError:
-##   print 'For parallel-processing dtrmity install IPython1.'
+try:
+    import graph
+except ImportError:
+    pass
 
-del mod, __modules__, __sepmodules__, __optmodules__
+try:
+    import Matplot
+except ImportError:
+    pass
 
-
-
-    

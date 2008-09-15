@@ -24,6 +24,8 @@ import ram, no_trace, base
 import os, datetime, numpy
 import string, cPickle
 
+__all__ = ['Trace', 'Database', 'load']
+
 class Trace(ram.Trace):
     pass
 

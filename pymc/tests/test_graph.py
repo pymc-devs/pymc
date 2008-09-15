@@ -2,6 +2,8 @@ from pymc import *
 from numpy.testing import *
 from pymc.graph import *
 
+DIR = 'test_graph'
+
 def mymodel():
     
     @stochastic
@@ -62,20 +64,26 @@ def mymodel():
 class test_graph(TestCase):
     def test_raw(self):
         A = Model(mymodel())
-        graph(A, path='../test_results/full.dot', format='raw', prog='dot', consts = True)
-        graph(A, path='../test_results/deterministic.dot', format='raw', prog='dot', collapse_deterministics=True, consts = True)
-        graph(A, path='../test_results/pot.dot', format='raw', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='../test_results/deterministic_pot.dot', format='raw', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
-        moral_graph(A, path='../test_results/moral.dot', format='raw', prog='dot')
+        graph(A, path='full.dot', format='raw', prog='dot', consts = True)
+        graph(A, path='deterministic.dot', format='raw', prog='dot', collapse_deterministics=True, consts = True)
+        graph(A, path='pot.dot', format='raw', prog='dot', collapse_potentials=True, consts = True)
+        graph(A, path='deterministic_pot.dot', format='raw', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
+        moral_graph(A, path='moral.dot', format='raw', prog='dot')
     def test_pdf(self):
         A = Model(mymodel())    
-        graph(A, path='../test_results/full.pdf', format='pdf', prog='dot', consts = True)
-        graph(A, path='../test_results/deterministic.pdf', format='pdf', prog='dot', collapse_deterministics=True, consts = True)
-        graph(A, path='../test_results/pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='../test_results/deterministic_pot.pdf', format='pdf', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
-        moral_graph(A, path='../test_results/moral.pdf', format='pdf', prog='dot')
+        graph(A, path='full.pdf', format='pdf', prog='dot', consts = True)
+        graph(A, path='deterministic.pdf', format='pdf', prog='dot', collapse_deterministics=True, consts = True)
+        graph(A, path='pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
+        graph(A, path='deterministic_pot.pdf', format='pdf', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
+        moral_graph(A, path='moral.pdf', format='pdf', prog='dot')
 
 if __name__ == '__main__':
-    os.chdir('../test_results')
+    try:
+        os.mkdir(DIR)
+        os.chdir(DIR)
+    except: 
+        os.chdir(DIR)
+    
     import unittest
     unittest.main()
+    os.chdir('..')

@@ -12,6 +12,8 @@ import sqlite3
 import base, pickle, ram, pymc
 import pdb
 
+__all__ = ['Trace', 'Database', 'load']
+
 class Trace(object):
     """SQLite Trace class."""
     

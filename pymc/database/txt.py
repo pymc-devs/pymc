@@ -11,8 +11,10 @@
 import base, ram, no_trace, pickle
 import os, datetime, shutil, re
 import numpy as np
-
 import string 
+
+__all__ = ['Trace', 'Database', 'load']
+
 CHAIN_NAME = 'Chain_%d'
 
 class Trace(ram.Trace):

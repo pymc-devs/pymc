@@ -7,6 +7,8 @@ import pymc
 from numpy import zeros,shape,concatenate, ndarray,dtype
 import base
 
+__all__ = ['Trace', 'Database']
+
 class Trace(base.Trace):
     """RAM trace 
     

@@ -33,21 +33,30 @@ file. Look at template.py for a skeleton, and the other modules for examples.
 
 """
 
-#__author__ = ["David Huard <david.huard@gmail.com>",
-#                "Chris Fonnesbeck"]
-#__version__ = "2.0.beta"
+__modules__ = ['no_trace', 'txt', 'ram', 'pickle', 'sqlite', 'mysql', 'hdf5', 'hdf52', "__test_import__"]
 
-__modules__ = ["ram", "pickle", "no_trace", "txt", "sqlite", "mysql", "hdf5", "hdf52", "__test_import__"]
+import no_trace
+import txt
+import ram
+import pickle
 
-
-available_modules = []
-for mod in __modules__:
-    try:
-        exec "from %s import *" % mod
-        available_modules.append(mod)
-    except ImportError, msg:
-        pass
-        #print "Database module " + mod + " could not be loaded: "
-        #print msg
-del mod
+try: 
+    import sqlite
+except ImportError:
+    pass
+    
+try:
+    import mysql
+except ImportError:
+    pass
+    
+try:
+    import hdf5
+except ImportError:
+    pass
+    
+try:
+    import hdf52
+except ImportError:
+    pass
 
