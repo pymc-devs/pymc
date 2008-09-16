@@ -24,7 +24,7 @@ from StepMethods import *
 from convergencediagnostics import *
 from CommonDeterministics import *
 
-from testsuite import test
+from tests import test
 
 # Utilities modules
 import utils
