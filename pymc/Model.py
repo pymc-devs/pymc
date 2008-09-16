@@ -18,12 +18,17 @@ from Container import Container, ObjectContainer
 import sys,os
 from copy import copy
 from threading import Thread
+import thread
 from Node import ContainerBase
 from time import sleep
 import pdb
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
+
+class EndofSampling(Exception):
+    pass
+
 
 def find_generations(container, with_data = False):
     """
@@ -456,11 +461,19 @@ class Sampler(Model):
         
         self.db.commit()
 
+    
+    def __isample(self, *args, **kwds):
+        """Call the sample method, and when the sampling is over, raise an 
+        EndofSampling exception.
+        """
+        self.sample(*args, **kwds)
+        raise EndofSampling
+
     def isample(self, *args, **kwds):
         """
         Samples in interactive mode. Main thread of control stays in this function.
         """
-        self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
+        self._sampling_thread = Thread(target=self.__isample, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
         self.iprompt()
@@ -476,7 +489,9 @@ class Sampler(Model):
         
     def iprompt(self):
         """
-        Drive the sampler from the prompt.
+        pymc has started sampling.
+        
+        This console allows you to pause the sampler at any time. 
 
         Commands:
           i -- print current iteration index
@@ -502,6 +517,9 @@ class Sampler(Model):
         except KeyboardInterrupt:
             if not self.status == 'ready':
                 self.status = 'halt'      
+        
+        except EndofSampling:
+            pass
                 
         if not self.status == 'ready':        
             print 'Waiting for current iteration to finish...'
