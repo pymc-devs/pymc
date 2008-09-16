@@ -22,6 +22,7 @@ import thread
 from Node import ContainerBase
 from time import sleep
 import pdb
+import utils
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -462,22 +463,15 @@ class Sampler(Model):
         self.db.commit()
 
     
-    def __isample(self, *args, **kwds):
-        """Call the sample method, and when the sampling is over, raise an 
-        EndofSampling exception.
-        """
-        self.sample(*args, **kwds)
-        raise EndofSampling
-
     def isample(self, *args, **kwds):
         """
         Samples in interactive mode. Main thread of control stays in this function.
         """
-        self._sampling_thread = Thread(target=self.__isample, args=args, kwargs=kwds)
+        self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
         self.iprompt()
-
+        
     def icontinue(self):
         """
         Restarts thread in interactive mode
@@ -488,48 +482,65 @@ class Sampler(Model):
         self.iprompt()
         
     def iprompt(self):
-        """
-        pymc has started sampling.
-        
-        This console allows you to pause the sampler at any time. 
-
+        """Start a prompt listening to user input."""
+       
+        cmds = """
         Commands:
           i -- print current iteration index
           p -- pause
           q -- quit
         """
-        print self.iprompt.__doc__, '\n'
+        
+        print """        ============
+        pymc console
+        ============
+        
+        pymc is now sampling. Use the following commands to query or pause the sampler.
+        """
+        print cmds
+        
+        prompt = True
         try:
             while self.status in ['running', 'paused']:
                     # sys.stdout.write('pymc> ')
-                    cmd = raw_input('pymc> ')
+                    if prompt: 
+                        sys.stdout.write('pymc> ')
+                        sys.stdout.flush()
+                        
+                    cmd = utils.getInput().strip()
                     if cmd == 'i':
                         print 'Current iteration: ', self._current_iter
+                        prompt = True
                     elif cmd == 'p':
                         self.status = 'paused'
                         break
                     elif cmd == 'q':
                         self.status = 'halt'
                         break
+                    elif cmd == '\n':
+                        prompt = True
+                        pass
+                    elif cmd == '':
+                        prompt = False
+                        sleep(.5)
                     else:
-                        print 'Unknown command'
-                        print self.iprompt.__doc__
+                        print 'Unknown command: ', cmd
+                        print cmds
+                        prompt = True
+
         except KeyboardInterrupt:
             if not self.status == 'ready':
-                self.status = 'halt'      
-        
-        except EndofSampling:
-            pass
-                
+                self.status = 'halt'
+
+
         if not self.status == 'ready':        
             print 'Waiting for current iteration to finish...'
             while self._sampling_thread.isAlive():
                 sleep(.1)
-
-
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
                 print 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
+
 
     def get_state(self):
         """

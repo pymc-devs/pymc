@@ -5,10 +5,11 @@
 # Author: David Huard, 2006
 
 import numpy as np
-import sys, inspect
+import sys, inspect, select, os
 from copy import copy
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
+
 
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
@@ -702,3 +703,11 @@ def _process_trace(trace_file, index_file, trace, name, index):
         index_file.write('%s%s\r\n' % (index_buffer, index-1))
     
     return index
+    
+    
+def getInput():
+    """Read the input buffer without blocking the system."""
+    input = ''
+    while len(select.select([sys.stdin.fileno()], [], [], 0.0)[0])>0:
+        input += os.read(sys.stdin.fileno(), 4096)
+    return input
