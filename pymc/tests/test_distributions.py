@@ -450,6 +450,16 @@ class test_logistic(TestCase):
         if PLOT:
             compare_hist(figname='logistic', **figdata)
         assert_array_almost_equal(hist, like,1)
+        
+class test_t(TestCase):
+    """Based on gamma."""
+    def test_consistency(self):
+        parameters={'nu':5}
+        hist, like, figdata = consistency(rt, t_like, 
+            parameters, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='Student t', **figdata)
+        assert_array_almost_equal(hist, like,1)
 
 class test_exponweib(TestCase):
     def test_consistency(self):

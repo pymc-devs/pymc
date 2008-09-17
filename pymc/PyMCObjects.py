@@ -661,7 +661,7 @@ class Stochastic(StochasticBase):
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
         
         # Set Stochastic's value to drawn value
-        if self.isdata is False:
+        if not self.isdata:
             self.value = r
         return r
     

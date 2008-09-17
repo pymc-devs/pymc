@@ -502,6 +502,45 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       like = sumx - sumfact
       return
       END
+      
+      SUBROUTINE t(x,nu,n,nnu,like)
+
+c Student's t log-likelihood function    
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(nnu),intent(in) :: nu
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+
+      IMPLICIT NONE
+      INTEGER n, i, nnu
+      INTEGER x(n)
+      DOUBLE PRECISION nu(nnu), like, infinity, nut
+      PARAMETER (infinity = 1.7976931348623157d308)
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      
+      nut = nu(1)
+
+      like = 0.0
+      do i=1,n
+        if (nnu .GT. 1) then
+          nut = nu(i)
+        endif
+        
+        if (nut .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+    
+        like = like + gammln((nut+1.0)/2.0)
+        like = like - 0.5*dlog(nut * PI) - gammln(nut/2.0)
+        like = like - (nut+1)/2 * dlog(1 + (x(i)**2)/nut)
+      enddo
+      return
+      END
 
       SUBROUTINE multinomial(x,n,p,nx,nn,np,k,like)
 

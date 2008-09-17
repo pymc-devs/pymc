@@ -46,9 +46,9 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
+sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'laplace', 'lognormal', 'normal', 'uniform',
+'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
 'weibull','skew_normal']
 
 sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
@@ -428,8 +428,58 @@ squared_loss = lambda o,e: (o - e)**2
 
 chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
 
+loss_functions = {'absolute':absolute_loss, 'squared':squared_loss, 'chi_square':chi_square_loss}
+
 def GOFpoints(x,y,expval,loss):
+    # Return pairs of points for GOF calculation
     return np.sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)
+    
+def gofwrapper(f, loss_function='squared'):
+    """
+    Goodness-of-fit decorator function for likelihoods
+    ==================================================
+    Generates goodness-of-fit points for data likelihoods.
+    
+    Wrap function f(*args, **kwds) where f is a likelihood.
+    
+    Assume args = (x, parameter1, parameter2, ...)
+    Before passing the arguments to the function, the wrapper makes sure that
+    the parameters have the same shape as x.
+    """
+    
+    name = f.__name__[:-5]
+    # Take a snapshot of the main namespace.
+    
+    # Find the functions needed to compute the gof points.
+    expval_func = eval(name+'_expval')
+    random_func = eval('r'+name)
+    
+    def wrapper(*args, **kwds):
+        """
+        This wraps a likelihood.
+        """
+        
+        """Return gof points."""
+        
+        # Calculate loss
+        loss = kwds.pop('gof', loss_functions[loss_function])
+        
+        # Expected value, given parameters
+        expval = expval_func(*args[1:], **kwds)
+        y = random_func(size=len(args[0]), *args[1:], **kwds)
+        f.gof_points = GOFpoints(args[0], y, expval, loss)
+    
+        """Return likelihood."""
+        
+        return f(*args, **kwds)
+
+    
+    # Assign function attributes to wrapper.
+    wrapper.__doc__ = f.__doc__
+    wrapper.__name__ = f.__name__
+    wrapper.name = name
+    
+    return wrapper
 
 #--------------------------------------------------------
 # Statistical distributions
@@ -750,6 +800,42 @@ def chi2_like(x, nu):
     """
     
     return flib.gamma(x, 0.5*nu, 1./2)
+    
+# Degenerate---------------------------------------------
+@randomwrap
+def rdegenerate(k, size=1):
+    """
+    rdegenerate(k, size=1)
+    
+    Random degenerate variates.
+    """
+    return np.ones(size)*k
+
+def degenerate_expval(k):
+    """
+    degenerate_expval(k)
+    
+    Expected value of degenerate distribution.
+    """
+    return k
+
+def degenerate_like(x, k):
+    R"""
+    degenerate_like(x, k)
+    
+    Degenerate log-likelihood.
+    
+    .. math::
+        f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.
+    
+    :Parameters:
+      x : float
+       :math:`x = k`
+      k : float
+        degenerate value.
+    """
+    x = np.asarray(x)
+    return sum(np.log([i==k for i in x]))
 
 # Dirichlet----------------------------------------------
 @randomwrap
@@ -859,109 +945,6 @@ def exponential_like(x, beta):
     """
     
     return flib.gamma(x, 1, beta)
-
-# Double exponential (Laplace)--------------------------------------------
-@randomwrap
-def rlaplace(mu, tau, size=1):
-    """
-    rlaplace(mu, tau)
-    
-    Laplace (double exponential) random variates.
-    """
-    
-    u = np.random.uniform(-0.5, 0.5, size)
-    return mu - np.sign(u)*np.log(1 - 2*np.abs(u))/tau
-
-rdexponential = rlaplace
-
-def laplace_expval(mu, tau):
-    """
-    laplace_expval(mu, tau)
-    
-    Expected value of Laplace (double exponential) distribution.
-    """
-    return mu
-
-dexponential_expval = laplace_expval
-
-def laplace_like(x, mu, tau):
-    R"""
-    laplace_like(x, mu, tau)
-    
-    Laplace (doubel exponential) log-likelihood.
-    
-    The Laplace (or double eexponential) distribution describes the
-    difference between two independent, identically distributed exponential
-    events. It is often used as a heavier-tailed alternative to the normal.
-    
-    .. math::
-        f(x \mid \mu, tau) = \frac{\tau}{2}e^{-\tau\abs{x-\mu}}
-    
-    :Parameters:
-      x : float
-        :math:`-\infty < x < \infty`
-      mu : float
-        Location parameter :math: `-\infty < mu < \infty`
-      tau : float
-        Scale parameter :math:`\tau > 0`
-    
-    :Note:
-      - :math:`E(X) = \mu`
-      - :math:`Var(X) = \frac{2}{\tau^2}`
-    """
-    
-    return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
-
-dexponential_like = laplace_like
-
-# Logistic-----------------------------------
-@randomwrap
-def rlogistic(mu, tau, size=1):
-    """
-    rlogistic(mu, tau)
-    
-    Logistic random variates.
-    """
-    
-    u = np.random.random(size)
-    return mu + np.log(u/(1-u))/tau
-
-
-def logistic_expval(mu, tau):
-    """
-    logistic_expval(mu, tau)
-    
-    Expected value of logistic distribution.
-    """
-    return mu
-
-
-def logistic_like(x, mu, tau):
-    R"""
-    logistic_like(x, mu, tau)
-    
-    Logistic log-likelihood.
-    
-    The logistic distribution is often used as a growth model; for example,
-    populations, markets. Resembles a heavy-tailed normal distribution.
-    
-    .. math::
-        f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}
-    
-    :Parameters:
-      x : float
-        :math:`-\infty < x < \infty`
-      mu : float
-        Location parameter :math: `-\infty < mu < \infty`
-      tau : float
-        Scale parameter :math:`\tau > 0`
-    
-    :Note:
-      - :math:`E(X) = \mu`
-      - :math:`Var(X) = \frac{\pi^2}{3\tau^2}`
-    """
-    
-    return flib.logistic(x, mu, tau)
 
 
 # Exponentiated Weibull-----------------------------------
@@ -1276,6 +1259,111 @@ def inverse_gamma_like(x, alpha, beta):
     """
     
     return flib.igamma(x, alpha, beta)
+    
+
+# Double exponential (Laplace)--------------------------------------------
+@randomwrap
+def rlaplace(mu, tau, size=1):
+    """
+    rlaplace(mu, tau)
+    
+    Laplace (double exponential) random variates.
+    """
+    
+    u = np.random.uniform(-0.5, 0.5, size)
+    return mu - np.sign(u)*np.log(1 - 2*np.abs(u))/tau
+
+rdexponential = rlaplace
+
+def laplace_expval(mu, tau):
+    """
+    laplace_expval(mu, tau)
+    
+    Expected value of Laplace (double exponential) distribution.
+    """
+    return mu
+
+dexponential_expval = laplace_expval
+
+def laplace_like(x, mu, tau):
+    R"""
+    laplace_like(x, mu, tau)
+    
+    Laplace (doubel exponential) log-likelihood.
+    
+    The Laplace (or double eexponential) distribution describes the
+    difference between two independent, identically distributed exponential
+    events. It is often used as a heavier-tailed alternative to the normal.
+    
+    .. math::
+        f(x \mid \mu, tau) = \frac{\tau}{2}e^{-\tau\abs{x-\mu}}
+    
+    :Parameters:
+      x : float
+        :math:`-\infty < x < \infty`
+      mu : float
+        Location parameter :math: `-\infty < mu < \infty`
+      tau : float
+        Scale parameter :math:`\tau > 0`
+    
+    :Note:
+      - :math:`E(X) = \mu`
+      - :math:`Var(X) = \frac{2}{\tau^2}`
+    """
+    
+    return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
+
+dexponential_like = laplace_like
+
+# Logistic-----------------------------------
+@randomwrap
+def rlogistic(mu, tau, size=1):
+    """
+    rlogistic(mu, tau)
+    
+    Logistic random variates.
+    """
+    
+    u = np.random.random(size)
+    return mu + np.log(u/(1-u))/tau
+
+
+def logistic_expval(mu, tau):
+    """
+    logistic_expval(mu, tau)
+    
+    Expected value of logistic distribution.
+    """
+    return mu
+
+
+def logistic_like(x, mu, tau):
+    R"""
+    logistic_like(x, mu, tau)
+    
+    Logistic log-likelihood.
+    
+    The logistic distribution is often used as a growth model; for example,
+    populations, markets. Resembles a heavy-tailed normal distribution.
+    
+    .. math::
+        f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}
+    
+    :Parameters:
+      x : float
+        :math:`-\infty < x < \infty`
+      mu : float
+        Location parameter :math: `-\infty < mu < \infty`
+      tau : float
+        Scale parameter :math:`\tau > 0`
+    
+    :Note:
+      - :math:`E(X) = \mu`
+      - :math:`Var(X) = \frac{\pi^2}{3\tau^2}`
+    """
+    
+    return flib.logistic(x, mu, tau)
+    
 
 # Lognormal----------------------------------------------
 @randomwrap
@@ -1733,6 +1821,7 @@ def poisson_expval(mu):
     
     Expected value of Poisson distribution.
     """
+    
     return mu
 
 
@@ -1864,6 +1953,40 @@ def skew_normal_expval(mu,tau,alpha):
     """
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
+    
+# Student's t-----------------------------------
+@randomwrap
+def rt(nu, size=1):
+    """rt(nu, size=1)
+    
+    Student's t random variates.
+    """
+    return rnormal(0,1,size) / np.sqrt(rchi2(nu,size)/nu)
+
+def t_like(x, nu):
+    R"""t_like(x, nu)
+    
+    Student's t log-likelihood
+    
+    .. math::
+        f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
+    
+    :Parameters:
+      x : float
+        Input data.
+      nu : float
+        Degrees of freedom.
+    
+    """
+    nu = np.asarray(nu)
+    return flib.t(x, nu)
+
+def t_expval(nu):
+    """t_expval(nu)
+    
+    Expectation of Student's t random variables.
+    """
+    return 0
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap
@@ -2141,50 +2264,6 @@ def random_method_wrapper(f, size, shape):
         if shape is not None:
             value= np.reshape(value, shape)
         return value
-    return wrapper
-
-def gofwrapper(f, snapshot):
-    """
-    Goodness-of-fit decorator function for likelihoods
-    ==================================================
-    Generates goodness-of-fit points for data likelihoods.
-    
-    Wrap function f(*args, **kwds) where f is a likelihood.
-    
-    Assume args = (x, parameter1, parameter2, ...)
-    Before passing the arguments to the function, the wrapper makes sure that
-    the parameters have the same shape as x.
-    """
-    
-    name = f.__name__[:-5]
-    # Take a snapshot of the main namespace.
-    
-    # Find the functions needed to compute the gof points.
-    expval_func = snapshot[name+'_expval']
-    random_func = snapshot['r'+name]
-    
-    def wrapper(*args, **kwds):
-        """
-        This wraps a likelihood.
-        """
-        
-        if kwds.pop('isdata', False):
-            """Return gof points."""
-            loss = kwds.pop('gof', squared_loss)
-            expval = expval_func(*args[1:], **kwds)
-            y = random_func(*args[1:], **kwds)
-            f.gof_points = GOFpoints(args[0],y,expval,loss)
-        
-        """Return likelihood."""
-        
-        return f(*args, **kwds)
-
-    
-    # Assign function attributes to wrapper.
-    wrapper.__doc__ = f.__doc__
-    wrapper.__name__ = f.__name__
-    wrapper.name = name
-    
     return wrapper
 
 
