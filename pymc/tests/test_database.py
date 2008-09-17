@@ -36,6 +36,11 @@ class test_ram(TestCase):
         assert_array_equal(M.e.trace().shape, (100,))
         assert_array_equal(M.e.trace(chain=None).shape, (300,))
         
+    def test_regression_155(self):
+        """thin > iter"""
+        M = MCMC(DisasterModel, db='ram')
+        M.sample(10,0,100)
+        
 class test_txt(TestCase):
     def test(self):
         try:

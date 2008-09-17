@@ -126,7 +126,7 @@ class MCMC(Sampler):
         
         self.assign_step_methods()
 
-        if burn > iter:
+        if burn >= iter:
             raise ValueError, 'Burn interval must be smaller than specified number of iterations.'
         self._iter = int(iter)
         self._burn = int(burn)
@@ -134,7 +134,7 @@ class MCMC(Sampler):
         self._tune_interval = int(tune_interval)
         self._save_interval = save_interval
 
-        length = int(round((1.0*iter-burn)/thin))
+        length = int(np.ceil((1.0*iter-burn)/thin))
         self.max_trace_length = length
 
         # Flags for tuning
