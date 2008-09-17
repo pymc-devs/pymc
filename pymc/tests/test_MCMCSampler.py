@@ -3,6 +3,9 @@ The DisasterMCMC example.
 
 """
 from numpy.testing import *
+from pymc import MCMC
+from pymc.examples import DisasterModel
+import nose
 
 try:
     from pymc.Matplot import plot
@@ -13,28 +16,31 @@ PLOT=False
 
 
 class test_MCMC(TestCase):
-    def test(self):
-        
-        # Import modules
-        from pymc import MCMC
-        from pymc.examples import DisasterModel
-        
-        # Instantiate samplers
-        M = MCMC(DisasterModel)
-        
+
+    # Instantiate samplers
+    M = MCMC(DisasterModel)
+    
+    # Sample
+    M.sample(4000,2000,verbose=0)
+    
+    def test_instantiation(self):
+             
         # Check stochastic arrays
-        assert_equal(len(M.stochastics), 3)
-        assert_equal(len(M.data_stochastics),1)
-        assert_array_equal(M.D.value, DisasterModel.disasters_array)
+        assert_equal(len(self.M.stochastics), 3)
+        assert_equal(len(self.M.data_stochastics),1)
+        assert_array_equal(self.M.D.value, DisasterModel.disasters_array)
         
-        # Sample
-        M.sample(10000,5000,verbose=0)
+    def test_plot(self):
+        if not PLOT:
+            raise nose.SkipTest
         
-        if PLOT:
-            # Plot samples
-            plot(M)
+        # Plot samples
+        plot(M)
+
+    def test_stats(self):
+        S = self.M.e.stats()
+        
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    nose.runmodule()
     

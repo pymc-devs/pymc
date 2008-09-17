@@ -344,7 +344,7 @@ class Sampler(Model):
         
     def stats(self, alpha=0.05, start=0):
         """
-        Statistical output for variables
+        Statistical output for variables.
         """
         
         stat_dict = {}
@@ -356,7 +356,7 @@ class Sampler(Model):
             
         return stat_dict
         
-
+    # Property --- status : the sampler state. 
     def status():
         doc = \
         """Status of sampler. May be one of running, paused, halt or ready.

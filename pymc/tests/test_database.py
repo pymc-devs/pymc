@@ -188,6 +188,7 @@ class test_hdf5(TestCase):
         assert_array_equal(S.e.trace().shape, (200,))
         assert_equal(S.e.trace.length(), 200)
         assert_array_equal(S.D.value, DisasterModel.disasters_array)
+        assert_equal(S.e.trace().__class__,  np.ndarray)
         S.db.close()
         
     def test_load(self):
