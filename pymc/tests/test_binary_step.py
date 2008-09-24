@@ -22,7 +22,7 @@ class BinaryTestModel:
     def coin(value=.5, fair=fair):
         """Return the probability of a tail on flipping a coin."""
         if fair is True:
-            return pymc.truncnorm_like(value, .5, .001, 0, 1)
+            return pymc.beta_like(value, 1e6, 1e6)
         else:
             return pymc.uniform_like(value, .3, .7)                    
 
