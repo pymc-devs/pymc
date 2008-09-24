@@ -161,15 +161,20 @@ class Variable(Node):
         from utils import hpd, quantiles
         from numpy import sqrt
     
-        trace = self.trace().astype(float)[start:]
+        trace = array(self.trace(), float)[start:]
+        
+        n = len(trace)
+        if not n:
+            print 'Cannot generate statistics for zero-length trace in', self.__name__
+            return
         
         try:
             return {
-                'n': len(trace),
+                'n': n,
                 'standard deviation': trace.std(0),
                 'mean': trace.mean(0),
                 '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
-                'mc error': trace.std(0) / sqrt(len(trace)),
+                'mc error': trace.std(0) / sqrt(n),
                 'quantiles': quantiles(trace)
             }
         except:

@@ -1486,7 +1486,7 @@ def multinomial_like(x, n, p):
     R"""
     multinomial_like(x, n, p)
     
-    Multinomial log-likelihood with k-1 bins. Generalization of the binomial
+    Multinomial log-likelihood. Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
     "failure", each one results in exactly one of some fixed finite number k
     of possible outcomes over n independent trials. 'x[i]' indicates the number
