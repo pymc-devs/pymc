@@ -9,7 +9,6 @@ We have two parameters:
 
 from numpy.testing import TestCase
 import pymc
-from pymc import stoch
 import numpy as np
 
 
@@ -18,13 +17,19 @@ class BinaryTestModel:
     
     fair = pymc.Bernoulli('fair', p=.5, value=1)
     
-    @stoch
-    def coin(value=.5, fair=fair):
-        """Return the probability of a tail on flipping a coin."""
-        if fair is True:
-            return pymc.beta_like(value, 1e6, 1e6)
+    @pymc.deterministic
+    def coin(fair=fair):
+        if fair:
+            return .5
         else:
-            return pymc.uniform_like(value, .3, .7)                    
+            return .1
+    # @stoch
+    # def coin(value=.5, fair=fair):
+    #     """Return the probability of a tail on flipping a coin."""
+    #     if fair is True:
+    #         return pymc.beta_like(value, 1e6, 1e6)
+    #     else:
+    #         return pymc.uniform_like(value, .3, .7)                    
 
     tail = pymc.Bernoulli('tail', p=coin, value=series, isdata=True)
     
