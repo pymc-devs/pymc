@@ -20,7 +20,7 @@ config = Configuration('pymc',parent_package=None,top_path=None)
 lapack_info = get_info('lapack_opt',1)
 f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f']
 if lapack_info:
-    config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info)
+    config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info, f2py_options=['skip:ppnd7'])
 else:
     ##inc_dirs = ['blas/BLAS','lapack/double']
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
