@@ -18,7 +18,10 @@ def _extract(__func__, kwds, keys, classname):
     """
     
     # Add docs and name
-    kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
+    kwds['doc'] = __func__.__doc__
+    if not kwds.has_key('name'):
+        kwds['name'] = __func__.__name__
+    # kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
     
     # Instanitate dictionary of parents
     parents = {}
