@@ -1931,7 +1931,7 @@ def truncnorm_expval(mu, tau, a, b):
         Phib = 1.0
     else:
         Phib = pymc.utils.normcdf((b-mu)/sigma)
-    return mu + (phia-phib)/(Phib - Phia)
+    return (mu + (phia-phib)/(Phib - Phia))[0]
 
 def truncnorm_like(x, mu, tau, a, b):
     R"""truncnorm_like(x, mu, tau, a, b)

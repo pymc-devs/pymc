@@ -161,7 +161,7 @@ class Variable(Node):
         from utils import hpd, quantiles
         from numpy import sqrt
     
-        trace = array(self.trace(), float)[start:]
+        trace = np.array(self.trace(), float)[start:]
         
         n = len(trace)
         if not n:
