@@ -24,7 +24,7 @@ class BinaryTestModel:
         if fair is True:
             return pymc.truncnorm_like(value, .5, .001, 0, 1)
         else:
-            return pymc.uniform_like(value, .3, .7)
+            return pymc.uniform_like(value, .3, .7)                    
 
     tail = pymc.Bernoulli('tail', p=coin, value=series, isdata=True)
     

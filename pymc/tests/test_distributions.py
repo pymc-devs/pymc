@@ -862,5 +862,15 @@ class test_wishart(TestCase):
         delta=A-wishart_cov_expval(n,self.Tau_test.I)
         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
 
+
+class test_Stochastic_generator(TestCase):
+    def test_randomwrap(self):
+        B = Bernoulli('x', ones(10)*.5, value=ones(10))
+        assert_equal(B.value.shape, (10,))
+        B.random()
+        assert_equal(B.value.shape, (10,))
+
+
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    nose.runmodule()

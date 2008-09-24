@@ -105,6 +105,7 @@ def new_dist_class(*new_class_args):
       :SeeAlso:
         stochastic_from_dist
     """
+    
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
         __doc__ = docstr
@@ -114,7 +115,7 @@ def new_dist_class(*new_class_args):
             
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'isdata', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [None, parents, None, False, 1, True, True, None, False, True, 0]
+            arg_vals = [None, parents, None, False, None, True, True, None, False, True, 0]
             
             # No size argument allowed for multivariate distributions.
             if mv:
@@ -153,25 +154,65 @@ def new_dist_class(*new_class_args):
                         pass
                 else:
                     raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
-            
-            # Determine size desired for scalar variables
+        
+        # Determine size desired for scalar variables.
+        # Notes
+        # -----
+        # Case | init_val     | parents       | size | value.shape | bind size
+        # ------------------------------------------------------------------
+        # 1.1  | None         | scalars       | None | 1           | 1
+        # 1.2  | None         | scalars       | n    | n           | n
+        # 1.3  | None         | n             | None | n           | 1
+        # 1.4  | None         | n             | n(m) | n (Error)   | 1 (-)
+        # 2.1  | scalar       | scalars       | None | 1           | 1
+        # 2.2  | scalar       | scalars       | n    | n           | n 
+        # 2.3  | scalar       | n             | None | n           | 1 
+        # 2.4  | scalar       | n             | n(m) | n (Error)   | 1 (-)
+        # 3.1  | n            | scalars       | None | n           | n
+        # 3.2  | n            | scalars       | n(m) | n (Error)   | n (-)
+        # 3.3  | n            | n             | None | n           | 1
+        # 3.4  | n            | n             | n(m) | n (Error)   | 1 (-)
+
             if not mv:
-                size = arg_dict_out.pop('size')
+                size = arg_dict_out.pop('size') 
                 init_val = arg_dict_out['value']
-                if init_val is not None:
-                    if np.isscalar(init_val):
-                        size = 1
-                    else:
-                        size = len(init_val)
+                init_val_size = np.alen(init_val)
+                parents_size = 1
+                for v in parents.values():
+                    try:
+                        parents_size = max(parents_size, np.size(v.value))
+                    except: 
+                        parents_size = max(parents_size, np.size(v))
                 
-                # Make sure size argument doesn't conflict with
-                # 'natural' size of variable.
-                elif size > 1:
-                    test_val = random(**(pymc.DictContainer(parents).value))
-                    if not np.isscalar(test_val):
-                        if not np.shape(test_val.squeeze()) == size:
-                            raise ValueError, 'Size argument is inconsistent with sizes of parents.'
-                random = bind_size(random, size)
+                bindsize = 1
+                
+                if np.size(init_val) == 1:
+                    if size is not None:
+                        if parents_size == 1:
+                            bindsize = size                   # Case 1.2 and 2.2
+                        elif parents_size != size:
+                            raise AttributeError,\
+                                "size is incompatible with parents shape."
+                else:
+                    if parents_size == 1:
+                        if size is None or size == np.size(init_val):
+                            bindsize = np.size(init_val)      # Case 3.1 and 3.2
+                        else:
+                            raise AttributeError, \
+                                "size is incompatible with parents shape."
+                    else:
+                        if size is not None and parents_size != size:
+                            raise AttributeError, \
+                                "size is incompatible with parents shape."
+                
+                random = bind_size(random, bindsize)
+                test_val = random(**(pymc.DictContainer(parents).value))
+                
+                if init_val is not None:
+                    if np.size(init_val) != np.size(test_val):
+                        raise AttributeError, \
+                        'init_val size: %d, test_val size: %d'%(np.size(init_val),np.size(test_val))
+                
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
                                     
