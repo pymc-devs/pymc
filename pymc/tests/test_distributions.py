@@ -33,6 +33,7 @@ if PLOT is True:
     except:
         pass
 try:
+    import scipy.stats
     from scipy import integrate, special, factorial, comb
     from scipy.stats import genextreme, exponweib
     from scipy.optimize import fmin
@@ -776,8 +777,19 @@ class test_truncnorm(TestCase):
         
     def test_random(self):
         r = rtruncnorm(mu=-1,tau=.1,a=-20,b=20,size=10000)
+        assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 2)
         assert (r > -20).all()
         assert (r < 20).all()
+        
+    def test_against_scipy(self):
+        mu = 3. 
+        sigma = 2.
+        tau = 1./sigma**2
+        a=2;b=4;
+        x = 3.5
+        y1 = truncnorm_like(x, mu, tau, a, b)
+        y2 = scipy.stats.truncnorm.pdf(x, -.5, .5, mu, sigma)
+        assert_almost_equal(y1, np.log(y2), 8)
         
     def test_normalization(self):
         parameters = dict(mu=1, tau=1, a=0, b=2)

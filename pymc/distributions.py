@@ -1830,8 +1830,8 @@ def normal_like(x, mu, tau):
       mu : float
         Mean of the distribution.
       tau : float
-        Precision of the distribution, > 0.
-    
+        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ). 
+        
     :Note:
       - :math:`E(X) = \mu`
       - :math:`Var(X) = 1/\tau`
@@ -1904,7 +1904,7 @@ def rtruncnorm(mu, tau, a, b, size=1):
     
     Random truncated normal variates.
     """
-    sigma = 1./tau
+    sigma = 1./np.sqrt(tau)
     
     na = pymc.utils.normcdf((a-mu)/sigma)
     nb = pymc.utils.normcdf((b-mu)/sigma)
@@ -1917,10 +1917,21 @@ def rtruncnorm(mu, tau, a, b, size=1):
     # Unnormalize
     return R*sigma + mu
 
-# TODO: code this.
+
 def truncnorm_expval(mu, tau, a, b):
-    """E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma. """
-    pass
+    """Expectation value of the truncated normal distribution. 
+    
+    .. math::
+       E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma**2. """
+    phia = np.exp(normal_like(a, mu, tau))
+    phib = np.exp(normal_like(b, mu, tau))
+    sigma = 1./np.sqrt(tau)
+    Phia = pymc.utils.normcdf((a-mu)/sigma)
+    if b == np.inf:
+        Phib = 1.0
+    else:
+        Phib = pymc.utils.normcdf((b-mu)/sigma)
+    return mu + (phia-phib)/(Phib - Phia)
 
 def truncnorm_like(x, mu, tau, a, b):
     R"""truncnorm_like(x, mu, tau, a, b)
@@ -1928,19 +1939,32 @@ def truncnorm_like(x, mu, tau, a, b):
     Truncated normal log-likelihood.
     
     .. math::
-        f(x \mid \mu, \tau, a, b) = \frac{\phi(\tau (x-\mu))} {\Phi(\tau (b-\mu)) - \Phi(\tau (a-\mu)},
+        f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},
+        
+    where :math:`\sigma^2=1/\tau`.
     
+    :Parameters:
+      x : float
+        Input data.
+      mu : float
+        Mean of the distribution.
+      tau : float
+        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ). 
+      a : float
+        Left bound of the distribution.
+      b : float
+        Right bound of the distribution.
     """
     x = np.atleast_1d(x)
     a = np.atleast_1d(a)
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
-    sigma = 1./np.atleast_1d(tau)
+    sigma = (1./np.atleast_1d(np.sqrt(tau)))
     if (x < a).any() or (x>b).any():
         return -np.inf
     else:
         n = len(x)
-        phi = normal_like(x, mu, 1./sigma**2)
+        phi = normal_like(x, mu, tau)
         Phia = pymc.utils.normcdf((a-mu)/sigma)
         if b == np.inf:
             Phib = 1.0
