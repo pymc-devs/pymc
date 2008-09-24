@@ -709,11 +709,25 @@ class BinaryMetropolis(Metropolis):
             # Test
             p_true = exp(logp_true + loglike_true)
             p_false = exp(logp_false + loglike_false)
+            
+            if self.verbose>1:
+                print """%s step information:
+    - logp_true: %f
+    - loglike_true: %f
+    - logp_false: %f
+    - loglike_false: %f
+    - p_true: %f
+    - p_false: %f
+                """ % (self._id, logp_true, loglike_true, logp_false, loglike_false, p_true, p_false)
         
             # Stochastically set value according to relative
             # probabilities of True and False
-            if random() > p_true / (p_true + p_false):
+            if random() > p_false / (p_true + p_false):
+                if self.verbose > 0:
+                    print "%s setting %s's value to True." % (self._id, self.stochastic)
                 self.stochastic.value = True
+            elif self.verbose > 0:
+                print "%s setting %s's value to False." % (self._id, self.stochastic)
         
     
     def propose(self):
