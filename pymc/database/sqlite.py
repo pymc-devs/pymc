@@ -138,7 +138,7 @@ class Database(pickle.Database):
         """
         base.Database.connect(self, sampler)
         self.choose_name('sqlite')
-        self.DB = sqlite3.connect(self.filename)
+        self.DB = sqlite3.connect(self.filename, check_same_thread=False)
         self.cur = self.DB.cursor()
     
     def commit(self):
