@@ -170,6 +170,11 @@ class test_sqlite(TestCase):
         assert_array_equal(S.e.trace(chain=None).shape, (450,))
         S.db.close()
     
+    def test_interactive(self):
+        M=MCMC(DisasterModel,db='sqlite')
+        M.isample(1000)
+        
+
 
 class test_hdf5(TestCase):
     def __init__(*args, **kwds):
