@@ -16,6 +16,7 @@ from pprint import pformat
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, transpose
 from numpy import apply_along_axis
+from utils import autocorr
 import pdb
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior']
@@ -511,7 +512,8 @@ def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
-def autocorr_plot(data, name, format='png', suffix='', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+@plotwrapper
+def autocorrelation(data, name, maxlag=100, format='png', suffix='_ac', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generate bar plot of a series, usually autocorrelation
     or autocovariance.
@@ -550,8 +552,9 @@ def autocorr_plot(data, name, format='png', suffix='', path='./', fontmap = {1:1
         
         # New subplot
         subplot(rows, 1, i - (rows*(i/rows)) + 1)
-        y = values
-        x = arange(len(y))
+        x = arange(maxlag)
+        y = [autocorr(values, lag=i) for i in x]
+        
         bar(x, y)
         
         # Set axis bounds

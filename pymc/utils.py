@@ -457,6 +457,9 @@ def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
     The autocorrelation is the correlation of x_i with x_{i+lag}.
     """
+    
+    if not lag: return 1
+    if lag<0: return
     x = np.squeeze(asarray(x))
     mu = x.mean()
     v = x.var()

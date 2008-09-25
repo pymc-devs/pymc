@@ -8,11 +8,11 @@ from pymc.examples import DisasterModel
 import nose
 
 try:
-    from pymc.Matplot import plot
+    from pymc.Matplot import plot, autocorrelation
 except:
     pass
 
-PLOT=False
+PLOT=True
 
 
 class test_MCMC(TestCase):
@@ -35,7 +35,14 @@ class test_MCMC(TestCase):
             raise nose.SkipTest
         
         # Plot samples
-        plot(M)
+        plot(self.M.e)
+        
+    def test_autocorrelation(self):
+        if not PLOT:
+            raise nose.SkipTest
+        
+        # Plot samples
+        autocorrelation(self.M.e)
 
     def test_stats(self):
         S = self.M.e.stats()
