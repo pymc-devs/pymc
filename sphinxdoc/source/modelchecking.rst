@@ -1,3 +1,8 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Model checking and diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 Convergence Diagnostics
 ~~~~~~~~~~~~~~~~~~~~~~~
  % (fold)

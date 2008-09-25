@@ -1,3 +1,7 @@
+~~~~~~~~~~~~~~
+Fitting Models
+~~~~~~~~~~~~~~
+
 PyMC probability models are linked collections of nodes. These nodes are only informed by the value of their parents. ``Deterministic`` instances can compute their values given their parents' values, ``Stochastic`` instances can compute their log-probabilities or draw new values, and ``Potential`` instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
 
 All objects capable of fitting probability models are subclasses of the ``Model`` class. All objects that fit probability models using some kind of Monte Carlo method are descended from the ``Model`` subclass ``Sampler``. ``Sampler`` provides a generic sampling loop method and database support for storing large sets of joint samples. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.

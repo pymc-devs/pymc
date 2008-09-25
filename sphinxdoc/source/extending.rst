@@ -1,3 +1,7 @@
+~~~~~~~~~~~~~~
+Extending pymc
+~~~~~~~~~~~~~~
+
 PyMC is designed to make standard things easy, but keep weird things possible. Its openness, combined with Python's flexibility, invite extensions from using new step methods to ``Stochastics`` valued as exotic stochastic processes (see the Gaussian process module). This chapter briefly reviews the primary ways PyMC can be extended without actually reading its source code. 
 
 \hypertarget{nonstandard}{}
