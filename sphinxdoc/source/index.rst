@@ -13,6 +13,13 @@ Contents:
    README
    INSTALL
    tutorial
+   theory
+   modelbuilding
+   modelfitting
+   database
+   modelchecking
+   extending
+   distributions
 
 Indices and tables
 ==================

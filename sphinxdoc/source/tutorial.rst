@@ -138,7 +138,7 @@ The last step is to define the number of disasters `D`. This is done the same wa
 .. rubric :: Why are data and unknown variables represented by the same object?
 
 
-Since its represented by a \texttt{Stochastic} object, `D` is defined by its dependence on its parents `s`, `e` and `l` even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior `p(e,s,l|D)` of model \ref{disastermodel}, we need to use the likelihood `p(D|e,s,l)`. Even though `D`'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
+Since its represented by a ``Stochastic`` object, `D` is defined by its dependence on its parents `s`, `e` and `l` even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior `p(e,s,l|D)` of model \ref{disastermodel}, we need to use the likelihood `p(D|e,s,l)`. Even though `D`'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (:eq:`disastermodel`) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of `D`, we could have sampled from its prior predictive distribution `p(D)` (*i.e.* the marginal distribution of the data) as follows:
 
@@ -173,27 +173,27 @@ and we would have no use for MCMC or any other fitting method. Bayesian methods,
 Parents and children
 ~~~~~~~~~~~~~~~~~~~~
 
-We have created a PyMC probability model: a linked collection of variables. To see the nature of the links, import or run \texttt{DisasterModel.py} and examine `s`'s \texttt{parents} attribute from the Python prompt\footnote{If you do not recognize this prompt, it is because we are using the IPython shell, rather than the standard shell.}::
+We have created a PyMC probability model: a linked collection of variables. To see the nature of the links, import or run ``DisasterModel.py`` and examine `s`'s ``parents`` attribute from the Python prompt\footnote{If you do not recognize this prompt, it is because we are using the IPython shell, rather than the standard shell.}::
 
    In [2]: s.parents
    Out[2]: {'lower': 0, 'upper': 110}
 
-The \texttt{parents} dictionary shows us the distributional parameters of `s`. Now try examining `D`'s parents::
+The ``parents`` dictionary shows us the distributional parameters of `s`. Now try examining `D`'s parents::
 
    In [3]: D.parents
    Out[3]: {'mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
 
-We are using `r` as a distributional parameter of `D`, so `r` is `D`'s parent. `D` labels `r` as \texttt{mu}, meaning it plays the role of the rate parameter in `D`'s Poisson distribution. Now examine `r`'s \texttt{children} attribute::
+We are using `r` as a distributional parameter of `D`, so `r` is `D`'s parent. `D` labels `r` as ``mu``, meaning it plays the role of the rate parameter in `D`'s Poisson distribution. Now examine `r`'s ``children`` attribute::
 
    In [3]: r.children
    Out[3]: set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
 
-Because `D` considers `r` its parent, `r` considers `D` its child. Unlike \texttt{parents}, \texttt{children} is a set; variables do not associate their children with any particular distributional role. Try examining the \texttt{parents} and \texttt{children} attributes of the other parameters in the model.
+Because `D` considers `r` its parent, `r` considers `D` its child. Unlike ``parents``, ``children`` is a set; variables do not associate their children with any particular distributional role. Try examining the ``parents`` and ``children`` attributes of the other parameters in the model.
 
 Variables' values and log-probabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All PyMC variables have an attribute called \texttt{value}. Try examining `D`'s value, and you'll see the initial value we provided for it::
+All PyMC variables have an attribute called ``value``. Try examining `D`'s value, and you'll see the initial value we provided for it::
 
    In [4]: D.value
    Out[4]: 
@@ -216,7 +216,7 @@ If you check `e`'s, `s`'s and `l`'s values, you'll see random initial values gen
    Out[7]: 2.6491936762267811
 
 
-Of course, since these are Stochastic elements, your value will be different than these. If you check `r`'s value, you'll see an array whose first `s` elements are \texttt{e.value}, and whose remaining elements are \texttt{l.value}::
+Of course, since these are Stochastic elements, your value will be different than these. If you check `r`'s value, you'll see an array whose first `s` elements are ``e.value``, and whose remaining elements are ``l.value``::
 
    In [8]: r.value
    Out[8]: 
@@ -246,7 +246,7 @@ Of course, since these are Stochastic elements, your value will be different tha
 
 To compute its value, `r` calls the funtion we used to create it, passing in the values of its parents.
 
-Stochastic objects can evaluate their probability mass or density functions at their current values given the values of their parents. The log of a stochastic object's probability mass or density can be accessed via the \texttt{logp} attribute. For vector-valued variables like `D`, the \texttt{logp} attribute returns the log of the joint probability or density of all elements of the value. Try examining `s`'s and `D`'s log-probabilities and `e`'s and `l`'s log-densities::
+Stochastic objects can evaluate their probability mass or density functions at their current values given the values of their parents. The log of a stochastic object's probability mass or density can be accessed via the ``logp`` attribute. For vector-valued variables like `D`, the ``logp`` attribute returns the log of the joint probability or density of all elements of the value. Try examining `s`'s and `D`'s log-probabilities and `e`'s and `l`'s log-densities::
 
    In [9]: s.logp
    Out[9]: -4.7095302013123339
@@ -261,9 +261,9 @@ Stochastic objects can evaluate their probability mass or density functions at t
    Out[12]: -2.6491936762267811
 
 
-Stochastic objects need to call an internal function to compute their \texttt{logp} attributes, as `r` needed to call an internal function to compute its value. Just as we created `r` by decorating a function that computes its value, it's possible to create custom \texttt{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). 
+Stochastic objects need to call an internal function to compute their ``logp`` attributes, as `r` needed to call an internal function to compute its value. Just as we created `r` by decorating a function that computes its value, it's possible to create custom ``Stochastic`` objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). 
 
-.. rubric:: Using \texttt{Variables} as parents of \texttt{Variables}
+.. rubric:: Using ``Variables`` as parents of ``Variables``
 
 Let's take a closer look at our definition of `r`::
 
@@ -278,21 +278,21 @@ Let's take a closer look at our definition of `r`::
       return out
 
 
-The arguments are \texttt{Stochastic} objects, not numbers. Why aren't errors raised when we attempt to slice array \texttt{out} up to a \texttt{Stochastic} object?
+The arguments are ``Stochastic`` objects, not numbers. Why aren't errors raised when we attempt to slice array ``out`` up to a ``Stochastic`` object?
 
-Whenever a variable is used as a parent for a child variable, PyMC replaces it with its \texttt{value} attribute when the child's value or log-probability is computed. When `r`'s value is recomputed, \texttt{s.value} is passed to the function as argument \texttt{s}. To see the values of the parents of `r` all together, look at \texttt{r.parents.value}.
+Whenever a variable is used as a parent for a child variable, PyMC replaces it with its ``value`` attribute when the child's value or log-probability is computed. When `r`'s value is recomputed, ``s.value`` is passed to the function as argument ``s``. To see the values of the parents of `r` all together, look at ``r.parents.value``.
 
 Fitting the model with MCMC
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \texttt{MCMC}, fits models with the Markov chain Monte Carlo algorithm. See chapter \ref{chap:MCMC} for an introduction to the algorithm itself. To create an \texttt{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \texttt{MCMC}::
+PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, ``MCMC``, fits models with the Markov chain Monte Carlo algorithm. See chapter \ref{chap:MCMC} for an introduction to the algorithm itself. To create an ``MCMC`` object to handle our model, import \module{DisasterModel.py} and use it as an argument for ``MCMC``::
 
    import DisasterModel
    from pymc import MCMC
    M = MCMC(DisasterModel)
 
 
-To run the sampler, call the MCMC object's \texttt{isample()} (or \texttt{sample()}) method, either from \module{DisasterModel.py} or the prompt::
+To run the sampler, call the MCMC object's ``isample()`` (or ``sample()``) method, either from \module{DisasterModel.py} or the prompt::
 
    M.isample(iter=10000, burn=1000)
 
@@ -304,9 +304,9 @@ After a few seconds, you should see that sampling has finished normally. The mod
 .. rubric:: What does it mean to fit a model?
 
 
-The MCMC sampler runs for the specified number of iterations. If the run is sufficiently long, the model will have converged to the posterior distribution of interest, and all subsequent samples can be considered samples from that distribution, and used for inference. The specified \texttt{burn} interval should be large enough to ensure that no pre-convergent samples are included in the sample used for generating summary statistics.
+The MCMC sampler runs for the specified number of iterations. If the run is sufficiently long, the model will have converged to the posterior distribution of interest, and all subsequent samples can be considered samples from that distribution, and used for inference. The specified ``burn`` interval should be large enough to ensure that no pre-convergent samples are included in the sample used for generating summary statistics.
 
-The output of the MCMC algorithm is a `trace', the sequence of retained samples for each variable in the model. These traces are stored as attributes of the variables themselves and can be accessed using the \texttt{trace()} method. For example::
+The output of the MCMC algorithm is a `trace', the sequence of retained samples for each variable in the model. These traces are stored as attributes of the variables themselves and can be accessed using the ``trace()`` method. For example::
 
    In [2]: s.trace()
    Out[2]: array([41, 40, 40, ..., 43, 44, 44])
@@ -333,7 +333,7 @@ You should see something like this:
 
 .. image:: ltrace.pdf
 
-PyMC has its own plotting functionality, via the optional matplotlib module as noted in the installation notes. The \texttt{Matplot} module includes a \texttt{plot} function that takes the model (or a single parameter) as an argument::
+PyMC has its own plotting functionality, via the optional matplotlib module as noted in the installation notes. The ``Matplot`` module includes a ``plot`` function that takes the model (or a single parameter) as an argument::
 
    In [5]: from pymc.Matplot import plot
    In [6]: plot(M)
@@ -345,13 +345,13 @@ You will see several figures like the following:
 
 The left-hand pane of this figure shows the temporal series of the samples from `s`, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance [\textbf{ref}]. If the trace looks good, the right-hand pane is useful for visualizing the posterior. The posterior of `s` seems to be bimodal, which is interesting.
 
-For a non-graphical summary of the posterior, simply call \texttt{M.stats()}.
+For a non-graphical summary of the posterior, simply call ``M.stats()``.
 
 
 Fine-tuning the MCMC algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-MCMC objects handle individual variables via 'step methods', which determine how parameters are updated at each step of the MCMC algorithm. By default, step methods are automatically assigned to variables by PyMC. To see which step methods `M` is using, look at its \texttt{step_method_dict} attribute with respect to each parameter::
+MCMC objects handle individual variables via 'step methods', which determine how parameters are updated at each step of the MCMC algorithm. By default, step methods are automatically assigned to variables by PyMC. To see which step methods `M` is using, look at its ``step_method_dict`` attribute with respect to each parameter::
 
    In [5]: M.step_method_dict[s]
    Out[5]: [<pymc.StepMethods.DiscreteMetropolis object at 0x3e8cb50>]
@@ -362,16 +362,16 @@ MCMC objects handle individual variables via 'step methods', which determine how
    In [9]: M.step_method_dict[l]
    Out[9]: [<pymc.StepMethods.Metropolis object at 0x3e8ccb0>]
 
-The value of \texttt{step_method_dict} corresponding to a particular variable is a list of the step methods `M` is using to handle that variable. 
+The value of ``step_method_dict`` corresponding to a particular variable is a list of the step methods `M` is using to handle that variable. 
 
-You can force `M` to use a particular step method by calling \texttt{M.use_step_method} before telling it to sample. The following call will cause `M` to handle `l` with a standard \texttt{Metropolis} step method, but with proposal standard deviation equal to `2`::
+You can force `M` to use a particular step method by calling ``M.use_step_method`` before telling it to sample. The following call will cause `M` to handle `l` with a standard ``Metropolis`` step method, but with proposal standard deviation equal to `2`::
 
    M.use_step_method(Metropolis, l, sig=2.)
 
 
-Another step method class, \texttt{AdaptiveMetropolis}, is better at handling highly-correlated variables. If your model mixes poorly, using \texttt{AdaptiveMetropolis} is a sensible first thing to try.
+Another step method class, ``AdaptiveMetropolis``, is better at handling highly-correlated variables. If your model mixes poorly, using ``AdaptiveMetropolis`` is a sensible first thing to try.
 
-You can see all the step method classes that have been defined (including user-defined step methods) in the list \texttt{StepMethodRegistry}, which is on the PyMC namespace::
+You can see all the step method classes that have been defined (including user-defined step methods) in the list ``StepMethodRegistry``, which is on the PyMC namespace::
 
    In [12]: pymc.StepMethodRegistry
    Out[12]: 
@@ -395,14 +395,14 @@ Beyond the basics
 
 That's all there is to basic PyMC usage. Many more topics are covered in the reference manual (all chapters after \ref{chap:MCMC}), including:
 
-#. Class \texttt{Potential}, another building block for probability models in addition to \texttt{Stochastic} and \texttt{Deterministic}
+#. Class ``Potential``, another building block for probability models in addition to ``Stochastic`` and ``Deterministic``
 #. Normal approximations
 #. How to use custom probability distributions
 #. The inner workings of the objects
 #. How to save traces to the disk, or stream them to the disk during sampling
 #. How to write your own step methods and fitting algorithms.
 
-Also, be sure to check out the documentation for the Gaussian process extension, located in folder \texttt{gp} in the source directory. 
+Also, be sure to check out the documentation for the Gaussian process extension, located in folder ``gp`` in the source directory. 
 
 
 MCMC is a surprisingly difficult and bug-prone algorithm to implement by hand. We find PyMC makes it much easier and less stressful. PyMC also makes our work more dynamic; getting hand-coded MCMC's working used to be so much work that we were reluctant to change anything, but with PyMC changing models is a breeze. We hope it does the same for you!
