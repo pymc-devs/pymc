@@ -8,10 +8,18 @@ An example statistical model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Consider the following dataset, which is a time series of recorded coal mining 
-disasters in the UK from 1851 to 1962 (\cite{Jarrett:1979fr}).
+disasters in the UK from 1851 to 1962 [Jarrett1979]_.
 
-.. image:: disasterts.pdf
-   
+.. _disastersts:
+
+.. figure:: disastersts_web.png
+   :alt: Disasters time series.
+   :scale: 30
+   :align: center
+
+   Number of mining disasters each year in the UK. 
+
+
 Occurrences of disasters in the time series is thought to be derived from a 
 Poisson process with a large rate parameter in the early part of the time 
 series, and from one with a smaller rate in the later part. We are interested 
@@ -406,3 +414,8 @@ Also, be sure to check out the documentation for the Gaussian process extension,
 
 
 MCMC is a surprisingly difficult and bug-prone algorithm to implement by hand. We find PyMC makes it much easier and less stressful. PyMC also makes our work more dynamic; getting hand-coded MCMC's working used to be so much work that we were reluctant to change anything, but with PyMC changing models is a breeze. We hope it does the same for you!
+
+
+
+.. [Jarrett1979] R.G. Jarrett. A note on the intervals between coal mining disasters. 
+   *Biometrika*, 66, 191-193, 1979.
