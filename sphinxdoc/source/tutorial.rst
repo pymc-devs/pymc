@@ -45,7 +45,7 @@ The symbols have the following meanings:
 
 
 Because we have defined `D` by its dependence on `s`, `e` and `l`, the latter 
-three are known as the `parents' of `D` and `D` is called their `child'. 
+three are known as the *parents* of `D` and `D` is called their *child*. 
 Similarly, the parents of `s` are `t_l` and `t_h`, and `s` is the child of `t_l`
 and `t_h`.
 
@@ -306,7 +306,7 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 The MCMC sampler runs for the specified number of iterations. If the run is sufficiently long, the model will have converged to the posterior distribution of interest, and all subsequent samples can be considered samples from that distribution, and used for inference. The specified ``burn`` interval should be large enough to ensure that no pre-convergent samples are included in the sample used for generating summary statistics.
 
-The output of the MCMC algorithm is a `trace', the sequence of retained samples for each variable in the model. These traces are stored as attributes of the variables themselves and can be accessed using the ``trace()`` method. For example::
+The output of the MCMC algorithm is a *trace*, the sequence of retained samples for each variable in the model. These traces are stored as attributes of the variables themselves and can be accessed using the ``trace()`` method. For example::
 
    In [2]: s.trace()
    Out[2]: array([41, 40, 40, ..., 43, 44, 44])

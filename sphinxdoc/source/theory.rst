@@ -14,25 +14,24 @@ Bayesian analysis often requires integration over multiple dimensions that is in
 
 .. math::
    
-   E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
-   {\bf x} = \{x_1,...,x_k\}
+   E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad  {\bf x} = \{x_1,...,x_k\}
    
 
-\noindent where `k` is perhaps very large. If we can produce a reasonable number of random vectors `\{{\bf x_i}\}`, we can use these values to approximate the unknown integral. This process is known as {\em Monte Carlo integration}. In general, MC integration allows integrals against probability density functions:
+where `k` is perhaps very large. If we can produce a reasonable number of random vectors `\bf x_i`, we can use these values to approximate the unknown integral. This process is known as *Monte Carlo integration*. In general, Monte Carlo (MC) integration allows integrals against probability density functions:
 
 .. math::
 
    I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
 
 
-\noindent to be estimated by finite sums:
+to be estimated by finite sums:
 
 .. math::
 
    \hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),
 
 
-\noindent where `\mathbf{x}_i` is a sample from `f`. This estimate is valid and useful because:
+where `\mathbf{x}_i` is a sample from `f`. This estimate is valid and useful because:
 
  * By the strong law of large numbers: `\hat{I} \rightarrow I   \mbox{   with probability 1}`
  * Simulation error can be measured and controlled: `Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2`
@@ -49,41 +48,46 @@ Why is this relevant to Bayesian analysis? If we replace `f(\mathbf{x})` with a 
 
 Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
-\begin{figure}[ht]
-        \begin{center}
-        \includegraphics[scale=0.4]{reject.png}
-    \end{center}
-    \caption{Rejection sampling of a bounded form. Area is estimated by the ratio of accepted (open squares) to total points, multiplied by the rectangle area.}
-    \label{fig:bound}
-\end{figure}
+.. _figbound:
 
-Posit a function, `f(x)` which can be evaluated for any value on the support of `x:S_x = [A,B]`, but may not be integrable or easily sampled from. If we can calculate the maximum  value of `f(x)`, we can then define a rectangle that is guaranteed to contain all possible values `(x,f(x))`. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure \ref{fig:bound}).
+.. figure:: reject.png
+   :alt: Bounded rejection sampling.
+   :scale: 40
+   :align: center
+
+   Rejection sampling of a bounded form. Area is estimated by the ratio of accepted (open squares) to total points, multiplied by the rectangle area. 
+
+
+Posit a function, `f(x)` which can be evaluated for any value on the support of `x:S_x = [A,B]`, but may not be integrable or easily sampled from. If we can calculate the maximum  value of `f(x)`, we can then define a rectangle that is guaranteed to contain all possible values `(x,f(x))`. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure :ref:`figbound`).
 
  .. math::
    
    \frac{\mbox{Points under curve}}{\mbox{Points generated}} \times \mbox{box area} = \lim_{n \to \infty} \int_A^B f(x) dx
 
 
-\begin{figure}[h]
-        \begin{center}
-        \includegraphics[scale=0.4]{envelope.png}
-    \end{center}
-    \caption{Rejection sampling of an unbounded form using an enveloping distribution.}
-    \label{fig:unbound}
-\end{figure}
+.. _figunbound: 
 
-\noindent This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
+.. figure:: envelope.png
+   :alt: Unbounded rejection sampling.
+   :align: center
+   :scale: 40  
 
+   Rejection sampling of an unbounded form using an enveloping distribution.
+    
+
+This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
 If `f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian distribution, a bounding box is no longer appropriate. We must specify a majorizing (or, enveloping) function, `g(x)`, which implies:
 
 .. math::
    
-   g(x) \le  f(x) \qquad\forall x \in (-\infty,\infty)
+    g(x) \le  f(x) \qquad\forall x \in (-\infty,\infty)
 
 
-Having done this, we can now sample `{x_i}` from `g(x)` and accept or reject each of these values based upon `f(x_i)`. Specifically, for each draw `x_i`, we also draw a uniform random variate `u_i` and accept `x_i` if `u_i < f(x_i)/kg(x_i)` (Figure \ref{fig:unbound}). This approach is made more efficient by choosing an enveloping distribution that is ``close'' to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
+Having done this, we can now sample `{x_i}` from `g(x)` and accept or reject each of these values based upon `f(x_i)`. Specifically, for each draw `x_i`, we also draw a uniform random variate `u_i` and accept `x_i` if `u_i < f(x_i)/kg(x_i)` (Figure :ref:`figunbound`). This approach is made more efficient by choosing an enveloping distribution that is *close* to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
 
-Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions \citep{Gamerman:1997tb}.
+Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman1997]_.
+
+
 
 Markov Chains
 ~~~~~~~~~~~~~
@@ -104,7 +108,9 @@ where `t` is frequently (but not necessarily) a time index. If we think of `X_t`
 
 then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a *transition matrix* when dealing with discrete states, or more generally, a *transition kernel*. 
 
-In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as ``mild non-independence''\footnote{In general, for Bayesian analyses, statistical independence is less relevant, relative to classical statistical inference. Instead, we substitute the notion of *exchangeability*, which is a weaker concept, but often just as useful. Exchangeability essentially implies that different permutations (orderings) of a sequence of random variables will have the same marginal distribution. A sequence of random quantities may not be considered independent in a Bayesian sense, but are frequently exchangeable.}. MCMC allows us to indirectly generate independent samples from a particular posterior distribution.
+In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as *mild non-independence* [#]_. 
+
+MCMC allows us to indirectly generate independent samples from a particular posterior distribution.
 
 
 .. rubric:: Jargon-busting
@@ -112,62 +118,67 @@ In the context of Markov chain Monte Carlo, it is useful to think of the Markovi
 
 Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
 
+.. glossary:: 
 
-**Homogeneity**
-  A Markov chain is homogeneous at step `t` if the transition probabilities are
-  independent of time `t`.
+  Homogeneity
+    A Markov chain is homogeneous at step `t` if the transition probabilities are
+    independent of time `t`.
 
-**Irreducibility**
-  A Markov chain is irreducible if every state is accessible in one or more 
-  steps from any other state. That is, the chain contains no absorbing states.
-  This implies that there is a non-zero probability of eventually reaching state
-  `k` from any other state in the chain.
+  Irreducibility
+    A Markov chain is irreducible if every state is accessible in one or more 
+    steps from any other state. That is, the chain contains no absorbing states.
+    This implies that there is a non-zero probability of eventually reaching state
+    `k` from any other state in the chain.
 
-**Recurrence**
-  States which are visited repeatedly are *recurrent*. If the expected time to 
-  return to a particular state is bounded, this is known as 
-  *positive recurrence*, otherwise the recurrent state is *null recurrent*. 
-  Further, a chain is *Harris recurrent* when it visits all states `X \in S` 
-  infinitely often in the limit as `t \to \infty`; this is an important 
-  characteristic when dealing with unbounded, continuous state spaces. Whenever 
-  a chain ends up in a closed, irreducible set of Harris recurrent states, it 
-  stays there forever and visits every state with probability one.
 
-**Stationarity**
-  A stationary Markov chain produces the same marginal distribution when 
-  multiplied by the transition kernel.  Thus, if `P` is some `n \times n` 
-  transition matrix:
+  Recurrence
+    States which are visited repeatedly are *recurrent*. If the expected time to 
+    return to a particular state is bounded, this is known as 
+    *positive recurrence*, otherwise the recurrent state is *null recurrent*. 
+    Further, a chain is *Harris recurrent* when it visits all states `X \in S` 
+    infinitely often in the limit as `t \to \infty`; this is an important 
+    characteristic when dealing with unbounded, continuous state spaces. Whenever 
+    a chain ends up in a closed, irreducible set of Harris recurrent states, it 
+    stays there forever and visits every state with probability one.
 
-  .. math::
+  Stationarity
+    A stationary Markov chain produces the same marginal distribution when 
+    multiplied by the transition kernel.  Thus, if `P` is some `n \times n` 
+    transition matrix:
 
-     {\bf \pi P} = {\bf \pi}
+    .. math::
 
-  for Markov chain `\pi`. Thus, `\pi` is no longer subscripted, and is referred 
-  to as the *limiting distribution* of the chain. In MCMC, the chain explores 
-  the state space according to its limiting marginal distribution.
+       {\bf \pi P} = {\bf \pi}
 
-**Ergodicity**
-  Ergodicity is an emergent property of Markov chains which are irreducible, 
-  positive Harris recurrent and aperiodic. Ergodicity is defined as:
+    for Markov chain `\pi`. Thus, `\pi` is no longer subscripted, and is referred 
+    to as the *limiting distribution* of the chain. In MCMC, the chain explores 
+    the state space according to its limiting marginal distribution.
 
-  .. math::
+  Ergodicity
+    Ergodicity is an emergent property of Markov chains which are irreducible, 
+    positive Harris recurrent and aperiodic. Ergodicity is defined as:
+
+    .. math::
  
-     \lim_{n \to \infty} Pr^{(n)}(\theta_i,\theta_j) = \pi(\theta_j) \quad \forall \theta_i, \theta_j \in \Theta
+       \lim_{n \to \infty} Pr^{(n)}(\theta_i,\theta_j) = \pi(\theta_j) \quad \forall \theta_i, \theta_j \in \Theta
 
 
-  or in words, after many steps the marginal distribution of the chain is the 
-  same at one step as at all other steps. This implies that our Markov chain, 
-  which we recall is dependent, can generate samples that are independent if 
-  we wait long enough between samples. If it means anything to you, ergodicity 
-  is the analogue of the strong law of large numbers for Markov chains. For 
-  example, take values `\theta_{i+1},\ldots,\theta_{i+n}` from a chain that has 
-  reached an ergodic state. A statistic of interest can then be estimated by:
+    or in words, after many steps the marginal distribution of the chain is the 
+    same at one step as at all other steps. This implies that our Markov chain, 
+    which we recall is dependent, can generate samples that are independent if 
+    we wait long enough between samples. If it means anything to you, ergodicity 
+    is the analogue of the strong law of large numbers for Markov chains. For 
+    example, take values `\theta_{i+1},\ldots,\theta_{i+n}` from a chain that has 
+    reached an ergodic state. A statistic of interest can then be estimated by:
 
-  .. math::
+    .. math::
 
-     \frac{1}{n}\sum_{j=i+1}^{i+n} h(\theta_j) \approx \int f(\theta) h(\theta) d\theta
+       \frac{1}{n}\sum_{j=i+1}^{i+n} h(\theta_j) \approx \int f(\theta) h(\theta) d\theta
 
 
+.. rubric:: Footnotes
+
+.. [#] In general, for Bayesian analyses, statistical independence is less relevant, relative to classical statistical inference. Instead, we substitute the notion of *exchangeability*, which is a weaker concept, but often just as useful. Exchangeability essentially implies that different permutations (orderings) of a sequence of random variables will have the same marginal distribution. A sequence of random quantities may not be considered independent in a Bayesian sense, but are frequently exchangeable.
 
 
 Why MCMC Works: Reversible Markov Chains
@@ -203,13 +214,13 @@ Forward and reverse transition probabilities may be related through Bayes theore
    \frac{Pr(\theta^{(k+1)}=x \mid \theta^{(k)}=y) \pi^{(k)}(y)}{\pi^{(k+1)}(x)}
 
 
-\noindent Though not homogeneous in general, `\pi` becomes homogeneous if \textbf{Do you ever call the stationary distribution itself homogeneous?}:
-\begin{itemize}
-\item `n \rightarrow \infty`
-\item `\pi^{(0)}=\pi` for some `i < k` \textbf{Is it meant to be `\pi^(i)`, and }
-\end{itemize}
+Though not homogeneous in general, `\pi` becomes homogeneous if \textbf{Do you ever call the stationary distribution itself homogeneous?}:
 
-\noindent If this chain is homogeneous it is called reversible, because it satisfies the \textbf{detailed balance equation}:
+  * `n \rightarrow \infty`
+  * `\pi^{(0)}=\pi` for some `i < k` \textbf{Is it meant to be `\pi^(i)`, and }
+
+
+If this chain is homogeneous it is called reversible, because it satisfies the **detailed balance equation**:
 
 .. math::
 
@@ -227,30 +238,26 @@ The Gibbs sampler is the simplest and most prevalent MCMC algorithm. If a poster
 
 Here is a stereotypical Gibbs sampling algorithm:
 
-\newcounter{lcount}
-\begin{list}{\arabic{lcount}}
-{\usecounter{lcount}}
-\item Choose starting values for states (parameters): `{\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]`
-\item Initialize counter `j=1`
-\item Draw the following values from each of the `k` conditional distributions:
+#. Choose starting values for states (parameters): `{\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]`
+#. Initialize counter `j=1`
+#. Draw the following values from each of the `k` conditional distributions:
+   
+   .. math::
 
-.. math::
+     \theta_1^{(j)} &\sim \pi(\theta_1 | \theta_2^{(j-1)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
 
-   \theta_1^{(j)} &\sim \pi(\theta_1 | \theta_2^{(j-1)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
+     \theta_2^{(j)} &\sim \pi(\theta_2 | \theta_1^{(j)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
 
-   \theta_2^{(j)} &\sim \pi(\theta_2 | \theta_1^{(j)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
+     \theta_3^{(j)} &\sim \pi(\theta_3 | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
 
-   \theta_3^{(j)} &\sim \pi(\theta_3 | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) 
+     & \vdots 
 
-   & \vdots 
+     \theta_{k-1}^{(j)} &\sim \pi(\theta_{k-1} | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_k^{(j-1)}) 
 
-   \theta_{k-1}^{(j)} &\sim \pi(\theta_{k-1} | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_k^{(j-1)}) 
+     \theta_k^{(j)} &\sim \pi(\theta_k | \theta_1^{(j)},\theta_2^{(j)},\theta_4^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_{k-1}^{(j)})
 
-   \theta_k^{(j)} &\sim \pi(\theta_k | \theta_1^{(j)},\theta_2^{(j)},\theta_4^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_{k-1}^{(j)})
+#. Increment `j` and repeat until convergence occurs.
 
-
-\item Increment `j` and repeat until convergence occurs.
-\end{list}
 
 As we can see from the algorithm, each distribution is conditioned on the last iteration of its chain values, constituting a Markov chain as advertised. The Gibbs sampler has all of the important properties outlined in the previous section: it is aperiodic, homogeneous and ergodic. Once the sampler converges, all subsequent samples are from the target distribution. This convergence occurs at a geometric rate.
 
@@ -275,19 +282,17 @@ Let us first consider a simple Metropolis-Hastings algorithm for a single parame
    \theta^{(t+1)} = \left\{\begin{array}{l@{\quad \mbox{with prob.} \quad}l}\theta^{\prime} & \min(a(\theta^{\prime},\theta),1) \\ \theta^{(t)} & 1 - \min(a(\theta^{\prime},\theta),1) \end{array}\right.
 
 
-\noindent This transition kernel implies that movement is not guaranteed at every step. It only occurs if the suggested transition is likely based on the acceptance ratio.
+This transition kernel implies that movement is not guaranteed at every step. It only occurs if the suggested transition is likely based on the acceptance ratio.
 
 A single iteration of the Metropolis-Hastings algorithm proceeds as follows:
 
-\newcounter{lcount2}
-\begin{list}{\arabic{lcount2}}
-{\usecounter{lcount2}}
-\item Sample `\theta^{\prime}` from `q(\theta^{\prime} | \theta^{(t)})`.
-\item Generate a Uniform[0,1] random variate `u`.
-\item If `a(\theta^{\prime},\theta) > u` then `\theta^{(t+1)} = \theta^{\prime}`, otherwise `\theta^{(t+1)} = \theta^{(t)}`.
-\end{list}
 
-\noindent The original form of the algorithm specified by Metropolis required that `q_t(\theta^{\prime} | \theta) = q_t(\theta | \theta^{\prime})`, which reduces `a(\theta^{\prime},\theta)` to `\pi(\theta^{\prime})/\pi(\theta)`, but this is not necessary. In either case, the state moves to high-density points in the distribution with high probability, and to low-density points with low probability. After convergence, the Metropolis-Hastings algorithm describes the full target posterior density, so all points are recurrent.
+#. Sample `\theta^{\prime}` from `q(\theta^{\prime} | \theta^{(t)})`.
+#. Generate a Uniform[0,1] random variate `u`.
+#. If `a(\theta^{\prime},\theta) > u` then `\theta^{(t+1)} = \theta^{\prime}`, otherwise `\theta^{(t+1)} = \theta^{(t)}`.
+
+
+The original form of the algorithm specified by Metropolis required that `q_t(\theta^{\prime} | \theta) = q_t(\theta | \theta^{\prime})`, which reduces `a(\theta^{\prime},\theta)` to `\pi(\theta^{\prime})/\pi(\theta)`, but this is not necessary. In either case, the state moves to high-density points in the distribution with high probability, and to low-density points with low probability. After convergence, the Metropolis-Hastings algorithm describes the full target posterior density, so all points are recurrent.
 
 
 .. rubric:: Random-walk Metropolis-Hastings
@@ -321,4 +326,7 @@ Generally, the density generating `\epsilon_t` is symmetric about zero, resultin
 
 The choice of the random walk distribution for `\epsilon_t` is frequently a normal or Student's `t` density, but it may be any distribution that generates an irreducible proposal chain.
 
-An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation \citep{Gamerman:1997tb}.
+An important consideration is the specification of the scale parameter for the random walk error distribution. Large values produce random walk steps that are highly exploratory, but tend to produce proposal values in the tails of the target distribution, potentially resulting in very small acceptance rates. Conversely, small values tend to be accepted more frequently, since they tend to produce proposals close to the current parameter value, but may result in chains that mix very slowly. Some simulation studies suggest optimal acceptance rates in the range of 20-50\%. It is often worthwhile to optimize the proposal variance by iteratively adjusting its value, according to observed acceptance rates early in the MCMC simulation [Gamerman1997]_.
+
+
+.. [Gamerman1997] D. Gamerman. *Markov Chain Monte Carlo: statistical simulation for Bayesian inference*. London, 1997.

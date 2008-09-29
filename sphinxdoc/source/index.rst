@@ -20,6 +20,7 @@ Contents:
    modelchecking
    extending
    distributions
+   references
 
 Indices and tables
 ==================

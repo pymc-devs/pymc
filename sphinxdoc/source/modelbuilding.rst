@@ -1,47 +1,69 @@
 Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: ``Stochastic``, ``Deterministic`` and ``Potential``. 
 
-A ``Stochastic`` object represents a variable whose value is not completely determined by its parents, and a ``Deterministic`` object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, ``Stochastic`` and ``Deterministic`` are subclasses of the ``Variable`` class, which is essentially a template for more specific subclasses that are actually implemented in models. The third basic class, representing `factor potentials' (\cite{dawidmarkov,Jordan:2004p5439}), represents an arbitrary log-probability term. ``Potential`` and ``Variable``, in turn, are subclasses of ``Node``.
+A ``Stochastic`` object represents a variable whose value is not completely determined by its parents, and a ``Deterministic`` object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, ``Stochastic`` and ``Deterministic`` are subclasses of the ``Variable`` class, which is essentially a template for more specific subclasses that are actually implemented in models. The third basic class, representing *factor potentials* (\cite{dawidmarkov,Jordan:2004p5439}), represents an arbitrary log-probability term. ``Potential`` and ``Variable``, in turn, are subclasses of ``Node``.
 
-% TODO: Need a better description of what a Potential is. Given the description of Stochastic and Deterministic we have given, its not clear where Potential fits in, as it classifies the world into 2 things -- completely determined by parents and not.
+.. TODO:: Need a better description of what a Potential is. Given the description of Stochastic and Deterministic we have given, its not clear where Potential fits in, as it classifies the world into 2 things -- completely determined by parents and not.
 
 % PyMC also provides container classes for variables to make it easier to program of certain dependency situations, such as when a variable is defined by its dependence on an entire Markov chain.
 
-\medskip
+
 PyMC probability models are simply linked groups of ``Stochastic``, ``Deterministic`` and ``Potential`` objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter \ref{chap:modelfitting}.
  
 
-\hypertarget{stochastic}{}
-The ``Stochastic`` class \label{stochastic}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``Stochastic`` class
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 A stochastic variable has the following major attributes: 
-\begin{description}
-    \item[``value``:] The variable's current value.
-    \item[``logp``:] The log-probability of the variable's current value given the values of its parents.
-\end{description}
-A stochastic variable can optionally be endowed with a method called ``\bfseries random``, which draws a value for the variable given the values of its parents\footnote{Note that the ``random`` method does not provide a Gibbs sample unless the variable has no children.}. Stochastic objects have the following additional attributes that are generally specified automatically, or only specified under particular circumstances:
-\begin{description}
-    \item[``parents``:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of `s`'s parents dictionary in model (\ref{disastermodel}) would be ``'t_l'`` and ``'t_h'``. Thanks to Python's dynamic typing, the actual parents (*i.e.* the values of the dictionary) may be of any class or type.
-    \item[``children``:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[``extended_parents``:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
-    \item[``extended_children``:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
-    \item[``coparents``:] A set containing all the stochastic variables that share extended children with the variable.
-    \item[``moral_neighbors``:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
-    \item[``markov_blanket``:] A set containing self and self's moral neighbors.
-    \item[``isdata``:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
-    \item[``dtype``:] A Numpy dtype object (such as ``numpy.int``) that specifies the type of the variable's value to fitting methods. If this is ``None`` (default) then no type is enforced.
-    % \item[``__name__``:] The name of the variable, should be unique.
-    %    \item[``__doc__``:] The docstring of the variable.
-\end{description}
+
+``value``
+  The variable's current value.
+
+``logp``
+  The log-probability of the variable's current value given the values of its parents.
+
+A stochastic variable can optionally be endowed with a method called ``random``, which draws a value for the variable given the values of its parents [#]_. Stochastic objects have the following additional attributes that are generally specified automatically, or only specified under particular circumstances:
+
+``parents``
+  A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of `s`'s parents dictionary in model (\ref{disastermodel}) would be ``'t_l'`` and ``'t_h'``. Thanks to Python's dynamic typing, the actual parents (*i.e.* the values of the dictionary) may be of any class or type.
+
+``children``
+  A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
+
+``extended_parents``
+  A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
+    
+``extended_children`` 
+  A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
+  
+``coparents``
+  A set containing all the stochastic variables that share extended children with the variable.
+ 
+``moral_neighbors``
+  A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
+
+``markov_blanket``
+  A set containing self and self's moral neighbors.
+ 
+``isdata``
+  A flag (boolean) indicating whether the variable's value has been observed (is fixed).
+ 
+``dtype``
+  A Numpy dtype object (such as ``numpy.int``) that specifies the type of the variable's value to fitting methods. If this is ``None`` (default) then no type is enforced.
+  
+..  % \item[``__name__``:] The name of the variable, should be unique.
+
+..  %    \item[``__doc__``:] The docstring of the variable.
+
 
 
 .. rubric:: Creation of stochastic variables
 
 
-There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
+There are three main ways to create stochastic variables, called the **automatic**, **decorator**, and **direct** interfaces.
 
-\begin{description}    
-    \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of ``Stochastic``. For example, the uniformly-distributed discrete variable `s` in (\ref{disastermodel}) could be created using the automatic interface as follows::
+
+:Automatic:
+Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of ``Stochastic``. For example, the uniformly-distributed discrete variable `s` in (\ref{disastermodel}) could be created using the automatic interface as follows::
 
         s = DiscreteUniform('s', 1851, 1962, value=1900)
 
@@ -61,7 +83,9 @@ There are three main ways to create stochastic variables, called the \textbf{aut
     % \end{description}
     
     
-    \item[Decorator] Uniformly-distributed discrete stochastic variable `s` in (\ref{disastermodel}) could be created as follows::
+:Decorator:
+
+Uniformly-distributed discrete stochastic variable `s` in (\ref{disastermodel}) could be created as follows::
 
 	@stochastic(dtype=int)
 	def s(value=1900, t_l=1851, t_h=1962):
@@ -75,13 +99,14 @@ Note that this is a simple Python function, preceded by a Python expression call
 
 The ``value`` and parents of stochastic variables may be any objects, provided their log-probability functions return a real number (Numpy ``float``). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables.
 
-    The decorator ``stochastic`` can take several arguments: 
-    \begin{itemize}
-        \item A flag called ``trace``, which signals to ``MCMC`` instances whether an MCMC trace should be kept for the stochastic variable. ``@stochastic(trace = False)`` would turn tracing off. Defaults to ``True``.
-        \item A flag called ``plot``, which signals to ``MCMC`` instances whether summary plots should be produced for this variable. Defaults to ``True``.
-        \item An integer-valued argument called ``verbose`` that controls the amount of output the variable prints to the screen. The default is `0`, no output; the maximum value is `3`. 
-        \item A Numpy datatype called ``dtype``. Decorating a log-probability function with ``@stochastic(dtype=int)`` would produce a discrete random variable. Such a variable will cast its value to either an integer or an array of integers. The default dtype is ``float``.
-    \end{itemize} 
+The decorator ``stochastic`` can take several arguments: 
+
+
+  * A flag called ``trace``, which signals to ``MCMC`` instances whether an MCMC trace should be kept for the stochastic variable. ``@stochastic(trace = False)`` would turn tracing off. Defaults to ``True``.
+  * A flag called ``plot``, which signals to ``MCMC`` instances whether summary plots should be produced for this variable. Defaults to ``True``.
+  * An integer-valued argument called ``verbose`` that controls the amount of output the variable prints to the screen. The default is `0`, no output; the maximum value is `3`. 
+  * A Numpy datatype called ``dtype``. Decorating a log-probability function with ``@stochastic(dtype=int)`` would produce a discrete random variable. Such a variable will cast its value to either an integer or an array of integers. The default dtype is ``float``.
+   
 
     The decorator interface has a slightly more complex implementation which allows you to specify a ``random`` method for sampling the stochastic variable's value conditional on its parents.
 ::
@@ -103,7 +128,9 @@ The ``value`` and parents of stochastic variables may be any objects, provided t
 
 The stochastic variable again gets its name, docstring and parents from function `s`, but in this case it will evaluate its log-probability using the ``logp`` function. The ``random`` function will be used when ``s.random()`` is called. Note that ``random`` doesn't take a ``value`` argument, as it generates values itself. The optional ``rseed`` variable provides a seed for the random number generator. The stochastic's ``value`` argument is optional when a ``random`` method is provided; if no initial value is provided, it will be drawn automatically using the ``random`` method.
 
-    \item[Direct] It's possible to instantiate ``Stochastic`` directly::
+:Direct:
+
+It's possible to instantiate ``Stochastic`` directly::
 
 	def s_logp(value, t_l, t_h):
 	    if value > t_h or value < t_l:
@@ -130,7 +157,7 @@ The stochastic variable again gets its name, docstring and parents from function
 
 Notice that the log-probability and random variate functions are specified externally and passed to ``Stochastic`` as arguments. This is a rather awkward way to instantiate a stochastic variable; consequently, such implementations should be rare.
 
-\end{description}
+
 
 
 \hypertarget{sub:warning}{}
@@ -154,6 +181,9 @@ The following are in-place updates and should *never* be used:
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several variables stored in an array or list.
 
 
+.. rubric:: Footnotes
+
+.. [#] Note that the ``random`` method does not provide a Gibbs sample unless the variable has no children.
 
 
 Data \label{data
