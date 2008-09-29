@@ -196,6 +196,53 @@ class test_hdf5(TestCase):
         assert_equal(S.e.trace().__class__,  np.ndarray)
         S.db.close()
         
+    def test_attribute_assignement(self):
+        if 'hdf5' not in dir(pymc.database):
+            raise nose.SkipTest
+            
+        arr = np.array([[1,2],[3,4]])
+        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
+        db.add_attr('some_list', [1,2,3])
+        db.add_attr('some_dict', {'a':5})
+        db.add_attr('some_array', arr, array=True)
+        assert_array_equal(db.some_list, [1,2,3])
+        assert_equal(db.some_dict['a'], 5)
+        assert_array_equal(db.some_array.read(), arr)
+        db.close()
+        del db
+        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
+        assert_array_equal(db.some_list, [1,2,3])
+        assert_equal(db.some_dict['a'], 5)
+        assert_array_equal(db.some_array, arr)
+        db.close()    
+
+    def test_compression(self):
+        if 'hdf5' not in dir(pymc.database):
+            raise nose.SkipTest
+            
+        try: 
+            os.remove('DisasterModelCompressed.hdf5')
+        except:
+            pass
+        db = pymc.database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
+        S = MCMC(DisasterModel,db)
+        S.sample(450,100,1)
+        assert_array_equal(S.e.trace().shape, (350,))
+        S.db.close()
+        db.close()
+        del S
+        
+
+    def test_hdf5_col(self):
+        import tables
+        db = pymc.database.hdf5.load('Disaster.hdf5')
+        col = db.e.hdf5_col()
+        assert col.__class__ == tables.table.Column
+        assert_equal(len(col), len(db.e()))
+        db.close()
+        del db
+        
+        
     def test_load(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
@@ -233,44 +280,13 @@ class test_hdf5(TestCase):
         tables = S.db._gettable(None)
         assert_equal(len(tables), 1)
         S.db.close()
+        del S
         
-    def test_compression(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-            
-        try: 
-            os.remove('DisasterModelCompressed.hdf5')
-        except:
-            pass
-        db = pymc.database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
-        S = MCMC(DisasterModel,db)
-        S.sample(450,100,1)
-        assert_array_equal(S.e.trace().shape, (350,))
-        S.db.close()
-        db.close()
-        
-    def test_attribute_assignement(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-            
-        arr = np.array([[1,2],[3,4]])
-        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
-        db.add_attr('some_list', [1,2,3])
-        db.add_attr('some_dict', {'a':5})
-        db.add_attr('some_array', arr, array=True)
-        assert_array_equal(db.some_list, [1,2,3])
-        assert_equal(db.some_dict['a'], 5)
-        assert_array_equal(db.some_array.read(), arr)
-        db.close()
-        del db
-        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
-        assert_array_equal(db.some_list, [1,2,3])
-        assert_equal(db.some_dict['a'], 5)
-        assert_array_equal(db.some_array, arr)
-        db.close()
     
 if __name__ == '__main__':
-    nose.runmodule()
+    
+    C =nose.config.Config(verbosity=1)
+    nose.runmodule(config=C)
     try:
         S.db.close()
     except:

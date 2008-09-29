@@ -7,7 +7,6 @@
 # Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
 
-# TODO: add a command to save attributes (chain attributes, group attributes)
 
 import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
@@ -57,11 +56,16 @@ class Trace(base.Trace):
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
-        Input:
-          - burn (int): The number of transient steps to skip.
-          - thin (int): Keep one in thin.
-          - chain (int): The index of the chain to fetch. If None, return all chains.
-          - slicing: A slice, overriding burn and thin assignement.
+        :Parameters:
+        burn : integer 
+          The number of transient steps to skip.
+        thin : integer 
+          Keep one in thin.
+        chain : integer 
+          The index of the chain to fetch. If None, return all chains. The 
+          default is to return the last chain. 
+        slicing : slice object
+          A slice overriding burn and thin assignement.
         """
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
@@ -73,13 +77,25 @@ class Trace(base.Trace):
                 stop = table.nrows
             col = table.read(start=burn, stop=stop, step=thin, field=self.name)
             if i == 0:
-                data = col
+                data = np.asarray(col)
             else:
                 data = hstack((data, col))
         
         return data
                             
-                      
+    def hdf5_col(self, chain=-1):
+        """Return a pytables column object.
+        
+        :Parameters:
+        chain : integer
+          The index of the chain. 
+          
+        .. note:: 
+           This method is specific to the ``hdf5`` backend. 
+        """
+        table = self.db._gettable(chain)[0]
+        return table.colinstances[self.name]
+        
     def _finalize(self):
         """Nothing done here."""
         pass
@@ -104,21 +120,21 @@ class Database(pickle.Database):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
         :Parameters:
-          filename : string
-            Specify the name of the file the results are stored in. 
-          mode : {'a', 'w', 'r'}
-            File mode: 'a': append, 'w': overwrite, 'r': read-only.
-          complevel : integer (0-9)
-            Compression level, 0: no compression.
-          complib : string
-            Compression library (zlib, bzip2, lzo)
+        filename : string
+          Specify the name of the file the results are stored in. 
+        mode : {'a', 'w', 'r'}
+          File mode: 'a': append, 'w': overwrite, 'r': read-only.
+        complevel : integer (0-9)
+          Compression level, 0: no compression.
+        complib : string
+          Compression library (zlib, bzip2, lzo)
             
         :Notes:
-          - zlib has a good compression ratio, although somewhat slow, and 
+          * zlib has a good compression ratio, although somewhat slow, and 
             reasonably fast decompression.
-          - LZO is a fast compression library offering however a low compression
+          * LZO is a fast compression library offering however a low compression
             ratio. 
-          - bzip2 has an excellent compression ratio but requires more CPU. 
+          * bzip2 has an excellent compression ratio but requires more CPU. 
         """
         self.__name__ = 'hdf5'
         self.filename = filename
@@ -206,9 +222,11 @@ class Database(pickle.Database):
             raise "The objects to tally are incompatible with the objects stored in the file."
             
     def _gettable(self, chain=-1):
-        """Return the list of hdf5 tables corresponding to chain. 
+        """Return a list of hdf5 tables. 
         
+        :Parameters:
         chain : scalar or sequence.
+          The index (or indices) of the desired table(s).    
         """
         
         groups = self._h5file.listNodes("/")
