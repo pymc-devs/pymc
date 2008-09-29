@@ -81,7 +81,7 @@ config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/dis
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  description="Quickly solve problems using Markov Chain Monte Carlo sampling.",
+    setup(  description="Markov Chain Monte Carlo sampling toolkit.",
             author="Christopher Fonnesbeck", 
             version="2.0.beta",
             author_email="fonnesbeck@gmail.com ",
@@ -104,11 +104,15 @@ if __name__ == '__main__':
             Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC),
             is an increasingly relevant approach to statistical estimation. However, 
             few statistical software packages implement MCMC samplers, and they are 
-            non-trivial to code by hand. ``pymc`` is a python module that implements the 
+            non-trivial to code by hand. ``pymc`` is a python package that implements the 
             Metropolis-Hastings algorithm as a python class, and is extremely 
             flexible and applicable to a large suite of problems. ``pymc`` includes 
             methods for summarizing output, plotting, goodness-of-fit and convergence 
-            diagnostics.""",
+            diagnostics.
+            
+            ``pymc`` only requires ``NumPy``. All other dependencies such as ``matplotlib``, 
+            ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
+            """,
             packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
             
             **(config_dict))
