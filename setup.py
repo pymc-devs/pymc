@@ -81,10 +81,35 @@ config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/dis
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="2.0",
-            description = "PyMC version 2.0",
-            license="Academic Free License",
-            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
+    setup(  description="Quickly solve problems using Markov Chain Monte Carlo sampling.",
+            author="Christopher Fonnesbeck", 
+            version="2.0.beta",
+            author_email="fonnesbeck@gmail.com ",
+            maintainer="David Huard",
+            maintainer_email="david.huard@gmail.com",
             url="pymc.googlecode.com",
+            #download_url="",
+            license="Academic Free License",
+            classifiers=[
+                'Development Status :: 4 - Beta',
+                'Environment :: Console',
+                'Operating System :: OS Independent',
+                'Intended Audience :: Science/Research',
+                'License :: OSI Approved :: Academic Free License (AFL)',
+                'Programming Language :: Python',
+                'Programming Language :: Fortran',
+                'Topic :: Scientific/Engineering',
+                 ],
+            long_description="""
+            Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC),
+            is an increasingly relevant approach to statistical estimation. However, 
+            few statistical software packages implement MCMC samplers, and they are 
+            non-trivial to code by hand. ``pymc`` is a python module that implements the 
+            Metropolis-Hastings algorithm as a python class, and is extremely 
+            flexible and applicable to a large suite of problems. ``pymc`` includes 
+            methods for summarizing output, plotting, goodness-of-fit and convergence 
+            diagnostics.""",
+            packages=["pymc", "pymc/database", "pymc/examples", "pymc/MultiModelInference", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
+            
             **(config_dict))
 

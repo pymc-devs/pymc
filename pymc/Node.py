@@ -20,24 +20,38 @@ class Node(object):
     The base class for Stochastic, Deterministic and Potential.
     
     :Parameters:
-      doc : string
-        The docstring for this node.
-      
-      name : string
-        The name of this node.
-      
-      parents : dictionary
-        A dictionary containing the parents of this node.
-      
-      cache_depth : integer
-        An integer indicating how many of this node's
-        value computations should be 'memorized'.
-      
-      verbose (optional) : integer
-        Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+    doc : string
+      The docstring for this node.
     
-    :SeeAlso: 
-      Stochastic, Deterministic, Potential, Variable
+    name : string
+      The name of this node.
+    
+    parents : dictionary
+      A dictionary containing the parents of this node.
+    
+    cache_depth : integer
+      An integer indicating how many of this node's
+      value computations should be 'memorized'.
+    
+    verbose (optional) : integer
+      Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+
+
+    .. seealso::
+     
+       :class:`Stochastic`
+         The class defining *random* variables, or unknown parameters. 
+       
+       :class:`Deterministic`
+         The class defining deterministic values, ie the result of a function.
+         
+       :class:`Potential`
+         An arbitrary log-probability term to multiply into the joint 
+         distribution.
+         
+       :class:`Variable`
+         The base class for :class:`Stochastics` and :class:`Deterministics`.
+         
     """
     def __init__(self, doc, name, parents, cache_depth, verbose=0):
         
@@ -94,33 +108,33 @@ class Variable(Node):
     The base class for Stochastics and Deterministics.
     
     :Parameters:
-      doc : string
-        The docstring for this node.
+    doc : string
+      The docstring for this node.
+    
+    name : string
+      The name of this node.
+    
+    parents : dictionary
+      A dictionary containing the parents of this node.
+    
+    cache_depth : integer
+      An integer indicating how many of this node's
+      value computations should be 'memorized'.
+    
+    trace : boolean
+      Indicates whether a trace should be kept for this variable
+      if its model is fit using a Monte Carlo method.
       
-      name : string
-        The name of this node.
+    plot : boolean
+      Indicates whether summary plots should be prepared for this
+      variable if summary plots of its model are requested.
       
-      parents : dictionary
-        A dictionary containing the parents of this node.
-      
-      cache_depth : integer
-        An integer indicating how many of this node's
-        value computations should be 'memorized'.
-      
-      trace : boolean
-        Indicates whether a trace should be kept for this variable
-        if its model is fit using a Monte Carlo method.
-        
-      plot : boolean
-        Indicates whether summary plots should be prepared for this
-        variable if summary plots of its model are requested.
-        
-      dtype : numpy dtype
-        If the value of this variable's numpy dtype can be known in
-        advance, it is advantageous to specify it here.
-      
-      verbose (optional) : integer
-        Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+    dtype : numpy dtype
+      If the value of this variable's numpy dtype can be known in
+      advance, it is advantageous to specify it here.
+    
+    verbose (optional) : integer
+      Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     :SeeAlso: 
       Stochastic, Deterministic, Potential, Node
