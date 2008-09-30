@@ -27,9 +27,11 @@ l = Exponential('l', beta=1)
 
 @deterministic(plot=False)
 def r(s=s, e=e, l=l):
-  out = np.empty(len(disasters_array))
-  out[:s] = e
-  out[s:] = l
-  return out
+    # if np.random.random() < .001:
+    #     raise ValueError, 'Lala'
+    out = np.empty(len(disasters_array))
+    out[:s] = e
+    out[s:] = l
+    return out
  
 D = Poisson('D', mu=r, value=disasters_array, isdata=True)

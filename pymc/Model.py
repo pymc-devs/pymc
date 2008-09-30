@@ -467,7 +467,13 @@ class Sampler(Model):
         """
         Samples in interactive mode. Main thread of control stays in this function.
         """
-        self._sampling_thread = Thread(target=self.sample, args=args, kwargs=kwds)
+        self._exc_info = None
+        def samp_targ(*args, **kwds):
+            try:
+                self.sample(*args, **kwds)
+            except:
+                self._exc_info = sys.exc_info()
+        self._sampling_thread = Thread(target=samp_targ, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
         self.iprompt()
@@ -506,6 +512,10 @@ class Sampler(Model):
                     if prompt: 
                         sys.stdout.write('pymc > ')
                         sys.stdout.flush()
+                    
+                    if self._exc_info is not None:
+                        a,b,c = self._exc_info
+                        raise a, b, c
                         
                     cmd = utils.getInput().strip()
                     if cmd == 'i':
