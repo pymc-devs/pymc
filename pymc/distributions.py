@@ -204,11 +204,11 @@ def new_dist_class(*new_class_args):
                         if size is not None and parents_size != size:
                             raise AttributeError, \
                                 "size is incompatible with parents shape."
+                if random is not None:
+                    random = bind_size(random, bindsize)
+                    test_val = random(**(pymc.DictContainer(parents).value))
                 
-                random = bind_size(random, bindsize)
-                test_val = random(**(pymc.DictContainer(parents).value))
-                
-                if init_val is not None:
+                if init_val is not None and random is not None:
                     if np.size(init_val) != np.size(test_val):
                         raise AttributeError, \
                         'init_val size: %d, test_val size: %d'%(np.size(init_val),np.size(test_val))

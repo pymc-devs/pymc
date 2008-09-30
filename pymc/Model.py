@@ -491,11 +491,11 @@ class Sampler(Model):
           q -- quit
         """
         
-        print """        ============
-        pymc console
-        ============
+        print """==============
+ PyMC console
+==============
         
-        pymc is now sampling. Use the following commands to query or pause the sampler.
+        PyMC is now sampling. Use the following commands to query or pause the sampler.
         """
         print cmds
         
@@ -504,7 +504,7 @@ class Sampler(Model):
             while self.status in ['running', 'paused']:
                     # sys.stdout.write('pymc> ')
                     if prompt: 
-                        sys.stdout.write('pymc> ')
+                        sys.stdout.write('pymc > ')
                         sys.stdout.flush()
                         
                     cmd = utils.getInput().strip()

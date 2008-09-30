@@ -131,12 +131,10 @@ BugsSlice = pp.Forward()
 BugsVar = pp.Word(pp.alphas).setResultsName('name') + pp.Optional(BugsSlice).setResultsName('slice')
 
 # Convert to reference to existing object or number
-# BugsAtom = pp.Forward()
 BugsAtom = pp.Group((BugsVar ^ pp.Word(pp.nums)))
 
 # Convert to number, array or exising object
 BugsExpr = pp.Forward()
-# BugsExpr = pp.operatorPrecedence(BugsAtom, [('-', 1, pp.opAssoc.RIGHT),(pp.oneOf('* /'),2, pp.opAssoc.LEFT),(pp.oneOf('- +'), 2, pp.opAssoc.LEFT)])
 
 # Convert to numpy slice or slice-valued deterministic
 Bugs1dSlice = pp.Group(pp.delimitedList(pp.Optional(BugsExpr),':'))
@@ -166,6 +164,11 @@ BugsDeterministic = pp.Group(BugsVar.setResultsName('lhs') + sl('<-') + (BugsFun
 # Convert to PyMC submodel.
 BugsSubModel = pp.OneOrMore(BugsStochastic ^ BugsDeterministic)
 
+
+# ===============================================
+# = Parse actions corresponding to BUGS grammar =
+# ===============================================        
+    
 
 if __name__ == '__main__':
 
