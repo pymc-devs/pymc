@@ -584,10 +584,7 @@ def bernoulli_expval(p):
 
 
 def bernoulli_like(x, p):
-    R"""
-    bernoulli_like(x, p)
-    
-    Bernoulli log-likelihood
+    R"""Bernoulli log-likelihood
     
     The Bernoulli distribution describes the probability of successes (x=1) and
     failures (x=0).
@@ -596,14 +593,18 @@ def bernoulli_like(x, p):
         f(x \mid p) = p^{x- 1} (1-p)^{1-x}
     
     :Parameters:
-      - `x` : Series of successes (1) and failures (0). :math:`x=0,1`
-      - `p` : Probability of success. :math:`0 < p < 1`
+      x : sequence
+        Series of successes (1) and failures (0). :math:`x=0,1`
+      p : float
+        Probability of success. :math:`0 < p < 1`.
     
     :Example:
-      >>> bernoulli_like([0,1,0,1], .4)
-      -2.8542325496673584
     
-    :Note:
+    >>> bernoulli_like([0,1,0,1], .4)
+    -2.8542325496673584
+    
+    .. note::
+
       - :math:`E(x)= p`
       - :math:`Var(x)= p(1-p)`
     
