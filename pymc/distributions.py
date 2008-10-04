@@ -53,7 +53,7 @@ sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerat
 
 sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
 
-mv_continuous_distributions = ['dirichlet','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
+mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
 mv_discrete_distributions = ['multivariate_hypergeometric','multinomial']
 
@@ -1302,6 +1302,49 @@ def inverse_gamma_like(x, alpha, beta):
     
     return flib.igamma(x, alpha, beta)
     
+# Inverse Wishart---------------------------------------------------
+def rinverse_wishart(n, Tau):
+    """
+    rinverse_wishart(n, Tau)
+    
+    Return an inverse Wishart random matrix.
+    
+    n is the degrees of freedom.
+    Tau is a positive definite scale matrix.
+    """
+    
+    return rwishart(n, np.asmatrix(Tau).I).I
+
+def inverse_wishart_expval(n, Tau):
+    """
+    inverse_wishart_expval(n, Tau)
+    
+    Expected value of inverse Wishart distribution.
+    """
+    return np.asarray(Tau)/(n-len(Tau)-1)
+
+def inverse_wishart_like(X, n, Tau):
+    R"""
+    inverse_wishart_like(X, n, Tau)
+    
+    Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate 
+    prior for the covariance matrix of a multivariate normal distribution.
+    
+    .. math::
+        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}
+    
+    where :math:`k` is the rank of X.
+    
+    :Parameters:
+      X : matrix
+        Symmetric, positive definite.
+      n : int
+        Degrees of freedom, > 0.
+      Tau : matrix
+        Symmetric and positive definite
+    
+    """
+    return flib.blas_inv_wishart(X,n,Tau)
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap

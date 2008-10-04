@@ -875,6 +875,50 @@ class test_wishart(TestCase):
         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
 
 
+class test_inverse_wishart(TestCase):
+    """
+    Adapted from test_wishart
+    """
+    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
+                          [  10.88057915,  213.58694978,   11.18453854],
+                          [  13.80581557,   11.18453854,  209.89396417]]).I
+  
+    def test_likelihoods(self):
+
+        from scipy.special import gammaln    
+
+        IW_test = rinverse_wishart(100,self.Tau_test)
+
+        def slo_inv_wishart(W,n,V):
+            p = W.shape[0]
+
+            logp = -0.5*(n+p+1) * np.log(np.linalg.det(W)) - n*p*.5*np.log(2) + n*.5*np.log(np.linalg.det(V)) - p*(p-1)/4.*np.log(pi)
+            
+            for i in xrange(1,p+1):
+                logp -= gammaln((n+1-i)*.5)
+            logp -= 0.5*np.trace(V*W.I)
+            
+            return logp
+
+        for i in [5,10,100,10000]:
+            right_answer = slo_inv_wishart(IW_test,i,self.Tau_test)
+            assert_array_almost_equal(inverse_wishart_like(IW_test,i,self.Tau_test), right_answer, decimal=1)
+    
+    """
+    def test_expval(self):
+
+        n = 100
+        N = 1000
+
+        A = 0.*self.Tau_test    
+        for i in xrange(N):
+            A += rinverse_wishart(n,self.Tau_test)    
+        A /= N
+        delta=A-inverse_wishart_expval(n,self.Tau_test)
+        print np.abs(np.asarray(delta)/np.asarray(A)).max()
+        assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.5)
+    """ 
+
 class test_Stochastic_generator(TestCase):
     def test_randomwrap(self):
         B = Bernoulli('x', ones(10)*.5, value=ones(10))
