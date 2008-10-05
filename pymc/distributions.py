@@ -1168,6 +1168,50 @@ def geometric_like(x, p):
     """
     
     return flib.geometric(x, p)
+    
+# Half Cauchy----------------------------------------------
+@randomwrap
+def rhalf_cauchy(alpha, beta, size=1):
+    """
+    rhalf_cauchy(alpha, beta, size=1)
+    
+    Returns half-Cauchy random variates.
+    """
+    
+    return abs(alpha + beta*np.tan(pi*random_number(size) - pi/2.0))
+
+def half_cauchy_expval(alpha, beta):
+    """
+    half_cauchy_expval(alpha, beta)
+    
+    Expected value of cauchy distribution is undefined.
+    """
+    
+    return inf
+
+# In wikipedia, the arguments name are k, x0.
+def half_cauchy_like(x, alpha, beta):
+    R"""
+    half_cauchy_like(x, alpha, beta)
+    
+    Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
+    
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{2}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+    
+    :Parameters:
+      alpha : float
+         Location parameter.
+      beta : float
+          Scale parameter > 0.
+    
+    :Note:
+      - x must be non-negative
+    """
+    
+    x = np.atleast_1d(x)
+    if sum(x<0): return -inf
+    return flib.cauchy(x,alpha,beta) + len(x)*log(2)
 
 # Half-normal----------------------------------------------
 @randomwrap
@@ -2096,7 +2140,7 @@ def t_expval(nu):
     Expectation of Student's t random variables.
     """
     return 0
-
+    
 # DiscreteUniform--------------------------------------------------
 @randomwrap
 def rdiscrete_uniform(lower, upper, size=1):
