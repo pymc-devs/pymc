@@ -287,7 +287,7 @@ def plotwrapper(f):
             # First try Model type
             for variable in pymc_obj._variables_to_tally:            
                 # Plot object
-                if variable._plot!=False and (len(atleast_id(variable.get_value()))<=10 or variable._plot==True):
+                if variable._plot!=False and (len(atleast_1d(variable.get_value()))<=10 or variable._plot==True):
                     data = variable.trace()[start:]
                     name = variable.__name__
                     f(data, name, *args, **kwargs)
