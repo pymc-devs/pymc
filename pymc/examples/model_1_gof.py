@@ -50,4 +50,4 @@ def discrepancy(  early_mean = early_mean,
     # Expected values
     expected = concatenate((ones(switchpoint)*early_mean, ones(n-switchpoint)*late_mean))
     # Return discrepancy measures for simulated and observed data
-    return sum([(sqrt(s)-sqrt(e))**2 for s,e in zip(sim, expected)]), sum([(sqrt(x)-sqrt(e))**2 for x,e in zip(disasters_array, expected)])
+    return utils.discrepancy(disasters_array, sim, expected)

@@ -36,3 +36,4 @@ def disasters(  value = disasters_array,
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint:],late_mean)
+

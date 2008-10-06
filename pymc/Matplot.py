@@ -484,7 +484,7 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     #close()
 
 @plotwrapper
-def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def gof(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit scatter plot
     if verbose>0:
         print 'Plotting', name+suffix
@@ -513,7 +513,7 @@ def gof_plot(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10
     #close()
 
 @plotwrapper
-def autocorrelation(data, name, maxlag=100, format='png', suffix='_ac', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generate bar plot of a series, usually autocorrelation
     or autocovariance.

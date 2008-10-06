@@ -236,7 +236,7 @@ class Sampler(Model):
         # Initialize deviance, if asked
         if calc_deviance:
             self._init_deviance()
-        
+            
         # Specify database backend and save its keywords
         self._db_args = kwds        
         self._assign_database_backend(db)
@@ -252,7 +252,7 @@ class Sampler(Model):
     def _sum_deviance(self):
         # Sum deviance from all stochastics
         
-        return -2*sum([v.get_logp() for v in self.data_stochastics])        
+        return -2*sum([v.get_logp() for v in self.data_stochastics])   
         
     def _init_deviance(self):
         """
