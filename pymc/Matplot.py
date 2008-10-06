@@ -15,7 +15,7 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, transpose
-from numpy import apply_along_axis
+from numpy import apply_along_axis, atleast_1d
 from utils import autocorr
 import pdb
 
