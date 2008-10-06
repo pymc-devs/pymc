@@ -388,7 +388,9 @@ class Index(LinearCombination):
             
             @deterministic
             def coef(index=self.index, x=x):
-                if self.x[index] is s:
+                if self.x is s:
+                    return np.eye(safe_len(x[index]))
+                elif self.x[index] is s:
                     return np.eye(safe_len(x[index]))
                 else:
                     return None
@@ -396,5 +398,5 @@ class Index(LinearCombination):
             self.coefs[s] = [coef]
             self.sides[s] = ['L']
      
-        self.sides = pm.Container(self.sides)
-        self.coefs = pm.Container(self.coefs)
+        self.sides = Container(self.sides)
+        self.coefs = Container(self.coefs)

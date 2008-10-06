@@ -1,4 +1,19 @@
+      SUBROUTINE logsum(x, nx, s)
+cf2py intent(hide) nx
+cf2py intent(out) s
+      DOUBLE PRECISION x(nx), s
+      INTEGER nx, i
+      
+      s = x(1)
+      
+      do i=2,nx
+          s = s + dlog(1.0D0+dexp(x(i)-s))
+      end do
 
+      RETURN
+      END
+          
+          
 
       DOUBLE PRECISION FUNCTION combinationln(n,k)
 
