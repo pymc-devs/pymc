@@ -10,6 +10,7 @@ from GPutils import regularize_array, trisolve
 from linalg_utils import dpotrf_wrap
 from Covariance import Covariance
 from incomplete_chol import ichol, ichol_continue
+from IPython.Debugger import Pdb
 
 
 class FullRankCovariance(Covariance):
@@ -139,7 +140,7 @@ class FullRankCovariance(Covariance):
             for i in xrange(N_new):
                 U_new[i,i] += nugget[i]
 
-        U = asmatrix(zeros((N_new + N_old, N_old + N_new), dtype=float))
+        U = asmatrix(zeros((N_new + N_old, N_old + N_new), dtype=float, order='F'))
         U[:N_old, :N_old] = U_old
         
         offdiag = self.__call__(x=x_old, y=x, observed=observed, regularize=False)

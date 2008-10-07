@@ -1,5 +1,8 @@
 #/usr/bin/env python  
-
+try:
+    import setuptools
+except:
+    pass
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os

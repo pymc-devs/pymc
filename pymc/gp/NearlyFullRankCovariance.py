@@ -184,7 +184,7 @@ class NearlyFullRankCovariance(Covariance):
             m_new = U_new.shape[0]
             piv_new = arange(m_new)
         U_new = asmatrix(U_new[:m_new,:])
-        U = asmatrix(zeros((m_new + m_old, N_old + N_new), dtype=float))
+        U = asmatrix(zeros((m_new + m_old, N_old + N_new), dtype=float, order='F'))
         
         # Top portion of U
         U[:m_old, :m_old] = U_old[:,:m_old]

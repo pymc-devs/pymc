@@ -220,7 +220,7 @@ class Covariance(object):
 
 
         # Arrange U for input to ichol. See documentation.
-        U = asmatrix(zeros((N_new + m_old, N_old + N_new), dtype=float))
+        U = asmatrix(zeros((N_new + m_old, N_old + N_new), dtype=float, order='F'))
         U[:m_old, :m_old] = U_old[:,:m_old]
         U[:m_old,N_new+m_old:] = U_old[:,m_old:]
         

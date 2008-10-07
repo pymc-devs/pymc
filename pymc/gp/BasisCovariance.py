@@ -103,7 +103,7 @@ class BasisCovariance(Covariance):
         if regularize:
             x = regularize_array(x)
         
-        out = zeros((self.n, x.shape[0]), dtype=float)
+        out = zeros((self.n, x.shape[0]), dtype=float, order='F')
         
         for i in xrange(self.n):
             out[i] = self.basis[i](x, **self.params)
@@ -377,7 +377,7 @@ class SeparableBasisCovariance(BasisCovariance):
         if regularize:
             x = regularize_array(x)
 
-        out = zeros(self.shape+(x.shape[0],), dtype=float)
+        out = zeros(self.shape+(x.shape[0],), dtype=float,order='F')
 
         # Evaluate the basis factors
         basis_factors = []
