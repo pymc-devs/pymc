@@ -1,5 +1,6 @@
 import subprocess
-import ipython1.kernel.api as kernel
+from IPython.kernel import client
+    
 
 """
 It seems to work, but the real challenge is to get the results back. 
@@ -61,40 +62,40 @@ class Parallel:
     """
     def __init__(self, input, dbase='ram', proc=2):
         try:
-            rc = kernel.RemoteController(('127.0.0.1',10105))
+            mec = client.MultiEngineClient()
         except:
             p = subprocess.Popen('ipcluster -n %d'%proc, shell=True)
             p.wait()
-            rc = kernel.RemoteController(('127.0.0.1',10105))
+            mec = client.MultiEngineClient()
         
         # Check everything is alright.
-        nproc = len(rc.getIDs())
+        nproc = len(mec.get_ids())
         
         # Import the individual models in each process
-        #rc.pushModule(input)
+        #mec.pushModule(input)
         
         try:
-            rc.executeAll('import %s as input'%input.__name__)
+            mec.execute('import %s as input'%input.__name__)
         except:
-            rc.executeAll( 'import site' )
-            rc.executeAll( 'site.addsitedir( ' + `os.getcwd()` + ' )' )
-            rc.executeAll( 'import %s as input; reload(input)'%input.__name__)
+            mec.execute( 'import site' )
+            mec.execute( 'site.addsitedir( ' + `os.getcwd()` + ' )' )
+            mec.execute( 'import %s as input; reload(input)'%input.__name__)
         
         # Instantiate Sampler instances in each process
-        rc.executeAll('from pymc import Sampler')
-        rc.executeAll('from pymc.database.parallel import Database')
-        for i in range(nproc):
-            rc.execute(i, 'db = Database(%d)'%i)
-        rc.executeAll('S = Sampler(input, db=db)')
+        mec.execute('from pymc import MCMC')
+        #mec.execute('from pymc.database.parallel import Database')
+        #for i in range(nproc):
+        #    mec.execute(i, 'db = Database(%d)'%i)
+        mec.execute('S = MCMC(input)')
         
-        self.rc = rc
+        self.mec = mec
         
     def sample(self, iter, burn=0, thin=1, tune_interval=100):
         # Set the random initial seeds
-        self.rc.executeAll('S.seed()')
+        self.mec.execute('S.seed()')
         
         # Run the chains on each process
-        self.rc.executeAll('S.sample(%(iter)i, %(burn)i, %(thin)i, %(tune_interval)i'%vars())
+        self.mec.execute('S.sample(%(iter)i, %(burn)i, %(thin)i, %(tune_interval)i)'%vars())
         
         # Merge the traces
          
@@ -105,4 +106,4 @@ if __name__ == '__main__':
     from pymc.examples import DisasterModel
     P = Parallel(DisasterModel, 'ram')
     P.sample(1000,500,1)
-    #P.rc.killAll(controller=True)
+    #P.mec.killAll(controller=True)
