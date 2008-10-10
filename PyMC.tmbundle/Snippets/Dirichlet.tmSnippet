@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>content</key>
-	<string>${1:name} = Beta('$1', theta=${2:value})$0</string>
+	<string>${1:name} = Dirichlet('$1', theta=${2:value})$0</string>
 	<key>name</key>
 	<string>Dirichlet stochastic</string>
 	<key>scope</key>
