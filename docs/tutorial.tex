@@ -43,42 +43,40 @@ On the other hand, even if the values of the parents of parameters $s$, $D$, $e$
 We can represent model \ref{disastermodel} in a file called \module{DisasterModel.py} as follows. First, we import the PyMC and NumPy namespaces and enter the actual data values into an array:
 \begin{verbatim}
 	
-   # Import from modules
-   from pymc import Exponential, deterministic, DiscreteUniform, Poisson
-   from numpy import array
+from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
+import numpy as np
 
-   D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                       3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                       2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                       1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                       0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                       3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                       0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+                   3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                   2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                   1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                   0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim} 
 Next, we create the switchpoint variable $s$:
 \begin{verbatim}
-   s = DiscreteUniform('s', lower=0, upper=110)   
+	s = DiscreteUniform('s', lower=0, upper=110)   
 \end{verbatim}
 \texttt{DiscreteUniform} is a subclass of \texttt{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no information \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$:
 \begin{verbatim}
-   e = Exponential('e', beta=1)
-   l = Exponential('l', beta=1)   
+   	e = Exponential('e', beta=1)
+	l = Exponential('l', beta=1)   
 \end{verbatim}
 Next, we define the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We create $r$ using the \texttt{deterministic} decorator, which converts the ordinary Python function $r$ into a \texttt{Deterministic} object.
 \begin{verbatim}
-   @deterministic
-   def r(s=s, e=e, l=l):
-      # Create an empty array of size 111
-      out = np.empty(111)
-      # Assign e to the first s elements
-      out[:s] = e
-      # ... and l to the rest.
-      out[s:] = l
-      return out
+	@deterministic(plot=False)
+	def r(s=s, e=e, l=l):
+	    # if np.random.random() < .001:
+	    #     raise ValueError, 'Lala'
+	    out = np.empty(len(disasters_array))
+	    out[:s] = e
+	    out[s:] = l
+	    return out
 \end{verbatim}
 The last step is to define the number of disasters $D$. This is done the same way as for stochastic variables, except that we set the argument \texttt{isdata} to \texttt{True} (it is set to \texttt{False} by default). This tells PyMC that this object has a fixed value and does not need to be sampled:
 \begin{verbatim}
-   D = Poisson('D', mu=r, value=D_array, isdata=True)
+	D = Poisson('D', mu=r, value=disasters_array, isdata=True)
 \end{verbatim}
 
 \subsection*{Why are data and unknown variables represented by the same object?}
@@ -197,15 +195,14 @@ Stochastic objects need to call an internal function to compute their \texttt{lo
 
 Let's take a closer look at our definition of $r$:
 \begin{verbatim}
-   @deterministic
-   def r(s=s, e=e, l=l):
-      # Create an empty array of size 111
-      out = np.empty(111)
-      # Assign e to the first s elements
-      out[:s] = e
-      # ... and l to the rest.
-      out[s:] = l
-      return out
+   	@deterministic(plot=False)
+	def r(s=s, e=e, l=l):
+	    # if np.random.random() < .001:
+	    #     raise ValueError, 'Lala'
+	    out = np.empty(len(disasters_array))
+	    out[:s] = e
+	    out[s:] = l
+	    return out
 \end{verbatim}
 The arguments are \texttt{Stochastic} objects, not numbers. Why aren't errors raised when we attempt to slice array \texttt{out} up to a \texttt{Stochastic} object?
 
