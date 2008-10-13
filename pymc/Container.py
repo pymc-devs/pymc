@@ -41,7 +41,7 @@ from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
 from pymc.Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
 from types import ModuleType
-
+import pdb
 
 __all__ = ['Container', 'DictContainer', 'ListContainer', 'TupleContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
 
@@ -202,6 +202,8 @@ def file_items(container, iterable):
             if isinstance(item, StochasticBase):
                 if item.isdata:
                     container.data_stochastics.add(item)
+                    if item._missing:
+                        container.stochastics.add(item)
                 else:
                     container.stochastics.add(item)
             elif isinstance(item, DeterministicBase):

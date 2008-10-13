@@ -44,7 +44,11 @@ class Trace(base.Trace):
     
     def tally(self):
         """Adds current value to trace"""
-        self.db._row[self.name] = self._obj.value
+        try:
+            value = self._obj.value[self._obj._missing]
+        except (AttributeError, TypeError):
+            value = self._obj.value
+        self.db._row[self.name] = value
                
     def truncate(self, index):
         """

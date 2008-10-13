@@ -1,8 +1,6 @@
 #/usr/bin/env python  
-try:
-    import setuptools
-except:
-    pass
+# Do not add setuptools here; use setupegg.py instead. Nose still has problems running
+# tests inside of egg packages, so it is useful to be able to install without eggs as needed.
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os

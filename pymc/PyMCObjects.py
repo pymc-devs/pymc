@@ -4,7 +4,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 from Container import DictContainer, ContainerBase, file_items
 import pdb
@@ -243,7 +243,7 @@ class Potential(PotentialBase):
         self._plot = plot
 
         self._logp.force_compute()
-
+        
         # Check initial value
         if not isinstance(self.logp, float):
             raise ValueError, "Potential " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
@@ -341,6 +341,8 @@ class Deterministic(DeterministicBase):
                         verbose=verbose)
                         
         self._value.force_compute()
+        
+        self._dim = size(self.value)
         
     def gen_lazy_function(self):
 
@@ -482,10 +484,6 @@ class Stochastic(StochasticBase):
         # A flag indicating whether self's value has been observed.
         self.isdata = isdata
         
-        # We dont need to plot our data
-        if isdata:
-            plot = False
-        
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
         
@@ -495,24 +493,15 @@ class Stochastic(StochasticBase):
         # A seed for self's rng. If provided, the initial value will be drawn. Otherwise it's
         # taken from the constructor.
         self.rseed = rseed
-
-        # Initialize value, either from value provided or from random function.
+        
+        # Specify the dimension of stochastic
+        self._dim = size(value)
+        
         if value is not None:
-            if isinstance(value, ndarray):
-                if dtype is not None:
-                    if not dtype is value.dtype:
-                        self._value = asarray(value, dtype=dtype).view(value.__class__)
-                    else:
-                        self._value = value
-                else:
-                    self._value = value
-            elif dtype and dtype is not object:
-                try:
-                    self._value = dtype(value)
-                except TypeError:
-                    self._value = asarray(value)
-            else:
-                self._value = value
+            try:
+                self._value = dtype(copy(value))
+            except TypeError:
+                self._value = asarray(copy(value))
         else:
             self._value = None
                 
@@ -524,13 +513,14 @@ class Stochastic(StochasticBase):
                         trace=trace,
                         dtype=dtype,
                         plot=plot,
-                        verbose=verbose)
-    
-        # self._logp.force_compute()                   
-
+                        verbose=verbose)    
+        
+        if isinstance(self._value, ndarray) and not dtype is self._value.dtype:
+            self._value = asarray(self._value, dtype=dtype).view(self._value.__class__)                
+        
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
-
+            
         # Check initial value
         if not isinstance(self.logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
@@ -550,7 +540,27 @@ class Stochastic(StochasticBase):
             # Otherwise leave initial value at None and warn.
             else:
                 raise ValueError, 'Stochastic ' + self.__name__ + "'s value initialized to None; no initial value or random method provided."
+                
+        # Check for missing values
+        if not self.__dict__.has_key('_missing'):
+            try:
+            
+                self._missing = [i for i,x in enumerate(self.value) if x==None]
+                self._dim = len(self._missing)
+        
+                if self._missing:
+            
+                    # Use random function if provided
+                    if self._random is not None:
+                        self._value[self._missing] = self._random(**self._parents.value)[self._missing]
 
+                    # Otherwise leave initial value at None and warn.
+                    else:
+                        raise ValueError, 'Stochastic ' + self.__name__ + "'s value initialized to None; no initial value or random method provided."
+                
+            except TypeError:
+                self._missing = None
+                
         arguments = {}
         arguments.update(self.parents)
         arguments['value'] = self
@@ -579,7 +589,12 @@ class Stochastic(StochasticBase):
         
         # Value can't be updated if isdata=True
         if self.isdata:
-            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
+            if self._missing:
+                missing_values = value[self._missing]
+                value = copy(self._value)
+                value[self._missing] = missing_values
+            else:
+                raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
             
         # Save current value as last_value
         # Don't copy because caching depends on the object's reference. 
@@ -661,8 +676,8 @@ class Stochastic(StochasticBase):
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
         
         # Set Stochastic's value to drawn value
-        if not self.isdata:
-            self.value = r
+        self.value = r
+            
         return r
     
     # Shortcut alias to random

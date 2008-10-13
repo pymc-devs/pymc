@@ -217,7 +217,7 @@ class MCMC(Sampler):
 
         # Initialize counter for number of tuning stochastics
         tuning_count = 0
-
+        
         for step_method in self.step_methods:
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)

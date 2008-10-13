@@ -51,13 +51,18 @@ class Trace(base.Trace):
     
     def tally(self,index):
         """Adds current value to trace"""
+        try:
+            value = self._obj.value[self._obj._missing]
+        except (AttributeError, TypeError):
+            value = self._obj.value
+            
         if not self.isnum:
-            self._array.append(self._obj.value)
+            self._array.append(value)
         else:
             if len(self._array.shape)==1:
-                self._array.append(np.atleast_1d(self._obj.value))
+                self._array.append(np.atleast_1d(value))
             else:
-                self._array.append(np.reshape(self._obj.value, (1,) + self._obj.value.shape))
+                self._array.append(np.reshape(value, (1,) + value.shape))
 
                        
     def truncate(self, index):

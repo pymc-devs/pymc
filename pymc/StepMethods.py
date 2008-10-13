@@ -26,7 +26,7 @@ nonconjugate_Gibbs_competence = 0
 
 class AdaptationError(ValueError): pass
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
+__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Impute','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
 
 StepMethodRegistry = []
 
@@ -151,10 +151,12 @@ class StepMethod(object):
 
         # File away the variables
         for variable in variables:
-            
             # Sort.
             if isinstance(variable,Stochastic):
-                if not variable.isdata:
+                if variable.isdata:
+                    if variable._missing:
+                        self.stochastics.add(variable)
+                else:
                     self.stochastics.add(variable)
         
         if len(self.stochastics)==0:
@@ -435,11 +437,14 @@ class Metropolis(StepMethod):
         # If no stochastics depend on this stochastic, I'll just propose it from its conditional prior.
         # This is the best possible step method for this stochastic.
         if len(s.extended_children)==0:
-            try:
-                s.rand()
-                return 3                
-            except:
-                pass
+            if s.isdata:
+                return 0
+            else:
+                try:
+                    s.rand()
+                    return 3                
+                except:
+                    pass
                 
         if s.dtype is None:
             return .5
@@ -548,6 +553,28 @@ class Metropolis(StepMethod):
             self.stochastic.value = rnormal(self.stochastic.value, self._asf * self._sig)
         elif self._dist == "Prior":
             self.stochastic.random()
+            
+class Impute(Metropolis):
+    """
+    Step method for imputing missing data in data stochastics
+    """
+    def __init__(self, stochastic, verbose=0):
+        Metropolis.__init__(self, stochastic, verbose=verbose)
+        
+    @staticmethod
+    def competence(s):
+        
+        if s.isdata:
+            return 3
+        else:
+            return 0
+        
+    def step(self):
+        
+        self.propose()
+    
+    def tune(self, verbose):
+        return False
 
 class Gibbs(Metropolis):
     """

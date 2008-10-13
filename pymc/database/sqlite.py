@@ -52,9 +52,14 @@ class Trace(object):
     def tally(self,index):
         """Adds current value to trace"""
         
+        try:
+            value = self._obj.value[self._obj._missing]
+        except (AttributeError, TypeError):
+            value = self._obj.value
+        
         size = 1
         try:
-            size = len(self._obj.value)
+            size = len(value)
         except TypeError:
             pass
             
@@ -65,9 +70,9 @@ class Trace(object):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the 
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in self._obj.value])
+            valstring = ', '.join(['%f'%x for x in value])
         except:
-            valstring = str(self._obj.value)  
+            valstring = str(value)  
             
         # Add value to database
         self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))

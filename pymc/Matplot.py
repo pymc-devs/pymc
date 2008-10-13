@@ -282,13 +282,16 @@ def plotwrapper(f):
         if kwargs.has_key('start'):
             start = kwargs.pop('start')
     
+        
         # Figure out what type of object it is
         try:
             # First try Model type
             for variable in pymc_obj._variables_to_tally:            
                 # Plot object
-                if variable._plot!=False and (len(atleast_1d(variable.get_value()))<=10 or variable._plot==True):
+                if variable._plot!=False:
                     data = variable.trace()[start:]
+                    if len(data[-1])>=10 and variable._plot!=True:
+                        continue
                     name = variable.__name__
                     f(data, name, *args, **kwargs)
             return
@@ -304,7 +307,7 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
-            
+        
         # If others fail, assume that raw data is passed
         f(pymc_obj, *args, **kwargs)
     
