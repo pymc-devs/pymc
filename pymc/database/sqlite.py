@@ -32,8 +32,9 @@ class Trace(object):
         """Initialize the trace. Create a table.
         """
         size = 1
+        
         try:
-            size = len(self._obj.value)
+            size = self._obj._dim
         except TypeError:
             pass
         
@@ -52,10 +53,11 @@ class Trace(object):
     def tally(self,index):
         """Adds current value to trace"""
         
+        value = self._obj.value
         try:
-            value = self._obj.value[self._obj._missing]
+            value = value[self._obj._missing]
         except (AttributeError, TypeError):
-            value = self._obj.value
+            pass
         
         size = 1
         try:
@@ -87,6 +89,7 @@ class Trace(object):
             chains. By default, the last chain is returned.
           - slicing: A slice, overriding burn and thin assignement.
         """
+        
         if not slicing:
             slicing = slice(burn, None, thin)
    

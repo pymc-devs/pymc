@@ -401,6 +401,7 @@ class Sampler(Model):
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.stochastics | self.deterministics :
+            
             if object.trace:
                 self._variables_to_tally.add(object)
             else:

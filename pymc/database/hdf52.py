@@ -14,7 +14,7 @@ import numpy as np
 import pymc
 from pymc.database import base, pickle
 from copy import copy
-import tables
+import tables, pdb
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -51,18 +51,21 @@ class Trace(base.Trace):
     
     def tally(self,index):
         """Adds current value to trace"""
+        
+        value = self._obj.value
         try:
-            value = self._obj.value[self._obj._missing]
+            value = value[self._obj._missing]
         except (AttributeError, TypeError):
-            value = self._obj.value
+            pass
             
         if not self.isnum:
             self._array.append(value)
         else:
+            value = np.atleast_1d(value)
             if len(self._array.shape)==1:
-                self._array.append(np.atleast_1d(value))
+                self._array.append(value)
             else:
-                self._array.append(np.reshape(value, (1,) + value.shape))
+                self._array.append(np.reshape(value, (1,) + np.shape(value)))
 
                        
     def truncate(self, index):
@@ -184,6 +187,11 @@ class Database(pickle.Database):
         if not self.mode.__class__ is str:
             for o in self.model._variables_to_tally:
                 arr_value = np.asarray(o.value)
+                try:
+                    arr_value = arr_value[o._missing]
+                except (AttributeError, TypeError):
+                    pass
+                
                 self.dtype_dict[o] = arr_value.dtype
                 for group_num in xrange(len(self._h5file.listNodes(self._group))):
                     try:
@@ -215,6 +223,10 @@ descend from a single group, so the traces are split up into several groups.')
                     group_counter += 1
                                 
                     arr_value = np.asarray(o.value)
+                    try:
+                        arr_value = arr_value[o._missing]
+                    except (AttributeError, TypeError):
+                        pass
                     title = o.__name__ + ': samples from %s' % self._group._v_name
                     self.dtype_dict[o] = arr_value.dtype
                     self.groupnum_dict[o] = group_num
@@ -226,7 +238,7 @@ descend from a single group, so the traces are split up into several groups.')
                     else:
                         atom = tables.Atom.from_dtype(arr_value.dtype)
                         self.trace_dict[o] = self._h5file.createEArray(this_group, o.__name__, 
-                            atom=atom, shape=(0,) + arr_value.shape, title=title, 
+                            atom=atom, shape=(0,)+arr_value.shape, title=title, 
                             filters=self.filter, expectedrows=length)
 
                     if group_counter % 4096 == 0:
@@ -246,16 +258,20 @@ descend from a single group, so the traces are split up into several groups.')
                     group_counter += 1
                 
                     arr_value = np.asarray(o.value)
+                    try:
+                        arr_value = arr_value[o._missing]
+                    except (AttributeError, TypeError):
+                        pass
                     title = o.__name__ + ': observed value'
                 
                     if arr_value.dtype is np.dtype('object'):
                         va = self._h5file.createVLArray(this_group, o.__name__, tables.ObjectAtom(), title=title, filters=self.filter)
-                        va.append(o.value)
+                        va.append(arr_value)
                     
                     else:
                         ca = self._h5file.createCArray(this_group, o.__name__, tables.Atom.from_dtype(arr_value.dtype), 
                             shape = arr_value.shape, title=title, filters=self.filter)
-                        ca[:] = o.value
+                        ca[:] = arr_value
                     
                     if group_counter % 4096 == 0:
                         group_num += 1
@@ -285,9 +301,14 @@ descend from a single group, so the traces are split up into several groups.')
         """Make sure the next objects to be tallied are compatible with the 
         stored trace."""
         for o in self.model._variables_to_tally:
-            if not np.asarray(o.value).dtype == self.dtype_dict[o]:
+            arr_value = np.asarray(o.value)
+            try:
+                arr_value = arr_value[o._missing]
+            except (AttributeError, TypeError):
+                pass
+            if not arr_value.dtype == self.dtype_dict[o]:
                 raise ValueError, "Variable %s's current dtype, '%s', is different from trace dtype '%s'. Cannot tally it." \
-                    % (o.__name__, np.asarray(o.value).dtype.name, self.dtype_dict[o].name)
+                    % (o.__name__, arr_value.dtype.name, self.dtype_dict[o].name)
         
     def close(self):
         self._h5file.close()

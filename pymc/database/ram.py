@@ -51,10 +51,11 @@ class Trace(base.Trace):
     def tally(self, index, chain=-1):
         """Store current value."""
         
+        value = self._obj.value
         try:
-            value = self._obj.value[self._obj._missing]
+            value = value[self._obj._missing]
         except (AttributeError, TypeError):
-            value = self._obj.value
+            pass
         
         try:
             self._trace[chain][index] = value.copy()

@@ -22,7 +22,7 @@ class Trace(sqlite.Trace):
         """
         size = 1
         try:
-            size = len(self._obj.value)
+            size = self._obj._dim
         except TypeError:
             pass
         
@@ -44,10 +44,11 @@ class Trace(sqlite.Trace):
     def tally(self,index):
         """Adds current value to trace"""
         
+        value = self._obj.value
         try:
-            value = self._obj.value[self._obj._missing]
+            value = value[self._obj._missing]
         except (AttributeError, TypeError):
-            value = self._obj.value
+            pass
         
         size = 1
         try:
