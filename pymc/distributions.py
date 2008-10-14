@@ -886,16 +886,13 @@ def rdirichlet(theta, size=1):
     rdirichlet(theta, size=1)
     
     Dirichlet random variates.
-    
-    NOTE only the first k-1 values are returned.
-    The k'th value is equal to one minus the sum of the first k-1 values.
     """
     
     gammas = rgamma(theta,1,size)
     if size > 1 and np.size(theta) > 1:
-        return (gammas[:,:-1].transpose()/gammas.sum(1)).transpose()
+        return (gammas.transpose()/gammas.sum(1)).transpose()
     elif np.size(theta)>1:
-        return gammas[:-1]/gammas.sum()
+        return gammas/gammas.sum()
     else:
         return 1.
 
@@ -904,12 +901,8 @@ def dirichlet_expval(theta):
     dirichlet_expval(theta)
     
     Expected value of Dirichlet distribution.
-    
-    NOTE only the expectations of the first k-1 values are returned.
-    The expectation of the k'th value is one minus the expectations of
-    the first k-1 values.
     """
-    return theta[:-1]/np.sum(theta)
+    return theta/np.sum(theta).astype(float)
 
 def dirichlet_like(x, theta):
     R"""
@@ -928,19 +921,8 @@ def dirichlet_like(x, theta):
         :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
       theta : (n,k) or (1,k) float
         :math:`\theta > 0`
-    
-    :Note:
-      There is an implicit k'th value of x, equal to :math:`\sum_{i=1}^{k-1} x_i`.
     """
     
-    # Disabled multiple x's and theta's ... got confused reparametrizing
-    # by first k-1. AP
-    #
-    # x = np.atleast_2d(x)
-    #
-    # if np.any(np.around(x.sum(1), 6)!=1):
-    #     return -np.Inf
-    # return flib.dirichlet(x,np.atleast_2d(theta))
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------

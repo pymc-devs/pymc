@@ -499,9 +499,9 @@ class Stochastic(StochasticBase):
         
         if value is not None:
             try:
-                self._value = dtype(copy(value))
-            except TypeError:
-                self._value = asarray(copy(value))
+                self._value = dtype(value)
+            except (TypeError,ValueError):
+                self._value = asarray(value, dtype=dtype)
         else:
             self._value = None
                 

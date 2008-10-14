@@ -1207,111 +1207,108 @@ cf2py double precision intent(out) :: like
       END SUBROUTINE geometric
 
 
-      SUBROUTINE dirichlet(x,theta,k,like)
-
-! Updated 3/7/08... AP couldn't figure out how to 
-! make x length k-1, so using single x and theta values
-! for now.
-
-c Dirichlet multivariate log-likelihood function      
-
-cf2py intent(out) like
-cf2py intent(hide) k
-
-      IMPLICIT NONE
-      INTEGER j,k
-      DOUBLE PRECISION like,sumt,sumx
-      DOUBLE PRECISION x(k-1),theta(k)
-      DOUBLE PRECISION gammln
-      DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)
-      
-      like = 0.0D0
-
-        sumt = 0.0D0
-        sumx = 0.0D0
-        do j=1,k-1
-c kernel of distribution      
-
-          if ((x(j) .LE. 0.0).OR.(theta(j).LE.0.0)) then
-            like = -infinity
-            RETURN
-          endif
-          like = like + (theta(j)-1.0D0)*dlog(x(j))
-
-c normalizing constant        
-          like = like - gammln(theta(j))
-          sumt = sumt + theta(j)
-          sumx = sumx + x(j)
-        enddo
-        
-c implicit k'th term
-        if (sumx .GT. 1.0) then
-          like = -infinity
-          RETURN
-        endif          
-        
-       if ((theta(k).LE.0.0).OR.(sumx.GE.1.0)) then
-          like = -infinity
-          RETURN
-       end if
-           
-       like = like + (theta(k)-1.0D0)*dlog(1.0D0-sumx)
-       like = like - gammln(theta(k))
-       sumt = sumt + theta(k)
-       
-        like = like + gammln(sumt)
-
-      return
-      END SUBROUTINE dirichlet
-
-
-!       SUBROUTINE dirichlet(x,theta,k,nx,nt,like)
+!       SUBROUTINE dirichlet(x,theta,k,like)
 ! 
 ! c Dirichlet multivariate log-likelihood function      
 ! 
-! c Updated 22/01/2007 DH. 
-! 
-! cf2py double precision dimension(nx,k),intent(in) :: x
-! cf2py double precision dimension(nt,k),intent(in) :: theta
-! cf2py double precision intent(out) :: like
-! cf2py integer intent(hide), depend(x,theta),check(k==shape(theta,1)||(k==shape(theta,0) && shape(theta,1)==1)) :: k=shape(x,1)
-! cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
-! cf2py integer intent(hide),depend(theta,nx),check(nt==1 || nt==nx) :: nt=shape(theta,0)
+! cf2py intent(out) like
+! cf2py intent(hide) k
 ! 
 !       IMPLICIT NONE
-!       INTEGER i,j,nx,nt,k
-!       DOUBLE PRECISION like,sumt
-!       DOUBLE PRECISION x(nx,k),theta(nt,k)
-!       DOUBLE PRECISION theta_tmp(k)
+!       INTEGER j,k
+!       DOUBLE PRECISION like,sumt,sumx
+!       DOUBLE PRECISION x(k),theta(k)
 !       DOUBLE PRECISION gammln
 !       DOUBLE PRECISION infinity
 !       PARAMETER (infinity = 1.7976931348623157d308)
 !       
+!       like = 0.0D0
 ! 
-!       like = 0.0
+!       sumt = 0.0D0
+!       sumx = 0.0D0
 !       do j=1,k
-!         theta_tmp(j) = theta(1,j)
-!       enddo
-! 
-!       do i=1,nx
-!         sumt = 0.0
-!         do j=1,k
-!           if (nt .NE. 1) theta_tmp(j) = theta(i,j)      
 ! c kernel of distribution      
-!           like = like + (theta_tmp(j)-1.0)*dlog(x(i,j))  
-!           if ((x(i,j) .LE. 0.0) .OR. (theta_tmp(j) .LE. 0.0)) then
-!             like = -infinity
-!             RETURN
-!           endif          
+! 
+!         if ((x(j) .LE. 0.0).OR.(theta(j) .LE. 0.0)) then
+!           like = -infinity
+!           RETURN
+!         endif
+!         like = like + (theta(j)-1.0D0)*dlog(x(j))
+! 
 ! c normalizing constant        
-!           like = like - gammln(theta_tmp(j))
-!           sumt = sumt + theta_tmp(j)
-!         enddo
-!         like = like + gammln(sumt)
+!         like = like - gammln(theta(j))
+!         sumt = sumt + theta(j)
+!         sumx = sumx + x(j)
 !       enddo
+!       
+! c check sum to unity constraint
+!       if (sumx .GT. 1.0) then
+!         like = -infinity
+!         RETURN
+!       endif          
+!        
+!       like = like + gammln(sumt)
+! 
 !       return
 !       END SUBROUTINE dirichlet
+
+
+      SUBROUTINE dirichlet(x,theta,nx,nt,k,like)
+
+c Dirichlet log-likelihood function     
+
+cf2py integer intent(hide),depend(x) :: nx=shape(x,1)
+cf2py integer intent(hide),depend(theta) :: nt=shape(theta,1)
+cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,0)) :: k=shape(x,0)
+cf2py intent(out) like      
+
+      IMPLICIT NONE
+      INTEGER i,j,k,nx,nt
+      DOUBLE PRECISION like,sumt,sumx
+      DOUBLE PRECISION x(nx,k),theta(nt,k)
+      DOUBLE PRECISION t_tmp(k)
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
+      like = 0.0D0
+      do i=1,k
+            t_tmp(i) = theta(1,i)
+      enddo
+      do j=1,nx
+        if (nt .NE. 1) then
+              do i=1,k
+                    t_tmp(i) = theta(j,i)
+              enddo
+        endif
+
+        sumt = 0.0D0
+        sumx = 0.0D0
+        
+        do i=1,k
+!         protect against non-positive x or theta
+          if ((x(j,i) .LE. 0.0D0) .OR. (t_tmp(i).LE.0.0D0)) then
+            like = -infinity
+            RETURN
+          endif
+          
+          like = like + (t_tmp(i)-1.0D0)*dlog(x(j,i))
+          like = like - gammln(t_tmp(i))
+          
+          sumt = sumt + t_tmp(i)
+          sumx = sumx + x(j,i)
+
+        enddo
+!       make sure x sums approximately to unity
+        if ((sumx .GT. 1.000001) .OR. (sumx .LT. 0.999999)) then
+          like=-infinity
+          return
+        endif
+        like = like + gammln(sumt)
+      enddo
+      RETURN
+      END SUBROUTINE dirichlet
 
 
       SUBROUTINE cauchy(x,alpha,beta,nx, na, nb,like)

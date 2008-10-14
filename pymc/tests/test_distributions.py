@@ -389,8 +389,7 @@ class test_dirichlet(TestCase):
     """Multivariate Dirichlet distribution"""
     def test_random(self):
         theta = np.array([2.,3.,5.])
-        rpart = rdirichlet(theta, 2000)
-        r = np.hstack((rpart, np.atleast_2d(rpart.sum(1)).T))
+        r = rdirichlet(theta, 2000)
         
         s = theta.sum()
         m = r.mean(0)
@@ -400,15 +399,14 @@ class test_dirichlet(TestCase):
         M = theta/s
         # Theoretical covariance
         cov_th = -np.outer(theta, theta)/s**2/(s+1.)
-
         assert_array_almost_equal(m,M, 2)
         assert_array_almost_equal(cov_ex, cov_th,1)
 
     def test_like(self):
         theta = np.array([2.,3.,5.])
-        x = [.4,.2]
+        x = [.4,.2,.4]
         l = flib.dirichlet(x, theta)
-        f = dirichlet(np.hstack((x, 1.-np.sum(x))), theta)
+        f = dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
 
     # Disabled vectorization bc got confused... AP

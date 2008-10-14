@@ -231,6 +231,7 @@ def data(obj=None, **kwds):
       stochastic, Stochastic, dtrm, Deterministic, potential, Potential, Model,
       distributions
     """
+    
     if obj is not None:
         if isinstance(obj, Stochastic):
             obj.isdata=True
