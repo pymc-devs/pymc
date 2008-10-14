@@ -3,14 +3,14 @@ PyMC Installation Instructions
 ==============================
 
 
-:Date: April 5, 2007
+:Date: Oct 14, 2008
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
 
-PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be 
+``pymc`` is known to run on Mac OS X, Linux and Windows, but in theory should be 
 able to work on just about any platform for which Python and the numpy module 
-are  available. Before installing PyMC, you will need to install some dependencies. 
+are  available. Before installing ``pymc``, you will need to install some dependencies. 
 
 
 Dependencies
@@ -39,14 +39,15 @@ dependencies, and all are freely available online.
 
 
 There are prebuilt distributions that include all the needed dependencies. For 
-Mac OSX users, we recommend the `MacPython`_ distribution, the `Enthought Python Distribution`_, or Python 2.5.1 that
-ships with OSX 10.5 (Leopard). Windows users should download and install the 
-`Enthought Python Distribution`_. The Enthought Python Distribution comes bundled with 
-these prerequisites.
+Mac OSX users, we recommend the `MacPython`_ distribution, the 
+`Enthought Python Distribution`_, or Python 2.5.1 that ships with 
+OSX 10.5 (Leopard). Windows users should download and install the 
+`Enthought Python Distribution`_. The Enthought Python Distribution comes 
+bundled with these prerequisites.
 
-If instead of installing the prebuilt binaries you prefer (or have) to build PyMC 
-yourself, make sure you have a Fortran and a C compiler. There are free
-compilers (g77, gcc) available on all platforms. Other compilers have not been
+If instead of installing the prebuilt binaries you prefer (or have) to build 
+``pymc`` yourself, make sure you have a Fortran and a C compiler. There are free
+compilers (gfortran, gcc) available on all platforms. Other compilers have not been
 tested with PyMC but may work nonetheless. 
 
 
@@ -152,16 +153,21 @@ Previous versions are available in the /tags/ directory.
 Running the test suite
 ======================
 
-To make sure everything is working correctly, open a python shell and type::
-  
-    from pymc import testsuite
-    testsuite.test()
+``pymc`` comes with a set of tests that verify that the critical components
+of the code work as expected. To run these tests, users must have `nose`_
+installed on their system. The tests are launched from a python shell::  
 
-You should see a lot of tests being run, and messages appear if errors are 
-raised or if some tests fail. In case this happens (it shouldn't), please report
+    import pymc
+    pymc.test()
+
+In case of failures, messages detailing the nature of these failures will 
+appear. In case this happens (it shouldn't), please report
 the problems on the `issue tracker`_, specifying the version you are using and the
 environment. Some of the tests require SciPy, if it is not installed on your 
 system, you should not worry too much about failing tests. 
+
+.. _`nose`:
+   http://somethingaboutorange.com/mrl/projects/nose/
 
 
 Bugs and feature requests
