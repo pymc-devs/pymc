@@ -1,7 +1,7 @@
 from pymc import *
 from numpy.testing import *
 from pymc.graph import *
-
+import nose
 DIR = 'test_graph'
 
 def mymodel():
@@ -63,6 +63,10 @@ def mymodel():
 
 class test_graph(TestCase):
     def test_raw(self):
+        try:
+            import pydot
+        except ImportError:
+            raise nose.SkipTest
         A = Model(mymodel())
         graph(A, path='full.dot', format='raw', prog='dot', consts = True)
         graph(A, path='deterministic.dot', format='raw', prog='dot', collapse_deterministics=True, consts = True)
@@ -70,6 +74,10 @@ class test_graph(TestCase):
         graph(A, path='deterministic_pot.dot', format='raw', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
         moral_graph(A, path='moral.dot', format='raw', prog='dot')
     def test_pdf(self):
+        try:
+            import pydot
+        except ImportError:
+            raise nose.SkipTest
         A = Model(mymodel())    
         graph(A, path='full.pdf', format='pdf', prog='dot', consts = True)
         graph(A, path='deterministic.pdf', format='pdf', prog='dot', collapse_deterministics=True, consts = True)

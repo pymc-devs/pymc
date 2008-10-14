@@ -775,7 +775,7 @@ class test_truncnorm(TestCase):
         
     def test_random(self):
         r = rtruncnorm(mu=-1,tau=.1,a=-20,b=20,size=10000)
-        assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 2)
+        assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 1)
         assert (r > -20).all()
         assert (r < 20).all()
         

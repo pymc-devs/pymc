@@ -234,6 +234,8 @@ class test_hdf5(TestCase):
         
 
     def test_hdf5_col(self):
+        if 'hdf5' not in dir(pymc.database):
+            raise nose.SkipTest
         import tables
         db = pymc.database.hdf5.load('Disaster.hdf5')
         col = db.e.hdf5_col()
