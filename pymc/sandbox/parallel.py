@@ -1,7 +1,8 @@
 import subprocess
 from IPython.kernel import client
-    
-
+import os, time
+from pymc import Sampler
+import numpy as np
 """
 It seems to work, but the real challenge is to get the results back. 
 One solution may be to create a parallel database backend. The backend
@@ -15,7 +16,7 @@ The sample method is Parallel must initialize the chains
 """
 
 
-class Parallel:
+class Parallel(Sampler):
     """
     Parallel manages multiple MCMC loops. It is initialized with:
 
@@ -29,7 +30,7 @@ class Parallel:
         dbase: Database backend used to tally the samples. 
         Implemented backends: None, hdf5.
         
-        proc: Number of processes (generally the number of available CPUs.)
+        chains: Number of processes (generally the number of available CPUs.)
         
     Externally-accessible attributes:
 
@@ -60,7 +61,7 @@ class Parallel:
 
     See also StepMethod, OneAtATimeMetropolis, Node, Stochastic, Deterministic, and weight.
     """
-    def __init__(self, input, dbase='ram', proc=2):
+    def __init__(self, input, db='ram', chains=2):
         try:
             mec = client.MultiEngineClient()
         except:
@@ -70,35 +71,69 @@ class Parallel:
         
         # Check everything is alright.
         nproc = len(mec.get_ids())
+        assert chains <= nproc
+        
+        
+        Sampler.__init__(self, input, db=db)
         
         # Import the individual models in each process
         #mec.pushModule(input)
         
+        proc = range(chains)
+        
         try:
-            mec.execute('import %s as input'%input.__name__)
+            mec.execute('import %s as input'%input.__name__, proc)
         except:
-            mec.execute( 'import site' )
-            mec.execute( 'site.addsitedir( ' + `os.getcwd()` + ' )' )
-            mec.execute( 'import %s as input; reload(input)'%input.__name__)
+            mec.execute( 'import site' , proc)
+            mec.execute( 'site.addsitedir( ' + `os.getcwd()` + ' )' , proc)
+            mec.execute( 'import %s as input; reload(input)'%input.__name__, proc)
         
         # Instantiate Sampler instances in each process
-        mec.execute('from pymc import MCMC')
+        mec.execute('from pymc import MCMC', proc)
         #mec.execute('from pymc.database.parallel import Database')
         #for i in range(nproc):
         #    mec.execute(i, 'db = Database(%d)'%i)
-        mec.execute('S = MCMC(input)')
+        mec.execute('S = MCMC(input)', proc)
         
         self.mec = mec
+        self.proc = proc
         
     def sample(self, iter, burn=0, thin=1, tune_interval=100):
+        proc = self.proc
         # Set the random initial seeds
-        self.mec.execute('S.seed()')
+        self.mec.execute('S.seed()', proc)
+        self.mec.execute('nugget = {}')
+        length = int(np.ceil((1.0*iter-burn)/thin))
         
+        for i in proc:
+            self.db._initialize(length=length)
+            
         # Run the chains on each process
-        self.mec.execute('S.sample(%(iter)i, %(burn)i, %(thin)i, %(tune_interval)i)'%vars())
+        self.result = self.mec.execute('S.sample(%(iter)i, %(burn)i, %(thin)i, %(tune_interval)i)'%vars(), proc, block=True)
+    
+        self.mec.execute("print 'Sampling terminated successfully on process %d.'%id", proc)
         
-        # Merge the traces
-         
+        # Launch a subprocess that will tally the traces of each sampler.
+        #self.tally()
+        
+    def tally(self):
+        """Read in the traces dumped by the samplers."""
+        mec = self.mec
+        data = {}
+        for obj in self._variables_to_tally:
+            name = obj.__name__
+            print 'getting ', name
+            mec.execute('x = S.%s.trace(chain=-1)'%name, self.proc)
+            data[name] = mec.pull('x', self.proc)
+        
+        for obj in self._variables_to_tally:
+            name = obj.__name__
+            traces = data[name]
+            for chain, trace in enumerate(traces):
+                for index, v in enumerate(trace):
+                    obj.value = v
+                    obj.trace.tally(index, chain)
+                
         
     
 
