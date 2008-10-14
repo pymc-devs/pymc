@@ -9,7 +9,7 @@ import sys, inspect, select, os
 from copy import copy
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
-
+import pdb
 
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv

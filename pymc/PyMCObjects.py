@@ -342,7 +342,7 @@ class Deterministic(DeterministicBase):
                         
         self._value.force_compute()
         
-        self._dim = size(self.value)
+        self._size = size(self.value)
         
     def gen_lazy_function(self):
 
@@ -495,7 +495,7 @@ class Stochastic(StochasticBase):
         self.rseed = rseed
         
         # Specify the dimension of stochastic
-        self._dim = size(value)
+        self._size = size(value)
         
         if value is not None:
             try:
@@ -546,7 +546,7 @@ class Stochastic(StochasticBase):
             try:
             
                 self._missing = [i for i,x in enumerate(self.value) if x==None]
-                self._dim = len(self._missing)
+                self._size = len(self._missing)
         
                 if self._missing:
             

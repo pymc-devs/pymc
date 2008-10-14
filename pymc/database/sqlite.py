@@ -34,7 +34,7 @@ class Trace(object):
         size = 1
         
         try:
-            size = self._obj._dim
+            size = self._obj._size
         except TypeError:
             pass
         
