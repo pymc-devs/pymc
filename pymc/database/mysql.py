@@ -84,7 +84,7 @@ class Database(pickle.Database):
         
         self.Trace = Trace
     
-    def _initialize(self, length):
+    def _initialize(self, length=None):
         """Initialize database."""
         
         dbname = self.model.__name__
@@ -120,10 +120,23 @@ class Database(pickle.Database):
     def clean(self):
         """Deletes tables from database"""
         
-        tables = get_table_list(self.cur)
+        try:
+            tables = get_table_list(self.cur)
+            
+            for t in tables:
+                self.cur.execute('DROP TABLE %s' % t)
+            
+        except AttributeError:
+            
+            self._initialize()
+            
+            tables = get_table_list(self.cur)
         
-        for t in tables:
-            self.cur.execute('DROP TABLE %s' % t)
+            for t in tables:
+                self.cur.execute('DROP TABLE %s' % t)
+            
+            self.close
+        
         
     
     def close(self, *args, **kwds):

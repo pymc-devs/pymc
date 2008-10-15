@@ -51,10 +51,11 @@ class Trace(base.Trace):
         
         value = self._obj.value
         try:
-            value = value[self._obj._missing]
-        except (AttributeError, TypeError):
+            if self._obj._missing:
+                value = value[self._obj._missing]
+        except AttributeError:
             pass
-
+            
         self.db._row[self.name] = value
                
     def truncate(self, index):
@@ -187,10 +188,8 @@ class Database(pickle.Database):
         for object in self.model.data_stochastics:
             if object.trace is True:
                 value = object.value
-                try:
+                if object._missing:
                     value = value[object._missing]
-                except (AttributeError, TypeError):
-                    pass
                 setattr(self._table.attrs, object.__name__, value)
     
     def tally(self, index):

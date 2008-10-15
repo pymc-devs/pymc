@@ -397,7 +397,7 @@ class Sampler(Model):
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace
         # Tallyable objects are listed in the _nodes_to_tally set. 
-
+        
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.stochastics | self.deterministics :
@@ -582,6 +582,7 @@ class Sampler(Model):
         Restore the state of the sampler and to
         the state stored in the database.
         """
+        
         state = self.db.getstate()
         
         # Restore sampler's state

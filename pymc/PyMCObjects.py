@@ -497,13 +497,7 @@ class Stochastic(StochasticBase):
         # Specify the dimension of stochastic
         self._size = size(value)
         
-        if value is not None:
-            try:
-                self._value = dtype(value)
-            except (TypeError,ValueError):
-                self._value = asarray(value, dtype=dtype)
-        else:
-            self._value = None
+        self._value = value
                 
         Variable.__init__(  self, 
                         doc=doc, 

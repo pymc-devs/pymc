@@ -152,6 +152,7 @@ class StepMethod(object):
         # File away the variables
         for variable in variables:
             # Sort.
+            
             if isinstance(variable,Stochastic):
                 if variable.isdata:
                     if variable._missing:
@@ -568,13 +569,16 @@ class Impute(Metropolis):
             return 3
         else:
             return 0
-        
-    def step(self):
-        
-        self.propose()
-    
+
     def tune(self, verbose):
-        return False
+        
+        if self._dist == "Prior":
+            # Only tune if not sampling from prior
+            return False
+        else:
+            return Metropolis.tune(self, verbose)
+        
+    
 
 class Gibbs(Metropolis):
     """
