@@ -1911,6 +1911,7 @@ def normal_like(x, mu, tau):
     #     constrain(tau, lower=0)
     # except ZeroProbability:
     #     return -np.Inf
+    
     return flib.normal(x, mu, tau)
 
 

@@ -497,7 +497,11 @@ class Stochastic(StochasticBase):
         # Specify the dimension of stochastic
         self._size = size(value)
         
-        self._value = value
+        if self._size>1:
+            self._value = array(value)
+        else:
+            self._value = value
+
                 
         Variable.__init__(  self, 
                         doc=doc, 
@@ -509,11 +513,10 @@ class Stochastic(StochasticBase):
                         plot=plot,
                         verbose=verbose)    
         
-        if isinstance(self._value, ndarray) and not dtype is self._value.dtype:
-            self._value = asarray(self._value, dtype=dtype).view(self._value.__class__)                
-        
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
+            if not dtype is self._value.dtype:
+                self._value = asarray(self._value, dtype=dtype).view(self._value.__class__)        
             
         # Check initial value
         if not isinstance(self.logp, float):
@@ -537,13 +540,14 @@ class Stochastic(StochasticBase):
                 
         # Check for missing values
         if not self.__dict__.has_key('_missing'):
+            
             try:
             
                 self._missing = [i for i,x in enumerate(self.value) if x==None]
                 self._size = len(self._missing)
         
                 if self._missing:
-            
+                    
                     # Use random function if provided
                     if self._random is not None:
                         self._value[self._missing] = self._random(**self._parents.value)[self._missing]
@@ -584,6 +588,7 @@ class Stochastic(StochasticBase):
         # Value can't be updated if isdata=True
         if self.isdata:
             if self._missing:
+                
                 missing_values = value[self._missing]
                 value = copy(self._value)
                 value[self._missing] = missing_values
@@ -651,8 +656,8 @@ class Stochastic(StochasticBase):
     def set_logp(self):
         raise AttributeError, 'Stochastic '+self.__name__+'\'s logp attribute cannot be set'
 
-    logp = property(fget = get_logp, fset=set_logp, doc="Log-probability or log-density of self's current value\n given values of parents.")        
-
+    logp = property(fget = get_logp, fset=set_logp, doc="Log-probability or log-density of self's current value\n given values of parents.") 
+    
     
     # Sample self's value conditional on parents.
     def random(self):

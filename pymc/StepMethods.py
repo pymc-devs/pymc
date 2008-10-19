@@ -438,6 +438,7 @@ class Metropolis(StepMethod):
         # If no stochastics depend on this stochastic, I'll just propose it from its conditional prior.
         # This is the best possible step method for this stochastic.
         if len(s.extended_children)==0:
+            
             if s.isdata:
                 return 0
             else:
@@ -560,11 +561,12 @@ class Impute(Metropolis):
     Step method for imputing missing data in data stochastics
     """
     def __init__(self, stochastic, verbose=0):
-        Metropolis.__init__(self, stochastic, verbose=verbose)
+        Metropolis.__init__(self, stochastic, dist='Prior', verbose=verbose)
         
     @staticmethod
     def competence(s):
         
+        return 0
         if s.isdata:
             return 3
         else:
