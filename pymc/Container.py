@@ -202,8 +202,6 @@ def file_items(container, iterable):
             if isinstance(item, StochasticBase):
                 if item.isdata:
                     container.data_stochastics.add(item)
-                    if item._missing:
-                        container.stochastics.add(item)
                 else:
                     container.stochastics.add(item)
             elif isinstance(item, DeterministicBase):
@@ -625,3 +623,4 @@ class ArrayContainer(ContainerBase, ndarray):
         return self._value
                 
     value = property(fget = get_value, doc=value_doc)
+            

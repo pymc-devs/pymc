@@ -12,15 +12,16 @@ from pymc import *
 from numpy import *
 from numpy.random import randint
 
-__all__ = ['disasters_array', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
+__all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
 
-disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+disasters_data =   MissingData('disasters_data', [ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, None, 3, 4, 2, 5,
                             2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
                             1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
                             0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
                             3, 3, 1, 1, 2, 1, None, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+
 
 # Define data and stochastics
 
@@ -30,7 +31,7 @@ late_mean = Exponential('late_mean',beta=1.)
     
 @data
 @stochastic(dtype=int)
-def disasters(  value = disasters_array, 
+def disasters(  value = disasters_data, 
                 early_mean = early_mean, 
                 late_mean = late_mean, 
                 switchpoint = switchpoint):

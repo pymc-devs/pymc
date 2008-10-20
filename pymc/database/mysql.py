@@ -22,7 +22,7 @@ class Trace(sqlite.Trace):
         """
         size = 1
         try:
-            size = self._obj._size
+            size = len(self._obj.value)
         except TypeError:
             pass
         
@@ -44,15 +44,9 @@ class Trace(sqlite.Trace):
     def tally(self,index):
         """Adds current value to trace"""
         
-        value = self._obj.value
-        try:
-            value = value[self._obj._missing]
-        except (AttributeError, TypeError):
-            pass
-        
         size = 1
         try:
-            size = len(value)
+            size = len(self._obj.value)
         except TypeError:
             pass
         
@@ -63,9 +57,9 @@ class Trace(sqlite.Trace):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in value])
+            valstring = ', '.join(['%f'%x for x in self._obj.value])
         except:
-            valstring = str(value)
+            valstring = str(self._obj.value)
         
         # Add value to database
         self.db.cur.execute("INSERT INTO %s (trace, %s) values (%s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))

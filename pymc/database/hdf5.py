@@ -7,8 +7,6 @@
 # Numarray >= 1.5.2 (eventually will rely on numpy)
 ###
 
-# TODO: Need to fix missing data support; for some reason it still wants to 
-# make rows the size of the whole data array, and not just the missing values.
 
 import numpy as np
 from numpy import zeros,shape, asarray, hstack, size, dtype
@@ -17,7 +15,6 @@ from pymc.database import base, pickle
 from copy import copy
 import tables
 import pickle    
-import pdb
 
 
 __all__ = ['Trace', 'Database', 'load']
@@ -30,7 +27,6 @@ class Trace(base.Trace):
     """
     def __init__(self,value=None, obj=None, name=None):
         """Assign an initial value and an internal PyMC object."""
-        
         self._trace = value
         if obj is not None:
             if isinstance(obj, pymc.Variable):
@@ -48,15 +44,7 @@ class Trace(base.Trace):
     
     def tally(self):
         """Adds current value to trace"""
-        
-        value = self._obj.value
-        try:
-            if self._obj._missing:
-                value = value[self._obj._missing]
-        except AttributeError:
-            pass
-            
-        self.db._row[self.name] = value
+        self.db._row[self.name] = self._obj.value
                
     def truncate(self, index):
         """
@@ -183,14 +171,11 @@ class Database(pickle.Database):
         self._row = self._table.row
         for object in self.model._variables_to_tally:
             object.trace._initialize(length)
-            
+        
         # Store data objects
         for object in self.model.data_stochastics:
             if object.trace is True:
-                value = object.value
-                if object._missing:
-                    value = value[object._missing]
-                setattr(self._table.attrs, object.__name__, value)
+                setattr(self._table.attrs, object.__name__, object.value)
     
     def tally(self, index):
         for o in self.model._variables_to_tally:

@@ -6,7 +6,8 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 from copy import copy
 from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
-from Container import DictContainer, ContainerBase, file_items
+import Container
+from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
 
 d_neg_inf = float(-1.79E308)
@@ -171,6 +172,7 @@ class ParentDict(DictContainer):
             self.attach_extended_parents()
         
         dict.__setitem__(self, key, new_parent)
+        
         file_items(self, self)
         
         # Tell my owner it needs a new lazy function.
@@ -342,8 +344,6 @@ class Deterministic(DeterministicBase):
                         
         self._value.force_compute()
         
-        self._size = size(self.value)
-        
     def gen_lazy_function(self):
 
         self._value = LazyFunction(fun = self._eval_fun, 
@@ -494,15 +494,11 @@ class Stochastic(StochasticBase):
         # taken from the constructor.
         self.rseed = rseed
         
-        # Specify the dimension of stochastic
-        self._size = size(value)
-        
-        if self._size>1:
-            self._value = array(value)
-        else:
-            self._value = value
+        self._value = value
 
-                
+        if isinstance(self._value, ArrayContainer):
+            parents['value'] = value
+
         Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
@@ -515,7 +511,7 @@ class Stochastic(StochasticBase):
         
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
-            if not dtype is self._value.dtype:
+            if not dtype is self._value.dtype and not isinstance(self._value, ArrayContainer):
                 self._value = asarray(self._value, dtype=dtype).view(self._value.__class__)        
             
         # Check initial value
@@ -538,27 +534,6 @@ class Stochastic(StochasticBase):
             else:
                 raise ValueError, 'Stochastic ' + self.__name__ + "'s value initialized to None; no initial value or random method provided."
                 
-        # Check for missing values
-        if not self.__dict__.has_key('_missing'):
-            
-            try:
-            
-                self._missing = [i for i,x in enumerate(self.value) if x==None]
-                self._size = len(self._missing)
-        
-                if self._missing:
-                    
-                    # Use random function if provided
-                    if self._random is not None:
-                        self._value[self._missing] = self._random(**self._parents.value)[self._missing]
-
-                    # Otherwise leave initial value at None and warn.
-                    else:
-                        raise ValueError, 'Stochastic ' + self.__name__ + "'s value initialized to None; no initial value or random method provided."
-                
-            except TypeError:
-                self._missing = None
-                
         arguments = {}
         arguments.update(self.parents)
         arguments['value'] = self
@@ -576,7 +551,10 @@ class Stochastic(StochasticBase):
         
         if self.verbose > 1:
             print '\t' + self.__name__ + ': value accessed.'
-        return self._value
+        try:
+            return self._value.value
+        except AttributeError:
+            return self._value
 
     
     def set_value(self, value):
