@@ -8,10 +8,11 @@ from distributions import DiscreteUniform, Uniform
 
 __all__ = ['MissingData']
 
-def MissingData(name, iterable):
+def MissingData(name, iterable, missing=None):
     """
     Container subclass designed for data iterables with missing elements. Elements of the 
-    None type are considered missing values, and are replaced by stochastics. These are given 
+    None type (or whatever is specified for missing values) are considered missing values, 
+    and are replaced by stochastics. These are given 
     uninformative priors, bounded by the range of the observed data, and are evaluated in the 
     likelihood with the observed data.
     """
@@ -26,7 +27,7 @@ def MissingData(name, iterable):
     elements = []
     for i,value in enumerate(iterable):
         
-        if value is None:
+        if value is missing:
             
             # Give missing element a name
             missing_name = '%s_%i' % (name, i)
