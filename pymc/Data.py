@@ -10,11 +10,23 @@ __all__ = ['MissingData']
 
 def MissingData(name, iterable, missing=None):
     """
-    Container subclass designed for data iterables with missing elements. Elements of the 
+    Returns container designed for data iterables with missing elements. Elements of the 
     None type (or whatever is specified for missing values) are considered missing values, 
-    and are replaced by stochastics. These are given 
-    uninformative priors, bounded by the range of the observed data, and are evaluated in the 
-    likelihood with the observed data.
+    and are replaced by stochastics. These are given uninformative priors, bounded by the 
+    range of the observed data, and are evaluated in the likelihood with the observed data.
+    
+    :Parameters:
+        - name (string) : name for the data
+        - iterable (iterable) : the data which contains missing values
+        - missing (optional) : the value that is considered missing e.g., None (default), -999
+    
+    :Example:
+    
+        >>> some_data = (3, -999, 1, 5, 4, 1, 2)
+        >>> x = MissingData('x', some_data, -999)
+        >>> x
+        ArrayContainer([3, x_1, 1, 5, 4, 1, 2], dtype=object)
+        
     """
 
     # Array of data with no missing elements
@@ -27,7 +39,7 @@ def MissingData(name, iterable, missing=None):
     elements = []
     for i,value in enumerate(iterable):
         
-        if value is missing:
+        if value == missing:
             
             # Give missing element a name
             missing_name = '%s_%i' % (name, i)
