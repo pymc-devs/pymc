@@ -26,11 +26,13 @@ def MissingData(name, iterable, missing=None):
         >>> x = MissingData('x', some_data, -999)
         >>> x
         ArrayContainer([3, x_1, 1, 5, 4, 1, 2], dtype=object)
+        >>> x.value
+        array([3, 5, 1, 5, 4, 1, 2], dtype=object)
         
     """
 
     # Array of data with no missing elements
-    no_missing = filter(None, iterable)
+    no_missing = filter(lambda x: x!=missing, iterable)
     # Array type
     dtype = array(no_missing).dtype
     # Use minimum and maximum observed values to bound prior
