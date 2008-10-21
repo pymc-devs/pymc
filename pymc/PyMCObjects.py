@@ -494,11 +494,26 @@ class Stochastic(StochasticBase):
         # taken from the constructor.
         self.rseed = rseed
         
-        self._value = value
-
-        if isinstance(self._value, ArrayContainer):
-            parents['value'] = value
-
+        # Initialize value, either from value provided or from random function.
+        if value is not None:
+            if isinstance(value, ndarray):
+                if dtype is not None:
+                    if not dtype is value.dtype and not isinstance(value, ArrayContainer):
+                        self._value = asarray(value, dtype=dtype).view(value.__class__)
+                    else:
+                        self._value = value
+                else:
+                    self._value = value
+            elif dtype and dtype is not object:
+                try:
+                    self._value = dtype(value)
+                except TypeError:
+                    self._value = asarray(value)
+            else:
+                self._value = value
+        else:
+            self._value = None
+                
         Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
@@ -507,13 +522,13 @@ class Stochastic(StochasticBase):
                         trace=trace,
                         dtype=dtype,
                         plot=plot,
-                        verbose=verbose)    
-        
+                        verbose=verbose)
+    
+        # self._logp.force_compute()                   
+
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
-            if not dtype is self._value.dtype and not isinstance(self._value, ArrayContainer):
-                self._value = asarray(self._value, dtype=dtype).view(self._value.__class__)        
-            
+
         # Check initial value
         if not isinstance(self.logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
