@@ -8,7 +8,7 @@ from distributions import DiscreteUniform, Uniform, Bernoulli
 
 __all__ = ['MissingData']
 
-def MissingData(name, iterable, missing=None):
+def MissingData(name, iterable, missing=None, plot=False):
     """
     Returns container designed for data iterables with missing elements. Elements of the 
     None type (or whatever is specified for missing values) are considered missing values, 
@@ -20,6 +20,7 @@ def MissingData(name, iterable, missing=None):
         - name (string) : name for the data
         - iterable (iterable) : the data which contains missing values
         - missing (optional) : the value that is considered missing e.g., None (default), -999
+        - plot (optional) : flag for plotting (defaults to False)
     
     :Example:
     
@@ -50,11 +51,11 @@ def MissingData(name, iterable, missing=None):
             # Uninformative priors according to type
             if dtype==int:
                 if minmax == (0,1):
-                    elements.append(Bernoulli(missing_name, 0.5))
+                    elements.append(Bernoulli(missing_name, 0.5, plot=plot))
                 else:
-                    elements.append(DiscreteUniform(missing_name, minmax[0], minmax[1]))
+                    elements.append(DiscreteUniform(missing_name, minmax[0], minmax[1], plot=plot))
             else:
-                elements.append(Uniform(missing_name, minmax[0], minmax[1]))
+                elements.append(Uniform(missing_name, minmax[0], minmax[1], plot=plot))
                 
         else:
             elements.append(value)

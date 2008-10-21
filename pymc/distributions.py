@@ -923,6 +923,8 @@ def dirichlet_like(x, theta):
         :math:`\theta > 0`
     """
     
+    if (shape(x)[-1]+1) == shape(theta)[-1]:
+        return flib.dirichlet2(x, theta)
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------

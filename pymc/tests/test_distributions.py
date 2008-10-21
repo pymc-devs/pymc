@@ -401,11 +401,19 @@ class test_dirichlet(TestCase):
         cov_th = -np.outer(theta, theta)/s**2/(s+1.)
         assert_array_almost_equal(m,M, 2)
         assert_array_almost_equal(cov_ex, cov_th,1)
-
+    
     def test_like(self):
         theta = np.array([2.,3.,5.])
         x = [.4,.2,.4]
         l = flib.dirichlet(x, theta)
+        f = dirichlet(x, theta)
+        assert_almost_equal(l, sum(np.log(f)), 5)
+
+    def test_like2(self):
+        # k-1 version of Dirichlet
+        theta = np.array([2.,3.,5.])
+        x = [.4,.2,.4]
+        l = flib.dirichlet2(x[:-1], theta)
         f = dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
 
