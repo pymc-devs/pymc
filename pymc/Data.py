@@ -4,7 +4,7 @@ Classes and functions related to data objects, including missing data.
 
 from numpy import array
 from Container import ArrayContainer
-from distributions import DiscreteUniform, Uniform
+from distributions import DiscreteUniform, Uniform, Bernoulli
 
 __all__ = ['MissingData']
 
@@ -16,6 +16,7 @@ def MissingData(name, iterable, missing=None):
     range of the observed data, and are evaluated in the likelihood with the observed data.
     
     :Parameters:
+    
         - name (string) : name for the data
         - iterable (iterable) : the data which contains missing values
         - missing (optional) : the value that is considered missing e.g., None (default), -999
@@ -48,7 +49,10 @@ def MissingData(name, iterable, missing=None):
         
             # Uninformative priors according to type
             if dtype==int:
-                elements.append(DiscreteUniform(missing_name, minmax[0], minmax[1]))
+                if minmax == (0,1):
+                    elements.append(Bernoulli(missing_name, 0.5))
+                else:
+                    elements.append(DiscreteUniform(missing_name, minmax[0], minmax[1]))
             else:
                 elements.append(Uniform(missing_name, minmax[0], minmax[1]))
                 
