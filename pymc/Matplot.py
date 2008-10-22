@@ -373,7 +373,7 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
             # Current subplot number
             _num = i % _rows * 2 + 1
             # Final subplot of current figure?
-            _last = not (_num + 1) % (_rows * 2)
+            _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
             
             plot(tdata[i], name+'_'+str(i), format=format, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 

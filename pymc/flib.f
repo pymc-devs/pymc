@@ -1257,9 +1257,9 @@ cf2py double precision intent(out) :: like
 
 c Dirichlet log-likelihood function     
 
-cf2py integer intent(hide),depend(x) :: nx=shape(x,1)
-cf2py integer intent(hide),depend(theta) :: nt=shape(theta,1)
-cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,0)) :: k=shape(x,0)
+cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
+cf2py integer intent(hide),depend(theta) :: nt=shape(theta,0)
+cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,1)) :: k=shape(x,1)
 cf2py intent(out) like      
 
       IMPLICIT NONE
@@ -1288,7 +1288,7 @@ cf2py intent(out) like
         
         do i=1,k
 !         protect against non-positive x or theta
-          if ((x(j,i) .LE. 0.0D0) .OR. (t_tmp(i).LE.0.0D0)) then
+          if ((x(j,i) .LE. 0.0D0) .OR. (t_tmp(i) .LE. 0.0D0)) then
             like = -infinity
             RETURN
           endif
@@ -1298,7 +1298,7 @@ cf2py intent(out) like
           
           sumt = sumt + t_tmp(i)
           sumx = sumx + x(j,i)
-
+          
         enddo
 !       make sure x sums approximately to unity
         if ((sumx .GT. 1.000001) .OR. (sumx .LT. 0.999999)) then
@@ -1315,9 +1315,9 @@ cf2py intent(out) like
 
 c Dirichlet log-likelihood function with k-1 elements
 
-cf2py integer intent(hide),depend(x) :: nx=shape(x,1)
-cf2py integer intent(hide),depend(theta) :: nt=shape(theta,1)
-cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,0)) :: k=shape(x,0)+1
+cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
+cf2py integer intent(hide),depend(theta) :: nt=shape(theta,0)
+cf2py integer intent(hide),depend(x,theta) :: k=shape(theta,1)
 cf2py intent(out) like      
 
       IMPLICIT NONE

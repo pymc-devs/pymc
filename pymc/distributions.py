@@ -376,7 +376,7 @@ def randomwrap(func):
         size = arg[-1]
         vec_stochastics = len(r)>1
         if mv:
-            if nr == 1 and N==1:
+            if nr == 1:
                 return r[0]
             else:
                 return np.vstack(r)
@@ -887,7 +887,6 @@ def rdirichlet(theta, size=1):
     
     Dirichlet random variates.
     """
-    
     gammas = rgamma(theta,1,size)
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1)).transpose()
@@ -922,8 +921,9 @@ def dirichlet_like(x, theta):
       theta : (n,k) or (1,k) float
         :math:`\theta > 0`
     """
-    
-    if (shape(x)[-1]+1) == shape(theta)[-1]:
+    x = np.atleast_2d(x)
+    theta = np.atleast_2d(theta)
+    if (np.shape(x)[-1]+1) == np.shape(theta)[-1]:
         return flib.dirichlet2(x, theta)
     return flib.dirichlet(x,theta)
 
