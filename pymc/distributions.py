@@ -889,9 +889,9 @@ def rdirichlet(theta, size=1):
     """
     gammas = rgamma(theta,1,size)
     if size > 1 and np.size(theta) > 1:
-        return (gammas.transpose()/gammas.sum(1)).transpose()
+        return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
-        return gammas/gammas.sum()
+        return (gammas/gammas.sum())[:-1]
     else:
         return 1.
 
@@ -923,8 +923,8 @@ def dirichlet_like(x, theta):
     """
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
-    if (np.shape(x)[-1]+1) == np.shape(theta)[-1]:
-        return flib.dirichlet2(x, theta)
+    if (np.shape(x)[-1]+1) != np.shape(theta)[-1]:
+        raise ValueError, 'The dimension of x in dirichlet_like must be k-1.' 
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------

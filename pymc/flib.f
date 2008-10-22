@@ -1207,111 +1207,65 @@ cf2py double precision intent(out) :: like
       END SUBROUTINE geometric
 
 
-!       SUBROUTINE dirichlet(x,theta,k,like)
+!       SUBROUTINE dirichlet(x,theta,nx,nt,k,like)
 ! 
-! c Dirichlet multivariate log-likelihood function      
+! c Dirichlet log-likelihood function     
 ! 
-! cf2py intent(out) like
-! cf2py intent(hide) k
+! cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
+! cf2py integer intent(hide),depend(theta) :: nt=shape(theta,0)
+! cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,1)) :: k=shape(x,1)
+! cf2py intent(out) like      
 ! 
 !       IMPLICIT NONE
-!       INTEGER j,k
+!       INTEGER i,j,k,nx,nt
 !       DOUBLE PRECISION like,sumt,sumx
-!       DOUBLE PRECISION x(k),theta(k)
+!       DOUBLE PRECISION x(nx,k),theta(nt,k)
+!       DOUBLE PRECISION t_tmp(k)
 !       DOUBLE PRECISION gammln
 !       DOUBLE PRECISION infinity
 !       PARAMETER (infinity = 1.7976931348623157d308)
-!       
+! 
+! 
 !       like = 0.0D0
-! 
-!       sumt = 0.0D0
-!       sumx = 0.0D0
-!       do j=1,k
-! c kernel of distribution      
-! 
-!         if ((x(j) .LE. 0.0).OR.(theta(j) .LE. 0.0)) then
-!           like = -infinity
-!           RETURN
-!         endif
-!         like = like + (theta(j)-1.0D0)*dlog(x(j))
-! 
-! c normalizing constant        
-!         like = like - gammln(theta(j))
-!         sumt = sumt + theta(j)
-!         sumx = sumx + x(j)
+!       do i=1,k
+!             t_tmp(i) = theta(1,i)
 !       enddo
-!       
-! c check sum to unity constraint
-!       if (sumx .GT. 1.0) then
-!         like = -infinity
-!         RETURN
-!       endif          
-!        
-!       like = like + gammln(sumt)
+!       do j=1,nx
+!         if (nt .NE. 1) then
+!               do i=1,k
+!                     t_tmp(i) = theta(j,i)
+!               enddo
+!         endif
 ! 
-!       return
+!         sumt = 0.0D0
+!         sumx = 0.0D0
+!         
+!         do i=1,k
+! !         protect against non-positive x or theta
+!           if ((x(j,i) .LE. 0.0D0) .OR. (t_tmp(i) .LE. 0.0D0)) then
+!             like = -infinity
+!             RETURN
+!           endif
+!           
+!           like = like + (t_tmp(i)-1.0D0)*dlog(x(j,i))
+!           like = like - gammln(t_tmp(i))
+!           
+!           sumt = sumt + t_tmp(i)
+!           sumx = sumx + x(j,i)
+!           
+!         enddo
+! !       make sure x sums approximately to unity
+!         if ((sumx .GT. 1.000001) .OR. (sumx .LT. 0.999999)) then
+!           like=-infinity
+!           return
+!         endif
+!         like = like + gammln(sumt)
+!       enddo
+!       RETURN
 !       END SUBROUTINE dirichlet
-
-
+      
+      
       SUBROUTINE dirichlet(x,theta,nx,nt,k,like)
-
-c Dirichlet log-likelihood function     
-
-cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
-cf2py integer intent(hide),depend(theta) :: nt=shape(theta,0)
-cf2py integer intent(hide),depend(x,theta),check(k==shape(theta,1)) :: k=shape(x,1)
-cf2py intent(out) like      
-
-      IMPLICIT NONE
-      INTEGER i,j,k,nx,nt
-      DOUBLE PRECISION like,sumt,sumx
-      DOUBLE PRECISION x(nx,k),theta(nt,k)
-      DOUBLE PRECISION t_tmp(k)
-      DOUBLE PRECISION gammln
-      DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)
-
-
-      like = 0.0D0
-      do i=1,k
-            t_tmp(i) = theta(1,i)
-      enddo
-      do j=1,nx
-        if (nt .NE. 1) then
-              do i=1,k
-                    t_tmp(i) = theta(j,i)
-              enddo
-        endif
-
-        sumt = 0.0D0
-        sumx = 0.0D0
-        
-        do i=1,k
-!         protect against non-positive x or theta
-          if ((x(j,i) .LE. 0.0D0) .OR. (t_tmp(i) .LE. 0.0D0)) then
-            like = -infinity
-            RETURN
-          endif
-          
-          like = like + (t_tmp(i)-1.0D0)*dlog(x(j,i))
-          like = like - gammln(t_tmp(i))
-          
-          sumt = sumt + t_tmp(i)
-          sumx = sumx + x(j,i)
-          
-        enddo
-!       make sure x sums approximately to unity
-        if ((sumx .GT. 1.000001) .OR. (sumx .LT. 0.999999)) then
-          like=-infinity
-          return
-        endif
-        like = like + gammln(sumt)
-      enddo
-      RETURN
-      END SUBROUTINE dirichlet
-      
-      
-      SUBROUTINE dirichlet2(x,theta,nx,nt,k,like)
 
 c Dirichlet log-likelihood function with k-1 elements
 
@@ -1356,17 +1310,20 @@ cf2py intent(out) like
           
           sumt = sumt + t_tmp(i)
           sumx = sumx + x(j,i)
-
+          
         enddo
 !       implicit kth term
         like = like + (t_tmp(k)-1.0D0)*dlog(1.0D0-sumx)
         like = like - gammln(t_tmp(k))
         sumt = sumt + t_tmp(k)
-
+        if (sumx .GT. 1.0D0) then
+            like = -infinity
+            RETURN
+          endif
         like = like + gammln(sumt)
       enddo
       RETURN
-      END SUBROUTINE dirichlet2
+      END SUBROUTINE dirichlet
 
 
       SUBROUTINE cauchy(x,alpha,beta,nx, na, nb,like)
