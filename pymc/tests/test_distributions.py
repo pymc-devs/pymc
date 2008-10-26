@@ -393,19 +393,20 @@ class test_dirichlet(TestCase):
         
         s = theta.sum()
         m = r.mean(0)
-        cov_ex = np.cov(r.transpose())
+        m = append(m, 1-sum(m))
+        cov_ex = np.cov(append(r.transpose(), 1.-sum(r.transpose(),0)))
 
         # Theoretical mean
         M = theta/s
         # Theoretical covariance
         cov_th = -np.outer(theta, theta)/s**2/(s+1.)
-        assert_array_almost_equal(m,M, 2)
+        assert_array_almost_equal(m, M, 2)
         assert_array_almost_equal(cov_ex, cov_th,1)
     
     def test_like(self):
         theta = np.array([2.,3.,5.])
         x = np.array([.4,.2,.4])
-        l = flib.dirichlet2(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
+        l = flib.dirichlet(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
         f = dirichlet(x, theta)
         assert_almost_equal(l, sum(np.log(f)), 5)
 
