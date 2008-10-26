@@ -5,6 +5,7 @@ Class MCMC, which fits probability models using Markov Chain Monte Carlo, is def
 __all__ = ['MCMC']
 
 from Model import Sampler
+from Node import ZeroProbability
 from StepMethods import StepMethodRegistry, assign_method
 from distributions import absolute_loss, squared_loss, chi_square_loss
 import sys, time, pdb
@@ -284,10 +285,13 @@ class MCMC(Sampler):
             stochastic.value = mean_value
         
         # Calculate deviance at the means
-        self.deviance._value.force_compute()
-        
+        try:
+            self.deviance._value.force_compute()
+            deviance_at_mean = self.deviance.value
+        except ZeroProbability:
+            deviance_at_mean = -np.inf
         # Return twice deviance minus deviance at means
-        return 2*mean_deviance - self.deviance.value
+        return 2*mean_deviance - deviance_at_mean
         
 
     

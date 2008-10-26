@@ -10,6 +10,21 @@ Required external components: TclTk
 
 """
 
+# Make sure you're not importing from inside the source tree
+import os
+split_path = os.getcwd().split('/')
+for i in xrange(len(split_path)):
+    if split_path[i] == 'pymc':
+        this_path = '/'.join(split_path[:i+1])
+        file_list = os.listdir(this_path)
+        if 'INSTALL.txt' in file_list:
+            f = file(this_path + '/' + 'INSTALL.txt')
+            f.readline()
+            pream = f.readline()
+            f.close()
+            if pream == 'PyMC Installation Instructions\n':
+                raise RuntimeError, 'You seem to be trying to import PyMC from inside its source tree.\n\t\t Please change to another directory and try again.'
+        
 
 # Core modules
 from Node import *
