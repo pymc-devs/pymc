@@ -78,9 +78,9 @@ First, define your model in a file, say mymodel.py (with comments, of course!)::
 
    # Arbitrary deterministic function of parameters
    @pymc.deterministic
-   def theta(a=alpha, b=beta, d=dose):
+   def theta(a=alpha, b=beta):
        """theta = logit^{-1}(a+b)"""
-       return pymc.invlogit(a+b*d)
+       return pymc.invlogit(a+b*x)
 
    # Binomial likelihood for data
    d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]), isdata=True)
@@ -92,6 +92,7 @@ From a python shell (or another file), call::
 	
 	S = pymc.MCMC(mymodel, db='pickle')
 	S.sample(iter=10000, burn=5000, thin=2)
+	pymc.Matplot.plot(S)
 
 This will generate 10000 posterior samples, with the first half discarded as burn-in. The sample is stored in a Python serialization (pickle) database.
 
