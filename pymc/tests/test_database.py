@@ -290,9 +290,10 @@ class test_hdf5(TestCase):
     """    
     
 if __name__ == '__main__':
-    
+    warnings.simplefilter('ignore', UserWarning)
     C =nose.config.Config(verbosity=1)
     nose.runmodule(config=C)
+    warnings.simplefilter('default', UserWarning)
     try:
         S.db.close()
     except:
