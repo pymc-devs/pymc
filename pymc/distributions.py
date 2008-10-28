@@ -2610,7 +2610,7 @@ Otherwise parent p's value should sum to 1.
     def __init__(self, name, n, p, trace=True, value=None, rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0):
         
         if isinstance(p, Dirichlet):
-            Stochastic.__init__(self, logp=mod_multinom_like, doc='A Multinomial random variable', name=name,
+            Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like), doc='A Multinomial random variable', name=name,
                 parents={'n':n,'p':p}, random=mod_rmultinom, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 isdata=isdata, cache_depth=cache_depth, plot=plot, verbose=verbose)
         else:
