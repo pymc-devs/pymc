@@ -15,8 +15,6 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-from IPython.Debugger import Pdb
-
 
 def GP_array_random(M, U, scale=1.):
     b = np.dot(U.T , np.random.normal(size = U.shape[0]))
@@ -196,8 +194,6 @@ class GP(pm.Stochastic):
             self.random()
             
     def _set_value(self, v):
-        # Pdb(color_scheme='Linux').set_trace()
-        # print self._value, v, v.f_sofar
         self.last_value = self._value
         self._value = v
     def _get_value(self):

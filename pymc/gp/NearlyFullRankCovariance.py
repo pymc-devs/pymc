@@ -10,7 +10,6 @@ from GPutils import regularize_array, trisolve
 from linalg_utils import diag_call
 from incomplete_chol import ichol_full
 from Covariance import Covariance
-from IPython.Debugger import Pdb
 
 
 class NearlyFullRankCovariance(Covariance):
