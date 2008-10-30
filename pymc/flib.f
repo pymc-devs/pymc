@@ -195,43 +195,6 @@ C Out of range of the table.
       END
 
 
-      SUBROUTINE categor(x,hist,mn,step,n,k,like)
-
-c Categorical log-likelihood function
-c Need to return -Infs when appropriate
-
-cf2py double precision dimension(n),intent(in) :: x
-cf2py double precision dimension(k),intent(in) :: hist
-cf2py double precision intent(in) :: mn,step
-cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py integer intent(hide),depend(hist) :: k=len(hist)
-cf2py double precision intent(out) :: like
-            
-      DOUBLE PRECISION hist(k),x(n),mn,step,val,like
-      INTEGER n,k,i,j
-      DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)
-
-      like = 0.0
-c loop over number of elements in x      
-      do i=1,n
-c initialize current value      
-        val = mn
-        j = 1
-c check for appropriate bin        
-    1   if (x(i).gt.val) then
-c increment value    
-          val = val + step
-          j = j + 1
-        goto 1
-        endif
-c increment log-likelihood        
-        like = like + dlog(hist(j))
-      enddo
-      return
-      END
-
-
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph, tnx
 cf2py intent(out) x
@@ -2207,73 +2170,123 @@ c
         return
       END
 
+! 
+!       SUBROUTINE categorical(x,n,hist,k,mn,step,logp)
+! 
+! cf2py intent(out) logp
+! cf2py intent(hide) n,k
+! 
+!       DOUBLE PRECISION hist(k),logp,x(n),mn,step,nrm
+!       INTEGER n,k,i,j
+!       DOUBLE PRECISION infinity
+!       PARAMETER (infinity = 1.7976931348623157d308)
+!       LOGICAL match
+!       
+!       logp = 0.0D0
+!       nrm = 0.0D0
+!       do i=1,k
+!           nrm = nrm + hist(k)
+!       end do
+!       if (dabs(nrm-0.0D0).GT.1.0D-7) then
+!           logp = -infinity
+!           return
+!       end if
+!       
+!       do i=1,n
+!           match = .FALSE.
+!           
+!           j = int(x(i)-mn/step)+1
+!           logp = logp + dlog(hist(j))
+! 
+!       end do
+!       
+!       return
+!       END
+!       
+      
+      SUBROUTINE categorical(x,p,n,k,like)
 
-      SUBROUTINE categorical(x,n,hist,k,mn,step,logp)
+c Categorical log-likelihood function
+c Need to return -Infs when appropriate
 
-cf2py intent(out) logp
-cf2py intent(hide) n,k
-
-      DOUBLE PRECISION hist(k),logp,x(n),mn,step,nrm
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(k-1),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(p) :: k=len(p)+1
+cf2py double precision intent(out) :: like
+            
+      DOUBLE PRECISION p(k),val,like
+      INTEGER x(n)
       INTEGER n,k,i,j
-      DOUBLE PRECISION infinity
+      DOUBLE PRECISION infinity, sump
       PARAMETER (infinity = 1.7976931348623157d308)
-      LOGICAL match
-      
-      logp = 0.0D0
-      nrm = 0.0D0
-      do i=1,k
-          nrm = nrm + hist(k)
-      end do
-      if (dabs(nrm-0.0D0).GT.1.0D-7) then
-          logp = -infinity
-          return
-      end if
-      
-      do i=1,n
-          match = .FALSE.
-          
-          j = int(x(i)-mn/step)+1
-          logp = logp + dlog(hist(j))
 
-      end do
-      
+      like = 0.0
+c loop over number of elements in x      
+      do i=1,n
+c elements should not be larger than the largest index
+        if (x(i).GT.(k-1)) then
+          like = -infinity
+          RETURN
+        endif
+c initialize current value      
+        val = 0
+        j = 0
+        sump = 0
+c check for appropriate bin        
+        do while (x(i).gt.val)
+c increment value    
+          sump = sump + p(j+1)
+          val = val + 1
+          j = j + 1
+        enddo
+c increment log-likelihood      
+        if (j.eq.(k-1)) then
+c likelihood of the kth element
+          like = like + dlog(1.0D0-sump)
+        else
+          like = like + dlog(p(j+1))
+        endif
+      enddo
       return
       END
               
 
-      SUBROUTINE rcat(hist,mn,step,n,s,k,rands)
+      SUBROUTINE rcat(p,s,k,n,rands)
 
 c Returns n samples from categorical random variable (histogram)
 
-cf2py double precision dimension(k),intent(in) :: hist
-cf2py double precision intent(in) :: mn,step
-cf2py integer intent(in) :: n
-cf2py double precision dimension(n),intent(out) :: s
-cf2py integer intent(hide),depend(hist) :: k=len(hist)
+cf2py double precision dimension(k-1),intent(in) :: p
+cf2py double precision dimension(n),intent(in) :: rands
+cf2py integer dimension(n),intent(out) :: s
+cf2py integer intent(hide),depend(p) :: k=len(p)+1
+cf2py integer intent(hide),depend(rands) :: n=len(rands)
 
-      DOUBLE PRECISION hist(k),s(n),mn,step,sump,u
-      DOUBLE PRECISION rands(n)
+
+      DOUBLE PRECISION p(k-1),sump,u,rands(n)
+      INTEGER s(n)
       INTEGER n,k,i,j
       
-!       print *,mn,step,k
-
 c repeat for n samples
       do i=1,n
 c initialize sum      
-        sump = 0.0
-c random draw
-!         call random_number(u)
+        sump = p(1)
+c random number
         u = rands(i)
+c initialize index
         j = 0
         
 c find index to value        
-    1   if (u.gt.sump) then
-          sump = sump + hist(j+1)
+        do while (u.gt.sump)
           j = j + 1
-        goto 1
-        endif
-c assign value to array        
-        s(i) = mn + step*(j-1)
+          if (j.eq.(k-1)) then
+            goto 1
+          endif
+          sump = sump + p(j+1)
+          
+      enddo
+c assign value to array  
+    1 s(i) = j
       enddo
       return
       END

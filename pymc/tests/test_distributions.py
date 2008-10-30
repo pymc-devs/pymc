@@ -187,6 +187,7 @@ def discrete_consistency(randomf, likef, parameters,nrandom=1000, \
     x = np.arange(len(hist))
     l = []
     for z in x:
+        print likef, z, parameters
         l.append(likef(z, **parameters))
     like = np.exp(np.array(l))
     figuredata = {'hist':hist, 'bins':x, \
@@ -352,7 +353,17 @@ class test_binomial(TestCase):
         c = flib.binomial([3,4,5], [7,7,7], [.7,.7,.7])
         assert_equal(a,b)
         assert_equal(a,c)
-
+        
+class test_categorical(TestCase):
+    def test_consistency(self):
+        parameters={'p':[0.5,0.3]}
+        hist, like, figdata = discrete_consistency(rcategorical, flib.categorical, \
+            parameters, nrandom=2000)
+        assert_array_almost_equal(hist, like, 1)
+        if PLOT:
+            compare_hist(figname='categorical', **figdata)
+        # test_normalization
+        assert_almost_equal(like.sum(), 1, 4)
 
 class test_cauchy(TestCase):
     def test_consistency(self):

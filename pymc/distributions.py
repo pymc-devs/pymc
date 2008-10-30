@@ -715,46 +715,37 @@ def binomial_like(x, n, p):
     return flib.binomial(x,n,p)
 
 # Categorical----------------------------------------------
-# GOF not working yet, because expval not conform to wrapper spec.
-# @randomwrap
-def rcategorical(p, minval=0, step=1, size=1):
-    out = flib.rcat(p, minval, step, np.random.random(size=size))
+# Note that because categorical elements are not ordinal, there
+# is no expected value.
+
+#@randomwrap
+def rcategorical(p, size=1):
+    out = flib.rcat(p, np.random.random(size=size))
     if sum(out.shape) == 1:
         return out.squeeze()
     else:
         return out
 
-def categorical_expval(p, minval=0, step=1):
-    """
-    categorical_expval(p, minval=0, step=1)
-    
-    Expected value of categorical distribution.
-    """
-    return np.sum([p*(minval + i*step) for i, p in enumerate(p)])
-
 def categorical_like(x, p, minval=0, step=1):
     R"""
-    categorical_like(x,p,minval=0,step=1)
+    categorical_like(x,p)
     
     Categorical log-likelihood.
     
     ..math::
-        f(x=v_i \mid p, m, s) = p_i
+        f(x=v_i \mid p) = p_i
     ..math::
-        v_i = m + s i,\ i \in 0\ldots k-1
+        v_i \in 0\ldots k-1
     
     :Parameters:
       x : integer
         :math: `x \in v`
-        :math: `v_i = m + s_i,\ i \in 0\ldots k-1`
+        :math: `v_i \in 0\ldots k-1`
       p : (k) float
         :math: `p > 0`
         :math: `\sum p = 1`
-      minval : integer
-      step : integer
-        :math: `s \ge 1`
     """
-    return flib.categor(x, p, minval, step)
+    return flib.categorical(x, p)
 
 
 # Cauchy----------------------------------------------
