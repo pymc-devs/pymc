@@ -47,11 +47,11 @@ class ArgumentError(AttributeError):
     pass
 
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
-'exponential', 'exponweib', 'gamma', 'geometric', 'half_normal', 'hypergeometric',
+'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
 'weibull','skew_normal']
 
-sc_discrete_distributions = ['binomial', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
+sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
 
 mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
