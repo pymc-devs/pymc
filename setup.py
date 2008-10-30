@@ -3,8 +3,9 @@
 # tests inside of egg packages, so it is useful to be able to install without eggs as needed.
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
-import os
+import os, sys
 config = Configuration('pymc',parent_package=None,top_path=None)
+dist = sys.argv[1]
 
 
 # ==============================
@@ -17,7 +18,8 @@ lapack_info = get_info('lapack_opt',1)
 f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f']
 if lapack_info:
     config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info, f2py_options=['skip:ppnd7'])
-else:
+
+if not lapack_info or dist in ['bdist', 'sdist']:
     ##inc_dirs = ['blas/BLAS','lapack/double']
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
     for fname in os.listdir('blas/BLAS'):
@@ -56,7 +58,7 @@ if lapack_info:
     config.add_extension(name='gp.linalg_utils',sources=['pymc/gp/linalg_utils.f'], extra_info=lapack_info)
     config.add_extension(name='gp.incomplete_chol',sources=['pymc/gp/incomplete_chol.f'], extra_info=lapack_info)
 
-else:
+if not lapack_info or dist in ['bdist', 'sdist']:
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
     f_sources = []
     for fname in os.listdir('blas/BLAS'):
