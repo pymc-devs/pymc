@@ -187,7 +187,6 @@ def discrete_consistency(randomf, likef, parameters,nrandom=1000, \
     x = np.arange(len(hist))
     l = []
     for z in x:
-        print likef, z, parameters
         l.append(likef(z, **parameters))
     like = np.exp(np.array(l))
     figuredata = {'hist':hist, 'bins':x, \
