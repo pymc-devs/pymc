@@ -1415,6 +1415,8 @@ cf2py double precision intent(out) :: like
       a_tmp = a(1)
       like = 0.0
       do i=1,n
+        if (not_scalar_mu) mu_tmp = mu(i)
+        if (not_scalar_a) a_tmp = a(i)
         if ((x(i) .LT. 0) .OR. (mu_tmp .LE. 0.0) .OR. 
      +(a_tmp .LE. 0.0)) then
           like = -infinity

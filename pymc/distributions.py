@@ -1855,8 +1855,6 @@ def negative_binomial_like(x, mu, alpha):
       of the negative binomial distribution. In that case the expectation of the rate
       is equal to :math: \mu.
     """
-    
-    
     return flib.negbin2(x, mu, alpha)
 
 # Normal---------------------------------------------------

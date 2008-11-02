@@ -10,7 +10,7 @@ import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
 
-d_neg_inf = float(-1.79E308)
+d_neg_inf = float(-1.7976931348623157e+308)
 
 # from PyrexLazyFunction import LazyFunction
 from LazyFunction import LazyFunction
