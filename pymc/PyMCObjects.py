@@ -580,13 +580,7 @@ class Stochastic(StochasticBase):
         
         # Value can't be updated if isdata=True
         if self.isdata:
-            if self._missing:
-                
-                missing_values = value[self._missing]
-                value = copy(self._value)
-                value[self._missing] = missing_values
-            else:
-                raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
+            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
             
         # Save current value as last_value
         # Don't copy because caching depends on the object's reference. 

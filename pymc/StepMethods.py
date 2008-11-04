@@ -153,12 +153,8 @@ class StepMethod(object):
         for variable in variables:
             # Sort.
             
-            if isinstance(variable,Stochastic):
-                if variable.isdata:
-                    if variable._missing:
-                        self.stochastics.add(variable)
-                else:
-                    self.stochastics.add(variable)
+            if isinstance(variable,Stochastic) and not variable.isdata:
+                self.stochastics.add(variable)
         
         if len(self.stochastics)==0:
             raise ValueError, 'No stochastics provided.'
