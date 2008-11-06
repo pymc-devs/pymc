@@ -115,7 +115,7 @@ def new_dist_class(*new_class_args):
             
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'isdata', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [None, parents, None, False, None, True, True, None, False, True, 0]
+            arg_vals = [None, parents, None, False, None, True, True, None, False, None, 0]
             
             # No size argument allowed for multivariate distributions.
             if mv:
@@ -2533,7 +2533,7 @@ def rmod_categor(p,minval=0,step=1,size=1):
 class Categorical(Stochastic):
     __doc__ = """
 C = Categorical(name, p, minval, step[, trace=True, value=None,
-   rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
+   rseed=False, isdata=False, cache_depth=2, plot=None, verbose=0])
 
 Stochastic variable with Categorical distribution.
 Parents are: p, minval, step.
@@ -2554,7 +2554,7 @@ Docstring of mod_categorical_like (case where P is a Dirichlet):
     
     parent_names = ['p', 'minval', 'step']
     
-    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, isdata=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0):
         
         if value is not None:
             if np.isscalar(value):
@@ -2584,7 +2584,7 @@ def mod_multinom_like(x,n,p):
 class Multinomial(Stochastic):
     """
 M = Multinomial(name, n, p, trace=True, value=None,
-   rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0])
+   rseed=False, isdata=False, cache_depth=2, plot=None, verbose=0])
 
 A multinomial random variable. Parents are p, minval, step.
 
@@ -2596,7 +2596,7 @@ Otherwise parent p's value should sum to 1.
     
     parent_names = ['n', 'p']
     
-    def __init__(self, name, n, p, trace=True, value=None, rseed=False, isdata=False, cache_depth=2, plot=True, verbose=0):
+    def __init__(self, name, n, p, trace=True, value=None, rseed=False, isdata=False, cache_depth=2, plot=None, verbose=0):
         
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like), doc='A Multinomial random variable', name=name,

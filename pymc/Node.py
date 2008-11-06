@@ -139,7 +139,7 @@ class Variable(Node):
     :SeeAlso: 
       Stochastic, Deterministic, Potential, Node
     """
-    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=True, verbose=0):
+    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=0):
 
         self.dtype=dtype        
         self.trace=trace
