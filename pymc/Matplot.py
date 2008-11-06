@@ -300,7 +300,7 @@ def plotwrapper(f):
             
         try:
             # Then try Node type
-            if pymc_obj._plot:
+            if pymc_obj._plot!=False:
                 data = pymc_obj.trace()[start:]
                 name = pymc_obj.__name__
                 f(data, name, *args, **kwargs)
