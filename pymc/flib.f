@@ -1,13 +1,20 @@
       SUBROUTINE logsum(x, nx, s)
 cf2py intent(hide) nx
 cf2py intent(out) s
-      DOUBLE PRECISION x(nx), s
+      DOUBLE PRECISION x(nx), s, diff, li
       INTEGER nx, i
+      PARAMETER (li=709.78271289338397)
       
       s = x(1)
       
       do i=2,nx
-          s = s + dlog(1.0D0+dexp(x(i)-s))
+!           If x(i) swamps the sum so far, ditch the sum so far.
+          diff = x(i)-s
+          if (diff.GE.li) then
+              s = x(i)
+          else
+              s = s + dlog(1.0D0+dexp(x(i)-s))
+          end if
       end do
 
       RETURN
