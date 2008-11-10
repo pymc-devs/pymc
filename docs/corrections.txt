@@ -1,0 +1,168 @@
+------------------------
+Corrections and Comments
+------------------------
+
+David Huard, Nov. 10, 2008
+
+
+General Comments
+----------------
+
+The guide is well written and concise. The writing style is relaxed, which makes reading the guide a pleasant experience compared to R's terse and formal documents. I think the
+document describes in enough details the general working of pymc, though some users would probably be thankful for more examples. Since the intended audience probably goes from python novices to experts and MCMC newbies to gurus and all permutations, it is probably worthwhile to flesh out the introduction to provide more references and state the assumed competence of readers with respect to these topics. 
+
+With respect to the document structure, the only serious glitch I see is the theoretical section on Monte-Carlo methods. It appears right between the `Tutorial` and the `Building Model` sections. In a sense, it distracts readers from the main topic which is understanding how pymc works and what it can do. My feeling is that it would be more appropriate as an appendix, with ample references to it in the text. Apart from that, an abstract and a conclusion are missing. 
+
+
+Specific Comments
+-----------------
+
+ * Use the JSS style.
+ * In the logo on the first page, the ship's trace has weird looking diagonal cuts. 
+ * Replaces occurrences of 
+   In [2]: tada
+   Out[2]: 45
+   by 
+   >>> tada
+   45
+ * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors), and bibtex complains about a missing cross-ref to Bernardo, altough it is there in the bib file. 
+ * Harmonize class names typeface.  
+
+
+The line number is defined with respect to the pdf created from revision 954 with the 
+lineno package. 
+
+
+Line	Comment
+----    ------------------------------------------------------------------------
+4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
+8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
+11		well documented -- is the rest not so well documented ?
+25 		Faster, optimized probability distributions, with # new distributions. 
+28 		Not sure an example of usage should go in so early in the text. 
+60   	Markov chain Monte Carlo (MCMC)
+61		The choice... maybe give more arguments to switch away from BUGS.
+62		the use OF MCMC
+72 		for which Python, NumPy and a fortran compiler are available.
+72 		Other dependencies are not mandatory, but substantially enrich the pymc experience.
+78		NumPy 1.2 Remove : Use the latest version.
+80      Matplotlib : 2D plotting library which produces publication quality figures.
+89 		replace g77 with gfortran, add a note about intel's compiler issues. 
+91 		The instructions would probably be simpler if the binaries and source were all on pypi. This needs to be done anyway, so it is as well to document the way it is going to be. 
+131		import pymc; pymc.test() 
+135		Tests that require SciPy should be skipped. Test suite now runs on nose. Add a note about skipped tests.
+138 	Add mailing list info and link. 
+
+
+154		changes: the switchpoint.
+156		switchpoint $s$.
+157 	of year $t$.
+158		Prior parameters (also called hyperparameters). 
+160 	Should we put the node graph ? 
+162		Put random in italic. 
+163		Put random in italic. 
+166		Is the footnote really pertinent in a tutorial ?
+167 	No transition from previous paragraph. 
+178		Wondering if it would be best to replace from pymc import ... by import pymc.
+180 	doc = "Switchpoint [year]"
+184		Here the parameter is beta, while in the model definition it's r_e. Maybe the model definition should use \beta_e, \beta_l.
+188 	Remove plot=False and comments. Add docstring.
+194 	Since it is
+218 	A PyMC probability model is a linked collection of variables. To see the nature of these links.
+228 	I think it would be wise here to show the node graph. It's a cool feature and will put a picture on the parents and children words.
+235		Here you use Stochastics, at some other places it is \texttt{Stochastics} and in the convergence section it is stochs. This should be uniform throughout. 
+237		Should we really print the whole r array ?
+240 	logarithm 
+248		Users are thus not limited to the set of of statistical distributions provided by PyMC.
+251		Remove comments
+262		Add M.sample(iter=10000. burn=1000)
+273		Explain the new interface to the traces. 
+279 	from pylab import hist, show   ... show()
+292		...which is interesting.  why ? Does this depend on the histogram resolution ?
+313		This is a bit weird, the tutorial is part of the reference manual. This should rather look like: Many more topics are covered in the next sections, including:
+318		Using ...
+320		Saving ...
+321		Writing... 
+
+
+333		simulating (drawing samples)
+315		where $k$, the dimension of vector x, is perhaps...
+342		pi is generally used for priors, no ? And later it denotes a Markov chain.
+367		g(x) >= f(x)
+359 	how is $k$ defined ? Generally, we see Mg(x) >= f(x) and u_i < f(x_i)/ M g(x_i)
+377 	The exchangeability footnote is not clear to me. Are we talking about autocorrelation or correlation between variables ?
+399 	The equation compares a bivariate distribution and a univariate distribution. Is this correct ? Not sure I understand what that means. 
+
+
+494		random: ...
+530		np.inf, np.log
+538 	NumPy
+538		SciPy's implementation of distributions is 10 times slower than pymc.
+556		rseed is not a seed for the random generator, just a flag to signal the variable should be randomly sampled before sampling to provide a starting point. 
+564		Can we put this in a box or side-bar ? Integrate it visually as a CAUTION/WARNING ?
+576		Should we replace @data by @observed ? Less chance of conflict with user defined variables. 
+577		This sentence is a bit weird. 
+579 	changed, and it won't be sampled by the fitting method. 
+589		Type face of deterministic
+592		Type face of deterministic
+595 	Thanks ... this has already been said. 
+597 	the user doesn't ... already been said. 
+606		typeface of index
+607		typeface of index
+624 	also a plot argument I guess. 
+632		Put that paragraph in a footnote. 
+638	 	In the equation, put the i=0,...,N-2 at the right of the second line. 
+642		This is a detail, but you could do without the last_x variable and use mu=x[-1]
+643		The python expression... isn't it evident ?
+728		I understand what this means, but doubt this is valid Python. 
+
+761		What happens for stochs without random method ?
+764		only stochs whose rseed attribute is not None are changed.
+770		representations (see ...). 
+788		output_path is not supported by the db backends.
+807		The call arguments to Sampler needs to be updated. 
+807		document calc_deviance: whether or not a deviance deterministic should be created. 
+811		isn't length==iter ?
+819		database. The actual write operation depends on the database backend chosen, see ...
+820		This is not supported yet for sqlite and mysql.
+824		Explain that trace_index is different from the sampler's index (in MCMC), since some iterations might not be saved due to burn and thin arguments. 
+825	 	calc_deviance
+827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
+885		loop, each `tune_interval` iterations. 
+897		Gibbs step methods are not in the sandbox anymore. 
+925		How ?
+927		More info. 
+938		Provide more info about the method. 
+952		step method printed output. 
+954		cite and add a reference. 
+961		not in the sandbox anymore.
+983		can are
+1010	check sentence
+1045	disk no comma
+1057  	txt now has support for restore_state
+1065	all applications runnning 
+1070	<>
+1080	hdf5 typeface
+1081	Flesh out, remove mature comments.
+1084 	Flesh out, remove mature comments.
+1123	can be taken
+1135	principle reason
+1177 	Put a figure ?
+1187	I get weird looking symbols here. 
+1271	This section ... strange transition, and not really a section.
+1292	algorithms
+
+Bibiliography
+* Harmonize first names (abbreviations with or without periods or full name)
+* Gelman, 1996:  Posterior predictive
+* Geweke, period after pages. 
+* Should we really put links to scopus and jstor ?
+
+
+
+
+ 
+
+
+
+
