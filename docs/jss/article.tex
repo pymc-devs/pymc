@@ -1,0 +1,63 @@
+\documentclass[article]{jss}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% almost as usual
+\author{Achim Zeileis\\Wirtschaftsuniversit\"at Wien \And 
+        Second Author\\Plus Affiliation}
+\title{A Capitalized Title: Something About a Package \pkg{foo}}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Achim Zeileis, Second Author} %% comma-separated
+\Plaintitle{A Capitalized Title: Something About a Package foo} %% without formatting
+\Shorttitle{A Capitalized Title} %% a short title (if necessary)
+
+%% an abstract and keywords
+\Abstract{
+  The abstract of the article.
+}
+\Keywords{keywords, comma-separated, not capitalized, \proglang{Java}}
+\Plainkeywords{keywords, comma-separated, not capitalized, Java} %% without formatting
+%% at least one keyword must be supplied
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Achim Zeileis\\
+  Department f\"ur Statistik \& Mathematik\\
+  Wirtschaftsuniversit\"at Wien\\
+  1090 Wien, Austria\\
+  E-mail: \email{Achim.Zeileis@wu-wien.ac.at}\\
+  URL: \url{http://statmath.wu-wien.ac.at/~zeileis/}
+}
+%% It is also possible to add a telephone and fax number
+%% before the e-mail in the following format:
+%% Telephone: +43/1/31336-5053
+%% Fax: +43/1/31336-734
+
+%% for those who use Sweave please include the following line (with % symbols):
+%% need no \usepackage{Sweave.sty}
+
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%% include your article here, just as usual
+%% Note that you should use the \pkg{}, \proglang{} and \code{} commands.
+
+\section[About Java]{About \proglang{Java}}
+%% Note: If there is markup in \(sub)section, then it has to be escape as above.
+
+\end{document}
