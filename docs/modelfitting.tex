@@ -315,3 +315,91 @@ An individual step method will be assigned to each element of \texttt{A} in the 
 Every step method subclass (including user-defined ones) adds itself to a list called \texttt{StepMethodRegistry} in the PyMC namespace. If you create a step method is created by the user to handle a stochastic variable, no other step method will be created to handle that variable by \texttt{MCMC} (though you can create multiple step methods for the same variable if desired). 
 
 If you have not created any step method to handle a stochastic variable, each class in \texttt{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \texttt{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \texttt{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
+
+\subsection*{Imputation of Missing Data} % (fold)
+\label{subsec:missing_data}
+
+As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in the loss of information if an excluded observation contains valid values for other quantities. 
+
+For example, consider a survey dataset for some wildlife species:
+
+\begin{tabular}{cccc}
+\hline
+Count & Site & Observer & Temperature\\
+\hline
+15 & 1 & 1 & 15\\
+10 & 1 & 2 & NA\\
+6 & 1 & 1 & 11\\
+\hline
+\end{tabular}
+
+Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates. 
+
+In a Bayesian modelling framework, missing data are accommodated simply by treating them as unknown model parameters. Values for the missing data $\tilde{y}$ are estimated naturally, using the posterior predictive distribution:
+
+\begin{equation}
+	Pr(\tilde{y}|y) = \int Pr(\tilde{y}|\theta) Pr(\theta|y) d\theta
+\end{equation}
+
+Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data list by the use of \texttt{None} objects. These are simply placeholders, as \texttt{None} cannot be used in arithmetic operations with other values without yielding an error.
+
+\begin{verbatim}
+x = [ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, None, 3, 4, 2, 5,
+2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+3, 3, 1, 1, 2, 1, None, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
+\end{verbatim}
+
+To allow these missing data to be estimated in the model, we pass the data list to the \texttt{MissingData} function, along with a label:
+
+\begin{verbatim}
+	>>> disaster_data = MissingData("disaster_data", x)
+	>>> disaster_data
+	ArrayContainer([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
+	       4, 4, 1, 5, disaster_data_27, 3, 4, 2, 5, 2, 2, 3, 4, 2, 1, 3, 2, 2,
+	       1, 1, 1, 1, 3, 0, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+	       0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2, 3, 3, 1, 1, 2, 1,
+	       disaster_data_86, 1, 1, 2, 4, 2, 0, 0, 1, 4, 0, 0, 0, 1, 0, 0, 0, 0,
+	       0, 1, 0, 0, 1, 0, 1], dtype=object)
+\end{verbatim}
+
+Notice that the \texttt{None} elements have been replaced by random variables, named after the data object and the index value of the missing data. These elements are Stochastic objects, just like any other stochastic unknown quantity in the model. Hence, they have current values:
+
+\begin{verbatim}
+	>>> disaster_data.value
+	array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
+	       4, 4, 1, 5, 5, 3, 4, 2, 5, 2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3,
+	       0, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1, 0, 1, 0, 1, 0,
+	       0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2, 3, 3, 1, 1, 2, 1, 2, 1, 1, 2, 4, 2,
+	       0, 0, 1, 4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1], dtype=object)
+\end{verbatim}
+
+Initial values are drawn randomly from the range of the existing data. These values are updated by the MCMC sampler class. 
+
+The key is to treat the \texttt{disaster_data} array as just another stochastic variable. The rest of the model looks very similar to the original model:
+
+\begin{verbatim}
+	# Define data and stochastics
+	switchpoint = DiscreteUniform('switchpoint',lower=0,upper=110)
+	early_mean = Exponential('early_mean',beta=1.)
+	late_mean = Exponential('late_mean',beta=1.)
+
+	@data
+	@stochastic(dtype=int)
+	def disasters(  value = disasters_data, 
+	                early_mean = early_mean, 
+	                late_mean = late_mean, 
+	                switchpoint = switchpoint):
+	    """Annual occurences of coal mining disasters."""
+
+	    def logp(value, early_mean, late_mean, switchpoint):
+	        return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint:],late_mean)
+
+	    def random(early_mean, late_mean, switchpoint):
+	        return concatenate((rpoisson(early_mean, switchpoint), rpoisson(late_mean, len(value)-switchpoint)))	
+\end{verbatim}
+
+% section missing_data (end)

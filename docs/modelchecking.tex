@@ -80,37 +80,6 @@ Calling \verb=coda_output= yields a \verb=.out= file containing raw trace values
 
 % section convergence_diagnostics (end)
 
-\section{Goodness of Fit} % (fold)
-\label{sec:goodness_of_fit}
-
-PyMC provides a flexible method for assessing goodness-of-fit (GOF) of models following MCMC estimation. Following \citet{Gelman:1996gp}, the \verb=goodness= method from the \verb=MetropolisHastings= sampler assesses GOF using a simple discrepancy measure for each component of the likelihood. This measure compares the deviance of the data from the expected stoch values to deviance of simulated data from the expected stoch values. Data are simulated based on samples from the trace of all the stochs. These observed and simulated deviances are plotted against one another to yield GOF plots:
-
-Evidence for lack of fit is apparent when points do not fall on either side of the diagonal in approximately the same numbers; the example above shows very good fit. One plot is generated for every component of the likelihood bearing the same name. Additionally, PyMC reports a GOF statistic (which some authors regrettably call the Bayesian $p$-value), which is simply the proportion of points where the simulated deviance is greater than the observed deviance. This value should be close to 0.5 for a well-fit model.
-
-\subsubsection{Method Usage}
-\begin{verbatim}
-sampler.goodness(iterations, plot=True, loss='squared', burn=0, thin=1, chain=-1, composite=False)
-\end{verbatim}
-
-\begin{itemize}
-
-\item \verb=iterations=: Number of GOF iterations to run.
-
-\item \verb=plot (optional)=: Plotting flag. Defaults to True.
-
-\item \verb=loss (optional)=: Loss function to use. Valid arguments include ‘squared’, ‘absolute’ and ‘chi-square’. Defaults to ‘squared’.
-
-\item \verb=burn (optional)=: Number of burn-in iterations to exclude. Defaults to 0 (\emph{i.e.} no burn-in).
-
-\item \verb=thin (optional)=: Thinning factor. Defaults to 1 (\emph{i.e.} no thinning).
-
-\item \verb=chain (optional)=: Chain to be analyzed. Defaults to -1 (\emph{i.e.} last chain).
-
-\item \verb=composite (optional)=: Flag for composite GOF analysis (\emph{i.e.} based on all chains combined). Defaults to False.
-\end{itemize}
-
-% section goodness_of_fit (end)
-
 \section{Autocorrelation Plots} % (fold)
 \label{sec:autocorrelation_plots}
 
@@ -145,3 +114,10 @@ sampler.autocorrelation(max_lag=100, burn=0, thin=1, chain=-1)
 \end{itemize}
 
 % section autocorrelation_plots (end)
+
+
+\section{Goodness of Fit} % (fold)
+\label{sec:goodness_of_fit}
+
+
+% section goodness_of_fit (end)

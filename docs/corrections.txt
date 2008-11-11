@@ -20,12 +20,6 @@ Specific Comments
 
  * Use the JSS style.
  * In the logo on the first page, the ship's trace has weird looking diagonal cuts. [AP] I'll work on it.
- * Replaces occurrences of 
-   In [2]: tada
-   Out[2]: 45
-   by 
-   >>> tada
-   45
  * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors), and bibtex complains about a missing cross-ref to Bernardo, altough it is there in the bib file. 
  * Harmonize class names typeface.  
 
@@ -38,22 +32,15 @@ Line	Comment
 ----    ------------------------------------------------------------------------
 4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
-11		well documented -- is the rest not so well documented ?
-25 		Faster, optimized probability distributions, with # new distributions. 
 28 		Not sure an example of usage should go in so early in the text. 
 [AP] I like this bit here- I think it has a good chance of hooking window-shoppers with short attention spans.
 60   	Markov chain Monte Carlo (MCMC)
 61		The choice... maybe give more arguments to switch away from BUGS. 
 [AP] I think we should studiously avoid saying anything bad about BUGS or R, even if it means being less-than-explicit about the pros and cons, and just let people make their own decisions based on the features.
-62		the use OF MCMC
-72 		for which Python, NumPy and a fortran compiler are available.
-72 		Other dependencies are not mandatory, but substantially enrich the pymc experience.
-78		NumPy 1.2 Remove : Use the latest version.
-80      Matplotlib : 2D plotting library which produces publication quality figures.
 89 		replace g77 with gfortran, add a note about intel's compiler issues. 
 91 		The instructions would probably be simpler if the binaries and source were all on pypi. This needs to be done anyway, so it is as well to document the way it is going to be. 
 131		import pymc; pymc.test() 
-135		Tests that require SciPy should be skipped. Test suite now runs on nose. Add a note about skipped tests.
+[CF] I would keep it a 2-line operation
 138 	Add mailing list info and link. 
 
 

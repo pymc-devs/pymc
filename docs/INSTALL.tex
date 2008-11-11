@@ -1,0 +1,208 @@
+
+
+
+\texttt{pymc} is known to run on Mac OS X, Linux and Windows, but in theory should be 
+able to work on just about any platform for which Python and the numpy module 
+are  available. Before installing \texttt{pymc}, you will need to install some dependencies.
+
+
+%___________________________________________________________________________
+
+\hypertarget{dependencies}{}
+\pdfbookmark[0]{Dependencies}{dependencies}
+\section*{Dependencies}
+
+PyMC requires some prerequisite packages to be present on the system before the 
+PyMC package itself is installed. Fortunately, there are currently only a few 
+dependencies, and all are freely available online.
+\begin{itemize}
+\item {} 
+\href{http://www.python.org/.}{Python} version 2.5 or later.
+
+\item {} 
+\href{http://www.scipy.org/NumPy}{NumPy}: The fundamental scientific programming package, it provides a 
+multidimensional array type and many useful functions for numerical analysis. 
+Use the latest version preferably.
+
+\item {} 
+\href{http://matplotlib.sourceforge.net/}{Matplotlib} (optional): A plotting package.
+
+\item {} 
+\href{http://www.scipy.org/}{SciPy} (optional): A scientific package with a lot of functionality.
+
+\item {} 
+\href{http://ipython.scipy.org/}{IPython} (optional): A convenient python shell coming with parallel 
+computing facilities.
+
+\item {} 
+\href{http://www.pytables.org/moin}{pyTables} (optional): An interface to the HDF5 library for storing datasets
+in binary format.
+
+\end{itemize}
+
+There are prebuilt distributions that include all the needed dependencies. For 
+Mac OSX users, we recommend the \href{http://www.activestate.com/Products/ActivePython/}{MacPython} distribution, the 
+\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}, or Python 2.5.1 that ships with 
+OSX 10.5 (Leopard). Windows users should download and install the 
+\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}. The Enthought Python Distribution comes 
+bundled with these prerequisites.
+
+If instead of installing the prebuilt binaries you prefer (or have) to build 
+\texttt{pymc} yourself, make sure you have a Fortran and a C compiler. There are free
+compilers (gfortran, gcc) available on all platforms. Other compilers have not been
+tested with PyMC but may work nonetheless.
+
+
+%___________________________________________________________________________
+
+\hypertarget{platform-specific-instructions}{}
+\pdfbookmark[0]{Platform-specific instructions}{platform-specific-instructions}
+\section*{Platform-specific instructions}
+
+
+%___________________________________________________________________________
+
+\hypertarget{windows}{}
+\pdfbookmark[1]{Windows}{windows}
+\subsection*{Windows}
+\newcounter{listcnt1}
+\begin{list}{\arabic{listcnt1}.}
+{
+\usecounter{listcnt1}
+\setlength{\rightmargin}{\leftmargin}
+}
+\item {} 
+Download the prebuilt binary installer from
+
+\item {} 
+Simply double-click the executable installation package, and follow the on-screen instructions.
+
+\end{list}
+
+To build from source, get the source code tarball or checkout the subversion
+repository, move into the resulting source directory in the command terminal 
+and type:
+\begin{quote}{\ttfamily \raggedright \noindent
+python~setup.py~build~-{}-compiler=mingw32~install
+}\end{quote}
+
+This assumes you are using the GCC compiler (recommended). Otherwise, 
+change the -{}-compiler argument accordingly.
+
+
+%___________________________________________________________________________
+
+\hypertarget{mac-os-x}{}
+\pdfbookmark[1]{Mac OS X}{mac-os-x}
+\subsection*{Mac OS X}
+
+Mac binaries are installed using \href{http://peak.telecommunity.com/DevCenter/EasyInstall}{EasyInstall}, part of the setuptools suite. 
+Once EasyInstall is on your system, simply type:
+\begin{quote}{\ttfamily \raggedright \noindent
+sudo~easy{\_}install~-Z~-i~http://drop.io/superpack~pymc
+}\end{quote}
+
+The \titlereference{sudo} command will be required to install PyMC into the Python site-packages 
+directory if it has restricted privileges. You will be prompted for a  password, and 
+provided you have superuser privileges, the installation will proceed.
+
+To build and install PyMC from source:
+\newcounter{listcnt2}
+\begin{list}{\arabic{listcnt2}.}
+{
+\usecounter{listcnt2}
+\setlength{\rightmargin}{\leftmargin}
+}
+\item {} 
+Download the source tarball or checkout the subversion repository.
+
+\item {} 
+Untar the source archive, then move into the resulting source directory in
+the command terminal and type:
+\begin{quote}{\ttfamily \raggedright \noindent
+python~setup.py~build~\\
+sudo~python~setup.py~install
+}\end{quote}
+
+\end{list}
+
+
+%___________________________________________________________________________
+
+\hypertarget{linux}{}
+\pdfbookmark[1]{Linux}{linux}
+\subsection*{Linux}
+
+Unfortunately, binary installers are not currently available for Linux systems, 
+but it is straightforward to build the package yourself.
+\newcounter{listcnt3}
+\begin{list}{\arabic{listcnt3}.}
+{
+\usecounter{listcnt3}
+\setlength{\rightmargin}{\leftmargin}
+}
+\item {} 
+Download the source tarball or checkout the subversion repository.
+
+\item {} 
+Untar the package archive, then move to the resulting archive directory and type:
+\begin{quote}{\ttfamily \raggedright \noindent
+python~setup.py~build~\\
+python~setup.py~install
+}\end{quote}
+
+\end{list}
+
+The \titlereference{sudo} command will be required to install PyMC into the Python site-packages 
+directory if it has restricted privileges:
+\begin{quote}{\ttfamily \raggedright \noindent
+sudo~python~setup.py~install
+}\end{quote}
+
+You will be prompted for a  password, and provided you have superuser privileges, 
+the installation will proceed.
+
+
+%___________________________________________________________________________
+
+\hypertarget{subversion-repository}{}
+\pdfbookmark[0]{Subversion repository}{subversion-repository}
+\section*{Subversion repository}
+
+You can check out the bleeding edge version of the code from the subversion 
+repository:
+\begin{quote}{\ttfamily \raggedright \noindent
+svn~checkout~http://pymc.googlecode.com/svn/trunk/~pymc
+}\end{quote}
+
+Previous versions are available in the /tags/ directory.
+
+
+%___________________________________________________________________________
+
+\hypertarget{running-the-test-suite}{}
+\pdfbookmark[0]{Running the test suite}{running-the-test-suite}
+\section*{Running the test suite}
+
+\texttt{pymc} comes with a set of tests that verify that the critical components
+of the code work as expected. To run these tests, users must have \href{http://somethingaboutorange.com/mrl/projects/nose/}{nose}
+installed on their system. The tests are launched from a python shell:
+\begin{quote}{\ttfamily \raggedright \noindent
+import~pymc~\\
+pymc.test()
+}\end{quote}
+
+In case of failures, messages detailing the nature of these failures will 
+appear. In case this happens (it shouldn't), please report
+the problems on the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}, specifying the version you are using, along with the computing platform and operating system.
+
+
+%___________________________________________________________________________
+
+\hypertarget{bugs-and-feature-requests}{}
+\pdfbookmark[0]{Bugs and feature requests}{bugs-and-feature-requests}
+\section*{Bugs and feature requests}
+
+Report problems with the installation, bugs in the code or feature request at 
+the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker} at \href{http://code.google.com/p/pymc/issues/list}{http://code.google.com/p/pymc/issues/list} .
+

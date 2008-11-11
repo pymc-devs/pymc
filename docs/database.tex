@@ -1,0 +1,212 @@
+
+
+By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different storing strategies, which we refer to as \emph{database backends}. All those backends provide the same user interface, making it trivial to switch from one backend to another. In the following, this common interface is presented, along with an individual description of each backend.
+
+
+%___________________________________________________________________________
+
+\hypertarget{accessing-sampled-data-user-interface}{}
+\pdfbookmark[0]{Accessing Sampled Data: User Interface}{accessing-sampled-data-user-interface}
+\section*{Accessing Sampled Data: User Interface}
+
+The database backend is selected by the \titlereference{db} keyword:
+\begin{quote}{\ttfamily \raggedright \noindent
+S~=~MCMC(DisasterModel,~db='ram')
+}\end{quote}
+
+Here, we instructed the MCMC sampler to keep the trace in the computer's live memory. This means that when the Python session closes, all data will be lost. This is the default backend.
+
+Each time MCMC's \titlereference{sample} method is called, a \titlereference{chain} is created storing the sampled variables. The data in this chain can be accessed for each variable using the call method of its trace attribute:
+\begin{quote}{\ttfamily \raggedright \noindent
+S.e.trace(burn=0,~thin=1,~chain=-1,~slicing=None)
+}\end{quote}
+
+with arguments having the following meaning:
+\begin{description}
+%[visit_definition_list_item]
+\item[{burn}] (\textbf{int})
+%[visit_definition]
+
+Number of initial samples to skip.
+
+%[depart_definition]
+%[depart_definition_list_item]
+%[visit_definition_list_item]
+\item[{thin}] (\textbf{int})
+%[visit_definition]
+
+The stride, ie the number of samples to step for each returned value.
+
+%[depart_definition]
+%[depart_definition_list_item]
+%[visit_definition_list_item]
+\item[{chain}] (\textbf{int or None})
+%[visit_definition]
+
+Index of the sampling chain to return. Use \titlereference{None} to return all chains. Note that a new chain is created each time \titlereference{sample} is called.
+
+%[depart_definition]
+%[depart_definition_list_item]
+%[visit_definition_list_item]
+\item[{slicing}] (\textbf{slice})
+%[visit_definition]
+
+Slice object used to parse the samples. Overrides burn and thin parameters.
+
+%[depart_definition]
+%[depart_definition_list_item]
+\end{description}
+
+
+%___________________________________________________________________________
+
+\hypertarget{loading-data-from-a-previous-session}{}
+\pdfbookmark[0]{Loading data from a previous session}{loading-data-from-a-previous-session}
+\section*{Loading data from a previous session}
+
+To store a copy of the trace on the hard disk, a number of backends are available: \titlereference{txt}, \titlereference{pickle}, \titlereference{hdf5}, \titlereference{sqlite} and \titlereference{mysql}. These all write the data to disk, in such a way that it can be loaded back in a following session and appended to. So for instance, to save data in ASCII format, we would do:
+\begin{quote}{\ttfamily \raggedright \noindent
+S~=~MCMC(DisasterModel,~db='txt',~dirname='disaster{\_}data')~\\
+S.sample(10000)~\\
+S.db.close()
+}\end{quote}
+
+When \titlereference{S.db.close()} is called, the data is flushed to disk. That is, directories are created for each chain, with samples from each stochastic variable in a separate file. To access this data during a following session, each database provides a \titlereference{load} function instantiating a \titlereference{Database} object
+\begin{quote}{\ttfamily \raggedright \noindent
+DB~=~Database.txt.load('disaster{\_}data')
+}\end{quote}
+
+This \titlereference{Database} object can then be linked to a model definition using
+\begin{quote}{\ttfamily \raggedright \noindent
+S~=~Sampler(DisasterSampler,~db=DB)~\\
+S.sample(10000)
+}\end{quote}
+
+For some databases (\titlereference{hdf5}, \titlereference{pickle}), loading an existing database restores the previous state of the sampler. That is, the attributes of the Sampler, its Stochastic parameters and StepMethods are all set to the value they had at the time \titlereference{S.db.close()} was called.
+
+
+%___________________________________________________________________________
+
+\hypertarget{backends-description}{}
+\pdfbookmark[0]{Backends description}{backends-description}
+\section*{Backends description}
+
+PyMC provides seven different backends with different level of support.
+
+
+%___________________________________________________________________________
+
+\hypertarget{ram}{}
+\pdfbookmark[1]{ram}{ram}
+\subsection*{ram}
+
+Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all running applications on your computer.
+
+
+%___________________________________________________________________________
+
+\hypertarget{txt}{}
+\pdfbookmark[1]{txt}{txt}
+\subsection*{txt}
+
+With the \titlereference{txt} backend, the data is written to disk in ASCII files when the class \titlereference{close()} method is called. More precisely, the data for each chain is stored in a directory called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, the trace for each variable being stored in a file names`{\textless}variable name{\textgreater}.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory.
+
+
+%___________________________________________________________________________
+
+\hypertarget{pickle}{}
+\pdfbookmark[1]{pickle}{pickle}
+\subsection*{pickle}
+
+As its name implies, the \titlereference{pickle} database relies on the \titlereference{Cpickle} module to save the trace objects. Use of this backend is appropriate for small scale, short-lived projects. For longer term or larger projects, the \titlereference{pickle} backend should be avoided since generated files might be unreadable across different Python versions.
+
+
+%___________________________________________________________________________
+
+\hypertarget{hdf5}{}
+\pdfbookmark[1]{hdf5}{hdf5}
+\subsection*{hdf5}
+
+The hdf5 backend uses \href{http://www.pytables.org/moin}{pyTables} to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the hdf5 library.
+
+
+%___________________________________________________________________________
+
+\hypertarget{sqlite}{}
+\pdfbookmark[1]{sqlite}{sqlite}
+\subsection*{sqlite}
+
+The sqlite backend is based on the python module sqlite3. It is not as mature as the other backends, in the sense that is does not support saving/restoring of state and plug and play reloading.
+
+
+%___________________________________________________________________________
+
+\hypertarget{mysql}{}
+\pdfbookmark[1]{mysql}{mysql}
+\subsection*{mysql}
+
+The mysql backend is based on the MySQLdb python module. It also is not as mature as the other backends.
+
+\begin{longtable}[c]{|p{0.13\locallinewidth}|p{0.45\locallinewidth}|p{0.31\locallinewidth}|}
+\hline
+\textbf{
+Backend
+} & \textbf{
+Description
+} & \textbf{
+External Dependencies
+} \\
+\hline
+\endhead
+
+no{\_}trace
+ & 
+Do not tally samples at all.
+ &  \\
+\hline
+
+ram
+ & 
+Store samples in live memory.
+ &  \\
+\hline
+
+txt
+ & 
+Write data to ascii files.
+ &  \\
+\hline
+
+pickle
+ & 
+Write data to a pickle file.
+ &  \\
+\hline
+
+hdf5
+ & 
+Store samples in the HDF5 format.
+ & 
+pytables ({\textgreater}2.0), libhdf5
+ \\
+\hline
+
+sqlite
+ & 
+Store samples in a sqlite database.
+ & 
+sqlite3
+ \\
+\hline
+
+mysql
+ & 
+Store samples in a mysql database.
+ & 
+MySQLdb
+ \\
+\hline
+\end{longtable}
+
+For more information about individual backends, refer to the \href{docs/API.pdf}{API} documentation.
+
