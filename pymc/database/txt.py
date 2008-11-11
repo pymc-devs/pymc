@@ -1,12 +1,22 @@
-###
-# Txt trace module
-# Trace are stored in memory during sampling and saved to a
-# txt file at the end of sampling. Each object has its own file. 
-###
-# TODO: Implement state dump and recovery.
+"""
+TXT database module
 
-# Changeset
-# Nov. 30, 2007: Implemented load function. DH
+Store the traces in ASCII files. 
+
+For each chain, a directory named `Chain_#` is created. In this directory, 
+one file per tallyable object is created containing the values of the object. 
+
+Implementation Notes
+--------------------
+The NumPy arrays are saved and loaded using NumPy's `loadtxt` and `savetxt`
+functions. 
+
+Changeset
+---------
+Nov. 30, 2007: Implemented load function. DH
+Oct. 24, 2008: Implemented savestate. Implemented parallel chain tallying. DH
+"""
+
 
 import base, ram, no_trace, pickle
 import os, datetime, shutil, re
@@ -18,151 +28,132 @@ __all__ = ['Trace', 'Database', 'load']
 CHAIN_NAME = 'Chain_%d'
 
 class Trace(ram.Trace):
-    def _finalize(self):
-        """Dump trace into txt file in the simulation folder _dbdir."""
-        path = os.path.join(self.db._cur_dir, self._obj.__name__+'.txt')
-        arr = self.gettrace()
+    """Txt Trace Class.
+    
+    Store the trace in a ASCII file located in one directory per chain.
+    
+    dbname/
+      Chain_0/
+        <object name>.txt
+        <object name>.txt
+        ...
+      Chain_1/
+        <object name>.txt
+        <object name>.txt
+        ...
+      ...
+    """
+    
+    def _finalize(self, chain):
+        """Write the trace to an ASCII file.
+        
+        :Parameter:
+        chain : int
+          The chain index.
+        """
+        
+        path = os.path.join(self.db._directory, self.db.get_chains()[chain], self.name+'.txt')
+        arr = self.gettrace(chain=chain)
         f = open(path, 'w')
-        print >> f, '# Variable: %s' % self._obj.__name__
-        doc = self._obj.__doc__ or ""
-        print >> f, '# Description: %s' % doc.replace('\n', '\n# ')
-        print >> f, '# Burned: %d, thinned= %d' % \
-            (self.db.model._burn, self.db.model._thin)
+        print >> f, '# Variable: %s' % self.name
         print >> f, '# Sample shape: %s' % str(arr.shape)
         print >> f, '# Date: %s' % datetime.datetime.now()
-        #f.close()
-        #aput(arr, path, 'a')
         np.savetxt(f, arr, delimiter=',')
+        f.close()
 
 class Database(pickle.Database):
-    """Define the methods that will be assigned to the Model class"""
-    def __init__(self, dirname=None, mode='w'):
-        self.__name__ = 'txt'
-        self.filename = dirname
-        self.Trace = Trace
-        self.mode = mode
+    """Txt Database class."""
     
-    def connect(self, model):
-        """Link the Database to the Sampler instance. 
+    def __init__(self, dbname=None, dbmode='a'):
+        """Create a Txt Database.
         
-        If database is loaded from a file, restore the objects trace 
-        to their stored value, if a new database is created, instantiate
-        a Trace for the nodes to tally.
+        :Parameters:
+        dbname : string
+          Name of the directory where the traces are stored. 
+        dbmode : {a, r, w}
+          Opening mode: a:append, w:write, r:read. 
         """
-        base.Database.connect(self, model)
-        self.choose_name()
-        self.makedir()
-               
-    def makedir(self):
-        if self.filename in os.listdir('.'):
-            if self.mode == 'w':
-                shutil.rmtree(self.filename)
-                os.mkdir(self.filename)
+        self.__name__ = 'txt'
+        self._directory = dbname
+        self.__Trace__ = Trace
+        self.mode = dbmode
+        
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
+        self._traces = {} # A dictionary of the Trace objects. 
+        self.chains = 0
+        self._default_chain = -1
+        
+        if os.path.exists(self._directory):
+            if dbmode=='w':
+                shutil.rmtree(self._directory)
+                os.mkdir(self._directory)
         else:
-            os.mkdir(self.filename)
-            
+            os.mkdir(self._directory)
+                       
     def get_chains(self):
+        """Return an ordered list of the `Chain_#` directories in the db
+        directory."""
         chains = []
         try:
-            content = os.listdir(self.filename)
+            content = os.listdir(self._directory)
             for c in content:
-                if os.path.isdir(os.path.join(self.filename, c)) and c.startswith(CHAIN_NAME[:-2]):
+                if os.path.isdir(os.path.join(self._directory, c)) and c.startswith(CHAIN_NAME[:-2]):
                     chains.append(c)
         except:
             pass
         chains.sort()
         return chains
             
-    def chain_name(self, chain=-1):
-        """Return the name of the directory corresponding to the chain."""
-        return self.get_chains()[chain]
-    
-    def new_chain_name(self):
-        """Return the name of the directory for the new chain."""
-        n = len(self.get_chains())+1
-        return CHAIN_NAME%n
-        
-        
-    def _initialize(self, length):
+    def _initialize(self, variables, length):
         """Create folder to store simulation results."""
-        self._cur_dir = os.path.join(self.filename, self.new_chain_name())
-        os.mkdir(self._cur_dir)
         
-        for object in self.model._variables_to_tally:
-            object.trace._initialize(length)
+        dir = os.path.join(self._directory, CHAIN_NAME%self.chains)
+        os.mkdir(dir)
+        
+        pickle.Database._initialize(self, variables, length)
             
-    def close(self):
-        pass
-        
+    def savestate(self, state):
+        """Save the sampler's state in a state.txt file."""
+        file = open(os.path.join(self._directory, 'state.txt'), 'w')
+        print >> file, state 
+        file.close()
+    
 
-def aput (outarray,fname,writetype='w',delimit=' '):
-    """Sends passed 1D or 2D array to an output file and closes the file.
-    """
-    outfile = open(fname,writetype)
-    if outarray.ndim==1:
-        outarray = np.atleast_2d(outarray).transpose()
     
-    if outarray.ndim > 2:
-        raise TypeError, "aput() require 1D or 2D arrays.  Otherwise use some kind of pickling."
-    else: # must be a 2D array
-        for row in outarray:
-            outfile.write(string.join(map(str,row),delimit))
-            outfile.write('\n')
-    outfile.close()
-    return None
-    
-    #---------------------------------------
-def readArray(filename, skipchar = '#'):
-    #---------------------------------------
-    # From the NumPy Wiki
-    """
-    PURPOSE: read an array from a file. Skip empty lines or lines
-             starting with the comment delimiter (defaulted to '#').
-    
-    OUTPUT: a float numpy array
-    
-    EXAMPLE: >>> data = readArray("/home/albert/einstein.dat")
-             >>> x = data[:,0]        # first column
-             >>> y = data[:,1]        # second column
-    """
-    
-    myfile = open(filename, "r")
-    contents = myfile.readlines()
-    myfile.close()
-    
-    data = []
-    for line in contents:
-        stripped_line = string.lstrip(line)
-        if (len(stripped_line) != 0):
-          if (stripped_line[0] != skipchar):
-            items = string.split(stripped_line)
-            data.append(map(float, items))
-    
-    a = numpy.array(data)
-    (Nrow,Ncol) = a.shape
-    if ((Nrow == 1) or (Ncol == 1)): a = numpy.ravel(a)
-    return(a)
-
-  
-def load(dirname, mode='a'):
+def load(dirname):
     """Create a Database instance from the data stored in the directory."""
-    db = Database(dirname, mode)
-    chains = [os.path.join(dirname, c) for c in db.get_chains()]
-    files = os.listdir(os.path.join(chains[0]))
-    varnames = varname(files)
-    data = dict([(v, []) for v in varnames])
-    for c in chains:
-        files = os.listdir(os.path.join(c))
-        for f in files:
-            file = os.path.join(c, f)
-            #a = readArray(file)
-            a = np.loadtxt(file, delimiter=',')
-            data[varname(f)].append(a)
-    for k in varnames:
-        setattr(db, k, Trace(data[k]))
-        o = getattr(db,k)
-        setattr(o, 'db', db)
-    db._state_ = {}
+    if not os.path.exists(dirname):
+        raise AttributeError, 'No txt database named %s'%dirname
+    
+    db = Database(dirname, dbmode='a')
+    chain_folders = [os.path.join(dirname, c) for c in db.get_chains()]
+    db.chains = len(chain_folders)
+    
+    data = {}
+    for chain, folder in enumerate(chain_folders):
+        files = os.listdir(folder)
+        varnames = varname(files)
+        db.variables_to_tally.append(varnames)
+        for file in files:
+            name = varname(file)
+            try:
+                data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',')
+            except:
+                data[name] = {chain:np.loadtxt(os.path.join(folder, file), delimiter=',')}
+    
+    
+    # Create the Traces.
+    for name, values in data.iteritems():
+        db._traces[name] = Trace(name=name, value=values, db=db)
+        setattr(db, name, db._traces[name])
+    
+    # Load the state.
+    statefile = os.path.join(dirname, 'state.txt')
+    if os.path.exists(statefile):
+        file = open(statefile, 'r')
+        db._state_ = eval(file.read())
+    else:
+        db._state_= {}
     return db
     
 def varname(file):

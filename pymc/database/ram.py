@@ -1,69 +1,104 @@
-###
-# Basic trace module
-# Simply store the trace in memory
-###
+"""
+RAM database module
+
+Store the trace in memory using NumPy arrays. 
+
+Implementation Notes
+--------------------
+This is the only backend using preallocated memory. All others simply
+append values to a stack. It might be worthwhile to use a list instead
+of a NumPy array to 1. simplify this backend, 2. standardize the 
+`Trace model` and 3. remove the need for a truncate method.
+We would need to catch MemoryError exceptions though. 
+"""
 
 import pymc
 from numpy import zeros,shape,concatenate, ndarray,dtype
 import base
+import numpy as np
 
 __all__ = ['Trace', 'Database']
 
 class Trace(base.Trace):
-    """RAM trace 
+    """RAM Trace 
     
-    Store the samples in memory. 
+    Store the samples in memory. No data is written to disk.
     """
-    def __init__(self, value=None, obj=None):
-        """Assign an initial value and an internal PyMC object."""
+    
+    def __init__(self, name, getfunc=None, db=None, value=None):
+        """Create a Trace instance. 
+        
+        :Parameters:
+        name : string
+          The trace object name. This name should uniquely identify 
+          the pymc variable. 
+        getfunc : function
+          A function returning the value to tally. 
+        db : Database instance
+          The database owning this Trace. 
+        value : list
+          The list of trace arrays. This is used when loading the Trace from 
+          disk."""
         if value is None:
-            self._trace = []
+            self._trace = {}
+            self._index = {}
         else:
             self._trace = value
-        
-        if obj is not None:
-            if isinstance(obj, pymc.Variable):
-                self._obj = obj
-            else:
-                raise AttributeError, 'Not PyMC object', obj
+            self._index = dict(zip(value.keys(), map(len, value.values())))
+    
+        base.Trace.__init__(self, name=name, getfunc=getfunc, db=db)
 
-    def _initialize(self, length):
+    def _initialize(self, chain, length):
         """Create an array of zeros with shape (length, shape(obj)), where 
         obj is the internal PyMC Stochastic or Deterministic.
         """
         # First, see if the object has an explicit dtype.
-        if self._obj.dtype is object:
-            self._trace.append( zeros(length, dtype=object) )
+        value = np.array(self._getfunc())
+
+        if value.dtype is object:
+            self._trace[chain] = zeros(length, dtype=object)
         
-        elif self._obj.dtype is not None:
-            self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.dtype) )
+        elif value.dtype is not None:
+            self._trace[chain] = zeros ((length,) + shape(value), value.dtype) 
             
         # Otherwise, if it's an array, read off its value's dtype.
-        elif isinstance(self._obj.value, ndarray):
-            self._trace.append( zeros ((length,) + shape(self._obj.value), self._obj.value.dtype) )
+        elif isinstance(value, ndarray):
+            self._trace[chain] = zeros ((length,) + shape(value), value.dtype) 
         
         # Otherwise, let numpy type its value. If the value is a scalar, the trace will be of the
         # corresponding type. Otherwise it'll be an object array.
         else:
-            self._trace.append( zeros ((length,) + shape(self._obj.value), dtype=self._obj.value.__class__))           
+            self._trace[chain] = zeros ((length,) + shape(value), dtype=value.__class__)
 
+        self._index[chain] = 0
         
-    def tally(self, index, chain=-1):
-        """Store current value."""
+    def tally(self, chain):
+        """Store the object's current value to a chain.
+        
+        :Parameters:
+        chain : integer
+          Chain index. 
+        """
         try:
-            self._trace[chain][index] = self._obj.value.copy()
+            self._trace[chain][self._index[chain]] = self._getfunc().copy()
         except AttributeError:
-            self._trace[chain][index] = self._obj.value
+            self._trace[chain][self._index[chain]] = self._getfunc()
+        self._index[chain] += 1
 
-    def truncate(self, index):
+    def truncate(self, chain, index):
         """
-        When model receives a keyboard interrupt, it tells the traces
-        to truncate their values.
+        Truncate the trace array to some index.
+        
+        :Parameters:
+        chain : int
+          The chain index.
+        index : int
+          The index within the chain after which all values will be removed.
         """
-        self._trace[-1] = self._trace[-1][:index]
+        self._trace[chain] = self._trace[chain][:index]
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
-        """Return the trace (last by default).
+        """Return the trace.
 
         :Stochastics:
           - burn (int): The number of transient steps to skip.
@@ -71,27 +106,45 @@ class Trace(base.Trace):
           - chain (int): The index of the chain to fetch. If None, return all chains.
           - slicing: A slice, overriding burn and thin assignement.
         """
+        
         if slicing is None:
             slicing = slice(burn, None, thin)
         if chain is not None:
+            if chain < 0:
+                chain = range(self.db.chains)[chain]
             return self._trace[chain][slicing]
         else:
-            return concatenate(self._trace)[slicing]
+            return concatenate(self._trace.values())[slicing]
 
     __call__ = gettrace
 
+
     def length(self, chain=-1):
-        """Return the sample length of given chain. If chain is None,
-        return the total length of all chains."""
-        return len(self.gettrace(chain=chain))
+        """Return the length of the trace.
+       
+        :Parameters:
+        chain : int or None
+          The chain index. If None, returns the combined length of all chains.
+        """
+        if chain is not None:
+            if chain < 0:
+                chain = range(self.db.chains)[chain]
+            return self._trace[chain].shape[0]
+        else:
+            return sum([t.shape[0] for t in self._trace.values()])
 
 class Database(base.Database):
     """RAM database. 
     
-    Store the samples in memory.
+    Store the samples in memory. No data is written to disk.
     """
-    def __init__(self):
-        """Get the Trace from the local scope."""
-        self.__name__ = 'ram'
-        self.Trace = Trace
     
+    def __init__(self, dbname):
+        """Create a RAM Database instance."""
+        self.__name__ = 'ram'
+        self.__Trace__ = Trace
+        self.dbname = dbname
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
+        self._traces = {} # A dictionary of the Trace objects. 
+        self.chains = 0
+        self._default_chain = -1

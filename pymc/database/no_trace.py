@@ -20,6 +20,9 @@ class Database(base.Database):
     trace of the values sampled is kept. This may be useful for testing 
     purposes.
     """ 
-    def __init__(self):
+    def __init__(self, dbname):
         """Get the Trace from the local scope."""
-        self.Trace = Trace
+        self.__Trace__ = Trace
+        self.__name__ = 'notrace'
+        self.dbname = dbname
+        

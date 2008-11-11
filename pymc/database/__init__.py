@@ -29,7 +29,7 @@ Writing a new backend
 Each backend is implemented in a file in the database directory. Each one 
 of these files define two classes: Trace and Database. A new backend 
 can easily be implemented by defining new classes and saving them in a 
-file. Look at template.py for a skeleton, and the other modules for examples. 
+file. Look at base.py for skeleton classes, and the other modules for examples. 
 
 """
 
@@ -55,8 +55,4 @@ try:
 except ImportError:
     pass
     
-try:
-    import hdf52
-except ImportError:
-    pass
 

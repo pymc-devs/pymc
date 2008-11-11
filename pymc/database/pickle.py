@@ -1,24 +1,14 @@
-###
-# Pickle backend module
-# Trace are stored in memory during sampling and saved to a
-# pickle file at the end of sampling.
-###
 """
-The object passed as db to Sampler may be:
-1. A string (the database module name),
-2. A Database instance,
+Pickle backend module
 
-There could be two ways to initialize a Database instance:
-1. Instantiation: db = PyMC.database.pickle.Database(**kwds)
-2. Loading : db = PyMC.database.pickle.load(file)
+Store the trace in a pickle file.
 
-Supporting 2 is a bit tricky, since it implies that we must :
-a) restore the state of the database, using previously computed values,
-b) restore the state of the Sampler.
-which means that the database must also store the Sampler's state.
-This is partially achieved.
+Notes
+-----
+Pickle file are not always compatible across different python 
+versions. Users should use this backend only for shortlived projects.
+
 """
-
 
 import ram, no_trace, base
 import os, datetime, numpy
@@ -31,52 +21,38 @@ class Trace(ram.Trace):
 
 class Database(base.Database):
     """Pickle database backend.
-    Saves the trace to a pickle file.
+    
+    Save the trace to a pickle file.
     """
-    def __init__(self, filename=None):
+    
+    def __init__(self, dbname=None, dbmode='a'):
         """Assign a name to the file the database will be saved in.
+        
+        :Parameters:
+        dbname : string
+          Name of the pickle file.
+        dbmode : {'a', 'w'}
+          File mode.  Use `a` to append values, and `w` to overwrite
+          an existing file.
         """
         self.__name__ = 'pickle'
-        self.filename = filename
-        self.Trace = Trace
-
-    def choose_name(self, extension=None):
-        """If a file name has not been assigned, choose one from the 
-        name of the input module imported by the Sampler."""
-        if extension is not None:
-            extension = '.'+extension
-        else:
-            extension = ''
-        if self.filename is None:
-            modname = self.model.__name__
-            name = modname+extension
-            i=0
-            existing_names = os.listdir(".")
-            while True:
-                if name+extension in existing_names:
-                    name = modname+'_%d'%i+extension
-                    i += 1
-                else:
-                    break
-            self.filename = name
-
-
-    def connect(self, sampler):
-        """Link the Database to the Sampler instance. 
+        self.filename = dbname
+        self.__Trace__ = Trace
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
+        self._traces = {} # A dictionary of the Trace objects. 
+        self.chains = 0
+        self._default_chain = -1
         
-        If database is loaded from a file, restore the objects trace 
-        to their stored value, if a new database is created, instantiate
-        a Trace for the nodes to tally.
-        """
-        base.Database.connect(self, sampler)
-        self.choose_name(extension='pickle')
-        
+        if os.path.exists(dbname):
+            if dbmode=='w':
+                os.remove(dbname)
+
     def close(self):
         """Dump traces using cPickle."""
         container={}
         try:
-            for o in self.model._variables_to_tally:
-                container[o.__name__] = o.trace._trace
+            for name in self._traces.keys():
+                container[name] = self._traces[name]._trace
             container['_state_'] = self._state_
         
             file = open(self.filename, 'w')
@@ -87,7 +63,7 @@ class Database(base.Database):
         
      
 def load(filename):
-    """Load an existing database.
+    """Load a pickled database.
 
     Return a Database instance.
     """
@@ -95,11 +71,20 @@ def load(filename):
     container = cPickle.load(file)
     file.close()
     db = Database(file.name)
+    chains = 0
+    variables = set()
     for k,v in container.iteritems():
         if k == '_state_':
            db._state_ = v
         else:
-            setattr(db, k, Trace(value=v))
+            db._traces[k] = Trace(name=k, value=v, db=db)
+            setattr(db, k, db._traces[k])
+            chains = max(chains, len(v))
+            variables.add(k)
+            
+    db.chains = chains
+    db.variables_to_tally = chains*[list(variables)]
+    
     return db
         
     

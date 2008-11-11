@@ -1,61 +1,64 @@
 """
-mysql.py
+SQLite database backend
 
-MySQL trace module
+Store traces from tallyable objects in individual SQL tables. 
 
+Implementation Notes
+--------------------
+For each object, a table is created with the following format:
+
+key (INT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ... 
+
+The key is autoincremented each time a new row is added to the table. 
+trace denotes the chain index, and starts at 0. 
+
+Additional Dependencies
+-----------------------
+sqlite3 <http://www.sqlite.org>
+
+Changeset
+---------
 Created by Chris Fonnesbeck on 2007-02-01.
 Updated by DH on 2007-04-04.
+DB API changes, October 2008, DH. 
 """
+
+# TODO: Add support for integer valued objects. 
+
 import numpy as np
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
 import base, pickle, ram, pymc
-import pdb
+import pdb,os
+from pymc.database import base
 
 __all__ = ['Trace', 'Database', 'load']
 
-class Trace(object):
+class Trace(base.Trace):
     """SQLite Trace class."""
-    
-    def __init__(self, obj=None, name=None):
-        """Assign an initial value and an internal PyMC object."""       
-        if obj is not None:
-            if isinstance(obj, pymc.Variable):
-                self._obj = obj
-                self.name = self._obj.__name__
-            else:
-                raise AttributeError, 'Not PyMC object', obj
-        else:
-            self.name = name
-            
-    def _initialize(self):
-        """Initialize the trace. Create a table.
+
+    def _initialize(self, chain, length):
+        """Create an SQL table.
         """
-        size = 1
+        # If the table already exists, exit now. 
+        if chain != 0:
+            return
         
+        # Determine size
         try:
-            size = len(self._obj.value)
+            size = len(self._getfunc())
         except TypeError:
-            pass
+            size = 1
         
-        # Try to create a new table. If a table of same name exists, simply 
-        # update self.last_trace.
+        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
+        self.db.cur.execute(query)
         
-        try:
-            query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
-            self.db.cur.execute(query)
-            self.current_trace = 1
-        except Exception:
-            self.db.cur.execute('SELECT MAX(trace) FROM %s' % self.name)
-            last_trace = self.db.cur.fetchall()[0][0]
-            self.current_trace =  last_trace + 1
-        
-    def tally(self,index):
-        """Adds current value to trace"""
+    def tally(self, chain):
+        """Adds current value to trace."""
         
         size = 1
         try:
-            size = len(self._obj.value)
+            size = len(self._getfunc())
         except TypeError:
             pass
             
@@ -66,13 +69,16 @@ class Trace(object):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the 
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in self._obj.value])
+            valstring = ', '.join(['%f'%x for x in self._getfunc()])
         except:
-            valstring = str(self._obj.value)
+            valstring = str(self._getfunc())
             
-        # Add value to database
-        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), self.current_trace, valstring))
         
+        # Add value to database
+        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
+            (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), chain, valstring))
+        
+            
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
@@ -86,10 +92,6 @@ class Trace(object):
         
         if not slicing:
             slicing = slice(burn, None, thin)
-   
-        # Find the number of traces.
-        self.db.cur.execute('SELECT MAX(trace) FROM %s' % self.name)
-        n_traces = self.db.cur.fetchall()[0][0]
         
         # If chain is None, get the data from all chains.
         if chain is None: 
@@ -98,54 +100,65 @@ class Trace(object):
         else:
             # Deal with negative chains (starting from the end)
             if chain < 0:
-                chain = n_traces+chain+1
+                chain = range(self.db.chains)[chain]
             self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
          
         trace = np.array(trace)[:,2:]
         return squeeze(trace[slicing])
-
-    def _finalize(self):
-        pass
-        #self.commit()
-
+        
+        
     __call__ = gettrace
-
-
+        
+#    def nchains(self):
+#        """Return the number of existing chains, completed or not."""
+#        try:
+#            self.db.cur.execute('SELECT MAX(trace) FROM %s'%self.name)
+#            trace = self.db.cur.fetchall()[0][0]
+#
+#            if trace is None:
+#                return 0
+#            else:
+#                return trace + 1
+#        except:
+#           return 0 
+    
     def length(self, chain=-1):
         """Return the sample length of given chain. If chain is None,
         return the total length of all chains."""
         return len(self.gettrace(chain=chain))
 
-class Database(pickle.Database):
-    """Define the methods that will be assigned to the Model class"""
-    def __init__(self, filename=None):
-        """Assign a name to the file the database will be saved in.
+class Database(base.Database):
+    """SQLite database.
+    """
+    
+    def __init__(self, dbname, dbmode='a'):
+        """Open or create an SQL database. 
+        
+        :Parameters:
+        dbname : string
+          The name of the database file. 
+        dbmode : {'a', 'w'}
+          File mode.  Use `a` to append values, and `w` to overwrite
+          an existing file.
         """
         self.__name__ = 'sqlite'
-        self.filename = filename
-        self.Trace = Trace
+        self.dbname = dbname
+        self.__Trace__ = Trace
+        
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
+        self._traces = {} # A dictionary of the Trace objects. 
+        self.chains = 0
+        self._default_chain = -1
+        
+        if os.path.exists(dbname) and dbmode=='w':
+            os.remove(dbname)
     
-    def _initialize(self,length):
-        """Tell the traces to initialize themselves."""
-        for o in self.model._variables_to_tally:
-            o.trace._initialize()
-        
-    def connect(self, sampler):
-        """Link the Database to the Sampler instance. 
-        
-        If database is loaded from a file, restore the objects trace 
-        to their stored value, if a new database is created, instantiate
-        a Trace for the nodes to tally.
-        """
-        base.Database.connect(self, sampler)
-        self.choose_name('sqlite')
-        self.DB = sqlite3.connect(self.filename, check_same_thread=False)
+        self.DB = sqlite3.connect(dbname, check_same_thread=False)
         self.cur = self.DB.cursor()
-    
+                        
     def commit(self):
         """Commit updates to database"""
-        
         self.DB.commit()
                    
     def close(self, *args, **kwds):
@@ -153,6 +166,9 @@ class Database(pickle.Database):
         self.cur.close()
         self.commit()
         self.DB.close()
+    
+
+
 
 # TODO: Code savestate and getstate to enable storing of the model's state.
 # state is a dictionary with two keys: sampler and step_methods.
@@ -177,24 +193,29 @@ class Database(pickle.Database):
         StepMethods."""
         return {}
 
-def load(filename):
-    """Load an existing database.
+def load(dbname):
+    """Load an existing SQLite database.
 
     Return a Database instance.
     """
-    db = Database(filename)
-    db.DB = sqlite3.connect(db.filename)
-    db.cur = db.DB.cursor()
+    db = Database(dbname)
     
     # Get the name of the objects
     tables = get_table_list(db.cur)
     
     # Create a Trace instance for each object
+    chains = 0
     for name in tables:
-        setattr(db, name, Trace(name=name))
-        o = getattr(db, name)
-        setattr(o, 'db', db)
+        db._traces[name] = Trace(name=name, db=db)
+        setattr(db, name, db._traces[name])
+        db.cur.execute('SELECT MAX(trace) FROM %s'%name)
+        chains = max(chains, db.cur.fetchall()[0][0]+1)
+        
+    db.chains=chains 
+    db.variables_to_tally = chains * [tables,]
+    db._state_ = {}
     return db
+    
 
 # Copied form Django.
 def get_table_list(cursor): 

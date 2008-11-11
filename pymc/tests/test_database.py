@@ -7,6 +7,9 @@ import numpy as np
 from pymc import MCMC
 import pymc.database
 import nose
+import warnings
+warnings.simplefilter('ignore', UserWarning)
+
 
 class test_backend_attribution(TestCase):
     def test_raise(self):
@@ -15,196 +18,157 @@ class test_backend_attribution(TestCase):
         self.assertRaises(ImportError, MCMC, DisasterModel, '__test_import__')
 
 
-class test_no_trace(TestCase):
-    def test(self):
-        M = MCMC(DisasterModel, db='no_trace')
-        M.sample(1000,500,2)
-        try:
-            assert_array_equal(M.e.trace().shape, (0,))
-        except AttributeError:
-            pass
+class TestBase(TestCase):
+    """Test features that should be common to all databases."""    
+    @classmethod
+    def setUpClass(self):
+        self.S = pymc.MCMC(DisasterModel, db='base')
         
-class test_ram(TestCase):
-    def test(self):
-        M = MCMC(DisasterModel, db='ram')
-        M.sample(500,100,2)
-        assert_array_equal(M.e.trace().shape, (200,))
-        assert_equal(M.e.trace.length(), 200)
-        M.sample(100)
-        assert_array_equal(M.e.trace().shape, (100,))
-        assert_array_equal(M.e.trace(chain=None).shape, (300,))
-        
-    def test_regression_155(self):
-        """thin > iter"""
-        M = MCMC(DisasterModel, db='ram')
-        M.sample(10,0,100)
-        
-class test_txt(TestCase):
-    def test(self):
-        try:
-            os.removedir('txt_data')
-        except:
-            pass
-        S = MCMC(DisasterModel, db='txt', dirname='txt_data', mode='w')
-        S.sample(100)
-        S.sample(100)
-        S.db.close()
+    def test_init(self):
+        assert hasattr(self.S.db, '__Trace__')
+        assert hasattr(self.S.db, '__name__')
     
-    def test_load(self):
-        db = pymc.database.txt.load('txt_data')
-        assert_equal(len(db.e._trace), 2)
-        assert_array_equal(db.e().shape, (100,))
-        assert_array_equal(db.e(chain=None).shape, (200,))
-        """
-        # This will not work until getstate() is implemented for txt backend
-        S = MCMC(DisasterModel, db)
-        S.sample(100)
-        S.db.close()
-        """
-        
-        
-class test_pickle(TestCase):
-    def __init__(*args, **kwds):
-        TestCase.__init__(*args, **kwds)
-        try: 
-            os.remove('Disaster.pickle')
+    @classmethod
+    def tearDownClass(self):
+        try:
+            self.S.db.close()
         except:
             pass
-            
-    def test(self):
-        M = MCMC(DisasterModel, db='pickle', name='Disaster')
-        M.sample(500,100,2)
-        assert_array_equal(M.e.trace().shape, (200,))
-        assert_equal(M.e.trace.length(), 200)
-        M.db.close()
+
+class TestRam(TestBase):
+    @classmethod
+    def setUpClass(self):
+        self.S = pymc.MCMC(DisasterModel, db='ram')
+    
+    def test_simple_sample(self):
         
-    def test_load(self):
-        db = pymc.database.pickle.load('Disaster.pickle')
-        S = MCMC(DisasterModel, db)
-        S.sample(100,0,1)
-        assert_equal(len(S.e.trace._trace),2)
-        assert_array_equal(S.e.trace().shape, (100,))
-        assert_array_equal(S.e.trace(chain=None).shape, (300,))
-        assert_equal(S.e.trace.length(None), 300)
-        S.db.close()
-
-
-
-class test_mysql(TestCase):
-    def test(self):
-        if 'mysql' not in dir(pymc.database):
-            raise nose.SkipTest
-            
-        M = MCMC(DisasterModel, db='mysql', name='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
-        M.db.clean()
-        M.sample(50,10,thin=2)
-        assert_array_equal(M.e.trace().shape, (20,))
-        # Test second trace.
-        M.sample(10)
-        assert_array_equal(M.e.trace().shape, (10,))
-        assert_array_equal(M.e.trace(chain=None).shape, (30,))
-        assert_equal(M.e.trace.length(chain=1), 20)
-        assert_equal(M.e.trace.length(chain=2), 10)
-        assert_equal(M.e.trace.length(chain=None), 30)
-        assert_equal(M.e.trace.length(chain=-1), 10)
-        M.sample(5)
-        assert_equal(M.e.trace.length(), 5)
-        M.db.close()
-
-    def test_load(self):
-        if 'mysql' not in dir(pymc.database):
-            raise nose.SkipTest
+        self.S.sample(50,25,5)
         
-        db = pymc.database.mysql.load(dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
-        assert_array_equal(db.e.length(chain=1), 20)
-        assert_array_equal(db.e.length(chain=2), 10)
-        assert_array_equal(db.e.length(chain=3), 5)
-        assert_array_equal(db.e.length(chain=None), 35)
-        S = MCMC(DisasterModel, db='mysql', name='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
+        assert_array_equal(self.S.e.trace().shape, (5,))
+        assert_array_equal(self.S.e.trace(chain=0).shape, (5,))
+        assert_array_equal(self.S.e.trace(chain=None).shape, (5,))
+        
+        assert_equal(self.S.e.trace.length(), 5)
+        assert_equal(self.S.e.trace.length(chain=0), 5)
+        assert_equal(self.S.e.trace.length(chain=None), 5)
+
+        self.S.sample(10,0,1)
+        
+        assert_array_equal(self.S.e.trace().shape, (10,))
+        assert_array_equal(self.S.e.trace(chain=1).shape, (10,))
+        assert_array_equal(self.S.e.trace(chain=None).shape, (15,))
+        
+        assert_equal(self.S.e.trace.length(), 10)
+        assert_equal(self.S.e.trace.length(chain=1), 10)
+        assert_equal(self.S.e.trace.length(chain=None), 15)
+        
+        assert_equal(self.S.e.trace().__class__,  np.ndarray)
+        
+        # Test __getitem__
+        assert_array_equal(self.S.e.trace(slicing=slice(1,1)), self.S.e.trace[1])
+        
+        # Test __getslice__
+        assert_array_equal(self.S.e.trace(thin=2), self.S.e.trace[::2])
+        
+        # Test Sampler trace method
+        assert_array_equal(self.S.trace('e')[:].shape, (10,))
+        assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
+        assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
+                           
+        self.S.db.close()
+
+class TestPickle(TestRam):
+    @classmethod
+    def setUpClass(self):
+        self.S = pymc.MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle', dbmode='w')
+        
+    def load(self):
+        return pymc.database.pickle.load('Disaster.pickle')
+        
+    def test_xload(self):
+        db = self.load()
+        assert_array_equal(db.e(chain=0).shape, (5,))
+        assert_array_equal(db.e(chain=1).shape, (10,))
+        assert_array_equal(db.e(chain=-1).shape, (10,))
+        assert_array_equal(db.e(chain=None).shape, (15,))
+        db.close()
+        
+    def test_yconnect_and_sample(self):
+        db = self.load()
+        S = pymc.MCMC(DisasterModel, db=db)
+        S.sample(5)
+        assert_array_equal(db.e(chain=-1).shape, (5,))
+        assert_array_equal(db.e(chain=None).shape, (20,))
+        db.close()
+        
+    def test_yrestore_state(self):
+        db = self.load()
+        S = pymc.MCMC(DisasterModel, db=db)
         S.sample(10)
-        assert_array_equal(S.e.trace(chain=-1).shape, (10,))
-        assert_array_equal(S.e.trace(chain=None).shape, (45,))
-        S.db.clean()
-        S.db.close()
-            
+        sm = S.step_methods.pop()
+        assert_equal(sm._accepted+sm._rejected, 75)
 
-class test_sqlite(TestCase):
-    def __init__(*args, **kwds):
-        TestCase.__init__(*args, **kwds)
-        try:    
+
+class TestTxt(TestPickle):
+    @classmethod
+    def setUpClass(self):
+        self.S = pymc.MCMC(DisasterModel, db='txt', dbname='Disaster.txt', dbmode='w')
+        
+    def load(self):
+        return pymc.database.txt.load('Disaster.txt')
+
+
+class TestSqlite(TestPickle):
+    @classmethod
+    def setUpClass(self):
+        if 'sqlite' not in dir(pymc.database):
+            raise nose.SkipTest
+        if os.path.exists('Disaster.sqlite'):
             os.remove('Disaster.sqlite')
-            os.remove('Disaster.sqlite-journal')
-        except:
-            pass
-            
-    def test(self):
-        if 'sqlite' not in dir(pymc.database):
-            raise nose.SkipTest
-    
-        M = MCMC(DisasterModel, db='sqlite', name='Disaster')
-        M.sample(500,100,2)
-        assert_array_equal(M.e.trace().shape, (200,))
-        # Test second trace.
-        M.sample(100,0,1)
-        assert_array_equal(M.e.trace().shape, (100,))
-        assert_array_equal(M.e.trace(chain=None).shape, (300,))
-        assert_equal(M.e.trace.length(chain=1), 200)
-        assert_equal(M.e.trace.length(chain=2), 100)
-        assert_equal(M.e.trace.length(chain=None), 300)
-        assert_equal(M.e.trace.length(chain=-1), 100)
-        M.sample(50)
-        assert_equal(M.e.trace.length(), 50)
-        M.db.close()
+        self.S = pymc.MCMC(DisasterModel, db='sqlite', dbname='Disaster.sqlite')
         
-    """
-    # This will not work until getstate() is implemented for sqlite backend    
-    def test_load(self):
-        if 'sqlite' not in dir(pymc.database):
+    def load(self):
+        return pymc.database.sqlite.load('Disaster.sqlite')
+
+    def test_yrestore_state(self):
+        raise nose.SkipTest, "Not implemented."
+
+class TestMySQL(TestPickle):
+    @classmethod
+    def setUpClass(self):
+        if 'mysql' not in dir(pymc.database):
             raise nose.SkipTest
-        db = pymc.database.sqlite.load('Disaster.sqlite')
-        assert_array_equal(db.e.length(chain=1), 200)
-        assert_array_equal(db.e.length(chain=2), 100)
-        assert_array_equal(db.e.length(chain=3), 50)
-        assert_array_equal(db.e.length(chain=None), 350)
-        S = MCMC(DisasterModel, db)
-        S.sample(100,0,1)
-        assert_array_equal(S.e.trace(chain=-1).shape, (100,))
-        assert_array_equal(S.e.trace(chain=None).shape, (450,))
-        S.db.close()
-    """
-    
-    def test_interactive(self):
-        M=MCMC(DisasterModel,db='sqlite')
-        M.isample(1000)
+        self.S = pymc.MCMC(DisasterModel, db='mysql', dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org', dbmode='w')
         
+    def load(self):
+        return pymc.database.mysql.load(dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
 
+    def test_yrestore_state(self):
+        raise nose.SkipTest, "Not implemented."
 
-class test_hdf5(TestCase):
-    def __init__(*args, **kwds):
-        TestCase.__init__(*args, **kwds)        
-        try: 
-            os.remove('Disaster.hdf52')
-        except:
-            pass
+        
     
-    def test(self):
+class TestHDF5(TestPickle):    
+    
+    @classmethod
+    def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
-            
-        S = MCMC(DisasterModel, db='hdf5', name='Disaster')
-        S.sample(500,100,2)
-        assert_array_equal(S.e.trace().shape, (200,))
-        assert_equal(S.e.trace.length(), 200)
-        assert_array_equal(S.D.value, DisasterModel.disasters_array)
-        assert_equal(S.e.trace().__class__,  np.ndarray)
-        S.db.close()
+        self.S = pymc.MCMC(DisasterModel, db='hdf5', dbname='Disaster.hdf5', dbmode='w')    
         
-    def test_attribute_assignement(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-            
+    def load(self):
+        return pymc.database.hdf5.load('Disaster.hdf5')
+
+    def test_xdata_attributes(self):
+        db = self.load()
+        assert_array_equal(db.D, DisasterModel.disasters_array)
+        db.close()
+        del db
+        
+    def test_xattribute_assignement(self):
         arr = np.array([[1,2],[3,4]])
-        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
+        db = self.load()
         db.add_attr('some_list', [1,2,3])
         db.add_attr('some_dict', {'a':5})
         db.add_attr('some_array', arr, array=True)
@@ -213,87 +177,107 @@ class test_hdf5(TestCase):
         assert_array_equal(db.some_array.read(), arr)
         db.close()
         del db
-        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
+        
+        db = self.load()
         assert_array_equal(db.some_list, [1,2,3])
         assert_equal(db.some_dict['a'], 5)
         assert_array_equal(db.some_array, arr)
         db.close()  
-
-    def test_hdf5_col(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
+        del db
+        
+    def test_xhdf5_col(self):
         import tables
-        db = pymc.database.hdf5.load('Disaster.hdf5')
+        db = self.load()
         col = db.e.hdf5_col()
         assert col.__class__ == tables.table.Column
         assert_equal(len(col), len(db.e()))
         db.close()
         del db
         
-    """   
-    # This will not work until getstate() is implemented for hdf5
-    def test_compression(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-            
-        try: 
-            os.remove('DisasterModelCompressed.hdf5')
-        except:
-            pass
-        db = pymc.database.hdf5.Database('DisasterModelCompressed.hdf5', complevel=5)
-        S = MCMC(DisasterModel,db)
-        S.sample(450,100,1)
-        assert_array_equal(S.e.trace().shape, (350,))
+    def test_zcompression(self):
+        db = pymc.database.hdf5.Database(dbname='DisasterModelCompressed.hdf5', dbmode='w', complevel=5)
+        S = MCMC(DisasterModel, db=db)
+        S.sample(45,10,1)
+        assert_array_equal(S.e.trace().shape, (35,))
         S.db.close()
         db.close()
         del S
         
-    def test_load(self):
+        
+        
+class testHDF5Objects(TestCase):
+    @classmethod
+    def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
-            
-        db = pymc.database.hdf5.load('Disaster.hdf5', 'a')
-        assert_array_equal(db._h5file.root.chain1.PyMCsamples.attrs.D, 
-           DisasterModel.disasters_array)
-        assert_array_equal(db.D, DisasterModel.disasters_array)
-        S = MCMC(DisasterModel, db)
+        import objectmodel
+        self.S = pymc.MCMC(objectmodel, db='hdf5', dbname='Objects.hdf5', dbmode='w')
         
-        S.sample(100,0,1)
-        assert_array_equal(S.e.trace(chain=None).shape, (300,))
-        assert_equal(S.e.trace.length(None), 300)
-        db.close() # For some reason, the hdf5 file remains open.
-        S.db.close()
+    def load(self):
+        return pymc.database.hdf5.load('Objects.hdf5')
         
-        # test that the step method state was correctly restored.
-        sm = S.step_methods.pop()
-        assert(sm._accepted+sm._rejected ==600)
-    
+    def test_simple_sample(self):
+        self.S.sample(50, 25, 5)
         
-    def test_mode(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-            
-        S = MCMC(DisasterModel, db='hdf5', name='Disaster', mode='w')
-        try:
-            tables = S.db._gettable(None)
-        except LookupError:
-            pass
-        else:
-            raise 'Mode not working'
-        S.sample(100)
-        S.db.close()
-        S = MCMC(DisasterModel, db='hdf5', name='Disaster', mode='a')
-        tables = S.db._gettable(None)
-        assert_equal(len(tables), 1)
-        S.db.close()
-        del S
-    """    
-    
+        assert_array_equal(self.S.B.trace().shape, (5,)) 
+        assert_array_equal(self.S.K.trace().shape, (5,)) 
+        assert_array_equal(self.S.K.trace(chain=0).shape, (5,)) 
+        assert_array_equal(self.S.K.trace(chain=None).shape, (5,)) 
+        
+        assert_equal(self.S.K.trace.length(), 5)
+        assert_equal(self.S.K.trace.length(chain=0), 5)
+        assert_equal(self.S.K.trace.length(chain=None), 5)
+        
+        
+        self.S.sample(10)
+        
+        assert_array_equal(self.S.K.trace().shape, (10,)) 
+        assert_array_equal(self.S.K.trace(chain=1).shape, (10,)) 
+        assert_array_equal(self.S.K.trace(chain=None).shape, (15,)) 
+        
+        assert_equal(self.S.K.trace.length(), 10)
+        assert_equal(self.S.K.trace.length(chain=1), 10)
+        assert_equal(self.S.K.trace.length(chain=None), 15)
+        
+        self.S.db.close()
+        
+    def test_xload(self):
+        db = self.load()
+        assert_array_equal(db.B().shape, (10,)) 
+        assert_array_equal(db.K().shape, (10,)) 
+        assert_array_equal(db.K(chain=0).shape, (5,)) 
+        assert_array_equal(db.K(chain=None).shape, (15,)) 
+        db.close()
+        
+    def test_yconnect_and_sample(self):
+        db = self.load()
+        import objectmodel
+        S = pymc.MCMC(objectmodel, db=db)
+        S.sample(5)
+        assert_array_equal(db.K(chain=0).shape, (5,))
+        assert_array_equal(db.K(chain=1).shape, (10,))
+        assert_array_equal(db.K(chain=2).shape, (5,))
+        assert_array_equal(db.K(chain=-1).shape, (5,))
+        assert_array_equal(db.K(chain=None).shape, (20,))
+        db.close()
+        
+        
+
+def test_regression_155():
+    """thin > iter"""
+    M = MCMC(DisasterModel, db='ram')
+    M.sample(10,0,100)
+
+
+def test_interactive():
+    M=MCMC(DisasterModel,db='sqlite', dbname='interactiveDisaster.sqlite', dbmode='w')
+    M.isample(10)
+        
+
 if __name__ == '__main__':
-    warnings.simplefilter('ignore', UserWarning)
+    
     C =nose.config.Config(verbosity=1)
     nose.runmodule(config=C)
-    warnings.simplefilter('default', UserWarning)
     try:
         S.db.close()
     except:

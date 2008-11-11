@@ -23,6 +23,7 @@ from Node import ContainerBase
 from time import sleep
 import pdb
 import utils
+import warnings, exceptions
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -281,7 +282,7 @@ class Sampler(Model):
         # Initialize database -> initialize traces.
         if length is None:
             length = iter
-        self.db._initialize(length)
+        self.db._initialize(self._variables_to_tally, length)
 
         # Loop
         self._current_iter = 0
@@ -405,7 +406,7 @@ class Sampler(Model):
             if object.trace:
                 self._variables_to_tally.add(object)
             else:
-                object.trace = no_trace.Trace()
+                object.trace = no_trace.Trace(object.__name__)
                 
         # Add model deviance to backend
         if hasattr(self, 'deviance'):
@@ -416,6 +417,11 @@ class Sampler(Model):
         if type(db) is str:
             if db in dir(database):
                 module = getattr(database, db)
+                
+                # Assign a default name for the database output file. 
+                if self._db_args.get('dbname') is None:
+                    self._db_args['dbname'] = self.__name__
+                    
                 self.db = module.Database(**self._db_args)
             elif db in database.__modules__:
                 raise ImportError, \
@@ -431,7 +437,7 @@ class Sampler(Model):
             self.db = db
         
         # Assign Trace instances to tallyable objects. 
-        self.db.connect(self)
+        self.db.connect_model(self)
 
     def halt(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
@@ -450,7 +456,7 @@ class Sampler(Model):
        if self.verbose > 2:
            print self.__name__ + ' tallying.'
        if self._cur_trace_index < self.max_trace_length:
-           self.db.tally(self._cur_trace_index)
+           self.db.tally()
 
        self._cur_trace_index += 1
        if self.verbose > 2:
@@ -583,7 +589,7 @@ class Sampler(Model):
         the state stored in the database.
         """
         
-        state = self.db.getstate()
+        state = self.db.getstate() or {}
         
         # Restore sampler's state
         sampler_state = state.get('sampler', {})
@@ -595,7 +601,8 @@ class Sampler(Model):
             try:
                 sm.value = stoch_state[sm.__name__]
             except:
-                print 'Warning, failed to restore state of stochastic %s from %s backend' % (sm.__name__, self.db.__name__)
+                warnings.warn(\
+    'Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__), exceptions.UserWarning)
         
             
     def remember(self, trace_index = None):
@@ -611,3 +618,17 @@ class Sampler(Model):
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
                 variable.value = variable.trace()[trace_index]
+
+    def trace(self, name, chain=-1):
+        """Return the trace of a tallyable object stored in the database.
+        
+        :Parameters:
+        name : string
+          The name of the tallyable object.
+        chain : int
+          The trace index. Setting `chain=i` will return the trace created by 
+          the ith call to `sample`. 
+        """
+        self.db._default_chain = chain
+        return self.db._traces[name]
+    

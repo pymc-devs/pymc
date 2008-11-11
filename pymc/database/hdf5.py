@@ -1,11 +1,20 @@
-###
-# HDF5 database module. Version 2. 
-# Store the traces in an HDF5 array using pytables.
-# Dependencies
-# pytables >=2 <http://sourceforge.net/projects/pytables/>
-# HDF5 >= 1.6.5
-# Numarray >= 1.5.2 (eventually will rely on numpy)
-###
+"""
+HDF5 database module. 
+
+Store the traces in an HDF5 array using pytables. 
+
+Implementation Notes
+--------------------
+This version supports arbitrary objects through ObjectAtom and VLArray 
+constructs. Ordinary numerical objects are stored in a Table. 
+
+Additional Dependencies
+-----------------------
+ * HDF5 version 1.6.5, required by pytables.
+ * pytables version 2 and up.  <http://sourceforge.net/projects/pytables/>
+
+ 
+"""
 
 
 import numpy as np
@@ -19,40 +28,78 @@ import pickle
 
 __all__ = ['Trace', 'Database', 'load']
 
+class TraceObject(base.Trace):
+    """HDF5 Trace for Objects."""
+    def __init__(self, name, getfunc=None, db=None, vlarrays=[]):
+        """Create a Trace instance.
+         
+        :Parameters:
+        obj : pymc object
+          A Stochastic or Determistic object.
+        name : string
+          The trace object name. This is used only if no `obj` is given.
+        db : Database instance
+          The database owning this Trace. 
+        vlarrays : sequence
+          The nodes storing the data for this object. 
+         """
+        
+        base.Trace.__init__(self, name, getfunc=getfunc, db=db)
+        self._vlarrays = vlarrays  # This should be a dict keyed by chain. 
+
+
+    def tally(self, chain):
+        """Adds current value to trace"""
+        try:
+            self._vlarrays[chain].append(self._getfunc())
+        except:
+            print self._vlarrays, chain
+            raise AttributeError
+            
+    def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
+        """Return the trace (last by default).
+
+        :Parameters:
+        burn : integer 
+          The number of transient steps to skip.
+        thin : integer 
+          Keep one in thin.
+        chain : integer 
+          The index of the chain to fetch. If None, return all chains. The 
+          default is to return the last chain. 
+        slicing : slice object
+          A slice overriding burn and thin assignement.
+        """
+        if chain is not None:
+            return np.array(self._vlarrays[chain])
+        else:
+            return np.concatenate(self._vlarrays[:])
+            
+    __call__ = gettrace
+            
+    def length(self, chain=-1):
+        """Return the length of the trace.
+       
+        :Parameters:
+        chain : int or None
+          The chain index. If None, returns the combined length of all chains.
+        """
+        if chain is not None:
+            return len(self._vlarrays[chain])
+        else:
+            return sum(map(len, self._vlarrays))
+        
 
 class Trace(base.Trace):
     """HDF5 trace
 
     Database backend based on the HDF5 format.
-    """
-    def __init__(self,value=None, obj=None, name=None):
-        """Assign an initial value and an internal PyMC object."""
-        self._trace = value
-        if obj is not None:
-            if isinstance(obj, pymc.Variable):
-                self._obj = obj
-                self.name = self._obj.__name__
-            else:
-                raise AttributeError, 'Not PyMC object', obj
-        else:
-            self.name = name
-            
-    def _initialize(self, length):
-        """Make sure the object name is known"""
-        if self.name is None:
-            self.name = self._obj.__name__
+    """        
     
-    def tally(self):
+    def tally(self, chain):
         """Adds current value to trace"""
-        self.db._row[self.name] = self._obj.value
+        self.db._rows[chain][self.name] = self._getfunc()
                
-    def truncate(self, index):
-        """
-        When model receives a keyboard interrupt, it tells the traces
-        to truncate their values.
-        """
-        pass
-
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
@@ -70,7 +117,10 @@ class Trace(base.Trace):
         if slicing is not None:
             burn, stop, thin = slicing.start, slicing.stop, slicing.step
             
-        tables = self.db._gettable(chain)
+        if chain is not None:
+            tables = [self.db._gettables()[chain],]
+        else:
+            tables = self.db._gettables()
         
         for i,table in enumerate(tables):
             if slicing is None:
@@ -82,7 +132,9 @@ class Trace(base.Trace):
                 data = hstack((data, col))
         
         return data
-                            
+    
+    __call__ = gettrace
+
     def hdf5_col(self, chain=-1):
         """Return a pytables column object.
         
@@ -93,19 +145,20 @@ class Trace(base.Trace):
         .. note:: 
            This method is specific to the ``hdf5`` backend. 
         """
-        table = self.db._gettable(chain)[0]
-        return table.colinstances[self.name]
+        return self.db._tables[chain].colinstances[self.name]
         
-    def _finalize(self):
-        """Nothing done here."""
-        pass
-
-    __call__ = gettrace
-
     def length(self, chain=-1):
-        """Return the sample length of given chain. If chain is None,
-        return the total length of all chains."""
-        tables = self.db._gettable(chain)
+        """Return the length of the trace.
+       
+        :Parameters:
+        chain : int or None
+          The chain index. If None, returns the combined length of all chains.
+        """
+        if chain is not None:
+            tables = [self.db._gettables()[chain],]
+        else:
+            tables = self.db._gettables()
+            
         n = asarray([table.nrows for table in tables])
         return n.sum()
 
@@ -116,7 +169,7 @@ class Database(pickle.Database):
     stochastics and deterministics are stored as arrays in each group.
 
     """
-    def __init__(self, filename=None, mode='w', complevel=0, complib='zlib', **kwds):
+    def __init__(self, dbname, dbmode='a', complevel=0, complib='zlib', **kwds):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
         :Parameters:
@@ -137,57 +190,159 @@ class Database(pickle.Database):
           * bzip2 has an excellent compression ratio but requires more CPU. 
         """
         self.__name__ = 'hdf5'
-        self.filename = filename
-        self.Trace = Trace
-        self.filter = tables.Filters(complevel=complevel, complib=complib)
-        if mode in ['a', 'r', 'w']: 
-            self.mode = mode
-        else:
-            raise ValueError, "mode must be one of a, r, w. Got %s" % mode
+        self.dbname = dbname
+        self.__Trace__ = Trace
+        self.mode = dbmode
+
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
+        self._traces = {} # A dictionary of the Trace objects. 
         
-    def connect(self, sampler):
-        """Link the Database to the Sampler instance. 
+
+
+        self._h5file = tables.openFile(self.dbname, self.mode)
         
-        If database is loaded from a file, restore the objects trace 
-        to their stored value, if a new database is created, instantiate
-        a Trace for the nodes to tally.
+        self.filter = getattr(self._h5file, 'filters', \
+                              tables.Filters(complevel=complevel, complib=complib))
+        
+        self._tables = self._gettables()  # This should be a dict keyed by chain.
+        self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
+        self._chains = self._h5file.listNodes("/")  # This should be a dict keyed by chain.
+        self.chains = len(self._chains)
+        self._default_chain = -1
+    
+    def connect_model(self, model):
+        """Link the Database to the Model instance. 
+        
+        In case a new database is created from scratch, ``connect_model``
+        creates Trace objects for all tallyable pymc objects defined in
+        `model`.
+        
+        If the database is being loaded from an existing file, ``connect_model``
+        restore the objects trace to their stored value. 
+        
+        :Parameters:
+        model : pymc.Model instance
+          An instance holding the pymc objects defining a statistical 
+          model (stochastics, deterministics, data, ...)
         """
-        base.Database.connect(self, sampler)
-        self.choose_name('hdf5')
-        if not hasattr(self, '_h5file'):
-            self._h5file = tables.openFile(self.filename, self.mode)
-        root = self._h5file.root
         
+        # Changed this to allow non-Model models. -AP
+        if isinstance(model, pymc.Model):
+            self.model = model
+        else:
+            raise AttributeError, 'Not a Model instance.'
+            
+        # Restore the state of the Model from an existing Database.
+        # The `load` method will have already created the Trace objects.
+        if hasattr(self, '_state_'): 
+            for name in set(reduce(list.__add__, self.variables_to_tally)):
+                if self._traces.has_key(name):
+                    obj = getattr(model, name)
+                    self._traces[name]._getfunc = obj.get_value
         
-    def _initialize(self, length):
-        """Create group for the current chain."""
-        i = len(self._h5file.listNodes('/'))+1
-        self._groupname = 'chain%d'%i
-        self._group = self._h5file.createGroup("/", self._groupname, 'Chain #%d'%i)
+        # Create a fresh new state. This is now taken care of in initialize. 
+        else: 
+            for o in model._variables_to_tally:
+                name = o.__name__
+                if np.array(o.value).dtype is np.dtype('object'):
+                    self._traces[name] = TraceObject(name, getfunc=o.get_value, db=self)
+                else:
+                    self._traces[name] = Trace(name, getfunc=o.get_value, db=self)
+                
+                o.trace = self._traces[name]
+    
+    def nchains(self):
+        """Return the number of existing chains."""
+        return len(self._h5file.listNodes('/'))
         
-        self._table = self._h5file.createTable(self._group, 'PyMCsamples', \
-            self._model_trace_description(), 'PyMC samples from chain %d'%i, \
-            filters=self.filter, expectedrows=length)
-        self._row = self._table.row
-        for object in self.model._variables_to_tally:
-            object.trace._initialize(length)
+    def _initialize(self, variables, length):
+        """
+        Create a group named ``Chain#`` to store all data for this chain. 
+        The group contains one pyTables Table, and at least one subgroup 
+        called ``group#``. This subgroup holds ObjectAtoms, which can hold
+        pymc objects whose value is not a numerical array. 
+        
+        There is too much stuff in here. ObjectAtoms should get initialized 
+        """
+        i = self.chains
+        self._chains.append(self._h5file.createGroup("/", 'chain%d'%i, 'Chain #%d'%i))
+        current_object_group = self._h5file.createGroup(self._chains[-1], 'group0', 'Group storing objects.')
+        group_counter = 0
+        object_counter = 0
+        
+        # Create the Table in the chain# group, and ObjectAtoms in chain#/group#. 
+        table_descr = {}
+        for obj in variables:
+            
+            name = obj.__name__
+            arr = asarray(obj.value)
+            
+            if arr.dtype is np.dtype('object'):
+                
+                self._traces[name]._vlarrays.append(self._h5file.createVLArray(\
+                            current_object_group, 
+                            name, \
+                            tables.ObjectAtom(),  \
+                            title=name + ' samples.', 
+                            filters=self.filter))
+                
+                object_counter += 1
+                if object_counter % 4096 == 0:
+                    group_counter += 1
+                    current_object_group = self._h5file.createGroup(self._chains[-1], \
+                        'group%d'%group_counter, 'Group storing objects.')
+            
+            
+            else:
+                table_descr[name] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
+            
+            
+        table = self._h5file.createTable(self._chains[-1], \
+            'PyMCsamples', \
+            table_descr, \
+            title='PyMC samples', \
+            filters=self.filter, 
+            expectedrows=length)
+            
+        self._tables.append(table) 
+        self._rows.append(self._tables[-1].row)
         
         # Store data objects
         for object in self.model.data_stochastics:
             if object.trace is True:
-                setattr(self._table.attrs, object.__name__, object.value)
-    
-    def tally(self, index):
-        for o in self.model._variables_to_tally:
-            o.trace.tally()
-        self._row.append()
-        self._table.flush()
-        self._row = self._table.row
+                setattr(table.attrs, object.__name__, object.value)
         
-    def _finalize(self):
+        
+       # Make sure the variables have a corresponding Trace instance.
+        for obj in variables:
+            name = obj.__name__
+            if not self._traces.has_key(obj.__name__):
+                if np.array(obj.value).dtype is np.dtype('object'):
+                    self._traces[name] = TraceObject(name, getfunc=obj.get_value, db=self)
+                else:
+                    self._traces[name] = Trace(name, getfunc=obj.get_value, db=self)
+        
+            
+            self._traces[name]._initialize(self.chains, length)
+            
+        
+        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
+        self.chains += 1
+    
+    def tally(self, chain=-1):
+        chain = range(self.chains)[chain]
+        for name in self.variables_to_tally[chain]:
+            self._traces[name].tally(chain)
+        self._rows[chain].append()
+        self._tables[chain].flush()
+        self._rows[chain] = self._tables[chain].row
+        
+    def _finalize(self, chain=-1):
         """Close file."""
         # add attributes. Computation time.
-        self._table.flush()
+        #self._tables[chain].flush()
+        self._h5file.flush()
+        
         
     def savestate(self, state):
         """Store a dictionnary containing the state of the Model and its 
@@ -196,19 +351,24 @@ class Database(pickle.Database):
         self._h5file.flush()
             
     def _model_trace_description(self):
-        """Return a description of the table to be created in terms of PyTables columns."""
+        """Return a description of the table and the ObjectAtoms to be created.
+       
+        :Returns:
+        table_description : dict
+          A Description of the pyTables table.
+        ObjectAtomsn : dict
+          A
+      in terms of PyTables 
+        columns, and a"""
         D = {}
         for o in self.model._variables_to_tally:
             arr = asarray(o.value)
-            #if len(s) == 0: 
-            #    D[o.__name__] = tables.Col.from_scdtype(arr.dtype)
-            #else:
             D[o.__name__] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
-        return D
+        return D, {}
 
     def _file_trace_description(self):
         """Return a description of the last trace stored in the database."""
-        table = self._gettable(-1)[0]
+        table = self._gettables()[-1][0]
         return table.description
 
     def _check_compatibility(self):
@@ -221,34 +381,16 @@ class Database(pickle.Database):
         except:
             raise "The objects to tally are incompatible with the objects stored in the file."
             
-    def _gettable(self, chain=-1):
-        """Return a list of hdf5 tables. 
-        
-        :Parameters:
-        chain : scalar or sequence.
-          The index (or indices) of the desired table(s).    
+    def _gettables(self):
+        """Return a list of hdf5 tables name PyMCsamples. 
         """
         
         groups = self._h5file.listNodes("/")
-        nchains = len(groups)    
-        if chain == -1:
-            chains = [nchains-1]    # Index of last group
-        elif chain is None:
-            chains = range(nchains)
-        elif size(chain) == 1:
-           chains = [chain]
+        if len(groups) == 0:
+            return []
+        else:
+            return [gr.PyMCsamples for gr in groups]
         
-        if len(chains) == 0:
-            raise LookupError, 'No table found, that is, no data in file.'
-            
-        table = []
-        for i,c in enumerate(chains):
-            gr = groups[c]
-            table.append(getattr(gr, 'PyMCsamples'))
-
-        return table
-
-
     def close(self):
         self._h5file.close()
 
@@ -260,7 +402,9 @@ class Database(pickle.Database):
         """
         if not np.isscalar(chain):
             raise TypeError, "chain must be a scalar integer."
-        table = self._gettable(chain)[0]
+        
+        table = self._tables[chain]
+        
         if array is False:
             table.setAttr(name, object)
             obj = getattr(table.attrs, name)
@@ -274,7 +418,7 @@ class Database(pickle.Database):
         setattr(self, name, obj)
         
 
-def load(filename, mode='a'):
+def load(dbname, dbmode='a'):
     """Load an existing hdf5 database.
 
     Return a Database instance.
@@ -285,21 +429,43 @@ def load(filename, mode='a'):
       mode : 'a', 'r'
         File mode : 'a': append, 'r': read-only.
     """ 
-    if mode == 'w':
-        raise AttributeError, "mode='w' not allowed for load."
-    db = Database(filename)
-    db._h5file = tables.openFile(filename, mode)
-    db._table = db._gettable(-1)[0]
-    db._group = db._table._g_getparent()
-    for k in db._table.colnames:
-        setattr(db, k, Trace(name=k))
-        o = getattr(db,k)
-        setattr(o, 'db', db)
-    for k in db._table.attrs._v_attrnamesuser:
-        setattr(db, k, getattr(db._table.attrs, k))
-    for k in db._group._f_listNodes():
-        if k.__class__ is not tables.table.Table:
+    if dbmode == 'w':
+        raise AttributeError, "dbmode='w' not allowed for load."
+    db = Database(dbname, dbmode=dbmode)
+    
+    # Create traces from objects stored in Table.
+    for k in db._tables[-1].colnames:
+        db._traces[k] = Trace(name=k, db=db)
+        setattr(db, k, db._traces[k])
+        
+    
+    # Walk nodes proceed from top to bottom, so we need to invert
+    # the list to have the chains in chronological order.
+    objects = {}
+    for node in db._h5file.walkNodes("/", classname='VLArray'):
+            try:
+                objects[node._v_name].append(node)
+            except:
+                objects[node._v_name] = [node,]
+                    
+    # Note that the list vlarrays is in reverse order. 
+    for k, vlarrays in objects.iteritems():
+        db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays[::-1])
+        setattr(db, k, db._traces[k])
+        
+    # Restore table attributes.
+    # This restores the sampler's state for the last chain. 
+    table = db._tables[-1]
+    for k in table.attrs._v_attrnamesuser:
+        setattr(db, k, getattr(table.attrs, k))
+
+    # Restore group attributes.
+    for k in db._chains[-1]._f_listNodes():
+        if k.__class__ not in [tables.Table, tables.Group]:
             setattr(db, k.name, k)
+
+    varnames = db._tables[-1].colnames+ objects.keys()
+    db.variables_to_tally = db.chains * [varnames,]
     return db
 
 def save_sampler(sampler):
