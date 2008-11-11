@@ -12,13 +12,14 @@ The guide is well written and concise. The writing style is relaxed, which makes
 document describes in enough details the general working of pymc, though some users would probably be thankful for more examples. Since the intended audience probably goes from python novices to experts and MCMC newbies to gurus and all permutations, it is probably worthwhile to flesh out the introduction to provide more references and state the assumed competence of readers with respect to these topics. 
 
 With respect to the document structure, the only serious glitch I see is the theoretical section on Monte-Carlo methods. It appears right between the `Tutorial` and the `Building Model` sections. In a sense, it distracts readers from the main topic which is understanding how pymc works and what it can do. My feeling is that it would be more appropriate as an appendix, with ample references to it in the text. Apart from that, an abstract and a conclusion are missing. 
-
+[AP] Do we really need an abstract and conclusion, even for JSS?
+[DH] Maybe not an abstract, but some kind of conclusion (what's next, get involved, ...) would still be nice. 
 
 Specific Comments
 -----------------
 
  * Use the JSS style.
- * In the logo on the first page, the ship's trace has weird looking diagonal cuts. 
+ * In the logo on the first page, the ship's trace has weird looking diagonal cuts. [AP] I'll work on it.
  * Replaces occurrences of 
    In [2]: tada
    Out[2]: 45
@@ -40,8 +41,10 @@ Line	Comment
 11		well documented -- is the rest not so well documented ?
 25 		Faster, optimized probability distributions, with # new distributions. 
 28 		Not sure an example of usage should go in so early in the text. 
+[AP] I like this bit here- I think it has a good chance of hooking window-shoppers with short attention spans.
 60   	Markov chain Monte Carlo (MCMC)
-61		The choice... maybe give more arguments to switch away from BUGS.
+61		The choice... maybe give more arguments to switch away from BUGS. 
+[AP] I think we should studiously avoid saying anything bad about BUGS or R, even if it means being less-than-explicit about the pros and cons, and just let people make their own decisions based on the features.
 62		the use OF MCMC
 72 		for which Python, NumPy and a fortran compiler are available.
 72 		Other dependencies are not mandatory, but substantially enrich the pymc experience.
@@ -59,26 +62,38 @@ Line	Comment
 157 	of year $t$.
 158		Prior parameters (also called hyperparameters). 
 160 	Should we put the node graph ? 
+[AP] Tricky one. Ecologists seem to dislike node graphs for the most part, but some of the machine learning types that have been cropping up on the list would like them.
 162		Put random in italic. 
 163		Put random in italic. 
 166		Is the footnote really pertinent in a tutorial ?
+[AP] Nope.
 167 	No transition from previous paragraph. 
 178		Wondering if it would be best to replace from pymc import ... by import pymc.
+[AP] In the tutorial, I'd vote for from pymc import *.
 180 	doc = "Switchpoint [year]"
 184		Here the parameter is beta, while in the model definition it's r_e. Maybe the model definition should use \beta_e, \beta_l.
+[AP] Good catch.
 188 	Remove plot=False and comments. Add docstring.
+[AP] Really remove plot=False? It's pretty irritating to watch r get plotted... 
 194 	Since it is
 218 	A PyMC probability model is a linked collection of variables. To see the nature of these links.
 228 	I think it would be wise here to show the node graph. It's a cool feature and will put a picture on the parents and children words.
+[AP] OK, this is probably the place for it.
 235		Here you use Stochastics, at some other places it is \texttt{Stochastics} and in the convergence section it is stochs. This should be uniform throughout. 
+[AP] Agreed. We need a typeface convention.
 237		Should we really print the whole r array ?
+[AP] Sure. It's big, but it's neat, so it doesn't look at all confusing or distracting. Many of our audience find spreadsheets friendlier than programming languages because the data is right in front of them.
 240 	logarithm 
 248		Users are thus not limited to the set of of statistical distributions provided by PyMC.
 251		Remove comments
 262		Add M.sample(iter=10000. burn=1000)
+[AP] It's there on line 65...
+[DH] I meant just there, not on a different page. 
 273		Explain the new interface to the traces. 
+[AP] Actually, you ought to update this with the new trace slicing conventions.
 279 	from pylab import hist, show   ... show()
 292		...which is interesting.  why ? Does this depend on the histogram resolution ?
+[AP] I don't know, people like bimodal distributions. I tried it at a few different resolutions and got the same, but maybe it was just a fluke.
 313		This is a bit weird, the tutorial is part of the reference manual. This should rather look like: Many more topics are covered in the next sections, including:
 318		Using ...
 320		Saving ...
@@ -95,18 +110,26 @@ Line	Comment
 
 
 494		random: ...
+[AP] Throughout the building models section, should we really document the arguments in such detail or should we leave that for the API reference? If we decide to keep the detail, we need to make sure it's in sync with the current API. There are bound to be some differences.
+[DH] I'd leave the lower level details for the API document. 
 530		np.inf, np.log
 538 	NumPy
 538		SciPy's implementation of distributions is 10 times slower than pymc.
+[AP] Again, I think we should avoid saying anything bad about other packages; people will figure this out.
+[DH] OK, but then we shouldn't say that SciPy's functions are fast. 
 556		rseed is not a seed for the random generator, just a flag to signal the variable should be randomly sampled before sampling to provide a starting point. 
+[AP] Oh, I had no idea!
 564		Can we put this in a box or side-bar ? Integrate it visually as a CAUTION/WARNING ?
+[AP] That would be better. I don't know how to do that in standard latex.
 576		Should we replace @data by @observed ? Less chance of conflict with user defined variables. 
+[AP] This ticket still hasn't been resolved...
 577		This sentence is a bit weird. 
 579 	changed, and it won't be sampled by the fitting method. 
 589		Type face of deterministic
 592		Type face of deterministic
 595 	Thanks ... this has already been said. 
-597 	the user doesn't ... already been said. 
+597 	the user doesn't ... already been said.
+[AP] It's OK if we repeat ourselves a bit. People are going to flip to the page they want, not read through like a novel. 
 606		typeface of index
 607		typeface of index
 624 	also a plot argument I guess. 
@@ -114,28 +137,40 @@ Line	Comment
 638	 	In the equation, put the i=0,...,N-2 at the right of the second line. 
 642		This is a detail, but you could do without the last_x variable and use mu=x[-1]
 643		The python expression... isn't it evident ?
+[AP] Just trying to noob-proof it to the extent possible. Fine with taking it out.
 728		I understand what this means, but doubt this is valid Python. 
-
+[AP] Sure it is!
+[DH] Well, well, well. I'm dumbfounded. 
 761		What happens for stochs without random method ?
+[AP] It _should_ raise an error.
 764		only stochs whose rseed attribute is not None are changed.
 770		representations (see ...). 
+[AP] Lauritzen and Spiegelhalter, Jordan
 788		output_path is not supported by the db backends.
 807		The call arguments to Sampler needs to be updated. 
 807		document calc_deviance: whether or not a deviance deterministic should be created. 
 811		isn't length==iter ?
+[AP] This text dates back to the stone age...
 819		database. The actual write operation depends on the database backend chosen, see ...
 820		This is not supported yet for sqlite and mysql.
 824		Explain that trace_index is different from the sampler's index (in MCMC), since some iterations might not be saved due to burn and thin arguments. 
 825	 	calc_deviance
 827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
+[AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy.
 885		loop, each `tune_interval` iterations. 
-897		Gibbs step methods are not in the sandbox anymore. 
+897		Gibbs step methods are not in the sandbox anymore.
+[AP] They are in my checkout...
+[DH] I got confused because there is a Gibbs StepMethod in StepMethods.py, but it's a dummy I guess. 
 925		How ?
 927		More info. 
 938		Provide more info about the method. 
 952		step method printed output. 
 954		cite and add a reference. 
+[AP] You mean a reference for conjugate submodels in addition to Wikipedia, or the fact that they can be handled by Gibbs? I guess the latter is probably in Gilks, but would need to look.
+[DH] I mean display it as a reference and put the full url in the references section.
 961		not in the sandbox anymore.
+[AP] If they aren't, they should be. :)
+[DH] Again, my bad.
 983		can are
 1010	check sentence
 1045	disk no comma
@@ -149,6 +184,7 @@ Line	Comment
 1135	principle reason
 1177 	Put a figure ?
 1187	I get weird looking symbols here. 
+[AP] me too.
 1271	This section ... strange transition, and not really a section.
 1292	algorithms
 
@@ -157,12 +193,4 @@ Bibiliography
 * Gelman, 1996:  Posterior predictive
 * Geweke, period after pages. 
 * Should we really put links to scopus and jstor ?
-
-
-
-
- 
-
-
-
 
