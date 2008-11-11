@@ -420,7 +420,7 @@ class Sampler(Model):
                 
                 # Assign a default name for the database output file. 
                 if self._db_args.get('dbname') is None:
-                    self._db_args['dbname'] = self.__name__
+                    self._db_args['dbname'] = self.__name__ + '.' + db
                     
                 self.db = module.Database(**self._db_args)
             elif db in database.__modules__:
