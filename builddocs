@@ -5,16 +5,18 @@
 # By introspection, epydoc finds the related docstrings and creates a tex output. This way, 
 # we avoid documenting all the stuff that lives in the real pymc.distributions.py
 
-epydoc --verbose --debug --config epydoc.conf
+#epydoc --verbose --debug --config epydoc.conf
 
 
 # Make manual
 cd docs
-cat distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
-sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
-rst2latex ../README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\hypertarget\{installation\}\{\}' -o README.tex
-rst2latex ../INSTALL.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex
-rst2latex ../pymc/database/README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
+
+#cat distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
+#sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
+
+python rst2latex.py ../README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\hypertarget\{installation\}\{\}' -o README.tex
+python rst2latex.py ../INSTALL.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex
+python rst2latex.py ../pymc/database/README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
 
 mkdir pdf
 pdflatex -output-directory=pdf -interaction batchmode guide2.0
