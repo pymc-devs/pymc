@@ -24,19 +24,17 @@ The symbols have the following meanings:
 \begin{description}
     \item[$D_t$:] The number of disasters in year $t$.
     \item[$r_t$:] The rate parameter of the Poisson distribution of disasters in year $t$.
-    \item[$s$:] The year in which the rate parameter changes.
+    \item[$s$:] The year in which the rate parameter changes (the switchpoint).
     \item[$e$:] The rate parameter before the switchpoint $s$.
-    \item[$l$:] The rate parameter after the switchpoint.
-    \item[$t_l$ and $t_h$:] The lower and upper boundaries of time $t$.
-    \item[$r_e$ and $r_l$:] Prior parameters.
+    \item[$l$:] The rate parameter after the switchpoint $s$.
+    \item[$t_l$ and $t_h$:] The lower and upper boundaries of year $t$.
+    \item[$\beta_e$ and $\beta_l$:] Prior parameters (also called hyperparameters).
 \end{description}
 Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter three are known as the `parents' of $D$ and $D$ is called their `child'. Similarly, the parents of $s$ are $t_l$ and $t_h$, and $s$ is the child of $t_l$ and $t_h$.
 
 \section*{Conditionally stochastic and conditionally deterministic variables}
 
-At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Under the Bayesian interpretation of probability, `random' variables have not necessarily arisen from a physical random process. Instead, probability distributions are used to characterize our uncertainty in the true parameter values. Random variables are represented in PyMC by \texttt{Stochastic} and \texttt{Deterministic} classes\footnote{Both \texttt{Stochastic} and \texttt{Deterministic} are subclasses of the generic \texttt{Variable} class.}.
-
-There is a difference between $r$ and the other variables: if we knew the values of $r$'s parents, we could compute the value of $r$ exactly. This variable, represented by the \texttt{Deterministic} class, is defined by a mathematical function which returns its value given values for its parents. This nomenclature is a bit confusing, because these objects usually represent random variables; if the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \texttt{DeterminedByValuesOfParents}.
+At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random} variables. Under the Bayesian interpretation of probability, \emph{random} variables have not necessarily arisen from a physical random process. Instead, probability distributions are used to characterize our uncertainty in the true parameter values. Random variables are represented in PyMC by \texttt{Stochastic} and \texttt{Deterministic} classes (Both \texttt{Stochastic} and \texttt{Deterministic} are subclasses of the generic \texttt{Variable} class). There is a difference between $r$ and the other variables: if we knew the values of $r$'s parents, we could compute the value of $r$ exactly. This variable, represented by the \texttt{Deterministic} class, is defined by a mathematical function which returns its value given values for its parents. This nomenclature is a bit confusing, because these objects usually represent random variables; if the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \texttt{DeterminedByValuesOfParents}.
 
 On the other hand, even if the values of the parents of parameters $s$, $D$, $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \texttt{Stochastic} class represents these variables. A better name for these objects might be \texttt{RandomEvenGivenValuesOfParents}.
 
@@ -67,8 +65,7 @@ Next, we define the variable $r$, which selects the early rate $e$ for times bef
 \begin{verbatim}
 	@deterministic(plot=False)
 	def r(s=s, e=e, l=l):
-	    # if np.random.random() < .001:
-	    #     raise ValueError, 'Lala'
+		""" Concatenate Poisson means """
 	    out = np.empty(len(disasters_array))
 	    out[:s] = e
 	    out[s:] = l
@@ -80,7 +77,7 @@ The last step is to define the number of disasters $D$. This is done the same wa
 \end{verbatim}
 
 \subsection*{Why are data and unknown variables represented by the same object?}
-Since its represented by a \texttt{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
+Since it is represented by a \texttt{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -107,7 +104,7 @@ and we would have no use for MCMC or any other fitting method. Bayesian methods,
 
 \section*{Parents and children}
 
-We have created a PyMC probability model: a linked collection of variables. To see the nature of the links, import or run \texttt{DisasterModel.py} and examine $s$'s \texttt{parents} attribute from the Python prompt\footnote{If you do not recognize this prompt, it is because we are using the IPython shell, rather than the standard shell.}:
+We have created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run \texttt{DisasterModel.py} and examine $s$'s \texttt{parents} attribute from the Python prompt:
 \begin{verbatim}
    >>> s.parents
    >>> {'lower': 0, 'upper': 110}
@@ -123,6 +120,10 @@ We are using $r$ as a distributional parameter of $D$, so $r$ is $D$'s parent. $
    >>> set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
 \end{verbatim}
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \texttt{parents}, \texttt{children} is a set; variables do not associate their children with any particular distributional role. Try examining the \texttt{parents} and \texttt{children} attributes of the other parameters in the model.
+
+\begin{center}
+   \epsfig{file=dag.pdf, width=5cm}
+\end{center}
 
 \section*{Variables' values and log-probabilities}
 All PyMC variables have an attribute called \texttt{value}. Try examining $D$'s value, and you'll see the initial value we provided for it:
@@ -146,7 +147,7 @@ If you check $e$'s, $s$'s and $l$'s values, you'll see random initial values gen
    >>> l.value
    >>> 2.6491936762267811
 \end{verbatim}
-Of course, since these are Stochastic elements, your value will be different than these. If you check $r$'s value, you'll see an array whose first $s$ elements are \texttt{e.value}, and whose remaining elements are \texttt{l.value}:
+Of course, since these are \texttt{Stochastic} elements, your value will be different than these. If you check $r$'s value, you'll see an array whose first $s$ elements are \texttt{e.value}, and whose remaining elements are \texttt{l.value}:
 \begin{verbatim}
    >>> r.value
    >>> 
@@ -175,7 +176,7 @@ Of course, since these are Stochastic elements, your value will be different tha
 \end{verbatim}
 To compute its value, $r$ calls the funtion we used to create it, passing in the values of its parents.
 
-Stochastic objects can evaluate their probability mass or density functions at their current values given the values of their parents. The log of a stochastic object's probability mass or density can be accessed via the \texttt{logp} attribute. For vector-valued variables like $D$, the \texttt{logp} attribute returns the log of the joint probability or density of all elements of the value. Try examining $s$'s and $D$'s log-probabilities and $e$'s and $l$'s log-densities:
+\texttt{Stochastic} objects can evaluate their probability mass or density functions at their current values given the values of their parents. The logarithm of a stochastic object's probability mass or density can be accessed via the \texttt{logp} attribute. For vector-valued variables like $D$, the \texttt{logp} attribute returns the log of the joint probability or density of all elements of the value. Try examining $s$'s and $D$'s log-probabilities and $e$'s and $l$'s log-densities:
 \begin{verbatim}
    >>> s.logp
    >>> -4.7095302013123339
@@ -189,7 +190,7 @@ Stochastic objects can evaluate their probability mass or density functions at t
    >>> l.logp
    >>> -2.6491936762267811
 \end{verbatim}
-Stochastic objects need to call an internal function to compute their \texttt{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \texttt{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). 
+\texttt{Stochastic} objects need to call an internal function to compute their \texttt{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \texttt{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). Users are thus not limited to the set of of statistical distributions provided by PyMC.
 
 \subsection*{Using \texttt{Variables} as parents of \texttt{Variables}}
 
@@ -197,8 +198,7 @@ Let's take a closer look at our definition of $r$:
 \begin{verbatim}
    	@deterministic(plot=False)
 	def r(s=s, e=e, l=l):
-	    # if np.random.random() < .001:
-	    #     raise ValueError, 'Lala'
+	    """ Concatenate Poisson means """
 	    out = np.empty(len(disasters_array))
 	    out[:s] = e
 	    out[s:] = l
@@ -236,13 +236,14 @@ The unknown variables $s$, $e$, $l$ and $r$ will all accrue samples, but $D$ wil
 \subsection*{Sampling output} 
 You can examine the marginal posterior of any variable by plotting a histogram of its trace:
 \begin{verbatim}
-   >>> from pylab import hist
+   >>> from pylab import hist, show
    >>> hist(l.trace())
    >>> 
    (array([   8,   52,  565, 1624, 2563, 2105, 1292,  488,  258,   45]),
     array([ 0.52721865,  0.60788251,  0.68854637,  0.76921023,  0.84987409,
            0.93053795,  1.01120181,  1.09186567,  1.17252953,  1.25319339]),
     <a list of 10 Patch objects>)
+   >>> show()
 \end{verbatim}
 You should see something like this:
 \begin{center}
@@ -257,7 +258,7 @@ You will see several figures like the following:
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
 \end{center}
-The left-hand pane of this figure shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance [\textbf{ref}]. If the trace looks good, the right-hand pane is useful for visualizing the posterior. The posterior of $s$ seems to be bimodal, which is interesting.
+The left-hand pane of this figure shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance [\textbf{ref}]. If the trace looks good, the right-hand pane is useful for visualizing the posterior. Notice that the posterior of $s$ appears to be bimodal.
 
 For a non-graphical summary of the posterior, simply call \texttt{M.stats()}.
 
@@ -304,14 +305,14 @@ You can see all the step method classes that have been defined (including user-d
 See the docstrings of the individual classes for details on how to use them.
 
 \section*{Beyond the basics}
-That's all there is to basic PyMC usage. Many more topics are covered in the reference manual (all chapters after \ref{chap:MCMC}), including:
+That's all there is to basic PyMC usage. Many more topics are covered in the subsequent sections, including:
 \begin{itemize}
    \item Class \texttt{Potential}, another building block for probability models in addition to \texttt{Stochastic} and \texttt{Deterministic}
    \item Normal approximations
-   \item How to use custom probability distributions
-   \item The inner workings of the objects
-   \item How to save traces to the disk, or stream them to the disk during sampling
-   \item How to write your own step methods and fitting algorithms.
+   \item Using custom probability distributions
+   \item Object architecture
+   \item Saving traces to the disk, or stream them to the disk during sampling
+   \item Writing your own step methods and fitting algorithms.
 \end{itemize}
 Also, be sure to check out the documentation for the Gaussian process extension, located in folder \texttt{gp} in the source directory. 
 

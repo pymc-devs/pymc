@@ -44,47 +44,16 @@ Line	Comment
 138 	Add mailing list info and link. 
 
 
-154		changes: the switchpoint.
-156		switchpoint $s$.
-157 	of year $t$.
-158		Prior parameters (also called hyperparameters). 
 160 	Should we put the node graph ? 
 [AP] Tricky one. Ecologists seem to dislike node graphs for the most part, but some of the machine learning types that have been cropping up on the list would like them.
-162		Put random in italic. 
-163		Put random in italic. 
-166		Is the footnote really pertinent in a tutorial ?
-[AP] Nope.
-167 	No transition from previous paragraph. 
+[CF] I just published one in Endangered Species Research, and they did not seem to mind. They are particularly useful for very complex models.
 178		Wondering if it would be best to replace from pymc import ... by import pymc.
 [AP] In the tutorial, I'd vote for from pymc import *.
+[CF] from pymc import * is almost universally discouraged these days, because of namespace concerns. Dont want to encourage bad habits ...
 180 	doc = "Switchpoint [year]"
-184		Here the parameter is beta, while in the model definition it's r_e. Maybe the model definition should use \beta_e, \beta_l.
-[AP] Good catch.
-188 	Remove plot=False and comments. Add docstring.
-[AP] Really remove plot=False? It's pretty irritating to watch r get plotted... 
-194 	Since it is
-218 	A PyMC probability model is a linked collection of variables. To see the nature of these links.
-228 	I think it would be wise here to show the node graph. It's a cool feature and will put a picture on the parents and children words.
-[AP] OK, this is probably the place for it.
-235		Here you use Stochastics, at some other places it is \texttt{Stochastics} and in the convergence section it is stochs. This should be uniform throughout. 
-[AP] Agreed. We need a typeface convention.
-237		Should we really print the whole r array ?
-[AP] Sure. It's big, but it's neat, so it doesn't look at all confusing or distracting. Many of our audience find spreadsheets friendlier than programming languages because the data is right in front of them.
-240 	logarithm 
-248		Users are thus not limited to the set of of statistical distributions provided by PyMC.
-251		Remove comments
-262		Add M.sample(iter=10000. burn=1000)
-[AP] It's there on line 65...
-[DH] I meant just there, not on a different page. 
 273		Explain the new interface to the traces. 
 [AP] Actually, you ought to update this with the new trace slicing conventions.
-279 	from pylab import hist, show   ... show()
-292		...which is interesting.  why ? Does this depend on the histogram resolution ?
-[AP] I don't know, people like bimodal distributions. I tried it at a few different resolutions and got the same, but maybe it was just a fluke.
-313		This is a bit weird, the tutorial is part of the reference manual. This should rather look like: Many more topics are covered in the next sections, including:
-318		Using ...
-320		Saving ...
-321		Writing... 
+
 
 
 333		simulating (drawing samples)

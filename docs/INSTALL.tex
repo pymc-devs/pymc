@@ -2,8 +2,8 @@
 
 
 \texttt{pymc} is known to run on Mac OS X, Linux and Windows, but in theory should be 
-able to work on just about any platform for which Python and the numpy module 
-are  available. Before installing \texttt{pymc}, you will need to install some dependencies.
+able to work on just about any platform for which Python, the NumPy module and a Fortran 
+are available. Before installing \texttt{pymc}, you will need to install some dependencies; some are mandatory, while others substantially enrich the \texttt{pymc} experience.
 
 
 %___________________________________________________________________________
@@ -22,10 +22,11 @@ dependencies, and all are freely available online.
 \item {} 
 \href{http://www.scipy.org/NumPy}{NumPy}: The fundamental scientific programming package, it provides a 
 multidimensional array type and many useful functions for numerical analysis. 
-Use the latest version preferably.
+We recommend installing the latest version, even if it is a development release,
+as it typically contains important bug fixes and enhancements.
 
 \item {} 
-\href{http://matplotlib.sourceforge.net/}{Matplotlib} (optional): A plotting package.
+\href{http://matplotlib.sourceforge.net/}{Matplotlib} (optional): A plotting library that produces publication-quality figures.
 
 \item {} 
 \href{http://www.scipy.org/}{SciPy} (optional): A scientific package with a lot of functionality.
@@ -194,7 +195,9 @@ pymc.test()
 
 In case of failures, messages detailing the nature of these failures will 
 appear. In case this happens (it shouldn't), please report
-the problems on the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}, specifying the version you are using, along with the computing platform and operating system.
+the problems on the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}, specifying the version you are using and the
+environment. Some of the tests require SciPy, if it is not installed on your 
+system, you should not worry too much about failing tests.
 
 
 %___________________________________________________________________________

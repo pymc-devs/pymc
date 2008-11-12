@@ -207,10 +207,10 @@ l\sim \textup{Exp}(1)
 The symbols have the following meanings:
 \begin{description}
     \item[$D_t$:] The number of disasters in year $t$.
-    \item[$r_t$:] The rate stoch of the Poisson distribution of disasters in year $t$.
-    \item[$s$:] The year in which the rate stoch changes.
-    \item[$e$:] The rate stoch before the switchpoint $s$.
-    \item[$l$:] The rate stoch after the switchpoint.
+    \item[$r_t$:] The rate of the Poisson distribution of disasters in year $t$.
+    \item[$s$:] The year in which the rate changes.
+    \item[$e$:] The rate before the switchpoint $s$.
+    \item[$l$:] The rate after the switchpoint.
 \end{description}
 
 The product
@@ -227,7 +227,7 @@ The dependence structure of a statistical model can be represented by a \emph{di
 \begin{center}
 \epsfig{file=DisasterModel.pdf,width=7cm}
 \epsfig{file=DisasterModel2.pdf,width=7cm}
-\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the stochs of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the stoch names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' stoch.
+\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the stochs of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the 	\texttt{Stochastic} names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' stoch.
 }
 \label{fig:disaster_dag}
 \end{center}
@@ -239,11 +239,11 @@ p(s|D,l,e)\prod_tp(D_t|l,e,D_{1851\ldots t-1})p(l)p(e),
 \end{eqnarray*}
 and drawn a new DAG representation of the dependence structure. However, that would have been extremely uncomfortable. Our intuition tells us that $e$, $l$ and $s$ influence $D_t$, not that $D_t$, $e$ and $l$ influence $s$. In other words, the statement
 \begin{quote}
-Given the rate stoch before the switchpoint, the rate stoch after the switchpoint, and the switchpoint itself, the distribution of disasters in year $t$ is $d$.
+Given the rate before the switchpoint, the rate after the switchpoint, and the switchpoint itself, the distribution of disasters in year $t$ is $d$.
 \end{quote}
 is much more natural than the statement
 \begin{quote}
-Given the rate stoch befare the switchpoint, the rate stoch after the switchpoint, and annual disasters up to year $t-1$, the distribution of disasters in year $t$ is $d^*$. Further, given all the data on annual disasters the distribution of the switchpoint is $d^{**}$.
+Given the rate befare the switchpoint, the rate after the switchpoint, and annual disasters up to year $t-1$, the distribution of disasters in year $t$ is $d^*$. Further, given all the data on annual disasters the distribution of the switchpoint is $d^{**}$.
 \end{quote}
 
 Bayesian methods, and statistics in general, are usually needed \emph{because} it's natural to think of the data as consequences of the inferential targets. This point can be counterintuitive at first, as most scientists' instinct is to regard data as fixed a priori and unknown stochs' values as dependent on the data. However, it's important to understand for effective model-building in PyMC.
@@ -251,15 +251,15 @@ Bayesian methods, and statistics in general, are usually needed \emph{because} i
 
 
 \section{\texttt{Stochastic} and \texttt{Deterministic}}\label{sec:PyMCObjects}
-PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A stoch object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A dtrm object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a dtrm.
+PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A \texttt{Stochastic} object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A dtrm object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a dtrm.
 
-These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves stoch updating dtrmity to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level dtrmity to the \texttt{Model} class (sec \ref{sec:Model})
+These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves \texttt{Stochastic} updating dtrmity to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level dtrmity to the \texttt{Model} class (sec \ref{sec:Model})
 
 PyMC also provides a special container class for stochs and dtrms to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
 \subsection{\texttt{Stochastic}}\label{sub:stoch}
 
-Stochastics expose the following attributes:
+\texttt{Stochastics} expose the following attributes:
 \begin{description}
     \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed stoch's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
     \item[\texttt{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
@@ -271,7 +271,7 @@ Stochastics expose the following attributes:
     \item[\texttt{\_\_doc\_\_}:] The docstring of the stoch.
 \end{description}
 
-Stochastics have the following methods:
+\texttt{Stochastics} have the following methods:
 \begin{description}
 	\item[\texttt{touch()}:] PyMC stochs and dtrms cache the last few values of their arguments. If a stoch's log-probability or a dtrm's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
     \item[\texttt{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
@@ -281,16 +281,16 @@ Stochastics have the following methods:
 In order to make specification of standard probability models easy while making room for specification of even the most exotic probability model, PyMC provides four ways to instantiate stochs.
 \begin{description}
     \item[Short] \textbf{XXX}
-    \item[Medium] A normally-distributed stoch called \texttt{A} could be instantiated using the medium interface as follows:
+    \item[Medium] A normally-distributed \texttt{Stochastic} called \texttt{A} could be instantiated using the medium interface as follows:
     \begin{verbatim}
 @stoch
 def A(value=3., mu=B, tau=C):
     """Stochastic A is normally distributed."""
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
     \end{verbatim}
-    The decorator \texttt{stoch} turns the function \texttt{A} into a stoch which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the stoch. The names of the function's other arguments become the keys of the stoch's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the stoch as well.
+    The decorator \texttt{stoch} turns the function \texttt{A} into a \texttt{Stochastic} which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the stoch. The names of the function's other arguments become the keys of the stoch's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the \texttt{Stochastic} as well.
 
-    The stoch may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
+    The \texttt{Stochastic} may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
 
     The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this stoch: \texttt{@stoch(trace = False)}.
     \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the stoch's value conditional only on its parents.
@@ -307,7 +307,7 @@ def A(value=3., mu=B, tau=C):
 
     rseed = 1.
     \end{verbatim}
-The stoch again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Stochastic.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
+The \texttt{Stochastic} again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Stochastic.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
 
     \item[Direct] Some users may prefer not to use the \texttt{stoch} decorator, but to instantiate \texttt{Stochastic} directly:
 \begin{verbatim}
