@@ -270,6 +270,8 @@ def test_regression_155():
 
 
 def test_interactive():
+    if 'sqlite' not in dir(pymc.database):
+        raise nose.SkipTest
     M=MCMC(DisasterModel,db='sqlite', dbname='interactiveDisaster.sqlite', dbmode='w')
     M.isample(10)
         
