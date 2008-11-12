@@ -1,0 +1,91 @@
+%
+%  PyMC User's Guide for submission to the Journal of Statistical Software
+%
+%  Created by Chris Fonnesbeck on 2008-11-12.
+%  Copyright (c) 2008 . All rights reserved.
+%
+\documentclass[]{jss}
+
+\author{Christopher Fonnesbeck\\University of Otago \And 
+        David Huard\\Institut National de la\\Recherche Scientifique \And
+		Anand Patil\\University of Oxford}
+\title{\pkg{PyMC} 2.0: Bayesian Stochastic Modelling in \proglang{Python}}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Christopher Fonnesbeck, David Huard, Anand Patil} %% comma-separated
+\Plaintitle{PyMC 2.0: Bayesian Stochastic Modelling in Python} %% without formatting
+\Shorttitle{PyMC 2.0} %% a short title (if necessary)
+
+\Abstract{
+  The abstract of the article.
+}
+\Keywords{statistics, Markov chain Monte Carlo, simulation, \proglang{Python}}
+\Plainkeywords{statistics, Markov chain Monte Carlo, simulation, Python}
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+\begin{document}
+
+%\maketitle
+
+%\tableofcontents
+%\linenumbers
+\section[Introduction]{Introduction} 
+\label{sec:intro} 
+\input{README}
+
+\section[Installation]{Installation} 
+\label{sec:install} 
+\input{INSTALL}
+
+\section[Tutorial]{Tutorial}
+\label{sec:tutorial}
+\input{tutorial}
+
+\section[MCMC]{Markov chain Monte Carlo} 
+\label{sec:MCMC} 
+\input{theory}
+
+\section[Building Models]{Building models}
+\label{sec:modelbuilding} 
+\input{modelbuilding}
+
+\section[Fitting Models]{Fitting models}
+\label{sec:modelfitting}
+\input{modelfitting}
+
+\section[Sampling Results]{Saving and managing sampling results}
+\label{sec:database} 
+\input{database}
+
+\section[Model Checking]{Model checking and diagnostics} 
+\label{sec:modelchecking}
+\input{modelchecking}
+
+\section[Extending PyMC]{Extending PyMC}
+\label{sec:extending}
+\input{extending}
+
+\section[Distributions]{Probability distributions} 
+\label{sec:distributions}
+Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
+\begin{itemize}
+    \item A function that evaluates its log-probability or log-density: \texttt{normal_like()}.
+    \item A function that draws random variables: \texttt{rnormal()}.
+    \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
+    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
+\end{itemize} 
+\input{distributions-module}
+
+\bibliographystyle{jss}
+\bibliography{pymc}
+
+\end{document}
+ 
