@@ -85,15 +85,15 @@ class Trace(base.Trace):
             self._trace[chain][self._index[chain]] = self._getfunc()
         self._index[chain] += 1
 
-    def truncate(self, chain, index):
+    def truncate(self, index, chain):
         """
         Truncate the trace array to some index.
         
         :Parameters:
-        chain : int
-          The chain index.
         index : int
           The index within the chain after which all values will be removed.
+        chain : int
+          The chain index (>=0).
         """
         self._trace[chain] = self._trace[chain][:index]
 

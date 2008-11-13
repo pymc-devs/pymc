@@ -198,7 +198,7 @@ class MCMC(Sampler):
             self.status='halt'
 
         if self.status == 'halt':
-            self.halt()
+            self._halt()
     
     def tune(self):
         """

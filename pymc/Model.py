@@ -276,10 +276,12 @@ class Sampler(Model):
         # Loop
         self._current_iter = 0
         self._loop()
+        self._finalize()
 
-        # Finalize
+    def _finalize(self):
+        """Reset the status and tell the database to finalize the traces.""" 
         if self.status in ['running', 'halt']:
-            if verbose > 0:      
+            if self.verbose > 0:      
                 print 'Sampling finished normally.'
             self.status = 'ready'
             
@@ -324,7 +326,7 @@ class Sampler(Model):
             self.status='halt'
 
         if self.status == 'halt':
-            self.halt()
+            self._halt()
     
     def draw(self):
         """
@@ -429,9 +431,16 @@ class Sampler(Model):
         self.db.connect_model(self)
 
     def halt(self):
+        """Halt a sampling running in another thread."""
+        self.status = 'halt'
+        print 'Waiting for iteration to complete.'
+        while self._sampling_thread.isAlive():
+                sleep(.1)
+        
+    def _halt(self):
         print 'Halting at iteration ', self._current_iter, ' of ', self._iter
-        for variable in self._variables_to_tally:
-            variable.trace.truncate(self._cur_trace_index)
+        self.db.truncate(self._cur_trace_index)
+        self._finalize()
            
     #
     # Tally
@@ -478,7 +487,12 @@ class Sampler(Model):
         """
         Restarts thread in interactive mode
         """
-        self._sampling_thread = Thread(target=self._loop)
+        
+        def sample_and_finalize():
+            self._loop()
+            self._finalize()
+            
+        self._sampling_thread = Thread(target=sample_and_finalize)
         self.status = 'running'        
         self._sampling_thread.start()
         self.iprompt()
@@ -490,7 +504,8 @@ class Sampler(Model):
         Commands:
           i -- print current iteration index
           p -- pause
-          q -- quit
+          h -- halt (stop sampling and truncate trace)
+          q -- quit the pymc console
         """
         
         print """==============
@@ -520,9 +535,11 @@ class Sampler(Model):
                     elif cmd == 'p':
                         self.status = 'paused'
                         break
-                    elif cmd == 'q':
+                    elif cmd == 'h':
                         self.status = 'halt'
                         break
+                    elif cmd == 'q':
+                        return
                     elif cmd == '\n':
                         prompt = True
                         pass
@@ -539,13 +556,18 @@ class Sampler(Model):
                 self.status = 'halt'
 
 
-        if not self.status == 'ready':        
+        if self.status == 'ready':
+            print "Sampling terminated successfully."
+        else:
             print 'Waiting for current iteration to finish...'
             while self._sampling_thread.isAlive():
                 sleep(.1)
             print 'Exiting interactive prompt...'
             if self.status == 'paused':
                 print 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
+        
+            
+
 
 
     def get_state(self):
