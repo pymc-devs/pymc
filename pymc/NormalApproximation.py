@@ -450,7 +450,7 @@ class MAP(Model):
 
 class NormApprox(MAP, Sampler):
     """
-    N = NormApprox(input, db='ram', eps=.001, diff_order = 5, output_path=None, **kwds)
+    N = NormApprox(input, db='ram', eps=.001, diff_order = 5, **kwds)
     
     Normal approximation to the posterior of a model.
     
@@ -478,13 +478,13 @@ class NormApprox(MAP, Sampler):
         
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', output_path=None, eps=.001, diff_order = 5, **kwds):
+    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, **kwds):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
         
         MAP.__init__(self, input, eps, diff_order)
 
-        Sampler.__init__(self, input, db, output_path, reinit_model=False, **kwds)
+        Sampler.__init__(self, input, db, reinit_model=False, **kwds)
         self.C = NormApproxC(self)
 
     def fit(self, *args, **kwargs):

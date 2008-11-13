@@ -106,7 +106,7 @@ class NormalModelC(object):
         
 class NormalModel(pymc.Sampler):
     """
-    N = NoralModel(input, db='ram', output_path=None, **kwds))
+    N = NoralModel(input, db='ram', **kwds))
     
     A Sampler subclass whose variables comprise a Gaussian submodel.
     
@@ -115,13 +115,13 @@ class NormalModel(pymc.Sampler):
     -  C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
     
     """
-    def __init__(self, input, db='ram', output_path=None, **kwds):
+    def __init__(self, input, db='ram', **kwds):
 
         if not isinstance(input, NormalSubmodel):
             raise ValueError, 'input argument must be NormalSubmodel instance.'
 
         self.NSM = input
-        pymc.Sampler.__init__(self, input, db=db, output_path=output_path, reinit_model=True, **kwds)
+        pymc.Sampler.__init__(self, input, db=db, reinit_model=True, **kwds)
     
         self.mu = NormalModelMu(self)
         self.C = NormalModelC(self)

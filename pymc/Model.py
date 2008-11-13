@@ -81,15 +81,13 @@ class Model(ObjectContainer):
     """
     The base class for all objects that fit probability models. Model is initialized with:
 
-      >>> A = Model(input, output_path=None, verbose=0)
+      >>> A = Model(input, verbose=0)
 
       :Parameters:
         - input : module, list, tuple, dictionary, set, object or nothing.
             Model definition, in terms of Stochastics, Deterministics, Potentials and Containers.
             If nothing, all nodes are collected from the base namespace.
-        - output_path : string
-            The place where any output files should be put.
-
+            
     Attributes:
       - deterministics
       - stochastics (with isdata=False)
@@ -116,15 +114,13 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, name=None, output_path=None):
+    def __init__(self, input=None, name=None):
         """Initialize a Model instance.
 
         :Parameters:
           - input : module, list, tuple, dictionary, set, object or nothing.
               Model definition, in terms of Stochastics, Deterministics, Potentials and Containers.
               If nothing, all nodes are collected from the base namespace.
-          - output_path : string
-              The place where any output files should be put.
         """
 
         # Get stochastics, deterministics, etc.
@@ -139,8 +135,6 @@ class Model(ObjectContainer):
             self.__name__ = name
         self.verbose = 0
         
-        self.output_path = output_path
-    
     def _get_generations(self):
         if not hasattr(self, '_generations'):
             self._generations = find_generations(self)
@@ -186,10 +180,7 @@ class Sampler(Model):
             If nothing, all nodes are collected from the base namespace.
         - db : string
             The name of the database backend that will store the values
-            of the stochastics and deterministics sampled during the MCMC loop.            
-        - output_path : string
-            The place where any output files should be put.
-
+            of the stochastics and deterministics sampled during the MCMC loop. 
 
     Inherits all methods and attributes from Model. Subclasses must either define the _loop method:
 
@@ -209,7 +200,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', name='Sampler', output_path=None, reinit_model=True, calc_deviance=False, **kwds):
+    def __init__(self, input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -219,8 +210,6 @@ class Sampler(Model):
           - db : string
               The name of the database backend that will store the values
               of the stochastics and deterministics sampled during the MCMC loop.
-          - output_path : string
-              The place where any output files should be put.
           - reinit_model : bool
               Flag for reinitialization of Model superclass.
           - calc_deviance : bool
@@ -232,7 +221,7 @@ class Sampler(Model):
         
         # Instantiate superclass
         if reinit_model:
-            Model.__init__(self, input, name, output_path)
+            Model.__init__(self, input, name)
             
         # Initialize deviance, if asked
         if calc_deviance:
