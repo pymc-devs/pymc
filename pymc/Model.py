@@ -430,11 +430,23 @@ class Sampler(Model):
         # Assign Trace instances to tallyable objects. 
         self.db.connect_model(self)
 
+    def pause(self):
+        """Pause the sampler. Sampling can be resumed by calling `icontinue`.
+        """
+        self.status = 'paused'
+        # The _loop method will react to 'paused' status and stop looping. 
+        if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
+            print 'Waiting for current iteration to finish...'
+            while self._sampling_thread.isAlive():
+                sleep(.1)
+        
     def halt(self):
         """Halt a sampling running in another thread."""
         self.status = 'halt'
-        print 'Waiting for iteration to complete.'
-        while self._sampling_thread.isAlive():
+        # The _halt method is called by _loop. 
+        if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
+            print 'Waiting for current iteration to finish...'
+            while self._sampling_thread.isAlive():
                 sleep(.1)
         
     def _halt(self):
@@ -487,7 +499,10 @@ class Sampler(Model):
         """
         Restarts thread in interactive mode
         """
-        
+        if self.status != 'paused':
+            print "No sampling to continue. Please initiate sampling with isample."
+            return
+            
         def sample_and_finalize():
             self._loop()
             self._finalize()

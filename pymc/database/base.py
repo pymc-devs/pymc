@@ -246,7 +246,7 @@ class Database(object):
         """Tell the traces to truncate themselves at the given index."""
         chain = range(self.chains)[chain]
         for name in self.variables_to_tally[chain]:
-            self._traces[name].truncate(chain)
+            self._traces[name].truncate(index, chain)
         
     def commit(self):
         """Flush data to disk."""
