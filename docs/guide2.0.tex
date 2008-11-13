@@ -4,19 +4,19 @@
 %  Created by Chris Fonnesbeck on 2006-05-03.
 %  Copyright (c) 2006 . All rights reserved.
 %
-\documentclass[]{manual}
+\documentclass[]{jss}
 
 % Use utf-8 encoding for foreign characters
 %\usepackage[utf8]{inputenc}
 
 % Setup for fullpage use
-\usepackage{fullpage}
-\usepackage{amsmath}
-\usepackage{epsfig}
+% \usepackage{fullpage}
+% \usepackage{amsmath}
+% \usepackage{epsfig}
 %\usepackage{pdfsync} 
 
 % Flexible citation syntax
-\usepackage{natbib}
+%\usepackage{natbib}
 % Uncomment some of the following if you use the features
 %
 
@@ -24,15 +24,15 @@
 %\usepackage{subfigure}
 
 % More symbols
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{latexsym}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{latexsym}
 
 % Line numbering
 \usepackage{lineno}
 
 % Package for including code in the document
-\usepackage{listings}
+%\usepackage{listings}
 
 % Surround parts of graphics with box
 %\usepackage{boxedminipage}
@@ -41,13 +41,7 @@
 %\usepackage{ifpdf}
 
 % Enable hyperlinks
-\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
-
-%\ifpdf
-%\usepackage[pdftex]{graphicx}
-%\else
-%\usepackage{graphicx}
-%\fi
+%\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
 %%% EPYDOC STUFF %%%
 \usepackage{underscore}
@@ -65,10 +59,10 @@
 \input{epydocheader}
 %%% END OF EPYDOC STUFF %%%
 
-
-\title{PyMC 2.0 User's Guide \\
-Installation and tutorial}
-\author{ Christopher Fonnesbeck\\ David Huard \\ Anand Patil }
+\author{Christopher Fonnesbeck\\University of Otago \And 
+        David Huard\\Institut National de la Recherche Scientiﬁque \And
+		Anand Patil\\University of Oxford}
+\title{\pkg{PyMC} 2.0: Bayesian Stochastic Modelling in \proglang{Python}}
 \graphicspath{{docs/}}
 \pdfoutput=1
 % \date
@@ -81,64 +75,69 @@ Installation and tutorial}
 \setlength{\locallinewidth}{7in}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Abstract{
+  The abstract of the article.
+}
+\Keywords{keywords, comma-separated, not capitalized, \proglang{Java}}
+\Plainkeywords{keywords, comma-separated, not capitalized, Java}
 
 \begin{document}
 
-\maketitle
+%\maketitle
 
-\tableofcontents
-\linenumbers
-\chapter{Introduction} 
+%\tableofcontents
+%\linenumbers
+\section{Introduction} 
 \label{chap:intro} 
 \input{README}
 
-\chapter{Installation} 
+\section{Installation} 
 \label{chap:install} 
 \input{INSTALL}
 
-\chapter{Tutorial}
+\section{Tutorial}
 \label{chap:tutorial}
 \input{tutorial}
 
-\chapter{Markov chain Monte Carlo} 
+\section{Markov chain Monte Carlo} 
 \label{chap:MCMC} 
 \input{theory}
 
-\chapter{Building models}
+\section{Building models}
 \label{chap:modelbuilding} 
 \input{modelbuilding}
 
-\chapter{Fitting models}
+\section{Fitting models}
 \label{chap:modelfitting}
 \input{modelfitting}
 
-\chapter{Saving and managing sampling results}
+\section{Saving and managing sampling results}
 \label{chap:database} 
 \input{database}
 
-\chapter{Model checking and diagnostics} 
+\section{Model checking and diagnostics} 
 \label{chap:modelchecking}
 \input{modelchecking}
 
-\chapter{Extending PyMC}
+\section{Extending PyMC}
 \label{chap:extending}
 \input{extending}
 
-\chapter{Probability distributions} 
+\section{Probability distributions} 
 \label{chap:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}
-    \item A function that evaluates its log-probability or log-density: \texttt{normal_like()}.
-    \item A function that draws random variables: \texttt{rnormal()}.
-    \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
-    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
+    \item A function that evaluates its log-probability or log-density: \code{normal_like()}.
+    \item A function that draws random variables: \code{rnormal()}.
+    \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
+    \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
 \end{itemize} 
 % Reminder to David:
 % When updating distributions-module.tex, replace the lines \rule{\textwidth}{0.5\fboxrule} by 
 % \rule{\textwidth}{1pt}.
 \input{distributions-module}
 
-\bibliographystyle{plainnat}
+\bibliographystyle{jss}
 \bibliography{pymc}
 
 \end{document}

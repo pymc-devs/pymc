@@ -87,11 +87,11 @@ It is straightforward to code a simple MCMC sampler, using either the Gibbs or M
 \bigskip
 PyMC is not an application per se. It consists of:
 \begin{itemize}
-    \item Two Python types, \texttt{Stochastic} and \texttt{Deterministic}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
-    \item The \texttt{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
+    \item Two Python types, \code{Stochastic} and \code{Deterministic}, which are natural and extremely flexible building blocks for specifying arbitrary Bayesian statistical models.
+    \item The \code{Model} class, which supervises MCMC loops and relieves users of the need for re-implementing utilities such as plotting, statistical summary, and recording samples in databases. This allows the user to concentrate on important aspects of the problem at hand, rather than the mundane details of statistical simulation.
     \item Fast, user-friendly and well-documented implementations of 24 common probability distributions.
     \item \textbf{XXX} Whatever we end up with with parallelization.
-    \item The \texttt{StepMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
+    \item The \code{StepMethod} class, which users can subclass to implement specialized algorithms on submodels. A handful of standard methods are included with the distribution.
 \end{itemize}
 
 PyMC aims to fully support newcomers to MCMC while providing the performance and flexibility statistical researchers need to develop new methods. As a Python package, it allows users to interface their MCMC algorithms with a wide range of other applications and analysis tools.
@@ -227,7 +227,7 @@ The dependence structure of a statistical model can be represented by a \emph{di
 \begin{center}
 \epsfig{file=DisasterModel.pdf,width=7cm}
 \epsfig{file=DisasterModel2.pdf,width=7cm}
-\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the stochs of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the 	\texttt{Stochastic} names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' stoch.
+\caption{\textbf{Left:} A DAG of the coal-mining disaster example with the function $r_t$ implicit. \textbf{Right:} An equivalent DAG with $r_t$ explicit. The `float const's refer to the stochs of the priors of $e$, $l$ and $s$. The labels on the arrows refer to the 	\code{Stochastic} names assigned to the parents by the child. For example, in the DAG on the right $D$ considers $r$ to be its `rate' stoch.
 }
 \label{fig:disaster_dag}
 \end{center}
@@ -250,49 +250,49 @@ Bayesian methods, and statistics in general, are usually needed \emph{because} i
 
 
 
-\section{\texttt{Stochastic} and \texttt{Deterministic}}\label{sec:PyMCObjects}
-PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A \texttt{Stochastic} object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \texttt{isdata} flag would be set to true; see section \ref{sub:@data}. A dtrm object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a dtrm.
+\section{\code{Stochastic} and \code{Deterministic}}\label{sec:PyMCObjects}
+PyMC provides two built-in types to serve as the building blocks of Bayesian probability models in Python. A \code{Stochastic} object represents a variable whose distribution depends on its parents, but which is not completely determined by its parents. This is sometimes referred to as a random variable, though it need not be random in the frequentist sense. In the coal-mining disaster model, $s$, $l$, $e$ and $D$ are all stochs, but $r$ is not. Since the value of $D$ has been observed, its \code{isdata} flag would be set to true; see section \ref{sub:@data}. A dtrm object, on the other hand, represents a variable that is completely determined by its parents. In the coal-mining disaster model, $r$ is a dtrm.
 
-These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves \texttt{Stochastic} updating dtrmity to the \texttt{StepMethod} class (sec \ref{sec:StepMethod}) and model-level dtrmity to the \texttt{Model} class (sec \ref{sec:Model})
+These objects are meant to do only what their mathematical counterparts `do,' and to do it efficiently. As such, they have very limited awareness of the probability model in which they are embedded and no methods for updating their values in an MCMC loop given the rest of the model. PyMC leaves \code{Stochastic} updating dtrmity to the \code{StepMethod} class (sec \ref{sec:StepMethod}) and model-level dtrmity to the \code{Model} class (sec \ref{sec:Model})
 
 PyMC also provides a special container class for stochs and dtrms to ease programming of certain dependency situations, such as when a particular variable depends on every element of a Markov chain.
 
-\subsection{\texttt{Stochastic}}\label{sub:stoch}
+\subsection{\code{Stochastic}}\label{sub:stoch}
 
-\texttt{Stochastics} expose the following attributes:
+\code{Stochastics} expose the following attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed stoch's parents would probably be keyed as \texttt{mu} and \texttt{tau}, \texttt{V} or \texttt{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \texttt{isdata} is true. Again, this may be of any class or type.
-    \item[\texttt{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
-    \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
-    \item[\texttt{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \texttt{Stochastic} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
-    \item[\texttt{\_\_name\_\_}:] The name of the stoch, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the stoch.
+    \item[\code{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. For example, a normally-distributed stoch's parents would probably be keyed as \code{mu} and \code{tau}, \code{V} or \code{sigma}. Since PyMC inherits Python's weak typing, parents may be of any class or type.
+    \item[\code{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\code{value}:] Self's current value, which is updated many times over the course of an MCMC loop. Attempts to update this attribute raise an error if \code{isdata} is true. Again, this may be of any class or type.
+    \item[\code{isdata}:] A boolean indicating whether the self's value has been observed (is fixed).
+    \item[\code{trace}:] The trace object assigned to self, see \textbf{XXX}.
+    \item[\code{logp}:] The log-probability or log-density of self's current value, conditional on self's parents' current values. This attribute is automatically updated every time it is accessed. In addition, \code{Stochastic} caches its most recent log-probabilities to avoid unnecessary recomputation. See section \ref{sub:caching}.
+    \item[\code{\_\_name\_\_}:] The name of the stoch, should be unique.
+    \item[\code{\_\_doc\_\_}:] The docstring of the stoch.
 \end{description}
 
-\texttt{Stochastics} have the following methods:
+\code{Stochastics} have the following methods:
 \begin{description}
-	\item[\texttt{touch()}:] PyMC stochs and dtrms cache the last few values of their arguments. If a stoch's log-probability or a dtrm's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
-    \item[\texttt{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \texttt{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
+	\item[\code{touch()}:] PyMC stochs and dtrms cache the last few values of their arguments. If a stoch's log-probability or a dtrm's value is queried when their arguments' value configuration is in their cache, they don't recompute. This is called `memoization'. The price of this optimization is that stochs' values can't be updated in-place, or else the next recompute may be incorrectly skipped. If you update a stoch's value in-place, be sure to call this method afterward. It simply replaces the stoch's value with a shallow copy of itself.
+    \item[\code{random()}:] This causes self to draw its value from its distribution conditional on its parents, and returns that value. This is useful for model averaging and certain Metropolis-Hastings algorithms. Raises an error if no \code{random} argument was passed to the constructor (ie, if the `medium' interface was used, see below).
 \end{description}
 
 \subsubsection{Instantiation}
 In order to make specification of standard probability models easy while making room for specification of even the most exotic probability model, PyMC provides four ways to instantiate stochs.
 \begin{description}
     \item[Short] \textbf{XXX}
-    \item[Medium] A normally-distributed \texttt{Stochastic} called \texttt{A} could be instantiated using the medium interface as follows:
+    \item[Medium] A normally-distributed \code{Stochastic} called \code{A} could be instantiated using the medium interface as follows:
     \begin{verbatim}
 @stoch
 def A(value=3., mu=B, tau=C):
     """Stochastic A is normally distributed."""
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
     \end{verbatim}
-    The decorator \texttt{stoch} turns the function \texttt{A} into a \texttt{Stochastic} which evaluates its log-probability using \texttt{A}. The \texttt{value} argument, which is required, provides an initial value for the stoch. The names of the function's other arguments become the keys of the stoch's \texttt{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \texttt{A}) becomes the \texttt{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the \texttt{Stochastic} as well.
+    The decorator \code{stoch} turns the function \code{A} into a \code{Stochastic} which evaluates its log-probability using \code{A}. The \code{value} argument, which is required, provides an initial value for the stoch. The names of the function's other arguments become the keys of the stoch's \code{parents} dictionary, which maps to the corresponding values (parent objects). The name of the function (in this case \code{A}) becomes the \code{\_\_name\_\_} of the stoch, and the docstring of the function is passed on to the \code{Stochastic} as well.
 
-    The \texttt{Stochastic} may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \texttt{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \texttt{normal\_like(value, mu, tau)}
+    The \code{Stochastic} may be valued as any object, its parents may be any objects, and there is absolutely no restriction on the log-probability function, as long as it returns a \code{float}. Note that, although the log-probability function is written out for illustration, it would be much faster to return \code{normal\_like(value, mu, tau)}
 
-    The medium interface's decorator can take a flag called \texttt{trace} which signals to \texttt{Model} whether an MCMC trace should be kept for this stoch: \texttt{@stoch(trace = False)}.
+    The medium interface's decorator can take a flag called \code{trace} which signals to \code{Model} whether an MCMC trace should be kept for this stoch: \code{@stoch(trace = False)}.
     \item[Long] The long interface extends the medium interface by allowing the user to specify a method for sampling the stoch's value conditional only on its parents.
     \begin{verbatim}
 @stoch
@@ -307,9 +307,9 @@ def A(value=3., mu=B, tau=C):
 
     rseed = 1.
     \end{verbatim}
-The \texttt{Stochastic} again gets its name, docstring and parents from \texttt{A}, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function is used when \texttt{Stochastic.random()} is called. Note that it doesn't take a \texttt{value} argument, because it provides a new value. \textbf{XXX} \texttt{rseed} provides a seed for the RNG.
+The \code{Stochastic} again gets its name, docstring and parents from \code{A}, but in this case it will evaluate its log-probability using the \code{logp} function. The \code{random} function is used when \code{Stochastic.random()} is called. Note that it doesn't take a \code{value} argument, because it provides a new value. \textbf{XXX} \code{rseed} provides a seed for the RNG.
 
-    \item[Direct] Some users may prefer not to use the \texttt{stoch} decorator, but to instantiate \texttt{Stochastic} directly:
+    \item[Direct] Some users may prefer not to use the \code{stoch} decorator, but to instantiate \code{Stochastic} directly:
 \begin{verbatim}
 def A_logp(value, mu, tau):
     return 0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/PI)
@@ -324,20 +324,20 @@ cache_depth = 2])
 
 
 
-\subsection{The \texttt{data} decorator}\label{sub:@data}
-In the medium and long interfaces, the stoch's \texttt{isdata} flag can be set to true by replacing \texttt{@stoch} with \texttt{@data}.
+\subsection{The \code{data} decorator}\label{sub:@data}
+In the medium and long interfaces, the stoch's \code{isdata} flag can be set to true by replacing \code{@stoch} with \code{@data}.
 
 
-\subsection{\texttt{Deterministic}}\label{sub:dtrm}
+\subsection{\code{Deterministic}}\label{sub:dtrm}
 
 Deterministics expose the following attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{value}:] Self's current value. Unlike stoch, self's value depends on its parents. As with stoch's \texttt{logp} attribute, this attribute is automatically updated every time it is accessed. Deterministics cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
-    \item[\texttt{trace}:] The trace object assigned to self, see \textbf{XXX}.
-    \item[\texttt{\_\_name\_\_}:] The name of the dtrm, should be unique.
-    \item[\texttt{\_\_doc\_\_}:] The docstring of the dtrm.
+    \item[\code{parents}:] A dictionary containing self's parents. The keys of the dictionary correspond to the names assigned to self's parents by self, and the values correspond to the actual parents. Since PyMC inherits Python's weak typing, parents may be of any class or type.
+    \item[\code{children}:] A set containing self's children, which must be stochs or dtrms. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\code{value}:] Self's current value. Unlike stoch, self's value depends on its parents. As with stoch's \code{logp} attribute, this attribute is automatically updated every time it is accessed. Deterministics cache their last few values to avoid unnecessary recomputation. Attempts to update this attribute raise an error.
+    \item[\code{trace}:] The trace object assigned to self, see \textbf{XXX}.
+    \item[\code{\_\_name\_\_}:] The name of the dtrm, should be unique.
+    \item[\code{\_\_doc\_\_}:] The docstring of the dtrm.
 \end{description}
 Deterministics have no methods.
 
@@ -351,7 +351,7 @@ def D(arg_1 = E, arg_2 = F)
     """The D dtrm"""
     return sqrt(arg_1 ** 2 + arg_2 ** 2)
 \end{verbatim}
-The function supplied should return a new value for the dtrm (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \texttt{\_\_name\_\_} is passed on to the dtrm.
+The function supplied should return a new value for the dtrm (which, again, may be any object). Arguments' keys and values are converted into a parent dictionary as with stoch's medium interface. The function's \code{\_\_name\_\_} is passed on to the dtrm.
     \item[Direct] The same dtrm could be instantiated directly as follows:
 \begin{verbatim}
 def D_eval(arg_1, arg_2):
@@ -363,11 +363,11 @@ doc = 'The D dtrm',
 trace = True),
 cache_depth = 2]
 \end{verbatim}
-The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for self, as with stoch.
+The \code{trace} flag signals to \code{Model} whether to keep a trace for self, as with stoch.
 \end{description}
-Note that dtrms have no \texttt{isdata} flag. If a dtrm's value were known, its parents would be restricted to the inverse image of that value under the dtrm's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \texttt{StepMethod} level.
+Note that dtrms have no \code{isdata} flag. If a dtrm's value were known, its parents would be restricted to the inverse image of that value under the dtrm's evaluation function. This usage case would be extremely difficult to support in generality, but it can be implemented for particular applications at the \code{StepMethod} level.
 
-\subsection{The \texttt{PyMCObjectContainer} class for arrays of stochs and dtrms}\label{sub:container}
+\subsection{The \code{PyMCObjectContainer} class for arrays of stochs and dtrms}\label{sub:container}
 In the following hypothetical situation, it would be inconvenient to assign a unique label to each parent of $B$:
 \begin{eqnarray*}
 	A_0 \sim \textup N(0,V)\\
@@ -375,7 +375,7 @@ In the following hypothetical situation, it would be inconvenient to assign a un
 	B \sim \textup N\left(\sum_{i=0}^N A_i,W\right).
 \end{eqnarray*}
 
-This situation can be handled using the \texttt{PyMCObjectContainer} class as follows:
+This situation can be handled using the \code{PyMCObjectContainer} class as follows:
 \begin{verbatim}
 @stoch
 def A(value=0., mu=0., V=V):
@@ -397,14 +397,14 @@ def B(value=0., mu=A, V=W):
     """The sum of the Markov chain"""
     return normal_like(value, sum(mu), V)   
 \end{verbatim}
-This works because PyMC object containers, like stochs and dtrms, expose an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a stoch or dtrm replaced with \emph{its} value. Note that simply writing
+This works because PyMC object containers, like stochs and dtrms, expose an attribute called \code{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container at instantiation, but with each instance of a stoch or dtrm replaced with \emph{its} value. Note that simply writing
 \begin{verbatim}
 @data
 def B(value=0., mu=Alist, V=W):
 	"""The sum of the Markov chain"""
 	return normal_like(value, sum(mu), V)	
 \end{verbatim}
-would not have worked, because \texttt{list} does not expose an attribute called \texttt{value}. PyMC object containers can currently be constructed from any object that has a \texttt{\_\_getitem\_\_} method (such as lists, tuples, and numpy arrays), but not from sets.
+would not have worked, because \code{list} does not expose an attribute called \code{value}. PyMC object containers can currently be constructed from any object that has a \code{\_\_getitem\_\_} method (such as lists, tuples, and numpy arrays), but not from sets.
 
 \subsection{Examples}\label{sub:example}
 Here is the coal-mining disaster model implemented in PyMC with $r$ implicit, as in the left pane of figure \ref{fig:disaster_dag}:
@@ -466,24 +466,24 @@ def D(  value = D_array, rate=r):
 \end{verbatim}
 In general, it's better to make heavyweight functions into their own dtrms, because dtrms' caches avoid unnecessary recomputation. In this case, however, the version with $r$ implicit is quite a bit faster.
 
-\section{The \texttt{Model} class} \label{sec:Model} 
-This class serves as a container for probability models and as a stem class for other `model-level' classes like \texttt{Sampler}. Methods implemented:
+\section{The \code{Model} class} \label{sec:Model} 
+This class serves as a container for probability models and as a stem class for other `model-level' classes like \code{Sampler}. Methods implemented:
 \begin{description}
-	\item[\texttt{sample\_model\_likelihood()}:] Returns an estimate of $\log p(d|M)$, the unconditional log-probability or log-density of all the data objects in model $M$. This is called by the function \texttt{weight()}, which finds the posterior probabilities of a set of models.
-	\item[\texttt{DAG()}:] Outputs a graphical representation of the model.
-	\item[\texttt{tally()}:] Tells all stochs and dtrms to record their current values in their traces.
-	\item[\texttt{remember()}:] Tells all stochs and dtrms to set their values to a certain element of their traces.
-	\item[\texttt{save\_state()}:] Under construction.
-	\item[\texttt{save\_traces()}:] Under construction.
-	\item[\texttt{seed()}:] All stochs with an \texttt{rseed} value draw a new value from their distributions.
+	\item[\code{sample\_model\_likelihood()}:] Returns an estimate of $\log p(d|M)$, the unconditional log-probability or log-density of all the data objects in model $M$. This is called by the function \code{weight()}, which finds the posterior probabilities of a set of models.
+	\item[\code{DAG()}:] Outputs a graphical representation of the model.
+	\item[\code{tally()}:] Tells all stochs and dtrms to record their current values in their traces.
+	\item[\code{remember()}:] Tells all stochs and dtrms to set their values to a certain element of their traces.
+	\item[\code{save\_state()}:] Under construction.
+	\item[\code{save\_traces()}:] Under construction.
+	\item[\code{seed()}:] All stochs with an \code{rseed} value draw a new value from their distributions.
 \end{description}
 
 Useful attributes:
 \begin{description}
-	\item[\texttt{containers}:] A set of self's PyMC object containers.
-	\item[\texttt{stochs}:] A set of self's stochs.
-	\item[\texttt{dtrms}:] A set of self's dtrms.
-	\item[\texttt{data}:] A set of self's data objects.
+	\item[\code{containers}:] A set of self's PyMC object containers.
+	\item[\code{stochs}:] A set of self's stochs.
+	\item[\code{dtrms}:] A set of self's dtrms.
+	\item[\code{data}:] A set of self's data objects.
 \end{description}
 
 \chapter{Model fitting with PyMC} %(fold)
@@ -791,36 +791,36 @@ Valid inference relies on the assumption that sample values are random (but not 
 Since the sample is derived from a Markov chain, it is necessarily autocorrelated. Poorly-mixing simulations will exhibit autocorrelation more acutely, as successive samples will be relatively close (in stoch space) to their predecessors. Therefore, it is often desirable to ``thin" the sample output, by retaining every $k$ sample from the chain, where $k$ is determined by the severity of the autocorrelation function.
 
 
-\section{The \texttt{StepMethod} class}\label{sec:StepMethod}
-Sampling methods are responsible for making stochs or groups of stochs take single MCMC steps. PyMC provides several standard step methods, including \texttt{OneAtATimeMetropolis}, but \texttt{StepMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own step methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of step methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
+\section{The \code{StepMethod} class}\label{sec:StepMethod}
+Sampling methods are responsible for making stochs or groups of stochs take single MCMC steps. PyMC provides several standard step methods, including \code{OneAtATimeMetropolis}, but \code{StepMethod} is designed to be subclassed to handle particular types of probability submodels. When writing your own step methods, try to make them embeddable; that is, try to make them work reliably regardless of what the probability model looks like outside of the submodel over which they have jurisdiction. If you do this, you'll accumulate a library of step methods that can be easily stuck together to fit new probability models, and you won't have to keep rewriting them.
 
 \begin{figure}[hhhhhhhhh]
     \centering
     \epsfig{file=sampmethod_children.pdf,width=6cm}
-    \caption{The children of a step method. The stochs under the step method's jurisdiction are shown on a plate. The children of the step method are the stochs (regardless of \texttt{isdata}) which depend on the step method's stochs either directly or via an unbroken sequence of dtrms, and which aren't in the step method's stochs.}
+    \caption{The children of a step method. The stochs under the step method's jurisdiction are shown on a plate. The children of the step method are the stochs (regardless of \code{isdata}) which depend on the step method's stochs either directly or via an unbroken sequence of dtrms, and which aren't in the step method's stochs.}
     \label{fig:sampmethod_children}
 \end{figure}
 
-All step methods must be subclasses of \texttt{StepMethod}, which exposes the following attributes:
+All step methods must be subclasses of \code{StepMethod}, which exposes the following attributes:
 \begin{description}
-    \item[\texttt{dtrms}:] A set containing the dtrms over which self has jurisdiction. Although step methods are primarily responsible for making stochs take Metropolis steps, it can be nice to assign dtrms to them for organizational reasons.
-    \item[\texttt{stochs}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to false. Self will be responsible for making all of these stochs take single MCMC steps.
-    \item[\texttt{data}:] A set containing the stochs over which self has jurisdiction, with \texttt{isdata} set to true. Again, this attribute is provided for the sake of organization.
-    \item[\texttt{pymc\_objects}:] The union of \texttt{dtrms}, \texttt{stochs}, and \texttt{data}.
-    \item[\texttt{children}:] The union of all the nearest descendants of self's stochs that are themselves stochs, differenced with the set of self's stochs. See figure \ref{fig:sampmethod_children}.
-    \item[\texttt{loglike}:] The log-probability of self's children given self's stochs' current values. The sum of self's stochs' \texttt{logp} attributes plus \texttt{self.loglike}  gives the total log joint probability of self's stochs, up to superfluous constants. This attribute will be needed by most embeddable step methods. Loglike is recomputed every time it's accessed.
-    \item[\texttt{\_asf}]: A catchall name for tunable sampling stochs.
+    \item[\code{dtrms}:] A set containing the dtrms over which self has jurisdiction. Although step methods are primarily responsible for making stochs take Metropolis steps, it can be nice to assign dtrms to them for organizational reasons.
+    \item[\code{stochs}:] A set containing the stochs over which self has jurisdiction, with \code{isdata} set to false. Self will be responsible for making all of these stochs take single MCMC steps.
+    \item[\code{data}:] A set containing the stochs over which self has jurisdiction, with \code{isdata} set to true. Again, this attribute is provided for the sake of organization.
+    \item[\code{pymc\_objects}:] The union of \code{dtrms}, \code{stochs}, and \code{data}.
+    \item[\code{children}:] The union of all the nearest descendants of self's stochs that are themselves stochs, differenced with the set of self's stochs. See figure \ref{fig:sampmethod_children}.
+    \item[\code{loglike}:] The log-probability of self's children given self's stochs' current values. The sum of self's stochs' \code{logp} attributes plus \code{self.loglike}  gives the total log joint probability of self's stochs, up to superfluous constants. This attribute will be needed by most embeddable step methods. Loglike is recomputed every time it's accessed.
+    \item[\code{\_asf}]: A catchall name for tunable sampling stochs.
 \end{description}
 
-\texttt{StepMethod} has the following methods, which aren't implemented in the base class:
+\code{StepMethod} has the following methods, which aren't implemented in the base class:
 \begin{description}
-    \item[\texttt{sample()}:] \texttt{Model} will call this method for each step method. When it is called, self must cause each of its stochs to take an MCMC step. All subclasses must implement this method.
-    \item[\texttt{tune()}:] \texttt{Model} will also call this method for each step method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \texttt{\_asf}.
+    \item[\code{sample()}:] \code{Model} will call this method for each step method. When it is called, self must cause each of its stochs to take an MCMC step. All subclasses must implement this method.
+    \item[\code{tune()}:] \code{Model} will also call this method for each step method, but implementation is optional. When it is called, self should tune its stepping strategy somehow, possibly by adjusting \code{\_asf}.
 \end{description}
 
 
-\subsection{\texttt{OneAtATimeMetropolis}}\label{sub:OAATM}
-This is PyMC's basic step method. If \texttt{Model}, on instantiation, finds that a stoch is not handled by any step method, it will create an instance of \texttt{OneAtATimeMetropolis} to handle that stoch. The easiest way to explain this simple object is just to display its source code: \textbf{XXX replace when tune() and more \_dist's are implemented}
+\subsection{\code{OneAtATimeMetropolis}}\label{sub:OAATM}
+This is PyMC's basic step method. If \code{Model}, on instantiation, finds that a stoch is not handled by any step method, it will create an instance of \code{OneAtATimeMetropolis} to handle that stoch. The easiest way to explain this simple object is just to display its source code: \textbf{XXX replace when tune() and more \_dist's are implemented}
 \begin{verbatim}
 class OneAtATimeMetropolis(StepMethod):
 
@@ -879,7 +879,7 @@ class OneAtATimeMetropolis(StepMethod):
         pass
 \end{verbatim}
 
-Note that a proposal is made by actually updating the stoch's value, and jumps are rejected by calling the stoch's \texttt{revert()} method. This procedure lets stochs and dtrms make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \texttt{LikelihoodError} rather than returning \texttt{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \texttt{inf}s. The function \texttt{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
+Note that a proposal is made by actually updating the stoch's value, and jumps are rejected by calling the stoch's \code{revert()} method. This procedure lets stochs and dtrms make the best use of their internal caches and minimizes the computation that needs to be done. Note also that, by convention, log-probability evaluation functions raise a \code{LikelihoodError} rather than returning \code{-inf} when the probability or density of a value is zero. This is done for compatibility with fortran 77, which does not recognize \code{inf}s. The function \code{random()}, from numpy, returns a random number uniformly distributed between 0 and 1.
 
 
 \subsection{Other step methods provided with the distribution}\label{sub:other_sm}
@@ -889,16 +889,16 @@ Note that a proposal is made by actually updating the stoch's value, and jumps a
 
 %(end)
 
-\section{The \texttt{Sampler} class}\label{sec:Sampler}
+\section{The \code{Sampler} class}\label{sec:Sampler}
 The Sampler class is a subclass of Model. In addition to those inherited from Model, it has the following attributes:
 \begin{description}
-	\item[\texttt{sampling\_methods}:]
+	\item[\code{sampling\_methods}:]
 \end{description}
 and the following methods:
 \begin{description}
-	\item[\texttt{tune()}:]
-	\item[\texttt{sample()}:]
-	\item[\texttt{interactive\_sample()}:] 
+	\item[\code{tune()}:]
+	\item[\code{sample()}:]
+	\item[\code{interactive\_sample()}:] 
 \end{description}
 
 

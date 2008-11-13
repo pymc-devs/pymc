@@ -6,13 +6,15 @@
 %
 \documentclass[]{jss}
 
-\author{Christopher Fonnesbeck\\University of Otago \And 
+\usepackage{hyperref}
+
+\author{Anand Patil\\University of Oxford \And 
         David Huard\\Institut National de la\\Recherche Scientifique \And
-		Anand Patil\\University of Oxford}
+		Christopher Fonnesbeck\\University of Otago}
 \title{\pkg{PyMC} 2.0: Bayesian Stochastic Modelling in \proglang{Python}}
 
 %% for pretty printing and a nice hypersummary also set:
-\Plainauthor{Christopher Fonnesbeck, David Huard, Anand Patil} %% comma-separated
+\Plainauthor{Anand Patil, David Huard, Christopher Fonnesbeck} %% comma-separated
 \Plaintitle{PyMC 2.0: Bayesian Stochastic Modelling in Python} %% without formatting
 \Shorttitle{PyMC 2.0} %% a short title (if necessary)
 
@@ -77,10 +79,10 @@
 \label{sec:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}
-    \item A function that evaluates its log-probability or log-density: \texttt{normal_like()}.
-    \item A function that draws random variables: \texttt{rnormal()}.
-    \item A function that computes the expectation associated with the distribution: \texttt{normal_expval()}.
-    \item A \texttt{Stochastic} subclass generated from the distribution: \texttt{Normal}.
+    \item A function that evaluates its log-probability or log-density: \code{normal_like()}.
+    \item A function that draws random variables: \code{rnormal()}.
+    \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
+    \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
 \end{itemize} 
 \input{distributions-module}
 

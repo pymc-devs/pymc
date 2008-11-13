@@ -1,63 +1,63 @@
 %!TEX root = guide2.0.tex
 
 % \section{Summary}\label{sec:PyMCObjects}
-Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: \texttt{Stochastic}, \texttt{Deterministic} and \texttt{Potential}. 
+Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: \code{Stochastic}, \code{Deterministic} and \code{Potential}. 
 
-A \texttt{Stochastic} object represents a variable whose value is not completely determined by its parents, and a \texttt{Deterministic} object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, \texttt{Stochastic} and \texttt{Deterministic} are subclasses of the \texttt{Variable} class, which is essentially a template for more specific subclasses that are actually implemented in models. The third basic class, representing `factor potentials' (\cite{dawidmarkov,Jordan:2004p5439}), represents an arbitrary log-probability term. \texttt{Potential} and \texttt{Variable}, in turn, are subclasses of \texttt{Node}.
+A \code{Stochastic} object represents a variable whose value is not completely determined by its parents, and a \code{Deterministic} object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, \code{Stochastic} and \code{Deterministic} are subclasses of the \code{Variable} class, which is essentially a template for more specific subclasses that are actually implemented in models. The third basic class, representing `factor potentials' (\cite{dawidmarkov,Jordan:2004p5439}), represents an arbitrary log-probability term. \code{Potential} and \code{Variable}, in turn, are subclasses of \code{Node}.
 
 % TODO: Need a better description of what a Potential is. Given the description of Stochastic and Deterministic we have given, its not clear where Potential fits in, as it classifies the world into 2 things -- completely determined by parents and not.
 
 % PyMC also provides container classes for variables to make it easier to program of certain dependency situations, such as when a variable is defined by its dependence on an entire Markov chain.
 
 \medskip
-PyMC probability models are simply linked groups of \texttt{Stochastic}, \texttt{Deterministic} and \texttt{Potential} objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter \ref{chap:modelfitting}.
+PyMC probability models are simply linked groups of \code{Stochastic}, \code{Deterministic} and \code{Potential} objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter \ref{chap:modelfitting}.
  
 
 \hypertarget{stochastic}{}
-\section*{The \texttt{Stochastic} class} \label{stochastic}
+\section*{The \code{Stochastic} class} \label{stochastic}
 \pdfbookmark[0]{The Stochastic class}{stochastic}
 
 A stochastic variable has the following major attributes: 
 \begin{description}
-    \item[\texttt{value}:] The variable's current value.
-    \item[\texttt{logp}:] The log-probability of the variable's current value given the values of its parents.
+    \item[\code{value}:] The variable's current value.
+    \item[\code{logp}:] The log-probability of the variable's current value given the values of its parents.
 \end{description}
-A stochastic variable can optionally be endowed with a method called \texttt{\bfseries random}, which draws a value for the variable given the values of its parents\footnote{Note that the \texttt{random} method does not provide a Gibbs sample unless the variable has no children.}. Stochastic objects have the following additional attributes that are generally specified automatically, or only specified under particular circumstances:
+A stochastic variable can optionally be endowed with a method called \code{\bfseries random}, which draws a value for the variable given the values of its parents\footnote{Note that the \code{random} method does not provide a Gibbs sample unless the variable has no children.}. Stochastic objects have the following additional attributes that are generally specified automatically, or only specified under particular circumstances:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \texttt{'t_l'} and \texttt{'t_h'}. Thanks to Python's dynamic typing, the actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
-    \item[\texttt{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\texttt{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
-    \item[\texttt{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
-    \item[\texttt{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
-    \item[\texttt{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
-    \item[\texttt{markov_blanket}:] A set containing self and self's moral neighbors.
-    \item[\texttt{isdata}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
-    \item[\texttt{dtype}:] A Numpy dtype object (such as \texttt{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \texttt{None} (default) then no type is enforced.
-    % \item[\texttt{__name__}:] The name of the variable, should be unique.
-    %    \item[\texttt{__doc__}:] The docstring of the variable.
+    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{'t_l'} and \code{'t_h'}. Thanks to Python's dynamic typing, the actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
+    \item[\code{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\code{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
+    \item[\code{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
+    \item[\code{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
+    \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
+    \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
+    \item[\code{isdata}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
+    \item[\code{dtype}:] A Numpy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
+    % \item[\code{__name__}:] The name of the variable, should be unique.
+    %    \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
 
 \subsection{Creation of stochastic variables}
 There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
 
 \begin{description}    
-    \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of \texttt{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
     \begin{verbatim}
         s = DiscreteUniform('s', 1851, 1962, value=1900)
     \end{verbatim}
 
-    In addition to the classes in chapter \ref{chap:distributions}, \texttt{scipy.stats.distributions}' random variable classes are wrapped as \texttt{Stochastic} subclasses if SciPy is installed. These distributions are in the submodule \texttt{pymc.SciPyDistributions}
+    In addition to the classes in chapter \ref{chap:distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if SciPy is installed. These distributions are in the submodule \code{pymc.SciPyDistributions}
 
-    Users can call the class factory \texttt{stochastic_from_dist} to produce \texttt{Stochastic} subclasses of their own from probability distributions not included with PyMC.%  These classes' init methods take the following arguments:
+    Users can call the class factory \code{stochastic_from_dist} to produce \code{Stochastic} subclasses of their own from probability distributions not included with PyMC.%  These classes' init methods take the following arguments:
     % \begin{description}
-    %     \item[\texttt{name}:] The name of the variable.
-    %     \item[\texttt{value}:] An initial value for the variable.
-    %     \item[\texttt{parents}:] Keyword arguments specifying the parents of the variable.
-    %     \item[\texttt{isdata} (optional)]
-    %     \item[\texttt{doc} (optional):] The docstring of the variable.
-    %     \item[\texttt{verbose} (optional):] An integer from 0 to 3.
-    %     \item[\texttt{trace} (optional):] A boolean indicating whether a trace should be kept for this variable in Monte Carlo fitting methods.
-    %     \item[\texttt{cache_depth}:] See section \ref{sec:caching}. 
+    %     \item[\code{name}:] The name of the variable.
+    %     \item[\code{value}:] An initial value for the variable.
+    %     \item[\code{parents}:] Keyword arguments specifying the parents of the variable.
+    %     \item[\code{isdata} (optional)]
+    %     \item[\code{doc} (optional):] The docstring of the variable.
+    %     \item[\code{verbose} (optional):] An integer from 0 to 3.
+    %     \item[\code{trace} (optional):] A boolean indicating whether a trace should be kept for this variable in Monte Carlo fitting methods.
+    %     \item[\code{cache_depth}:] See section \ref{sec:caching}. 
     % \end{description}
     
     
@@ -67,23 +67,25 @@ There are three main ways to create stochastic variables, called the \textbf{aut
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
-        return -Inf
+		# Invalid values
+        return -numpy.inf
     else:
-        return -log(t_h - t_l + 1) 
+		# Uniform log-likelihood
+        return -numpy.log(t_h - t_l + 1) 
     \end{verbatim}
-Note that this is a simple Python function, preceded by a Python expression called a \textbf{decorator}, here called \texttt{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \texttt{Stochastic} object produced by the \texttt{@stochastic} decorator will evaluate its log-probability using the function \texttt{s}. The \texttt{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of \texttt{s} (\emph{i.e.} they will populate the \texttt{parents} dictionary).
+Note that this is a simple Python function, preceded by a Python expression called a \textbf{decorator}, here called \code{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \code{Stochastic} object produced by the \code{@stochastic} decorator will evaluate its log-probability using the function \code{s}. The \code{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of \code{s} (\emph{i.e.} they will populate the \code{parents} dictionary).
 
-The \texttt{value} and parents of stochastic variables may be any objects, provided their log-probability functions return a real number (Numpy \texttt{float}). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables.
+The \code{value} and parents of stochastic variables may be any objects, provided their log-probability functions return a real number (\code{float}). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison, the distributions in PyMC are approximately an order of magnitude faster than their counterparts in SciPy.
 
-    The decorator \texttt{stochastic} can take several arguments: 
+    The decorator \code{stochastic} can take several arguments: 
     \begin{itemize}
-        \item A flag called \texttt{trace}, which signals to \texttt{MCMC} instances whether an MCMC trace should be kept for the stochastic variable. \texttt{@stochastic(trace = False)} would turn tracing off. Defaults to \texttt{True}.
-        \item A flag called \texttt{plot}, which signals to \texttt{MCMC} instances whether summary plots should be produced for this variable. Defaults to \texttt{True}.
-        \item An integer-valued argument called \texttt{verbose} that controls the amount of output the variable prints to the screen. The default is $0$, no output; the maximum value is $3$. 
-        \item A Numpy datatype called \texttt{dtype}. Decorating a log-probability function with \texttt{@stochastic(dtype=int)} would produce a discrete random variable. Such a variable will cast its value to either an integer or an array of integers. The default dtype is \texttt{float}.
+        \item A flag called \code{trace}, which signals to \code{MCMC} instances whether an MCMC trace should be kept for the stochastic variable. \code{@stochastic(trace = False)} would turn tracing off. Defaults to \code{True}.
+        \item A flag called \code{plot}, which signals to \code{MCMC} instances whether summary plots should be produced for this variable. Defaults to \code{True}.
+        \item An integer-valued argument called \code{verbose} that controls the amount of output the variable prints to the screen. The default is $0$, no output; the maximum value is $3$. 
+        \item A Numpy datatype called \code{dtype}. Decorating a log-probability function with \code{@stochastic(dtype=int)} would produce a discrete random variable. Such a variable will cast its value to either an integer or an array of integers. The default dtype is \code{float}.
     \end{itemize} 
 
-    The decorator interface has a slightly more complex implementation which allows you to specify a \texttt{random} method for sampling the stochastic variable's value conditional on its parents.
+    The decorator interface has a slightly more complex implementation which allows you to specify a \code{random} method for sampling the stochastic variable's value conditional on its parents.
     \begin{verbatim}
 @stochastic(dtype=int)
 def s(value=1900, t_l=1851, t_h=1962):
@@ -98,11 +100,10 @@ def s(value=1900, t_l=1851, t_h=1962):
     def random(t_l, t_h):
         return round( (t_l - t_h) * random() ) + t_l
 
-    rseed = 1.
     \end{verbatim}
-The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \texttt{logp} function. The \texttt{random} function will be used when \texttt{s.random()} is called. Note that \texttt{random} doesn't take a \texttt{value} argument, as it generates values itself. The optional \texttt{rseed} variable provides a seed for the random number generator. The stochastic's \texttt{value} argument is optional when a \texttt{random} method is provided; if no initial value is provided, it will be drawn automatically using the \texttt{random} method.
+The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \code{logp} function. The \code{random} function will be used when \code{s.random()} is called. Note that \code{random} doesn't take a \code{value} argument, as it generates values itself. The optional \code{rseed} variable provides a seed for the random number generator. The stochastic's \code{value} argument is optional when a \code{random} method is provided; if no initial value is provided, it will be drawn automatically using the \code{random} method.
 
-    \item[Direct] It's possible to instantiate \texttt{Stochastic} directly:
+    \item[Direct] It's possible to instantiate \code{Stochastic} directly:
 \begin{verbatim}
 def s_logp(value, t_l, t_h):
     if value > t_h or value < t_l:
@@ -127,24 +128,24 @@ s = Stochastic( logp = s_logp,
                 plot=True,
                 verbose = 0)
 \end{verbatim}
-Notice that the log-probability and random variate functions are specified externally and passed to \texttt{Stochastic} as arguments. This is a rather awkward way to instantiate a stochastic variable; consequently, such implementations should be rare.
+Notice that the log-probability and random variate functions are specified externally and passed to \code{Stochastic} as arguments. This is a rather awkward way to instantiate a stochastic variable; consequently, such implementations should be rare.
 
 \end{description}
 
-
+% TODO Put this warning in a sidebar
 \hypertarget{sub:warning}{}
 \subsection*{Don't update stochastic variables' values in-place} \label{sub:warning}
 \pdfbookmark[0]{Don't update stochastic variables' values in-place}{sub:warning}
 
-\texttt{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupt the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
+\code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupt the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
 \begin{verbatim}
     A.value = new_value
 \end{verbatim}
 The following are in-place updates and should \emph{never} be used:
 \begin{itemize}
-    \item \texttt{A.value += 3}
-    \item \texttt{A.value[2,1] = 5}
-    \item \texttt{A.value.attribute = new_attribute_value}.
+    \item \code{A.value += 3}
+    \item \code{A.value[2,1] = 5}
+    \item \code{A.value.attribute = new_attribute_value}.
 \end{itemize}
 
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several variables stored in an array or list.
@@ -154,11 +155,11 @@ This restriction becomes onerous if a step method proposes values for the elemen
 \section*{Data} \label{data}
 \pdfbookmark[0]{Data}{data}
 
-Although the data $D$ is represented by a random variable in the model, we have fixed its value by observing it. Such variables are represented by \texttt{Stochastic} objects whose \texttt{isdata} attribute is set to \texttt{True}. If a stochastic variable's \texttt{isdata} flag is \texttt{True}, its value cannot be changed.
+Although the data are modelled with statistical distributions, just as random variables are, their values are immutable (since they have been observed). Data are represented by \code{Stochastic} objects whose \code{isdata} attribute is set to \code{True}. If a stochastic variable's \code{isdata} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method..
 
 \subsection*{Declaring stochastic variables to be data}
 
-In the short and long interfaces, a \texttt{Stochastic} object's \texttt{isdata} flag can be set to true by stacking a \texttt{@data} decorator on top of the \texttt{@stochastic} decorator:
+In the short and long interfaces, a \code{Stochastic} object's \code{isdata} flag can be set to true by stacking a \code{@data} decorator on top of the \code{@stochastic} decorator:
 \begin{verbatim}
 @data
 @stochastic(dtype=int)
@@ -170,14 +171,14 @@ def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
             - gammaln(late_rate))
     return logp
 \end{verbatim}
-In the automatic and direct interfaces, the \texttt{isdata} argument can be simply set to \texttt{True}.
+In the automatic and direct interfaces, the \code{isdata} argument can be simply set to \code{True}.
 
 
 \hypertarget{deterministic}{}
-\section*{The \texttt{Deterministic} class} \label{deterministic}
+\section*{The \code{Deterministic} class} \label{deterministic}
 \pdfbookmark[0]{The Deterministic class}{deterministic}
 
-The \texttt{Deterministic} class represents variables whose values are completely determined by the values of their parents. For example, in model (\ref{disastermodel}), $r$ is a deterministic variable. Recall it was defined by
+The \code{Deterministic} class represents variables whose values are completely determined by the values of their parents. For example, in model (\ref{disastermodel}), $r$ is a \code{deterministic} variable. Recall it was defined by
 \begin{eqnarray*}
     r_t=\left\{\begin{array}{ll}
         e & t\le s\\ l & t>s
@@ -185,14 +186,14 @@ The \texttt{Deterministic} class represents variables whose values are completel
 \end{eqnarray*}
 so $r$'s value can be computed exactly from the values of its parents $e$, $l$ and $s$.
 
-A deterministic variable's most important attribute is \texttt{\bfseries value}, which gives the current value of the variable given the values of its parents. Like \texttt{Stochastic}'s \texttt{logp} attribute, this attribute is computed on-demand and cached for efficiency.
+A \code{deterministic} variable's most important attribute is \code{\bfseries value}, which gives the current value of the variable given the values of its parents. Like \code{Stochastic}'s \code{logp} attribute, this attribute is computed on-demand and cached for efficiency.
 
 A Deterministic variable has the following additional attributes:
 \begin{description}
-    \item[\texttt{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. Thanks to Python's dynamic typing, parents may be of any class or type.
-    \item[\texttt{children}:] A set containing the variable's children, which must be nodes. This set is produced automatically; the user doesn't need to worry about filling it.
-    % \item[\texttt{__name__}:] The name of the variable, should be unique.
-    %     \item[\texttt{__doc__}:] The docstring of the variable.
+    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. Thanks to Python's dynamic typing, parents may be of any class or type.
+    \item[\code{children}:] A set containing the variable's children, which must be nodes. This set is produced automatically; the user doesn't need to worry about filling it.
+    % \item[\code{__name__}:] The name of the variable, should be unique.
+    %     \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
 Deterministic variables have no methods.
 
@@ -202,22 +203,22 @@ Deterministic variables are less complicated than stochastic variables, and have
 \begin{description}
    \item[Automatic] A handful of common functions have been wrapped in Deterministic objects. These are brief enough to list:
    \begin{description}
-      \item[\texttt{LinearCombination}:] Has two parents $x$ and $y$, both of which must be iterable (\emph{i.e.} vector-valued). This function returns:
+      \item[\code{LinearCombination}:] Has two parents $x$ and $y$, both of which must be iterable (\emph{i.e.} vector-valued). This function returns:
       \[
       \sum_i x_i^{\prime} y_i.
       \]
-      \item[\texttt{Index}:] Has three parents $x$, $y$ and \texttt{index}. $x$ and $y$ must be iterables, \texttt{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \mathttt{index}:
+      \item[\code{Index}:] Has three parents $x$, $y$ and \code{index}. $x$ and $y$ must be iterables, \code{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \mathttt{index}:
       \[
       x[\mathtt{index}]^T y[\mathtt{index}].
       \]
-      \texttt{Index} is useful for implementing dynamic models, in which the parent-child connections change.
-      \item[\texttt{Lambda}:] Converts an anonymous function (in Python, called \textbf{lambda functions}) to a \texttt{Deterministic} instance on a single line.
-      \item[\texttt{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k^{th}$ element is determined by the others. \texttt{CompletedDirichlet} appends the $k^{th}$ element to the value of its parent $D$.      
-      \item[\texttt{Logit}, \texttt{InvLogit}, \texttt{StukelLogit}, \texttt{StukelInvLogit}:] Various common link functions for generalized linear models.
+      \code{Index} is useful for implementing dynamic models, in which the parent-child connections change.
+      \item[\code{Lambda}:] Converts an anonymous function (in Python, called \textbf{lambda functions}) to a \code{Deterministic} instance on a single line.
+      \item[\code{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k^{th}$ element is determined by the others. \code{CompletedDirichlet} appends the $k^{th}$ element to the value of its parent $D$.      
+      \item[\code{Logit}, \code{InvLogit}, \code{StukelLogit}, \code{StukelInvLogit}:] Various common link functions for generalized linear models.
    \end{description}
    It's a good idea to use these classes when feasible, because certain fitting methods (Gibbs step methods in particular) implicitly know how to take them into account.
 
-    \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \texttt{Stochastic}'s decorator interface:
+    \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \code{Stochastic}'s decorator interface:
 \begin{verbatim}
 @deterministic
 def r(switchpoint = s, early_rate = e, late_rate = l):
@@ -227,9 +228,9 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-Notice that rather than returning the log-probability, as is the case for \texttt{Stochastic} objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Arguments' keys and values are converted into a parent dictionary as with \texttt{Stochastic}'s short interface. The \texttt{deterministic} decorator can take \texttt{trace} and \texttt{verbose} arguments, like the \texttt{stochastic} decorator.
+Notice that rather than returning the log-probability, as is the case for \code{Stochastic} objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Arguments' keys and values are converted into a parent dictionary as with \code{Stochastic}'s short interface. The \code{deterministic} decorator can take \code{trace}, \code{verbose} and \code{plot} arguments, like the \code{stochastic} decorator\footnote{Note that deterministic variables have no \code{isdata} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \code{StepMethod} level.}.
 
-Of course, since deterministic nodes are not expected to generate random variates, the longer implementation of the decorator interface available to \texttt{Stochastic} objects is not relevant here.
+Of course, since deterministic nodes are not expected to generate random variates, the longer implementation of the decorator interface available to \code{Stochastic} objects is not relevant here.
 
     \item[Direct] Deterministic objects can also be instantiated directly, by passing the evaluation function to the Deterministic class as an argument:
 \begin{verbatim}
@@ -247,10 +248,8 @@ r = Deterministic(  eval = r_eval,
                     verbose = 0,
                     cache_depth = 2)
 \end{verbatim}
-The \texttt{trace} flag signals to \texttt{Model} whether to keep a trace for the variable, as with stochastic variables.
+The \code{trace} flag signals to \code{Model} whether to keep a trace for the variable, as with stochastic variables.
 \end{description}
-
-Note that deterministic variables have no \texttt{isdata} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \texttt{StepMethod} level.
 
 \hypertarget{container}{}
 \section*{Containers} \label{container}
@@ -260,45 +259,55 @@ In some situations, such as a state-space model, it would be inconvenient to ass
 \begin{eqnarray*}
     x_0 &\sim& \textup N(0,\tau_x)\\
     x_{i+1}|x_i &\sim& \textup{N}(x_i, \tau_x)\\
-    y|x &\sim& \textup N\left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)\\
 	&&i=0,\ldots, N-2
+    y|x &\sim& \textup N\left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)\\
 \end{eqnarray*}
-Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \texttt{`x_0'}, \texttt{`x_1'}, etc.
+Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \code{`x_0'}, \code{`x_1'}, etc.
 
 This situation can be handled naturally in PyMC:
 \begin{verbatim}
 x_0 = Normal(`x_0', mu=0, tau=1)
 
+# Initialize array of stochastics
 x = [x_0]
-last_x = x_0
 
-for i in range(1,N):          
-   x_now = Normal(`x_%i' % i, mu=last_x, tau=1)        
-   last_x = x_now 
-   x.append(x_now)
+# Loop over number of elements in N
+for i in range(1,N):  
+      
+   # Instantiate Normal stochastic, based on value of previous element in x
+   xi = Normal(`x_%i' % i, mu=x[-1], tau=1)    
+ 
+   # Append to x
+   x.append(xi)
 
 @data
 @stochastic
 def y(value = 1, mu = x, tau = 100):
+
+	# Initialize sum of mu's
     mu_sum = 0
+
     for i in range(N):
+		# Append squared mu
         mu_sum += mu[i] ** 2
+
+	# Calculate and return log-likelihood
     return normal_like(value, mu_sum, tau)
 \end{verbatim}
-PyMC automatically wraps list \texttt{x} in an appropriate \texttt{Container} class. The python expression \texttt{`x_\%i' \% i} labels each Normal object in the container with the appropriate index $i$.
+PyMC automatically wraps list \code{x} in an appropriate \code{Container} class. The  expression \code{`x_\%i' \% i} labels each Normal object in the container with the appropriate index $i$.
 
-Containers, like variables, have an attribute called \texttt{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with its corresponding value. 
+Containers, like variables, have an attribute called \code{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with its corresponding value. 
 
-Containers can currently be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets or any object with a \texttt{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested\footnote{Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.}. Containers attempt to behave like the objects they wrap. All containers are subclasses of \texttt{ContainerBase}. 
+Containers can currently be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets or any object with a \code{__dict__} attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested\footnote{Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.}. Containers attempt to behave like the objects they wrap. All containers are subclasses of \code{ContainerBase}. 
 
-Containers have the following useful attributes in addition to \texttt{value}:
+Containers have the following useful attributes in addition to \code{value}:
 \begin{itemize}
-    \item\texttt{variables}
-    \item\texttt{stochastics}
-    \item\texttt{potentials}
-    \item\texttt{deterministics}
-    \item\texttt{data_stochastics}
-    \item\texttt{step_methods}.
+    \item\code{variables}
+    \item\code{stochastics}
+    \item\code{potentials}
+    \item\code{deterministics}
+    \item\code{data_stochastics}
+    \item\code{step_methods}.
 \end{itemize}
 Each of these attributes is a set containing all the objects of each type in a container, and within any containers in the container.
 
@@ -316,13 +325,13 @@ The joint density corresponding to model (\ref{disastermodel}) can be written as
 \begin{eqnarray*}
     p(D,s,l,e) = p(D|s,l,e) p(s) p(l) p(e).
 \end{eqnarray*}
-Each factor in the joint distribution is a proper, normalized probability distribution for one of the variables conditional on its parents. Such factors are contributed by \texttt{Stochastic} objects.
+Each factor in the joint distribution is a proper, normalized probability distribution for one of the variables conditional on its parents. Such factors are contributed by \code{Stochastic} objects.
 
 In some cases, it's nice to be able to modify the joint density by incorporating terms that don't correspond to probabilities of variables conditional on parents, for example:
 \begin{eqnarray*}
     p(x_0, x_2, \ldots x_{N-1}) \propto \prod_{i=0}^{N-2} \psi_i(x_i, x_{i+1}).
 \end{eqnarray*}
-Arbitrary factors such as $\psi$ are contributed by objects of class \texttt{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \citep{Christakos:2002p5506}.
+Arbitrary factors such as $\psi$ are contributed by objects of class \code{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \citep{Christakos:2002p5506}.
 
 Even when there is a definite dependence hierarchy, potentials can provide a useful shorthand. Consider a new example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
 \begin{eqnarray*}
@@ -348,20 +357,20 @@ to
 where $\gamma$ expresses the prior information. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed.
 
 \bigskip
-Potentials have one important attribute, \texttt{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is \texttt{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \texttt{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \texttt{children} attribute.
+Potentials have one important attribute, \code{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is \code{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \code{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \code{children} attribute.
 
 
-\subsection*{Creation of \texttt{Potentials}}
+\subsection*{Creation of \code{Potentials}}
 There are two ways to create potentials:
 \begin{description}
-    \item[Decorator] A potential can be created via a decorator in a way very similar to \texttt{Deterministic}'s decorator interface:
+    \item[Decorator] A potential can be created via a decorator in a way very similar to \code{Deterministic}'s decorator interface:
 \begin{verbatim}
 @potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
     return -(xlo - xhi)**2
 \end{verbatim}
-The function supplied should return a Numpy \texttt{float}. The \texttt{potential} decorator can take \texttt{verbose} and \texttt{cache_depth} arguments like the \texttt{stochastic} decorator.
+The function supplied should return a Numpy \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
@@ -381,7 +390,7 @@ psi_i = Potential(  logp = psi_i_logp,
 \section*{Graphing models} \label{graphical}
 \pdfbookmark[0]{Graphing models}{graphical}
 
-The function \texttt{graph} draws graphical representations of \texttt{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot (if they are installed). See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \code{graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot (if they are installed). See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
@@ -397,7 +406,7 @@ PyMC's symbol for deterministic variables is a downward-pointing triangle. A gra
 % \begin{center}
 %     \epsfig{file=DeterministicPreInheritance.pdf, width=3.5cm} $\Rightarrow$ \epsfig{file=DeterministicPostInheritance.pdf, width=5cm}
 % \end{center}
-% These inherited children can be accessed via the \texttt{extended_children} attributes of the parents.
+% These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
 The symbol for factor potentials is a rectangle:
 \begin{center}
@@ -408,23 +417,23 @@ Factor potentials are usually associated with \emph{undirected} grahical models.
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
 \end{center}
 
-Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \texttt{moral_graph}.
+Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{moral_graph}.
 
 
-\section*{Class \texttt{LazyFunction} and caching}
+\section*{Class \code{LazyFunction} and caching}
 \label{sec:caching} 
 
-The \texttt{logp} attributes of stochastic variables and potentials and the \texttt{value} attributes of deterministic variables are wrappers for instances of class \texttt{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \texttt{L} could be created from a function \texttt{fun} as follows:
+The \code{logp} attributes of stochastic variables and potentials and the \code{value} attributes of deterministic variables are wrappers for instances of class \code{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \code{L} could be created from a function \code{fun} as follows:
 \begin{verbatim}
 L = LazyFunction(fun, arguments)
 \end{verbatim}
-The argument \texttt{arguments} is a dictionary container; \texttt{fun} must accept keyword arguments only. When \texttt{L}'s \texttt{get()} method is called, the return value is the same as the call 
+The argument \code{arguments} is a dictionary container; \code{fun} must accept keyword arguments only. When \code{L}'s \code{get()} method is called, the return value is the same as the call 
 \begin{verbatim}
 fun(**arguments.value)
 \end{verbatim}
-Note that no arguments need to be passed to \texttt{L.get}; lazy functions memorize their arguments.
+Note that no arguments need to be passed to \code{L.get}; lazy functions memorize their arguments.
 
-Before calling \texttt{fun}, \texttt{L} will check the values of \texttt{arguments.variables} against an internal cache. This comparison is done \emph{by reference}, not by value, and this is part of the reason why stochastic variables' values cannot be updated in-place. If \texttt{arguments.variables}' values match a frame of the cache, the corresponding output value is returned and \texttt{fun} is not called. If a call to \texttt{fun} is needed, \texttt{arguments.variables}' values and the return value replace the oldest frame in the cache. The depth of the cache can be set using the optional init argument \texttt{cache_depth}, which defaults to 2.
+Before calling \code{fun}, \code{L} will check the values of \code{arguments.variables} against an internal cache. This comparison is done \emph{by reference}, not by value, and this is part of the reason why stochastic variables' values cannot be updated in-place. If \code{arguments.variables}' values match a frame of the cache, the corresponding output value is returned and \code{fun} is not called. If a call to \code{fun} is needed, \code{arguments.variables}' values and the return value replace the oldest frame in the cache. The depth of the cache can be set using the optional init argument \code{cache_depth}, which defaults to 2.
 
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parental value configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected.
 
