@@ -502,10 +502,16 @@ class Sampler(Model):
        
         cmds = """
         Commands:
-          i -- print current iteration index
-          p -- pause
-          h -- halt (stop sampling and truncate trace)
-          q -- quit the pymc console
+          i -- index: print current iteration index
+          p -- pause: interrupt sampling and return to the main console.
+                      Sampling can be resumed later with icontinue().
+          h -- halt:  stop sampling and truncate trace. Sampling cannot be 
+                      resumed for this chain.
+          b -- bg:    return to the main console. The sampling will still 
+                      run in a background thread. There is a possibility of 
+                      malfunction if you interfere with the Sampler's 
+                      state or the database during sampling. Use this at your
+                      own risk. 
         """
         
         print """==============
@@ -538,7 +544,7 @@ class Sampler(Model):
                     elif cmd == 'h':
                         self.status = 'halt'
                         break
-                    elif cmd == 'q':
+                    elif cmd == 'b':
                         return
                     elif cmd == '\n':
                         prompt = True
