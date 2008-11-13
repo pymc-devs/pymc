@@ -20,7 +20,7 @@ class MCMC(Sampler):
     is assigned a StepMethod object, which makes it take a single MCMC step conditional on the
     rest of the model. These step methods are called in turn.
 
-      >>> A = MCMC(input, db, output_path=None, verbose=0)
+      >>> A = MCMC(input, db, verbose=0)
 
       :Parameters:
         - input : module, list, tuple, dictionary, set, object or nothing.
@@ -29,8 +29,6 @@ class MCMC(Sampler):
         - db : string
             The name of the database backend that will store the values
             of the stochastics and deterministics sampled during the MCMC loop.            
-        - output_path : string
-            The place where any output files should be put.
         - verbose : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
 
@@ -49,7 +47,7 @@ class MCMC(Sampler):
     
     :SeeAlso: Model, Sampler, StepMethod.
     """
-    def __init__(self, input=None, db='ram', name='MCMC', output_path=None, **kwds):
+    def __init__(self, input=None, db='ram', name='MCMC', **kwds):
         """Initialize an MCMC instance.
 
         :Parameters:
@@ -59,14 +57,12 @@ class MCMC(Sampler):
           - db : string
               The name of the database backend that will store the values
               of the stochastics and deterministics sampled during the MCMC loop.
-          - output_path : string
-              The place where any output files should be put.
           - verbose : integer
               Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
           - **kwds : 
               Keywords arguments to be passed to the database instantiation method.
         """
-        Sampler.__init__(self, input, db, name, output_path, calc_deviance=True, **kwds)
+        Sampler.__init__(self, input, db, name, calc_deviance=True, **kwds)
 
         self.step_method_dict = {}
         for s in self.stochastics:
