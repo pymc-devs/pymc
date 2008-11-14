@@ -15,7 +15,7 @@
 \usepackage{fullpage}
 \usepackage{amsmath}
 \usepackage{epsfig}
-\usepackage{pdfsync} 
+% \usepackage{pdfsync} 
 
 % Flexible citation syntax
 \usepackage{natbib}
@@ -28,7 +28,7 @@
 % More symbols
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{latexsym}
+% \usepackage{latexsym}
 
 % Package for including code in the document
 \usepackage{listings}
@@ -37,25 +37,25 @@
 %\usepackage{boxedminipage}
 
 % This is now the recommended way for checking for PDFLaTeX:
-%\usepackage{ifpdf}
+% \usepackage{ifpdf}
 
 % Enable hyperlinks
-\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+% \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
-%\ifpdf
-%\usepackage[pdftex]{graphicx}
-%\else
-%\usepackage{graphicx}
-%\fi
+% \ifpdf
+% \usepackage[pdftex]{graphicx}
+% \else
+% \usepackage{graphicx}
+% \fi
 
 %%% EPYDOC STUFF %%%
 \usepackage{underscore}
 \usepackage[english]{babel}
-\usepackage{alltt, parskip, boxedminipage}
+% \usepackage{alltt, parskip, boxedminipage}
 \usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
 \usepackage{fullpage}
 \usepackage[usenames]{color}
-\usepackage{ifthen}
+% \usepackage{ifthen}
 \usepackage{ae}
 \usepackage{aeguill}
 \usepackage{shortvrb}
@@ -1284,41 +1284,41 @@ The following high-level linear algebra utilities are found in \file{GPutils.py}
 
 % chapter numerics (end)
 
-\chapter{Wishlist}\label{cha:wishlist}
-\section{Features}
-\begin{itemize}
-    \item Linear transformations.
-    \begin{itemize}
-        \item Create new GP's from old GP's via linear transformations. Maybe try to make a \class{LinearOperator} class.
-        \item Observe linear transformations of evaluations of GP.
-    \end{itemize}
-    \item Observations can be dependent (\texttt{obs_V} can be square rather than a diagonal).
-    \item Specific support for anisotropy.
-    \item Specific support for spline covariances.
-    \item Specific support for vector-valued GPs (cokriging).
-\end{itemize}
-
-\section{Optimizations}
-\begin{itemize}
-    \item Markov random field covariances, which take advantage of the sparseness of the covariance for speed.
-    \item Speed up realization calls with just one value. All the array manipulation really bogs this case down, and this makes dynamical/autoregressive applications slow.
-    \begin{itemize}
-        \item There isn't a clear bottleneck, unfortunately. It might be necessary to write all the call methods in f2py or Pyrex.
-    \end{itemize}
-\item \function{ichol} and friends:
-\begin{itemize}
-    \item Don't allocate full-rank memory up-front.
-    \item Use a symbolic Cholesky decomposition to save some work.
-    \item Increase granularity of BLAS calls to take better advantage of threaded libraries.
-    \item Distributed memory.
-\end{itemize}
-\end{itemize}
-
-\section{Other} 
-\begin{itemize}
-    \item Clean up the return values from \class{Covariance.observe}.
-    \item Try to figure out relative performance of incomplete Cholesky w/low-rank covariances to basis covariances, and relative performance of sparse Cholesky to Markov Random Field covariances.
-\end{itemize}
+% \chapter{Wishlist}\label{cha:wishlist}
+% \section{Features}
+% \begin{itemize}
+%     \item Linear transformations.
+%     \begin{itemize}
+%         \item Create new GP's from old GP's via linear transformations. Maybe try to make a \class{LinearOperator} class.
+%         \item Observe linear transformations of evaluations of GP.
+%     \end{itemize}
+%     \item Observations can be dependent (\texttt{obs_V} can be square rather than a diagonal).
+%     \item Specific support for anisotropy.
+%     \item Specific support for spline covariances.
+%     \item Specific support for vector-valued GPs (cokriging).
+% \end{itemize}
+% 
+% \section{Optimizations}
+% \begin{itemize}
+%     % \item Markov random field covariances, which take advantage of the sparseness of the covariance for speed.
+%     \item Speed up realization calls with just one value. All the array manipulation really bogs this case down, and this makes dynamical/autoregressive applications slow.
+%     \begin{itemize}
+%         \item There isn't a clear bottleneck, unfortunately. It might be necessary to write all the call methods in f2py or Pyrex.
+%     \end{itemize}
+% \item \function{ichol} and friends:
+% \begin{itemize}
+%     \item Don't allocate full-rank memory up-front.
+%     \item Use a symbolic Cholesky decomposition to save some work.
+%     \item Increase granularity of BLAS calls to take better advantage of threaded libraries.
+%     \item Distributed memory.
+% \end{itemize}
+% \end{itemize}
+% 
+% \section{Other} 
+% \begin{itemize}
+%     \item Clean up the return values from \class{Covariance.observe}.
+%     \item Try to figure out relative performance of incomplete Cholesky w/low-rank covariances to basis covariances, and relative performance of sparse Cholesky to Markov Random Field covariances.
+% \end{itemize}
 
 % section new_features (end)
 

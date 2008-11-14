@@ -81,7 +81,7 @@
       %{\rm\Huge\py@HeaderFamily \@title \par}%
       %{\em\LARGE\py@HeaderFamily \py@release\releaseinfo \par}
       \vfill
-      \epsfig{file=logo_purple.pdf,width=15cm}
+      \epsfig{file=logo.pdf,width=15cm}
       \vfill
       {\LARGE\py@HeaderFamily \@author \par}
       \vfill\vfill
