@@ -7,6 +7,7 @@
 \documentclass[]{jss}
 
 \usepackage{hyperref}
+\usepackage{boxedminipage}
 
 \author{Anand Patil\\University of Oxford \And 
         David Huard\\Institut National de la\\Recherche Scientifique \And
@@ -51,10 +52,6 @@
 \label{sec:tutorial}
 \input{tutorial}
 
-\section[MCMC]{Markov chain Monte Carlo} 
-\label{sec:MCMC} 
-\input{theory}
-
 \section[Building Models]{Building models}
 \label{sec:modelbuilding} 
 \input{modelbuilding}
@@ -75,7 +72,11 @@
 \label{sec:extending}
 \input{extending}
 
-\section[Distributions]{Probability distributions} 
+\appendix[MCMC]{Markov chain Monte Carlo} 
+\label{sec:MCMC} 
+\input{theory}
+
+\appendix[Distributions]{Probability distributions} 
 \label{sec:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}

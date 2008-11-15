@@ -41,7 +41,6 @@ In addition, models expose each node they contain as an attribute. For instance,
 The \code{Model} class's init method takes the following arguments:
 \begin{description}
     \item[\code{input}:] Some collection of PyMC nodes defining a probability model. These may be stored in a list, set, tuple, dictionary, array, module, or any object with a \code{__dict__} attribute. If \code{input} is \code{None} (the default), all the nodes on the main namespace and the \code{Model} object's class's dictionary are collected.
-    \item[\code{output_path} (optional):] A string indicating where all of the files produced by the model should be saved (defaults to current directory).
     \item[\code{verbose} (optional):] An integer controlling the verbosity of the model's output.
 \end{description}
 The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation, using nodes \code{a}, \code{b} and \code{c}:
@@ -106,7 +105,7 @@ M = MyModel()
 \hypertarget{sampler}{}
 \section*{The \code{Sampler} class} \label{sec:Sampler}
 \pdfbookmark[1]{The Sampler class}{sampler}
-Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input, db=`ram', output\_path=None, verbose=0)}. The \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), and the other three arguments are the same as for \code{Model}. Samplers have the following important methods:
+Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
 \begin{description}
     \item[\code{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \code{iter} argument controls how many times the sampling loop will be run, and the \code{length} argument controls the initial size of the database that will be used to store the samples.
     \item[\code{isample(iter, length=None, verbose=0)}:] The same as \code{sample}, but the sampling is done interactively: you can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful: 
@@ -114,12 +113,12 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
         \item[\code{icontinue()}:] Continue interactive sampling.
         \item[\code{halt()}:] Truncate the database and clean up.
     \end{description}
-    \item[\code{tally()}:] Write all variables' current values to the database.
+    \item[\code{tally()}:] Write all variables' current values to the database. The actual write operation depends on the specified database backend.
     %\item[\code{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \code{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values of all the stochastic variables in the model).
-    \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling.
+    \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
     \item[\code{restore\_state()}:] Restores the sampler to the state stored in the database.
 	 \item[\code{stats()}:] Generate summary statistics for all nodes in the model.
-    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database.
+    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database. Note that the \code{trace_index} is different from the current iteration, since not all samples are necessarily saved due to burning and thinning. 
 \end{description}
 
 In addition, the sampler attribute \code{deviance} is a deterministic variable valued as the model's deviance at its current state.
@@ -178,7 +177,7 @@ MCMC samplers have the following methods, in addition to those of \code{Sampler}
     \item[\code{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] Interactive sampling; see \code{Sampler.isample}.
     \item[\code{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \code{method} to handle some stochastic variables. The extra arguments are passed to the init method.
     \item[\code{assign_step_methods()}:] Assigns step methods now. This method is called whenever \code{sample} or \code{isample} is called, but it can be useful to call it directly to see what the default step methods will be.
-    \item[\code{tune()}:] Each step method's \code{tune} method is called. This method is called periodically throughout the sampling loop.
+    \item[\code{tune()}:] Each step method's \code{tune} method is called. This method is called periodically throughout the sampling loop, each \code{tune_interval} iterations.
     \item[\code{goodness()}:] Calculates goodness-of-fit (GOF) statistics according to \cite{Brooks:2000il}.
 \end{description}
 

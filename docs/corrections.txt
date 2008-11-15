@@ -55,28 +55,13 @@ Line	Comment
 [AP] Actually, you ought to update this with the new trace slicing conventions.
 
 
-564		Can we put this in a box or side-bar ? Integrate it visually as a CAUTION/WARNING ?
-[AP] That would be better. I don't know how to do that in standard latex.
 576		Should we replace @data by @observed ? Less chance of conflict with user defined variables. 
 [AP] This ticket still hasn't been resolved...
 [CF] I'm in favour of getting rid of this decorator altogether, in favour of a boolean keyword argument for @stochastic. See issue tracker.
 
-
-788		output_path is not supported by the db backends.
-807		The call arguments to Sampler needs to be updated. 
-807		document calc_deviance: whether or not a deviance deterministic should be created. 
-811		isn't length==iter ?
-[AP] This text dates back to the stone age...
-819		database. The actual write operation depends on the database backend chosen, see ...
-820		This is not supported yet for sqlite and mysql.
-824		Explain that trace_index is different from the sampler's index (in MCMC), since some iterations might not be saved due to burn and thin arguments. 
-825	 	calc_deviance
 827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
-[AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy.
-885		loop, each `tune_interval` iterations. 
-897		Gibbs step methods are not in the sandbox anymore.
-[AP] They are in my checkout...
-[DH] I got confused because there is a Gibbs StepMethod in StepMethods.py, but it's a dummy I guess. 
+[AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy. 
+
 925		How ?
 927		More info. 
 938		Provide more info about the method. 

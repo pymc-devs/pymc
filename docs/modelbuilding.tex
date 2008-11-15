@@ -132,10 +132,8 @@ Notice that the log-probability and random variate functions are specified exter
 
 \end{description}
 
-% TODO Put this warning in a sidebar
-\hypertarget{sub:warning}{}
-\subsection*{Don't update stochastic variables' values in-place} \label{sub:warning}
-\pdfbookmark[0]{Don't update stochastic variables' values in-place}{sub:warning}
+\begin{boxedminipage}{.9\textwidth} 
+\subsection*{Don't update stochastic variables' values in-place}
 
 \code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupt the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
 \begin{verbatim}
@@ -149,7 +147,7 @@ The following are in-place updates and should \emph{never} be used:
 \end{itemize}
 
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several variables stored in an array or list.
-
+\end{boxedminipage}
 
 \hypertarget{data}{}
 \section*{Data} \label{data}
