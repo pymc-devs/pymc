@@ -26,11 +26,11 @@ xlpot = xplot=arange(0.,max(blowflydata),100.)
 #  B  #
 #######
     
-RickerRate = Gamma('RickerRate', .00225, alpha=3., beta=.002/3., isdata=True)
-RickerSlope = Gamma('RickerSlope', 5., alpha=3., beta=4./3., isdata=True)
+RickerRate = Gamma('RickerRate', .00225, alpha=3., beta=.002/3., observed=True)
+RickerSlope = Gamma('RickerSlope', 5., alpha=3., beta=4./3., observed=True)
 
 # # Uncomment for nonparametric B
-B_amp = Gamma('B_amp', .4, alpha=5., beta=1./4., isdata=True)
+B_amp = Gamma('B_amp', .4, alpha=5., beta=1./4., observed=True)
 B_scale = 10000.
 
 @dtrm
@@ -59,10 +59,10 @@ B = GP(B_M, B_C, mesh = xsteer, name = 'B', init_mesh_vals = B_M.value(xsteer), 
 #  D  #
 #######
 
-MortalityMean = Gamma('MortalityMean', .14, alpha=3., beta=.1/alpha, isdata=True)
+MortalityMean = Gamma('MortalityMean', .14, alpha=3., beta=.1/alpha, observed=True)
 
 # # Uncomment for nonparametric D
-D_amp = Gamma('D_amp', .12, alpha=4., beta=.1/5., isdata=True)
+D_amp = Gamma('D_amp', .12, alpha=4., beta=.1/5., observed=True)
 D_scale = 1000.
 
 @dtrm
@@ -143,8 +143,8 @@ def TS(B=B, D=D, psi=psi, t=t, tau=tau, IC = TS_IC):
 # Data #
 ########
 
-meas_V = Gamma('meas_V', .01, alpha=3., beta=.01/3., isdata=True)
-TSdata = Normal('TSdata', blowflydata, mu=TS, V=meas_V, isdata=True)
+meas_V = Gamma('meas_V', .01, alpha=3., beta=.01/3., observed=True)
+TSdata = Normal('TSdata', blowflydata, mu=TS, V=meas_V, observed=True)
 
 PsiStepper = JointMetropolis([psi, mu_psi, V_psi, TS_IC], 
             oneatatime_scales = {psi: .005, mu_psi: 1., V_psi: 1., TS_IC: .01},

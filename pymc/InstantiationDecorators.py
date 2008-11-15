@@ -3,7 +3,7 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
-__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data']
+__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed']
 
 import sys, inspect, pdb
 from imp import load_dynamic
@@ -208,10 +208,10 @@ def deterministic(__func__ = None, **kwds):
 # Shortcut alias
 dtrm = deterministic
 
-def data(obj=None, **kwds):
+def observed(obj=None, **kwds):
     """
     Decorator function to instantiate data objects.     
-    If given a Stochastic, sets a the isdata flag to True.
+    If given a Stochastic, sets a the observed flag to True.
     
     Can be used as
     
@@ -234,15 +234,16 @@ def data(obj=None, **kwds):
     
     if obj is not None:
         if isinstance(obj, Stochastic):
-            obj.isdata=True
+            obj.observed=True
             return obj
         else:
-            p = stochastic(__func__=obj, isdata=True, **kwds)
+            p = stochastic(__func__=obj, observed=True, **kwds)
             return p
     
-    kwds['isdata']=True
-    def instantiate_data(func):
+    kwds['observed']=True
+    def instantiate_observed(func):
         return stochastic(func, **kwds)
         
-    return instantiate_data
+    return instantiate_observed
 
+data = observed

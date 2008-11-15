@@ -36,9 +36,9 @@ class Parallel(Sampler):
 
         dtrms:          All extant Deterministics.
 
-        stochs:         All extant Stochastics with isdata = False.
+        stochs:         All extant Stochastics with observed = False.
 
-        data:               All extant Stochastics with isdata = True.
+        data:               All extant Stochastics with observed = True.
 
         nodes:               All extant Stochastics and Deterministics.
 

@@ -108,7 +108,7 @@ class StepMethod(object):
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
     
     Externally-accessible attributes:
-      stochastics:   The Stochastics over which self has jurisdiction which have isdata = False.
+      stochastics:   The Stochastics over which self has jurisdiction which have observed = False.
       children: The combined children of all Variables over which self has jurisdiction.
       parents:  The combined parents of all Nodes over which self has jurisdiction, as a set.
       loglike:  The summed log-probability of self's children conditional on all of self's 
@@ -153,7 +153,7 @@ class StepMethod(object):
         for variable in variables:
             # Sort.
             
-            if isinstance(variable,Stochastic) and not variable.isdata:
+            if isinstance(variable,Stochastic) and not variable.observed:
                 self.stochastics.add(variable)
         
         if len(self.stochastics)==0:
@@ -336,7 +336,7 @@ class NoStepper(StepMethod):
     """
     Step and tune methods do nothing.
     
-    Useful for holding stochastics constant without setting isdata=True.
+    Useful for holding stochastics constant without setting observed=True.
     """
     def step(self):
         pass
@@ -435,7 +435,7 @@ class Metropolis(StepMethod):
         # This is the best possible step method for this stochastic.
         if len(s.extended_children)==0:
             
-            if s.isdata:
+            if s.observed:
                 return 0
             else:
                 try:
@@ -563,7 +563,7 @@ class Impute(Metropolis):
     def competence(s):
         
         return 0
-        if s.isdata:
+        if s.observed:
             return 3
         else:
             return 0
@@ -615,7 +615,7 @@ class NoStepper(StepMethod):
     """
     Step and tune methods do nothing.
     
-    Useful for holding stochastics constant without setting isdata=True.
+    Useful for holding stochastics constant without setting observed=True.
     """
     def step(self):
         pass

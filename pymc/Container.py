@@ -179,7 +179,7 @@ def file_items(container, iterable):
     container.deterministics = set()
     container.stochastics = set()
     container.potentials = set()
-    container.data_stochastics = set()
+    container.observed_stochastics = set()
 
     # containers needs to be a list to hold unhashable items.
     container.containers = []
@@ -200,8 +200,8 @@ def file_items(container, iterable):
         if isinstance(item, Variable):
             container.variables.add(item)
             if isinstance(item, StochasticBase):
-                if item.isdata:
-                    container.data_stochastics.add(item)
+                if item.observed:
+                    container.observed_stochastics.add(item)
                 else:
                     container.stochastics.add(item)
             elif isinstance(item, DeterministicBase):
@@ -265,11 +265,11 @@ class SetContainer(ContainerBase, set):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         
@@ -326,11 +326,11 @@ class TupleContainer(ContainerBase, tuple):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         
@@ -376,11 +376,11 @@ class ListContainer(ContainerBase, list):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         
@@ -435,11 +435,11 @@ class DictContainer(ContainerBase, dict):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         
@@ -495,11 +495,11 @@ class ObjectContainer(ContainerBase):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         
@@ -558,11 +558,11 @@ class ArrayContainer(ContainerBase, ndarray):
       deterministics : set
         All the deterministics self contains.
       stochastics : set
-        All the stochastics self contains with isdata=False.
+        All the stochastics self contains with observed=False.
       potentials : set
         All the potentials self contains.
-      data_stochastics : set
-        All the stochastics self contains with isdata=True.
+      observed_stochastics : set
+        All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
         

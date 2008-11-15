@@ -219,7 +219,7 @@ class DLM(NormalSubmodel):
             # If data provided, use it.
             if Y_vals is not None:
                 Y[t].value = Y_vals[t]
-                Y[t].isdata = True
+                Y[t].observed = True
             
         self.Y_mean = pymc.Container(np.array(Y_mean))
         self.Y = pymc.Container(np.array(Y))

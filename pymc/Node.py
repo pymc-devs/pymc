@@ -225,11 +225,11 @@ class ContainerBase(object):
         self.stochastics.update(new_container.stochastics)
         self.potentials.update(new_container.potentials)
         self.deterministics.update(new_container.deterministics)
-        self.data_stochastics.update(new_container.data_stochastics)        
+        self.observed_stochastics.update(new_container.observed_stochastics)        
     
     def _get_logp(self):
         # Return total log-probabilities from all elements
-        return sum(obj.logp for obj in self.stochastics | self.potentials | self.data_stochastics)
+        return sum(obj.logp for obj in self.stochastics | self.potentials | self.observed_stochastics)
     
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')

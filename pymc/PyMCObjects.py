@@ -428,7 +428,7 @@ class Stochastic(StochasticBase):
             A seed for this variable's rng. Either value or rseed must
             be given.
                         
-    - isdata (optional) :  boolean
+    - observed (optional) :  boolean
             A flag indicating whether this variable is data; whether
             its value is known.
 
@@ -474,15 +474,20 @@ class Stochastic(StochasticBase):
                     value=None,
                     dtype=None, 
                     rseed=False, 
-                    isdata=False,
+                    observed=False,
                     cache_depth=2,
                     plot=None,
-                    verbose = 0):                    
+                    verbose = 0,
+                    isdata=None):                    
 
         self.ParentDict = ParentDict
-
+        
+        # Support legacy 'isdata' for a while
+        if isdata is not None:
+            self.isdata = isdata
+        
         # A flag indicating whether self's value has been observed.
-        self.isdata = isdata
+        self.observed = observed
         
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
@@ -578,9 +583,9 @@ class Stochastic(StochasticBase):
         if self.verbose > 0:
             print '\t' + self.__name__ + ': value set to ', value
         
-        # Value can't be updated if isdata=True
-        if self.isdata:
-            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if isdata flag is set'
+        # Value can't be updated if observed=True
+        if self.observed:
+            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if observed flag is set'
             
         # Save current value as last_value
         # Don't copy because caching depends on the object's reference. 
@@ -668,6 +673,16 @@ class Stochastic(StochasticBase):
     
     # Shortcut alias to random
     rand = random
+    
+    def _get_isdata(self):
+        import warnings
+        warnings.warn('"isdata" is deprecated, please use "observed" instead.')
+        return self.observed
+    def _set_isdata(self, isdata):
+        import warnings
+        warnings.warn('"isdata" is deprecated, please use "observed" instead.')        
+        self.observed = isdata
+    isdata = property(_get_isdata, _set_isdata)
         
     def _get_coparents(self):
         coparents = set()

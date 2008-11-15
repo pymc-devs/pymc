@@ -44,7 +44,7 @@ def find_generations(container, with_data = False):
     generations.append(set())
     all_children = set()
     if with_data:
-        stochastics_to_iterate = container.stochastics | container.data_stochastics
+        stochastics_to_iterate = container.stochastics | container.observed_stochastics
     else:
         stochastics_to_iterate = container.stochastics
     for s in stochastics_to_iterate:
@@ -90,8 +90,8 @@ class Model(ObjectContainer):
             
     Attributes:
       - deterministics
-      - stochastics (with isdata=False)
-      - data (stochastic variables with isdata=True)
+      - stochastics (with observed=False)
+      - data (stochastic variables with observed=True)
       - variables
       - potentials
       - containers
@@ -242,7 +242,7 @@ class Sampler(Model):
     def _sum_deviance(self):
         # Sum deviance from all stochastics
         
-        return -2*sum([v.get_logp() for v in self.data_stochastics])   
+        return -2*sum([v.get_logp() for v in self.observed_stochastics])   
         
     def _init_deviance(self):
         """

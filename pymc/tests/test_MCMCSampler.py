@@ -27,7 +27,7 @@ class test_MCMC(TestCase):
              
         # Check stochastic arrays
         assert_equal(len(self.M.stochastics), 3)
-        assert_equal(len(self.M.data_stochastics),1)
+        assert_equal(len(self.M.observed_stochastics),1)
         assert_array_equal(self.M.D.value, DisasterModel.disasters_array)
         
     def test_plot(self):

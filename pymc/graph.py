@@ -38,7 +38,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
     model.moral_dot_object = pydot.Dot()
         
     # Data are filled ellipses
-    for datum in model.data_stochastics:
+    for datum in model.observed_stochastics:
         model.moral_dot_object.add_node(pydot.Node(name=datum.__name__, style='filled'))
 
     # Stochastics are open ellipses
@@ -46,7 +46,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
         model.moral_dot_object.add_node(pydot.Node(name=s.__name__))
     
     gone_already = set()
-    for s in model.stochastics | model.data_stochastics:
+    for s in model.stochastics | model.observed_stochastics:
         gone_already.add(s)
         for other_s in s.moral_neighbors:
             if not other_s in gone_already:
@@ -113,7 +113,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
     
         
     # Data are filled ellipses
-    for datum in model.data_stochastics:
+    for datum in model.observed_stochastics:
         pydot_nodes[datum] = pydot.Node(name=datum.__name__, style='filled')
         model.dot_object.add_node(pydot_nodes[datum])
         shown_objects.add(datum)

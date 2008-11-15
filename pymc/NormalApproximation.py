@@ -187,7 +187,7 @@ class MAP(Model):
                 self.stochastic_types.append(type_now)
 
         self.data_len = 0
-        for datum in self.data_stochastics:
+        for datum in self.observed_stochastics:
             self.data_len += len(ravel(datum.value))
 
         # Unpack step    

@@ -299,7 +299,7 @@ class LinearCombination(pm.Deterministic):
         self.coefs = {}
         self.sides = {}
 
-        for s in self.parents.stochastics | self.parents.data_stochastics:
+        for s in self.parents.stochastics | self.parents.observed_stochastics:
             self.coefs[s] = []
             self.sides[s] = []
 
@@ -384,7 +384,7 @@ class Index(LinearCombination):
         self.coefs = {}
         self.sides = {}
 
-        for s in self.parents.stochastics | self.parents.data_stochastics:
+        for s in self.parents.stochastics | self.parents.observed_stochastics:
             
             @deterministic
             def coef(index=self.index, x=x):

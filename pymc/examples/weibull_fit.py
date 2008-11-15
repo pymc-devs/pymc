@@ -32,7 +32,7 @@ of the parameters.
 """
 a = pymc.Uniform('a', lower=0, upper=10, value=5, doc='Weibull alpha parameter')
 b = pymc.Uniform('b', lower=0, upper=10, value=5, doc='Weibull beta parameter')
-like = pymc.Weibull('like', alpha=a, beta=b, value=dataset, isdata=True)
+like = pymc.Weibull('like', alpha=a, beta=b, value=dataset, observed=True)
 
 """
 The last step is simply to sample the parameters a and b and analyze the 

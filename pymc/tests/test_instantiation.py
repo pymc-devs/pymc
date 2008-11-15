@@ -75,16 +75,16 @@ def G(value = D_array*.5,
 class test_instantiation(TestCase):
     def test_data(self):
         assert(isinstance(D, Stochastic))
-        assert(D.isdata)
+        assert(D.observed)
         assert(isinstance(E, Stochastic))
-        assert(E.isdata)
+        assert(E.observed)
         assert(isinstance(F, Stochastic))
-        assert(F.isdata)
+        assert(F.observed)
         assert(isinstance(G, Stochastic))
-        assert(G.isdata)
+        assert(G.observed)
     def test_stochastic(self):
         assert(isinstance(l, Stochastic))
-        assert(not l.isdata)
+        assert(not l.observed)
 
 if __name__ == '__main__':
     import unittest

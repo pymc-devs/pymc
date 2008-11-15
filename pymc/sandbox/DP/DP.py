@@ -237,7 +237,7 @@ class DP(Stochastic):
         # If no clusters argument provided, propose from prior all over the place.
         
         Stochastic.__init__(self, logp=dp_logp_fun, random=dp_random_fun, doc=doc, name=name, parents=parents,
-                            trace=trace, value=value, dtype=np.object, rseed=True, isdata=False, cache_depth=cache_depth,
+                            trace=trace, value=value, dtype=np.object, rseed=True, observed=False, cache_depth=cache_depth,
                             plot=plot, verbose=verbose)
 
 
@@ -268,7 +268,7 @@ class DPDraw(Stochastic):
                     N=1,                    
                     doc=None,                      
                     trace=True, 
-                    isdata=False,
+                    observed=False,
                     cache_depth=2,
                     plot=True,
                     verbose = 0):
@@ -291,7 +291,7 @@ class DPDraw(Stochastic):
                             value=None,
                             dtype=float, 
                             rseed=True, 
-                            isdata=isdata,
+                            observed=observed,
                             cache_depth=cache_depth,
                             plot=plot,
                             verbose = verbose)                    

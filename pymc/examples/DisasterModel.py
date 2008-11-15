@@ -34,4 +34,4 @@ def r(s=s, e=e, l=l):
     out[s:] = l
     return out
  
-D = Poisson('D', mu=r, value=disasters_array, isdata=True)
+D = Poisson('D', mu=r, value=disasters_array, observed=True)

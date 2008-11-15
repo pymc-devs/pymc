@@ -22,7 +22,7 @@ def GP_array_random(M, U, scale=1.):
 
 class GP(pm.Stochastic):
     """
-    f = GP('f', M, C, [mesh, doc, init_mesh_vals, mesh_eval_isdata, trace, cache_depth, verbose])
+    f = GP('f', M, C, [mesh, doc, init_mesh_vals, mesh_eval_observed, trace, cache_depth, verbose])
     
     A stochastic variable valued as a Realization object.
     
@@ -36,7 +36,7 @@ class GP(pm.Stochastic):
         
         - init_mesh_vals: Initial values for self over mesh.
         
-        - mesh_eval_isdata: Whether self's evaluation over mesh is known with no uncertainty.
+        - mesh_eval_observed: Whether self's evaluation over mesh is known with no uncertainty.
         
         - trace: Whether self should be traced. See pymc documentation.
         
@@ -53,7 +53,7 @@ class GP(pm.Stochastic):
                  mesh=None,
                  doc="A GP realization-valued stochastic variable",
                  init_mesh_vals = None,
-                 mesh_eval_isdata = False,
+                 mesh_eval_observed = False,
                  trace=True,
                  cache_depth=2,
                  verbose=False):
@@ -169,7 +169,7 @@ class GP(pm.Stochastic):
                             random = random_fun, 
                             trace=trace, 
                             value=init_val.value, 
-                            isdata=False,
+                            observed=False,
                             cache_depth=cache_depth,
                             verbose = verbose)
 

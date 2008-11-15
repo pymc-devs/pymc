@@ -31,7 +31,7 @@ class BinaryTestModel:
     #     else:
     #         return pymc.uniform_like(value, .3, .7)                    
 
-    tail = pymc.Bernoulli('tail', p=coin, value=series, isdata=True)
+    tail = pymc.Bernoulli('tail', p=coin, value=series, observed=True)
     
 
 class TestBinary(TestCase):

@@ -245,9 +245,9 @@ class NormalSubmodel(ListContainer):
         ListContainer.__init__(self, input)
         
         # Need to figure out children and parents of model.
-        self.children, self.parents = find_children_and_parents(self.stochastics | self.data_stochastics)
+        self.children, self.parents = find_children_and_parents(self.stochastics | self.observed_stochastics)
 
-        self.stochastic_list = order_stochastic_list(self.stochastics | self.data_stochastics)
+        self.stochastic_list = order_stochastic_list(self.stochastics | self.observed_stochastics)
         
         self.check_input(self.stochastic_list)                
 
@@ -266,7 +266,7 @@ class NormalSubmodel(ListContainer):
         self.changeable_stochastic_list = []
         self.fixed_stochastic_list = []
         for stochastic in self.stochastic_list:
-            if not stochastic in self.children and not stochastic.isdata:
+            if not stochastic in self.children and not stochastic.observed:
                 self.changeable_stochastic_list.append(stochastic)
             else:
                 self.fixed_stochastic_list.append(stochastic)
@@ -704,7 +704,7 @@ if __name__=='__main__':
     # B = Normal('B',A,2*np.ones(2))
     # C_tau = np.diag([.5,.5])
     # C_tau[0,1] = C_tau[1,0] = .25
-    # C = MvNormal('C',B, C_tau,isdata=True)
+    # C = MvNormal('C',B, C_tau,observed=True)
     # D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
     # 
     # D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))
@@ -743,7 +743,7 @@ if __name__=='__main__':
     # 
     # 
     # x_list[-1].value = x_list[-1].value * 0. + 1.
-    # x_list[N/2].isdata=True
+    # x_list[N/2].observed=True
     # 
     # G = NormalSubmodel(x_list)
     # # C = Container(x_list)

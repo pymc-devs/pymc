@@ -211,7 +211,7 @@ class test_Gibbs(NumpyTestCase):
         B = Normal('B',A,2*np.ones(2))
         C_tau = np.diag([.5,.5])
         C_tau[0,1] = C_tau[1,0] = .25
-        C = MvNormal('C',B, C_tau, isdata=True)
+        C = MvNormal('C',B, C_tau, observed=True)
         D_mean = LinearCombination('D_mean', x=[np.ones((3,2))], y=[C])
 
         D = MvNormal('D',D_mean,np.diag(.5*np.ones(3)))

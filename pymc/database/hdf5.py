@@ -308,7 +308,7 @@ class Database(pickle.Database):
         self._rows.append(self._tables[-1].row)
         
         # Store data objects
-        for object in self.model.data_stochastics:
+        for object in self.model.observed_stochastics:
             if object.trace is True:
                 setattr(table.attrs, object.__name__, object.value)
         
