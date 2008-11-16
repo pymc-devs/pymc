@@ -28,8 +28,7 @@ switchpoint = DiscreteUniform('switchpoint',lower=0,upper=110)
 early_mean = Exponential('early_mean',beta=1.)
 late_mean = Exponential('late_mean',beta=1.)
     
-@data
-@stochastic(dtype=int)
+@stochastic(observed=True, dtype=int)
 def disasters(  value = disasters_array, 
                 early_mean = early_mean, 
                 late_mean = late_mean, 

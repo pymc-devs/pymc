@@ -27,8 +27,7 @@ l = Exponential('l', beta=1)
 
 @deterministic(plot=False)
 def r(s=s, e=e, l=l):
-    # if np.random.random() < .001:
-    #     raise ValueError, 'Lala'
+    """Concatenate Poisson means"""
     out = np.empty(len(disasters_array))
     out[:s] = e
     out[s:] = l
