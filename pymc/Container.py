@@ -124,7 +124,7 @@ def Container(*args):
       ListContainer, TupleContainer, SetContainer, ArrayContainer, DictContainer, 
       ObjectContainer
     """
-    
+        
     if len(args)==1:
         iterable = args[0]
     else:
@@ -158,7 +158,7 @@ def Container(*args):
     
     # Wrap modules
     elif isinstance(iterable, ModuleType):
-        return DictContainer(filter_dict(iterable))
+        return DictContainer(iterable.__dict__)
         
     # Wrap mutable objects
     elif hasattr(iterable, '__dict__'):
@@ -522,7 +522,7 @@ class ObjectContainer(ContainerBase):
             input_to_file = input
 
         else: # Modules, objects, etc.
-            input_to_file = filter_dict(input)
+            input_to_file = input.__dict__
             self.__dict__.update(input_to_file)
 
         self._dict_container = DictContainer(self.__dict__)  
