@@ -125,6 +125,8 @@ class Model(ObjectContainer):
 
         # Get stochastics, deterministics, etc.
         if input is None:
+            import warnings
+            warnings.warn('The MCMC() syntax is deprecated. Please pass in nodes explicitly via M = MCMC(input).')
             import __main__
             __main__.__dict__.update(self.__class__.__dict__)
             input = __main__
