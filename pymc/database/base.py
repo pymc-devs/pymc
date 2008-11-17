@@ -220,10 +220,14 @@ class Database(object):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'): 
-            for name in set(reduce(list.__add__, self.variables_to_tally)):
+            names = set(reduce(list.__add__, self.variables_to_tally))
+            for var in model._variables_to_tally:
+                name = var.__name__
                 if self._traces.has_key(name):
-                    obj = getattr(model, name)
-                    self._traces[name]._getfunc = obj.get_value
+                    self._traces[name]._getfunc = var.get_value
+                    names.remove(name)
+            if len(names) > 0:
+                print "Some objects from the database have not been assigned a getfunc", names
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
