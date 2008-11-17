@@ -484,7 +484,8 @@ class Stochastic(StochasticBase):
         
         # Support legacy 'isdata' for a while
         if isdata is not None:
-            self.isdata = isdata
+            print "Deprecation Warning: the 'isdata' flag has been replaced by 'observed'. Please update your model accordingly."
+            self.observed = isdata
         
         # A flag indicating whether self's value has been observed.
         self.observed = observed
