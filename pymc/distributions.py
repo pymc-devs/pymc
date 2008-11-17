@@ -35,6 +35,7 @@ from PyMCObjects import Stochastic, Deterministic
 from numpy import pi
 import pdb
 import utils
+import warnings
 
 # Import utility functions
 import inspect, types
