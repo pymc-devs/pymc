@@ -17,7 +17,25 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 \subsection*{Informal Methods}
 
-The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the stochs exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$; if the histograms are not visibly different among the sample intervals, this is reasonable evidence for convergence. Note that such diagnostics should be carried out for each stoch estimated by the MCMC algorithm, because convergent behaviour by one stoch does not imply evidence for convergence for other stochs in the analysis. An extension of this approach can me taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
+The most straightforward approach for assessing convergence is based on
+simply plotting and inspecting traces and histograms of the observed MCMC
+sample. If the trace of values for each of the stochs exhibits asymptotic
+behaviour\footnote{Asymptotic behaviour implies that the variance and the
+mean value of the sample stays relatively constant over some arbitrary
+period.} over the last $m$ iterations, this may be satisfactory evidence
+for convergence. A similar approach involves plotting a histogram for every
+set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$;
+if the histograms are not visibly different among the sample intervals,
+this is reasonable evidence for convergence. Note that such diagnostics
+should be carried out for each stoch estimated by the MCMC algorithm,
+because convergent behaviour by one stoch does not imply evidence for
+convergence for other stochs in the analysis. An extension of this approach
+can be taken when multiple parallel chains are run, rather than just a
+single, long chain. In this case, the final values of $c$ chains run for
+$n$ iterations are plotted in a histogram; just as above, this is repeated
+every $k$ iterations thereafter, and the histograms of the endpoints are
+plotted again and compared to the previous histogram. This is repeated
+until consecutive histograms are indistinguishable.
 
 \begin{figure}[h]
 \begin{center}

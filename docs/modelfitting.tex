@@ -285,7 +285,9 @@ Gibbs step methods have the following class attributes:
 
 A Gibbs step method can handle variables that are not of their target class, as long as all their children are of the appropriate class. If this is the case, the step method's \code{conjugate} attribute will be set to \code{False} and its acceptance rate will no longer be 1.
 
-Gibbs step methods can are easy to use manually. To tell an \code{MCMC} object $M$ to handle a variable $x$ using the \code{GammaNormal} class, simply use the call
+Gibbs step methods are easy to use manually. To tell an \code{MCMC}
+object $M$ to handle a variable $x$ using the \code{GammaNormal} class,
+simply use the call
 \begin{verbatim}
     M.use_step_method(GammaNormal, x)
 \end{verbatim}

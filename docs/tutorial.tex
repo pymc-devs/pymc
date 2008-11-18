@@ -54,7 +54,8 @@ disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 \end{verbatim} 
 Next, we create the switchpoint variable $s$:
 \begin{verbatim}
-	s = DiscreteUniform('s', lower=0, upper=110)   
+	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint
+[year]')  
 \end{verbatim}
 \code{DiscreteUniform} is a subclass of \code{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no information \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$:
 \begin{verbatim}
