@@ -537,6 +537,12 @@ class Metropolis(StepMethod):
         if self.verbose > 1:
             print self._id + ' returning.'
     
+    def tune(self, *args, **kwargs):
+        if self._dist == "Prior":
+            return False
+        else:
+            return StepMethod.tune(self, *args, **kwargs)
+    
     def reject(self):
         # Sets current s value to the last accepted value
         # self.stochastic.value = self.stochastic.last_value
@@ -604,7 +610,7 @@ class Gibbs(Metropolis):
             if log(np.random.random()) > logp_p - logp:
                 self.reject()
 
-    def tune(self, verbose):
+    def tune(self, *args, **kwargs):
         return False
 
     def propose(self):
