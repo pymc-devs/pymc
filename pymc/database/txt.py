@@ -18,7 +18,7 @@ Oct. 24, 2008: Implemented savestate. Implemented parallel chain tallying. DH
 """
 
 
-import base, ram, no_trace, pickle
+import base, ram
 import os, datetime, shutil, re
 import numpy as np
 import string 
@@ -61,7 +61,7 @@ class Trace(ram.Trace):
         np.savetxt(f, arr, delimiter=',')
         f.close()
 
-class Database(pickle.Database):
+class Database(base.Database):
     """Txt Database class."""
     
     def __init__(self, dbname=None, dbmode='a'):
@@ -110,14 +110,14 @@ class Database(pickle.Database):
         dir = os.path.join(self._directory, CHAIN_NAME%self.chains)
         os.mkdir(dir)
         
-        pickle.Database._initialize(self, variables, length)
+        base.Database._initialize(self, variables, length)
             
     def savestate(self, state):
         """Save the sampler's state in a state.txt file."""
         file = open(os.path.join(self._directory, 'state.txt'), 'w')
         print >> file, state 
         file.close()
-    
+
 
     
 def load(dirname):

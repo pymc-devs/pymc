@@ -1,84 +1,138 @@
 
 
-By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different storing strategies, which we refer to as \emph{database backends}. All those backends provide the same user interface, making it trivial to switch from one backend to another. In the following, this common interface is presented, along with an individual description of each backend.
+In the examples seen so far, traces are simply held in memory and discarded once
+the Python session ends. PyMC provides the means to store these traces on disk,
+load them back and add additional samples. Internally, this is implemented in
+what we call \emph{database backends}. These backends are simply made of two classes:
+\texttt{Database} and \texttt{Trace}, which all present a similar interface to users.
+At the moment, PyMC counts seven such backends: \texttt{ram}, \texttt{no{\_}trace},
+\texttt{pickle}, \texttt{txt}, \texttt{sqlite}, \texttt{mysql} and \texttt{hdf5}.
+In the following, we present the common interface to those backends and a
+description of each individual backend.
 
 
 %___________________________________________________________________________
 
-\hypertarget{accessing-sampled-data-user-interface}{}
-\pdfbookmark[0]{Accessing Sampled Data: User Interface}{accessing-sampled-data-user-interface}
-\section*{Accessing Sampled Data: User Interface}
-\label{accessing-sampled-data-user-interface}
+\hypertarget{accessing-sampled-data}{}
+\pdfbookmark[0]{Accessing Sampled Data}{accessing-sampled-data}
+\section*{Accessing Sampled Data}
+\label{accessing-sampled-data}
 
-The database backend is selected by the \titlereference{db} keyword:
+To recommended way to access data from an MCMC run, irrespective of the
+database backend, is to use the \texttt{trace(self, name, chain=-1)} method:
 \begin{quote}{\ttfamily \raggedright \noindent
-S~=~MCMC(DisasterModel,~db='ram')
+>{}>{}>~M~=~MCMC(DisasterModel)~\\
+>{}>{}>~M.sample(10)~\\
+>{}>{}>~M.trace('e'){[}:{]}~\\
+array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~\\
+~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489{]})
 }\end{quote}
 
-Here, we instructed the MCMC sampler to keep the trace in the computer's live memory. This means that when the Python session closes, all data will be lost. This is the default backend.
-
-Each time MCMC's \titlereference{sample} method is called, a \titlereference{chain} is created storing the sampled variables. The data in this chain can be accessed for each variable using the call method of its trace attribute:
+\texttt{M.trace('e')} returns the \texttt{Trace} instance associated with the tallyable
+object \titlereference{e}:
 \begin{quote}{\ttfamily \raggedright \noindent
-S.e.trace(burn=0,~thin=1,~chain=-1,~slicing=None)
+>{}>{}>~M.trace('e')~\\
+<pymc.database.ram.Trace~object~at~0x7fa4877a8b50>
 }\end{quote}
 
-with arguments having the following meaning:
-\begin{description}
-\item[{burn}] \leavevmode (\textbf{int})
-
-Number of initial samples to skip.
-
-\item[{thin}] \leavevmode (\textbf{int})
-
-The stride, ie the number of samples to step for each returned value.
-
-\item[{chain}] \leavevmode (\textbf{int or None})
-
-Index of the sampling chain to return. Use \titlereference{None} to return all chains. Note that a new chain is created each time \titlereference{sample} is called.
-
-\item[{slicing}] \leavevmode (\textbf{slice})
-
-Slice object used to parse the samples. Overrides burn and thin parameters.
-
-\end{description}
+This \texttt{Trace} object from the \texttt{ram} backend has a \texttt{{\_}{\_}getitem{\_}{\_}} method
+that is used to access the trace, just as with any other NumPy array.
+By default, \texttt{trace} returns the samples from
+the last chain (chain=-1), which in this case is equivalent to \texttt{chain=0}. To
+return the samples from all the chains, use \texttt{chain=None}:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M.sample(5)~\\
+>{}>{}>~M.trace('e',~chain=None){[}:{]}~\\
+array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~\\
+~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489,~\\
+~~~~~~~~3.14499489,~~3.14499489,~~3.14499489,~~2.94672454,~~3.10767686{]})
+}\end{quote}
 
 
 %___________________________________________________________________________
 
-\hypertarget{loading-data-from-a-previous-session}{}
-\pdfbookmark[0]{Loading data from a previous session}{loading-data-from-a-previous-session}
-\section*{Loading data from a previous session}
-\label{loading-data-from-a-previous-session}
+\hypertarget{saving-data-to-disk}{}
+\pdfbookmark[0]{Saving Data to Disk}{saving-data-to-disk}
+\section*{Saving Data to Disk}
+\label{saving-data-to-disk}
 
-To store a copy of the trace on the hard disk, a number of backends are available: \titlereference{txt}, \titlereference{pickle}, \titlereference{hdf5}, \titlereference{sqlite} and \titlereference{mysql}. These all write the data to disk, in such a way that it can be loaded back in a following session and appended to. So for instance, to save data in ASCII format, we would do:
+By default, the database backend selected by the \texttt{MCMC} sampler is the \texttt{ram}
+backend, which simply holds the data in RAM memory. Now, we will create a
+sampler that, instead, will write data to a pickle file:
 \begin{quote}{\ttfamily \raggedright \noindent
-S~=~MCMC(DisasterModel,~db='txt',~dirname='disaster{\_}data')~\\
-S.sample(10000)~\\
-S.db.close()
+>{}>{}>~M~=~MCMC(DisasterModel,~db='pickle',~dbname='Disaster.pickle')~\\
+>{}>{}>~M.db~\\
+<pymc.database.pickle.Database~object~at~0x7fa486623d90>~\\
+~\\
+>{}>{}>~M.sample(10)~\\
+>{}>{}>~M.db.commit()
 }\end{quote}
 
-When \titlereference{S.db.close()} is called, the data is flushed to disk. That is, directories are created for each chain, with samples from each stochastic variable in a separate file. To access this data during a following session, each database provides a \titlereference{load} function instantiating a \titlereference{Database} object
+Note that in this particular case, no data is written to disk before the call
+to \texttt{db.commit}. The \texttt{commit} call creates a file named \titlereference{Disaster.pickle}
+that contains the trace of each tallyable object as well as the final state of
+the sampler. This means that a user that forgets to call the \texttt{commit}
+method runs the risk of losing his data. Some backends write the data to disk
+continuously, so that not calling \texttt{commit} is less catastrophic.
+
+In general, however, it is recommended to always call the \texttt{db.close} method
+before closing the session. The \texttt{close} method first calls \texttt{commit}, and
+goes further in making sure that the database is in a safe state. Once \texttt{close}
+has been called, further call to \texttt{sample} will likely fail, at least
+for some backends.
+\begin{center}\begin{sffamily}
+\fbox{\parbox{\admonitionwidth}{
+\textbf{\large Warning}
+\vspace{2mm}
+
+Users must absolutly call \texttt{close()} before closing the session. Otherwise,
+they run the risk of losing their data.
+}}
+\end{sffamily}
+\end{center}
+
+Note that all backends except \texttt{ram} and \texttt{no{\_}trace} take a \texttt{dbname} argument that
+specifies the name of the file or directory that will store the data.
+
+
+%___________________________________________________________________________
+
+\hypertarget{loading-back-a-database}{}
+\pdfbookmark[0]{Loading Back a Database}{loading-back-a-database}
+\section*{Loading Back a Database}
+\label{loading-back-a-database}
+
+To load the file we just created in a new session, use the \texttt{load} function
+from the backend that created the database:
 \begin{quote}{\ttfamily \raggedright \noindent
-DB~=~Database.txt.load('disaster{\_}data')
+>{}>{}>~import~pymc~\\
+>{}>{}>~db~=~pymc.database.pickle.load('Disaster.pickle')~\\
+>{}>{}>~len(db.trace('e'){[}:{]})~\\
+10
 }\end{quote}
 
-This \titlereference{Database} object can then be linked to a model definition using
-\begin{quote}{\ttfamily \raggedright \noindent
-S~=~Sampler(DisasterSampler,~db=DB)~\\
-S.sample(10000)
-}\end{quote}
+The \texttt{db} object also has a \texttt{trace} method identical to that of \texttt{Sampler}.
+You can hence inspect the results of a model, even when you don't have the model
+around.
 
-For some databases (\titlereference{hdf5}, \titlereference{pickle}), loading an existing database restores the previous state of the sampler. That is, the attributes of the Sampler, its Stochastic parameters and StepMethods are all set to the value they had at the time \titlereference{S.db.close()} was called.
+To add samples to this file, we need to create an MCMC instance. This time,
+instead of setting \texttt{db='pickle'}, we will pass the existing \texttt{Database}:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~from~pymc.examples~import~DisasterModel~\\
+>{}>{}>~M~=~MCMC(DisasterModel,~db=db)~\\
+>{}>{}>~M.sample(5)~\\
+>{}>{}>~len(M.trace('e',~chain=None){[}:{]})~\\
+15~\\
+>{}>{}>~M.db.close()
+}\end{quote}
 
 
 %___________________________________________________________________________
 
 \hypertarget{backends-description}{}
-\pdfbookmark[0]{Backends description}{backends-description}
-\section*{Backends description}
+\pdfbookmark[0]{Backends Description}{backends-description}
+\section*{Backends Description}
 \label{backends-description}
-
-PyMC provides seven different backends with different level of support.
 
 
 %___________________________________________________________________________
@@ -88,7 +142,22 @@ PyMC provides seven different backends with different level of support.
 \subsection*{ram}
 \label{ram}
 
-Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all running applications on your computer.
+Used by default, this backend simply holds a copy in memory, with no output
+written to disk. This is useful for short runs or testing. For long runs
+generating large amount of data, using this backend may fill the available
+memory, forcing the OS to store data in the cache, slowing down all running
+applications on your computer.
+
+
+%___________________________________________________________________________
+
+\hypertarget{no-trace}{}
+\pdfbookmark[1]{no{\_}trace}{no-trace}
+\subsection*{no{\_}trace}
+\label{no-trace}
+
+This backend simply does not store the trace. This may be useful for testing
+purposes.
 
 
 %___________________________________________________________________________
@@ -98,7 +167,37 @@ Used by default, this backend simply holds a copy in memory, with no output writ
 \subsection*{txt}
 \label{txt}
 
-With the \titlereference{txt} backend, the data is written to disk in ASCII files when the class \titlereference{close()} method is called. More precisely, the data for each chain is stored in a directory called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, the trace for each variable being stored in a file names`{\textless}variable name{\textgreater}.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory.
+With the \titlereference{txt} backend, the data is written to disk in ASCII files.
+More precisely, the \texttt{dbname} argument is used to create a top directory
+into which chain directories, called \titlereference{Chain{\_}{\textless}{\#}{\textgreater}}, are going to be created each
+time \texttt{sample} is called:
+\begin{quote}{\ttfamily \raggedright \noindent
+dbname/~\\
+~~Chain{\_}0/~\\
+~~~~<object~name>.txt~\\
+~~~~<object~name>.txt~\\
+~~~~...~\\
+~~Chain{\_}1/~\\
+~~~~<object~name>.txt~\\
+~~~~<object~name>.txt~\\
+~~~~...~\\
+~~...
+}\end{quote}
+
+In each one of these chain directories, files named \texttt{<variable name>.txt}
+are created, storing the values of the variable as rows of text:
+\begin{quote}{\ttfamily \raggedright \noindent
+{\#}~Variable:~e~\\
+{\#}~Sample~shape:~(5,)~\\
+{\#}~Date:~2008-11-18~17:19:13.554188~\\
+3.033672373807017486e+00~\\
+3.033672373807017486e+00~\\
+...
+}\end{quote}
+
+Although this backend makes it easy to load the data using another application,
+for large datasets files tend to be embarassingly large and slow to load
+into memory.
 
 
 %___________________________________________________________________________

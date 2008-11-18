@@ -270,6 +270,18 @@ class Database(object):
         StepMethods."""
         return getattr(self, '_state_', {})
     
+    def trace(self, name, chain):
+        """Return the trace of a tallyable object stored in the database.
+        
+        :Parameters:
+        name : string
+          The name of the tallyable object.
+        chain : int
+          The trace index. Setting `chain=i` will return the trace created by 
+          the ith call to `sample`. 
+        """
+        self._default_chain = chain
+        return self._traces[name]
     
 def load(dbname):
     """Return a Database instance from the traces stored on disk.

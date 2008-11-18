@@ -19,9 +19,9 @@ python rst2latex.py ../INSTALL.txt | ./extract.py -s '\\setlength\{\\locallinewi
 python rst2latex.py ../pymc/database/README.txt | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
 
 mkdir pdf
-pdflatex -output-directory=pdf -interaction batchmode guide2.0
-bibtex pdf/guide2.0
-pdflatex -output-directory=pdf -interaction batchmode guide2.0
-pdflatex -output-directory=pdf -interaction batchmode guide2.0
-cp pdf/guide2.0.pdf .
+pdflatex -output-directory=pdf -interaction batchmode UserGuide
+bibtex pdf/UserGuide
+pdflatex -output-directory=pdf -interaction batchmode UserGuide
+pdflatex -output-directory=pdf -interaction batchmode UserGuide
+cp pdf/UserGuide.pdf .
 cd ..

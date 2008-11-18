@@ -663,6 +663,5 @@ class Sampler(Model):
           The trace index. Setting `chain=i` will return the trace created by 
           the ith call to `sample`. 
         """
-        self.db._default_chain = chain
-        return self.db._traces[name]
-    
+        return self.db.trace(name, chain)
+        

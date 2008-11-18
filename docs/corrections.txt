@@ -19,7 +19,7 @@ Specific Comments
 -----------------
 
  * Use the JSS style.
- * In the logo on the first page, the ship's trace has weird looking diagonal cuts. [AP] I'll work on it.
+[DH] Clashes with the python style. see jss_article for comments. 
  * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors), and bibtex complains about a missing cross-ref to Bernardo, altough it is there in the bib file. 
  * Harmonize class names typeface.  
 
@@ -34,9 +34,6 @@ Line	Comment
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
 28 		Not sure an example of usage should go in so early in the text. 
 [AP] I like this bit here- I think it has a good chance of hooking window-shoppers with short attention spans.
-60   	Markov chain Monte Carlo (MCMC)
-61		The choice... maybe give more arguments to switch away from BUGS. 
-[AP] I think we should studiously avoid saying anything bad about BUGS or R, even if it means being less-than-explicit about the pros and cons, and just let people make their own decisions based on the features.
 89 		replace g77 with gfortran, add a note about intel's compiler issues. 
 91 		The instructions would probably be simpler if the binaries and source were all on pypi. This needs to be done anyway, so it is as well to document the way it is going to be. 
 138 	Add mailing list info and link. 
@@ -62,9 +59,6 @@ Line	Comment
 954		cite and add a reference. 
 [AP] You mean a reference for conjugate submodels in addition to Wikipedia, or the fact that they can be handled by Gibbs? I guess the latter is probably in Gilks, but would need to look.
 [DH] I mean display it as a reference and put the full url in the references section.
-961		not in the sandbox anymore.
-[AP] If they aren't, they should be. :)
-[DH] Again, my bad.
 1010	check sentence
 1045	disk no comma
 1057  	txt now has support for restore_state

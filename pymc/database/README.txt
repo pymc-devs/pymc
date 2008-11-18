@@ -2,74 +2,166 @@
 Database Backends
 -----------------
 
-By default, PyMC keeps the sampled data in memory and keeps no trace of it on the hard drive. To save this data to disk, PyMC provides different storing strategies, which we refer to as *database backends*. All those backends provide the same user interface, making it trivial to switch from one backend to another. In the following, this common interface is presented, along with an individual description of each backend. 
-
-Accessing Sampled Data: User Interface
-=======================================
-
-The database backend is selected by the `db` keyword::
-
-	S = MCMC(DisasterModel, db='ram')
-	
-Here, we instructed the MCMC sampler to keep the trace in the computer's live memory. This means that when the Python session closes, all data will be lost. This is the default backend. 
-
-Each time MCMC's `sample` method is called, a `chain` is created storing the sampled variables. The data in this chain can be accessed for each variable using the call method of its trace attribute::
-
-	S.e.trace(burn=0, thin=1, chain=-1, slicing=None)
-
-with arguments having the following meaning:
-
-burn : int
-	Number of initial samples to skip. 
-	
-thin : int
-	The stride, ie the number of samples to step for each returned value.
-
-chain : int or None
-	Index of the sampling chain to return. Use `None` to return all chains. Note that a new chain is created each time `sample` is called.
-
-slicing : slice
-	Slice object used to parse the samples. Overrides burn and thin parameters. 
-	
+In the examples seen so far, traces are simply held in memory and discarded once
+the Python session ends. PyMC provides the means to store these traces on disk, 
+load them back and add additional samples. Internally, this is implemented in
+what we call *database backends*. These backends are simply made of two classes:
+``Database`` and ``Trace``, which all present a similar interface to users. 
+At the moment, PyMC counts seven such backends: ``ram``, ``no_trace``, 
+``pickle``, ``txt``, ``sqlite``, ``mysql`` and ``hdf5``. 
+In the following, we present the common interface to those backends and a 
+description of each individual backend. 
 
 
+Accessing Sampled Data
+======================
 
-Loading data from a previous session
-====================================
+To recommended way to access data from an MCMC run, irrespective of the 
+database backend, is to use the ``trace(self, name, chain=-1)`` method::
 
-To store a copy of the trace on the hard disk, a number of backends are available: `txt`, `pickle`, `hdf5`, `sqlite` and `mysql`. These all write the data to disk, in such a way that it can be loaded back in a following session and appended to. So for instance, to save data in ASCII format, we would do::
- 
-	S = MCMC(DisasterModel, db='txt', dirname='disaster_data')
-	S.sample(10000)
-	S.db.close()
+  >>> M = MCMC(DisasterModel)
+  >>> M.sample(10)
+  >>> M.trace('e')[:]
+  array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+          2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])
 
-When `S.db.close()` is called, the data is flushed to disk. That is, directories are created for each chain, with samples from each stochastic variable in a separate file. To access this data during a following session, each database provides a `load` function instantiating a `Database` object ::
+``M.trace('e')`` returns the ``Trace`` instance associated with the tallyable
+object `e`::
 
-	DB = Database.txt.load('disaster_data')
+  >>> M.trace('e')
+  <pymc.database.ram.Trace object at 0x7fa4877a8b50>
 
-This `Database` object can then be linked to a model definition using ::
+This ``Trace`` object from the ``ram`` backend has a ``__getitem__`` method 
+that is used to access the trace, just as with any other NumPy array. 
+By default, ``trace`` returns the samples from 
+the last chain (chain=-1), which in this case is equivalent to ``chain=0``. To 
+return the samples from all the chains, use ``chain=None``::
 
-	S = Sampler(DisasterSampler, db=DB)
-	S.sample(10000)
-
-For some databases (`hdf5`, `pickle`), loading an existing database restores the previous state of the sampler. That is, the attributes of the Sampler, its Stochastic parameters and StepMethods are all set to the value they had at the time `S.db.close()` was called. 
+  >>> M.sample(5)
+  >>> M.trace('e', chain=None)[:]
+  array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+          2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,
+          3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])
 
 
 
-Backends description
+Saving Data to Disk
+===================
+
+By default, the database backend selected by the ``MCMC`` sampler is the ``ram``
+backend, which simply holds the data in RAM memory. Now, we will create a 
+sampler that, instead, will write data to a pickle file::
+
+  >>> M = MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle')
+  >>> M.db
+  <pymc.database.pickle.Database object at 0x7fa486623d90>
+
+  >>> M.sample(10)
+  >>> M.db.commit()
+
+Note that in this particular case, no data is written to disk before the call
+to ``db.commit``. The ``commit`` call creates a file named `Disaster.pickle` 
+that contains the trace of each tallyable object as well as the final state of 
+the sampler. This means that a user that forgets to call the ``commit`` 
+method runs the risk of losing his data. Some backends write the data to disk
+continuously, so that not calling ``commit`` is less catastrophic. 
+
+In general, however, it is recommended to always call the ``db.close`` method 
+before closing the session. The ``close`` method first calls ``commit``, and 
+goes further in making sure that the database is in a safe state. Once ``close``
+has been called, further call to ``sample`` will likely fail, at least 
+for some backends.  
+
+.. warning::
+
+  Users must absolutly call ``close()`` before closing the session. Otherwise, 
+  they run the risk of losing their data. 
+
+Note that all backends except ``ram`` and ``no_trace`` take a ``dbname`` argument that 
+specifies the name of the file or directory that will store the data.
+
+
+Loading Back a Database
+=======================
+
+To load the file we just created in a new session, use the ``load`` function
+from the backend that created the database::
+
+  >>> import pymc
+  >>> db = pymc.database.pickle.load('Disaster.pickle')
+  >>> len(db.trace('e')[:])
+  10
+
+The ``db`` object also has a ``trace`` method identical to that of ``Sampler``. 
+You can hence inspect the results of a model, even when you don't have the model
+around. 
+
+To add samples to this file, we need to create an MCMC instance. This time, 
+instead of setting ``db='pickle'``, we will pass the existing ``Database``::
+
+  >>> from pymc.examples import DisasterModel
+  >>> M = MCMC(DisasterModel, db=db)
+  >>> M.sample(5)
+  >>> len(M.trace('e', chain=None)[:])
+  15
+  >>> M.db.close()
+
+
+
+Backends Description
 ====================
 
-PyMC provides seven different backends with different level of support. 
 
 ram
 ---
 
-Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all running applications on your computer. 
+Used by default, this backend simply holds a copy in memory, with no output 
+written to disk. This is useful for short runs or testing. For long runs 
+generating large amount of data, using this backend may fill the available 
+memory, forcing the OS to store data in the cache, slowing down all running 
+applications on your computer. 
+
+
+no_trace
+--------
+
+This backend simply does not store the trace. This may be useful for testing
+purposes. 
+
 
 txt
 ---
 
-With the `txt` backend, the data is written to disk in ASCII files when the class `close()` method is called. More precisely, the data for each chain is stored in a directory called `Chain_<#>`, the trace for each variable being stored in a file names`<variable name>.txt`. This backend makes it easy to load the data using another application, but for large datasets, files tend to be embarassingly large and slow to load into memory. 
+With the `txt` backend, the data is written to disk in ASCII files. 
+More precisely, the ``dbname`` argument is used to create a top directory 
+into which chain directories, called `Chain_<#>`, are going to be created each 
+time ``sample`` is called:: 
+
+    dbname/
+      Chain_0/
+        <object name>.txt
+        <object name>.txt
+        ...
+      Chain_1/
+        <object name>.txt
+        <object name>.txt
+        ...
+      ...
+
+In each one of these chain directories, files named ``<variable name>.txt`` 
+are created, storing the values of the variable as rows of text::
+
+  # Variable: e
+  # Sample shape: (5,)
+  # Date: 2008-11-18 17:19:13.554188
+  3.033672373807017486e+00
+  3.033672373807017486e+00
+  ...
+
+Although this backend makes it easy to load the data using another application, 
+for large datasets files tend to be embarassingly large and slow to load 
+into memory. 
+
 
 pickle
 ------
