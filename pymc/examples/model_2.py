@@ -6,7 +6,7 @@ disasters[t] ~ Po(global_rate)
 """
 
 from pymc import *
-from numpy import *
+from numpy import array
 
 __all__ = ['global_rate', 'disasters', 'disasters_array']
 disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,

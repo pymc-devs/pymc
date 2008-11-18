@@ -1,5 +1,5 @@
 from pymc import *
-from numpy import *
+from numpy import array
 
 mu_A = array([0.,0.])
 tau_A = eye(2)

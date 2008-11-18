@@ -1,5 +1,5 @@
 from pymc import *
-from numpy import *
+from numpy import ones, array
 
 n = 5*ones(4,dtype=int)
 dose=array([-.86,-.3,-.05,.73])
@@ -17,7 +17,7 @@ def theta(a=alpha, b=beta, d=dose):
     """theta = inv_logit(a+b)"""
     return invlogit(a+b*d)
 
-@data
+@observed
 @stochastic(dtype=int)
 def deaths(value=array([0,1,3,5],dtype=float), n=n, p=theta):
     """deaths ~ binomial(n, p)"""

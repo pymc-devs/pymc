@@ -46,7 +46,7 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
         return val
         
     
-@stochastic(data=True, dtype=int)
+@stochastic(observed=True, dtype=int)
 def disasters(value = disasters_array, params_of_mean = params_of_mean):
     """Annual occurences of coal mining disasters."""
     val = params_of_mean[1] + params_of_mean[0] * arange(111)

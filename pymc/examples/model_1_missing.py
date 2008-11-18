@@ -9,7 +9,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
 from pymc import *
-from numpy import *
+import numpy
 from numpy.random import randint
 
 __all__ = ['switchpoint', 'early_mean', 'late_mean', 'disasters']
