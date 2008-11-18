@@ -393,7 +393,7 @@ class Database(pickle.Database):
         if len(groups) == 0:
             return []
         else:
-            return [gr.PyMCsamples for gr in groups]
+            return [gr.PyMCsamples for gr in groups if gr._v_name[:5]=='chain']
         
     def close(self):
         self._h5file.close()
