@@ -1,7 +1,7 @@
-from PyMC import *
+from pymc import *
 
 def disaster_no_r():
-    @discrete_stochastic
+    @stoch(discrete=True)
     def s(value=50, length=110):
         """Change time for rate stochastic."""
         return 0.
@@ -16,7 +16,7 @@ def disaster_no_r():
         """Rate stochastic of poisson distribution."""
         return 0.
         
-    @data(discrete=True)
+    @observed(discrete=True)
     def D(  value = 0.,
             switchpoint = s,
             early_rate = e,
@@ -27,10 +27,11 @@ def disaster_no_r():
     return locals()
         
 M = Model(disaster_no_r())
-M.DAG(consts=False, path='DisasterModel.dot', format='raw', legend=False)
+#M.DAG(consts=False, path='DisasterModel.dot', format='raw', legend=False)
+graph.graph(M, consts=False, path='DisasterModel.pdf', format='pdf', legend=False)
 
 def disaster_yes_r():
-    @discrete_stochastic
+    @stochastic(discrete=True)
     def s(value=50, length=110):
         """Change time for rate stochastic."""
         return 0.
@@ -52,7 +53,7 @@ def disaster_yes_r():
         return 0.
     
     
-    @data(discrete=True)
+    @observed(discrete=True)
     def D(  value = 0.,
             rate = r):
         """Annual occurences of coal mining disasters."""
@@ -61,7 +62,8 @@ def disaster_yes_r():
     return locals()
         
 M = Model(disaster_yes_r())
-M.DAG(consts=False, path='DisasterModel2.dot', format='raw', legend=False)
+#M.DAG(consts=False, path='DisasterModel2.dot', format='raw', legend=False)
+graph.graph(M, consts=False, path='DisasterModel2.pdf', format='pdf', legend=False)
 
 def deterministic_pre():
     @stochastic
@@ -87,8 +89,10 @@ def deterministic_pre():
     return locals()
     
 M = Model(deterministic_pre())
-M.DAG(consts=False, path='DeterministicPreInheritance.dot', format='raw', legend=False)    
-    
+#   M.DAG(consts=False, path='DeterministicPreInheritance.dot', format='raw', legend=False)    
+graph.graph(M,consts=False, path='DeterministicPreInheritance.pdf', format='pdf', legend=False)
+
+
 def deterministic_post():
     @stochastic
     def A(value=0):
@@ -109,8 +113,8 @@ def deterministic_post():
     return locals()
     
 M = Model(deterministic_post())
-M.DAG(consts=False, path='DeterministicPostInheritance.dot', format='raw', legend=False)    
-    
+#M.DAG(consts=False, path='DeterministicPostInheritance.dot', format='raw', legend=False)
+graph.graph(M, consts=False, path='DeterministicPostInheritance.pdf', format='pdf', legend=False)    
     
 def survival():
     @stochastic
@@ -146,7 +150,9 @@ def survival():
     return locals()
     
 M = Model(survival())
-M.DAG(consts=False, path='SurvivalModel.dot', format='raw', legend=False)    
+#M.DAG(consts=False, path='SurvivalModel.dot', format='raw', legend=False)    
+graph.graph(M, consts=False, path='SurvivalModel.pdf', format='pdf', legend=False)    
     
 M = Model(survival())
-M.DAG(consts=False, path='SurvivalModelCollapsed.dot', format='raw', legend=False, collapse_potentials=True)
+#M.DAG(consts=False, path='SurvivalModelCollapsed.dot', format='raw', legend=False, collapse_potentials=True)
+graph.graph(M, consts=False, path='SurvivalModelCollapsed.pdf', format='pdf', legend=False, collapse_potentials=True)
