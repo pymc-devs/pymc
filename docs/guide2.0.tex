@@ -4,19 +4,21 @@
 %  Created by Chris Fonnesbeck on 2006-05-03.
 %  Copyright (c) 2006 . All rights reserved.
 %
-\documentclass[]{jss}
+\documentclass[]{manual}
 
 % Use utf-8 encoding for foreign characters
-%\usepackage[utf8]{inputenc}
+\usepackage[utf8]{inputenc}
 
 % Setup for fullpage use
-% \usepackage{fullpage}
-% \usepackage{amsmath}
-% \usepackage{epsfig}
+
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{epsfig}
+
 %\usepackage{pdfsync} 
 
 % Flexible citation syntax
-%\usepackage{natbib}
+\usepackage{natbib}
 % Uncomment some of the following if you use the features
 %
 
@@ -24,15 +26,15 @@
 %\usepackage{subfigure}
 
 % More symbols
-% \usepackage{amsmath}
-% \usepackage{amssymb}
-% \usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
 
 % Line numbering
 \usepackage{lineno}
 
 % Package for including code in the document
-%\usepackage{listings}
+\usepackage{listings}
 
 % Surround parts of graphics with box
 %\usepackage{boxedminipage}
@@ -41,28 +43,34 @@
 %\usepackage{ifpdf}
 
 % Enable hyperlinks
-%\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
 
-%%% EPYDOC STUFF %%%
+%\ifpdf
+%\usepackage[pdftex]{graphicx}
+%\else
+%\usepackage{graphicx}
+%\fi
+
+%% EPYDOC STUFF %%%
 \usepackage{underscore}
 \usepackage[english]{babel}
-\usepackage{alltt, parskip, boxedminipage}
+ \usepackage{alltt, parskip, boxedminipage}
 \usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
 \usepackage{fullpage}
 \usepackage[usenames]{color}
 \usepackage{ifthen}
 \usepackage{ae}
-\usepackage{aeguill}
+%\usepackage{aeguill}
 \usepackage{shortvrb}
 \usepackage{ucs}
 \usepackage{tabularx}
 \input{epydocheader}
-%%% END OF EPYDOC STUFF %%%
+%% END OF EPYDOC STUFF %%%
 
-\author{Christopher Fonnesbeck\\University of Otago \And 
-        David Huard\\Institut National de la Recherche Scientiﬁque \And
-		Anand Patil\\University of Oxford}
-\title{\pkg{PyMC} 2.0: Bayesian Stochastic Modelling in \proglang{Python}}
+
+\title{PyMC 2.0 User's Guide \\
+Installation and tutorial}
+\author{Anand Patil \\ David Huard \\ Christopher Fonnesbeck}
 \graphicspath{{docs/}}
 \pdfoutput=1
 % \date
@@ -75,55 +83,46 @@
 \setlength{\locallinewidth}{7in}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Abstract{
-  The abstract of the article.
-}
-\Keywords{keywords, comma-separated, not capitalized, \proglang{Java}}
-\Plainkeywords{keywords, comma-separated, not capitalized, Java}
 
 \begin{document}
 
-%\maketitle
+\maketitle
 
-%\tableofcontents
-%\linenumbers
-\section{Introduction} 
+\tableofcontents
+\linenumbers
+\chapter{Introduction} 
 \label{chap:intro} 
 \input{README}
 
-\section{Installation} 
+\chapter{Installation} 
 \label{chap:install} 
 \input{INSTALL}
 
-\section{Tutorial}
+\chapter{Tutorial}
 \label{chap:tutorial}
 \input{tutorial}
 
-\section{Markov chain Monte Carlo} 
-\label{chap:MCMC} 
-\input{theory}
-
-\section{Building models}
+\chapter{Building models}
 \label{chap:modelbuilding} 
 \input{modelbuilding}
 
-\section{Fitting models}
+\chapter{Fitting models}
 \label{chap:modelfitting}
 \input{modelfitting}
 
-\section{Saving and managing sampling results}
+\chapter{Saving and managing sampling results}
 \label{chap:database} 
 \input{database}
 
-\section{Model checking and diagnostics} 
+\chapter{Model checking and diagnostics} 
 \label{chap:modelchecking}
 \input{modelchecking}
 
-\section{Extending PyMC}
+\chapter{Extending PyMC}
 \label{chap:extending}
 \input{extending}
 
-\section{Probability distributions} 
+\chapter{Probability distributions} 
 \label{chap:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}
@@ -135,9 +134,14 @@ Several probability distributions are provided in the module \module{distributio
 % Reminder to David:
 % When updating distributions-module.tex, replace the lines \rule{\textwidth}{0.5\fboxrule} by 
 % \rule{\textwidth}{1pt}.
-%\input{distributions-module}
+\input{distributions-module}
 
-\bibliographystyle{jss}
+\appendix
+\chapter{Markov chain Monte Carlo} 
+\label{chap:MCMC} 
+\input{theory}
+
+\bibliographystyle{plainnat}
 \bibliography{pymc}
 
 \end{document}

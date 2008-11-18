@@ -143,8 +143,8 @@ The useful attributes of \code{MAP} are:
 \begin{description}
     \item[\code{logp}:] The joint log-probability of the model.
     \item[\code{logp_at_max}:] The maximum joint log-probability of the model.
-    \item[\code{len}:] The total number of elements in all the stochastic variables in the model with \code{isdata=False}.
-    \item[\code{data_len}:] The total number number of elements in all the stochastic variables in the model with \code{isdata=True}.
+    \item[\code{len}:] The total number of elements in all the stochastic variables in the model with \code{observed=False}.
+    \item[\code{data_len}:] The total number number of elements in all the stochastic variables in the model with \code{observed=True}.
     \item[\code{AIC}:] Akaike's information criterion for this model \cite{Akaike:1973aj,Burnham:2002ic}.
     \item[\code{BIC}:] The Bayesian information criterion for this model \cite{Schwarz:1978ud}.
 \end{description}
@@ -231,17 +231,17 @@ The \code{dist} argument specifies the proposal distribution and may be either o
 \end{itemize}
 If \code{dist=None}, the proposal distribution is chosen automatically.
 
-\subsubsection{The \code{DiscreteMetropolis} class}
+\subsubsection{The \texttt{DiscreteMetropolis} class}
 This class is just like \code{Metropolis}, but specialized to handle \code{Stochastic} instances with dtype \code{int}.
 
-\subsubsection{The \code{BinaryMetropolis} class} 
+\subsubsection{The \texttt{BinaryMetropolis} class} 
 This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}, which are Bernoulli random variables conditional on their parents. 
 
 For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{_asf} parameters are not used in this case.
 
 For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is when proposing a new value for array-valued variables. Like \code{Metropolis}' attribute \code{proposal_sig}, \code{p_jump} is tuned throughout the sampling loop via \code{_asf}.
 
-\subsubsection{The \code{AdaptiveMetropolis} class} 
+\subsubsection{The \texttt{AdaptiveMetropolis} class} 
 The \code{AdaptativeMetropolis} (AM) sampling algorithm works like a regular Metropolis step method, with the exception that stochastic parameters are block-updated using a multivariate jump distribution whose covariance is tuned during sampling. Although the chain is non-Markovian, it has correct ergodic properties (see \cite{Haario:2001lr}).
 
 \code{AdaptativeMetropolis}' init method takes the following arguments:
@@ -316,7 +316,7 @@ Every step method subclass (including user-defined ones) adds itself to a list c
 If you have not created any step method to handle a stochastic variable, each class in \code{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \code{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
 
 \subsection*{Imputation of Missing Data} % (fold)
-\label{subsec:missing_data}
+%\label{subsec:missing_data}
 
 As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in the loss of information if an excluded observation contains valid values for other quantities. 
 
@@ -386,7 +386,7 @@ The key is to treat the \code{disaster_data} array as just another stochastic va
 	early_mean = Exponential('early_mean',beta=1.)
 	late_mean = Exponential('late_mean',beta=1.)
 
-	@data
+	@observed
 	@stochastic(dtype=int)
 	def disasters(  value = disasters_data, 
 	                early_mean = early_mean, 

@@ -31,7 +31,7 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
     \item[\code{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
     \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
     \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
-    \item[\code{isdata}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
+    \item[\code{observed}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
     \item[\code{dtype}:] A Numpy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
     % \item[\code{__name__}:] The name of the variable, should be unique.
     %    \item[\code{__doc__}:] The docstring of the variable.
@@ -53,7 +53,7 @@ There are three main ways to create stochastic variables, called the \textbf{aut
     %     \item[\code{name}:] The name of the variable.
     %     \item[\code{value}:] An initial value for the variable.
     %     \item[\code{parents}:] Keyword arguments specifying the parents of the variable.
-    %     \item[\code{isdata} (optional)]
+    %     \item[\code{observed} (optional)]
     %     \item[\code{doc} (optional):] The docstring of the variable.
     %     \item[\code{verbose} (optional):] An integer from 0 to 3.
     %     \item[\code{trace} (optional):] A boolean indicating whether a trace should be kept for this variable in Monte Carlo fitting methods.
@@ -123,7 +123,7 @@ s = Stochastic( logp = s_logp,
                 value = 1900,
                 dtype=int,
                 rseed = 1., 
-                isdata = False,
+                observed = False,
                 cache_depth = 2,
                 plot=True,
                 verbose = 0)
@@ -153,13 +153,13 @@ This restriction becomes onerous if a step method proposes values for the elemen
 \section*{Data} \label{data}
 \pdfbookmark[0]{Data}{data}
 
-Although the data are modelled with statistical distributions, just as random variables are, their values are immutable (since they have been observed). Data are represented by \code{Stochastic} objects whose \code{isdata} attribute is set to \code{True}. If a stochastic variable's \code{isdata} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method..
+Although the data are modelled with statistical distributions, just as random variables are, their values are immutable (since they have been observed). Data are represented by \code{Stochastic} objects whose \code{observed} attribute is set to \code{True}. If a stochastic variable's \code{observed} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method..
 
 \subsection*{Declaring stochastic variables to be data}
 
-In the short and long interfaces, a \code{Stochastic} object's \code{isdata} flag can be set to true by stacking a \code{@data} decorator on top of the \code{@stochastic} decorator:
+In the short and long interfaces, a \code{Stochastic} object's \code{observed} flag can be set to true by stacking a \code{@observed} decorator on top of the \code{@stochastic} decorator:
 \begin{verbatim}
-@data
+@observed
 @stochastic(dtype=int)
 def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
     """The observed annual disaster counts."""
@@ -169,7 +169,7 @@ def D(value = count_array, switchpoint = s, early_rate = e, late_rate = l):
             - gammaln(late_rate))
     return logp
 \end{verbatim}
-In the automatic and direct interfaces, the \code{isdata} argument can be simply set to \code{True}.
+In the automatic and direct interfaces, the \code{observed} argument can be simply set to \code{True}.
 
 
 \hypertarget{deterministic}{}
@@ -205,7 +205,7 @@ Deterministic variables are less complicated than stochastic variables, and have
       \[
       \sum_i x_i^{\prime} y_i.
       \]
-      \item[\code{Index}:] Has three parents $x$, $y$ and \code{index}. $x$ and $y$ must be iterables, \code{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \mathttt{index}:
+      \item[\code{Index}:] Has three parents $x$, $y$ and \code{index}. $x$ and $y$ must be iterables, \code{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \texttt{index}:
       \[
       x[\mathtt{index}]^T y[\mathtt{index}].
       \]
@@ -226,7 +226,7 @@ def r(switchpoint = s, early_rate = e, late_rate = l):
     value[switchpoint:] = late_rate
     return value
 \end{verbatim}
-Notice that rather than returning the log-probability, as is the case for \code{Stochastic} objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Arguments' keys and values are converted into a parent dictionary as with \code{Stochastic}'s short interface. The \code{deterministic} decorator can take \code{trace}, \code{verbose} and \code{plot} arguments, like the \code{stochastic} decorator\footnote{Note that deterministic variables have no \code{isdata} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \code{StepMethod} level.}.
+Notice that rather than returning the log-probability, as is the case for \code{Stochastic} objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Arguments' keys and values are converted into a parent dictionary as with \code{Stochastic}'s short interface. The \code{deterministic} decorator can take \code{trace}, \code{verbose} and \code{plot} arguments, like the \code{stochastic} decorator\footnote{Note that deterministic variables have no \code{observed} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \code{StepMethod} level.}.
 
 Of course, since deterministic nodes are not expected to generate random variates, the longer implementation of the decorator interface available to \code{Stochastic} objects is not relevant here.
 
@@ -254,12 +254,12 @@ The \code{trace} flag signals to \code{Model} whether to keep a trace for the va
 \pdfbookmark[0]{Containers}{container}
 
 In some situations, such as a state-space model, it would be inconvenient to assign a unique label to each parent of $y$:
-\begin{eqnarray*}
-    x_0 &\sim& \textup N(0,\tau_x)\\
-    x_{i+1}|x_i &\sim& \textup{N}(x_i, \tau_x)\\
+\begin{align*}
+    x_0 &\sim \textup N (0,\tau_x)\\
+    x_{i+1}|x_i &\sim \textup{N}(x_i, \tau_x)\\
 	&&i=0,\ldots, N-2
-    y|x &\sim& \textup N\left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)\\
-\end{eqnarray*}
+    y|x &\sim \textup N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
+\end{align*}
 Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \code{`x_0'}, \code{`x_1'}, etc.
 
 This situation can be handled naturally in PyMC:
@@ -278,7 +278,7 @@ for i in range(1,N):
    # Append to x
    x.append(xi)
 
-@data
+@observed
 @stochastic
 def y(value = 1, mu = x, tau = 100):
 

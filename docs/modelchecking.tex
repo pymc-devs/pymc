@@ -1,5 +1,5 @@
 \section{Convergence Diagnostics} % (fold)
-\label{sec:convergence_diagnostics}
+%\label{sec:convergence_diagnostics}
 
 Valid inferences from sequences of MCMC samples are based on the assumption that the samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
 
@@ -9,7 +9,7 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 \begin{figure}[ht]
 \begin{center}
-\includegraphics[height=3in]{poor_mixing.png}
+%\includegraphics[height=3in]{poor_mixing.png}
 \caption{An example of a poorly-mixing sample in two dimensions. Notice that the chain is trapped in a region of low probability relative to the mean (dot) and variance (oval) of the true posterior quantity.}
 \label{fig:mix}
 \end{center}
@@ -81,7 +81,7 @@ Calling \verb=coda_output= yields a \verb=.out= file containing raw trace values
 % section convergence_diagnostics (end)
 
 \section{Autocorrelation Plots} % (fold)
-\label{sec:autocorrelation_plots}
+%\label{sec:autocorrelation_plots}
 
 Samples from MCMC algorithms are ususally autocorrelated, due partly to the inherent Markovian dependence structure. The degree of autocorrelation can be quantified using the autocorrelation function:
 \begin{eqnarray*}
@@ -117,7 +117,7 @@ sampler.autocorrelation(max_lag=100, burn=0, thin=1, chain=-1)
 
 
 \section{Goodness of Fit} % (fold)
-\label{sec:goodness_of_fit}
+%\label{sec:goodness_of_fit}
 
 
 % section goodness_of_fit (end)

@@ -98,7 +98,7 @@ PyMC provides a convenient platform for non-MCMC fitting algorithms in addition 
 All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}. 
 
 \hypertarget{custom-MC}{}
-\subsection*{Monte Carlo fitting algoriths} \label{custom-MC}
+\subsection*{Monte Carlo fitting algorithms} \label{custom-MC}
 \pdfbookmark[1]{Monte Carlo fitting algoriths}{custom-MC}
 
 Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms should be implemented by subclasses of \code{Sampler} to take advantage of the interactive sampling feature and database backends. Subclasses using the standard \code{sample()} and \code{isample()} methods must define one of two methods:
