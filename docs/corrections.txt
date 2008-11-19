@@ -34,9 +34,6 @@ Line	Comment
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
 28 		Not sure an example of usage should go in so early in the text. 
 [AP] I like this bit here- I think it has a good chance of hooking window-shoppers with short attention spans.
-89 		replace g77 with gfortran, add a note about intel's compiler issues. 
-91 		The instructions would probably be simpler if the binaries and source were all on pypi. This needs to be done anyway, so it is as well to document the way it is going to be. 
-138 	Add mailing list info and link. 
 
 
 160 	Should we put the node graph ? 
