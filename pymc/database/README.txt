@@ -5,8 +5,9 @@ Database Backends
 In the examples seen so far, traces are simply held in memory and discarded once
 the Python session ends. PyMC provides the means to store these traces on disk, 
 load them back and add additional samples. Internally, this is implemented in
-what we call *database backends*. These backends are simply made of two classes:
-``Database`` and ``Trace``, which all present a similar interface to users. 
+what we call *database backends*. Each one of these backends is simply made 
+of two classes: ``Database`` and ``Trace`` which all present a similar 
+interface to users. 
 At the moment, PyMC counts seven such backends: ``ram``, ``no_trace``, 
 ``pickle``, ``txt``, ``sqlite``, ``mysql`` and ``hdf5``. 
 In the following, we present the common interface to those backends and a 
@@ -17,7 +18,7 @@ Accessing Sampled Data
 ======================
 
 To recommended way to access data from an MCMC run, irrespective of the 
-database backend, is to use the ``trace(self, name, chain=-1)`` method::
+database backend, is to use the ``trace(name, chain=-1)`` method::
 
   >>> M = MCMC(DisasterModel)
   >>> M.sample(10)
@@ -64,7 +65,7 @@ to ``db.commit``. The ``commit`` call creates a file named `Disaster.pickle`
 that contains the trace of each tallyable object as well as the final state of 
 the sampler. This means that a user that forgets to call the ``commit`` 
 method runs the risk of losing his data. Some backends write the data to disk
-continuously, so that not calling ``commit`` is less catastrophic. 
+continuously, so that not calling ``commit`` is less of an issue. 
 
 In general, however, it is recommended to always call the ``db.close`` method 
 before closing the session. The ``close`` method first calls ``commit``, and 
@@ -74,20 +75,16 @@ for some backends.
 
 .. warning::
 
-  Users must absolutly call ``close()`` before closing the session. Otherwise, 
-  they run the risk of losing their data. 
-
-Note that all backends except ``ram`` and ``no_trace`` take a ``dbname`` argument that 
-specifies the name of the file or directory that will store the data.
+  Always call the ``close`` method before closing the session to avoid running
+  the risk of losing your data. 
 
 
 Loading Back a Database
 =======================
 
-To load the file we just created in a new session, use the ``load`` function
+To load a file created in a previous session, use the ``load`` function
 from the backend that created the database::
 
-  >>> import pymc
   >>> db = pymc.database.pickle.load('Disaster.pickle')
   >>> len(db.trace('e')[:])
   10
@@ -97,9 +94,9 @@ You can hence inspect the results of a model, even when you don't have the model
 around. 
 
 To add samples to this file, we need to create an MCMC instance. This time, 
-instead of setting ``db='pickle'``, we will pass the existing ``Database``::
+instead of setting ``db='pickle'``, we will pass the existing ``Database`` 
+instance::
 
-  >>> from pymc.examples import DisasterModel
   >>> M = MCMC(DisasterModel, db=db)
   >>> M.sample(5)
   >>> len(M.trace('e', chain=None)[:])
@@ -139,12 +136,12 @@ time ``sample`` is called::
 
     dbname/
       Chain_0/
-        <object name>.txt
-        <object name>.txt
+        <object0 name>.txt
+        <object1 name>.txt
         ...
       Chain_1/
-        <object name>.txt
-        <object name>.txt
+        <object0 name>.txt
+        <object1 name>.txt
         ...
       ...
 
@@ -172,14 +169,14 @@ short-lived projects. For longer term or larger projects, the ``pickle``
 backend should be avoided since generated files might be unreadable 
 across different Python versions. The `pickled` file is a simple dump of a 
 dictionary containing the NumPy arrays storing the traces, as well as 
-the state of the ``StepMethod``. 
+the state of the ``Sampler``'s step methods. 
 
 
 
 sqlite
 ------
 
-The ``sqlite`` backend is based on the python module ``sqlite3_`` ( 
+The ``sqlite`` backend is based on the python module `sqlite3`_ ( 
 a Python 2.5 built-in ) . It opens an SQL database named ``dbname``, 
 and creates one table per tallyable objects. The rows of this table
 store a key, the chain index and the values of the objects as::
@@ -188,53 +185,109 @@ store a key, the chain index and the values of the objects as::
 
 The key is autoincremented each time a new row is added to the table. 
 
-.. warning:: Note that the state of the ``StepMethod`` is not saved by 
+.. warning:: Note that the state of the sampler is not saved by 
    the ``sqlite`` backend. 
 
-_`sqlite3` http://www.sqlite.org
+.. _`sqlite3`: http://www.sqlite.org
 
 
 mysql
 -----
 
-The ``mysql`` backend is based on the ``MySQLdb_`` Python module. The 
-database structure is similar to that of the ``sqlite``backend. The 
-``mysql.Database`` accepts the following input arguments::
+The ``mysql`` backend depends on the `MySQL`_ library and its python wrapper
+`MySQLdb`_. Like the ``sqlite`` backend, it creates an SQL database containing
+one table per tallyable object. The main difference of ``mysql`` compared to 
+``sqlite`` is that it can connect to a remote database, provided the url and 
+port of the host server is given, along with a valid user name and password. 
+These parameters are passed when the ``Sampler`` is instantiated:
+
+* ``dbname`` (`string`) The name of the database file. 
+
+* ``dbuser`` (`string`) The database user name.
+
+* ``dbpass`` (`string`) The user password for this database.
+
+* ``dbhost`` (`string`) The location of the database host. 
+
+* ``dbport`` (`int`)    The port number to use to reach the database host. 
+
+* ``dbmode`` {``a``, ``w``} File mode.  Use ``a`` to append values, and ``w`` 
+  to overwrite an existing database.
 
 
+.. warning:: Note that the state of the sampler is not saved by 
+   the ``mysql`` backend. 
+
+.. _`MySQL`: 
+   http://www.mysql.com/downloads/
+
+.. _`MySQLdb`: 
+   http://sourceforge.net/projects/mysql-python
 
 
-_`MySQLdb`
 
 hdf5
 ----
 
-The hdf5 backend uses `pyTables`_ to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the hdf5 library. 
+The ``hdf5`` backend uses `pyTables`_ to save data in binary HDF5 format. 
+The ``hdf5`` database is fast and can store huge traces, far larger than the 
+available RAM. This data can be compressed and decompressed on the fly to 
+reduce the memory footprint. 
+Another feature of this backends is that it can store arbitrary objects. 
+Whereas the other backends are limited to numerical values, ``hdf5`` can 
+tally any object that can be pickled, opening the door for powerful and
+exotic applications (see ``pymc.gp``). 
+
+The internal structure of an HDF5 file storing both numerical values and 
+arbitrary objects is as follows::
+
+  / (root)
+    /chain0/ (Group) 'Chain #0'
+      /chain0/PyMCSamples (Table(N,)) 'PyMC Samples'
+      /chain0/group0 (Group) 'Group storing objects.'
+        /chain0/group0/<object0 name> (VLArray(N,)) '<object0 name> samples.'
+        /chain0/group0/<object1 name> (VLArray(N,)) '<object1 name> samples.'
+        ...
+    /chain1/ (Group) 'Chain #1'
+      ...
+
+All standard numerical values are stored in a ``Table``, while ``objects``
+are stored in individual ``VLArrays``. 
+
+The ``hdf5`` Database takes the following parameters:
+
+* ``dbname`` (`string`) Name of the hdf5 file. 
+
+* ``dbmode`` {``a``, ``w``, ``r``} File mode: ``a``: append, ``w``: overwrite, 
+  ``r``: read-only.
+
+* ``dbcomplevel`` : (`int` (0-9)) Compression level, 0: no compression.
+
+* ``dbcomplib`` (`string`) Compression library (``zlib``, ``bzip2``, ``lzo``)
 
 
+According the the `pyTables`_ manual, `zlib` has a fast decompression, 
+relatively slow compression, and a good compression ratio. 
+`LZO` has a fast compression, but a low compression ratio. 
+`bzip2` has an excellent compression ratio but requires more CPU. Note that
+some of these compression algorithms require additional software to work (see
+the `pyTables`_ manual). 
 
 
+Writing a New Backend
+=====================
 
-==========  =====================================  =========================
- Backend     Description                            External Dependencies
-==========  =====================================  =========================
- no_trace    Do not tally samples at all.        
- ram         Store samples in live memory.            
- txt         Write data to ascii files.          
- pickle      Write data to a pickle file.        
- hdf5        Store samples in the HDF5 format.      pytables (>2.0), libhdf5
- sqlite      Store samples in a sqlite database.    sqlite3
- mysql       Store samples in a mysql database.     MySQLdb
-==========  =====================================  =========================
+It is relatively easy to write a new backend for ``PyMC``. The first step is to
+look at the ``database.base`` module, which defines barebone ``Database`` 
+and ``Trace`` classes. This module contains documentation on the methods that 
+should be defined to get a working backend. 
+
+Testing your new backend should be trivial, since the ``test_database`` 
+module contains a generic test class that can easily be subclassed to check
+that the basic features required of all backends are implemented and working
+properly. 
 
 
-For more information about individual backends, refer to the `API`_ documentation.
-
-.. _`database/base.py`:
-   pymc/database/base.py
-
-.. _`API`:
-   docs/API.pdf
 
 .. _`pyTables`:
    http://www.pytables.org/moin

@@ -6,7 +6,8 @@ Store the traces in an HDF5 array using pytables.
 Implementation Notes
 --------------------
 This version supports arbitrary objects through ObjectAtom and VLArray 
-constructs. Ordinary numerical objects are stored in a Table. 
+constructs. Ordinary numerical objects are stored in a Table. Each chain
+is stored in an individual group called ``chain#``. 
 
 Additional Dependencies
 -----------------------
@@ -22,9 +23,8 @@ from numpy import zeros,shape, asarray, hstack, size, dtype
 import pymc
 from pymc.database import base, pickle
 from copy import copy
-import tables
-import pickle    
-
+import tables  
+import warnings
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -169,17 +169,17 @@ class Database(pickle.Database):
     stochastics and deterministics are stored as arrays in each group.
 
     """
-    def __init__(self, dbname, dbmode='a', complevel=0, complib='zlib', **kwds):
+    def __init__(self, dbname, dbmode='a', dbcomplevel=0, dbcomplib='zlib', **kwds):
         """Create an HDF5 database instance, where samples are stored in tables. 
         
         :Parameters:
-        filename : string
-          Specify the name of the file the results are stored in. 
-        mode : {'a', 'w', 'r'}
+        dbname : string
+          Name of the hdf5 file. 
+        dbmode : {'a', 'w', 'r'}
           File mode: 'a': append, 'w': overwrite, 'r': read-only.
-        complevel : integer (0-9)
+        dbcomplevel : integer (0-9)
           Compression level, 0: no compression.
-        complib : string
+        dbcomplib : string
           Compression library (zlib, bzip2, lzo)
             
         :Notes:
@@ -197,12 +197,18 @@ class Database(pickle.Database):
         self.variables_to_tally = []   # A list of sequences of names of the objects to tally. 
         self._traces = {} # A dictionary of the Trace objects. 
         
-
+        # Deprecation of complevel and complib
+        if kwds.has_key('complevel'):
+            warnings.warn('complevel has been replaced with dbcomplevel.', DeprecationWarning)
+            dbcomplevel = kwds.get('complevel')
+        if kwds.has_key('complib'):
+            warnings.warn('complib has been replaced with dbcomplib.', DeprecationWarning)
+            dbcomplib = kwds.get('complib')
 
         self._h5file = tables.openFile(self.dbname, self.mode)
         
         self.filter = getattr(self._h5file, 'filters', \
-                              tables.Filters(complevel=complevel, complib=complib))
+                              tables.Filters(complevel=dbcomplevel, complib=dbcomplib))
         
         self._tables = self._gettables()  # This should be a dict keyed by chain.
         self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
@@ -472,6 +478,10 @@ def load(dbname, dbmode='a'):
     db.variables_to_tally = db.chains * [varnames,]
     return db
 
+
+# TODO: Check this. It seems that pickle will be the 
+# pickle backend, not the cPickle module. 
+
 def save_sampler(sampler):
     """
     Dumps a sampler into its hdf5 database.
@@ -489,9 +499,5 @@ def restore_sampler(fname):
     fnode = hf.root.__sampler__
     sampler = pickle.load(fnode)
     return sampler
-        
-##    groups = db._h5file.root._g_listGroup()[0]
-##    groups.sort()
-##    last_chain = '/'+groups[-1]
-##    db._table = db._h5file.getDeterministic(last_chain, 'PyMCsamples')
+
 

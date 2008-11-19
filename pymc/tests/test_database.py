@@ -195,7 +195,7 @@ class TestHDF5(TestPickle):
         del db
         
     def test_zcompression(self):
-        db = pymc.database.hdf5.Database(dbname='DisasterModelCompressed.hdf5', dbmode='w', complevel=5)
+        db = pymc.database.hdf5.Database(dbname='DisasterModelCompressed.hdf5', dbmode='w', dbcomplevel=5)
         S = MCMC(DisasterModel, db=db)
         S.sample(45,10,1)
         assert_array_equal(S.e.trace().shape, (35,))
