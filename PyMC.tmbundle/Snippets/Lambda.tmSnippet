@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Lambda('$1', lambda ${2:parents}: ${3:formula})$0</string>
+	<key>name</key>
+	<string>Lambda deterministic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>lambda</string>
+	<key>uuid</key>
+	<string>90A225B7-577F-49A1-96B0-444F2D94F07F</string>
+</dict>
+</plist>
