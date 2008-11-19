@@ -18,8 +18,6 @@ An abstract and a conclusion are missing.
 Specific Comments
 -----------------
 
- * Use the JSS style.
-[DH] Clashes with the python style. see jss_article for comments. 
  * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors), and bibtex complains about a missing cross-ref to Bernardo, altough it is there in the bib file. 
  * Harmonize class names typeface.  
 
@@ -42,9 +40,7 @@ Line	Comment
 178		Wondering if it would be best to replace from pymc import ... by import pymc.
 [AP] In the tutorial, I'd vote for from pymc import *.
 [CF] from pymc import * is almost universally discouraged these days, because of namespace concerns. Dont want to encourage bad habits ...
-273		Explain the new interface to the traces. 
-[AP] Actually, you ought to update this with the new trace slicing conventions.
-[DH] Will do.
+
 
 827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
 [AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy. 

@@ -227,18 +227,31 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 The MCMC sampler runs for the specified number of iterations. If the run is sufficiently long, the model will have converged to the posterior distribution of interest, and all subsequent samples can be considered samples from that distribution, and used for inference. The specified \code{burn} interval should be large enough to ensure that no pre-convergent samples are included in the sample used for generating summary statistics.
 
-The output of the MCMC algorithm is a `trace', the sequence of retained samples for each variable in the model. These traces are stored as attributes of the variables themselves and can be accessed using the \code{trace()} method. For example:
+\subsection*{Accessing the samples}
+The output of the MCMC algorithm is a `trace', the sequence of retained
+samples for each variable in the model. These traces can be accessed
+using the \code{trace(name, chain=-1)} method. For example:
 \begin{verbatim}
-   >>> s.trace()
+   >>> M.trace('s')[:]
    >>> array([41, 40, 40, ..., 43, 44, 44])
 \end{verbatim}
-The unknown variables $s$, $e$, $l$ and $r$ will all accrue samples, but $D$ will not because its value has been observed and is not updated.
+The trace slice \code{[start:stop:step]} works just like the NumPy array
+slice. By default, the returned trace array contains the samples from the
+last call to \code{sample}, that is, \code{chain=-1}, but the trace from
+previous sampling runs can be retrieved by specifying the correspondent 
+chain index. To return the trace from all chains, simply use
+\code{chain=None}. 
+
+\footnote{Note that the unknown variables $s$, $e$, $l$ and $r$ will all
+accrue samples, but $D$ will not because its value has been observed and is
+not updated. Hence $D$ has no trace and calling \code{M.trace('D')[:]} will
+raise an error. }
 
 \subsection*{Sampling output} 
 You can examine the marginal posterior of any variable by plotting a histogram of its trace:
 \begin{verbatim}
    >>> from pylab import hist, show
-   >>> hist(l.trace())
+   >>> hist(M.trace('l')[:])
    >>> 
    (array([   8,   52,  565, 1624, 2563, 2105, 1292,  488,  258,   45]),
     array([ 0.52721865,  0.60788251,  0.68854637,  0.76921023,  0.84987409,
@@ -250,7 +263,10 @@ You should see something like this:
 \begin{center}
    \epsfig{file=ltrace.pdf, width=10cm}
 \end{center}
-PyMC has its own plotting functionality, via the optional matplotlib module as noted in the installation notes. The \code{Matplot} module includes a \code{plot} function that takes the model (or a single parameter) as an argument:
+PyMC has its own plotting functionality, via the optional
+\module{matplotlib} module as noted in the installation notes. The
+\module{Matplot} module includes a \code{plot} function that takes the
+model (or a single parameter) as an argument:
 \begin{verbatim}
    >>> from pymc.Matplot import plot
    >>> plot(M)
