@@ -401,6 +401,8 @@ class Sampler(Model):
             else:
                 object.trace = no_trace.Trace(object.__name__)
                 
+        check_valid_object_name(self._variables_to_tally)
+        
         # Add model deviance to backend
         if hasattr(self, 'deviance'):
             self._variables_to_tally.add(self.deviance)
@@ -664,3 +666,11 @@ class Sampler(Model):
         """
         return self.db.trace(name, chain)
         
+def check_valid_object_name(sequence):
+    """Check that the names of the objects are all different."""
+    names = []
+    for o in sequence:
+        if o.__name__ in names:
+            raise ValueError, 'A PyMC object called %s already exists.'%o.__name__
+        else:
+            names.append(o.__name__)

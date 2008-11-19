@@ -262,6 +262,16 @@ class testHDF5Objects(TestCase):
         db.close()
         
         
+        
+        
+def test_identical_object_names():
+    A = pymc.Uniform('a', 0, 10)
+    B = pymc.Uniform('a', 0, 10)
+    try:
+        M = MCMC([A,B])
+    except ValueError:
+        pass
+    
 
 def test_regression_155():
     """thin > iter"""
