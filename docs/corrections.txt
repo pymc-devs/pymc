@@ -55,28 +55,7 @@ Line	Comment
 925		How ?
 927		More info. 
 938		Provide more info about the method. 
-952		step method printed output. 
-954		cite and add a reference. 
-[AP] You mean a reference for conjugate submodels in addition to Wikipedia, or the fact that they can be handled by Gibbs? I guess the latter is probably in Gilks, but would need to look.
-[DH] I mean display it as a reference and put the full url in the references section.
-1010	check sentence
-1045	disk no comma
-1057  	txt now has support for restore_state
-1065	all applications runnning 
-1070	<>
-1080	hdf5 typeface
-1081	Flesh out, remove mature comments.
-1084 	Flesh out, remove mature comments.
-1135	principle reason
-1177 	Put a figure ?
+
 1187	I get weird looking symbols here. 
 [AP] me too.
 1271	This section ... strange transition, and not really a section.
-
-
-Bibiliography
-* Harmonize first names (abbreviations with or without periods or full name)
-* Gelman, 1996:  Posterior predictive
-* Geweke, period after pages. 
-* Should we really put links to scopus and jstor ?
-

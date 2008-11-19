@@ -253,14 +253,14 @@ cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0)
    \item[\code{scales} (optional):] The initial covariance matrix will be diagonal, and its diagonal elements will be set to \code{scales} times the stochastics' values, squared.
    \item[\code{interval} (optional):] The number of iterations between updates of the covariance matrix.
    \item[\code{greedy} (optional):] If \code{True}, only accepted jumps will be counted toward the delay before the covariance is first computed.
-   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method.   
+   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method's printed output.   
 \end{description}
  
 \hypertarget{gibbs}{}
 \subsection*{Gibbs step methods} \label{gibbs}
 \pdfbookmark[1]{Gibbs step methods}{gibbs}
 
-Conjugate submodels (see \href{http://en.wikipedia.org/wiki/Conjugate_prior}{http://en.wikipedia.org/wiki/Conjugate_prior} ) can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \code{AdaptiveMetropolis} even when Gibbs step methods are available.
+Conjugate submodels (see \cite{gelman}) can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \code{AdaptiveMetropolis} even when Gibbs step methods are available.
 
 Alpha versions of Gibbs step methods handling the following conjugate submodels are available in the \code{sandbox} module:
 \begin{itemize}
@@ -313,9 +313,7 @@ A = [Normal('A_%i'%i, 0., mu=0., tau=1.) for i in xrange(100)]
 An individual step method will be assigned to each element of \code{A} in the latter case, and the elements will be updated individually. Note that \code{A} can be broken up into larger blocks if desired.
 
 \subsection*{Automatic assignment of step methods} 
-Every step method subclass (including user-defined ones) adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. If you create a step method is created by the user to handle a stochastic variable, no other step method will be created to handle that variable by \code{MCMC} (though you can create multiple step methods for the same variable if desired). 
-
-If you have not created any step method to handle a stochastic variable, each class in \code{StepMethodRegistry} is allowed to examine the variable. More specifically, each step method implements a static method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \code{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
+Every step method subclass (including user-defined ones) adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. Step method assignment can be done manually or automatically. If a user creates a custom step method to handle a particular stochastic variable, that step method alone will be used to update that variable by \code{MCMC} (though you can create multiple step methods for the same variable if desired). If a stochastic variable has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable. In doing so, each step method implements a static method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \code{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
 
 \subsection*{Imputation of Missing Data} % (fold)
 %\label{subsec:missing_data}

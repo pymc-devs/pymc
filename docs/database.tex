@@ -104,6 +104,7 @@ specifies the name of the file or directory that will store the data.
 
 To load the file we just created in a new session, use the \texttt{load} function
 from the backend that created the database:
+
 \begin{quote}{\ttfamily \raggedright \noindent
 >{}>{}>~import~pymc~\\
 >{}>{}>~db~=~pymc.database.pickle.load('Disaster.pickle')~\\
@@ -126,7 +127,6 @@ instead of setting \texttt{db='pickle'}, we will pass the existing \texttt{Datab
 >{}>{}>~M.db.close()
 }\end{quote}
 
-
 %___________________________________________________________________________
 
 \hypertarget{backends-description}{}
@@ -142,11 +142,8 @@ instead of setting \texttt{db='pickle'}, we will pass the existing \texttt{Datab
 \subsection*{ram}
 \label{ram}
 
-Used by default, this backend simply holds a copy in memory, with no output
-written to disk. This is useful for short runs or testing. For long runs
-generating large amount of data, using this backend may fill the available
-memory, forcing the OS to store data in the cache, slowing down all running
-applications on your computer.
+Used by default, this backend simply holds a copy in memory, with no output written to disk. This is useful for short runs or testing. For long runs generating large amount of data, using this backend may fill the available memory, forcing the OS to store data in the cache, slowing down all applications running on your computer.
+
 
 
 %___________________________________________________________________________
@@ -217,7 +214,7 @@ As its name implies, the \titlereference{pickle} database relies on the \titlere
 \subsection*{hdf5}
 \label{hdf5}
 
-The hdf5 backend uses \href{http://www.pytables.org/moin}{pyTables} to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the hdf5 library.
+The hdf5 backend uses \href{http://www.pytables.org/moin}{pyTables} to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the \titlereference{hdf5} library.
 
 
 %___________________________________________________________________________
@@ -227,7 +224,7 @@ The hdf5 backend uses \href{http://www.pytables.org/moin}{pyTables} to save data
 \subsection*{sqlite}
 \label{sqlite}
 
-The sqlite backend is based on the python module sqlite3. It is not as mature as the other backends, in the sense that is does not support saving/restoring of state and plug and play reloading.
+The sqlite backend stores trace objects using the \href{http://www.sqlite.org/}{SQLite} database engine. SQLite is a small C library that implements a self-contained relational database, which makes it popular for embedding in applications. Unlike traditional relational database management systems, it needs no configuration or special dependencies. In fact, SQLite is built in to Python 2.5 and can be accessed using the sqlite3 module. PyMC can exploit this facility to store traces, and is well-suited to storing large quantity of output. The resulting database file (named with a \titlereference{.sqlite} siuffix) can be opened by SQLite, or any applications that interface with SQLite.
 
 
 %___________________________________________________________________________
@@ -237,7 +234,7 @@ The sqlite backend is based on the python module sqlite3. It is not as mature as
 \subsection*{mysql}
 \label{mysql}
 
-The mysql backend is based on the MySQLdb python module. It also is not as mature as the other backends.
+The mysql backend stores trace objects in the \href{http://www.mysql.com/}{MySQL} relational database management system. MySQL is an open-source, networked database that can be installed on a variety of platforms and is suitable for storing very large quantities of data. Unlike SQLite, however, MySQL requires some configuration before it can be used by PyMC. A database on the SQLite server must be set up beforehand, and the appropriate permissions granted to the user (in particular, the ability to create and delete tables). The user must provide to the backend the name of the database, their user ID and password, and the host and port of the server, if it is networked.
 
 \leavevmode
 \begin{longtable}[c]{|p{0.133\locallinewidth}|p{0.447\locallinewidth}|p{0.307\locallinewidth}|}
