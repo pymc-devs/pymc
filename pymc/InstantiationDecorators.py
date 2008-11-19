@@ -215,14 +215,13 @@ def observed(obj=None, **kwds):
     
     Can be used as
     
-    @data
+    @observed
     def A(value = ., parent_name = .,  ...):
         return foo(value, parent_name, ...)
     
     or as
-    
-    @data
-    @stochastic
+
+    @stochastic(observed=True)
     def A(value = ., parent_name = .,  ...):
         return foo(value, parent_name, ...)
         
