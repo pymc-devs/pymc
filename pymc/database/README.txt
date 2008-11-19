@@ -132,9 +132,9 @@ purposes.
 txt
 ---
 
-With the `txt` backend, the data is written to disk in ASCII files. 
+With the ``txt`` backend, the data is written to disk in ASCII files. 
 More precisely, the ``dbname`` argument is used to create a top directory 
-into which chain directories, called `Chain_<#>`, are going to be created each 
+into which chain directories, called ``Chain_<#>``, are going to be created each 
 time ``sample`` is called:: 
 
     dbname/
@@ -166,23 +166,50 @@ into memory.
 pickle
 ------
 
-As its name implies, the `pickle` database relies on the `Cpickle` module to save the trace objects. Use of this backend is appropriate for small scale, short-lived projects. For longer term or larger projects, the `pickle` backend should be avoided since generated files might be unreadable across different Python versions. 
+The ``pickle`` database relies on the ``cPickle`` module to save the 
+traces. Use of this backend is appropriate for small scale, 
+short-lived projects. For longer term or larger projects, the ``pickle`` 
+backend should be avoided since generated files might be unreadable 
+across different Python versions. The `pickled` file is a simple dump of a 
+dictionary containing the NumPy arrays storing the traces, as well as 
+the state of the ``StepMethod``. 
 
-hdf5
-----
 
-The hdf5 backend uses `pyTables`_ to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the hdf5 library. 
 
 sqlite
 ------
 
-The sqlite backend is based on the python module sqlite3. It is not as mature as the other backends, in the sense that is does not support saving/restoring of state and plug and play reloading.
+The ``sqlite`` backend is based on the python module ``sqlite3_`` ( 
+a Python 2.5 built-in ) . It opens an SQL database named ``dbname``, 
+and creates one table per tallyable objects. The rows of this table
+store a key, the chain index and the values of the objects as::
+
+  key (INT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ... 
+
+The key is autoincremented each time a new row is added to the table. 
+
+.. warning:: Note that the state of the ``StepMethod`` is not saved by 
+   the ``sqlite`` backend. 
+
+_`sqlite3` http://www.sqlite.org
 
 
 mysql
 -----
 
-The mysql backend is based on the MySQLdb python module. It also is not as mature as the other backends. 
+The ``mysql`` backend is based on the ``MySQLdb_`` Python module. The 
+database structure is similar to that of the ``sqlite``backend. The 
+``mysql.Database`` accepts the following input arguments::
+
+
+
+
+_`MySQLdb`
+
+hdf5
+----
+
+The hdf5 backend uses `pyTables`_ to save data in binary HDF5 format. The main advantage of this backend is that data is flushed regularly to disk, reducing memory usage and allowing sampling of datasets much larger than the available RAM memory, speeding up data access. For this backend to work, pyTables must be installed, which in turn requires the hdf5 library. 
 
 
 

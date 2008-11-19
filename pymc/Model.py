@@ -426,8 +426,7 @@ class Sampler(Model):
             self.db = db
             self.restore_sampler_state()
         else:   # What is this for? DH. If it's a user defined backend, it doesn't initialize a Database. 
-            module = db.__module__
-            self.db = db
+            self.db = db.Database(**self._db_args)
         
         # Assign Trace instances to tallyable objects. 
         self.db.connect_model(self)
