@@ -4,18 +4,39 @@
 %  Created by Chris Fonnesbeck on 2008-11-12.
 %  Copyright (c) 2008 . All rights reserved.
 %
-\documentclass[]{jss}
+\documentclass[]{jss_mod}
 
-
-%\usepackage{python}
+\usepackage{python}
 \usepackage{epsfig}
-\usepackage{hyperref}
+\usepackage{amsmath}
+%\usepackage{hyperref}
 \usepackage{boxedminipage}
 
 \author{Anand Patil\\University of Oxford \And 
         David Huard\\McGill University  \And
 		Christopher Fonnesbeck\\University of Otago}
+
 \title{\pkg{PyMC} 2.0: Bayesian Stochastic Modelling in \proglang{Python}}
+
+\Address{
+  Anand Patil\\
+  \\
+
+  David Huard \\
+  Atmospheric and Oceanic Sciences \\
+  McGill University \\
+  Montr\'eal, Canada \\
+  E-mail: \email{david.huard@gmail.com}\\
+  \\
+  Christopher Fonnesbeck\\
+  Mathematics and Statistics Department\\
+  University of Otago\\
+  Dunedin, New Zealand\\
+  E-mail: \email{whichone@whichone}\\
+  URL: \url{http://yoursite}
+}
+
+
 
 %% for pretty printing and a nice hypersummary also set:
 \Plainauthor{Anand Patil, David Huard, Christopher Fonnesbeck} %% comma-separated
@@ -44,15 +65,16 @@
 \newcommand{\titlereference}[1]{\textsl{#1}}
 \newlength{\locallinewidth}
 \setlength{\locallinewidth}{7in}
+\newlength{\admonitionwidth}
+\setlength{\admonitionwidth}{0.9\textwidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % The tex files use constructs from the python.sty style file, 
 % such as \module and \code. The problem is that many commands
 % defined in python.sty are also defined in jss.sty, creating
 % clashes. In other words, jss is not compatible with python. 
-% We can either tweak python.sty or jss.sty. We simply need to 
-% either remove the offending definitions or use renewcommand
-% instead of newcommand. Let me know what you think. 
+% I created a jss_mod.cls file and commented out conflicting 
+% part of python.sty.
 
 \graphicspath{{figs/}}
 
@@ -109,7 +131,6 @@ Several probability distributions are provided in the module \module{distributio
 \end{itemize} 
 %\input{distributions-module}
 
-\bibliographystyle{jss}
 \bibliography{pymc}
 
 \end{document}

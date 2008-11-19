@@ -231,17 +231,20 @@ The \code{dist} argument specifies the proposal distribution and may be either o
 \end{itemize}
 If \code{dist=None}, the proposal distribution is chosen automatically.
 
-\subsubsection{The \texttt{DiscreteMetropolis} class}
+\subsubsection[The DiscreteMetropolis class]{The
+\code{DiscreteMetropolis} class}
 This class is just like \code{Metropolis}, but specialized to handle \code{Stochastic} instances with dtype \code{int}.
 
-\subsubsection{The \texttt{BinaryMetropolis} class} 
+\subsubsection[The BinaryMetropolis class]{The
+\code{BinaryMetropolis} class} 
 This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}, which are Bernoulli random variables conditional on their parents. 
 
 For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{_asf} parameters are not used in this case.
 
 For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is when proposing a new value for array-valued variables. Like \code{Metropolis}' attribute \code{proposal_sig}, \code{p_jump} is tuned throughout the sampling loop via \code{_asf}.
 
-\subsubsection{The \texttt{AdaptiveMetropolis} class} 
+\subsubsection[The AdaptiveMetropolis class]{The
+\code{AdaptiveMetropolis} class} 
 The \code{AdaptativeMetropolis} (AM) sampling algorithm works like a regular Metropolis step method, with the exception that stochastic parameters are block-updated using a multivariate jump distribution whose covariance is tuned during sampling. Although the chain is non-Markovian, it has correct ergodic properties (see \cite{Haario:2001lr}).
 
 \code{AdaptativeMetropolis}' init method takes the following arguments:

@@ -846,27 +846,29 @@
 
 % Use this def/redef approach for \url{} since hyperref defined this already,
 % but only if we actually used hyperref:
-\ifpdf
-  \newcommand{\url}[1]{{%
-    \py@pdfstartlink%
-    attr{ /Border [0 0 0] }%
-    user{%
-      /Subtype/Link%
-      /A<<%
-      /Type/Action%
-      /S/URI%
-      /URI(#1)%
-      >>%
-    }%
-    \py@LinkColor%                      color of the link text
-    \py@smallsize\sf #1%
-    \py@NormalColor%                    Turn it back off; these are declarative
-    \pdfendlink}%                       and don't appear bound to the current
-  }%                                    formatting "box".
-\else
-  \newcommand{\url}[1]{\mbox{\py@smallsize\textsf{#1}}}
-\fi
-\newcommand{\email}[1]{{\py@smallsize\textsf{#1}}}
+% \ifpdf
+%   \newcommand{\url}[1]{{%
+%     \py@pdfstartlink%
+%     attr{ /Border [0 0 0] }%
+%     user{%
+%       /Subtype/Link%
+%       /A<<%
+%       /Type/Action%
+%       /S/URI%
+%       /URI(#1)%
+%       >>%
+%     }%
+%     \py@LinkColor%                      color of the link text
+%     \py@smallsize\sf #1%
+%     \py@NormalColor%                    Turn it back off; these are
+%declarative
+%     \pdfendlink}%                       and don't appear bound to the
+%current
+%   }%                                    formatting "box".
+% \else
+%   \newcommand{\url}[1]{\mbox{\py@smallsize\textsf{#1}}}
+% \fi
+%\newcommand{\email}[1]{{\py@smallsize\textsf{#1}}}
 \newcommand{\newsgroup}[1]{{\py@smallsize\textsf{#1}}}
 
 \newcommand{\py@varvars}[1]{{%
