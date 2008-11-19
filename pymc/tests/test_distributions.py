@@ -46,7 +46,7 @@ try:
 except:
     print 'Plotting disabled'
     PLOT=False
-SP = False
+
 
 # Some python densities for comparison
 def cauchy(x, x0, gamma):
