@@ -32,6 +32,7 @@ import pymc
 import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, Deterministic
+from CommonDeterministics import Lambda
 from numpy import pi
 import pdb
 import utils
@@ -210,6 +211,7 @@ def new_dist_class(*new_class_args):
                         if size is not None and parents_size != size:
                             raise AttributeError, \
                                 "size is incompatible with parents shape."
+
                 if random is not None:
                     random = bind_size(random, bindsize)
                     test_val = random(**(pymc.DictContainer(parents).value))
@@ -2613,7 +2615,46 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-
+def ImputeMissing(name, dist_class, masked_values, **parents):
+    """
+    This function accomodates missing elements for the data of simple 
+    Stochastic distribution subclasses. The masked_values argument is an 
+    object of type numpy.ma.MaskedArray, which contains the raw data and
+    a boolean mask indicating missing values. The resulting list contains
+    a list of stochastics of type dist_class, with the extant values as data
+    stochastics and the missing values as variable stochastics.
+    
+    :Arguments:
+      - name : string
+        Name of the data stochastic
+      - dist_class : Stochastic
+        Stochastic subclass such as Poisson, Normal, etc.
+      - value : numpy.ma.core.MaskedArray
+        A masked array with missing elements. Where mask=True, value is assumed missing.
+      - parents (optional): dict
+        Arbitrary keyword arguments.
+    """
+    
+    # Initialise list
+    vars = []
+    for i in xrange(len(masked_values)):
+        # Name of element
+        this_name = name + '[%i]'%i
+        # Dictionary to hold parents
+        these_parents = {}
+        # Parse parents
+        for key, parent in parents.iteritems():
+            if len(parent.value) > 1:
+                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
+            else:
+                these_parents[key] = parent
+        if masked_values.mask[i]:
+            # Missing values
+            vars.append(dist_class(this_name, **these_parents))
+        else:
+            # Observed values
+            vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
+    return vars
 
 if __name__ == "__main__":
     import doctest

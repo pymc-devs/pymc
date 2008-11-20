@@ -505,7 +505,10 @@ class Stochastic(StochasticBase):
             if isinstance(value, ndarray):
                 if dtype is not None:
                     if not dtype is value.dtype and not isinstance(value, ArrayContainer):
-                        self._value = asarray(value, dtype=dtype).view(value.__class__)
+                        try:
+                            self._value = asarray(value, dtype=dtype).view(value.__class__)
+                        except ValueError:
+                            self._value = value
                     else:
                         self._value = value
                 else:
