@@ -30,8 +30,6 @@ Line	Comment
 ----    ------------------------------------------------------------------------
 4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
-28 		Not sure an example of usage should go in so early in the text. 
-[AP] I like this bit here- I think it has a good chance of hooking window-shoppers with short attention spans.
 
 
 160 	Should we put the node graph ? 
@@ -45,10 +43,5 @@ Line	Comment
 827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
 [AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy. 
 
-925		How ?
-927		More info. 
-938		Provide more info about the method. 
 
-1187	I get weird looking symbols here. 
-[AP] me too.
 1271	This section ... strange transition, and not really a section.

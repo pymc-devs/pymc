@@ -229,11 +229,18 @@ The \code{dist} argument specifies the proposal distribution and may be either o
     \item \code{"Normal"}: A random-walk normal proposal distribution is used.
     \item \code{"Prior"}: The variable's value is proposed from its prior using its \code{random} method, if possible.
 \end{itemize}
-If \code{dist=None}, the proposal distribution is chosen automatically.
+If \code{dist=None}, the proposal distribution is chosen automatically: 
+it is set to `Prior' if the variable has no children and has a random
+method, and to `Normal' otherwise. 
 
 \subsubsection[The DiscreteMetropolis class]{The
 \code{DiscreteMetropolis} class}
-This class is just like \code{Metropolis}, but specialized to handle \code{Stochastic} instances with dtype \code{int}.
+This class is just like \code{Metropolis}, but specialized to handle
+\code{Stochastic} instances with dtype \code{int}. The jump proposal
+distribution can either be `Normal', `Prior' or `Poisson'. In the
+`Normal' case, the proposed value is drawn from a normal distribution
+centered at the current value and then rounded to the
+nearest integer.
 
 \subsubsection[The BinaryMetropolis class]{The
 \code{BinaryMetropolis} class} 
@@ -259,6 +266,19 @@ cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0)
    \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method's printed output.   
 \end{description}
  
+In this algorithm, jumps are proposed from a multivariate normal
+distribution with covariance matrix $\Sigma$. The algorithm first iterates
+until \code{delay} samples has been drawn (if \code{greedy} is true, until
+\code{delay} jumps have been accepted). At this point, $\Sigma$ is given 
+the value of the empirical covariance of the trace so far and sampling
+resumes. The covariance is then updated each \code{interval}
+iterations throughout the entire sampling run\footnote{The covariance is
+estimated recursively from the previous value and the last \code{interval}
+samples, instead of computing it each time from the entire trace.}. It is
+this constant adaptation of the proposal distribution that makes the chain
+non-Markovian. 
+
+
 \hypertarget{gibbs}{}
 \subsection*{Gibbs step methods} \label{gibbs}
 \pdfbookmark[1]{Gibbs step methods}{gibbs}
