@@ -18,7 +18,7 @@ An abstract and a conclusion are missing.
 Specific Comments
 -----------------
 
- * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors), and bibtex complains about a missing cross-ref to Bernardo, altough it is there in the bib file. 
+ * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors).
  * Harmonize class names typeface.  
 
 
