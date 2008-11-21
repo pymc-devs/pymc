@@ -28,7 +28,6 @@ from MCMC import *
 from StepMethods import *
 from convergencediagnostics import *
 from CommonDeterministics import *
-from Data import *
 
 from tests import test
 
