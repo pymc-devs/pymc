@@ -1,6 +1,6 @@
 from pymc import *
-from RandomRealizations import * 
-from RandomRealizations.cov_funs import matern
+from pymc.gp import * 
+from pymc.gp.cov_funs import matern
 from numpy import *
 from pylab import *
 from csv import *
@@ -74,7 +74,7 @@ class SalmonSampler(MCMC):
             M = Mean(lambda x: beta_0+ x*beta_1)
             return M
         
-        SR = GP(M, C, mesh = labundance, name = self.name + '.SR')
+        SR = GP(self.name + '.SR', M, C, mesh = labundance)
         
         frye_tau = Gamma('frye_tau', alpha = 2., beta = 1./(10.*(ry/4.)**2))
             
@@ -86,7 +86,7 @@ class SalmonSampler(MCMC):
             return 1./(frye_tau)
         
         
-        @data
+        @observed
         @stochastic
         def obs_frye(value=lfrye, SR = SR, mesh=labundance, tau = frye_tau):
             """
@@ -94,8 +94,11 @@ class SalmonSampler(MCMC):
             """
             return normal_like(value, SR(labundance), tau)        
         
-        
-        MCMC.__init__(self, locals())
+        in_dict = {}
+        for key, value in locals().iteritems():
+            if isinstance(value, Node):
+                in_dict[key]=value
+        MCMC.__init__(self, in_dict)
         self.use_step_method(GPNormal, SR, labundance, frye_V, obs_frye)
         
         
@@ -117,7 +120,7 @@ class SalmonSampler(MCMC):
         figure()
         subplot(2,1,1)
         hold('on')
-        plot_GP_envelopes(self.SR, self.plot_x, transx = log, transy=exp)
+        gpplots.plot_GP_envelopes(self.SR, self.plot_x, transx = log, transy=exp)
 
         for i in range(3):
             plot(self.plot_x, exp(f_trace[i](log(self.plot_x))), label='draw %i'%i)

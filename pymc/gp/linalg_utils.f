@@ -249,7 +249,7 @@ cf2py integer intent(out)::info
 
       SUBROUTINE gp_array_logp(x, mu, sig, n, like, info)
 
-cf2py intent(in) x, mu
+cf2py intent(copy) x, mu
 cf2py intent(in) sig
 cf2py intent(out) like
 cf2py intent(hide) info, n

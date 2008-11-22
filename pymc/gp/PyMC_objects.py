@@ -190,6 +190,8 @@ class GP(pm.Stochastic):
             
             self.value = new_value
             
+            # self.value = Realization(self.parents.value['M'], self.parents.value['C'], init_mesh = self.mesh, init_vals = cur_mesh_value)
+            
         else:
             self.random()
             
@@ -266,7 +268,6 @@ class GPParentMetropolis(pm.Metropolis):
         self.verbose = verbose
 
         # Record all the meshes of self's GP-valued children.
-        
         self._id = 'GPParent_'+ self.metro_method._id
         
         self.C = {}
@@ -323,11 +324,10 @@ class GPParentMetropolis(pm.Metropolis):
                 self._need_to_reject_f = False
                 return
 
-            # If the jump isn't obviously bad, propose foff its mesh from its prior.
+            # If the jump isn't obviously bad, propose f off its mesh from its prior.
             self._need_to_reject_f = True
             for f in self.fs:
                 f.random_off_mesh()
-
         
         setattr(self.metro_method, 'propose', types.MethodType(propose_with_realization, self.metro_method, self.metro_class))
     
@@ -471,6 +471,9 @@ class GPMetropolis(pm.Metropolis):
             print self._id + 'rejecting.'
         # self.f.value = self.f.last_value
         self.f.revert()
+    
+    def tune(self, *args, **kwargs):
+        return pm.StepMethod.tune(self, *args, **kwargs)
     
     def step(self):
         if self.verbose:

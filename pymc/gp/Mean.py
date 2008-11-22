@@ -98,7 +98,6 @@ class Mean(object):
         if len(orig_shape)>1:
             orig_shape = orig_shape[:-1]
         
-        
         if regularize:
             x=regularize_array(x)            
 
@@ -113,12 +112,10 @@ class Mean(object):
         
 
         # Evaluate the unobserved mean
-
         M = self.eval_fun(x,**self.params).squeeze()
 
         # Condition. Basis covariances get special treatment. See documentation for formulas.
         if self.observed and observed:
-           
-	    M = self.C._obs_eval(self, M, x)
+            M = self.C._obs_eval(self, M, x)
         
         return M.reshape(orig_shape)

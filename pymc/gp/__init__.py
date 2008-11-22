@@ -10,7 +10,7 @@ __modules__ = [ 'GPutils',
                 'cov_funs',
                 'PyMC_objects']
                 
-__optmodules__ = ['GP_plots', 'SparseCovariance']
+__optmodules__ = ['gpplots']
 
 from GPutils import *
 from Mean import *
@@ -23,7 +23,7 @@ from cov_funs import *
 from PyMC_objects import *
 
 try:
-    import GP_plots
+    import gpplots
 except ImportError:
     pass
 

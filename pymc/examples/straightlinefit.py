@@ -22,7 +22,7 @@ marginalizing x from
 where p(x) stands for the prior for the true input and p(a,b) the prior for the 
 regression parameters. 
 """
-from pymc import stochastic, data, deterministic, uniform_like, normal_like, runiform, rnormal, Sampler
+from pymc import stochastic, observed, deterministic, uniform_like, normal_like, runiform, rnormal, Sampler
 from numpy import inf, log, cos,array
 import pylab 
 #from PyMC.sandbox import AdaptativeSampler
@@ -69,13 +69,13 @@ def modelled_y(x=x, theta=theta):
     slope, intercept = theta
     return slope*x + intercept
 
-@data
+@observed
 def measured_input(value=data_x, x=x, sigma_x=2):
     """Input error model.
     Define the probability of measuring x knowing the true value. """
     return normal_like(value, x, sigma_x)
     
-@data
+@observed
 def y(value=data_y, y=modelled_y, sigma_y=2):
     """Output error model.
     Define the probability of measuring x knowing the true value. 

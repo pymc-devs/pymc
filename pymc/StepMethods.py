@@ -623,10 +623,10 @@ class NoStepper(StepMethod):
     
     Useful for holding stochastics constant without setting observed=True.
     """
-    def step(self):
+    def step(self, *args, **kwargs):
         pass
-    def tune(self):
-        pass
+    def tune(self, *args, **kwargs):
+        return False
 
 class DiscreteMetropolis(Metropolis):
     """

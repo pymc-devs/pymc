@@ -5,7 +5,7 @@ c Author: Anand Patil, anand.prabhakar.patil@gmail.com
 cf2py double precision dimension(n), intent(copy) :: x
 cf2py double precision dimension(n), intent(copy) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py double precision dimension(n,n), intent(copy) :: sig
+cf2py double precision dimension(n,n), intent(in) :: sig
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide) :: info
 

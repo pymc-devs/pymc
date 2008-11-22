@@ -97,7 +97,7 @@ class Node(object):
         return self.__repr__()
     
     def __repr__(self):
-        return object.__repr__(self).replace('object', "'%s'"%self.__name__)
+        return object.__repr__(self).replace(' object ', " '%s' "%self.__name__)
     
     def gen_lazy_function(self):
         pass

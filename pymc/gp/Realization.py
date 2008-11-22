@@ -104,13 +104,13 @@ class StandardRealization(object):
             # Store init_mesh.
             if check_repeats:
                 self.x_sofar = init_mesh
-                self._f_sofar = init_vals
+                self.f_sofar = init_vals
                 
         elif check_repeats:
             
             # Store init_mesh.
             self.x_sofar = None
-            self._f_sofar = None
+            self.f_sofar = None
         
         self.check_repeats = check_repeats
         self.M_internal = M_internal
@@ -134,11 +134,11 @@ class StandardRealization(object):
             x = regularize_array(x)
 
         if x is self.x_sofar:
-            return self._f_sofar
+            return self.f_sofar
 
         if self.check_repeats:
             # use caching_call to save duplicate calls.
-            f, self.x_sofar, self._f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
+            f, self.x_sofar, self.f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
             
         else:
             # Call to self.draw_vals.
@@ -148,18 +148,6 @@ class StandardRealization(object):
             return f.reshape(orig_shape)
         else:
             return f
-            
-    def set_f_sofar(self, new):
-        # FIXME: Some Fortran function must be trying to overwrite
-        # f_sofar in-place... if you leave it writeable, there are problems.
-        try:
-            new.flags['WRITEABLE']=False
-        except:
-            pass
-        self._f_sofar = new
-    def get_f_sofar(self):
-        return self._f_sofar
-    f_sofar = property(get_f_sofar, set_f_sofar)
         
     def draw_vals(self, x):
 
@@ -179,7 +167,7 @@ class StandardRealization(object):
         f = asarray((M.T+q)).ravel()
 
         # Then observe self's mean using the new values.
-        self.M_internal.observe(self.C_internal, obs_mesh_new, f[relevant_slice], mean_under = M[relevant_slice])
+        self.M_internal.observe(self.C_internal, obs_mesh_new, f[relevant_slice])
 
         return f
 

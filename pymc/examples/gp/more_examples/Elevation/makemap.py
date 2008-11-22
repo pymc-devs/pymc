@@ -1,5 +1,5 @@
 from getdata import *
-from matplotlib.toolkits.basemap import Basemap
+from mpl_toolkits.basemap import Basemap
 from matplotlib import *
 from pylab import *
 

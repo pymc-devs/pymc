@@ -7,7 +7,7 @@ salmon = SalmonSampler('pink')
 
 
 # Really takes 100k
-iter=1000
+iter=100000
 thin=iter/200
 burn=0
 # salmon.sample(iter=iter,burn=burn,thin=thin)
