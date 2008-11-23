@@ -51,7 +51,7 @@ class ArgumentError(AttributeError):
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
-'weibull','skew_normal']
+'weibull','skew_normal', 'truncnorm']
 
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
 
@@ -2035,16 +2035,20 @@ def truncnorm_like(x, mu, tau, a, b):
     else:
         n = len(x)
         phi = normal_like(x, mu, tau)
-        Phia = pymc.utils.normcdf((a-mu)/sigma)
-        if b == np.inf:
-            Phib = 1.0
-        else:
-            Phib = pymc.utils.normcdf((b-mu)/sigma)
-        d = np.log(Phib-Phia)
+        # It would be nice to replace these with log-error function calls.
+        lPhia = np.log(pymc.utils.normcdf((a-mu)/sigma))
+        lPhib = np.log(pymc.utils.normcdf((b-mu)/sigma))
+        try:
+            d = utils.log_difference(lPhib, lPhia)
+        except ValueError:
+            return -np.inf
+        # d = np.log(Phib-Phia)
         if len(d) == n:
             Phi = d.sum()
         else:
             Phi = n*d
+        if np.isnan(Phi) or np.isinf(Phi):
+            return -np.inf
         return phi - Phi
 
 # Azzalini's skew-normal-----------------------------------

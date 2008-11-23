@@ -19,7 +19,7 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, vectorize, inf, shape, ndim, swapaxes, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference']
 
 
 def check_list(thing, label):
@@ -706,7 +706,20 @@ def _process_trace(trace_file, index_file, trace, name, index):
         index_file.write('%s%s\r\n' % (index_buffer, index-1))
     
     return index
-    
+
+def log_difference(lx, ly):
+    """Returns log(exp(lx) - exp(ly)) without leaving log space."""
+    # Negative log of double-precision infinity
+    li=-709.78271289338397
+    diff = ly - lx
+    # Make sure log-difference can succeed
+    if np.any(diff>=0):
+        raise ValueError, 'Cannot compute log(x-y), because y>=x for some elements.'
+    # If x is enormously larger than y, just return x.
+    if diff <= li:
+        return lx
+    # Otherwise evaluate log-difference
+    return lx + np.log(1.-np.exp(diff))
     
 def getInput():
     """Read the input buffer without blocking the system."""
