@@ -27,9 +27,13 @@ Features
 * Fits Bayesian statistical models you create with Markov chain Monte Carlo and 
   other algorithms.
   
+* Several 'step methods' allow easy customization of MCMC algorithms.
+  
 * Sampling loops can be paused and tuned manually, or saved and restarted later.
 
 * Large suite of well-documented statistical distributions.
+
+* Gaussian processes.
 
 * Creates summaries including tables and plots.
 

@@ -12,7 +12,7 @@ We represent our conceptual model formally as a statistical model:
 \begin{equation}
     \begin{array}{ccc}
         (D_t | s, e, l) \sim \textup{Poisson}\left(r_t\right), & r_t=\left\{\begin{array}{lll}
-            e &\texttt{for}& t< s\\ l &\texttt{ for}& t\ge s
+            e &\textup{if}& t< s\\ l &\textup{if}& t\ge s
             \end{array}\right.,&t\in[t_l,t_h]\\
         s\sim \textup{Uniform}(t_l, t_h)\\
         e\sim \textup{Exponential}(r_e)\\
@@ -32,9 +32,11 @@ The symbols have the following meanings:
 \end{description}
 Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter three are known as the `parents' of $D$ and $D$ is called their `child'. Similarly, the parents of $s$ are $t_l$ and $t_h$, and $s$ is the child of $t_l$ and $t_h$.
 
-\section*{Conditionally stochastic and conditionally deterministic variables}
+\section*{Two types of variables}
 
-At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random} variables. Under the Bayesian interpretation of probability, \emph{random} variables have not necessarily arisen from a physical random process. Instead, probability distributions are used to characterize our uncertainty in the true parameter values. Random variables are represented in PyMC by \code{Stochastic} and \code{Deterministic} classes (Both \code{Stochastic} and \code{Deterministic} are subclasses of the generic \code{Variable} class). There is a difference between $r$ and the other variables: if we knew the values of $r$'s parents, we could compute the value of $r$ exactly. This variable, represented by the \code{Deterministic} class, is defined by a mathematical function which returns its value given values for its parents. This nomenclature is a bit confusing, because these objects usually represent random variables; if the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
+At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random} variables. Under the Bayesian interpretation of probability, \emph{random} variables have not necessarily arisen from a physical random process. Instead, probability distributions are used to characterize our uncertainty in the true parameter values. Random variables are represented in PyMC by \code{Stochastic} and \code{Deterministic} classes (Both \code{Stochastic} and \code{Deterministic} are subclasses of the generic \code{Variable} class). 
+
+The only \code{Deterministic} in the model is $r$. If we knew the values of $r$'s parents, we could compute the value of $r$ exactly. A \code{Deterministic} is defined by a mathematical function which returns its value given values for its parents. The nomenclature is a bit confusing, because these objects usually represent random variables; if the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
 
 On the other hand, even if the values of the parents of parameters $s$, $D$, $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \code{Stochastic} class represents these variables. A better name for these objects might be \code{RandomEvenGivenValuesOfParents}.
 
@@ -54,12 +56,11 @@ disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 \end{verbatim} 
 Next, we create the switchpoint variable $s$:
 \begin{verbatim}
-	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint
-[year]')  
+	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')  
 \end{verbatim}
 \code{DiscreteUniform} is a subclass of \code{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no information \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$:
 \begin{verbatim}
-   	e = Exponential('e', beta=1)
+   e = Exponential('e', beta=1)
 	l = Exponential('l', beta=1)   
 \end{verbatim}
 Next, we define the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We create $r$ using the \code{deterministic} decorator, which converts the ordinary Python function $r$ into a \code{Deterministic} object.
@@ -78,7 +79,7 @@ The last step is to define the number of disasters $D$. This is done the same wa
 \end{verbatim}
 
 \subsection*{Why are data and unknown variables represented by the same object?}
-Since it is represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parents $s$, $e$ and $l$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
+Since it is represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -123,7 +124,7 @@ We are using $r$ as a distributional parameter of $D$, so $r$ is $D$'s parent. $
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set; variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
 \begin{center}
-   \epsfig{file=DisasterModel.pdf, width=5cm}
+   \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
 
 \section*{Variables' values and log-probabilities}
@@ -197,7 +198,7 @@ To compute its value, $r$ calls the funtion we used to create it, passing in the
 
 Let's take a closer look at our definition of $r$:
 \begin{verbatim}
-   	@deterministic(plot=False)
+   @deterministic(plot=False)
 	def r(s=s, e=e, l=l):
 	    """ Concatenate Poisson means """
 	    out = np.empty(len(disasters_array))

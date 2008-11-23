@@ -30,14 +30,14 @@ dependencies, and all are freely available online.
   multidimensional array type and many useful functions for numerical analysis. 
 
 * `Matplotlib`_ (optional): 2D plotting library which produces publication 
-  quality figures in a variety of hardcopy formats and interactive environments
+  quality figures in a variety of image formats and interactive environments
 
 * `pyTables`_ (optional): Package for managing hierarchical datasets and 
   designed to efficiently and easily cope with extremely large amounts of data.
   Requires the `HDF5`_ library. 
 
 * `pydot`_ (optional): Python interface to Graphviz's Dot language, it allows
-  to easily create both directed and non directed graphs.
+  PyMC to create both directed and non-directed graphical representations of models.
   Requires the `Graphviz`_ library. 
 
 * `SciPy`_ (optional): Library of algorithms for mathematics, science 
@@ -103,15 +103,15 @@ your computer.
 Installing from pre-built binaries
 ==================================
 
-Pre-built binaries are available for Windows XP and Mac OS X. For other 
-platforms, you will need to build the package yourself from source. 
-Fortunately, this should be relatively straightforward.
+Pre-built binaries are available for Windows XP and Mac OS X. To install these:
 
 1. Download the pre-built binary for your platform from `PyPi`_. 
 
 2. Double-click the executable installation package, and follow the on-screen 
    instructions.
 
+For other platforms, you will need to build the package yourself from source. 
+Fortunately, this should be relatively straightforward.
 
 Compiling the source code
 =========================
