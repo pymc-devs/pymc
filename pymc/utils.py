@@ -715,9 +715,6 @@ def log_difference(lx, ly):
     # Make sure log-difference can succeed
     if np.any(diff>=0):
         raise ValueError, 'Cannot compute log(x-y), because y>=x for some elements.'
-    # If x is enormously larger than y, just return x.
-    if diff <= li:
-        return lx
     # Otherwise evaluate log-difference
     return lx + np.log(1.-np.exp(diff))
     

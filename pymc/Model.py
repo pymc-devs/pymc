@@ -671,6 +671,6 @@ def check_valid_object_name(sequence):
     names = []
     for o in sequence:
         if o.__name__ in names:
-            raise ValueError, 'A PyMC object called %s already exists.'%o.__name__
+            raise ValueError, 'A tallyable PyMC object called %s already exists. This will cause problems for some database backends.'%o.__name__
         else:
             names.append(o.__name__)
