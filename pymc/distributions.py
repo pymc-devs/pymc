@@ -2041,8 +2041,8 @@ def truncnorm_like(x, mu, tau, a, b):
         # It would be nice to replace these with log-error function calls.
         lPhia = np.log(pymc.utils.normcdf((a-mu)/sigma))
         lPhib = np.log(pymc.utils.normcdf((b-mu)/sigma))
-        # try:
-        d = utils.log_difference(lPhib, lPhia)
+        try:
+            d = utils.log_difference(lPhib, lPhia)
         except ValueError:
             return -np.inf
         # d = np.log(Phib-Phia)
