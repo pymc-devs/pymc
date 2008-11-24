@@ -281,8 +281,7 @@ def plotwrapper(f):
         start = 0
         if kwargs.has_key('start'):
             start = kwargs.pop('start')
-    
-        
+            
         # Figure out what type of object it is
         try:
             # First try Model type
@@ -293,6 +292,8 @@ def plotwrapper(f):
                     if size(data[-1])>=10 and variable._plot!=True:
                         continue
                     name = variable.__name__
+                    if args:
+                        name = '%s_%s' % (args[0], variable.__name__)
                     f(data, name, *args, **kwargs)
             return
         except AttributeError:
@@ -307,7 +308,15 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
-        
+            
+        if type(pymc_obj) == dict:
+            # Then try dictionary
+            for i in pymc_obj:
+                data = pymc_obj[i][start:]
+                if args:
+                    i = '%s_%s' % (args[0], i)
+                f(data, i, *args, **kwargs)
+            return  
         # If others fail, assume that raw data is passed
         f(pymc_obj, *args, **kwargs)
     

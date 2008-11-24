@@ -5,7 +5,44 @@ __all__ = ['geweke', 'gelman_rubin', 'raftery_lewis']
 
 import numpy as np
 import pymc
+import pdb
 
+def diagnostic(f):
+    """
+    This decorator allows for PyMC arguments of various types to be passed to
+    the diagnostic functions. It identifies the type of object and locates its 
+    trace(s), then passes the data to the wrapped diagnostic function.
+    
+    """
+    
+    def wrapper(pymc_obj, *args, **kwargs):
+    
+        # Figure out what type of object it is
+        try:
+            values = {}
+            # First try Model type
+            for variable in pymc_obj._variables_to_tally:            
+                data = variable.trace()
+                name = variable.__name__
+                values[name] = f(data, *args, **kwargs)
+            return values
+        except AttributeError:
+            pass
+            
+        try:
+            # Then try Node type
+            data = pymc_obj.trace()
+            name = pymc_obj.__name__
+            return f(data, *args, **kwargs)
+        except AttributeError:
+            pass
+        
+        # If others fail, assume that raw data is passed
+        return f(pymc_obj, *args, **kwargs)
+    
+    return wrapper
+
+@diagnostic
 def geweke(x, first=.1, last=.5, intervals=20):
     """Return z-scores for convergence diagnostics.
     
@@ -78,6 +115,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return zscores
     
 # From StatLib -- gibbsit.f
+@diagnostic
 def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     """
     Return the number of iterations needed to achieve a given 
