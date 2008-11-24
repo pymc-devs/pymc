@@ -1830,8 +1830,11 @@ def rnegative_binomial(mu, alpha, size=1):
     Random negative binomial variates.
     """
     # Using gamma-poisson mixture rather than numpy directly
-    # because numpy apparently rou
-    return np.random.negative_binomial(alpha, alpha / (mu + alpha), size)
+    # because numpy apparently rounds
+    mu = np.asarray(mu, dtype=float)
+    pois_mu = np.random.gamma(alpha, mu/alpha, size)
+    return np.random.poisson(pois_mu, size)
+    # return np.random.negative_binomial(alpha, alpha / (mu + alpha), size)
 
 def negative_binomial_expval(mu, alpha):
     """

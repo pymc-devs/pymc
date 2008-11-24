@@ -53,7 +53,7 @@ def caching_call(f, x, x_sofar, f_sofar):
     unique_indices=ui[:nu]
     x_unique=xu[:nu]
     repeat_from=rf[:nr]
-    repeat_to=rt[:nr]            
+    repeat_to=rt[:nr]           
         
     # Check which observations have already been made.
     if x_sofar is not None:
