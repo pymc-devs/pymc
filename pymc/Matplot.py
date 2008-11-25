@@ -8,12 +8,12 @@ Plotting module using matplotlib.
 import matplotlib
 import pymc
 import os
-from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter
+from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter, axvline
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
 from pprint import pformat
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray
+from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d
 from utils import autocorr
@@ -496,14 +496,17 @@ def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='.
     #close()
 
 @plotwrapper
-def gof(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
-    # Generate goodness-of-fit scatter plot
+def discrepancy(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
         print 'Plotting', name+suffix
-    
+        
     # Generate new scatter plot
     figure()
-    x, y = data
+    try:
+        x, y = transpose(data)
+    except ValueError:
+        x, y = data
     scatter(x, y)
     
     # Plot x=y line
@@ -522,6 +525,44 @@ def gof(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8
     if not os.path.exists(path):
         os.mkdir(path)
     savefig("%s%s%s.%s" % (path, name, suffix, format))
+    #close()
+    
+def gof(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    """Plots histogram of replicated data, indicating the location of the observed data"""
+    
+    if ndim(trueval)==1 and ndim(simdata==2):
+        # Iterate over more than one set of data
+        for i in range(len(trueval)):
+            n = name or 'MCMC'
+            gof(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
+        return
+        
+    figure()
+    
+    #Specify number of bins (10 as default)
+    nbins = nbins or int(4 + 1.5*log(len(simdata)))
+
+    # Generate histogram
+    hist(simdata, nbins)
+
+    # Plot options
+    xlabel(name or 'Value', fontsize='x-small')
+
+    ylabel("Frequency", fontsize='x-small')
+
+    # Smaller tick labels
+    tlabels = gca().get_xticklabels()
+    setp(tlabels, 'fontsize', fontmap[1])
+    tlabels = gca().get_yticklabels()
+    setp(tlabels, 'fontsize', fontmap[1])
+
+    # Plot vertical line at location of true data value
+    axvline(x=trueval, linewidth=2, color='r', linestyle='dotted')
+    
+    if not os.path.exists(path):
+        os.mkdir(path)
+    # Save to file
+    savefig("%s%s%s.%s" % (path, name or 'MCMC', suffix, format))
     #close()
 
 @plotwrapper
