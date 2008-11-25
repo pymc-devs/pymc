@@ -338,13 +338,16 @@ An individual step method will be assigned to each element of \code{A} in the la
 \subsection*{Automatic assignment of step methods} 
 Every step method subclass (including user-defined ones) adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. Step method assignment can be done manually or automatically. If a user creates a custom step method to handle a particular stochastic variable, that step method alone will be used to update that variable by \code{MCMC} (though you can create multiple step methods for the same variable if desired). If a stochastic variable has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable. In doing so, each step method implements a static method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \code{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
 
+\hypertarget{missing}{}
 \subsection*{Imputation of Missing Data} % (fold)
+\pdfbookmark[1]{Imputation of Missing Data}{missing}
 %\label{subsec:missing_data}
 
 As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in the loss of information if an excluded observation contains valid values for other quantities. 
 
 For example, consider a survey dataset for some wildlife species:
 
+\begin{center}
 \begin{tabular}{cccc}
 \hline
 Count & Site & Observer & Temperature\\
@@ -354,74 +357,121 @@ Count & Site & Observer & Temperature\\
 6 & 1 & 1 & 11\\
 \hline
 \end{tabular}
+\end{center}
 
 Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates. 
 
 In a Bayesian modelling framework, missing data are accommodated simply by treating them as unknown model parameters. Values for the missing data $\tilde{y}$ are estimated naturally, using the posterior predictive distribution:
 
 \begin{equation}
-	Pr(\tilde{y}|y) = \int Pr(\tilde{y}|\theta) Pr(\theta|y) d\theta
+	p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta
 \end{equation}
 
-Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data list by the use of \code{None} objects. These are simply placeholders, as \code{None} cannot be used in arithmetic operations with other values without yielding an error.
+This describes additional data $\tilde{y}$, which may be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data.
+
+Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of a placeholder value, -999. 
 
 \begin{verbatim}
-x = [ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, None, 3, 4, 2, 5,
-2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+x = array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
 0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-3, 3, 1, 1, 2, 1, None, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
+3, 3, 1, -999, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim}
 
-To allow these missing data to be estimated in the model, we pass the data list to the \code{MissingData} function, along with a label:
+To estimate these values in PyMC, we generate a masked array. These are specialised arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{masked_array} function.
+
+First, we generate a mask that indicates the location of the missing values. This is easily done using the equivalence operator:
 
 \begin{verbatim}
-	>>> disaster_data = MissingData("disaster_data", x)
-	>>> disaster_data
-	ArrayContainer([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
-	       4, 4, 1, 5, disaster_data_27, 3, 4, 2, 5, 2, 2, 3, 4, 2, 1, 3, 2, 2,
-	       1, 1, 1, 1, 3, 0, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-	       0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2, 3, 3, 1, 1, 2, 1,
-	       disaster_data_86, 1, 1, 2, 4, 2, 0, 0, 1, 4, 0, 0, 0, 1, 0, 0, 0, 0,
-	       0, 1, 0, 0, 1, 0, 1], dtype=object)
+	>>> disasters_mask = disasters_array == -999
+	>>> disasters_mask
+	array([False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False,  True, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False,  True, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False, False, False, False, False, False, False,
+	       False, False, False], dtype=bool)
 \end{verbatim}
 
-Notice that the \code{None} elements have been replaced by random variables, named after the data object and the index value of the missing data. These elements are Stochastic objects, just like any other stochastic unknown quantity in the model. Hence, they have current values:
+This mask, along with the original data array, are passed to the \code{masked_array} function:
 
 \begin{verbatim}
-	>>> disaster_data.value
-	array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
-	       4, 4, 1, 5, 5, 3, 4, 2, 5, 2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3,
-	       0, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1, 0, 1, 0, 1, 0,
-	       0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2, 3, 3, 1, 1, 2, 1, 2, 1, 1, 2, 4, 2,
-	       0, 0, 1, 4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1], dtype=object)
+	>>> masked_data = numpy.ma.masked_array(disasters_array, disasters_mask)
+	>>> masked_data
+	masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3 4 2 5 2 2 3 4 2
+	 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0 1 0 0 0 2 1 0
+	 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1 0 0 1 0 1],
+	      mask = [False False False False False False False False False False False False
+	 False False False False False False False False False False False False
+	 False False False False False False False False False False False False
+	 False False False  True False False False False False False False False
+	 False False False False False False False False False False False False
+	 False False False False False False False False False False False False
+	 False False False False False False False False False False False  True
+	 False False False False False False False False False False False False
+	 False False False False False False False False False False False False
+	 False False False],
+	      fill_value=999999)
 \end{verbatim}
 
-Initial values are drawn randomly from the range of the existing data. These values are updated by the MCMC sampler class. 
-
-The key is to treat the \code{disaster_data} array as just another stochastic variable. The rest of the model looks very similar to the original model:
+This masked array can then be passed to PyMC's own \code{ImputeMissing} function, which replaces the missing values with Stochastic variables of the desired type. For the coal mining disasters problem, recall that disaster events were modelled as Poisson variates:
 
 \begin{verbatim}
-	# Define data and stochastics
-	switchpoint = DiscreteUniform('switchpoint',lower=0,upper=110)
-	early_mean = Exponential('early_mean',beta=1.)
-	late_mean = Exponential('late_mean',beta=1.)
-
-	@observed
-	@stochastic(dtype=int)
-	def disasters(  value = disasters_data, 
-	                early_mean = early_mean, 
-	                late_mean = late_mean, 
-	                switchpoint = switchpoint):
-	    """Annual occurences of coal mining disasters."""
-
-	    def logp(value, early_mean, late_mean, switchpoint):
-	        return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint:],late_mean)
-
-	    def random(early_mean, late_mean, switchpoint):
-	        return concatenate((rpoisson(early_mean, switchpoint), rpoisson(late_mean, len(value)-switchpoint)))	
+	>>> D = ImputeMissing('D', Poisson, masked_data, mu=r)
+	>>> D
+	[<pymc.distributions.Poisson 'D[0]' at 0x4ba42d0>,
+	 <pymc.distributions.Poisson 'D[1]' at 0x4ba4330>,
+	 <pymc.distributions.Poisson 'D[2]' at 0x4ba44d0>,
+	 <pymc.distributions.Poisson 'D[3]' at 0x4ba45f0>,
+	...
+	 <pymc.distributions.Poisson 'D[110]' at 0x4ba46d0>]
 \end{verbatim}
+
+Here $r$ is an array of means for each year of data, allocated according to the location of the switchpoint. Notice that each element is a Poisson Stochastic, irrespective of whether the observation was missing or not. The difference is that actual observations are data Stochastics, while the missing values are non-data Stochastics. The latter are considered unknown, rather than fixed, and therefore estimated by the MCMC algorithm, just as the parameters of the model.
+
+The entire model looks very similar to the original model:
+
+\begin{verbatim}
+	## Switchpoint
+	s = DiscreteUniform('s', lower=0, upper=110)   
+	# Early mean
+	e = Exponential('e', beta=1)
+	# Late mean
+	l = Exponential('l', beta=1)   
+
+	@deterministic(plot=False)
+	def r(s=s, e=e, l=l):
+	    """Allocate appropriate mean to time series"""
+	    out = np.empty(len(disasters_array))
+	    # Early mean prior to switchpoint
+	    out[:s] = e
+	    # Late mean following switchpoint
+	    out[s:] = l
+	    return out
+
+	# Where the mask is true, the value is taken as missing. 
+	masked_data = np.ma.masked_array(disasters_array, disasters_mask)
+	D = ImputeMissing('D', Poisson, masked_data, mu=r)
+\end{verbatim}
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[height=3in]{missing.png}
+\caption{Trace and posterior distribution of the second missing data point in the example.}
+\label{fig:missing}
+\end{center}
+\end{figure}
+
+The main limitation of this approach for imputation is performance. Because each element in the data array is modelled by an individual Stochastic, rather than a single Stochastic for the entire array, the number of nodes in the overall model increases from 4 to 113. This significantly slows the rate of sampling, since the model iterates over each node at every iteration.
 
 % section missing_data (end)
