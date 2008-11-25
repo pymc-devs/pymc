@@ -27,7 +27,3 @@ def test_dependencies():
             print '\t\t'+fname
     if len(dep_files['Pdb'])>0:
         raise ValueError, 'Looks like Pdb was not commented out in '+', '.join(dep_files[mod_str])
-                        
-            
-if __name__ == "__main__":
-    test_dependencies()

@@ -4,31 +4,27 @@ import numpy as np
 
 class TruncatedMetropolis(pm.Metropolis):
     def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-        self.bounds = (low_bound, up_bound)
+        self.low_bound = low_bound
+        self.up_bound = up_bound
         pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
     # Propose method written by hacking Metropolis.propose()
     def propose(self):
         tau = 1./(self._asf * self._sig)**2
-        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.bounds)
+        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-    # Hastings factor method accounts for nonsymmetric proposal distribution    
+    # Hastings factor method accounts for asymmetric proposal distribution    
     def hastings_factor(self):
         tau = 1./(self._asf * self._sig)**2
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 
-        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.bounds)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.bounds)   
+        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
 
         if self.verbose > 1:
             print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
         return lp_bak - lp_for
-
-    # Prevent PyMC from trying to automatically use TruncatedMetropolis.    
-    @classmethod
-    def competence(stochastic):
-        return 0
 
 
 # Maximum data value is around 1 (plot the histogram).        
@@ -62,4 +58,4 @@ M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 # Get a handle to the step method handling cutoff to investigate its behavior.
 S = M.step_method_dict[cutoff][0]
 
-# M.isample(10000,0,10)
+M.isample(10000,0,10)

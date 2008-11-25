@@ -14,6 +14,7 @@ from pymc.decorators import prop
 from copy import copy
 from InstantiationDecorators import deterministic
 import pdb, warnings, sys
+import inspect
 
 __docformat__='reStructuredText'
 
@@ -80,20 +81,46 @@ def assign_method(stochastic, scale=None):
     
     # Randomly grab and appropriate method
     method = best_candidates.pop()
-        
-    if scale:
-        return method(stochastic, scale = scale)
+
+    failure_header = """Failed attempting to automatically assign step method class %s
+to stochastic variable %s. Try setting %s's competence method to return 0
+and manually assigning it when appropriate. See the user guide.
+
+Error message: """%(method.__name__, stochastic.__name__, method.__name__)
     
-    return method(stochastic)
+    try:
+        if scale:
+            out = method(stochastic, scale = scale)    
+        else:
+            out = method(stochastic)
+    except:
+        a,b,c = sys.exc_info()
+        raise a, failure_header + b.message, c
+    return out
+    
 
 
 class StepMethodMeta(type):
     """
-    Automatically registers new step methods.
+    Automatically registers new step methods if they can be automatically assigned:
+    if their init method has one and only one required argument.
     """
     def __init__(cls, name, bases, dict):
         type.__init__(cls)
-        StepMethodRegistry.append(cls)
+        args, varargs, varkw, defaults = inspect.getargspec(cls.__init__)
+        auto_assignment_OK = False
+        if len(args) == 2:
+            auto_assignment_OK = True
+        elif len(args)>2:
+            if defaults is not None:
+                if len(defaults) == len(args)-2:
+                    auto_assignment_OK = True
+        elif len(args) == 1 and varargs is not None:
+            auto_assignment_OK = True
+
+        if auto_assignment_OK:
+            StepMethodRegistry.append(cls)
+        
         
 class StepMethod(object):
     """
