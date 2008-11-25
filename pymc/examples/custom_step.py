@@ -1,37 +1,35 @@
 import pymc as pm
 import numpy as np
 
+
 class TruncatedMetropolis(pm.Metropolis):
     def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-        # Put the boundaries in a Container, so that they can be either
-        # scalars or stochastics.
-        self.bounds = pm.Container({'low': low_bound, 'up': up_bound})
+        self.bounds = (low_bound, up_bound)
         pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
-        
+
     # Propose method written by hacking Metropolis.propose()
     def propose(self):
         tau = 1./(self._asf * self._sig)**2
-        bounds = (self.bounds.value['low'], self.bounds.value['up'])
-        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, *bounds)
-                
-    # Hastings factor method accounts for proposal distribution    
+        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.bounds)
+
+    # Hastings factor method accounts for nonsymmetric proposal distribution    
     def hastings_factor(self):
         tau = 1./(self._asf * self._sig)**2
-        bounds = (self.bounds.value['low'], self.bounds.value['up'])
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
-        
-        lp_for = pm.truncnorm_like(cur_val, last_val, tau, *bounds)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, *bounds)   
-        
+
+        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.bounds)
+        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.bounds)   
+
         if self.verbose > 1:
             print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
         return lp_bak - lp_for
-    
+
     # Prevent PyMC from trying to automatically use TruncatedMetropolis.    
     @classmethod
     def competence(stochastic):
         return 0
+
 
 # Maximum data value is around 1 (plot the histogram).        
 data = np.array([-1.6464815 , -0.86463278,  0.80656378,  0.67664181, -0.34312965,
@@ -64,4 +62,4 @@ M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 # Get a handle to the step method handling cutoff to investigate its behavior.
 S = M.step_method_dict[cutoff][0]
 
-M.isample(10000,0,10)
+# M.isample(10000,0,10)

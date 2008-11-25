@@ -664,7 +664,12 @@ class Sampler(Model):
           The trace index. Setting `chain=i` will return the trace created by 
           the ith call to `sample`. 
         """
-        return self.db.trace(name, chain)
+        if type(name) is str:
+            return self.db.trace(name, chain)
+        elif isinstance(name, Variable):
+            return self.db.trace(name.__name__, chain)
+        else:
+            raise ValueError, 'Name argument must be string or Variable, got %s.'%name
         
 def check_valid_object_name(sequence):
     """Check that the names of the objects are all different."""

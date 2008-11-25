@@ -2547,11 +2547,11 @@ def rmod_categor(p,minval=0,step=1,size=1):
 
 class Categorical(Stochastic):
     __doc__ = """
-C = Categorical(name, p, minval, step[, trace=True, value=None,
-   rseed=False, observed=False, cache_depth=2, plot=None, verbose=0])
+C = Categorical(name, p[, trace=True, value=None, rseed=False, 
+    observed=False, cache_depth=2, plot=None, verbose=0])
 
 Stochastic variable with Categorical distribution.
-Parents are: p, minval, step.
+Parent is: p
 
 If parent p is Dirichlet and has length k-1, an implicit k'th
 category is assumed to exist with associated probability 1-sum(p.value).
@@ -2562,14 +2562,14 @@ Docstring of categorical_like (case where P is not a Dirichlet):
     """\
     + categorical_like.__doc__ +\
     """
-Docstring of mod_categorical_like (case where P is a Dirichlet):
+Docstring of categorical_like (case where P is a Dirichlet):
     """\
-    + mod_categorical_like.__doc__
+    + categorical_like.__doc__
 
     
     parent_names = ['p', 'minval', 'step']
     
-    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
+    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
         
         if value is not None:
             if np.isscalar(value):
@@ -2581,13 +2581,55 @@ Docstring of mod_categorical_like (case where P is a Dirichlet):
         
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A Categorical random variable', name=name,
-                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
+                parents={'p':p}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
                 rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
         else:
             Stochastic.__init__(self, logp=valuewrapper(categorical_like), doc='A Categorical random variable', name=name,
-                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=dtype,
+                parents={'p':p}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=dtype,
                 rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
+class ModCategorical(Stochastic):
+    __doc__ = """
+C = ModCategorical(name, p, minval, step[, trace=True, value=None,
+   rseed=False, observed=False, cache_depth=2, plot=None, verbose=0])
+
+Stochastic variable with ModCategorical distribution.
+Parents are: p, minval, step.
+
+If parent p is Dirichlet and has length k-1, an implicit k'th
+category is assumed to exist with associated probability 1-sum(p.value).
+
+Otherwise parent p's value should sum to 1.
+
+Docstring of mod_categorical_like (case where P is not a Dirichlet):
+    """\
+    + mod_categorical_like.__doc__ +\
+    """
+Docstring of mod_categorical_like (case where P is a Dirichlet):
+    """\
+    + mod_categorical_like.__doc__
+
+
+    parent_names = ['p', 'minval', 'step']
+
+    def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
+
+        if value is not None:
+            if np.isscalar(value):
+                self.size = 1
+            else:
+                self.size = len(value)
+        else:
+            self.size = size
+
+        if isinstance(p, Dirichlet):
+            Stochastic.__init__(self, logp=valuewrapper(mod_mod_categorical_like), doc='A ModCategorical random variable', name=name,
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
+                rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
+        else:
+            Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A ModCategorical random variable', name=name,
+                parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categorical, self.size), trace=trace, value=value, dtype=dtype,
+                rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
 def mod_rmultinom(n,p):
     return rmultinomial(n,extend_dirichlet(p))
