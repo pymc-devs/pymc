@@ -14,7 +14,6 @@ Additional Dependencies
  * HDF5 version 1.6.5, required by pytables.
  * pytables version 2 and up.  <http://sourceforge.net/projects/pytables/>
 
- 
 """
 
 
@@ -24,7 +23,7 @@ import pymc
 from pymc.database import base, pickle
 from copy import copy
 import tables  
-import warnings
+import os, warnings
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -198,24 +197,64 @@ class Database(pickle.Database):
         self._traces = {} # A dictionary of the Trace objects. 
         
         # Deprecation of complevel and complib
+        # Remove in V2.1
         if kwds.has_key('complevel'):
             warnings.warn('complevel has been replaced with dbcomplevel.', DeprecationWarning)
             dbcomplevel = kwds.get('complevel')
         if kwds.has_key('complib'):
             warnings.warn('complib has been replaced with dbcomplib.', DeprecationWarning)
             dbcomplib = kwds.get('complib')
-
+            
+            
         self._h5file = tables.openFile(self.dbname, self.mode)
         
         self.filter = getattr(self._h5file, 'filters', \
                               tables.Filters(complevel=dbcomplevel, complib=dbcomplib))
+        
         
         self._tables = self._gettables()  # This should be a dict keyed by chain.
         self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
         self._chains = self._h5file.listNodes("/")  # This should be a dict keyed by chain.
         self.chains = len(self._chains)
         self._default_chain = -1
-    
+        
+        # LOAD LOGIC
+        if self.chains > 0:
+            # Create traces from objects stored in Table.
+            db = self
+            for k in db._tables[-1].colnames:
+                db._traces[k] = Trace(name=k, db=db)
+                setattr(db, k, db._traces[k])
+                
+            
+            # Walk nodes proceed from top to bottom, so we need to invert
+            # the list to have the chains in chronological order.
+            objects = {}
+            for node in db._h5file.walkNodes("/", classname='VLArray'):
+                    try:
+                        objects[node._v_name].append(node)
+                    except:
+                        objects[node._v_name] = [node,]
+                            
+            # Note that the list vlarrays is in reverse order. 
+            for k, vlarrays in objects.iteritems():
+                db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays[::-1])
+                setattr(db, k, db._traces[k])
+                
+            # Restore table attributes.
+            # This restores the sampler's state for the last chain. 
+            table = db._tables[-1]
+            for k in table.attrs._v_attrnamesuser:
+                setattr(db, k, getattr(table.attrs, k))
+        
+            # Restore group attributes.
+            for k in db._chains[-1]._f_listNodes():
+                if k.__class__ not in [tables.Table, tables.Group]:
+                    setattr(db, k.name, k)
+        
+            varnames = db._tables[-1].colnames+ objects.keys()
+            db.variables_to_tally = db.chains * [varnames,]
+        
     def connect_model(self, model):
         """Link the Database to the Model instance. 
         
@@ -443,39 +482,6 @@ def load(dbname, dbmode='a'):
         raise AttributeError, "dbmode='w' not allowed for load."
     db = Database(dbname, dbmode=dbmode)
     
-    # Create traces from objects stored in Table.
-    for k in db._tables[-1].colnames:
-        db._traces[k] = Trace(name=k, db=db)
-        setattr(db, k, db._traces[k])
-        
-    
-    # Walk nodes proceed from top to bottom, so we need to invert
-    # the list to have the chains in chronological order.
-    objects = {}
-    for node in db._h5file.walkNodes("/", classname='VLArray'):
-            try:
-                objects[node._v_name].append(node)
-            except:
-                objects[node._v_name] = [node,]
-                    
-    # Note that the list vlarrays is in reverse order. 
-    for k, vlarrays in objects.iteritems():
-        db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays[::-1])
-        setattr(db, k, db._traces[k])
-        
-    # Restore table attributes.
-    # This restores the sampler's state for the last chain. 
-    table = db._tables[-1]
-    for k in table.attrs._v_attrnamesuser:
-        setattr(db, k, getattr(table.attrs, k))
-
-    # Restore group attributes.
-    for k in db._chains[-1]._f_listNodes():
-        if k.__class__ not in [tables.Table, tables.Group]:
-            setattr(db, k.name, k)
-
-    varnames = db._tables[-1].colnames+ objects.keys()
-    db.variables_to_tally = db.chains * [varnames,]
     return db
 
 
