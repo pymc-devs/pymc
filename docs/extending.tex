@@ -80,7 +80,10 @@ Having created our custom step method, we would like to tell MCMC instances to u
 \begin{verbatim}
 	M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 \end{verbatim}
-This call causes $M$ to pass the arguments \texttt{cutoff, D.value.max(), np.inf} to a \texttt{TruncatedMetropolis} object's \texttt{init} method, and use the object to handle \texttt{cutoff}. It's often convenient to get a handle to a custom step method object directly for debugging purposes. \texttt{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \texttt{cutoff}:
+This call causes $M$ to pass the arguments \texttt{cutoff, D.value.max(), np.inf} to a \texttt{TruncatedMetropolis} object's \texttt{init} method, and use the object to handle \texttt{cutoff}. 
+
+\medskip
+It's often convenient to get a handle to a custom step method object directly for debugging purposes. \texttt{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \texttt{cutoff}:
 \begin{verbatim}
 	>>> M.step_method_dict[cutoff]
 	[<custom_step.TruncatedMetropolis object at 0x3c91130>]
