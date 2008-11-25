@@ -26,7 +26,7 @@ from InstantiationDecorators import *
 from NormalApproximation import *
 from MCMC import *
 from StepMethods import *
-from convergencediagnostics import *
+from diagnostics import *
 from CommonDeterministics import *
 
 from tests import test

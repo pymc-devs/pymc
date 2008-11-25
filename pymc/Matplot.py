@@ -466,7 +466,7 @@ def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num
         #close()
 
 @plotwrapper
-def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     
     # Generate Geweke (1992) diagnostic plots
     

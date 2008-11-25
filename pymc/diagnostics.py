@@ -128,10 +128,12 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
             Quantile.
         r : float
             Accuracy requested for quantile.
-        s : float
-            Probability of attaining the requested accuracy.
-        epsilon : float
-             Half width of the tolerance interval required for the q-quantile.
+        s (optional): float
+            Probability of attaining the requested accuracy (defaults to 0.95).
+        epsilon (optional) : float
+             Half width of the tolerance interval required for the q-quantile (defaults to 0.001).
+        verbose (optional) : int
+            Verbosity level for output (defaults to 1).
              
     :Return:
         nmin : int

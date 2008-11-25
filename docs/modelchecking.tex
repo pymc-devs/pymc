@@ -1,4 +1,6 @@
-\section{Convergence Diagnostics} % (fold)
+\hypertarget{convergence}{}
+\pdfbookmark[0]{Convergence Diagnostics}{convergence}
+\section*{Convergence Diagnostics} % (fold)
 %\label{sec:convergence_diagnostics}
 
 Valid inferences from sequences of MCMC samples are based on the assumption that the samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
@@ -9,7 +11,7 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 \begin{figure}[ht]
 \begin{center}
-%\includegraphics[height=3in]{poor_mixing.png}
+\includegraphics[height=3in]{poormixing.png}
 \caption{An example of a poorly-mixing sample in two dimensions. Notice that the chain is trapped in a region of low probability relative to the mean (dot) and variance (oval) of the true posterior quantity.}
 \label{fig:mix}
 \end{center}
@@ -19,7 +21,7 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 The most straightforward approach for assessing convergence is based on
 simply plotting and inspecting traces and histograms of the observed MCMC
-sample. If the trace of values for each of the stochs exhibits asymptotic
+sample. If the trace of values for each of the stochastics exhibits asymptotic
 behaviour\footnote{Asymptotic behaviour implies that the variance and the
 mean value of the sample stays relatively constant over some arbitrary
 period.} over the last $m$ iterations, this may be satisfactory evidence
@@ -27,9 +29,9 @@ for convergence. A similar approach involves plotting a histogram for every
 set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$;
 if the histograms are not visibly different among the sample intervals,
 this is reasonable evidence for convergence. Note that such diagnostics
-should be carried out for each stoch estimated by the MCMC algorithm,
-because convergent behaviour by one stoch does not imply evidence for
-convergence for other stochs in the analysis. An extension of this approach
+should be carried out for each stochastic estimated by the MCMC algorithm,
+because convergent behaviour by one variable does not imply evidence for
+convergence for other variables in the analysis. An extension of this approach
 can be taken when multiple parallel chains are run, rather than just a
 single, long chain. In this case, the final values of $c$ chains run for
 $n$ iterations are plotted in a histogram; just as above, this is repeated
@@ -53,52 +55,139 @@ A principal reason that evidence from informal techniques cannot guarantee conve
 
 Along with the \emph{ad hoc} techniques described above, a number of more formal methods exist which are prevalent in the literature. These are considered more formal because they are based on existing statistical methods, such as time series analysis.
 
-PyMC includes one formal convergence diagnostic method, first proposed by \citet{Geweke:1992gm}. This is a time-series approach, which compares the mean and variance of segments from the beginning and end of a single chain.
+PyMC currently includes two formal convergence diagnostic methods. The first, proposed by \citet{Geweke:1992gm}, is a time-series approach that compares the mean and variance of segments from the beginning and end of a single chain.
 \begin{equation}
 z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 \end{equation}
-where $a$ is the early interval and $b$ the late interval. If the z-scores of these two segments are similar, it can provide evidence for convergence. PyMC plots the z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. Calling the convergence method results in a diagnostic plot for each model stoch.
+where $a$ is the early interval and $b$ the late interval. If the z-scores (theoretically distributed as standard normal variates) of these two segments are similar, it can provide evidence for convergence. PyMC calculates z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero. 
 
-\subsubsection{Method Usage}
+Diagnostic z-scores can be obtained by calling the \code{geweke} function. It accepts either (1) a single trace, (2) a dictionary of traces, (3) a Node object, or (4) an entire Model object.
+
+\subsubsection*{Method Usage}
 \begin{verbatim}
-sampler.convergence(first=0.1, last=0.5, intervals=20, burn=0, thin=1, chain=-1, plot=True)
+geweke(x, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
 \begin{itemize}
+	
+\item \verb=x=: The object that is or contains the output trace(s).
 
-\item \verb=first= (optional): First portion of chain to be used in Geweke diagnostic. Defaults to 0.1 (i.e. first 10% of chain).
+\item \verb=first= (optional): First portion of chain to be used in Geweke diagnostic. Defaults to 0.1 (i.e. first 10\% of chain).
 
-\item \verb=last= (optional): Last portion of chain to be used in Geweke diagnostic. Defaults to 0.5 (i.e. last 50% of chain).
+\item \verb=last= (optional): Last portion of chain to be used in Geweke diagnostic. Defaults to 0.5 (i.e. last 50\% of chain).
 
 \item \verb=intervals= (optional): Number of sub-chains to analyze. Defaults to 20.
-
-\item \verb=burn (optional)=: Number of burn-in iterations to exclude. Defaults to 0 (\emph{i.e.} no burn-in).
-
-\item \verb=thin (optional)=: Thinning factor. Defaults to 1 (\emph{i.e.} no thinning).
-
-\item \verb=chain= (optional): Chain to be analyzed. Defaults to -1 (\emph{i.e}. last chain).
-
-\item \verb=plot= (optional): Plotting flag. Defaults to True.
 \end{itemize}
-Comprehensive convergence diagnostics are available in the \href{http://lib.stat.cmu.edu/R/CRAN/}{R statistical package}, via the \href{http://www-fis.iarc.fr/coda/}{CODA module}. The \verb=MetropolisHastings= class in PyMC includes a method for exporting model traces in a format that may be directly read by CODA.
 
-\subsubsection{Method Usage}
+The resulting scores are best interpreted graphically, using the \code{geweke_plot} function. This displays the scores in series, in relation to the 2 standard deviation boundaries around zero. Hence, it is easy to see departures from the standard normal assumption.
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[height=3in]{geweke.png}
+\caption{Sample plot of Geweke z-scores for a variable using \code{geweke_plot}. The occurrence of the scores well within 2 standard deviations of zero gives not indication of lack of convergence.}
+\label{fig:geweke}
+\end{center}
+\end{figure}
+
+\code{geweke_plot} takes either a single set of scores, or a dictionary of scores (output by \code{geweke} when an entire Sampler is passed) as its argument:
+
+\subsubsection*{Method Usage}
 \begin{verbatim}
-sampler.coda_output(filename="coda", burn=0, thin=1)
+def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
+\end{verbatim}
+\begin{itemize}
+	
+\item \verb=data=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
+
+\item \verb=name= (optional): Name used for output files. For multiple scores, the dictionary keys are used as names.
+
+\item \verb=format= (optional): Graphic output file format (defaults to \emph{png}).
+
+\item \verb=suffix= (optional): Suffix to filename (defaults to \emph{-diagnostic})
+
+\item \verb=path= (optional): The path for output graphics (defaults to working directory).
+
+\item \verb=fontmap= (optional): Dictionary containing the font map for the labels of the graphic.
+
+\item \verb=verbose= (optional): Verbosity level for output (defaults to 1).
+\end{itemize}
+
+To illustrate, consider a model \code{my_model} that is used to instantiate a MCMC sampler. The sampler is then run for a given number of iterations:
+\begin{verbatim}
+	>>> S = pymc.MCMC(my_model)
+	>>> S.sample(10000, burn=5000)
+\end{verbatim}
+It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
+\begin{verbatim}
+	>>> scores = pymc.geweke(S, intervals=20)
+	>>> pymc.geweke_plot(scores)
+\end{verbatim}
+Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
+\begin{verbatim}
+	>>> trace = S.alpha.trace()
+	>>> alpha_scores = pymc.geweke(trace, 'alpha', intervals=20)
+	>>> pymc.geweke_plot(alpha_scores)
+\end{verbatim}
+
+The second diagnostic provided by PyMC is the \citet{raftery} procedure. This approach estimates the number of iterations required to reach convergence, along with the number of burn-in samples to be discarded and the appropriate thinning interval. A separate estimate of both quantities can be obtained for each variable in a given model.
+
+As the criterion for determining convergence, the Raftery and Lewis approach uses the accuracy of estimation of a user-specified quantile. For example, we may want to estimate the quantile $q=0.975$ to within $r=0.005$ with probability $s=0.95$. In other words,
+
+\begin{equation}
+	Pr(|\hat{q}-q| \le r) = s
+\end{equation}
+
+From any sample of $\theta$, one can construct a binary chain:
+
+\begin{equation}
+	Z^{(j)} = I(\theta^{(j)} \le u_q)
+\end{equation}
+
+where $u_q$ is the quantile value and $I$ is the indicator function. While $\{\theta^{(j)}\}$ is a Markov chain, $\{Z^{(j)}\}$ is not necessarily so. In any case, the serial dependency among $Z^{(j)}$ decreases as the thinning interval $k$ increases. A value of $k$ is chosen to be the smallest value such that the first order Markov chain is preferable to the second order Markov chain. 
+
+This thinned sample is used to determine number of burn-in samples. This is done by comparing the remaining samples from burn-in intervals of increasing length to the limiting distribution of the chain. An appropriate value is one for which the truncated sample's distribution is within $\epsilon$ (arbitrarily small) of the limiting distribution. See \citet{raftery} or \citet{Gamerman:1997tb} for computational details. Estimates for sample size tend to be conservative.
+
+This diagnostic is best used on a short pilot run of a particular model, and the results used to parameterize a subsequent sample that is to be used for inference.
+
+
+\subsubsection*{Method Usage}
+\begin{verbatim}
+raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1)
+\end{verbatim}
+\begin{itemize}
+	
+	\item \verb=x=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
+	
+    \item \verb=q=: Desired quantile to be estimated.
+
+    \item \verb=r=: Desired accuracy for quantile.
+
+    \item \verb=s=(optional): Probability of attaining the requested accuracy (defaults to 0.95).
+
+    \item \verb=epsilon= (optional) : Half width of the tolerance interval required for the q-quantile (defaults to 0.001).
+
+    \item \verb=verbose= (optional) : Verbosity level for output (defaults to 1).
+\end{itemize}
+
+The code for \code{raftery_lewis} is based on the FORTRAN program \emph{gibbsit}, which was written by Steven Lewis.
+
+Additional convergence diagnostics are available in the \href{http://lib.stat.cmu.edu/R/CRAN/}{R statistical package}, via the \href{http://www-fis.iarc.fr/coda/}{CODA module}. PyMC includes a method \code{coda_output} for exporting model traces in a format that may be directly read by CODA.
+
+\subsubsection*{Method Usage}
+\begin{verbatim}
+sampler.coda_output(pymc_object)
 \end{verbatim}
 \begin{itemize}
 
-\item \verb=filename= (optional): Filename of coda output files. Defaults to ``coda''.
-
-\item \verb=burn (optional)=: Number of burn-in iterations to exclude. Defaults to 0 (\emph{i.e.} no burn-in).
-
-\item \verb=thin (optional)=: Thinning factor. Defaults to 1 (\emph{i.e.} no thinning).
+\item \verb=pymc_object=: The PyMC sampler for which output is desired.
 
 \end{itemize}
-Calling \verb=coda_output= yields a \verb=.out= file containing raw trace values and a \verb=.ind= file containing indices.
+Calling \verb=coda_output= yields a file containing raw trace values (suffix \verb=.out=) and a file containing indices to the trace values (suffix \verb=.ind=).
 
 % section convergence_diagnostics (end)
 
-\section{Autocorrelation Plots} % (fold)
+\hypertarget{autocorrelation}{}
+\pdfbookmark[0]{Autocorrelation Plots}{autocorrelation}
+\section*{Autocorrelation Plots} % (fold)
 %\label{sec:autocorrelation_plots}
 
 Samples from MCMC algorithms are ususally autocorrelated, due partly to the inherent Markovian dependence structure. The degree of autocorrelation can be quantified using the autocorrelation function:
@@ -106,7 +195,7 @@ Samples from MCMC algorithms are ususally autocorrelated, due partly to the inhe
     \rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
             &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
-The \verb=MetropolisHastings= class includes a method for plotting the autocorrelation function for each stoch in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
+PyMC includes a function for plotting the autocorrelation function for each stochastics in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
 
 \begin{figure}[h]
         \begin{center}
@@ -117,25 +206,33 @@ The \verb=MetropolisHastings= class includes a method for plotting the autocorre
 \end{figure}
 
 \begin{verbatim}
-sampler.autocorrelation(max_lag=100, burn=0, thin=1, chain=-1)
+autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
-
 \begin{itemize}
+	\item \verb=data=: The object that is or contains the output trace(s).
 
-\item \verb=max_lag (optional)=: Maximum time lag to calculate autocorrelation. Defaults to 100 iterations.
+	\item \verb=name=: Name used for output files.
+	
+	\item \verb=maxlag=: The highest lag interval for which autocorrelation is calculated.
 
-\item \verb=burn (optional)=: Number of burn-in iterations to exclude. Defaults to 0 (\emph{i.e.} no burn-in).
+	\item \verb=format= (optional): Graphic output file format (defaults to \emph{png}).
 
-\item \verb=thin (optional)=: Thinning factor. Defaults to 1 (\emph{i.e.} no thinning).
+	\item \verb=suffix= (optional): Suffix to filename (defaults to \emph{-diagnostic})
 
-\item \verb=chain (optional)=: Chain to be analyzed. Defaults to -1 (\emph{i.e}. last chain).
+	\item \verb=path= (optional): The path for output graphics (defaults to working directory).
+
+	\item \verb=fontmap= (optional): Dictionary containing the font map for the labels of the graphic.
+
+	\item \verb=verbose= (optional): Verbosity level for output (defaults to 1).
 \end{itemize}
 
 % section autocorrelation_plots (end)
 
-
-\section{Goodness of Fit} % (fold)
+\hypertarget{gof}{}
+\pdfbookmark[0]{Goodness of Fit}{gof}
+\section*{Goodness of Fit} % (fold)
 %\label{sec:goodness_of_fit}
+
 
 
 % section goodness_of_fit (end)

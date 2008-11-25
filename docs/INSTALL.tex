@@ -1,11 +1,11 @@
 
 
 
-\texttt{pymc} is known to run on Mac OS X, Linux and Windows, but in theory should be
+\texttt{pymc} is known to run on Mac OS X, Linux and Windows, but in theory should be 
 able to work on just about any platform for which Python, a fortran compiler
-and the numpy module are  available. However, installing some extra
-depencies can greatly improve PyMC's performance and versatility.
-The following describes the required and optional dependencies and takes you
+and the numpy module are  available. However, installing some extra 
+depencies can greatly improve PyMC's performance and versatility. 
+The following describes the required and optional dependencies and takes you 
 through the installation process.
 
 
@@ -14,25 +14,24 @@ through the installation process.
 \hypertarget{dependencies}{}
 \pdfbookmark[0]{Dependencies}{dependencies}
 \section*{Dependencies}
-\label{dependencies}
 
-PyMC requires some prerequisite packages to be present on the system before the
-PyMC package itself is installed. Fortunately, there are currently only a few
+PyMC requires some prerequisite packages to be present on the system before the 
+PyMC package itself is installed. Fortunately, there are currently only a few 
 dependencies, and all are freely available online.
 \begin{itemize}
 \item {} 
 \href{http://www.python.org/.}{Python} version 2.5 or later.
 
 \item {} 
-\href{http://www.scipy.org/NumPy}{NumPy} (1.2): The fundamental scientific programming package, it provides a
+\href{http://www.scipy.org/NumPy}{NumPy} (1.2): The fundamental scientific programming package, it provides a 
 multidimensional array type and many useful functions for numerical analysis.
 
 \item {} 
-\href{http://matplotlib.sourceforge.net/}{Matplotlib} (optional): 2D plotting library which produces publication
+\href{http://matplotlib.sourceforge.net/}{Matplotlib} (optional): 2D plotting library which produces publication 
 quality figures in a variety of image formats and interactive environments
 
 \item {} 
-\href{http://www.pytables.org/moin}{pyTables} (optional): Package for managing hierarchical datasets and
+\href{http://www.pytables.org/moin}{pyTables} (optional): Package for managing hierarchical datasets and 
 designed to efficiently and easily cope with extremely large amounts of data.
 Requires the \href{http://www.hdfgroup.org/HDF5/}{HDF5} library.
 
@@ -42,23 +41,23 @@ PyMC to create both directed and non-directed graphical representations of model
 Requires the \href{http://www.graphviz.org/}{Graphviz} library.
 
 \item {} 
-\href{http://www.scipy.org/}{SciPy} (optional): Library of algorithms for mathematics, science
+\href{http://www.scipy.org/}{SciPy} (optional): Library of algorithms for mathematics, science 
 and engineering.
 
 \item {} 
-\href{http://ipython.scipy.org/}{IPython} (optional): An enhanced interactive Python shell and an
+\href{http://ipython.scipy.org/}{IPython} (optional): An enhanced interactive Python shell and an 
 architecture for interactive parallel computing.
 
 \end{itemize}
 
-There are prebuilt distributions that include all required dependencies. For
-Mac OSX users, we recommend the \href{http://www.activestate.com/Products/ActivePython/}{MacPython} distribution, the
-\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}, or Python 2.5.1 that ships with
-OSX 10.5 (Leopard). Windows users should download and install the
-\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}. The Enthought Python Distribution comes
+There are prebuilt distributions that include all required dependencies. For 
+Mac OSX users, we recommend the \href{http://www.activestate.com/Products/ActivePython/}{MacPython} distribution, the 
+\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}, or Python 2.5.1 that ships with 
+OSX 10.5 (Leopard). Windows users should download and install the 
+\href{http://www.enthought.com/products/epddownload.php}{Enthought Python Distribution}. The Enthought Python Distribution comes 
 bundled with these prerequisites.
 
-If instead of installing the prebuilt binaries you prefer (or have) to build
+If instead of installing the prebuilt binaries you prefer (or have) to build 
 \texttt{pymc} yourself, make sure you have a Fortran and a C compiler. There are free
 compilers (gfortran, gcc) available on all platforms. Other compilers have not been
 tested with PyMC but may work nonetheless.
@@ -69,16 +68,15 @@ tested with PyMC but may work nonetheless.
 \hypertarget{installation-using-easyinstall}{}
 \pdfbookmark[0]{Installation using EasyInstall}{installation-using-easyinstall}
 \section*{Installation using EasyInstall}
-\label{installation-using-easyinstall}
 
 The easiest way to install PyMC is to type in a terminal:
 \begin{quote}{\ttfamily \raggedright \noindent
 easy{\_}install~pymc
 }\end{quote}
 
-Provided \href{http://peak.telecommunity.com/DevCenter/EasyInstall}{EasyInstall} is installed and in your path, this should fetch
+Provided \href{http://peak.telecommunity.com/DevCenter/EasyInstall}{EasyInstall} is installed and in your path, this should fetch 
 and install the package from the \href{http://pypi.python.org/pypi}{Python Index}. Make sure
-you have the appropriate administrative privileges to install software on
+you have the appropriate administrative privileges to install software on 
 your computer.
 
 
@@ -87,25 +85,24 @@ your computer.
 \hypertarget{installing-from-pre-built-binaries}{}
 \pdfbookmark[0]{Installing from pre-built binaries}{installing-from-pre-built-binaries}
 \section*{Installing from pre-built binaries}
-\label{installing-from-pre-built-binaries}
 
 Pre-built binaries are available for Windows XP and Mac OS X. To install these:
-\newcounter{listcnt0}
-\begin{list}{\arabic{listcnt0}.}
+\newcounter{listcnt1}
+\begin{list}{\arabic{listcnt1}.}
 {
-\usecounter{listcnt0}
+\usecounter{listcnt1}
 \setlength{\rightmargin}{\leftmargin}
 }
 \item {} 
 Download the pre-built binary for your platform from \href{http://pypi.python.org/pypi/pymc/}{PyPi}.
 
 \item {} 
-Double-click the executable installation package, and follow the on-screen
+Double-click the executable installation package, and follow the on-screen 
 instructions.
 
 \end{list}
 
-For other platforms, you will need to build the package yourself from source.
+For other platforms, you will need to build the package yourself from source. 
 Fortunately, this should be relatively straightforward.
 
 
@@ -114,9 +111,8 @@ Fortunately, this should be relatively straightforward.
 \hypertarget{compiling-the-source-code}{}
 \pdfbookmark[0]{Compiling the source code}{compiling-the-source-code}
 \section*{Compiling the source code}
-\label{compiling-the-source-code}
 
-First download the source code tarball from \href{http://pypi.python.org/pypi/pymc/}{PyPi} and unpack it. Then move
+First download the source code tarball from \href{http://pypi.python.org/pypi/pymc/}{PyPi} and unpack it. Then move 
 into the unpacked directory and follow the platform specific instructions.
 
 
@@ -125,14 +121,13 @@ into the unpacked directory and follow the platform specific instructions.
 \hypertarget{windows}{}
 \pdfbookmark[1]{Windows}{windows}
 \subsection*{Windows}
-\label{windows}
 
 In a terminal, type:
 \begin{quote}{\ttfamily \raggedright \noindent
 python~setup.py~build~-{}-compiler=mingw32~install
 }\end{quote}
 
-This assumes you are using the GCC compiler (recommended). Otherwise,
+This assumes you are using the GCC compiler (recommended). Otherwise, 
 change the -{}-compiler argument accordingly.
 
 
@@ -141,7 +136,6 @@ change the -{}-compiler argument accordingly.
 \hypertarget{mac-os-x}{}
 \pdfbookmark[1]{Mac OS X}{mac-os-x}
 \subsection*{Mac OS X}
-\label{mac-os-x}
 
 In a terminal, type:
 \begin{quote}{\ttfamily \raggedright \noindent
@@ -149,7 +143,7 @@ python~setup.py~build~\\
 sudo~python~setup.py~install
 }\end{quote}
 
-You will be prompted for a password, and provided you have superuser privilege,
+You will be prompted for a password, and provided you have superuser privilege, 
 the installation will proceed.
 
 
@@ -158,7 +152,6 @@ the installation will proceed.
 \hypertarget{linux}{}
 \pdfbookmark[1]{Linux}{linux}
 \subsection*{Linux}
-\label{linux}
 
 In a terminal, type:
 \begin{quote}{\ttfamily \raggedright \noindent
@@ -166,7 +159,7 @@ python~setup.py~build~\\
 sudo~python~setup.py~install
 }\end{quote}
 
-The \titlereference{sudo} command is required to install PyMC into the Python
+The \titlereference{sudo} command is required to install PyMC into the Python 
 \texttt{site-packages} directory if it has restricted privileges.
 
 
@@ -175,9 +168,8 @@ The \titlereference{sudo} command is required to install PyMC into the Python
 \hypertarget{development-version}{}
 \pdfbookmark[0]{Development version}{development-version}
 \section*{Development version}
-\label{development-version}
 
-You can check out the bleeding edge version of the code from the \href{http://subversion.tigris.org/}{subversion}
+You can check out the bleeding edge version of the code from the \href{http://subversion.tigris.org/}{subversion} 
 repository:
 \begin{quote}{\ttfamily \raggedright \noindent
 svn~checkout~http://pymc.googlecode.com/svn/trunk/~pymc
@@ -191,7 +183,6 @@ Previous versions are available in the \texttt{/tags} directory.
 \hypertarget{running-the-test-suite}{}
 \pdfbookmark[0]{Running the test suite}{running-the-test-suite}
 \section*{Running the test suite}
-\label{running-the-test-suite}
 
 \texttt{pymc} comes with a set of tests that verify that the critical components
 of the code work as expected. To run these tests, users must have \href{http://somethingaboutorange.com/mrl/projects/nose/}{nose}
@@ -202,9 +193,9 @@ import~pymc~\\
 pymc.test()
 }\end{quote}
 
-In case of failures, messages detailing the nature of these failures will
+In case of failures, messages detailing the nature of these failures will 
 appear. In case this happens (it shouldn't), please report
-the problems on the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}, specifying the version you are using and
+the problems on the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}, specifying the version you are using and 
 the environment.
 
 
@@ -213,9 +204,8 @@ the environment.
 \hypertarget{bugs-and-feature-requests}{}
 \pdfbookmark[0]{Bugs and feature requests}{bugs-and-feature-requests}
 \section*{Bugs and feature requests}
-\label{bugs-and-feature-requests}
 
-Report problems with the installation, bugs in the code or feature request at
-the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}. Comments and questions are welcome and should be
+Report problems with the installation, bugs in the code or feature request at 
+the \href{http://code.google.com/p/pymc/issues/list.}{issue tracker}. Comments and questions are welcome and should be 
 addressed to PyMC's \href{mailto:pymc-users@fisher.forestry.uga.edu}{mailing list}.
 
