@@ -7,7 +7,9 @@ cdef extern from "numpy/ndarrayobject.h":
 
 def TCValue(container):
     """
-    Fills in a tuple container's value'    
+    Fills in a tuple container's value
+    
+    :SeeAlso: TupleContainer    
     """
     cdef int i
     cdef object _value, isval
@@ -28,7 +30,7 @@ def LCValue(container):
     """
     Fills in a list container's value.
     
-    :SeeAlso: ListTupleContainer
+    :SeeAlso: ListContainer
     """
     cdef int i, ind
     cdef object _value, val_ind, nonval_ind
