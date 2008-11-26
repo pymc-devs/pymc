@@ -143,11 +143,11 @@ class MAP(Model):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, eps=.001, diff_order = 5):
+    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=0):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
 
-        Model.__init__(self, input)
+        Model.__init__(self, input, verbose=verbose)
 
         # Allocate memory for internal traces and get stochastic slices
         self._slices = {}

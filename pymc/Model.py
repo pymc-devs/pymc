@@ -23,7 +23,7 @@ from Node import ContainerBase
 from time import sleep
 import pdb
 import utils
-import warnings, exceptions
+import warnings, exceptions, traceback
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -114,7 +114,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, name=None):
+    def __init__(self, input=None, name=None, verbose=0):
         """Initialize a Model instance.
 
         :Parameters:
@@ -135,7 +135,7 @@ class Model(ObjectContainer):
 
         if name is not None:
             self.__name__ = name
-        self.verbose = 0
+        self.verbose = verbose
         
     def _get_generations(self):
         if not hasattr(self, '_generations'):
@@ -202,7 +202,7 @@ class Sampler(Model):
     
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False, **kwds):
+    def __init__(self, input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False, verbose=0, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -223,7 +223,7 @@ class Sampler(Model):
         
         # Instantiate superclass
         if reinit_model:
-            Model.__init__(self, input, name)
+            Model.__init__(self, input, name, verbose)
             
         # Initialize deviance, if asked
         if calc_deviance:
@@ -267,7 +267,8 @@ class Sampler(Model):
         self.max_trace_length = iter
         self._iter = iter
         
-        self.verbose = verbose
+        if verbose>0:
+            self.verbose = verbose
         self.seed()        
         
         # Initialize database -> initialize traces.
@@ -617,6 +618,8 @@ class Sampler(Model):
             self.db.savestate(self.get_state())
         except:
             print 'Warning, unable to save state.'
+            print 'Error message:'
+            traceback.print_exc()
 
     def restore_sampler_state(self):
         """
@@ -638,6 +641,8 @@ class Sampler(Model):
             except:
                 warnings.warn(\
     'Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__), exceptions.UserWarning)
+                print 'Error message:'
+                traceback.print_exc()
         
             
     def remember(self, trace_index = None):
