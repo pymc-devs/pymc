@@ -24,9 +24,10 @@ from pymc import flib, utils
 import numpy as np
 from numpy import *
 from numpy.linalg import cholesky
-import os, pdb
+import os, pdb, warnings
+warnings.simplefilter('ignore', DeprecationWarning)
 PLOT=True
-DIR = 'test_distributions'
+DIR = 'testresults'
 if PLOT is True:
     try:
         os.mkdir(DIR)

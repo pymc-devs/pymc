@@ -10,6 +10,11 @@ import nose
 import warnings
 warnings.simplefilter('ignore', UserWarning)
 
+testdir = 'testresults'
+try:
+    os.mkdir(testdir)
+except:
+    pass
 
 class test_backend_attribution(TestCase):
     def test_raise(self):
@@ -81,10 +86,13 @@ class TestRam(TestBase):
 class TestPickle(TestRam):
     @classmethod
     def setUpClass(self):
-        self.S = pymc.MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle', dbmode='w')
+        self.S = pymc.MCMC(DisasterModel, 
+                           db='pickle', 
+                           dbname=os.path.join(testdir, 'Disaster.pickle'), 
+                           dbmode='w')
         
     def load(self):
-        return pymc.database.pickle.load('Disaster.pickle')
+        return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
         
     def test_xload(self):
         db = self.load()
@@ -113,10 +121,13 @@ class TestPickle(TestRam):
 class TestTxt(TestPickle):
     @classmethod
     def setUpClass(self):
-        self.S = pymc.MCMC(DisasterModel, db='txt', dbname='Disaster.txt', dbmode='w')
+        self.S = pymc.MCMC(DisasterModel, 
+                           db='txt', 
+                           dbname=os.path.join(testdir, 'Disaster.txt'), 
+                           dbmode='w')
         
     def load(self):
-        return pymc.database.txt.load('Disaster.txt')
+        return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
 
 
 class TestSqlite(TestPickle):
@@ -124,12 +135,15 @@ class TestSqlite(TestPickle):
     def setUpClass(self):
         if 'sqlite' not in dir(pymc.database):
             raise nose.SkipTest
-        if os.path.exists('Disaster.sqlite'):
-            os.remove('Disaster.sqlite')
-        self.S = pymc.MCMC(DisasterModel, db='sqlite', dbname='Disaster.sqlite')
+        #if os.path.exists('Disaster.sqlite'):
+        #    os.remove('Disaster.sqlite')
+        self.S = pymc.MCMC(DisasterModel, 
+                           db='sqlite', 
+                           dbname=os.path.join(testdir, 'Disaster.sqlite'), 
+                           dbmode='w')
         
     def load(self):
-        return pymc.database.sqlite.load('Disaster.sqlite')
+        return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
 
     def test_yrestore_state(self):
         raise nose.SkipTest, "Not implemented."
@@ -139,10 +153,19 @@ class TestMySQL(TestPickle):
     def setUpClass(self):
         if 'mysql' not in dir(pymc.database):
             raise nose.SkipTest
-        self.S = pymc.MCMC(DisasterModel, db='mysql', dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org', dbmode='w')
+        self.S = pymc.MCMC(DisasterModel, 
+                           db='mysql', 
+                           dbname='pymc_test', 
+                           dbuser='pymc', 
+                           dbpass='bayesian', 
+                           dbhost='www.freesql.org', 
+                           dbmode='w')
         
     def load(self):
-        return pymc.database.mysql.load(dbname='pymc_test', dbuser='pymc', dbpass='bayesian', dbhost='www.freesql.org')
+        return pymc.database.mysql.load(dbname='pymc_test', 
+                                        dbuser='pymc', 
+                                        dbpass='bayesian', 
+                                        dbhost='www.freesql.org')
 
     def test_yrestore_state(self):
         raise nose.SkipTest, "Not implemented."
@@ -155,10 +178,13 @@ class TestHDF5(TestPickle):
     def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
-        self.S = pymc.MCMC(DisasterModel, db='hdf5', dbname='Disaster.hdf5', dbmode='w')    
+        self.S = pymc.MCMC(DisasterModel, 
+                           db='hdf5', 
+                           dbname=os.path.join(testdir, 'Disaster.hdf5'), 
+                           dbmode='w')    
         
     def load(self):
-        return pymc.database.hdf5.load('Disaster.hdf5')
+        return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
 
     def test_xdata_attributes(self):
         db = self.load()
@@ -195,7 +221,9 @@ class TestHDF5(TestPickle):
         del db
         
     def test_zcompression(self):
-        db = pymc.database.hdf5.Database(dbname='DisasterModelCompressed.hdf5', dbmode='w', dbcomplevel=5)
+        db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
+                                         dbmode='w', 
+                                         dbcomplevel=5)
         S = MCMC(DisasterModel, db=db)
         S.sample(45,10,1)
         assert_array_equal(S.e.trace().shape, (35,))
@@ -211,10 +239,13 @@ class testHDF5Objects(TestCase):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
         import objectmodel
-        self.S = pymc.MCMC(objectmodel, db='hdf5', dbname='Objects.hdf5', dbmode='w')
+        self.S = pymc.MCMC(objectmodel, 
+                           db='hdf5', 
+                           dbname=os.path.join(testdir, 'Objects.hdf5'),
+                           dbmode='w')
         
     def load(self):
-        return pymc.database.hdf5.load('Objects.hdf5')
+        return pymc.database.hdf5.load(os.path.join(testdir, 'Objects.hdf5'))
         
     def test_simple_sample(self):
         self.S.sample(50, 25, 5)
@@ -282,13 +313,15 @@ def test_regression_155():
 def test_interactive():
     if 'sqlite' not in dir(pymc.database):
         raise nose.SkipTest
-    M=MCMC(DisasterModel,db='sqlite', dbname='interactiveDisaster.sqlite', dbmode='w')
+    M=MCMC(DisasterModel,db='sqlite', 
+           dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'), 
+           dbmode='w')
     M.isample(10)
         
 
 if __name__ == '__main__':
     
-    C =nose.config.Config(verbosity=1)
+    C =nose.config.Config(verbosity=3)
     nose.runmodule(config=C)
     try:
         S.db.close()

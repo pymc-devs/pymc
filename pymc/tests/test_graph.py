@@ -2,7 +2,7 @@ from pymc import *
 from numpy.testing import *
 from pymc.graph import *
 import nose
-DIR = 'test_graph'
+DIR = 'testresults'
 
 def mymodel():
     
@@ -62,6 +62,18 @@ def mymodel():
     return locals()
 
 class test_graph(TestCase):
+    @classmethod
+    def setUpClass(self):
+        try:
+            os.mkdir(DIR)
+        except:
+            pass
+        os.chdir(DIR)
+        
+    @classmethod
+    def tearDownClass(self):
+        os.chdir('..')
+    
     def test_raw(self):
         try:
             import pydot
@@ -85,13 +97,9 @@ class test_graph(TestCase):
         graph(A, path='deterministic_pot.pdf', format='pdf', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
         moral_graph(A, path='moral.pdf', format='pdf', prog='dot')
 
+
+
 if __name__ == '__main__':
-    try:
-        os.mkdir(DIR)
-        os.chdir(DIR)
-    except: 
-        os.chdir(DIR)
-    
-    import unittest
-    unittest.main()
-    os.chdir('..')
+    C =nose.config.Config(verbosity=1)
+    nose.runmodule(config=C)
+

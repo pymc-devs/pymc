@@ -10,13 +10,29 @@ import unittest
 import numpy as np
 import pymc
 import pymc.examples.weibull_fit as model
+import os
 
 S = pymc.MCMC(model, 'ram')
 S.sample(10000, 5000)
 #a = S.a.trace()
 #b = S.b.trace()
 
+DIR = 'testresults'
+
 class test_geweke(TestCase):
+    @classmethod
+    def setUpClass(self):
+        try:
+            os.mkdir(DIR)
+        except:
+            pass
+        os.chdir(DIR)
+        
+    @classmethod
+    def tearDownClass(self):
+        os.chdir('..')
+        
+        
     def test_simple(self):
         scores = pymc.geweke(S, intervals=20)
         a_scores = scores['a']
@@ -34,6 +50,18 @@ class test_geweke(TestCase):
             pass
         
 class test_raftery_lewis(TestCase):
+    @classmethod
+    def setUpClass(self):
+        try:
+            os.mkdir(DIR)
+        except:
+            pass
+        os.chdir(DIR)
+        
+    @classmethod
+    def tearDownClass(self):
+        os.chdir('..')
+        
     def test_simple(self):
 
         nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(S.a, 0.5, .05, verbose=0)
@@ -42,5 +70,6 @@ class test_raftery_lewis(TestCase):
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 
 if __name__ == "__main__":
-    import unittest
-    unittest.main()
+    import nose
+    C =nose.config.Config(verbosity=1)
+    nose.runmodule(config=C)

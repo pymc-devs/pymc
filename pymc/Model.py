@@ -641,8 +641,8 @@ class Sampler(Model):
             except:
                 warnings.warn(\
     'Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__), exceptions.UserWarning)
-                print 'Error message:'
-                traceback.print_exc()
+                #print 'Error message:'
+                #traceback.print_exc()
         
             
     def remember(self, trace_index = None):
