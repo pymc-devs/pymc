@@ -339,8 +339,8 @@ An individual step method will be assigned to each element of \code{A} in the la
 Every step method subclass (including user-defined ones) adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. Step method assignment can be done manually or automatically. If a user creates a custom step method to handle a particular stochastic variable, that step method alone will be used to update that variable by \code{MCMC} (though you can create multiple step methods for the same variable if desired). If a stochastic variable has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable. In doing so, each step method implements a static method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. \code{MCMC} objects assign the step method that returns the highest competence value to each stochastic variable.
 
 \hypertarget{missing}{}
-\subsection*{Imputation of Missing Data} % (fold)
-\pdfbookmark[1]{Imputation of Missing Data}{missing}
+\section*{Imputation of Missing Data} % (fold)
+\pdfbookmark[0]{Imputation of Missing Data}{missing}
 %\label{subsec:missing_data}
 
 As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in the loss of information if an excluded observation contains valid values for other quantities. 

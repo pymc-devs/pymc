@@ -136,6 +136,7 @@ Notice that the log-probability and random variate functions are specified exter
 
 \end{description}
 
+\begin{center}
 \begin{boxedminipage}{.9\textwidth} 
 \subsection*{Don't update stochastic variables' values in-place}
 
@@ -152,6 +153,7 @@ The following are in-place updates and should \emph{never} be used:
 
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several scalar-valued variables stored in an array or list.
 \end{boxedminipage}
+\end{center}
 
 \hypertarget{data}{}
 \section*{Data} \label{data}
