@@ -30,60 +30,60 @@ tau = pm.Exponential('tau',.01, value=1)
 cutoff = pm.Exponential('cutoff',1, value=1.3)
 D = pm.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
 \end{verbatim}
-The stochastic variable \texttt{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \texttt{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected. 
+The stochastic variable \code{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \code{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected. 
 
 \medskip
-Suppose we want to handle \texttt{cutoff} with a smarter step method that doesn't propose illegal values. Specifically, we want to use the nonsymmetric proposal distribution
+Suppose we want to handle \code{cutoff} with a smarter step method that doesn't propose illegal values. Specifically, we want to use the nonsymmetric proposal distribution
 \begin{eqnarray*}
 	x_p | x \sim \textup{Truncnorm}(x, \sigma, \max(D), \infty).
 \end{eqnarray*}
 We can implement this Metropolis-Hastings algorithm with the following step method class:
 \begin{verbatim}
-	class TruncatedMetropolis(pm.Metropolis):
-	    def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-	        self.low_bound = low_bound
-	        self.up_bound = up_bound
-	        pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
+class TruncatedMetropolis(pm.Metropolis):
+    def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
+        self.low_bound = low_bound
+        self.up_bound = up_bound
+        pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-	    # Propose method written by hacking Metropolis.propose()
-	    def propose(self):
-	        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-	        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+    # Propose method written by hacking Metropolis.propose()
+    def propose(self):
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-	    # Hastings factor method accounts for asymmetric proposal distribution    
-	    def hastings_factor(self):
-	        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-	        cur_val = self.stochastic.value
-	        last_val = self.stochastic.last_value
+    # Hastings factor method accounts for asymmetric proposal distribution    
+    def hastings_factor(self):
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+        cur_val = self.stochastic.value
+        last_val = self.stochastic.last_value
 
-	        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-	        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
+        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
 
-	        if self.verbose > 1:
-	            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
-	        return lp_bak - lp_for
+        if self.verbose > 1:
+            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
+        return lp_bak - lp_for
 \end{verbatim}
 
-The \texttt{init} method simply records the lower and upper bounds, then allows Metropolis' \texttt{init} method to take care of other bookkeeping tasks. 
+The \code{init} method simply records the lower and upper bounds, then allows Metropolis' \code{init} method to take care of other bookkeeping tasks. 
 
-The \texttt{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \texttt{self.proposal_sd}, which is set with an input argument to Metropolis, and \texttt{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \texttt{adaptive_scale_factor} if the acceptance rate is too low, and to increase \texttt{adaptive_scale_factor} if it is too high. By incorporating \texttt{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \texttt{adaptive_scale_factor}.
+The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which is set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
 
-The \texttt{hastings_factor} method adjusts for the asymmetric proposal distribution \cite{gelman}. It is the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
+The \code{hastings_factor} method adjusts for the asymmetric proposal distribution \cite{gelman}. It is the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
 
 \medskip
-Having created our custom step method, we would like to tell MCMC instances to use it to handle the variable \texttt{cutoff}. This is done in \file{custom_step.py} with the following line:
+Having created our custom step method, we would like to tell MCMC instances to use it to handle the variable \code{cutoff}. This is done in \file{custom_step.py} with the following line:
 \begin{verbatim}
 M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 \end{verbatim}
-This call causes $M$ to pass the arguments \texttt{cutoff, D.value.max(), np.inf} to a \texttt{TruncatedMetropolis} object's \texttt{init} method, and use the object to handle \texttt{cutoff}. 
+This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), np.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}. 
 
 \medskip
-It's often convenient to get a handle to a custom step method object directly for debugging purposes. \texttt{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \texttt{cutoff}:
+It's often convenient to get a handle to a custom step method object directly for debugging purposes. \code{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \code{cutoff}:
 \begin{verbatim}
 >>> M.step_method_dict[cutoff]
 [<custom_step.TruncatedMetropolis object at 0x3c91130>]
 \end{verbatim}
-There may be more than one, and conversely step methods may handle more than one stochastic variable. To see which variables \texttt{S} is handling, try
+There may be more than one, and conversely step methods may handle more than one stochastic variable. To see which variables step method $S$ is handling, try
 \begin{verbatim}
 >>> S.stochastics
 set([<pymc.distributions.Exponential 'cutoff' at 0x3cd6b90>])
