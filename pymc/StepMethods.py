@@ -27,7 +27,7 @@ nonconjugate_Gibbs_competence = 0
 
 class AdaptationError(ValueError): pass
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Impute','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
+__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
 
 StepMethodRegistry = []
 
@@ -585,31 +585,6 @@ class Metropolis(StepMethod):
         elif self._dist == "Prior":
             self.stochastic.random()
             
-class Impute(Metropolis):
-    """
-    Step method for imputing missing data in data stochastics
-    """
-    def __init__(self, stochastic, verbose=0):
-        Metropolis.__init__(self, stochastic, dist='Prior', verbose=verbose)
-        
-    @staticmethod
-    def competence(s):
-        
-        return 0
-        if s.observed:
-            return 3
-        else:
-            return 0
-
-    def tune(self, verbose):
-        
-        if self._dist == "Prior":
-            # Only tune if not sampling from prior
-            return False
-        else:
-            return Metropolis.tune(self, verbose)
-        
-    
 
 class Gibbs(Metropolis):
     """
