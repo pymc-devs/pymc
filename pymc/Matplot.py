@@ -4,12 +4,14 @@
 Plotting module using matplotlib.
 """
 
+from __future__ import division
+
 # Import matplotlib functions
 import matplotlib
 import pymc
 import os
 from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter, axvline
-from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show
+from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show, text
 from pprint import pformat
 
 # Import numpy functions
@@ -496,7 +498,7 @@ def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='.
     #close()
 
 @plotwrapper
-def discrepancy(data, name, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
         print 'Plotting', name+suffix
@@ -521,13 +523,20 @@ def discrepancy(data, name, format='png', suffix='-gof', path='./', fontmap = {1
     xlabel('Observed deviates', fontsize='x-small')
     ylabel('Simulated deviates', fontsize='x-small')
     
+    if report_p:
+        # Put p-value in legend
+        count = sum(s>o for o,s in zip(x,y))
+        text(lo+0.1*datarange, hi-0.1*datarange,
+             'p=%.3f' % (count/len(x)), horizontalalignment='center',
+             fontsize=10)
+    
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
     
-def gof(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
     
     if ndim(trueval)==1 and ndim(simdata==2):
@@ -536,6 +545,9 @@ def gof(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', pa
             n = name or 'MCMC'
             gof(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
+        
+    if verbose>0:
+        print 'Plotting', (name or 'MCMC') + suffix
         
     figure()
     

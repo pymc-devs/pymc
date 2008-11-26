@@ -64,7 +64,7 @@ if __name__ == '__main__':
     # Instiatiate model
     M = pm.MCMC(vars)
     # Sample
-    M.sample(10000, burn=5000)
+    M.sample(10000, burn=5000, verbose=2)
     # Plot GOF graphics
     pm.Matplot.discrepancy(D.trace(), 'D')
     pm.Matplot.gof(disasters_sim.trace(), disasters_array, 'disasters')
