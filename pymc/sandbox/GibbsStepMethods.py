@@ -725,4 +725,4 @@ class BernoulliAnything(Gibbs):
                 self.set_stochastic_val(i,val,True)
         
         # Increment accepted count
-        self._accepted += 1
+        self.accepted += 1

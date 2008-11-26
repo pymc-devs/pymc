@@ -40,7 +40,7 @@ results.
 """
 if __name__=='__main__':
     import pylab
-    M = pymc.MCMC()
+    M = pymc.MCMC([a,b,like])
     M.sample(10000,5000,2)
     pymc.Matplot.plot(a)
     pymc.Matplot.plot(b)

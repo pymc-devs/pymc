@@ -10,12 +10,12 @@ class TruncatedMetropolis(pm.Metropolis):
 
     # Propose method written by hacking Metropolis.propose()
     def propose(self):
-        tau = 1./(self._asf * self._sig)**2
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
     # Hastings factor method accounts for asymmetric proposal distribution    
     def hastings_factor(self):
-        tau = 1./(self._asf * self._sig)**2
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 

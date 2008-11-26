@@ -225,7 +225,7 @@ class GPParentMetropolis(pm.Metropolis):
         
     :SeeAlso: GPMetropolis, GPNormal
     """
-    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None, min_asf=0):
+    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None, min_adaptive_scale_factor=0):
         
         if (stochastic is None and metro_method is None) or (stochastic is not None and metro_method is not None):
             raise ValueError, 'Either stochastic OR metro_method should be provided, not both.'
@@ -250,7 +250,7 @@ class GPParentMetropolis(pm.Metropolis):
         
         # Call to pm.StepMethod's init method.
         pm.StepMethod.__init__(self, stochastics, verbose=verbose)
-        self.min_asf=min_asf
+        self.min_adaptive_scale_factor=min_adaptive_scale_factor
 
         # Extend self's children through the GP-valued stochastics
         # and add them to the wrapped method's children.
@@ -342,7 +342,7 @@ class GPParentMetropolis(pm.Metropolis):
         else:
             return 0
     
-    # _model, _accepted, _rejected and _scale have to be properties that pass 
+    # _model, accepted, rejected and _scale have to be properties that pass 
     # set-values on to the wrapped method.
     def _get_model(self):
         return self.model
@@ -352,16 +352,16 @@ class GPParentMetropolis(pm.Metropolis):
     _model = property(_get_model, _set_model)
     
     def _get_accepted(self):
-        return self.metro_method._accepted
+        return self.metro_method.accepted
     def _set_accepted(self, number):
-        self.metro_method._accepted = number
-    _accepted = property(_get_accepted, _set_accepted)
+        self.metro_method.accepted = number
+    accepted = property(_get_accepted, _set_accepted)
 
     def _get_rejected(self):
-        return self.metro_method._rejected
+        return self.metro_method.rejected
     def _set_rejected(self, number):
-        self.metro_method._rejected = number
-    _rejected = property(_get_rejected, _set_rejected)
+        self.metro_method.rejected = number
+    rejected = property(_get_rejected, _set_rejected)
 
     def _get_scale(self):
         return self.metro_method.scale
@@ -387,11 +387,11 @@ class GPParentMetropolis(pm.Metropolis):
         self.metro_method.step()
         
     def tune(self, verbose=0):
-        if self.metro_method._asf > self.min_asf:
+        if self.metro_method.adaptive_scale_factor > self.min_adaptive_scale_factor:
             return self.metro_method.tune(verbose=verbose)
         else:
             if verbose > 0:
-                print self._id + " metro_method's asf is less than min_asf, not tuning it."
+                print self._id + " metro_method's asf is less than min_adaptive_scale_factor, not tuning it."
             return False
             
             
@@ -449,7 +449,7 @@ class GPMetropolis(pm.Metropolis):
         if self.f.mesh is not None:
             
             # Generate values for self's value on the mesh.
-            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.C_and_U_mesh.value[0], scale=self.scale * self._asf)
+            new_mesh_value = GP_array_random(M=self.f.value(self.f.mesh, regularize=False), U=self.f.C_and_U_mesh.value[0], scale=self.scale * self.adaptive_scale_factor)
             
             # Generate self's value using those values.
             C = self.f.C_and_U_mesh.value[1]
@@ -523,7 +523,7 @@ class GPMetropolis(pm.Metropolis):
         except pm.ZeroProbability:
 
             self.reject()
-            self._rejected += 1
+            self.rejected += 1
             if self.verbose:
                 print self._id + ' returning.'
                 try:
@@ -540,10 +540,10 @@ class GPMetropolis(pm.Metropolis):
         # Test
         if np.log(np.random.random()) > logp_p + loglike_p - logp - loglike:
             self.reject()
-            self._rejected += 1
+            self.rejected += 1
 
         else:
-            self._accepted += 1
+            self.accepted += 1
             if self.verbose:
                 print self._id + ' accepting'
 

@@ -328,11 +328,11 @@ class AdaptiveMetropolis(StepMethod):
             loglike_p = self.loglike
             if np.log(random()) < logp_p + loglike_p - logp - loglike:
                 accept = True
-                self._accepted += 1
+                self.accepted += 1
             else:
-                self._rejected += 1
+                self.rejected += 1
         except ZeroProbability:
-            self._rejected += 1
+            self.rejected += 1
             logp_p = None
             loglike_p = None
             
@@ -346,7 +346,7 @@ class AdaptiveMetropolis(StepMethod):
                 print "\tAccepted\t*******\n"
             else: 
                 print "\tRejected\n"
-            print "\tAcceptance ratio: ", self._accepted/(self._accepted+self._rejected)
+            print "\tAcceptance ratio: ", self.accepted/(self.accepted+self.rejected)
             
         if self._current_iter == self.delay: 
             self.greedy = False

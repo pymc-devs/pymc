@@ -708,7 +708,7 @@ In other words, if we propose $\tilde f$ from its prior distribution conditional
 \class{GPMetropolis} reports its competence to handle \texttt{GP} instances as \texttt{3}, so it will be chosen as the default handler. Its init method takes the following arguments:
 \begin{description}
     \item[\texttt{stoch}:] The \class{GPMetropolis} instance to be handled.
-    \item[\texttt{scale=.1}:] $f(\texttt{mesh})$ will be proposed from a random-walk multivariate normal distribution with covariance equal to \texttt{C(mesh, mesh * scale * _asf)}, where C is the covariance-valued parent and \texttt{_asf} is the adaptive scaling factor, which is updated when \texttt{self.tune()} is called.
+    \item[\texttt{scale=.1}:] $f(\texttt{mesh})$ will be proposed from a random-walk multivariate normal distribution with covariance equal to \texttt{C(mesh, mesh * scale * adaptive_scale_factor)}, where C is the covariance-valued parent and \texttt{adaptive_scale_factor} is the adaptive scaling factor, which is updated when \texttt{self.tune()} is called.
     \item[\texttt{verbose = 0}:] An integer from 0 to 3 indicating the preferred verbosity level.
 \end{description}
 

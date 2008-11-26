@@ -39,34 +39,34 @@ Suppose we want to handle \texttt{cutoff} with a smarter step method that doesn'
 \end{eqnarray*}
 We can implement this Metropolis-Hastings algorithm with the following step method class:
 \begin{verbatim}
-class TruncatedMetropolis(pm.Metropolis):
-    def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-        self.low_bound = low_bound
-        self.up_bound = up_bound
-        pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
+	class TruncatedMetropolis(pm.Metropolis):
+	    def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
+	        self.low_bound = low_bound
+	        self.up_bound = up_bound
+	        pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-    # Propose method written by hacking Metropolis.propose()
-    def propose(self):
-        tau = 1./(self._asf * self._sig)**2
-        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+	    # Propose method written by hacking Metropolis.propose()
+	    def propose(self):
+	        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	        self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-    # Hastings factor method accounts for asymmetric proposal distribution    
-    def hastings_factor(self):
-        tau = 1./(self._asf * self._sig)**2
-        cur_val = self.stochastic.value
-        last_val = self.stochastic.last_value
+	    # Hastings factor method accounts for asymmetric proposal distribution    
+	    def hastings_factor(self):
+	        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	        cur_val = self.stochastic.value
+	        last_val = self.stochastic.last_value
 
-        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
+	        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+	        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
 
-        if self.verbose > 1:
-            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
-        return lp_bak - lp_for
+	        if self.verbose > 1:
+	            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
+	        return lp_bak - lp_for
 \end{verbatim}
 
 The \texttt{init} method simply records the lower and upper bounds, then allows Metropolis' \texttt{init} method to take care of other bookkeeping tasks. 
 
-The \texttt{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \texttt{self._sig}, which is set with an input argument to Metropolis, and \texttt{self._asf}, which is the Metropolis step method's `adaptive scale factor'. Metropolis step methods' default tuning behavior is to reduce \texttt{_asf} if the acceptance rate is too low, and to increase \texttt{_asf} if it is too high. By incorporating \texttt{_asf} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \texttt{_asf}.
+The \texttt{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \texttt{self.proposal_sd}, which is set with an input argument to Metropolis, and \texttt{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \texttt{adaptive_scale_factor} if the acceptance rate is too low, and to increase \texttt{adaptive_scale_factor} if it is too high. By incorporating \texttt{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \texttt{adaptive_scale_factor}.
 
 The \texttt{hastings_factor} method adjusts for the asymmetric proposal distribution \cite{gelman}. It is the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
 
@@ -96,7 +96,7 @@ set([<pymc.distributions.Exponential 'cutoff' at 0x3cd6b90>])
 All step methods must implement the following methods:
 \begin{description}
    \item[\code{step()}:] Updates the values of \code{self.stochastics}.
-   \item[\code{tune()}:] Tunes the jumping strategy based on performance so far. A default method is available that increases \code{self._asf} (see below) when acceptance rate is high, and decreases it when acceptance rate is low. This method should return \code{True} if additional tuning will be required later, and \code{False} otherwise.
+   \item[\code{tune()}:] Tunes the jumping strategy based on performance so far. A default method is available that increases \code{self.adaptive_scale_factor} (see below) when acceptance rate is high, and decreases it when acceptance rate is low. This method should return \code{True} if additional tuning will be required later, and \code{False} otherwise.
    \item[\code{competence(s):}] A class method that examines stochastic variable $s$ and returns a value from 0 to 3 expressing the step method's ability to handle the variable. This method is used by \code{MCMC} instances when automatically assigning step methods. Conventions are:
    \begin{description}
       \item[0] I cannot safely handle this variable. 
@@ -133,7 +133,7 @@ Step methods should also maintain the following attributes:
    \item[\code{_id}:] A string that can identify each step method uniquely (usually something like \code{<class_name>_<stochastic_name>}).
    \item[\code{_accepted}:] A running tally of the number of jumps accepted.
    \item[\code{_rejected}:] A running tally of the number of jumps rejected.   
-   \item[\code{_asf}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
+   \item[\code{adaptive_scale_factor}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
 \end{description}
 
 All step methods have a property called \code{loglike}, which returns the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio.

@@ -170,10 +170,10 @@ class StepMethod(object):
         self.parents = set()
         
         # Initialize hidden attributes
-        self._asf = 1.
-        self._accepted = 0.
-        self._rejected = 0.
-        self._state = ['_rejected', '_accepted', '_asf']
+        self.adaptive_scale_factor = 1.
+        self.accepted = 0.
+        self.rejected = 0.
+        self._state = ['rejected', 'accepted', 'adaptive_scale_factor']
         self.verbose = verbose
 
         # File away the variables
@@ -204,7 +204,7 @@ class StepMethod(object):
         self.parents -= self.stochastics
         
         # ID string for verbose feedback
-        self._id = 'To define in subclasses'
+        self._id = self.__class__.__name__ + '_'.join([s.__name__ for s in self.stochastics])
     
     def step(self):
         """
@@ -280,35 +280,35 @@ class StepMethod(object):
         tuning = True        
         
         # Calculate recent acceptance rate
-        if not (self._accepted + self._rejected): return tuning
-        acc_rate = self._accepted / (self._accepted + self._rejected)
+        if not (self.accepted + self.rejected): return tuning
+        acc_rate = self.accepted / (self.accepted + self.rejected)
         
         
         # Switch statement
         if acc_rate<0.001:
             # reduce by 90 percent
-            self._asf *= 0.1
+            self.adaptive_scale_factor *= 0.1
         elif acc_rate<0.05:
             # reduce by 50 percent
-            self._asf *= 0.5
+            self.adaptive_scale_factor *= 0.5
         elif acc_rate<0.2:
             # reduce by ten percent
-            self._asf *= 0.9
+            self.adaptive_scale_factor *= 0.9
         elif acc_rate>0.95:
             # increase by factor of ten
-            self._asf *= 10.0
+            self.adaptive_scale_factor *= 10.0
         elif acc_rate>0.75:
             # increase by double
-            self._asf *= 2.0
+            self.adaptive_scale_factor *= 2.0
         elif acc_rate>0.5:
             # increase by ten percent
-            self._asf *= 1.1
+            self.adaptive_scale_factor *= 1.1
         else:
             tuning = False
         
         # Re-initialize rejection count
-        self._rejected = 0.
-        self._accepted = 0.
+        self.rejected = 0.
+        self.accepted = 0.
         
         # More verbose feedback, if requested
         # Warning: self.stochastic is not defined above. The following assumes
@@ -317,7 +317,7 @@ class StepMethod(object):
             if hasattr(self, 'stochastic'):
                 print '\t\tvalue:', self.stochastic.value
             print '\t\tacceptance rate:', acc_rate
-            print '\t\tadaptive scale factor:', self._asf
+            print '\t\tadaptive scale factor:', self.adaptive_scale_factor
             print
         
         return tuning
@@ -356,7 +356,7 @@ class StepMethod(object):
     def ratio():
         """Acceptance ratio"""
         def fget(self):
-            return self._accepted/(self._accepted + self._rejected)
+            return self.accepted/(self.accepted + self.rejected)
         return locals()
         
 class NoStepper(StepMethod):
@@ -379,7 +379,7 @@ class Metropolis(StepMethod):
     
     To instantiate a Metropolis called M with jurisdiction over a Stochastic P:
       
-      >>> M = Metropolis(P, scale=1, sig=None, dist=None)
+      >>> M = Metropolis(P, scale=1, proposal_sd=None, dist=None)
     
     :Arguments:
     - s : Stochastic
@@ -388,10 +388,10 @@ class Metropolis(StepMethod):
     - scale (optional) : number
             The proposal jump width is set to scale * variable.value.
             
-    - sig (optional) : number or vector
-            The proposal jump width is set to sig.
+    - proposal_sd (optional) : number or vector
+            The proposal jump width is set to proposal_sd.
     
-    - dist (optional) : string
+    - proposal_distribution (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
             'Prior' or None. If None is provided, a proposal distribution is
             chosen by examining P.value's type.
@@ -402,7 +402,7 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
     
-    def __init__(self, stochastic, scale=1., sig=None, dist=None, verbose=0):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0):
         # Metropolis class initialization
         
         # Initialize superclass
@@ -412,23 +412,20 @@ class Metropolis(StepMethod):
         self.stochastic = stochastic
         self.verbose = verbose
         
-        # Add _sig to state
-        self._state += ['_sig', '_dist']
+        # Add proposal_sd to state
+        self._state += ['proposal_sd', 'proposal_distribution']
         
         # Avoid zeros when setting proposal variance
-        if sig is not None:
-            self._sig = sig
+        if proposal_sd is not None:
+            self.proposal_sd = proposal_sd
         else:
             if all(self.stochastic.value != 0.):
-                self._sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+                self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
             else:
-                self._sig = ones(shape(self.stochastic.value)) * scale
+                self.proposal_sd = ones(shape(self.stochastic.value)) * scale
         
         # Initialize proposal deviate with array of zeros
         self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
-        
-        # Initialize verbose feedback string
-        self._id = stochastic.__name__
         
         # Determine size of stochastic
         if isinstance(self.stochastic.value, ndarray):
@@ -437,21 +434,21 @@ class Metropolis(StepMethod):
             self._len = 1
         
         # If no dist argument is provided, assign a proposal distribution automatically.
-        if not dist:
+        if not proposal_distribution:
             
             # Pick Gaussian by default
-            self._dist = "Normal"
+            self.proposal_distribution = "Normal"
             
             # If self has no children, proposing from the prior is best.
             if len(self.children) == 0:
                 try:
                     self.stochastic.random()
-                    self._dist = "Prior"
+                    self.proposal_distribution = "Prior"
                 except:
                     pass
 
         else:
-            self._dist = dist
+            self.proposal_distribution = proposal_distribution
     
     @staticmethod
     def competence(s):
@@ -499,7 +496,7 @@ class Metropolis(StepMethod):
             print
             print self._id + ' getting initial prior.'
         
-        if self._dist == "Prior":
+        if self.proposal_distribution == "Prior":
             # No children
             logp = 0.
         else:
@@ -517,7 +514,7 @@ class Metropolis(StepMethod):
         
         # Probability and likelihood for s's proposed value:
         try:
-            if self._dist == "Prior":
+            if self.proposal_distribution == "Prior":
                 logp_p = 0.
                 # Check for weirdness before accepting jump
                 self.stochastic.logp
@@ -533,7 +530,7 @@ class Metropolis(StepMethod):
             self.reject()
             
             # Increment rejected count
-            self._rejected += 1
+            self.rejected += 1
             
             if self.verbose > 1:
                 print self._id + ' returning.'
@@ -552,12 +549,12 @@ class Metropolis(StepMethod):
             self.reject()
             
             # Increment rejected count
-            self._rejected += 1
+            self.rejected += 1
             if self.verbose > 0:
                 print self._id + ' rejecting'
         else:
             # Increment accepted count
-            self._accepted += 1
+            self.accepted += 1
             if self.verbose > 0:
                 print self._id + ' accepting'
         
@@ -565,7 +562,7 @@ class Metropolis(StepMethod):
             print self._id + ' returning.'
     
     def tune(self, *args, **kwargs):
-        if self._dist == "Prior":
+        if self.proposal_distribution == "Prior":
             return False
         else:
             return StepMethod.tune(self, *args, **kwargs)
@@ -578,11 +575,11 @@ class Metropolis(StepMethod):
     def propose(self):
         """
         This method is called by step() to generate proposed values
-        if self._dist is "Normal" (i.e. no proposal specified).
+        if self.proposal_distribution is "Normal" (i.e. no proposal specified).
         """
-        if self._dist == "Normal":
-            self.stochastic.value = rnormal(self.stochastic.value, self._asf * self._sig)
-        elif self._dist == "Prior":
+        if self.proposal_distribution == "Normal":
+            self.stochastic.value = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd)
+        elif self.proposal_distribution == "Prior":
             self.stochastic.random()
             
 
@@ -636,11 +633,11 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
     
-    def __init__(self, stochastic, scale=1., sig=None, dist=None, positive=False):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stochastic, scale=scale, sig=sig, dist=dist)
+        Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution=proposal_distribution)
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
@@ -662,19 +659,19 @@ class DiscreteMetropolis(Metropolis):
     def propose(self):
         # Propose new values using normal distribution
         
-        if self._dist == "Normal":
+        if self.proposal_distribution == "Normal":
             
             # New normal deviate, centred on current value
-            new_val = rnormal(self.stochastic.value, self._asf * self._sig)
+            new_val = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd)
             
             # Round before setting proposed value
             self.stochastic.value = round_array(new_val)
             
-        elif self._dist == "Poisson":
+        elif self.proposal_distribution == "Poisson":
             
             k = shape(self.stochastic.value)
             # Add or subtract (equal probability) Poisson sample 
-            new_val = self.stochastic.value + rpoisson(self._asf * self._sig) * (-ones(k))**(random(k)>0.5)
+            new_val = self.stochastic.value + rpoisson(self.adaptive_scale_factor * self.proposal_sd) * (-ones(k))**(random(k)>0.5)
             
             if self._positive:
                 # Enforce positive values
@@ -682,7 +679,7 @@ class DiscreteMetropolis(Metropolis):
             else:
                 self.stochastic.value = new_val
                 
-        elif self._dist == "Prior":
+        elif self.proposal_distribution == "Prior":
             self.stochastic.random()
 
 
@@ -694,19 +691,19 @@ class BinaryMetropolis(Metropolis):
     
     """
     
-    def __init__(self, stochastic, p_jump=.1, dist=None, verbose=0):
+    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0):
         # BinaryMetropolis class initialization
         
         # Initialize superclass
-        Metropolis.__init__(self, stochastic, dist=dist, verbose=verbose)
+        Metropolis.__init__(self, stochastic, proposal_distribution=proposal_distribution, verbose=verbose)
         
-        self._state.remove('_sig')
+        self._state.remove('proposal_sd')
         
         # Initialize verbose feedback string
         self._id = stochastic.__name__
         
-        # _asf controls the jump probability
-        self._asf = log(1.-p_jump) / log(.5)
+        # adaptive_scale_factor controls the jump probability
+        self.adaptive_scale_factor = log(1.-p_jump) / log(.5)
         
     @staticmethod
     def competence(stochastic):
@@ -770,11 +767,11 @@ class BinaryMetropolis(Metropolis):
     def propose(self):
         # Propose new values
 
-        if self._dist == 'Prior':
+        if self.proposal_distribution == 'Prior':
             self.stochastic.random()
         else:
-            # Convert _asf to a jump probability
-            p_jump = 1.-.5**self._asf
+            # Convert adaptive_scale_factor to a jump probability
+            p_jump = 1.-.5**self.adaptive_scale_factor
         
             rand_array = random(size=shape(self.stochastic.value))
             new_value = copy(self.stochastic.value)
@@ -849,10 +846,10 @@ class AdaptiveMetropolis(StepMethod):
         
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session. 
-        self._state += ['_trace_count', '_current_iter', 'C', '_sig',
+        self._state += ['_trace_count', '_current_iter', 'C', 'proposal_sd',
         '_proposal_deviate', '_trace']
         
-        self._sig = None
+        self.proposal_sd = None
         
         # Number of successful steps before the empirical covariance is computed
         self.delay = delay
@@ -865,7 +862,7 @@ class AdaptiveMetropolis(StepMethod):
         self.check_type()
         self.dimension()
         self.set_cov(cov, scales)
-        self.update_sig()
+        self.updateproposal_sd()
         
         # Keep track of the internal trace length
         # It may be different from the iteration count since greedy 
@@ -881,7 +878,7 @@ class AdaptiveMetropolis(StepMethod):
             print "Initialization..."
             print 'Dimension: ', self.dim
             print "C_0: ", self.C
-            print "Sigma: ", self._sig
+            print "Sigma: ", self.proposal_sd
 
       
     @staticmethod
@@ -1002,7 +999,7 @@ class AdaptiveMetropolis(StepMethod):
             self.chain_mean, chain, scaling=scaling, epsilon=epsilon)
         
         # Shrink covariance if acceptance rate is too small    
-        acc_rate = self._accepted / (self._accepted + self._rejected)
+        acc_rate = self.accepted / (self.accepted + self.rejected)
         if acc_rate < .001:
             self.C *= .01        
         elif acc_rate < .01:
@@ -1010,8 +1007,8 @@ class AdaptiveMetropolis(StepMethod):
         if self.verbose > 0:
             if acc_rate < .01:
                 print '\tAcceptance rate was',acc_rate,'shrinking covariance'
-        self._accepted = 0.
-        self._rejected = 0.
+        self.accepted = 0.
+        self.rejected = 0.
         
         if self.verbose > 0:
             print "\tUpdating covariance ...\n", self.C
@@ -1019,17 +1016,17 @@ class AdaptiveMetropolis(StepMethod):
         
         # Update state
         adjustmentwarning = '\n'+\
-        'Covariance was not positive definite and _sig cannot be computed by \n'+ \
+        'Covariance was not positive definite and proposal_sd cannot be computed by \n'+ \
         'Cholesky decomposition. The next jumps will be based on the last \n' + \
         'valid covariance matrix. This situation may have arisen because no \n' + \
         'jumps were accepted during the last `interval`. One solution is to \n' + \
         'increase the interval, or specify an initial covariance matrix with \n' + \
         'a smaller variance. For this simulation, each time a similar error \n' + \
-        'occurs, _sig will be reduced by a factor .9 to reduce the \n' + \
+        'occurs, proposal_sd will be reduced by a factor .9 to reduce the \n' + \
         'jumps and increase the likelihood of accepted jumps.'
         
         try:
-            self.update_sig()
+            self.updateproposal_sd()
         except np.linalg.LinAlgError:
             warnings.warn(adjustmentwarning)
             self.covariance_adjustment(.9)
@@ -1038,13 +1035,13 @@ class AdaptiveMetropolis(StepMethod):
         self._trace = []  
         
     def covariance_adjustment(self, f=.9):
-        """Multiply self._sig by a factor f. This is useful when the current _sig is too large and all jumps are rejected.
+        """Multiply self.proposal_sd by a factor f. This is useful when the current proposal_sd is too large and all jumps are rejected.
         """
-        self._sig *= f
+        self.proposal_sd *= f
     
-    def update_sig(self):
+    def updateproposal_sd(self):
         """Compute the Cholesky decomposition of self.C."""
-        self._sig = np.linalg.cholesky(self.C)
+        self.proposal_sd = np.linalg.cholesky(self.C)
               
     def recursive_cov(self, cov, length, mean, chain, scaling=1, epsilon=0):
         r"""Compute the covariance recursively.
@@ -1114,7 +1111,7 @@ class AdaptiveMetropolis(StepMethod):
         The proposal jumps are drawn from a multivariate normal distribution.        
         """
         
-        arrayjump = np.dot(self._sig, np.random.normal(size=self._sig.shape[0]))
+        arrayjump = np.dot(self.proposal_sd, np.random.normal(size=self.proposal_sd.shape[0]))
         if self.verbose > 2:
             print 'Jump :', arrayjump
             
@@ -1166,15 +1163,15 @@ class AdaptiveMetropolis(StepMethod):
 
             if np.log(random()) < logp_p + loglike_p - logp - loglike:
                 accept = True
-                self._accepted += 1
+                self.accepted += 1
                 if self.verbose > 2:
                     print 'Accepted'
             else:
-                self._rejected += 1
+                self.rejected += 1
                 if self.verbose > 2:
                     print 'Rejected'
         except ZeroProbability:
-            self._rejected += 1
+            self.rejected += 1
             logp_p = None
             loglike_p = None
             if self.verbose > 2:
@@ -1190,7 +1187,7 @@ class AdaptiveMetropolis(StepMethod):
                 print "\tAccepted\t*******\n"
             else: 
                 print "\tRejected\n"
-            print "\tAcceptance ratio: ", self._accepted/(self._accepted+self._rejected)
+            print "\tAcceptance ratio: ", self.accepted/(self.accepted+self.rejected)
             
         if self._current_iter == self.delay: 
             self.greedy = False

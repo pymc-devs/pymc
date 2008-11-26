@@ -107,7 +107,7 @@ class TestPickle(TestRam):
         S = pymc.MCMC(DisasterModel, db=db)
         S.sample(10)
         sm = S.step_methods.pop()
-        assert_equal(sm._accepted+sm._rejected, 75)
+        assert_equal(sm.accepted+sm.rejected, 75)
 
 
 class TestTxt(TestPickle):

@@ -207,21 +207,21 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
 Metropolis step methods have the following useful attributes:
 \begin{description}
     \item[\code{dist}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}.
-    \item[\code{proposal\_sig}:] Proportional to the standard deviation of the proposal distribution (if it is \code{'Normal'}).
-    \item[\code{\_asf}:] The `adaptive scale factor'. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sig * self.\_asf}. It is usually OK to keep tuning throughout the MCMC loop even though the resulting chain is not actually Markov \cite{tuning}. % This attribute is hidden, and should not be altered manually by the user. S'OK if they alter it, I do it sometimes.
+    \item[\code{proposal\_sd}:] Proportional to the standard deviation of the proposal distribution (if it is \code{'Normal'}).
+    \item[\code{adaptive_scale_factor}:] The `adaptive scale factor'. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}. It is usually OK to keep tuning throughout the MCMC loop even though the resulting chain is not actually Markov \cite{tuning}. % This attribute is hidden, and should not be altered manually by the user. S'OK if they alter it, I do it sometimes.
 \end{description}
 
 Metropolis step methods can be created as follows:
 \begin{verbatim}
 M = Metropolis(stochastic, scale=1., sig=None, dist=None, verbose=0)
 \end{verbatim}
-The \code{scale} and \code{sig} arguments determine \code{proposal\_sig}. If \code{sig} is provided, \code{proposal\_sig} is set to \code{sig}. Otherwise \code{sig} is computed from \code{scale} as follows:
+The \code{scale} and \code{proposal\_sd} arguments determine \code{proposal\_sd}. If \code{proposal\_sd} is provided, \code{proposal\_sd} is set to \code{proposal\_sd}. Otherwise \code{proposal\_sd} is computed from \code{scale} as follows:
 \begin{verbatim}
 if all(self.stochastic.value != 0.):
-    self.proposal_sig = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) 
+    self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) 
 * scale
 else:
-    self.proposal_sig = ones(shape(self.stochastic.value)) * scale
+    self.proposal_sd = ones(shape(self.stochastic.value)) * scale
 \end{verbatim}
 
 The \code{dist} argument specifies the proposal distribution and may be either of the following strings:
@@ -246,9 +246,9 @@ nearest integer.
 \code{BinaryMetropolis} class} 
 This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}, which are Bernoulli random variables conditional on their parents. 
 
-For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{_asf} parameters are not used in this case.
+For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{adaptive_scale_factor} parameters are not used in this case.
 
-For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is when proposing a new value for array-valued variables. Like \code{Metropolis}' attribute \code{proposal_sig}, \code{p_jump} is tuned throughout the sampling loop via \code{_asf}.
+For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is when proposing a new value for array-valued variables. Like \code{Metropolis}' attribute \code{proposal_sd}, \code{p_jump} is tuned throughout the sampling loop via \code{adaptive_scale_factor}.
 
 \subsubsection[The AdaptiveMetropolis class]{The
 \code{AdaptiveMetropolis} class} 
