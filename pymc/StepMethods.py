@@ -204,8 +204,8 @@ class StepMethod(object):
         self.parents -= self.stochastics
         
         # ID string for verbose feedback
-        self._id = self.__class__.__name__ + '_'.join([s.__name__ for s in self.stochastics])
-    
+        self._id = self.__class__.__name__ + '_' + '_'.join([s.__name__ for s in self.stochastics])
+        
     def step(self):
         """
         Specifies single step of step method.
