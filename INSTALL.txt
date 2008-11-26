@@ -8,9 +8,9 @@ PyMC Installation Instructions
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
 
-``pymc`` is known to run on Mac OS X, Linux and Windows, but in theory should be 
-able to work on just about any platform for which Python, a fortran compiler
-and the numpy module are  available. However, installing some extra 
+PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be 
+able to work on just about any platform for which Python, a Fortran compiler
+and the NumPy module are  available. However, installing some extra 
 depencies can greatly improve PyMC's performance and versatility. 
 The following describes the required and optional dependencies and takes you 
 through the installation process. 
@@ -20,9 +20,9 @@ through the installation process.
 Dependencies
 ============
 
-PyMC requires some prerequisite packages to be present on the system before the 
-PyMC package itself is installed. Fortunately, there are currently only a few 
-dependencies, and all are freely available online.
+PyMC requires some prerequisite packages to be present on the system. 
+Fortunately, there are currently only a few dependencies, and all are 
+freely available online.
 
 * `Python`_ version 2.5 or later. 
 
@@ -93,11 +93,11 @@ The easiest way to install PyMC is to type in a terminal::
   easy_install pymc
 
 Provided `EasyInstall`_ is installed and in your path, this should fetch 
-and install the package from the `Python Index`_. Make sure
+and install the package from the `Python Package Index`_. Make sure
 you have the appropriate administrative privileges to install software on 
 your computer. 
 
-.. _`Python Index`: http://pypi.python.org/pypi
+.. _`Python Package Index`: http://pypi.python.org/pypi
 
 
 Installing from pre-built binaries
@@ -105,7 +105,7 @@ Installing from pre-built binaries
 
 Pre-built binaries are available for Windows XP and Mac OS X. To install these:
 
-1. Download the pre-built binary for your platform from `PyPi`_. 
+1. Download the pre-built binary for your platform from `PyPI`_. 
 
 2. Double-click the executable installation package, and follow the on-screen 
    instructions.
@@ -116,7 +116,7 @@ Fortunately, this should be relatively straightforward.
 Compiling the source code
 =========================
 
-First download the source code tarball from `PyPi`_ and unpack it. Then move 
+First download the source code tarball from `PyPI`_ and unpack it. Then move 
 into the unpacked directory and follow the platform specific instructions.
 
 Windows
@@ -152,7 +152,7 @@ The `sudo` command is required to install PyMC into the Python
 .. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
 
 
-.. _`PyPi`: http://pypi.python.org/pypi/pymc/
+.. _`PyPI`: http://pypi.python.org/pypi/pymc/
 
 
 Development version

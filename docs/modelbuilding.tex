@@ -3,7 +3,9 @@
 % \section{Summary}\label{sec:PyMCObjects}
 Bayesian inference begins with specification of a probability model relating unknown variables to data. PyMC provides three basic building blocks for Bayesian probability models: \code{Stochastic}, \code{Deterministic} and \code{Potential}. 
 
-A \code{Stochastic} object represents a variable whose value is not completely determined by its parents, and a \code{Deterministic} object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, \code{Stochastic} and \code{Deterministic} are subclasses of the \code{Variable} class, which is essentially a template for more specific subclasses that are actually implemented in models. The third basic class, representing `factor potentials' (\cite{dawidmarkov,Jordan:2004p5439}), represents an arbitrary log-probability term. \code{Potential} and \code{Variable}, in turn, are subclasses of \code{Node}.
+A \code{Stochastic} object represents a variable whose value is not completely determined by its parents, and a \code{Deterministic} object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, \code{Stochastic} and \code{Deterministic} are subclasses of the \code{Variable} class, which only serves as a template and is never actually implemented in models. 
+
+The third basic class, \code{Potential}, represents `factor potentials' (\cite{dawidmarkov,Jordan:2004p5439}), which are \emph{not} variables but simply terms and/or constraints that are multiplied into joint distributions to modify them. \code{Potential} and \code{Variable} are subclasses of \code{Node}.
 
 % TODO: Need a better description of what a Potential is. Given the description of Stochastic and Deterministic we have given, its not clear where Potential fits in, as it classifies the world into 2 things -- completely determined by parents and not.
 
@@ -17,7 +19,7 @@ PyMC probability models are simply linked groups of \code{Stochastic}, \code{Det
 \section*{The \code{Stochastic} class} \label{stochastic}
 \pdfbookmark[0]{The Stochastic class}{stochastic}
 
-A stochastic variable has the following major attributes: 
+A stochastic variable has the following primary attributes: 
 \begin{description}
     \item[\code{value}:] The variable's current value.
     \item[\code{logp}:] The log-probability of the variable's current value given the values of its parents.
@@ -25,14 +27,14 @@ A stochastic variable has the following major attributes:
 A stochastic variable can optionally be endowed with a method called \code{\bfseries random}, which draws a value for the variable given the values of its parents\footnote{Note that the \code{random} method does not provide a Gibbs sample unless the variable has no children.}. Stochastic objects have the following additional attributes that are generally specified automatically, or only specified under particular circumstances:
 \begin{description}
     \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{'t_l'} and \code{'t_h'}. Thanks to Python's dynamic typing, the actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
-    \item[\code{children}:] A set containing the variable's children. This set is produced automatically; the user doesn't need to worry about filling it.
-    \item[\code{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability. This set is produced automatically.
-    \item[\code{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities. This set is produced automatically.
-    \item[\code{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
-    \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
-    \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
+    \item[\code{children}:] A set containing the variable's children.
+    \item[\code{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability.
+    \item[\code{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities.
+    % \item[\code{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
+    % \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
+    % \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
     \item[\code{observed}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
-    \item[\code{dtype}:] A Numpy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
+    \item[\code{dtype}:] A NumPy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
     % \item[\code{__name__}:] The name of the variable, should be unique.
     %    \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
@@ -41,12 +43,12 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
 There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
 
 \begin{description}    
-    \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions} ) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
-    \begin{verbatim}
-        s = DiscreteUniform('s', 1851, 1962, value=1900)
-    \end{verbatim}
+    \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions}) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
+\begin{verbatim}
+    s = DiscreteUniform('s', 1851, 1962, value=1900)
+\end{verbatim}
 
-    In addition to the classes in chapter \ref{chap:distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if SciPy is installed. These distributions are in the submodule \code{pymc.SciPyDistributions}
+    In addition to the classes in chapter \ref{chap:distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if SciPy is installed. These distributions are in the submodule \code{pymc.SciPyDistributions}.
 
     Users can call the class factory \code{stochastic_from_dist} to produce \code{Stochastic} subclasses of their own from probability distributions not included with PyMC.%  These classes' init methods take the following arguments:
     % \begin{description}
@@ -61,25 +63,27 @@ There are three main ways to create stochastic variables, called the \textbf{aut
     % \end{description}
     
     
-    \item[Decorator] Uniformly-distributed discrete stochastic variable $s$ in (\ref{disastermodel}) could be created as follows:
-    \begin{verbatim}
+    \item[Decorator] Uniformly-distributed discrete stochastic variable $s$ in (\ref{disastermodel}) could alternatively be created from a function that computes its log-probability as follows:
+\begin{verbatim}
 @stochastic(dtype=int)
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
-		# Invalid values
+        # Invalid values
         return -numpy.inf
     else:
-		# Uniform log-likelihood
+        # Uniform log-likelihood
         return -numpy.log(t_h - t_l + 1) 
-    \end{verbatim}
-Note that this is a simple Python function, preceded by a Python expression called a \textbf{decorator}, here called \code{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \code{Stochastic} object produced by the \code{@stochastic} decorator will evaluate its log-probability using the function \code{s}. The \code{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of \code{s} (\emph{i.e.} they will populate the \code{parents} dictionary).
+\end{verbatim}
+Note that this is a simple Python function preceded by a Python expression called a \textbf{decorator}, here called \code{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \code{Stochastic} object produced by the \code{@stochastic} decorator will evaluate its log-probability using the function $s$. The \code{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of $s$ (\emph{i.e.} they will populate the \code{parents} dictionary).
 
-The \code{value} and parents of stochastic variables may be any objects, provided their log-probability functions return a real number (\code{float}). PyMC and SciPy both provide fast implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison, the distributions in PyMC are approximately an order of magnitude faster than their counterparts in SciPy.
+To emphasize, the Python function decorated by \texttt{@stochastic} should compute the \emph{log}-density or \emph{log}-probability of the variable. That is why the return value in the example above is $-\log(t_h-t_l+1)$ rather than $1/(t_h-t_l+1)$.
+
+The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function return a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy.
 
     The decorator \code{stochastic} can take several arguments: 
     \begin{itemize}
-        \item A flag called \code{trace}, which signals to \code{MCMC} instances whether an MCMC trace should be kept for the stochastic variable. \code{@stochastic(trace = False)} would turn tracing off. Defaults to \code{True}.
+        \item A flag called \code{trace}, which signals to \code{MCMC} instances whether an MCMC trace should be kept for this variable. \code{@stochastic(trace = False)} would turn tracing off. Defaults to \code{True}.
         \item A flag called \code{plot}, which signals to \code{MCMC} instances whether summary plots should be produced for this variable. Defaults to \code{True}.
         \item An integer-valued argument called \code{verbose} that controls the amount of output the variable prints to the screen. The default is $0$, no output; the maximum value is $3$. 
         \item A Numpy datatype called \code{dtype}. Decorating a log-probability function with \code{@stochastic(dtype=int)} would produce a discrete random variable. Such a variable will cast its value to either an integer or an array of integers. The default dtype is \code{float}.
@@ -135,7 +139,7 @@ Notice that the log-probability and random variate functions are specified exter
 \begin{boxedminipage}{.9\textwidth} 
 \subsection*{Don't update stochastic variables' values in-place}
 
-\code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupt the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
+\code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
 \begin{verbatim}
     A.value = new_value
 \end{verbatim}
@@ -146,18 +150,18 @@ The following are in-place updates and should \emph{never} be used:
     \item \code{A.value.attribute = new_attribute_value}.
 \end{itemize}
 
-This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several variables stored in an array or list.
+This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several scalar-valued variables stored in an array or list.
 \end{boxedminipage}
 
 \hypertarget{data}{}
 \section*{Data} \label{data}
 \pdfbookmark[0]{Data}{data}
 
-Although the data are modelled with statistical distributions, just as random variables are, their values are immutable (since they have been observed). Data are represented by \code{Stochastic} objects whose \code{observed} attribute is set to \code{True}. If a stochastic variable's \code{observed} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method..
+Although the data are modelled with statistical distributions, their values should be treated as immutable (since they have been observed). Data are represented by \code{Stochastic} objects whose \code{observed} attribute is set to \code{True}. If a stochastic variable's \code{observed} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method..
 
 \subsection*{Declaring stochastic variables to be data}
 
-In the short and long interfaces, a \code{Stochastic} object's \code{observed} flag can be set to true by stacking a \code{@observed} decorator on top of the \code{@stochastic} decorator:
+In the short and long interfaces, a \code{Stochastic} object's \code{observed} flag can be set to true by stacking an \code{@observed} decorator on top of the \code{@stochastic} decorator:
 \begin{verbatim}
 @observed
 @stochastic(dtype=int)
@@ -189,7 +193,7 @@ A \code{deterministic} variable's most important attribute is \code{\bfseries va
 A Deterministic variable has the following additional attributes:
 \begin{description}
     \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents. Thanks to Python's dynamic typing, parents may be of any class or type.
-    \item[\code{children}:] A set containing the variable's children, which must be nodes. This set is produced automatically; the user doesn't need to worry about filling it.
+    \item[\code{children}:] A set containing the variable's children, which must be nodes.
     % \item[\code{__name__}:] The name of the variable, should be unique.
     %     \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
@@ -230,7 +234,7 @@ Notice that rather than returning the log-probability, as is the case for \code{
 
 Of course, since deterministic nodes are not expected to generate random variates, the longer implementation of the decorator interface available to \code{Stochastic} objects is not relevant here.
 
-    \item[Direct] Deterministic objects can also be instantiated directly, by passing the evaluation function to the Deterministic class as an argument:
+    \item[Direct] Deterministic objects can also be instantiated directly, by passing the evaluation function to the \texttt{Deterministic} class as an argument:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
     value = zeros(N)
@@ -244,20 +248,21 @@ r = Deterministic(  eval = r_eval,
                     doc = 'The rate of disaster occurrence.',
                     trace = True,
                     verbose = 0,
+                    dtype=float,
+                    plot=False,
                     cache_depth = 2)
 \end{verbatim}
-The \code{trace} flag signals to \code{Model} whether to keep a trace for the variable, as with stochastic variables.
 \end{description}
 
 \hypertarget{container}{}
 \section*{Containers} \label{container}
 \pdfbookmark[0]{Containers}{container}
 
-In some situations, such as a state-space model, it would be inconvenient to assign a unique label to each parent of $y$:
+In some situations it would be inconvenient to assign a unique label to each parent of some variable. Consider $y$ in the following model:
 \begin{align*}
     x_0 &\sim \textup N (0,\tau_x)\\
     x_{i+1}|x_i &\sim \textup{N}(x_i, \tau_x)\\
-	&&i=0,\ldots, N-2
+    &&i=0,\ldots, N-2\\
     y|x &\sim \textup N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
 \end{align*}
 Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \code{`x_0'}, \code{`x_1'}, etc.
@@ -282,17 +287,17 @@ for i in range(1,N):
 @stochastic
 def y(value = 1, mu = x, tau = 100):
 
-	# Initialize sum of mu's
+    # Initialize sum of mu's
     mu_sum = 0
 
     for i in range(N):
-		# Append squared mu
+        # Append squared mu
         mu_sum += mu[i] ** 2
 
-	# Calculate and return log-likelihood
+    # Calculate and return log-likelihood
     return normal_like(value, mu_sum, tau)
 \end{verbatim}
-PyMC automatically wraps list \code{x} in an appropriate \code{Container} class. The  expression \code{`x_\%i' \% i} labels each Normal object in the container with the appropriate index $i$.
+PyMC automatically wraps list $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i' \% i} labels each \code{Normal} object in the container with the appropriate index $i$.
 
 Containers, like variables, have an attribute called \code{value}. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with its corresponding value. 
 
@@ -314,10 +319,7 @@ Each of these attributes is a set containing all the objects of each type in a c
 \section*{The Potential class} \label{potential}
 \pdfbookmark[0]{The Potential class}{potential}
 
-% WE PROBABLY NEED TO GIVE A GOOD EXAMPLE OF WHERE A POTENTIAL IS DIFFERENT FROM A DETERMINISTIC;
-% THIS PROBABLY WONT BE CLEAR TO EVERYONE. THE KEY DIFFERENCE IS THAT A POTENTIAL IS PART OF THE
-% JOINT POSTERIOR, NO?
-% 
+% See the two examples here and the extended example below. Is that enough?
 
 The joint density corresponding to model (\ref{disastermodel}) can be written as follows:
 \begin{eqnarray*}
@@ -329,33 +331,45 @@ In some cases, it's nice to be able to modify the joint density by incorporating
 \begin{eqnarray*}
     p(x_0, x_2, \ldots x_{N-1}) \propto \prod_{i=0}^{N-2} \psi_i(x_i, x_{i+1}).
 \end{eqnarray*}
-Arbitrary factors such as $\psi$ are contributed by objects of class \code{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are most useful in cases where there is no natural dependence hierarchy, such as Markov random fields. They are also useful for expressing `soft data' \citep{Christakos:2002p5506}.
 
-Even when there is a definite dependence hierarchy, potentials can provide a useful shorthand. Consider a new example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
+
+In other cases we may want to add probability terms to existing models. For example, suppose we want to constrain the difference between $e$ and $l$ in (\ref{disastermodel}) to be less than 1, so that the joint density becomes
+\begin{eqnarray*}
+    p(D,s,l,e) \propto p(D|s,l,e) p(s) p(l) p(e) 1_{|e-l|<1}.
+\end{eqnarray*}
+It's possible to express this constraint by adding variables to the model, or by grouping $e$ and $l$ to form a vector-valued variable, but it's uncomfortable to do so.
+
+Arbitrary factors such as $\psi$ and $1_{|e-l|<1}$ are contributed by objects of class \code{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are often used in cases where there is no natural dependence hierarchy, such as the first example above (which is known as a Markov random field). They are also useful for expressing `soft data' \citep{Christakos:2002p5506} as in the second example above.
+
+
+\bigskip
+Potentials have one important attribute, \code{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is \code{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \code{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \code{children} attribute.
+
+\subsection*{A more extended example} 
+The role of potentials can be confusing, so we will provide another example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
 \begin{eqnarray*}
     t_i|S_i \sim \textup{Geometric}(S_i), & i=1\ldots N\\
     S_i = \textup{logit}^{-1}(\beta x_i), &i=1\ldots N\\
     \beta\sim \textup{N}(\mu_\beta, V_\beta).
 \end{eqnarray*}
-So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be before seeing the data. It's not obvious how to work this prior information in, because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
+So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be independent of the value of $\beta$. It's not obvious how to work this `soft data', because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
 \begin{itemize}
-    \item Work the prior information into the prior on $\beta$.
+    \item Work the soft data into the prior on $\beta$.
     \item Incorporate the data from the previous experiments explicitly into the model.
     \item Refactor the model so that $S$ is at the bottom of the hierarchy, and assign the prior directly.
 \end{itemize}
 
-Factor potentials provide a convenient way to incorporate the prior information without the need for such major modifications. We can simply modify the joint distribution from
+Factor potentials provide a convenient way to incorporate the soft data without the need for such major modifications. We can simply modify the joint distribution from
 \begin{eqnarray*}
     p(t|S(x,\beta)) p(\beta)
 \end{eqnarray*}
 to
 \begin{eqnarray*}
-    \gamma(S,a,b) p(t|S(x,\beta)) p(\beta),
+    \gamma(S) p(t|S(x,\beta)) p(\beta),
 \end{eqnarray*}
-where $\gamma$ expresses the prior information. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed.
+where the value of $\gamma$is large if $S$'s value is plausible (based on our external information) and small otherwise. We do not know the normalizing constant for the new distribution, but we don't need it to use most popular fitting algorithms. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed. 
 
-\bigskip
-Potentials have one important attribute, \code{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is \code{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \code{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \code{children} attribute.
+It's important to understand that $\gamma$ is not a variable, so it does not have a value. That means, among other things, there will be no $\gamma$ column in MCMC traces. $\gamma$ is simply an extra term that we are incorporating in the joint distribution.
 
 
 \subsection*{Creation of \code{Potentials}}
@@ -368,7 +382,7 @@ def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
     return -(xlo - xhi)**2
 \end{verbatim}
-The function supplied should return a Numpy \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
+The function supplied should return the potential's current \emph{log}-probability or \emph{log}-density as a Numpy \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
@@ -388,38 +402,34 @@ psi_i = Potential(  logp = psi_i_logp,
 \section*{Graphing models} \label{graphical}
 \pdfbookmark[0]{Graphing models}{graphical}
 
-The function \code{graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot (if they are installed). See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \code{pymc.graph.graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot (if they are installed). See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
-The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. A graphical representation of model \ref{disastermodel} follows:
-\begin{center}
-    \epsfig{file=DisasterModel.pdf, width=6cm} 
-\end{center} 
-$D$ is shaded because it is flagged as data.
-
-PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} with $r$ explicit follows:
+The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=6cm} 
 \end{center}
+$D$ is shaded because it is flagged as data.
+
 % Note that if a deterministic variable has more than one child, its parents each inherit all of its children when it is made implicit:
 % \begin{center}
 %     \epsfig{file=DeterministicPreInheritance.pdf, width=3.5cm} $\Rightarrow$ \epsfig{file=DeterministicPostInheritance.pdf, width=5cm}
 % \end{center}
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
-The symbol for factor potentials is a rectangle:
+The symbol for factor potentials is a rectangle, as in the following model.
 \begin{center}
     \epsfig{file=PotExample.pdf, width=10cm} 
 \end{center}
-Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge:
+Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
 \end{center}
-
-Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{moral_graph}.
+Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
 \section*{Class \code{LazyFunction} and caching}
 \label{sec:caching} 
+This section gives an overview of PyMC's computational innards. You don't need this information to use PyMC.
 
 The \code{logp} attributes of stochastic variables and potentials and the \code{value} attributes of deterministic variables are wrappers for instances of class \code{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \code{L} could be created from a function \code{fun} as follows:
 \begin{verbatim}

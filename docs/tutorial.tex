@@ -34,33 +34,32 @@ Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter th
 
 \section*{Two types of variables}
 
-At the model-specification stage (before the data have been observed), $D$, $s$, $e$, $r$ and $l$ are all \emph{random} variables. Under the Bayesian interpretation of probability, \emph{random} variables have not necessarily arisen from a physical random process. Instead, probability distributions are used to characterize our uncertainty in the true parameter values. Random variables are represented in PyMC by \code{Stochastic} and \code{Deterministic} classes (Both \code{Stochastic} and \code{Deterministic} are subclasses of the generic \code{Variable} class). 
+At the model-specification stage (before the data are observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is `epistemic', meaning random variable $x$'s probability density $p(x)$ represents our knowledge and uncertainty about $x$'s value. Candidate values of $x$ for which $p(x)$ is high are, well, highly probable given what we know. Random variables are represented in PyMC by the classes \code{Stochastic} and \code{Deterministic}. 
 
-The only \code{Deterministic} in the model is $r$. If we knew the values of $r$'s parents, we could compute the value of $r$ exactly. A \code{Deterministic} is defined by a mathematical function which returns its value given values for its parents. The nomenclature is a bit confusing, because these objects usually represent random variables; if the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
+The only \code{Deterministic} in the model is $r$. If we knew the values of $r$'s parents ($s$, $l$ and $t$), we could compute the value of $r$ exactly. A \code{Deterministic} like $r$ is defined by a mathematical function that returns its value given values for its parents. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
 
-On the other hand, even if the values of the parents of parameters $s$, $D$, $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \code{Stochastic} class represents these variables. A better name for these objects might be \code{RandomEvenGivenValuesOfParents}.
+On the other hand, even if the values of the parents of variables $s$, $D$ (before observing the data), $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \code{Stochastic} class represents these variables. A more descriptive name for these objects might be \code{RandomEvenGivenValuesOfParents}.
 
 We can represent model \ref{disastermodel} in a file called \module{DisasterModel.py} as follows. First, we import the PyMC and NumPy namespaces and enter the actual data values into an array:
 \begin{verbatim}
-	
-from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
-import numpy as np
+	from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
+	import numpy as np
 
-disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                   3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                   2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                   1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                   0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+	disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+	                   3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+	                   2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+	                   1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+	                   0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+	                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+	                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim} 
 Next, we create the switchpoint variable $s$:
 \begin{verbatim}
 	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')  
 \end{verbatim}
-\code{DiscreteUniform} is a subclass of \code{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no information \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$:
+\code{DiscreteUniform} is a subclass of \code{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$:
 \begin{verbatim}
-   e = Exponential('e', beta=1)
+	e = Exponential('e', beta=1)
 	l = Exponential('l', beta=1)   
 \end{verbatim}
 Next, we define the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We create $r$ using the \code{deterministic} decorator, which converts the ordinary Python function $r$ into a \code{Deterministic} object.
@@ -73,13 +72,13 @@ Next, we define the variable $r$, which selects the early rate $e$ for times bef
 	    out[s:] = l
 	    return out
 \end{verbatim}
-The last step is to define the number of disasters $D$. This is done the same way as for stochastic variables, except that we set the argument \code{isdata} to \code{True} (it is set to \code{False} by default). This tells PyMC that this object has a fixed value and does not need to be sampled:
+The last step is to define the number of disasters $D$. This is a stochastic variable, but unlike $s$, $e$ and $l$ we have observed its value. To express this, we set the argument \code{observed} to \code{True} (it is set to \code{False} by default). This tells PyMC that this object's value should not be changed:
 \begin{verbatim}
 	D = Poisson('D', mu=r, value=disasters_array, isdata=True)
 \end{verbatim}
 
 \subsection*{Why are data and unknown variables represented by the same object?}
-Since it is represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
+Since it's represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we need to use the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -88,20 +87,23 @@ This point can be counterintuitive at first, as many peoples' instinct is to reg
 \end{enumerate}
 Even after we observe the value of $D$, we need to use this process model to make inferences about $e$, $s$ and $l$; it's the only information we have about how the variables are related.
 
-\medskip
-To look at the issue another way, we could, in principle, have written a model equivalent to (\ref{disastermodel}) such that $D$ depended on nothing and everything else depended on $D$, for example
-\begin{eqnarray*}
-    s|e,l,D\sim\cdot\\
-    e|l,D\sim\cdot\\
-    l|D\sim\cdot\\
-    D=D_*
-\end{eqnarray*}
-
-In one respect, this would have been more natural because we would have the unknown stochastic variables depending on the data. However, if we could write down that model using standard distributions we could trivially compute and sample from the posterior,
-\begin{eqnarray*}
-    p(s,e,l|D) = p(s|e, l, D) p(e|l, D) p(l|D),
-\end{eqnarray*}
-and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's feasible to write down the data's dependence on the unknown variables but not vice versa.
+% ==================================
+% = Does this section really help? =
+% ==================================
+% \medskip
+% To look at the issue another way, we could, in principle, have written a model equivalent to (\ref{disastermodel}) such that $D$ depended on nothing and everything else depended on $D$, for example
+% \begin{eqnarray*}
+%     s|e,l,D\sim\cdot\\
+%     e|l,D\sim\cdot\\
+%     l|D\sim\cdot\\
+%     D=D_*
+% \end{eqnarray*}
+% 
+% In one respect, this would have been more natural because we would have the unknown stochastic variables depending on the data. However, if we could write down that model using standard distributions we could trivially compute and sample from the posterior,
+% \begin{eqnarray*}
+%     p(s,e,l|D) = p(s|e, l, D) p(e|l, D) p(l|D),
+% \end{eqnarray*}
+% and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's feasible to write down the data's dependence on the unknown variables but not vice versa.
 
 
 \section*{Parents and children}
@@ -116,13 +118,14 @@ The \code{parents} dictionary shows us the distributional parameters of $s$. Now
    >>> D.parents
    >>> {'mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
 \end{verbatim}
-We are using $r$ as a distributional parameter of $D$, so $r$ is $D$'s parent. $D$ labels $r$ as \code{mu}, meaning it plays the role of the rate parameter in $D$'s Poisson distribution. Now examine $r$'s \code{children} attribute:
+We are using $r$ as a distributional parameter of $D$, so $r$ is $D$'s parent. $D$ labels $r$ as \code{mu}, meaning $r$ plays the role of the rate parameter in $D$'s Poisson distribution. Now examine $r$'s \code{children} attribute:
 \begin{verbatim}
    >>> r.children
    >>> set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
 \end{verbatim}
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set; variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
+The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details. 
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
@@ -149,7 +152,7 @@ If you check $e$'s, $s$'s and $l$'s values, you'll see random initial values gen
    >>> l.value
    >>> 2.6491936762267811
 \end{verbatim}
-Of course, since these are \code{Stochastic} elements, your value will be different than these. If you check $r$'s value, you'll see an array whose first $s$ elements are \code{e.value}, and whose remaining elements are \code{l.value}:
+Of course, since these are \code{Stochastic} elements, your values will be different than these. If you check $r$'s value, you'll see an array whose first $s$ elements are $e$, and whose remaining elements are $l$:
 \begin{verbatim}
    >>> r.value
    >>> 
@@ -198,7 +201,7 @@ To compute its value, $r$ calls the funtion we used to create it, passing in the
 
 Let's take a closer look at our definition of $r$:
 \begin{verbatim}
-   @deterministic(plot=False)
+	@deterministic(plot=False)
 	def r(s=s, e=e, l=l):
 	    """ Concatenate Poisson means """
 	    out = np.empty(len(disasters_array))
@@ -212,7 +215,7 @@ Whenever a variable is used as a parent for a child variable, PyMC replaces it w
 
 \section*{Fitting the model with MCMC}
 
-PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm. See chapter \ref{chap:MCMC} for an introduction to the algorithm itself. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
+PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm. See appendix \ref{chap:MCMC} for an introduction to the algorithm itself. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{verbatim}
    import DisasterModel
    from pymc import MCMC
@@ -220,13 +223,17 @@ PyMC provides several objects that fit probability models (linked collections of
 \end{verbatim}
 To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method, either from \module{DisasterModel.py} or the prompt:
 \begin{verbatim}
-   M.isample(iter=10000, burn=1000)
+   M.isample(iter=10000, burn=1000, thin=10)
 \end{verbatim}
 After a few seconds, you should see that sampling has finished normally. The model has been fitted.
 
 \subsection*{What does it mean to fit a model?}
 
-The MCMC sampler runs for the specified number of iterations. If the run is sufficiently long, the model will have converged to the posterior distribution of interest, and all subsequent samples can be considered samples from that distribution, and used for inference. The specified \code{burn} interval should be large enough to ensure that no pre-convergent samples are included in the sample used for generating summary statistics.
+`Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to characterize the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\cite{gelman}) for \code{iter}  iterations. 
+
+After a sufficiently large number of iterations, the current values of $s$, $e$ and $l$ can be considered a sample from the posterior. PyMC assumes that the \code{burn} parameter is the `sufficiently large' number of iterations. It is up to the user to verify that this is the case. After another interval, the values of $s$, $e$ and $l$ can be considered a second sample that is independent of the first, and so on. This second interval is usually shorter than the burnin interval. PyMC assumes that it is given by the the \code{thin} parameter. 
+
+If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the `traces'. See \cite{gelman} for general guidance.  
 
 \subsection*{Accessing the samples}
 The output of the MCMC algorithm is a `trace', the sequence of retained
@@ -298,29 +305,10 @@ The value of \code{step_method_dict} corresponding to a particular variable is a
 
 You can force $M$ to use a particular step method by calling \code{M.use_step_method} before telling it to sample. The following call will cause $M$ to handle $l$ with a standard \code{Metropolis} step method, but with proposal standard deviation equal to $2$:
 \begin{verbatim}
-   M.use_step_method(Metropolis, l, sig=2.)
+   M.use_step_method(Metropolis, l, proposal_sd=2.)
 \end{verbatim}
 
 Another step method class, \code{AdaptiveMetropolis}, is better at handling highly-correlated variables. If your model mixes poorly, using \code{AdaptiveMetropolis} is a sensible first thing to try.
-
-You can see all the step method classes that have been defined (including user-defined step methods) in the list \code{StepMethodRegistry}, which is on the PyMC namespace: 
-\begin{verbatim}
-   >>> pymc.StepMethodRegistry
-   >>> 
-   [<class 'pymc.StepMethods.StepMethod'>,
-    <class 'pymc.StepMethods.NoStepper'>,
-    <class 'pymc.StepMethods.Metropolis'>,
-    <class 'pymc.StepMethods.Gibbs'>,
-    <class 'pymc.StepMethods.NoStepper'>,
-    <class 'pymc.StepMethods.DiscreteMetropolis'>,
-    <class 'pymc.StepMethods.BinaryMetropolis'>,
-    <class 'pymc.StepMethods.AdaptiveMetropolis'>,
-    <class 'pymc.StepMethods.IIDSStepper'>,
-    <class 'pymc.GP.PyMC_objects.GPParentMetropolis'>,
-    <class 'pymc.GP.PyMC_objects.GPMetropolis'>,
-    <class 'pymc.GP.PyMC_objects.GPNormal'>]
-\end{verbatim}
-See the docstrings of the individual classes for details on how to use them.
 
 \section*{Beyond the basics}
 That's all there is to basic PyMC usage. Many more topics are covered in the subsequent sections, including:
@@ -329,7 +317,7 @@ That's all there is to basic PyMC usage. Many more topics are covered in the sub
    \item Normal approximations
    \item Using custom probability distributions
    \item Object architecture
-   \item Saving traces to the disk, or stream them to the disk during sampling
+   \item Saving traces to the disk, or streaming them to the disk during sampling
    \item Writing your own step methods and fitting algorithms.
 \end{itemize}
 Also, be sure to check out the documentation for the Gaussian process extension, located in folder \code{gp} in the source directory. 
