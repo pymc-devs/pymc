@@ -591,7 +591,7 @@ class Gibbs(Metropolis):
         Metropolis.__init__(self, stochastic, verbose=verbose)
 
     # Override Metropolis's competence.
-    competence = staticmethod(StepMethod.competence)
+    competence = classmethod(StepMethod.competence)
 
     def step(self):
         if not self.conjugate:
