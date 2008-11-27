@@ -316,7 +316,7 @@ def test_interactive():
     M=MCMC(DisasterModel,db='sqlite', 
            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'), 
            dbmode='w')
-    M.isample(10)
+    M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
         
 
 if __name__ == '__main__':

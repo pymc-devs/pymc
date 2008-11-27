@@ -10,7 +10,8 @@ import unittest
 import numpy as np
 import pymc
 import pymc.examples.weibull_fit as model
-import os
+import os,  warnings
+warnings.simplefilter('ignore', FutureWarning)
 
 S = pymc.MCMC(model, 'ram')
 S.sample(10000, 5000)
@@ -19,19 +20,7 @@ S.sample(10000, 5000)
 
 DIR = 'testresults'
 
-class test_geweke(TestCase):
-    @classmethod
-    def setUpClass(self):
-        try:
-            os.mkdir(DIR)
-        except:
-            pass
-        os.chdir(DIR)
-        
-    @classmethod
-    def tearDownClass(self):
-        os.chdir('..')
-        
+class test_geweke(TestCase):       
         
     def test_simple(self):
         scores = pymc.geweke(S, intervals=20)
@@ -45,23 +34,12 @@ class test_geweke(TestCase):
         # Plot diagnostics (if plotting is available)
         try:
             from pymc.Matplot import geweke_plot as plot
-            plot(scores)
+            plot(scores,  path=DIR, verbose=0)
         except ImportError:
             pass
         
 class test_raftery_lewis(TestCase):
-    @classmethod
-    def setUpClass(self):
-        try:
-            os.mkdir(DIR)
-        except:
-            pass
-        os.chdir(DIR)
-        
-    @classmethod
-    def tearDownClass(self):
-        os.chdir('..')
-        
+       
     def test_simple(self):
 
         nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(S.a, 0.5, .05, verbose=0)

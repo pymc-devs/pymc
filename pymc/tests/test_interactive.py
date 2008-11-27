@@ -6,11 +6,11 @@ Test interactive sampler
 
 from pymc import MCMC
 from pymc.examples import DisasterModel
-import nose
+import os, nose
 
 def test_interactive():
     S = MCMC(DisasterModel)
-    S.isample(200,100,2)
+    S.isample(200,100,2,  out=open('testresults/interactive.log', 'w'))
     
     
 if __name__ == '__main__':

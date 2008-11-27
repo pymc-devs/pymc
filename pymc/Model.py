@@ -489,6 +489,7 @@ class Sampler(Model):
         Samples in interactive mode. Main thread of control stays in this function.
         """
         self._exc_info = None
+        out = kwds.pop('out',  sys.stdout)
         def samp_targ(*args, **kwds):
             try:
                 self.sample(*args, **kwds)
@@ -497,7 +498,7 @@ class Sampler(Model):
         self._sampling_thread = Thread(target=samp_targ, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
-        self.iprompt()
+        self.iprompt(out=out)
         
     def icontinue(self):
         """
@@ -516,7 +517,7 @@ class Sampler(Model):
         self._sampling_thread.start()
         self.iprompt()
         
-    def iprompt(self):
+    def iprompt(self, out=sys.stdout):
         """Start a prompt listening to user input."""
        
         cmds = """
@@ -533,21 +534,21 @@ class Sampler(Model):
                       own risk. 
         """
         
-        print """==============
+        print >> out, """==============
  PyMC console
 ==============
         
         PyMC is now sampling. Use the following commands to query or pause the sampler.
         """
-        print cmds
+        print >> out, cmds
         
         prompt = True
         try:
             while self.status in ['running', 'paused']:
                     # sys.stdout.write('pymc> ')
                     if prompt: 
-                        sys.stdout.write('pymc > ')
-                        sys.stdout.flush()
+                        out.write('pymc > ')
+                        out.flush()
                     
                     if self._exc_info is not None:
                         a,b,c = self._exc_info
@@ -555,7 +556,7 @@ class Sampler(Model):
                         
                     cmd = utils.getInput().strip()
                     if cmd == 'i':
-                        print 'Current iteration: ', self._current_iter
+                        print >> out,  'Current iteration: ', self._current_iter
                         prompt = True
                     elif cmd == 'p':
                         self.status = 'paused'
@@ -572,8 +573,8 @@ class Sampler(Model):
                         prompt = False
                         sleep(.5)
                     else:
-                        print 'Unknown command: ', cmd
-                        print cmds
+                        print >> out, 'Unknown command: ', cmd
+                        print >> out, cmds
                         prompt = True
 
         except KeyboardInterrupt:
@@ -582,18 +583,15 @@ class Sampler(Model):
 
 
         if self.status == 'ready':
-            print "Sampling terminated successfully."
+            print >> out, "Sampling terminated successfully."
         else:
-            print 'Waiting for current iteration to finish...'
+            print >> out, 'Waiting for current iteration to finish...'
             while self._sampling_thread.isAlive():
                 sleep(.1)
-            print 'Exiting interactive prompt...'
+            print >> out, 'Exiting interactive prompt...'
             if self.status == 'paused':
-                print 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
+                print >> out, 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
         
-            
-
-
 
     def get_state(self):
         """
