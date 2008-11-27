@@ -10,7 +10,6 @@ from copy import copy
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
 import pdb
-
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
 
@@ -721,8 +720,14 @@ def log_difference(lx, ly):
 def getInput():
     """Read the input buffer without blocking the system."""
     input = ''
-    while len(select.select([sys.stdin.fileno()], [], [], 0.0)[0])>0:
-        input += os.read(sys.stdin.fileno(), 4096)
+    try:   # Windows
+        import win32api
+        sock = win32api.GetStdHandle(win32api.STD_INPUT_HANDLE)
+    except:
+        sock = sys.stdin
+      
+    while len(select.select([sock], [], [], 0.0)[0])>0:
+        input += os.read(sock, 4096)
     return input
 
 def discrepancy(observed, simulated, expected):
