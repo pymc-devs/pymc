@@ -44,7 +44,7 @@ class NormApproxMu(object):
     
     def __getitem__(self, *stochastics):
         
-        if not owner.fitted:
+        if not self.owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before mu can be accessed.'
         
         tot_len = 0
@@ -86,7 +86,7 @@ class NormApproxC(object):
             
     def __getitem__(self, *stochastics):
         
-        if not owner.fitted:
+        if not self.owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before C can be accessed.'
         
         tot_len = 0

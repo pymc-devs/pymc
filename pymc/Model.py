@@ -221,7 +221,7 @@ class Sampler(Model):
         """
         
         
-        # Instantiate superclass
+        # Initialize superclass
         if reinit_model:
             Model.__init__(self, input, name, verbose)
             

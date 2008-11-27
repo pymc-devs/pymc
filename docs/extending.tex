@@ -19,9 +19,9 @@ Full subclasses of \code{Stochastic} may be necessary to provide nonstandard beh
 \hypertarget{custom-stepper}{}
 \section*{User-defined step methods} \label{custom-stepper}
 \pdfbookmark[0]{User-defined step methods}{custom-stepper}
-The \code{StepMethod} class is meant to be subclassed. There are an enormous number of MCMC step methods in the literature, whereas PyMC provides only about a dozen. Most user-defined step methods will be either Metropolis-Hastings or Gibbs step methods, and these should subclass \code{Metropolis} or \code{Gibbs} respectively. More unusual step methods should subclass \code{StepMethod} directly.
+The \code{StepMethod} class is meant to be subclassed. There are an enormous number of MCMC step methods in the literature, whereas PyMC provides only about half a dozen. Most user-defined step methods will be either Metropolis-Hastings or Gibbs step methods, and these should subclass \code{Metropolis} or \code{Gibbs} respectively. More unusual step methods should subclass \code{StepMethod} directly.
 
-\hypertarget{custom_stepper_example}{custom_stepper_example}
+\hypertarget{custom_stepper_example}{}
 \subsection*{Example: an asymmetric Metropolis step} \label{user-gen}
 Consider the probability model in \file{examples/custom_step.py}: 
 \begin{verbatim}
@@ -64,21 +64,19 @@ class TruncatedMetropolis(pm.Metropolis):
         return lp_bak - lp_for
 \end{verbatim}
 
-The \code{init} method simply records the lower and upper bounds, then allows Metropolis' \code{init} method to take care of other bookkeeping tasks. 
+The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which can be set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
 
-The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which is set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
-
-The \code{hastings_factor} method adjusts for the asymmetric proposal distribution \cite{gelman}. It is the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
+The \code{hastings_factor} method adjusts for the asymmetric proposal distribution \cite{gelman}. It computes the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
 
 \medskip
-Having created our custom step method, we would like to tell MCMC instances to use it to handle the variable \code{cutoff}. This is done in \file{custom_step.py} with the following line:
+Having created our custom step method, we need to tell MCMC instances to use it to handle the variable \code{cutoff}. This is done in \file{custom_step.py} with the following line:
 \begin{verbatim}
 M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 \end{verbatim}
 This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), np.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}. 
 
 \medskip
-It's often convenient to get a handle to a custom step method object directly for debugging purposes. \code{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \code{cutoff}:
+It's often convenient to get a handle to a custom step method instance directly for debugging purposes. \code{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \code{cutoff}:
 \begin{verbatim}
 >>> M.step_method_dict[cutoff]
 [<custom_step.TruncatedMetropolis object at 0x3c91130>]
@@ -131,8 +129,6 @@ return state
 Step methods should also maintain the following attributes:
 \begin{description}
    \item[\code{_id}:] A string that can identify each step method uniquely (usually something like \code{<class_name>_<stochastic_name>}).
-   \item[\code{_accepted}:] A running tally of the number of jumps accepted.
-   \item[\code{_rejected}:] A running tally of the number of jumps rejected.   
    \item[\code{adaptive_scale_factor}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
 \end{description}
 
@@ -153,6 +149,8 @@ A Metropolis-Hastings step method must implement the following methods, which ar
 \end{description}
 Metropolis-Hastings step methods with asymmetric jumping distributions may implement a method called \code{hastings_factor()}, which returns the log of the ratio of the `reverse' and `forward' proposal probabilities. Note that no \code{accept()} method is needed or used.
 
+By convention, Metropolis-Hastings step methods use attributes called \code{accepted} and \code{rejected} to log their performance.
+
 \hypertarget{user-gibbs}{}
 \subsection*{Gibbs step methods} \label{user-gibbs}
 \pdfbookmark[1]{Gibbs step methods}{user-gibbs}
@@ -161,7 +159,7 @@ Gibbs step methods handle conjugate submodels. These models usually have two com
 
 This section describes PyMC's current scheme for Gibbs step methods. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass StepMethod directly when writing Gibbs step methods if you prefer.
 
-Gibbs step methods that subclass PyMC's \code{StandardGibbs} should define the following class attributes:
+Gibbs step methods that subclass PyMC's \code{Gibbs} should define the following class attributes:
 \begin{description}
    \item[\code{child_class}:] The class of the children in the submodels the step method can handle.
    \item[\code{parent_class}:] The class of the parent.
@@ -169,15 +167,13 @@ Gibbs step methods that subclass PyMC's \code{StandardGibbs} should define the f
    \item[\code{linear_OK}:] A flag indicating whether the children can use linear combinations involving the parent as their actual parent without destroying the conjugacy.
 \end{description}
 
-A subclass of \code{StandardGibbs} that defines these attributes need only implement a \code{propose()} method. The resulting step method will be able to handle both conjugate and non-conjugate cases. The conjugate case corresponds to an actual conjugate submodel. In the nonconjugate case all the children are of the required class, but the parent is not. In this case the parent's value is proposed from the likelihood and accepted based on its prior. The acceptance rate in the nonconjugate case will be less than one.
+A subclass of \code{Gibbs} that defines these attributes only needs to implement a \code{propose()} method. The resulting step method will be able to handle both conjugate and `non-conjugate' cases. The conjugate case corresponds to an actual conjugate submodel. In the nonconjugate case all the children are of the required class, but the parent is not. In this case the parent's value is proposed from the likelihood and accepted based on its prior. The acceptance rate in the nonconjugate case will be less than one.
 
 \hypertarget{custom-model}{}
 \section*{New fitting algorithms} \label{custom-model}
 \pdfbookmark[0]{New fitting algorithms}{custom-model}
 
-PyMC provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. The primary advantage of implementing fitting algorithms in PyMC is that the same model can be fit with the new algorithm or one of the existing algorithms with virtually no re-coding.
-
-All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}. 
+PyMC provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}. 
 
 \hypertarget{custom-MC}{}
 \subsection*{Monte Carlo fitting algorithms} \label{custom-MC}
@@ -201,7 +197,7 @@ Samplers may alternatively want to override the default \code{sample()} method. 
 \section*{Don't update stochastic variables' values in-place} \label{dont-update-indepth}
 \pdfbookmark[0]{Don't update stochastic variables' values in-place}{dont-update-indepth}
 
-If you're going to implement a new step method, fitting algorithm or exotic \code{Stochastic} subclass, you should understand the issues related to in-place updates of \code{Stochastic} objects' values. Fitting methods should never update variables' values in-place for two reasons:
+If you're going to implement a new step method, fitting algorithm or \code{Stochastic} subclass, you should understand the issues related to in-place updates of \code{Stochastic} objects' values. Fitting methods should never update variables' values in-place for two reasons:
 \begin{itemize}
    \item In algorithms that involve accepting and rejecting proposals, the `pre-proposal' value needs to be preserved uncorrupted. It would be possible to make a copy of the pre-proposal value and then allow in-place updates, but in PyMC we have chosen to store the pre-proposal value as \code{Stochastic.last_value} and require proposed values to be new objects. In-place updates would corrupt \code{Stochastic.last_value}, and this would cause problems.
    \item \code{LazyFunction}'s caching scheme checks current values against its internal cache by reference.

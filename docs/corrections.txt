@@ -32,9 +32,6 @@ Line	Comment
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
 
 
-160 	Should we put the node graph ? 
-[AP] Tricky one. Ecologists seem to dislike node graphs for the most part, but some of the machine learning types that have been cropping up on the list would like them.
-[CF] I just published one in Endangered Species Research, and they did not seem to mind. They are particularly useful for very complex models.
 178		Wondering if it would be best to replace from pymc import ... by import pymc.
 [AP] In the tutorial, I'd vote for from pymc import *.
 [CF] from pymc import * is almost universally discouraged these days, because of namespace concerns. Dont want to encourage bad habits ...
