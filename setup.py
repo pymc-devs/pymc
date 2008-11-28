@@ -23,7 +23,9 @@ if not lapack_info or dist in ['bdist', 'sdist']:
     ##inc_dirs = ['blas/BLAS','lapack/double']
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
     for fname in os.listdir('blas/BLAS'):
-        if fname[-2:]=='.f':
+        # Make sure this is a Fortran file, and not one of those weird hidden files that
+        # pop up sometimes in the tarballs
+        if fname[-2:]=='.f' and fname[0].find('_')==-1:
             f_sources.append('blas/BLAS/'+fname)
     ##    for fname in os.listdir('lapack/double'):
     ##        if fname[-2:]=='.f':
