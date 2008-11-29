@@ -7,7 +7,7 @@ PyMC provides three objects that fit models:
     \item \code{NormApprox}, which computes the `normal approximation' \citep{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum \emph{a posteriori} estimate.
 \end{itemize}
 
-All three objects are subclasses of \code{Model}, which is PyMC's base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is PyMC's base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.
+All three objects are subclasses of \code{Model}, which is PyMC's base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is PyMC's base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes implement some basic methods that are inherited by the three implemented fitting methods, so they are documented at the end of this chapter. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.
 
 \section*{Creating models} \label{sec:ModelInstantiation}
 The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
@@ -70,7 +70,7 @@ In addition, the AIC and BIC of the model are now available:
 \bigskip
 \code{MAP} has two useful methods:
 \begin{description}
-    \item[\code{fit(method ='fmin', iterlim=1000, tol=.0001)}:] The optimization method may be \code{fmin}, \code{fmin_l_bfgs_b}, \code{fmin_ncg}, \code{fmin_cg}, or \code{fmin_powell}. See the documentation of SciPy's optimize package for the details of these methods. The \code{tol} and \code{iterlim} parameters are passed to the optimization function under the appropriate names.
+    \item[\code{fit(method ='fmin', iterlim=1000, tol=.0001)}:] The optimization method may be \code{fmin}, \code{fmin_l_bfgs_b}, \code{fmin_ncg}, \code{fmin_cg}, or \code{fmin_powell}. See the documentation of SciPy's \code{optimize} package for the details of these methods. The \code{tol} and \code{iterlim} parameters are passed to the optimization function under the appropriate names.
     \item[\code{revert_to_max()}:] If the values of the constituent stochastic variables change after fitting, this function will reset them to their maximum \emph{a posteriori} values.
 \end{description}
 If you're going to use an optimization method that requires derivatives, \code{MAP}'s \code{init} method can take additional parameters \code{eps} and \code{diff_order}. \code{diff_order}, which must be an integer, specifies the order of the numerical approximation (see the SciPy function \code{derivative}). The step size for numerical derivatives is controlled by \code{eps}, which may be either a single value or a dictionary of values whose keys are variables (actual objects, not names).
@@ -124,10 +124,11 @@ array([  2.50203663,  14.73815047,  11.32166303,   0.43115426,
 Any of the database backends can be used (chapter \ref{chap:database}).  
 
 \bigskip
-In addition to the methods and attributes of \code{MAP}, \code{NormApprox} provides the following methods inherited from \code{Sampler}:
+In addition to the methods and attributes of \code{MAP}, \code{NormApprox} provides the following methods:
 \begin{description}
     \item[\code{sample(iter)}:] Samples from the approximate posterior distribution are drawn and stored.
-    \item[\code{isample(iter)}:] An `interactive' version of \code{sample()}: sampling can be paused, returning control to the user.    
+    \item[\code{isample(iter)}:] An `interactive' version of \code{sample()}: sampling can be paused, returning control to the user.
+    \item[\code{draw}:] Sets all variables to random values drawn from the approximate posterior.
 \end{description}
 It provides the following additional attributes:
 \begin{description}
@@ -139,7 +140,7 @@ It provides the following additional attributes:
 \section*{Markov chain Monte Carlo: the \code{MCMC} class} \label{sec:mcmc}
 \pdfbookmark[1]{The MCMC class}{mcmc}
 
-The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
+The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
 
 \code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in chapter \ref{chap:extending}.  
 
@@ -152,6 +153,10 @@ The \code{MCMC} class implements PyMC's core business: producing `traces' for a 
     
     % A variable is assigned a step method as follows: each eligible \code{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
     \item[\code{goodness()}:] Calculates goodness-of-fit (GOF) statistics according to \cite{Brooks:2000il}.
+    \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
+    \item[\code{restore\_state()}:] Restores the sampler to the state stored in the database.
+	 \item[\code{stats()}:] Generate summary statistics for all nodes in the model.
+    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database.
 \end{description}
 
 
@@ -177,17 +182,16 @@ M.use_step_method(Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
 
 \code{Metropolis} itself handles float-valued variables, and subclasses \code{DiscreteMetropolis} and \code{BinaryMetropolis} handle integer- and boolean-valued variables, respectively. Subclasses of \code{Metropolis} must implement the following methods:
 \begin{description}
-    \item[\code{propose()}:] Sets the values of the stochastic variables handled by the Metropolis step method to proposed values.
-    \item[\code{reject()}:] If the Metropolis-Hastings acceptance test fails, this method is called to reset the values of the stochastic variables to their values before \code{propose()} was called.
+    \item[\code{propose()}:] Sets the values of the variables handled by the Metropolis step method to proposed values.
+    \item[\code{reject()}:] If the Metropolis-Hastings acceptance test fails, this method is called to reset the values of the variables to their values before \code{propose()} was called.
 \end{description}
 Note that there is no \code{accept()} method; if a proposal is accepted, the variables' values are simply left alone. Subclasses that use proposal distributions other than symmetric random-walk may specify the `Hastings factor' by changing the \code{hastings\_factor} method. See chapter \ref{chap:extending} for an example.
 
 \code{Metropolis}' \texttt{init} method takes the following arguments:
-stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0
 \begin{description}
    \item[\code{stochastic}:] The variable to handle.
    \item[\code{proposal_sd}:] A float or array of floats. This sets the proposal standard deviation if the proposal distribution is normal.   
-   \item[\code{scale}:] A float. If the \code{scale} argument is provided but not \code{proposal_sd}, \code{proposal\_sd} is computed as follows:
+   \item[\code{scale}:] A float, defaulting to 1. If the \code{scale} argument is provided but not \code{proposal_sd}, \code{proposal\_sd} is computed as follows:
    \begin{verbatim}
    if all(self.stochastic.value != 0.):
        self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) 
@@ -195,7 +199,7 @@ stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0
    else:
        self.proposal_sd = ones(shape(self.stochastic.value)) * scale
    \end{verbatim}
-   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically:it is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise. 
+   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise. 
    \item[\code{verbose}:] An integer.
 \end{description}
 

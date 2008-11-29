@@ -37,8 +37,4 @@ Line	Comment
 [CF] from pymc import * is almost universally discouraged these days, because of namespace concerns. Dont want to encourage bad habits ...
 
 
-827		Maybe say a few words about the fact that the parameters of the multivariate normal are estimated using derivatives at the maximum a posteriori values: variances are estimated using partial derivatives and correlation coefficients using mixed partial derivatives ( and this is why discrete variables can't be fitted). 
-[AP] Sometimes they work if you use Nelder-Mead, but it gets kind of wishy-washy. 
-
-
 1271	This section ... strange transition, and not really a section.

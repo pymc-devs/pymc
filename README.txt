@@ -44,7 +44,7 @@ Features
   to the disk during sampling, reducing memory usage.
 
 * Extensible: easily incorporates custom step methods and unusual probability 
-  distributions and stochastic processes.
+  distributions.
 
 * MCMC loops can be embedded in larger programs, and results can be analyzed 
   with the full power of Python.
