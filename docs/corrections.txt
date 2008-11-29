@@ -26,6 +26,8 @@ The line number is defined with respect to the pdf created from revision 954 wit
 lineno package. 
 
 
+[AP] We ought to beef up our general MCMC citations a bit... all we really have is Gelman. Does anyone have a copy of 'MCMC in practice' by Gilks? Unfortunately Oxford kind of lacks a functioning science library... you can't take most books out of it.
+
 Line	Comment
 ----    ------------------------------------------------------------------------
 4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
