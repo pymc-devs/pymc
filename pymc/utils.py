@@ -723,8 +723,8 @@ def getInput():
     try:   # Windows
         import win32api
         sock = win32api.GetStdHandle(win32api.STD_INPUT_HANDLE)
-    except:
-        sock = sys.stdin
+    except: # Other platforms
+        sock = sys.stdin.fileno()
       
     while len(select.select([sock], [], [], 0.0)[0])>0:
         input += os.read(sock, 4096)
