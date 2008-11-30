@@ -14,6 +14,7 @@ document describes in enough details the general working of pymc, though some us
 An abstract and a conclusion are missing. 
 [AP] Do we really need an abstract and conclusion, even for JSS?
 [DH] Maybe not an abstract, but some kind of conclusion (what's next, get involved, ...) would still be nice. 
+[AP] I added a conclusion, please feel free to change it completely & also add the features you're planning to work on in the future.
 
 Specific Comments
 -----------------
