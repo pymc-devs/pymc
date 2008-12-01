@@ -2292,6 +2292,9 @@ def wishart_like(X, n, Tau):
     matrix of a multivariate normal distribution. If Tau=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
     
+    For an alternative parameterization based on :math: `C=T{-1}`, see 
+    wishart_cov_like.
+    
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
     
@@ -2335,7 +2338,7 @@ def wishart_cov_expval(n, C):
     return n * np.asarray(C)
 
 def wishart_cov_like(X, n, C):
-    R"""PLEASE CHECK THIS DOCSTRING
+    R"""
     wishart_like(X, n, C)
     
     Wishart log-likelihood. The Wishart distribution is the probability
@@ -2343,8 +2346,11 @@ def wishart_cov_like(X, n, C):
     matrix of a multivariate normal distribution. If C=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
     
+    For an alternative parameterization based on :math: `T=C{-1}`, see 
+    wishart_cov_like.
+    
     .. math::
-        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+        f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}
     
     where :math:`k` is the rank of X.
     
