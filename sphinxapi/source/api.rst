@@ -14,6 +14,8 @@ Application Programming Interface
 
 .. autofunction:: bernoulli_like
    
+.. autofunction:: beta_like
+
  
  
   
