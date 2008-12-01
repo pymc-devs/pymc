@@ -13,12 +13,12 @@ PyMC -- Markov chain Monte Carlo in Python
 Purpose
 =======
 
-
 PyMC is a python module that implements Bayesian statistical models and
-fitting algorithms, including Markov chain Monte Carlo, using Python classes. 
-Its flexibility makes it applicable to a large suite of problems. Along with 
-core sampling functionality, PyMC includes methods for summarizing output, plotting, 
-goodness-of- fit and convergence diagnostics. 
+fitting algorithms, including Markov chain Monte Carlo. 
+Its flexibility makes it applicable to a large suite of problems as well as 
+easily extensible. Along with core sampling functionality, PyMC includes 
+methods for summarizing output, plotting, goodness-of-fit and convergence 
+diagnostics. 
 
 
 Features
@@ -26,28 +26,26 @@ Features
 
 * Fits Bayesian statistical models you create with Markov chain Monte Carlo and 
   other algorithms.
-  
-* Several 'step methods' allow easy customization of MCMC algorithms.
-  
-* Sampling loops can be paused and tuned manually, or saved and restarted later.
 
 * Large suite of well-documented statistical distributions.
 
 * Gaussian processes.
+  
+* Sampling loops can be paused and tuned manually, or saved and restarted later.
 
 * Creates summaries including tables and plots.
 
-* Convergence diagnostics. 
-
 * Traces can be saved to the disk as plain text, Python pickles, SQLite or MySQL
-  database, or hdf5 archives. The hdf5 option allows traces to be streamed
-  to the disk during sampling, reducing memory usage.
+  database, or hdf5 archives. 
+
+* Convergence diagnostics. 
 
 * Extensible: easily incorporates custom step methods and unusual probability 
   distributions.
 
 * MCMC loops can be embedded in larger programs, and results can be analyzed 
   with the full power of Python.
+
 
 What's new in 2.0
 =================
@@ -62,6 +60,7 @@ What's new in 2.0
 * New adaptive blocked Metropolis step method.
 
 * Much more!
+
 
 Usage
 =====
@@ -104,10 +103,24 @@ This will generate 10000 posterior samples, with the first half discarded as bur
 History
 =======
 
-PyMC began development in 2003, as an effort to generalize the process of building Metropolis-Hastings samplers, with an aim to making Markov chain Monte Carlo (MCMC) more accessible to non-statisticians (particularly ecologists). The choice to develop PyMC as a python module, rather than a standalone application, allowed the use MCMC methods in a larger modeling framework, in contrast to the BUGS environment. By 2005, PyMC was reliable enough for version 1.0 to be released to the public. A small group of regular users, most associated with the University of Georgia, provided much of the feedback necessary for the refinement of PyMC to its current state.
+PyMC began development in 2003, as an effort to generalize the process of building Metropolis-Hastings samplers, with an aim to making Markov chain Monte Carlo (MCMC) more accessible to non-statisticians (particularly ecologists). The choice to develop PyMC as a python module, rather than a standalone application, allowed the use MCMC methods in a larger modeling framework. By 2005, PyMC was reliable enough for version 1.0 to be released to the public. A small group of regular users, most associated with the University of Georgia, provided much of the feedback necessary for the refinement of PyMC to its current state.
 
 In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development team for PyMC 2.0. This iteration of the software strives for more flexibility, better performance and a better end-user experience than any previous version of PyMC.
 
+
+
+Getting started
+===============
+
+This user guide provides all the information needed to install PyMC, code
+a Bayesian statistical model, run the sampler, save and analyze the results. 
+In addition, the appendix contains a chapter on MCMC theory as well as the list of the 
+available statistical distributions. More `examples`_ of usage as well as 
+`tutorials`_  are available from the PyMC web site. 
+
+.. _`examples`: http://code.google.com/p/pymc/
+
+.. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
 
 Installation
 ============

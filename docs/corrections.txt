@@ -33,6 +33,7 @@ Line	Comment
 ----    ------------------------------------------------------------------------
 4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
+[DH] first pass at it. 
 
 
 178		Wondering if it would be best to replace from pymc import ... by import pymc.

@@ -1,4 +1,4 @@
-%!TEX root = guide2.0.tex
+%!TEX root = UserGuide.tex
 
 MCMC is a surprisingly difficult and bug-prone algorithm to implement by hand. We find PyMC makes it much easier and less stressful. PyMC also makes our work more dynamic; getting hand-coded MCMC's working used to be so much work that we were reluctant to change anything, but with PyMC changing models is a breeze. We hope it does the same for you!
 
@@ -13,7 +13,7 @@ A partial list of the features we would like to include in future releases follo
    \item (**) Generic Monte Carlo EM and SEM algorithms,   
    \item (**) Parallelizing single chains with a thread pool,
    \item (**) Terse syntax inspired by \cite{fbc} for creating variables: \code{C=A*B} should return a deterministic object if $A$ and/or $B$ is a PyMC variable,   
-   \item (?) Distributing multiple chains across multiple processes,
+   \item (**) Distributing multiple chains across multiple processes,
    \item (*) Parsers for model-definition syntax from R and WinBugs,
    \item (*) Dirichlet processes and other stick-breaking processes \citep{stickbreak}.
 \end{itemize}
