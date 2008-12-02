@@ -79,7 +79,7 @@
     \fi
     \begin{flushright}%
       %{\rm\Huge\py@HeaderFamily \@title \par}%
-      %{\em\LARGE\py@HeaderFamily \py@release\releaseinfo \par}
+      {\em\LARGE\py@HeaderFamily \py@release\releaseinfo \par}
       \vfill
       \epsfig{file=logo.pdf,width=15cm}
       \vfill

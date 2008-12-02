@@ -51,28 +51,13 @@
 %\usepackage{graphicx}
 %\fi
 
-%% EPYDOC STUFF %%%
-\usepackage{underscore}
-\usepackage[english]{babel}
- \usepackage{alltt, parskip, boxedminipage}
-\usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
-\usepackage{fullpage}
-\usepackage[usenames]{color}
-\usepackage{ifthen}
-\usepackage{ae}
-%\usepackage{aeguill}
-\usepackage{shortvrb}
-\usepackage{ucs}
-\usepackage{tabularx}
-\input{epydocheader}
-%% END OF EPYDOC STUFF %%%
-
 
 \title{PyMC 2.0 User's Guide \\
 Installation and tutorial}
 \author{Anand Patil \\ David Huard \\ Christopher Fonnesbeck}
 \graphicspath{{figs/}}
 \pdfoutput=1
+\release{2.0}
 % \date
 
 
@@ -131,9 +116,6 @@ Several probability distributions are provided in the module \module{distributio
     \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
     \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
 \end{itemize} 
-% Reminder to David:
-% When updating distributions-module.tex, replace the lines \rule{\textwidth}{0.5\fboxrule} by 
-% \rule{\textwidth}{1pt}.
 \input{distributions-module}
 
 \chapter{Conclusion} 

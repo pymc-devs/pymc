@@ -48,7 +48,9 @@
 \Shorttitle{PyMC 2.0} %% a short title (if necessary)
 
 \Abstract{
-  The abstract of the article.
+This user guide describes a Python package, PyMC, that allows users to 
+efficiently code a probabilistic model and draw samples from its 
+posterior distribution using Markov-Chain Monte Carlo techniques. 
 }
 \Keywords{Bayesian modeling, Markov chain Monte Carlo, simulation, \proglang{Python}}
 \Plainkeywords{Bayesian modeling, Markov chain Monte Carlo, simulation, Python}
@@ -120,11 +122,17 @@
 \label{sec:extending}
 \input{extending}
 
-\appendix[MCMC]{Markov chain Monte Carlo} 
+
+\section{Conclusion}
+\label{conclusion}
+\input{conclusion}
+
+\appendix
+\section[MCMC]{Markov chain Monte Carlo} 
 \label{sec:MCMC} 
 \input{theory}
 
-\appendix[Distributions]{Probability distributions} 
+\section[Distributions]{Probability distributions} 
 \label{sec:distributions}
 Several probability distributions are provided in the module \module{distributions}. A probability distribution consists of:
 \begin{itemize}
@@ -133,7 +141,7 @@ Several probability distributions are provided in the module \module{distributio
     \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
     \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
 \end{itemize} 
-%\input{distributions-module}
+\input{distributions-module}
 
 \nocite{Bernardo:1992fk}
 \bibliography{pymc}
