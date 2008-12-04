@@ -1657,7 +1657,7 @@ def rmv_normal(mu, tau, size=1):
     """
     
     sig = np.linalg.cholesky(tau)
-    mu_size = mu.shape
+    mu_size = np.shape(mu)
     
     if size==1:
         out = np.random.normal(size=mu_size)
@@ -1718,7 +1718,7 @@ def rmv_normal_cov(mu, C, size=1):
     
     Random multivariate normal variates.
     """
-    mu_size = mu.shape
+    mu_size = np.shape(mu)
     if size==1:
         return np.random.multivariate_normal(mu, C, size).reshape(mu_size)
     else:
@@ -1763,7 +1763,7 @@ def rmv_normal_chol(mu, sig, size=1):
     
     Random multivariate normal variates.
     """
-    mu_size = mu.shape
+    mu_size = np.shape(mu)
     
     if size==1:
         out = np.random.normal(size=mu_size)
@@ -2261,7 +2261,7 @@ def rwishart(n, Tau):
     Tau is the inverse of the 'covariance' matrix :math:`C`.
     """
     
-    p = Tau.shape[0]
+    p = np.shape(Tau)[0]
     # sig = np.linalg.cholesky(np.linalg.inv(Tau))
     sig = np.linalg.cholesky(Tau)
     if n<p:
@@ -2318,7 +2318,7 @@ def rwishart_cov(n, C):
     
     Return a Wishart random matrix.
     """
-    p = C.shape[0]
+    p = np.shape(C)[0]
     sig = np.linalg.cholesky(C)
     if n<p:
         raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
