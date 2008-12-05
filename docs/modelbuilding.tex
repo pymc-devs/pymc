@@ -16,7 +16,7 @@ PyMC probability models are simply linked groups of \code{Stochastic}, \code{Det
  
 
 \hypertarget{stochastic}{}
-\section*{The \code{Stochastic} class} \label{stochastic}
+\section*[The Stochastic class]{The \code{Stochastic} class} \label{stochastic}
 \pdfbookmark[0]{The Stochastic class}{stochastic}
 
 A stochastic variable has the following primary attributes: 
@@ -179,7 +179,7 @@ In the automatic and direct interfaces, the \code{observed} argument can be simp
 
 
 \hypertarget{deterministic}{}
-\section*{The \code{Deterministic} class} \label{deterministic}
+\section*[The Deterministic class]{The \code{Deterministic} class} \label{deterministic}
 \pdfbookmark[0]{The Deterministic class}{deterministic}
 
 The \code{Deterministic} class represents variables whose values are completely determined by the values of their parents. For example, in model (\ref{disastermodel}), $r$ is a \code{deterministic} variable. Recall it was defined by
@@ -318,7 +318,7 @@ Each of these attributes is a set containing all the objects of each type in a c
 
 
 \hypertarget{potential}{}
-\section*{The Potential class} \label{potential}
+\section*[The Potential class]{The \code{Potential} class} \label{potential}
 \pdfbookmark[0]{The Potential class}{potential}
 
 % See the two examples here and the extended example below. Is that enough?
@@ -374,7 +374,7 @@ where the value of $\gamma$is large if $S$'s value is plausible (based on our ex
 It's important to understand that $\gamma$ is not a variable, so it does not have a value. That means, among other things, there will be no $\gamma$ column in MCMC traces. $\gamma$ is simply an extra term that we are incorporating in the joint distribution.
 
 
-\subsection*{Creation of \code{Potentials}}
+\subsection*[Creation of Potentials]{Creation of \code{Potentials}}
 There are two ways to create potentials:
 \begin{description}
     \item[Decorator] A potential can be created via a decorator in a way very similar to \code{Deterministic}'s decorator interface:

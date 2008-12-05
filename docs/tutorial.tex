@@ -197,7 +197,7 @@ To compute its value, $r$ calls the funtion we used to create it, passing in the
 \end{verbatim}
 \code{Stochastic} objects need to call an internal function to compute their \code{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \code{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). Users are thus not limited to the set of of statistical distributions provided by PyMC.
 
-\subsection*{Using \code{Variables} as parents of \code{Variables}}
+\subsection*[Using Variables as parents of Variables]{Using \code{Variables} as parents of \code{Variables}}
 
 Let's take a closer look at our definition of $r$:
 \begin{verbatim}
