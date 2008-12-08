@@ -26,7 +26,7 @@ freely available online.
 
 * `Python`_ version 2.5 or later. 
 
-* `NumPy`_ (1.2): The fundamental scientific programming package, it provides a 
+* `NumPy`_ (1.2 or newer): The fundamental scientific programming package, it provides a 
   multidimensional array type and many useful functions for numerical analysis. 
 
 * `Matplotlib`_ (optional): 2D plotting library which produces publication 
@@ -53,7 +53,8 @@ Mac OSX users, we recommend the `MacPython`_ distribution, the
 `Enthought Python Distribution`_, or Python 2.5.1 that ships with 
 OSX 10.5 (Leopard). Windows users should download and install the 
 `Enthought Python Distribution`_. The Enthought Python Distribution comes 
-bundled with these prerequisites.
+bundled with these prerequisites. Note that depending on the currency of these
+ distributions, some packages may need to be updated manually.
 
 If instead of installing the prebuilt binaries you prefer (or have) to build 
 ``pymc`` yourself, make sure you have a Fortran and a C compiler. There are free
@@ -92,26 +93,34 @@ The easiest way to install PyMC is to type in a terminal::
 
   easy_install pymc
 
-Provided `EasyInstall`_ is installed and in your path, this should fetch 
-and install the package from the `Python Package Index`_. Make sure
-you have the appropriate administrative privileges to install software on 
-your computer. 
+Provided `EasyInstall`_ (part of the `setuptools`_ module) is installed 
+and in your path, this should fetch and install the package from the 
+`Python Package Index`_. Make sure you have the appropriate administrative 
+privileges to install software on your computer. 
 
 .. _`Python Package Index`: http://pypi.python.org/pypi
+
+
+.. _`setuptools`: http://peak.telecommunity.com/DevCenter/setuptools
 
 
 Installing from pre-built binaries
 ==================================
 
-Pre-built binaries are available for Windows XP and Mac OS X. To install these:
+Pre-built binaries are available for Windows XP and Mac OS X. There are at least
+two ways to install these:
 
-1. Download the pre-built binary for your platform from `PyPI`_. 
+1. Download the pre-built binary for your platform from `PyPI`_, which installs them
+automatically or,
 
-2. Double-click the executable installation package, and follow the on-screen 
-   instructions.
+2. Manually download packages (e.g. from the `PyMC site`_) and double-click 
+the executable installation package, then follow the on-screen instructions.
 
 For other platforms, you will need to build the package yourself from source. 
 Fortunately, this should be relatively straightforward.
+
+.. _`PyMC site`: pymc.googlecode.com
+
 
 Compiling the source code
 =========================
@@ -128,25 +137,16 @@ In a terminal, type::
 This assumes you are using the GCC compiler (recommended). Otherwise, 
 change the --compiler argument accordingly. 
 
-Mac OS X
---------
+Mac OS X or Linux
+-----------------
 In a terminal, type::
 
     python setup.py build
     sudo python setup.py install
 
-You will be prompted for a password, and provided you have superuser privilege, 
-the installation will proceed.
-
-Linux
------
-In a terminal, type::
-
-       python setup.py build
-       sudo python setup.py install
-
-The `sudo` command is required to install PyMC into the Python 
-``site-packages`` directory if it has restricted privileges.
+The `sudo` command is required to install PyMC into the Python ``site-packages`` 
+directory if it has restricted privileges. You will be prompted for a password, 
+and provided you have superuser privileges, the installation will proceed.
 
 
 .. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
