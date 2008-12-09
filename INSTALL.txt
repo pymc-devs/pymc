@@ -54,7 +54,7 @@ Mac OSX users, we recommend the `MacPython`_ distribution, the
 OSX 10.5 (Leopard). Windows users should download and install the 
 `Enthought Python Distribution`_. The Enthought Python Distribution comes 
 bundled with these prerequisites. Note that depending on the currency of these
- distributions, some packages may need to be updated manually.
+distributions, some packages may need to be updated manually.
 
 If instead of installing the prebuilt binaries you prefer (or have) to build 
 ``pymc`` yourself, make sure you have a Fortran and a C compiler. There are free

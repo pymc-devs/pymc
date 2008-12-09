@@ -86,7 +86,7 @@ First, define your model in a file, say mymodel.py (with comments, of course!)::
        return pymc.invlogit(a+b*x)
 
    # Binomial likelihood for data
-   d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]), isdata=True)
+   d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]), observed=True)
 
 Save this file, then from a python shell (or another filein the same directory), call::
 
