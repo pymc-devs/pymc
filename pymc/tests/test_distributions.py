@@ -22,9 +22,9 @@ import unittest
 from numpy.testing import *
 from pymc import flib, utils
 import numpy as np
-from numpy import *
+from numpy import exp, log, array, sqrt
 from numpy.linalg import cholesky
-import os, pdb, warnings
+import os, pdb, warnings, nose
 warnings.simplefilter('ignore', DeprecationWarning)
 PLOT=True
 DIR = 'testresults'
@@ -40,8 +40,8 @@ try:
     from scipy.optimize import fmin
     SP = True
 except:
-    print 'Some of the tests might not pass because they depend on SciPy functions.'
     SP= False
+
 try:
     import pylab as P
 except:
@@ -118,9 +118,9 @@ def mv_normal(x, mu, C):
 
 def multivariate_lognormal(x, mu, C):
     N = len(x)
-    x = asmatrix(x)
-    mu = asmatrix(mu)
-    C = asmatrix(C)
+    x = np.asmatrix(x)
+    mu = np.asmatrix(mu)
+    C = np.asmatrix(C)
     
     I = (2*pi)**(N/2.) * sqrt(det(C))
     z = (np.log(x)-mu)
@@ -252,7 +252,7 @@ def normalization(like, parameters, domain, N=100):
         return np.trapz(y,x)
 
 def discrete_normalization(like, parameters, N):
-    return sum(exp([like(x,**parameters) for x in arange(N)]))
+    return sum(exp([like(x,**parameters) for x in np.arange(N)]))
 
 class test_arlognormal(TestCase):
     def like(self, parameters, r):
@@ -277,7 +277,8 @@ class test_arlognormal(TestCase):
         assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
     
     def test_consistency(self):
-    
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         # 1D case
         a = 1
         rho =.8
@@ -404,8 +405,8 @@ class test_dirichlet(TestCase):
         
         s = theta.sum()
         m = r.mean(0)
-        m = append(m, 1-sum(m))
-        cov_ex = np.cov(append(r.transpose(), 1.-sum(r.transpose(),0)))
+        m = np.append(m, 1-sum(m))
+        cov_ex = np.cov(np.append(r.transpose(), 1.-sum(r.transpose(),0)))
 
         # Theoretical mean
         M = theta/s
@@ -415,6 +416,8 @@ class test_dirichlet(TestCase):
         assert_array_almost_equal(cov_ex, cov_th,1)
     
     def test_like(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         theta = np.array([2.,3.,5.])
         x = np.array([.4,.2,.4])
         l = flib.dirichlet(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
@@ -487,6 +490,8 @@ class test_exponweib(TestCase):
         # scipy.exponweib.stats is buggy. may 17, 2007
 
     def test_with_scipy(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         parameters = {'alpha':2, 'k':.3, 'loc':1, 'scale':3}
         r = rexponweib(size=10, **parameters)
         a = exponweib.pdf(r, 2,.3, 1, 3)
@@ -532,6 +537,8 @@ class test_gev(TestCase):
         assert_array_almost_equal(hist, like,1)
 
     def test_with_scipy(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         x = [1,2,3,4]
         scipy_y = log(genextreme.pdf(x, -.3, 4, 2))
         flib_y = []
@@ -650,6 +657,8 @@ class test_multinomial(TestCase):
         assert_array_almost_equal(rvar, n*p*(1-p),1)
     
     def test_consistency(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
@@ -673,6 +682,8 @@ class test_multivariate_hypergeometric(TestCase):
         assert_array_almost_equal(r.mean(0), multivariate_hypergeometric_expval(n,m),1)
         
     def test_likelihood(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         m = [10,15]
         x = [3,4]
         a = multivariate_hypergeometric_like(x, m)
@@ -684,7 +695,7 @@ class test_mv_normal(TestCase):
     
     def test_random(self):
         mu = array([3,4])
-        C = matrix([[1, .5],[.5,1]])
+        C = np.matrix([[1, .5],[.5,1]])
 
         r = rmv_normal(mu, np.linalg.inv(C), 1000)
         rC = rmv_normal_cov(mu,C,1000)
@@ -701,7 +712,7 @@ class test_mv_normal(TestCase):
             
     def test_likelihood(self):
         mu = array([3,4])
-        C = matrix([[1, .5],[.5,1]])
+        C = np.matrix([[1, .5],[.5,1]])
         
 
         tau = np.linalg.inv(C)
@@ -758,7 +769,8 @@ class test_skew_normal(TestCase):
     def test_consistency(self):
         parameters = dict(mu=10, tau=10, alpha=-5)
         hist,like, figdata = consistency(rskew_normal, skew_normal_like, parameters, nrandom=5000)
-        compare_hist(figname='truncnorm', **figdata)
+        if PLOT:
+            compare_hist(figname='truncnorm', **figdata)    
         assert_array_almost_equal(hist, like,1)
 
     def test_normalization(self):
@@ -792,6 +804,8 @@ class test_truncnorm(TestCase):
         assert (r < 20).all()
         
     def test_against_scipy(self):
+        if not SP:
+            raise nose.SkipTest, "SciPy not installed."
         mu = 3. 
         sigma = 2.
         tau = 1./sigma**2
@@ -846,8 +860,10 @@ class test_wishart(TestCase):
                           [  13.80581557,   11.18453854,  209.89396417]])/100.
   
     def test_likelihoods(self):
-
-        from scipy.special import gammaln    
+        try:
+            from scipy.special import gammaln    
+        except:
+            raise nose.SkipTest, "SciPy not installed."
 
         W_test = rwishart(100,self.Tau_test)
 
@@ -894,8 +910,10 @@ class test_inverse_wishart(TestCase):
                           [  13.80581557,   11.18453854,  209.89396417]]).I
   
     def test_likelihoods(self):
-
-        from scipy.special import gammaln    
+        try:
+            from scipy.special import gammaln    
+        except:
+            raise nose.SkipTest, "SciPy not installed."
 
         IW_test = rinverse_wishart(100,self.Tau_test)
 
@@ -931,7 +949,7 @@ class test_inverse_wishart(TestCase):
 
 class test_Stochastic_generator(TestCase):
     def test_randomwrap(self):
-        B = Bernoulli('x', ones(10)*.5, value=ones(10))
+        B = Bernoulli('x', np.ones(10)*.5, value=np.ones(10))
         assert_equal(B.value.shape, (10,))
         B.random()
         assert_equal(B.value.shape, (10,))

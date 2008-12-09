@@ -721,8 +721,8 @@ def getInput():
     """Read the input buffer without blocking the system."""
     input = ''
     try:   # Windows
-        import win32api
-        sock = win32api.GetStdHandle(win32api.STD_INPUT_HANDLE)
+        from ctypes import windll
+        sock = windll.kernel32.GetStdHandle(windll.kernel32.STD_INPUT_HANDLE)
     except: # Other platforms
         sock = sys.stdin.fileno()
       

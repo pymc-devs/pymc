@@ -8,11 +8,18 @@ except:
 from numpy import *
 from numpy.testing import * 
 from numpy.linalg import cholesky
+import nose
 PLOT=False
 
 model = gelman_bioassay
 
 class test_norm_approx(TestCase):
+    @classmethod
+    def setUpClass(self):
+        try:
+            import scipy
+        except:
+            raise nose.SkipTest,"SciPy not installed."
     def test_fmin(self):
         N = NormApprox(model)
         N.fit('fmin')
