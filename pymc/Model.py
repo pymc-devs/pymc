@@ -571,7 +571,6 @@ class Sampler(Model):
                         pass
                     elif cmd == '':
                         prompt = False
-                        sleep(.5)
                     else:
                         print >> out, 'Unknown command: ', cmd
                         print >> out, cmds

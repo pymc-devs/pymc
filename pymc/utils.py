@@ -723,10 +723,14 @@ def getInput():
     try:   # Windows
         from ctypes import windll
         sock = windll.kernel32.GetStdHandle(windll.kernel32.STD_INPUT_HANDLE)
-    except: # Other platforms
+        # If that doesn't work, try again with sock = sys.stdin, but import socket first.
+    except: # Other platforms 
+        # Posix will work with sys.stdin or sys.stdin.fileno()
+        # Mac needs the file descriptor. 
         sock = sys.stdin.fileno()
       
-    while len(select.select([sock], [], [], 0.0)[0])>0:
+    #select(rlist, wlist, xlist, timeout)
+    while len(select.select([sock], [], [], 0.1)[0])>0:  
         input += os.read(sock, 4096)
     return input
 
