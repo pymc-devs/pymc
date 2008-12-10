@@ -7,13 +7,14 @@ from pymc import MCMC
 from pymc.examples import DisasterModel
 import nose,  warnings
 warnings.simplefilter('ignore', FutureWarning)
-
+PLOT=True
 try:
     from pymc.Matplot import plot, autocorrelation
 except:
+    PLOT=False
     pass
 
-PLOT=True
+
 DIR = 'testresults/'
 
 
