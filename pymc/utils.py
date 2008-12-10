@@ -720,18 +720,28 @@ def log_difference(lx, ly):
 def getInput():
     """Read the input buffer without blocking the system."""
     input = ''
-    try:   # Windows
-        from ctypes import windll
-        sock = windll.kernel32.GetStdHandle(windll.kernel32.STD_INPUT_HANDLE)
-        # If that doesn't work, try again with sock = sys.stdin, but import socket first.
-    except: # Other platforms 
+    
+    if sys.platform=='win32':
+        import msvcrt
+        if msvcrt.kbhit():  # Check for a keyboard hit.
+            input += msvcrt.getch()
+            print input
+        else:
+            time.sleep(.1) 
+            
+        
+    else: # Other platforms 
         # Posix will work with sys.stdin or sys.stdin.fileno()
         # Mac needs the file descriptor. 
+        # This solution does not work for windows since select
+        # expects a socket, and I have no idea how to create a 
+        # socket from standard input. 
         sock = sys.stdin.fileno()
       
-    #select(rlist, wlist, xlist, timeout)
-    while len(select.select([sock], [], [], 0.1)[0])>0:  
-        input += os.read(sock, 4096)
+        #select(rlist, wlist, xlist, timeout)
+        while len(select.select([sock], [], [], 0.1)[0])>0:  
+            input += os.read(sock, 4096)
+    
     return input
 
 def discrepancy(observed, simulated, expected):

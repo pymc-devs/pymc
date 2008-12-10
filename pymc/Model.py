@@ -495,6 +495,7 @@ class Sampler(Model):
                 self.sample(*args, **kwds)
             except:
                 self._exc_info = sys.exc_info()
+            
         self._sampling_thread = Thread(target=samp_targ, args=args, kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
