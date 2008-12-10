@@ -5,7 +5,7 @@
 # Author: David Huard, 2006
 
 import numpy as np
-import sys, inspect, select, os
+import sys, inspect, select, os,  time
 from copy import copy
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 import flib
