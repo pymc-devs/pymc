@@ -7,6 +7,8 @@ try:
     from numpy.testing import Tester
     test = Tester().test
 except ImportError:
-    warnings.warn('NumPy 1.2 is required to run the test suite.', ImportWarning)
+    warnings.warn('NumPy 1.2  and nose are required to run the test suite.', ImportWarning)
+    def test():
+        return "Please install nose to run the test suite."
 
     
