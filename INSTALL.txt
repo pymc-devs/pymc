@@ -46,6 +46,8 @@ freely available online.
 * `IPython`_ (optional): An enhanced interactive Python shell and an 
   architecture for interactive parallel computing. 
 
+* `nose`_ (optional): A test discovery-based unittest extension (required
+  to run the test suite.
 
 
 There are prebuilt distributions that include all required dependencies. For 
@@ -173,8 +175,7 @@ Running the test suite
 
 ``pymc`` comes with a set of tests that verify that the critical components
 of the code work as expected. To run these tests, users must have `nose`_
-installed on their system (this should not be a problem since nose is also
-a NumPy dependency). The tests are launched from a python shell::  
+installed. The tests are launched from a python shell::  
 
     import pymc
     pymc.test()

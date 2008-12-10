@@ -139,6 +139,8 @@ Notice that the log-probability and random variate functions are specified exter
 \begin{center}
 \begin{boxedminipage}{.9\textwidth} 
 \subsection*{Don't update stochastic variables' values in-place}
+\end{center}
+
 
 \code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
 \begin{verbatim}
@@ -369,7 +371,7 @@ to
 \begin{eqnarray*}
     \gamma(S) p(t|S(x,\beta)) p(\beta),
 \end{eqnarray*}
-where the value of $\gamma$is large if $S$'s value is plausible (based on our external information) and small otherwise. We do not know the normalizing constant for the new distribution, but we don't need it to use most popular fitting algorithms. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed. 
+where the value of $\gamma$ is large if $S$'s value is plausible (based on our external information) and small otherwise. We do not know the normalizing constant for the new distribution, but we don't need it to use most popular fitting algorithms. It's a good idea to check the induced priors on $S$ and $\beta$ for sanity. This can be done in PyMC by fitting the model with the data $t$ removed. 
 
 It's important to understand that $\gamma$ is not a variable, so it does not have a value. That means, among other things, there will be no $\gamma$ column in MCMC traces. $\gamma$ is simply an extra term that we are incorporating in the joint distribution.
 

@@ -8,12 +8,13 @@
 \hypertarget{purpose}{}
 \pdfbookmark[0]{Purpose}{purpose}
 \section*{Purpose}
+\label{purpose}
 
 PyMC is a python module that implements Bayesian statistical models and
-fitting algorithms, including Markov chain Monte Carlo. 
-Its flexibility makes it applicable to a large suite of problems as well as 
-easily extensible. Along with core sampling functionality, PyMC includes 
-methods for summarizing output, plotting, goodness-of-fit and convergence 
+fitting algorithms, including Markov chain Monte Carlo.
+Its flexibility makes it applicable to a large suite of problems as well as
+easily extensible. Along with core sampling functionality, PyMC includes
+methods for summarizing output, plotting, goodness-of-fit and convergence
 diagnostics.
 
 
@@ -22,9 +23,10 @@ diagnostics.
 \hypertarget{features}{}
 \pdfbookmark[0]{Features}{features}
 \section*{Features}
+\label{features}
 \begin{itemize}
 \item {} 
-Fits Bayesian statistical models you create with Markov chain Monte Carlo and 
+Fits Bayesian statistical models you create with Markov chain Monte Carlo and
 other algorithms.
 
 \item {} 
@@ -47,11 +49,11 @@ database, or hdf5 archives.
 Convergence diagnostics.
 
 \item {} 
-Extensible: easily incorporates custom step methods and unusual probability 
+Extensible: easily incorporates custom step methods and unusual probability
 distributions.
 
 \item {} 
-MCMC loops can be embedded in larger programs, and results can be analyzed 
+MCMC loops can be embedded in larger programs, and results can be analyzed
 with the full power of Python.
 
 \end{itemize}
@@ -62,12 +64,13 @@ with the full power of Python.
 \hypertarget{what-s-new-in-2-0}{}
 \pdfbookmark[0]{What's new in 2.0}{what-s-new-in-2-0}
 \section*{What's new in 2.0}
+\label{what-s-new-in-2-0}
 \begin{itemize}
 \item {} 
 New flexible object model and syntax (not backward-compatible).
 
 \item {} 
-Reduced redundant computations: only relevant log-probability terms are 
+Reduced redundant computations: only relevant log-probability terms are
 computed, and these are cached.
 
 \item {} 
@@ -87,6 +90,7 @@ Much more!
 \hypertarget{usage}{}
 \pdfbookmark[0]{Usage}{usage}
 \section*{Usage}
+\label{usage}
 
 First, define your model in a file, say mymodel.py (with comments, of course!):
 \begin{quote}{\ttfamily \raggedright \noindent
@@ -96,11 +100,11 @@ import~numpy~as~np~\\
 ~\\
 {\#}~Some~data~\\
 n~=~5*np.ones(4,dtype=int)~\\
-x~=~np.array({[}-.86,-.3,-.05,.73])~\\
+x~=~np.array({[}-.86,-.3,-.05,.73{]})~\\
 ~\\
 {\#}~Priors~on~unknown~parameters~\\
 alpha~=~pymc.Normal('alpha',mu=0,tau=.01)~\\
-beta~=~pymc.Normal('beta',mu=0,tau=.01)~~~~\\
+beta~=~pymc.Normal('beta',mu=0,tau=.01)~\\
 ~\\
 {\#}~Arbitrary~deterministic~function~of~parameters~\\
 @pymc.deterministic~\\
@@ -109,7 +113,7 @@ def~theta(a=alpha,~b=beta):~\\
 ~~~~return~pymc.invlogit(a+b*x)~\\
 ~\\
 {\#}~Binomial~likelihood~for~data~\\
-d~=~pymc.Binomial('d',~n=n,~p=theta,~value=np.array({[}0.,1.,3.,5.]),~observed=True)
+d~=~pymc.Binomial('d',~n=n,~p=theta,~value=np.array({[}0.,1.,3.,5.{]}),~observed=True)
 }\end{quote}
 
 Save this file, then from a python shell (or another filein the same directory), call:
@@ -130,6 +134,7 @@ This will generate 10000 posterior samples, thinned by a factor of 2, with the f
 \hypertarget{history}{}
 \pdfbookmark[0]{History}{history}
 \section*{History}
+\label{history}
 
 PyMC began development in 2003, as an effort to generalize the process of building Metropolis-Hastings samplers, with an aim to making Markov chain Monte Carlo (MCMC) more accessible to non-statisticians (particularly ecologists). The choice to develop PyMC as a python module, rather than a standalone application, allowed the use MCMC methods in a larger modeling framework. By 2005, PyMC was reliable enough for version 1.0 to be released to the public. A small group of regular users, most associated with the University of Georgia, provided much of the feedback necessary for the refinement of PyMC to a usable state.
 
@@ -141,11 +146,12 @@ In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development 
 \hypertarget{getting-started}{}
 \pdfbookmark[0]{Getting started}{getting-started}
 \section*{Getting started}
+\label{getting-started}
 
 This user guide provides all the information needed to install PyMC, code
-a Bayesian statistical model, run the sampler, save and analyze the results. 
-In addition, the appendix contains a chapter on MCMC theory as well as the list of the 
-available statistical distributions. More \href{http://code.google.com/p/pymc/}{examples} of usage as well as 
+a Bayesian statistical model, run the sampler, save and analyze the results.
+In addition, the appendix contains a chapter on MCMC theory as well as the list of the
+available statistical distributions. More \href{http://code.google.com/p/pymc/}{examples} of usage as well as
 \href{http://code.google.com/p/pymc/wiki/TutorialsAndRecipes}{tutorials}  are available from the PyMC web site.
 
 
