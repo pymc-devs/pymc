@@ -12,8 +12,7 @@ through the installation process.
 %___________________________________________________________________________
 
 \hypertarget{dependencies}{}
-\pdfbookmark[0]{Dependencies}{dependencies}
-\section*{Dependencies}
+\section{Dependencies}
 \label{dependencies}
 
 PyMC requires some prerequisite packages to be present on the system.
@@ -49,6 +48,10 @@ and engineering.
 \href{http://ipython.scipy.org/}{IPython} (optional): An enhanced interactive Python shell and an
 architecture for interactive parallel computing.
 
+\item {} 
+\href{http://somethingaboutorange.com/mrl/projects/nose/}{nose} (optional): A test discovery-based unittest extension (required
+to run the test suite).
+
 \end{itemize}
 
 There are prebuilt distributions that include all required dependencies. For
@@ -68,8 +71,7 @@ tested with PyMC but may work nonetheless.
 %___________________________________________________________________________
 
 \hypertarget{installation-using-easyinstall}{}
-\pdfbookmark[0]{Installation using EasyInstall}{installation-using-easyinstall}
-\section*{Installation using EasyInstall}
+\section{Installation using EasyInstall}
 \label{installation-using-easyinstall}
 
 The easiest way to install PyMC is to type in a terminal:
@@ -86,18 +88,25 @@ privileges to install software on your computer.
 %___________________________________________________________________________
 
 \hypertarget{installing-from-pre-built-binaries}{}
-\pdfbookmark[0]{Installing from pre-built binaries}{installing-from-pre-built-binaries}
-\section*{Installing from pre-built binaries}
+\section{Installing from pre-built binaries}
 \label{installing-from-pre-built-binaries}
 
 Pre-built binaries are available for Windows XP and Mac OS X. There are at least
 two ways to install these:
+\newcounter{listcnt0}
+\begin{list}{\arabic{listcnt0}.}
+{
+\usecounter{listcnt0}
+\setlength{\rightmargin}{\leftmargin}
+}
+\item {} 
+Download the installer for your platform from \href{http://pypi.python.org/pypi/pymc/}{PyPI}.
 
-1. Download the pre-built binary for your platform from \href{http://pypi.python.org/pypi/pymc/}{PyPI}, which installs them
-automatically or,
+\item {} 
+Double-click the executable installation package, then follow the
+on-screen instructions.
 
-2. Manually download packages (e.g. from the \href{pymc.googlecode.com}{PyMC site}) and double-click
-the executable installation package, then follow the on-screen instructions.
+\end{list}
 
 For other platforms, you will need to build the package yourself from source.
 Fortunately, this should be relatively straightforward.
@@ -106,8 +115,7 @@ Fortunately, this should be relatively straightforward.
 %___________________________________________________________________________
 
 \hypertarget{compiling-the-source-code}{}
-\pdfbookmark[0]{Compiling the source code}{compiling-the-source-code}
-\section*{Compiling the source code}
+\section{Compiling the source code}
 \label{compiling-the-source-code}
 
 First download the source code tarball from \href{http://pypi.python.org/pypi/pymc/}{PyPI} and unpack it. Then move
@@ -117,24 +125,32 @@ into the unpacked directory and follow the platform specific instructions.
 %___________________________________________________________________________
 
 \hypertarget{windows}{}
-\pdfbookmark[1]{Windows}{windows}
-\subsection*{Windows}
+\subsection{Windows}
 \label{windows}
 
-In a terminal, type:
+One way to compile PyMC on Windows is to install \href{http://www.mingw.org/}{MinGW} and \href{http://www.mingw.org/wiki/MSYS}{MSYS}. MinGW is
+the GNU Compiler Collection (GCC) augmented with Windows specific headers and
+libraries. MSYS is a POSIX-like console (bash) with UNIX command line tools.
+Download the \href{http://sourceforge.net/project/showfiles.php?group_id=2435}{Automated MinGW Installer} and double-click on it to launch
+the installation process. You will be asked to select which
+components are to be installed: make sure the g77 compiler is selected and
+proceed with the instructions. Then download and install \href{http://downloads.sourceforge.net/mingw/MSYS-1.0.10.exe}{MSYS-1.0.exe},
+launch it and again follow the on-screen instructions.
+
+Once this is done, launch the MSYS console, change into the PyMC directory and
+type:
 \begin{quote}{\ttfamily \raggedright \noindent
-python~setup.py~build~-{}-compiler=mingw32~install
+python~setup.py~install
 }\end{quote}
 
-This assumes you are using the GCC compiler (recommended). Otherwise,
-change the -{}-compiler argument accordingly.
+This will build the C and Fortran extension and copy the libraries and python
+modules in the C:/Python25/Lib/site-packages/pymc directory.
 
 
 %___________________________________________________________________________
 
 \hypertarget{mac-os-x-or-linux}{}
-\pdfbookmark[1]{Mac OS X or Linux}{mac-os-x-or-linux}
-\subsection*{Mac OS X or Linux}
+\subsection{Mac OS X or Linux}
 \label{mac-os-x-or-linux}
 
 In a terminal, type:
@@ -151,8 +167,7 @@ and provided you have superuser privileges, the installation will proceed.
 %___________________________________________________________________________
 
 \hypertarget{development-version}{}
-\pdfbookmark[0]{Development version}{development-version}
-\section*{Development version}
+\section{Development version}
 \label{development-version}
 
 You can check out the bleeding edge version of the code from the \href{http://subversion.tigris.org/}{subversion}
@@ -167,14 +182,12 @@ Previous versions are available in the \texttt{/tags} directory.
 %___________________________________________________________________________
 
 \hypertarget{running-the-test-suite}{}
-\pdfbookmark[0]{Running the test suite}{running-the-test-suite}
-\section*{Running the test suite}
+\section{Running the test suite}
 \label{running-the-test-suite}
 
 \texttt{pymc} comes with a set of tests that verify that the critical components
 of the code work as expected. To run these tests, users must have \href{http://somethingaboutorange.com/mrl/projects/nose/}{nose}
-installed on their system (this should not be a problem since nose is also
-a NumPy dependency). The tests are launched from a python shell:
+installed. The tests are launched from a python shell:
 \begin{quote}{\ttfamily \raggedright \noindent
 import~pymc~\\
 pymc.test()
@@ -189,8 +202,7 @@ the environment.
 %___________________________________________________________________________
 
 \hypertarget{bugs-and-feature-requests}{}
-\pdfbookmark[0]{Bugs and feature requests}{bugs-and-feature-requests}
-\section*{Bugs and feature requests}
+\section{Bugs and feature requests}
 \label{bugs-and-feature-requests}
 
 Report problems with the installation, bugs in the code or feature request at

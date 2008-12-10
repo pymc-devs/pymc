@@ -15,8 +15,7 @@ description of each individual backend.
 %___________________________________________________________________________
 
 \hypertarget{accessing-sampled-data}{}
-\pdfbookmark[0]{Accessing Sampled Data}{accessing-sampled-data}
-\section*{Accessing Sampled Data}
+\section{Accessing Sampled Data}
 \label{accessing-sampled-data}
 
 To recommended way to access data from an MCMC run, irrespective of the
@@ -53,8 +52,7 @@ array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~\\
 %___________________________________________________________________________
 
 \hypertarget{saving-data-to-disk}{}
-\pdfbookmark[0]{Saving Data to Disk}{saving-data-to-disk}
-\section*{Saving Data to Disk}
+\section{Saving Data to Disk}
 \label{saving-data-to-disk}
 
 By default, the database backend selected by the \texttt{MCMC} sampler is the \texttt{ram}
@@ -96,8 +94,7 @@ the risk of losing your data.
 %___________________________________________________________________________
 
 \hypertarget{loading-back-a-database}{}
-\pdfbookmark[0]{Loading Back a Database}{loading-back-a-database}
-\section*{Loading Back a Database}
+\section{Loading Back a Database}
 \label{loading-back-a-database}
 
 To load a file created in a previous session, use the \texttt{load} function
@@ -127,16 +124,14 @@ instance:
 %___________________________________________________________________________
 
 \hypertarget{backends-description}{}
-\pdfbookmark[0]{Backends Description}{backends-description}
-\section*{Backends Description}
+\section{Backends Description}
 \label{backends-description}
 
 
 %___________________________________________________________________________
 
 \hypertarget{ram}{}
-\pdfbookmark[1]{ram}{ram}
-\subsection*{ram}
+\subsection{ram}
 \label{ram}
 
 Used by default, this backend simply holds a copy in memory, with no output
@@ -149,8 +144,7 @@ applications on your computer.
 %___________________________________________________________________________
 
 \hypertarget{no-trace}{}
-\pdfbookmark[1]{no{\_}trace}{no-trace}
-\subsection*{no{\_}trace}
+\subsection{no{\_}trace}
 \label{no-trace}
 
 This backend simply does not store the trace. This may be useful for testing
@@ -160,8 +154,7 @@ purposes.
 %___________________________________________________________________________
 
 \hypertarget{txt}{}
-\pdfbookmark[1]{txt}{txt}
-\subsection*{txt}
+\subsection{txt}
 \label{txt}
 
 With the \texttt{txt} backend, the data is written to disk in ASCII files.
@@ -200,8 +193,7 @@ into memory.
 %___________________________________________________________________________
 
 \hypertarget{pickle}{}
-\pdfbookmark[1]{pickle}{pickle}
-\subsection*{pickle}
+\subsection{pickle}
 \label{pickle}
 
 The \texttt{pickle} database relies on the \texttt{cPickle} module to save the
@@ -216,8 +208,7 @@ the state of the \texttt{Sampler}'s step methods.
 %___________________________________________________________________________
 
 \hypertarget{sqlite}{}
-\pdfbookmark[1]{sqlite}{sqlite}
-\subsection*{sqlite}
+\subsection{sqlite}
 \label{sqlite}
 
 The \texttt{sqlite} backend is based on the python module \href{http://www.sqlite.org}{sqlite3} (
@@ -244,8 +235,7 @@ the \texttt{sqlite} backend.
 %___________________________________________________________________________
 
 \hypertarget{mysql}{}
-\pdfbookmark[1]{mysql}{mysql}
-\subsection*{mysql}
+\subsection{mysql}
 \label{mysql}
 
 The \texttt{mysql} backend depends on the \href{http://www.mysql.com/downloads/}{MySQL} library and its python wrapper
@@ -290,8 +280,7 @@ the \texttt{mysql} backend.
 %___________________________________________________________________________
 
 \hypertarget{hdf5}{}
-\pdfbookmark[1]{hdf5}{hdf5}
-\subsection*{hdf5}
+\subsection{hdf5}
 \label{hdf5}
 
 The \texttt{hdf5} backend uses \href{http://www.pytables.org/moin}{pyTables} to save data in binary HDF5 format.
@@ -348,8 +337,7 @@ the \href{http://www.pytables.org/moin}{pyTables} manual).
 %___________________________________________________________________________
 
 \hypertarget{writing-a-new-backend}{}
-\pdfbookmark[0]{Writing a New Backend}{writing-a-new-backend}
-\section*{Writing a New Backend}
+\section{Writing a New Backend}
 \label{writing-a-new-backend}
 
 It is relatively easy to write a new backend for \texttt{PyMC}. The first step is to

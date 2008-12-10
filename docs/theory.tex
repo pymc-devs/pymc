@@ -3,7 +3,7 @@
 \hypertarget{monte-carlo-methods-in-bayesian-analysis}{}
 \pdfbookmark[0]{Monte Carlo Methods in Bayesian Analysis}{monte-carlo-methods-in-bayesian-analysis}
 
-\section*{Monte Carlo Methods in Bayesian Analysis}
+\section{Monte Carlo Methods in Bayesian Analysis}
 
 Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating (drawing samples) from posterior distributions. For example, consider the expected value of a random variable $\mathbf{x}$:
 
@@ -45,7 +45,7 @@ E[h(\theta)|d] = \int f(\theta|d) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1
 
 \hypertarget{rejection-sampling}{}
 \pdfbookmark[1]{Rejection Sampling}{rejection-sampling}
-\subsection*{Rejection Sampling}
+\subsection{Rejection Sampling}
 
 Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
@@ -87,7 +87,7 @@ Rejection sampling is usually subject to declining performance as the dimension 
 
 \hypertarget{markov-chains}{}
 \pdfbookmark[0]{Markov Chains}{markov-chains}
-\section*{Markov Chains}
+\section{Markov Chains}
 
 A Markov chain is a special type of \emph{stochastic process}. The standard definition of a stochastic process is an ordered collection of random variables:
 
@@ -109,7 +109,7 @@ Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+
 
 \hypertarget{jargon-busting}{}
 \pdfbookmark[1]{Jargon-busting}{jargon-busting}
-\subsection*{Jargon-busting}
+\subsection{Jargon-busting}
 
 Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
 
@@ -140,7 +140,7 @@ Before we move on, it is important to define some general properties of Markov c
 
 \hypertarget{reversible-markov-chains}{}
 \pdfbookmark[0]{Why MCMC Works: Reversible Markov Chains}{reversible-markov-chains}
-\section*{Why MCMC Works: Reversible Markov Chains}
+\section{Why MCMC Works: Reversible Markov Chains}
 
 Markov chain Monte Carlo simulates a Markov chain for which some function of interest (\emph{e.g.} the joint distribution of the parameters of some model) is the unique, invariant limiting distribution. An invariant distribution with respect to some Markov chain with transition kernel $Pr(y \mid x)$ implies that:
 \[
@@ -178,7 +178,7 @@ Hence, if $\pi$ is of interest, we need only find the reversible Markov chain fo
 
 \hypertarget{gibbs-sampling}{}
 \pdfbookmark[0]{Gibbs Sampling}{gibbs-sampling}
-\section*{Gibbs Sampling}
+\section{Gibbs Sampling}
 
 The Gibbs sampler is the simplest and most prevalent MCMC algorithm. If a posterior has $k$ parameters to be estimated, we may condition each parameter on current values of the other $k-1$ parameters, and sample from the resultant distributional form (usually easier), and repeat this operation on the other parameters in turn. This procedure generates samples from the posterior distribution. Note that we have now combined Markov chains (conditional independence) and Monte Carlo techniques (estimation by simulation) to yield Markov chain Monte Carlo.
 
@@ -205,7 +205,7 @@ As we can see from the algorithm, each distribution is conditioned on the last i
 
 \hypertarget{the-metropolis-hastings-algorithm}{}
 \pdfbookmark[0]{The Metropolis-Hastings Algorithm}{the-metropolis-hastings-algorithm}
-\section*{The Metropolis-Hastings Algorithm}
+\section{The Metropolis-Hastings Algorithm}
 
 The key to success in applying the Gibbs sampler to the estimation of Bayesian posteriors is being able to specify the form of the complete conditionals of ${\bf \theta}$. In fact, the algorithm cannot be implemented without them. Of course, the posterior conditionals cannot always be neatly specified. In contrast to the Gibbs algorithm, the Metropolis-Hastings algorithm generates candidate state transitions from an alternate distribution, and accepts or rejects each candidate probabilistically.
 
@@ -239,7 +239,7 @@ A single iteration of the Metropolis-Hastings algorithm proceeds as follows:
 
 \hypertarget{random-walk-metropolis-hastings}{}
 \pdfbookmark[1]{Random-walk Metropolis-Hastings}{random-walk-metropolis-hastings}
-\subsection*{Random-walk Metropolis-Hastings}
+\subsection{Random-walk Metropolis-Hastings}
 
 A practical implementation of the Metropolis-Hastings algorithm makes use of a random-walk proposal. Recall that a random walk is a Markov chain that evolves according to:
 

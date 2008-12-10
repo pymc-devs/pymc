@@ -1,7 +1,6 @@
 %!TEX root = guide2.0.tex
 
-
-\section*{An example statistical model}
+\section{An example statistical model}
 Consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
@@ -32,7 +31,7 @@ The symbols are defined as:
 \end{description}
 Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter three are known as the `parents' of $D$ and $D$ is called their `child'. Similarly, the parents of $s$ are $t_l$ and $t_h$, and $s$ is the child of $t_l$ and $t_h$.
 
-\section*{Two types of variables}
+\section{Two types of variables}
 
 At the model-specification stage (before the data are observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is \emph{epistemic}, meaning random variable $x$'s probability density $p(x)$ represents our knowledge and uncertainty about $x$'s value. Candidate values of $x$ for which $p(x)$ is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes \code{Stochastic} and \code{Deterministic}. 
 
@@ -81,7 +80,8 @@ The last step is to define the number of disasters $D$. This is a stochastic var
 	D = Poisson('D', mu=r, value=disasters_array, observed=True)
 \end{verbatim}
 
-\subsection*{Why are data and unknown variables represented by the same object?}
+\subsection{Why are data and unknown variables represented by the same
+object?}
 Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former conditions on (and integrates over) the parameters and the latter on the data. 
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
@@ -110,7 +110,7 @@ Even after we observe the value of $D$, we need to use this process model to mak
 % and we would have no use for MCMC or any other fitting method. Bayesian methods, and statistics in general, are needed when it's feasible to write down the data's dependence on the unknown variables but not vice versa.
 
 
-\section*{Parents and children}
+\section{Parents and children}
 
 We have above created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run \code{DisasterModel.py} and examine $s$'s \code{parents} attribute from the Python prompt:
 \begin{verbatim}
@@ -134,7 +134,7 @@ The following `directed acyclic graph' is a visualization of the parent-child re
    \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
 
-\section*{Variables' values and log-probabilities}
+\section{Variables' values and log-probabilities}
 All PyMC variables have an attribute called \code{value} that stores the current value of that variable. Try examining $D$'s value, and you'll see the initial value we provided for it:
 \begin{verbatim}
    >>> D.value
@@ -201,7 +201,8 @@ To compute its value, $r$ calls the funtion we used to create it, passing in the
 \end{verbatim}
 \code{Stochastic} objects need to call an internal function to compute their \code{logp} attributes, as $r$ needed to call an internal function to compute its value. Just as we created $r$ by decorating a function that computes its value, it's possible to create custom \code{Stochastic} objects by decorating functions that compute their log-probabilities or densities (see chapter \ref{chap:modelbuilding}). Users are thus not limited to the set of of statistical distributions provided by PyMC.
 
-\subsection*{Using \code{Variables} as parents of other \code{Variables}}
+\subsection[Using Variables as parents of other Variables]{Using
+\code{Variables} as parents of other \code{Variables}}
 
 Let's take a closer look at our definition of $r$:
 \begin{verbatim}
@@ -217,7 +218,7 @@ The arguments $s$, $e$ and $l$ are \code{Stochastic} objects, not numbers. Why a
 
 Whenever a variable is used as a parent for a child variable, PyMC replaces it with its \code{value} attribute when the child's value or log-probability is computed. When $r$'s value is recomputed, \code{s.value} is passed to the function as argument \code{s}. To see the values of the parents of $r$ all together, look at \code{r.parents.value}.
 
-\section*{Fitting the model with MCMC}
+\section{Fitting the model with MCMC}
 
 PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm. See appendix \ref{chap:MCMC} for an introduction to the algorithm itself. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{verbatim}
@@ -231,7 +232,7 @@ To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()})
 \end{verbatim}
 After a few seconds, you should see that sampling has finished normally. The model has been fitted.
 
-\subsection*{What does it mean to fit a model?}
+\subsection{What does it mean to fit a model?}
 
 `Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to characterize the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\cite{gelman}) for \code{iter}  iterations. 
 
@@ -239,7 +240,7 @@ After a sufficiently large number of iterations, the current values of $s$, $e$ 
 
 If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \cite{gelman} for general guidance.  
 
-\subsection*{Accessing the samples}
+\subsection{Accessing the samples}
 The output of the MCMC algorithm is a `trace', the sequence of retained
 samples for each variable in the model. These traces can be accessed
 using the \code{trace(name, chain=-1)} method. For example:
@@ -263,7 +264,7 @@ Alternatively, the trace may be retrieved directly from the variable:
 	array([41, 40, 40, ..., 43, 44, 44])
 \end{verbatim}
 
-\subsection*{Sampling output} 
+\subsection{Sampling output} 
 You can examine the marginal posterior of any variable by plotting a histogram of its trace:
 \begin{verbatim}
    >>> from pylab import hist, show
@@ -296,7 +297,7 @@ The left-hand pane of this figure shows the temporal series of the samples from 
 For a non-graphical summary of the posterior, simply call \code{M.stats()}.
 
 \hypertarget{missing}{}
-\subsection*{Imputation of Missing Data} % (fold)
+\subsection{Imputation of Missing Data} % (fold)
 \pdfbookmark[1]{Imputation of Missing Data}{missing}
 %\label{subsec:missing_data}
 
@@ -434,7 +435,7 @@ The main limitation of this approach for imputation is performance. Because each
 % section missing_data (end)
 
 
-\section*{Fine-tuning the MCMC algorithm} 
+\section{Fine-tuning the MCMC algorithm} 
 
 MCMC objects handle individual variables via \emph{step methods}, which determine how parameters are updated at each step of the MCMC algorithm. By default, step methods are automatically assigned to variables by PyMC. To see which step methods $M$ is using, look at its \code{step_method_dict} attribute with respect to each parameter:
 \begin{verbatim}
@@ -456,7 +457,7 @@ You can force $M$ to use a particular step method by calling \code{M.use_step_me
 
 Another step method class, \code{AdaptiveMetropolis}, is better at handling highly-correlated variables. If your model mixes poorly, using \code{AdaptiveMetropolis} is a sensible first thing to try.
 
-\section*{Beyond the basics}
+\section{Beyond the basics}
 That was a brief introduction to basic PyMC usage. Many more topics are covered in the subsequent sections, including:
 \begin{itemize}
    \item Class \code{Potential}, another building block for probability models in addition to \code{Stochastic} and \code{Deterministic}

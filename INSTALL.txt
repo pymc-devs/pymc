@@ -47,7 +47,7 @@ freely available online.
   architecture for interactive parallel computing. 
 
 * `nose`_ (optional): A test discovery-based unittest extension (required
-  to run the test suite.
+  to run the test suite).
 
 
 There are prebuilt distributions that include all required dependencies. For 
@@ -112,11 +112,10 @@ Installing from pre-built binaries
 Pre-built binaries are available for Windows XP and Mac OS X. There are at least
 two ways to install these:
 
-1. Download the pre-built binary for your platform from `PyPI`_, which installs them
-automatically or,
+1. Download the installer for your platform from `PyPI`_. 
 
-2. Manually download packages (e.g. from the `PyMC site`_) and double-click 
-the executable installation package, then follow the on-screen instructions.
+2. Double-click the executable installation package, then follow the 
+   on-screen instructions.
 
 For other platforms, you will need to build the package yourself from source. 
 Fortunately, this should be relatively straightforward.
@@ -132,12 +131,33 @@ into the unpacked directory and follow the platform specific instructions.
 
 Windows
 -------
-In a terminal, type::
 
-    python setup.py build --compiler=mingw32 install
+One way to compile PyMC on Windows is to install `MinGW`_ and `MSYS`_. MinGW is
+the GNU Compiler Collection (GCC) augmented with Windows specific headers and
+libraries. MSYS is a POSIX-like console (bash) with UNIX command line tools.  
+Download the `Automated MinGW Installer`_ and double-click on it to launch 
+the installation process. You will be asked to select which 
+components are to be installed: make sure the g77 compiler is selected and 
+proceed with the instructions. Then download and install `MSYS-1.0.exe`_, 
+launch it and again follow the on-screen instructions. 
 
-This assumes you are using the GCC compiler (recommended). Otherwise, 
-change the --compiler argument accordingly. 
+Once this is done, launch the MSYS console, change into the PyMC directory and 
+type::
+
+    python setup.py install
+
+This will build the C and Fortran extension and copy the libraries and python 
+modules in the C:/Python25/Lib/site-packages/pymc directory.
+
+
+.. _`MinGW`: http://www.mingw.org/
+
+.. _`MSYS`: http://www.mingw.org/wiki/MSYS
+
+.. _`Automated MinGW Installer`: http://sourceforge.net/project/showfiles.php?group_id=2435
+
+.. _`MSYS-1.0.exe`: http://downloads.sourceforge.net/mingw/MSYS-1.0.10.exe
+
 
 Mac OS X or Linux
 -----------------

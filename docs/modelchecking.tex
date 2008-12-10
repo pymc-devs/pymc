@@ -1,6 +1,6 @@
 \hypertarget{convergence}{}
 \pdfbookmark[0]{Convergence Diagnostics}{convergence}
-\section*{Convergence Diagnostics} % (fold)
+\section{Convergence Diagnostics} % (fold)
 %\label{sec:convergence_diagnostics}
 
 Valid inferences from sequences of MCMC samples are based on the assumption that the samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
@@ -17,7 +17,7 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 \end{center}
 \end{figure}
 
-\subsection*{Informal Methods}
+\subsection{Informal Methods}
 
 The most straightforward approach for assessing convergence is based on
 simply plotting and inspecting traces and histograms of the observed MCMC
@@ -51,7 +51,7 @@ Another \emph{ad hoc} method for detecting convergence is to examine the traces 
 
 A principal reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the parameter space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
 
-\subsection*{Formal Methods}
+\subsection{Formal Methods}
 
 Along with the \emph{ad hoc} techniques described above, a number of more formal methods exist which are prevalent in the literature. These are considered more formal because they are based on existing statistical methods, such as time series analysis.
 
@@ -92,7 +92,8 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
+def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', \
+                path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
 	
@@ -187,50 +188,67 @@ Calling \verb=coda_output= yields a file containing raw trace values (suffix \ve
 
 \hypertarget{autocorrelation}{}
 \pdfbookmark[0]{Autocorrelation Plots}{autocorrelation}
-\section*{Autocorrelation Plots} % (fold)
+\section{Autocorrelation Plots} % (fold)
 %\label{sec:autocorrelation_plots}
 
-Samples from MCMC algorithms are ususally autocorrelated, due partly to the inherent Markovian dependence structure. The degree of autocorrelation can be quantified using the autocorrelation function:
+Samples from MCMC algorithms are ususally autocorrelated, due partly to the
+inherent Markovian dependence structure. The degree of autocorrelation can
+be quantified using the autocorrelation function:
 \begin{eqnarray*}
-    \rho_k &=& \frac{\mbox{Cov}(X_t, X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
-            &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
+    \rho_k &=& \frac{\mbox{Cov}(X_t,
+X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
+            &=& \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t -
+\theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
-PyMC includes a function for plotting the autocorrelation function for each stochastics in the sampler (Figure \ref{fig:autocorr}). This allows users to examine the relationship among successive samples within sampled chains. Significant autocorrelation suggests that chains require thinning prior to use of the posterior statistics for inference.
+PyMC includes a function for plotting the autocorrelation function for each
+stochastics in the sampler (Figure \ref{fig:autocorr}). This allows users
+to examine the relationship among successive samples within sampled chains.
+Significant autocorrelation suggests that chains require thinning prior to
+use of the posterior statistics for inference.
 
 \begin{figure}[h]
         \begin{center}
         \includegraphics[scale=0.4]{autocorr.png}
     \end{center}
-    \caption{Sample autocorrelation plots for two Poisson variables from coal mining disasters example model.}
+    \caption{Sample autocorrelation plots for two Poisson variables from
+coal mining disasters example model.}
     \label{fig:autocorr}
 \end{figure}
 
 \begin{verbatim}
-autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
+autocorrelation(data, name, maxlag=100, format='png', suffix='-acf',
+path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
-	\item \verb=data=: The object that is or contains the output trace(s).
+	\item \verb=data=: The object that is or contains the output
+trace(s).
 
 	\item \verb=name=: Name used for output files.
 	
-	\item \verb=maxlag=: The highest lag interval for which autocorrelation is calculated.
+	\item \verb=maxlag=: The highest lag interval for which
+autocorrelation is calculated.
 
-	\item \verb=format= (optional): Graphic output file format (defaults to \emph{png}).
+	\item \verb=format= (optional): Graphic output file format
+(defaults to \emph{png}).
 
-	\item \verb=suffix= (optional): Suffix to filename (defaults to \emph{-diagnostic})
+	\item \verb=suffix= (optional): Suffix to filename (defaults to
+\emph{-diagnostic})
 
-	\item \verb=path= (optional): The path for output graphics (defaults to working directory).
+	\item \verb=path= (optional): The path for output graphics
+(defaults to working directory).
 
-	\item \verb=fontmap= (optional): Dictionary containing the font map for the labels of the graphic.
+	\item \verb=fontmap= (optional): Dictionary containing the font map
+for the labels of the graphic.
 
-	\item \verb=verbose= (optional): Verbosity level for output (defaults to 1).
+	\item \verb=verbose= (optional): Verbosity level for output
+(defaults to 1).
 \end{itemize}
 
 % section autocorrelation_plots (end)
 
 \hypertarget{gof}{}
 \pdfbookmark[0]{Goodness of Fit}{gof}
-\section*{Goodness of Fit} % (fold)
+\section{Goodness of Fit} % (fold)
 %\label{sec:goodness_of_fit}
 
 Checking for model convergence is only the first step in the evaluation of MCMC model outputs. It is possible for an entirely unsuitable model to converge, so additional steps are needed to ensure that the estimated model adequately fits the data. One intuitive way for evaluating model fit is to compare model predictions with actual observations. In other words, the fitted model can be used to simulate data, and the distribution of the simulated data should resemble the distribution of the actual data.

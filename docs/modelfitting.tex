@@ -9,7 +9,7 @@ PyMC provides three objects that fit models:
 
 All three objects are subclasses of \code{Model}, which is PyMC's base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is PyMC's base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes implement some basic methods that are inherited by the three implemented fitting methods, so they are documented at the end of this chapter. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.
 
-\section*{Creating models} \label{sec:ModelInstantiation}
+\section{Creating models} \label{sec:ModelInstantiation}
 The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
 \begin{itemize}
     \item \code{M = Model(set([a,b,c]))}
@@ -43,7 +43,7 @@ M = Model(make_model(3))
 
 
 \hypertarget{MAP}{}
-\section*{Maximum \emph{a posteriori} estimates} \label{sec:MAP}
+\section{Maximum \emph{a posteriori} estimates} \label{sec:MAP}
 \pdfbookmark[1]{Maximum a posteriori estimates}{model}
 
 The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following  
@@ -88,7 +88,7 @@ The useful attributes of \code{MAP} are:
 One use of the \code{MAP} class is finding reasonable initial states for MCMC chains. Note that multiple \code{Model} subclasses can handle the same collection of nodes.
 
 \hypertarget{norm-approx}{}
-\section*{Normal approximations} \label{sec:norm-approx}
+\section{Normal approximations} \label{sec:norm-approx}
 \pdfbookmark[1]{Normal approximations}{norm-approx}
 
 The \code{NormApprox} class extends the \code{MAP} class by approximating the posterior covariance of the model using the Fisher information matrix, or the Hessian of the joint log probability at the maximum. To fit the model in \file{examples/gelman_bioassay.py} using \code{NormApprox}, do:
@@ -137,7 +137,8 @@ It provides the following additional attributes:
 \end{description}
 
 \hypertarget{mcmc}{}
-\section*{Markov chain Monte Carlo: the \code{MCMC} class} \label{sec:mcmc}
+\section[Markov chain Monte Carlo: the MCMC class]{Markov chain Monte
+Carlo: the \code{MCMC} class} \label{sec:mcmc}
 \pdfbookmark[1]{The MCMC class}{mcmc}
 
 The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
@@ -163,7 +164,7 @@ The \code{MCMC} class implements PyMC's core business: producing `traces' for a 
 MCMC samplers' step methods can be accessed via the \code{\textbf{step_method_dict}} attribute. \code{M.step_method_dict[x]} returns a list of the step methods \code{M} will use to handle the stochastic variable \code{x}.
 
 \hypertarget{step-method}{}
-\section*{Step methods} \label{sec:stepmethod}
+\section{Step methods} \label{sec:stepmethod}
 \pdfbookmark[0]{Step methods}{step-method}
 
 
@@ -172,7 +173,7 @@ Step method objects handle individual stochastic variables, or sometimes groups 
 The major subclasses of \code{StepMethod} are \code{Metropolis} and \code{Gibbs}. PyMC provides several flavors of the basic Metropolis steps, but the Gibbs steps are not ready for use as of the current release. %However, because it is feasible to write Gibbs step methods for particular applications, the \code{Gibbs} base class will be documented here.
 
 \hypertarget{metropolis}{}
-\subsection*{Metropolis step methods} \label{metropolis}
+\subsection{Metropolis step methods} \label{metropolis}
 \pdfbookmark[1]{Metropolis step methods}{metropolis}
 
 \code{Metropolis} and subclasses implement Metropolis-Hastings steps. To tell an \code{MCMC} object $M$ to handle a variable $x$ with a Metropolis step method, you might do the following:
@@ -262,7 +263,7 @@ non-Markovian.
 % = We can uncomment this when we actually release them... =
 % ==========================================================
 % \hypertarget{gibbs}{}
-% \subsection*{Gibbs step methods} \label{gibbs}
+% \subsection{Gibbs step methods} \label{gibbs}
 % \pdfbookmark[1]{Gibbs step methods}{gibbs}
 % 
 % Conjugate submodels (see \cite{gelman}) can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \code{AdaptiveMetropolis} even when Gibbs step methods are available.
@@ -305,7 +306,7 @@ non-Markovian.
 % \end{itemize}
 % 
 
-\subsection*{Granularity of step methods: one-at-a-time vs. block updating} 
+\subsection{Granularity of step methods: one-at-a-time vs. block updating} 
 \label{subsec:granularity}
 There is currently no way for a stochastic variable to compute individual terms of its log-probability; it is computed all together. This means that updating the elements of a array-valued variable individually would be inefficient, so all existing step methods update array-valued variables together, in a block update.
 
@@ -319,13 +320,13 @@ A = [Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in xrange(100)]
 \end{verbatim}
 An individual step method will be assigned to each element of \code{A} in the latter case, and the elements will be updated individually. Note that \code{A} can be broken up into larger blocks if desired.
 
-\subsection*{Automatic assignment of step methods} 
+\subsection{Automatic assignment of step methods} 
 Every step method subclass (including user-defined ones) that does not require any \texttt{init} arguments other than the stochastic variable to be handled adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. If a stochastic variable in an \code{MCMC} object has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable. 
 
 To do so, each step method implements a class method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. The \code{MCMC} object assigns the step method that returns the highest competence value to each of its stochastic variables.
 
 \hypertarget{model}{}
-\section*{The \code{Model} class} \label{sec:Model}
+\section[The Model class]{The \code{Model} class} \label{sec:Model}
 \pdfbookmark[1]{The Model class}{model}
 This class serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \code{MCMC}. Like any Python class, its properties are inherited by subclasses.
 
@@ -358,7 +359,7 @@ Models have the following important attributes:
 In addition, models expose each node they contain as an attribute. For instance, if model \code{M} were produced from model (\ref{disastermodel}) \code{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique name if you want to access them this way.
 
 \hypertarget{sampler}{}
-\section*{The \code{Sampler} class} \label{sec:Sampler}
+\section[The Sampler class]{The \code{Sampler} class} \label{sec:Sampler}
 \pdfbookmark[1]{The Sampler class}{sampler}
 Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
 \begin{description}

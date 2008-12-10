@@ -1,7 +1,7 @@
 PyMC tries to make standard things easy, but keep unusual things possible. Its openness, combined with Python's flexibility, invite extensions from using new step methods to exotic stochastic processes (see the Gaussian process module). This chapter briefly reviews the ways PyMC is designed to be extended. 
 
 \hypertarget{nonstandard}{}
-\section*{Nonstandard Stochastics} \label{nonstandard}
+\section{Nonstandard Stochastics} \label{nonstandard}
 \pdfbookmark[0]{Nonstandard Stochastics}{nonstandard}
 
 The simplest way to create a \code{Stochastic} object with a nonstandard distribution is to use the medium or long decorator syntax. See chapter \ref{chap:modelbuilding}. If you want to create many stochastics with the same nonstandard distribution, the decorator syntax can become cumbersome. An actual subclass of \code{Stochastic} can be created using the class factory \code{stochastic_from_distribution}. This function takes the following arguments:
@@ -17,12 +17,12 @@ The necessary parent labels are read from the \code{logp} function, and a docstr
 Full subclasses of \code{Stochastic} may be necessary to provide nonstandard behaviors (see \code{gp.GP}).
 
 \hypertarget{custom-stepper}{}
-\section*{User-defined step methods} \label{custom-stepper}
+\section{User-defined step methods} \label{custom-stepper}
 \pdfbookmark[0]{User-defined step methods}{custom-stepper}
 The \code{StepMethod} class is meant to be subclassed. There are an enormous number of MCMC step methods in the literature, whereas PyMC provides only about half a dozen. Most user-defined step methods will be either Metropolis-Hastings or Gibbs step methods, and these should subclass \code{Metropolis} or \code{Gibbs} respectively. More unusual step methods should subclass \code{StepMethod} directly.
 
 \hypertarget{custom_stepper_example}{}
-\subsection*{Example: an asymmetric Metropolis step} \label{user-gen}
+\subsection{Example: an asymmetric Metropolis step} \label{user-gen}
 Consider the probability model in \file{examples/custom_step.py}: 
 \begin{verbatim}
 mu = pm.Normal('mu',0,.01, value=0)
@@ -88,7 +88,7 @@ set([<pymc.distributions.Exponential 'cutoff' at 0x3cd6b90>])
 \end{verbatim}
 
 \hypertarget{user-gen}{}
-\subsection*{General step methods} \label{user-gen}
+\subsection{General step methods} \label{user-gen}
 \pdfbookmark[1]{General step methods}{user-gen}
 
 All step methods must implement the following methods:
@@ -136,7 +136,7 @@ All step methods have a property called \code{loglike}, which returns the sum of
 
 
 \hypertarget{user-metro}{}
-\subsection*{Metropolis-Hastings step methods} \label{user-metro}
+\subsection{Metropolis-Hastings step methods} \label{user-metro}
 \pdfbookmark[1]{Metropolis-Hastings step methods}{user-metro}
 A Metropolis-Hastings step method only needs to implement the following methods, which are called by \code{Metropolis.step()}:
 \begin{description}
@@ -155,7 +155,7 @@ Metropolis-Hastings step methods with asymmetric jumping distributions may imple
 By convention, Metropolis-Hastings step methods use attributes called \code{accepted} and \code{rejected} to log their performance.
 
 \hypertarget{user-gibbs}{}
-\subsection*{Gibbs step methods} \label{user-gibbs}
+\subsection{Gibbs step methods} \label{user-gibbs}
 \pdfbookmark[1]{Gibbs step methods}{user-gibbs}
 
 Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children. 
@@ -180,13 +180,13 @@ The inherited class method \code{Gibbs.competence} will determine the new step m
 If both conditions are met, \code{pymc.conjugate_Gibbs_competence} will be returned. If only the first is met, \code{pymc.nonconjugate_Gibbs_competence} will be returned.
 
 \hypertarget{custom-model}{}
-\section*{New fitting algorithms} \label{custom-model}
+\section{New fitting algorithms} \label{custom-model}
 \pdfbookmark[0]{New fitting algorithms}{custom-model}
 
 PyMC provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}. 
 
 \hypertarget{custom-MC}{}
-\subsection*{Monte Carlo fitting algorithms} \label{custom-MC}
+\subsection{Monte Carlo fitting algorithms} \label{custom-MC}
 \pdfbookmark[1]{Monte Carlo fitting algoriths}{custom-MC}
 
 Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms should be implemented by subclasses of \code{Sampler} to take advantage of the interactive sampling feature and database backends. Subclasses using the standard \code{sample()} and \code{isample()} methods must define one of two methods:
@@ -204,7 +204,8 @@ Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms sh
 Samplers may alternatively want to override the default \code{sample()} method. In that case, they should call the \code{tally()} method whenever it is appropriate to save the current model state. Like custom \code{_loop()} methods, custom \code{sample()} methods should handle \code{KeyboardInterrupts} and call the \code{halt()} method when sampling terminates to finalize the traces.
 
 \hypertarget{dont-update-indepth}{}
-\section*{Don't update stochastic variables' values in-place} \label{dont-update-indepth}
+\section{Don't update stochastic variables' values in-place}
+\label{dont-update-indepth}
 \pdfbookmark[0]{Don't update stochastic variables' values in-place}{dont-update-indepth}
 
 If you're going to implement a new step method, fitting algorithm or unusual (non-numeric-valued) \code{Stochastic} subclass, you should understand the issues related to in-place updates of \code{Stochastic} objects' values. Fitting methods should never update variables' values in-place for two reasons:

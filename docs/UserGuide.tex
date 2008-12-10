@@ -37,7 +37,7 @@
 \usepackage{listings}
 
 % Surround parts of graphics with box
-%\usepackage{boxedminipage}
+\usepackage{boxedminipage}
 
 % This is now the recommended way for checking for PDFLaTeX:
 %\usepackage{ifpdf}
@@ -57,7 +57,7 @@ Installation and tutorial}
 \author{Anand Patil \\ David Huard \\ Christopher Fonnesbeck}
 \graphicspath{{figs/}}
 \pdfoutput=1
-\release{2.0}
+\release{2.0rc1}
 % \date
 
 
@@ -66,8 +66,10 @@ Installation and tutorial}
 \newcommand{\titlereference}[1]{\textsl{#1}}
 \newlength{\locallinewidth}
 \setlength{\locallinewidth}{7in}
+\newlength{\admonitionwidth}
+\setlength{\admonitionwidth}{0.9\textwidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+\setcounter{secnumdepth}{1}
 
 \begin{document}
 
