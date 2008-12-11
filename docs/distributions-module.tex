@@ -132,10 +132,27 @@ Negative binomial log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
-x \textgreater{} 0, mu \textgreater{} 0, alpha \textgreater{} 0
+\paragraph{Parameters}
+\begin{paramlist}
+\item[]\textbf{x} : int
+\begin{quote}
+$x>0$
+\end{quote}
+
+\item[]\textbf{mu} : float
+\begin{quote}
+$\mu>0$
+\end{quote}
+
+\item[]\textbf{alpha} : float
+\begin{quote}
+$\alpha>0$
+\end{quote}
+\end{paramlist}
+
 \paragraph{Notes}
 In Wikipedia's parameterization, $r=\alpha$, $p=\alpha/(\mu+\alpha)$ and $\mu=r(1-p)/p$.
-This parameterization is convenient in the Gamma-Poisson mixture interpretation
+PyMC's parameterization is convenient for the Gamma-Poisson mixture interpretation
 of the negative binomial distribution. In that case the expectation of the rate
 is equal to $\mu$.
 \end{funcdesc}
@@ -152,16 +169,12 @@ Categorical log-likelihood.
 \begin{paramlist}
 \item[] \textbf{x} : integer
 \begin{quote}
-
-$x \in v$
-$v_i \in 0 \ldots k-1$
+$x \in v$, $v_i \in 0 \ldots k-1$
 \end{quote}
 
 \item[]\textbf{p} : (k) float
 \begin{quote}
-
-$p > 0$
-$\sum p = 1$
+$p > 0$, $\sum p = 1$
 \end{quote}
 \end{paramlist}
 \end{funcdesc}
@@ -195,7 +208,6 @@ Upper limit.
 \end{funcdesc}
 
 
-\section{Continuous distributions}
 \index{bernoulli\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.bernoulli_like}{}\begin{funcdesc}{bernoulli\_like}{x, p}
@@ -204,7 +216,7 @@ Bernoulli log-likelihood
 The Bernoulli distribution describes the probability of successes (x=1) and
 failures (x=0).
 \begin{gather}
-\begin{split}f(x \mid p) = p^{x- 1} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
+\begin{split}f(x \mid p) = p^{x} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
 \begin{paramlist}
@@ -231,6 +243,9 @@ $Var(x)= p(1-p)$
 \end{itemize}
 
 \end{funcdesc}
+
+\section{Continuous distributions}
+
 \index{beta\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.beta_like}{}\begin{funcdesc}{beta\_like}{x, alpha, beta}
@@ -248,14 +263,12 @@ Beta log-likelihood.
 
 \item[] \textbf{alpha} : float
 \begin{quote}
-
-\textgreater{} 0
+$\alpha>0$
 \end{quote}
 
 \item[] \textbf{beta} : float
 \begin{quote}
-
-\textgreater{} 0
+$\beta>0$
 \end{quote}
 \end{paramlist}
 \paragraph{Notes}
@@ -301,7 +314,7 @@ Mode and median are at alpha.
 \index{chi2\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.chi2_like}{}\begin{funcdesc}{chi2\_like}{x, nu}
-Chi-squared $\chi^2$ log-likelihood.
+Chi-squared ($\chi^2$) log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -310,7 +323,7 @@ Chi-squared $\chi^2$ log-likelihood.
 \item[] \textbf{x} : float
 \begin{quote}
 
-$\ge 0$
+$x \ge 0$
 \end{quote}
 
 \item[] \textbf{nu} : int
@@ -332,7 +345,7 @@ $Var(X)=2\nu$
 \index{degenerate\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.degenerate_like}{}\begin{funcdesc}{degenerate\_like}{x, k}
-Degenerate log-likelihood.
+Degenerate log-likelihood, also known as point mass.
 \begin{gather}
 \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -347,7 +360,7 @@ $x = k$
 \item[] \textbf{k} : float
 \begin{quote}
 
-degenerate value.
+degenerate value or location of point mass.
 \end{quote}
 \end{paramlist}
 \end{funcdesc}
@@ -357,7 +370,7 @@ degenerate value.
 Exponential log-likelihood.
 
 The exponential distribution is a special case of the gamma distribution
-with alpha=1. It often describes the duration of an event.
+with alpha=1. It often describes the time until an event.
 \begin{gather}
 \begin{split}f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -401,7 +414,7 @@ z & = \frac{x-loc}{scale}\end{split}\notag\\\begin{split}\end{split}\notag
 \item[] \textbf{x} : float
 \begin{quote}
 
-\textgreater{} 0
+$x>0$
 \end{quote}
 
 \item[] \textbf{alpha} : float
@@ -413,7 +426,7 @@ Shape parameter
 \item[] \textbf{k} : float
 \begin{quote}
 
-\textgreater{} 0
+$k>0$
 \end{quote}
 
 \item[] \textbf{loc} : float
@@ -694,7 +707,7 @@ Mean of the distribution.
 \item[] \textbf{tau} : float
 \begin{quote}
 
-Precision of the distribution, \textgreater{} 0 ( corresponds to 1/sigma**2 ).
+Precision of the distribution, $\tau>0$ ( corresponds to $1/\sigma^2$ ).
 \end{quote}
 \end{paramlist}
 \paragraph{Notes}
@@ -773,13 +786,13 @@ $x \ge 0$
 \item[] \textbf{alpha} : float
 \begin{quote}
 
-\textgreater{} 0
+$\alpha>0$
 \end{quote}
 
 \item[] \textbf{beta} : float
 \begin{quote}
 
-\textgreater{} 0
+$\beta>0$
 \end{quote}
 \end{paramlist}
 \paragraph{Notes}
@@ -798,7 +811,10 @@ $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 Azzalini's skew-normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\end{gather}
+where $\Phi$ is the normal CDF and $\phi$ is the normal PDF.
+
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -856,7 +872,7 @@ Mean of the distribution.
 \item[] \textbf{tau} : float
 \begin{quote}
 
-Precision of the distribution, \textgreater{} 0 ( corresponds to 1/sigma**2 ).
+Precision of the distribution, $\tau>0$ ( corresponds to $1/\sigma^2$ ).
 \end{quote}
 
 \item[] \textbf{a} : float
@@ -929,11 +945,13 @@ Number of trials.
 \begin{quote}
 
 Probability of each one of the different outcomes,
-$\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$.
+$\sum_{i=1}^k p_i = 1$, $p_i \ge 0$.
 \end{quote}
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
+\item {} A Multinomial's parent $p$ may be Dirichlet, even though its value is length $k-1$.
+   
 \item {} 
 $E(X_i)=n p_i$
 
@@ -1010,13 +1028,11 @@ Multivariate normal log-likelihood
 \begin{split}f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\paragraph{Parameters}\begin{paramlist}
 
-\item[] \textbf{x: (n,k)} :
+\item[] \textbf{x} : (n,k) float
 
-\item[] \textbf{mu: (k)} :
+\item[] \textbf{mu} : (k,) float
 
-\item[] \textbf{tau: (k,k)} :
-
-\item[] \textbf{tau positive definite} :
+\item[] \textbf{tau} : (k,k) float, positive definite
 \end{paramlist}
 
 \strong{See Also:}
@@ -1033,10 +1049,15 @@ Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
-x: (n,k)
-mu: (k)
-C: (k,k)
-C positive definite
+
+\paragraph{Parameters}\begin{paramlist}
+
+\item[] \textbf{x} : (n,k) float
+
+\item[] \textbf{mu} : (k,) float
+
+\item[] \textbf{C} : (k,k) float, positive definite
+\end{paramlist}
 
 
 \strong{See Also:}
@@ -1051,16 +1072,14 @@ C positive definite
 \hypertarget{pymc.distributions.mv_normal_chol_like}{}\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, tau}
 Multivariate normal log-likelihood
 \begin{gather}
-\begin{split}f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
+\begin{split}f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\paragraph{Parameters}\begin{paramlist}
 
-\item[] \textbf{x} : (n,k)
+\item[] \textbf{x} : (n,k) float
 
-\item[] \textbf{mu} : (k)
+\item[] \textbf{mu} : (k,) float
 
-\item[] \textbf{sigma} : (k,k)
-
-\item[] \textbf{sigma lower triangular} :
+\item[] \textbf{sigma} : (k,k) float, lower triangular
 \end{paramlist}
 
 \strong{See Also:}

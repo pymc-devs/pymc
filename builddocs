@@ -5,7 +5,7 @@
 # By introspection, epydoc finds the related docstrings and creates a tex output. This way, 
 # we avoid documenting all the stuff that lives in the real pymc.distributions.py
 
-#epydoc --verbose --debug --config epydoc.conf
+# epydoc --verbose --debug --config epydoc.conf
 
 
 # Make manual

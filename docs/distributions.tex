@@ -1,10 +1,10 @@
-\subsection*{Autoregressive Normal} 
+\subsection*{Autoregressive Lognormal} 
 \verb=arnormal_like(x, a, sigma, rho)=
 \begin{eqnarray*}
 	x_i & = a_i \exp(e_i) \\
    e_i & = \rho e_{i-1} + \epsilon_i \\
  \\
- & \epsilon_i \sim N(0,\tau)	
+ & \epsilon_i \sim N(0,\sigma)	
 \end{eqnarray*}
 
 \subsection*{Bernoulli}

@@ -598,7 +598,7 @@ def bernoulli_like(x, p):
     failures (x=0).
     
     .. math::
-        f(x \mid p) = p^{x- 1} (1-p)^{1-x}
+        f(x \mid p) = p^{x} (1-p)^{1-x}
     
     :Parameters:
       x : sequence
@@ -655,9 +655,9 @@ def beta_like(x, alpha, beta):
       x : float
           0 < x < 1
       alpha : float
-          > 0
+          alpha > 0
       beta : float
-          > 0
+          beta > 0
     
     :Example:
       >>> beta_like(.4,1,2)
@@ -953,7 +953,7 @@ def exponential_like(x, beta):
     Exponential log-likelihood.
     
     The exponential distribution is a special case of the gamma distribution
-    with alpha=1. It often describes the duration of an event.
+    with alpha=1. It often describes the time until an event.
     
     .. math::
         f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
@@ -1006,11 +1006,11 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     
     :Parameters:
       x : float
-          > 0
+          x > 0
       alpha : float
           Shape parameter
       k : float
-          > 0
+          k > 0
       loc : float
           Location parameter
       scale : float
@@ -1802,7 +1802,7 @@ def mv_normal_chol_like(x, mu, sig):
     Multivariate normal log-likelihood
     
     .. math::
-        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}
+        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
     
     :Parameters:
       x : (n,k)
@@ -2070,6 +2070,8 @@ def skew_normal_like(x,mu,tau,alpha):
     
     .. math::
         f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
+        
+    where :math: \Phi is the normal CDF and :math: \phi is the normal PDF.
     
     :Parameters:
       x : float
