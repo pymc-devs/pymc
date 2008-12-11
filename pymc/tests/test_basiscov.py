@@ -1,7 +1,6 @@
 from numpy.testing import *
 from pymc.gp import *
 from pymc.gp.cov_funs import *
-from pylab import *
 from numpy import *
 from copy import copy
 
@@ -41,19 +40,6 @@ class test_basiscov(TestCase):
     def test_sep(self):
         
         observe(M, C, obs_mesh = ostack, obs_V = V, obs_vals = data) 
-        # clf()
-        # subplot(1,3,1)
-        # contourf(x,y,C(xstack))
-        # title('Variance')
-        # subplot(1,3,2)
-        # contourf(x,y,M(xstack))
-        # title('Mean')
-        # subplot(1,3,3)
-        # f=Realization(M,C)
-        # contourf(x,y,f(xstack))
-        # plot([-.5,.5,-.5,.5],[-.5,-.5,.5,.5],'k.',markersize=12)
-        # title('Realization')
-        # colorbar()
         
     def test_nonsep(self):
 
@@ -91,16 +77,3 @@ class test_basiscov(TestCase):
         assert_almost_equal(C2(xstack), C(xstack))
 
         observe(M, C, obs_mesh = ostack, obs_V = V, obs_vals = data) 
-        # clf()
-        # subplot(1,3,1)
-        # contourf(x,y,C(xstack))
-        # title('Variance')
-        # subplot(1,3,2)
-        # contourf(x,y,M(xstack))
-        # title('Mean')
-        # subplot(1,3,3)
-        # f=Realization(M,C)
-        # contourf(x,y,f(xstack))
-        # plot([-.5,.5,-.5,.5],[-.5,-.5,.5,.5],'k.',markersize=12)
-        # title('Realization')
-        # colorbar()

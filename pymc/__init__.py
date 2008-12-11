@@ -33,7 +33,6 @@ from tests import test
 
 # Utilities modules
 import utils
-import MultiModelInference
 import CommonDeterministics
 import distributions
 import gp
