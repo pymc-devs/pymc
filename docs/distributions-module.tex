@@ -7,6 +7,15 @@
 
 \index{pymc.distributions (module)}
 
+\newenvironment{paramlist}{
+\begin{list}{}{
+\setlength{\itemsep}{-2pt}
+\setlength{\parsep}{-1pt}
+\setlength{\topsep}{-1pt}}
+ }{\end{list}}
+
+ 
+
 \section{Discrete distributions}
 \index{binomial\_like() (in module pymc.distributions)}
 
@@ -18,7 +27,7 @@ each of which yields success with probability p.
 \begin{split}f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -36,7 +45,7 @@ Number of Bernoulli trials, \textgreater{} x.
 
 Probability of success in each trial, $p \in [0,1]$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -47,8 +56,9 @@ $Var(X)=np(1-p)$
 
 \end{itemize}
 \end{funcdesc}
-\index{geometric\_like() (in module pymc.distributions)}
 
+
+\index{geometric\_like() (in module pymc.distributions)}
 \hypertarget{pymc.distributions.geometric_like}{}\begin{funcdesc}{geometric\_like}{x, p}
 Geometric log-likelihood. The probability that the first success in a
 sequence of Bernoulli trials occurs after x trials.
@@ -56,19 +66,19 @@ sequence of Bernoulli trials occurs after x trials.
 \begin{split}f(x \mid p) = p(1-p)^{x-1}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
-\item[] \item[] \textbf{x} : int
+\begin{paramlist}
+\item[] \textbf{x} : int
 \begin{quote}
 
 Number of trials before first success, \textgreater{} 0.
 \end{quote}
 
-\item[] \item[] \textbf{p} : float
+\item[] \textbf{p} : float
 \begin{quote}
 
 Probability of success on an individual trial, $p \in [0,1]$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -91,20 +101,20 @@ be derived as a limiting case of the binomial distribution.
 \begin{split}f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
-\item[] \item[] \textbf{x} : int
+\begin{paramlist}
+\item[]\textbf{x} : int
 \begin{quote}
 
 $x \in {0,1,2,...}$
 \end{quote}
 
-\item[] \item[] \textbf{mu} : float
+\item[]\textbf{mu} : float
 \begin{quote}
 
 Expected number of occurrences that occur during the given interval,
 $\mu \geq 0$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -124,20 +134,13 @@ Negative binomial log-likelihood
 \end{gather}
 x \textgreater{} 0, mu \textgreater{} 0, alpha \textgreater{} 0
 \paragraph{Notes}
-\begin{description}
-\item[In Wikipedia's parameterization,]
-$r=\alpha$
-$p=\alpha/(\mu+\alpha)$
-$\mu=r(1-p)/p$
-
-\end{description}
-
+In Wikipedia's parameterization, $r=\alpha$, $p=\alpha/(\mu+\alpha)$ and $\mu=r(1-p)/p$.
 This parameterization is convenient in the Gamma-Poisson mixture interpretation
 of the negative binomial distribution. In that case the expectation of the rate
 is equal to $\mu$.
 \end{funcdesc}
-\index{categorical\_like() (in module pymc.distributions)}
 
+\index{categorical\_like() (in module pymc.distributions)}
 \hypertarget{pymc.distributions.categorical_like}{}\begin{funcdesc}{categorical\_like}{x, p}
 Categorical log-likelihood.
 \begin{gather}
@@ -146,7 +149,7 @@ Categorical log-likelihood.
 \begin{split}v_i \in 0 \ldots k-1\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : integer
 \begin{quote}
 
@@ -154,13 +157,13 @@ $x \in v$
 $v_i \in 0 \ldots k-1$
 \end{quote}
 
-\item[] \item[] \textbf{p} : (k) float
+\item[]\textbf{p} : (k) float
 \begin{quote}
 
 $p > 0$
 $\sum p = 1$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{discrete\_uniform\_like() (in module pymc.distributions)}
 
@@ -170,7 +173,7 @@ discrete\_uniform log-likelihood.
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -188,7 +191,7 @@ Lower limit.
 
 Upper limit.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 
 
@@ -204,7 +207,7 @@ failures (x=0).
 \begin{split}f(x \mid p) = p^{x- 1} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : sequence
 \begin{quote}
 
@@ -216,7 +219,7 @@ Series of successes (1) and failures (0). $x=0,1$
 
 Probability of success. $0 < p < 1$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -236,7 +239,7 @@ Beta log-likelihood.
 \begin{split}f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -254,7 +257,7 @@ Beta log-likelihood.
 
 \textgreater{} 0
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -275,7 +278,7 @@ Lorentz or the Breit-Wigner distribution.
 \begin{split}f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{alpha} : float
 \begin{quote}
 
@@ -287,7 +290,7 @@ Location parameter.
 
 Scale parameter \textgreater{} 0.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -303,7 +306,7 @@ Chi-squared $\chi^2$ log-likelihood.
 \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -315,7 +318,7 @@ $\ge 0$
 
 Degrees of freedom ( $nu > 0$)
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -334,7 +337,7 @@ Degenerate log-likelihood.
 \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -346,7 +349,7 @@ $x = k$
 
 degenerate value.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{exponential\_like() (in module pymc.distributions)}
 
@@ -359,7 +362,7 @@ with alpha=1. It often describes the duration of an event.
 \begin{split}f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -371,7 +374,7 @@ $x \ge 0$
 
 Survival parameter $\beta > 0$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -394,7 +397,7 @@ failure rates.
 \begin{split}f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
 z & = \frac{x-loc}{scale}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -424,7 +427,7 @@ Location parameter
 
 Scale parameter \textgreater{} 0.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{gamma\_like() (in module pymc.distributions)}
 
@@ -437,7 +440,7 @@ of which has mean beta.
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -455,7 +458,7 @@ Shape parameter $\alpha > 0$.
 
 Scale parameter $\beta > 0$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -475,7 +478,7 @@ to the domain $x \in [0, \infty)$.
 \begin{split}f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -487,7 +490,7 @@ $x \ge 0$
 
 $\tau > 0$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{hypergeometric\_like() (in module pymc.distributions)}
 
@@ -499,7 +502,7 @@ population without replacement.
 \begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : int
 \begin{quote}
 Number of successes in a sample drawn from a population.
@@ -517,7 +520,7 @@ Number of successes in the population.
 \begin{quote}
 Total number of units in the population.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item $E(X) = \frac{n n}{N}$
@@ -531,7 +534,7 @@ Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
-\begin{itemize}
+\begin{paramlist}
 \item[] \textbf{x} : float
 \begin{quote}
 
@@ -549,7 +552,7 @@ Shape parameter, $\alpha > 0$.
 
 Scale parameter, $\beta > 0$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item $E(X)=\frac{1}{\beta(\alpha-1)}$  for $\alpha > 1$.
@@ -565,7 +568,7 @@ difference between two independent, identically distributed exponential
 events. It is often used as a heavier-tailed alternative to the normal.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau|x-\mu|}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -584,7 +587,7 @@ Location parameter $-\infty < \mu < \infty$
 
 Scale parameter $\tau > 0$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -604,7 +607,7 @@ The logistic distribution is often used as a growth model; for example,
 populations, markets. Resembles a heavy-tailed normal distribution.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -623,7 +626,7 @@ Location parameter $-\infty < \mu < \infty$
 
 Scale parameter $\tau > 0$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -644,7 +647,7 @@ small independent factors.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
 \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -663,7 +666,7 @@ Location parameter.
 
 Scale parameter, \textgreater{} 0.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 
 $E(X)=e^{\mu+\frac{1}{2\tau}}$
@@ -674,7 +677,7 @@ $E(X)=e^{\mu+\frac{1}{2\tau}}$
 Normal log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -693,7 +696,7 @@ Mean of the distribution.
 
 Precision of the distribution, \textgreater{} 0 ( corresponds to 1/sigma**2 ).
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -710,7 +713,7 @@ $Var(X) = 1/\tau$
 Student's t log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -723,7 +726,7 @@ Input data.
 
 Degrees of freedom.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{uniform\_like() (in module pymc.distributions)}
 
@@ -731,7 +734,7 @@ Degrees of freedom.
 Uniform log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -750,7 +753,7 @@ Lower limit.
 
 Upper limit.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{weibull\_like() (in module pymc.distributions)}
 
@@ -759,7 +762,7 @@ Weibull log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
 \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -778,7 +781,7 @@ $x \ge 0$
 
 \textgreater{} 0
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -795,7 +798,7 @@ $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 Azzalini's skew-normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -820,7 +823,7 @@ Precision of the distribution, \textgreater{} 0.
 
 Shape parameter of the distribution.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -836,7 +839,7 @@ Truncated normal log-likelihood.
 \begin{split}f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $\sigma^2=1/\tau$.
-\paragraph{Parameters}\begin{itemize}
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : float
 \begin{quote}
@@ -867,7 +870,7 @@ Left bound of the distribution.
 
 Right bound of the distribution.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 
 
@@ -882,7 +885,7 @@ given by m.
 \begin{split}\frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $N = \sum_i m_i$ and $n = \sum_i x_i$.
-\paragraph{Parameters}\begin{itemize}
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : int sequence
 \begin{quote}
@@ -895,7 +898,7 @@ Number of draws from each category, $< m$
 
 Number of items in each categoy.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{multinomial\_like() (in module pymc.distributions)}
 
@@ -907,7 +910,7 @@ of possible outcomes over n independent trials. `x{[}i{]}' indicates the number
 of times outcome number i was observed over the n trials.
 \begin{gather}
 \begin{split}f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : (ns, k) int
 \begin{quote}
@@ -928,7 +931,7 @@ Number of trials.
 Probability of each one of the different outcomes,
 $\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$.
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
 \item {} 
@@ -953,7 +956,7 @@ Dirichlet log-likelihood.
 This is a multivariate continuous distribution.
 \begin{gather}
 \begin{split}f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : (n,k-1) array
 \begin{quote}
@@ -967,7 +970,7 @@ $0 < x_i < 1$,  $\sum_{i=1}^{k-1} x_i < 1$
 
 $\theta > 0$
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{inverse\_wishart\_like() (in module pymc.distributions)}
 
@@ -978,7 +981,7 @@ prior for the covariance matrix of a multivariate normal distribution.
 \begin{split}f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{itemize}
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{X} : matrix
 \begin{quote}
@@ -997,7 +1000,7 @@ Degrees of freedom, \textgreater{} 0.
 
 Symmetric and positive definite
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{mv\_normal\_like() (in module pymc.distributions)}
 
@@ -1005,7 +1008,7 @@ Symmetric and positive definite
 Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x: (n,k)} :
 
@@ -1014,7 +1017,7 @@ Multivariate normal log-likelihood
 \item[] \textbf{tau: (k,k)} :
 
 \item[] \textbf{tau positive definite} :
-\end{itemize}
+\end{paramlist}
 
 \strong{See Also:}
 
@@ -1049,7 +1052,7 @@ C positive definite
 Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}\sigma \sigma^{\prime}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{itemize}
+\end{gather}\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{x} : (n,k)
 
@@ -1058,7 +1061,7 @@ Multivariate normal log-likelihood
 \item[] \textbf{sigma} : (k,k)
 
 \item[] \textbf{sigma lower triangular} :
-\end{itemize}
+\end{paramlist}
 
 \strong{See Also:}
 
@@ -1081,7 +1084,7 @@ wishart\_cov\_like.
 \begin{split}f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{itemize}
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{X} : matrix
 \begin{quote}
@@ -1100,7 +1103,7 @@ Degrees of freedom, \textgreater{} 0.
 
 Symmetric and positive definite
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 \index{wishart\_cov\_like() (in module pymc.distributions)}
 
@@ -1116,7 +1119,7 @@ wishart\_cov\_like.
 \begin{split}f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{itemize}
+\paragraph{Parameters}\begin{paramlist}
 
 \item[] \textbf{X} : matrix
 \begin{quote}
@@ -1135,7 +1138,7 @@ Degrees of freedom, \textgreater{} 0.
 
 Symmetric and positive definite
 \end{quote}
-\end{itemize}
+\end{paramlist}
 \end{funcdesc}
 
 

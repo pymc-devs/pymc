@@ -171,18 +171,24 @@ raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1)
 
 The code for \code{raftery_lewis} is based on the FORTRAN program \emph{gibbsit}, which was written by Steven Lewis.
 
-Additional convergence diagnostics are available in the \href{http://lib.stat.cmu.edu/R/CRAN/}{R statistical package}, via the \href{http://www-fis.iarc.fr/coda/}{CODA module}. PyMC includes a method \code{coda_output} for exporting model traces in a format that may be directly read by CODA.
+Additional convergence diagnostics are available in the
+\href{http://lib.stat.cmu.edu/R/CRAN/}{R statistical package}, via the
+\href{http://www-fis.iarc.fr/coda/}{CODA module}. PyMC includes a method
+\code{coda} for exporting model traces in a format that may be
+directly read by CODA.
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-sampler.coda_output(pymc_object)
+pymc.utils.coda(pymc_object)
 \end{verbatim}
 \begin{itemize}
 
 \item \verb=pymc_object=: The PyMC sampler for which output is desired.
 
 \end{itemize}
-Calling \verb=coda_output= yields a file containing raw trace values (suffix \verb=.out=) and a file containing indices to the trace values (suffix \verb=.ind=).
+Calling \verb=coda= yields a file containing raw trace values (suffix
+\verb=.out=) and a file containing indices to the trace values (suffix
+\verb=.ind=).
 
 % section convergence_diagnostics (end)
 

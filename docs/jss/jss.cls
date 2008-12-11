@@ -247,7 +247,7 @@
 \RequirePackage{hyperref}
 %% new \maketitle
 \def\@myoddhead{
-  {\color{white} JSS}\\[-1.42cm]
+  {\{white} JSS}\\[-1.42cm]
   \hspace{-2em} \includegraphics[height=23mm,keepaspectratio]{jsslogo} \hfill
   \parbox[b][23mm]{118mm}{\hrule height 3pt
    \center{

@@ -330,7 +330,7 @@ This describes additional data $\tilde{y}$, which may either be considered unobs
 Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, -999. 
 
 \begin{verbatim}
-x = array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
 2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
@@ -339,47 +339,26 @@ x = array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim}
 
-To estimate these values in PyMC, we generate a masked array. These are specialised arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{masked_array} function.
-
-First, we generate a mask that indicates the location of the missing values. This is easily done using the equivalence operator:
-
+To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{ma.masked_equal} function: 
 \begin{verbatim}
-	>>> disasters_mask = disasters_array == -999
-	>>> disasters_mask
-	array([False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False,  True, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False,  True, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False, False, False, False, False, False, False,
-	       False, False, False], dtype=bool)
-\end{verbatim}
+>>> masked_data = numpy.ma.masked_equal(x, value=-999)
+>>> masked_data
+masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
+ 4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0 
+ 1 0 0 0 2 1 0 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1
+ 0 0 1 0 1],
+ mask = [False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False  True False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False  True
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False],
+      fill_value=999999)
 
-Notice that this simply indicates where in the original \code{disasters_array} that the value is -999 and where it is not. This mask, along with the original data array, are passed to the \code{masked_array} function:
-
-\begin{verbatim}
-	>>> masked_data = numpy.ma.masked_array(disasters_array, disasters_mask)
-	>>> masked_data
-	masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3 4 2 5 2 2 3 4 2
-	 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0 1 0 0 0 2 1 0
-	 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1 0 0 1 0 1],
-	      mask = [False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False  True False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False  True
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False],
-	      fill_value=999999)
 \end{verbatim}
 
 This masked array, in turn, can then be passed to PyMC's own \code{ImputeMissing} function, which replaces the missing values with Stochastic variables of the desired type. For the coal mining disasters problem, recall that disaster events were modelled as Poisson variates:

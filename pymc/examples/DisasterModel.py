@@ -3,12 +3,12 @@
 """
 A model for coal mining disaster time series with a changepoint
 
-switch ~ U(0,111)
-early_mean ~ Exp(1.)
-late_mean ~ Exp(1.)
-disasters[t] ~ Poisson(early if t <= switch, late otherwise)
+switchpoint: s ~ U(0,111)
+early_mean: e ~ Exp(1.)
+late_mean: l ~ Exp(1.)
+disasters: D[t] ~ Poisson(early if t <= s, l otherwise)
 """
-__all__ = ['swichpoint','early_mean','late_mean','disasters']
+__all__ = ['s','e','l','r','D']
 
 from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
 import numpy as np

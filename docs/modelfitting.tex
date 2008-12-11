@@ -195,8 +195,8 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
    \item[\code{scale}:] A float, defaulting to 1. If the \code{scale} argument is provided but not \code{proposal_sd}, \code{proposal\_sd} is computed as follows:
    \begin{verbatim}
    if all(self.stochastic.value != 0.):
-       self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) 
-   * scale
+       self.proposal_sd = ones(shape(self.stochastic.value)) * \
+                           abs(self.stochastic.value) * scale
    else:
        self.proposal_sd = ones(shape(self.stochastic.value)) * scale
    \end{verbatim}
@@ -232,7 +232,8 @@ The \code{AdaptativeMetropolis} (AM) step method works like a regular Metropolis
 
 To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an \code{AdaptiveMetropolis} instance, you might do the following:
 \begin{verbatim}
-   M.use_step_method(AdaptiveMetropolis, [x,y,z], scales={'x':1, 'y':2, 'z':.5}, delay=10000)
+   M.use_step_method(AdaptiveMetropolis, [x,y,z], \
+                      scales={'x':1, 'y':2, 'z':.5}, delay=10000)
 \end{verbatim}
 
 \code{AdaptativeMetropolis}' init method takes the following arguments:

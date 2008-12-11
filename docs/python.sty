@@ -8,7 +8,7 @@
 
 \RequirePackage{longtable}
 \RequirePackage{underscore}
-
+\RequirePackage{color}
 % Uncomment these two lines to ignore the paper size and make the page 
 % size more like a typical published manual.
 %\renewcommand{\paperheight}{9in}
@@ -591,15 +591,15 @@
 % something else.
 \newcommand{\py@unspecified}{...}
 
-
+\definecolor{MediumSlateBlue}{rgb}{ 0.62109,  0.527343,  0.90625} 
 \newlength{\py@argswidth}
 \newcommand{\py@sigparams}[1]{%
   \parbox[t]{\py@argswidth}{\py@varvars{#1}\code{)}}}
 \newcommand{\py@sigline}[2]{%
-  \settowidth{\py@argswidth}{#1\code{(}}%
+  \settowidth{\py@argswidth}{#1\code{(}#2\code{)}}%
   \addtolength{\py@argswidth}{-2\py@argswidth}%
   \addtolength{\py@argswidth}{\textwidth}%
-  \item[#1\code{(}\py@sigparams{#2}]}
+  \item[\colorbox{MediumSlateBlue}{#1\code{(}\py@varvars{#2}\code{)}\hspace{\py@argswidth}}]}
 
 % C functions ------------------------------------------------------------
 % \begin{cfuncdesc}[refcount]{type}{name}{arglist}
@@ -660,14 +660,17 @@
 \newcommand{\funcline}[2]{%
   \funclineni{#1}{#2}%
   \index{#1@{\py@idxcode{#1()}} (in module \py@thismodule)}}
+
 \newenvironment{funcdesc}[2]{
-  \begin{fulllineitems}
+  \vspace{.1in}  
+\begin{fulllineitems}    
     \funcline{#1}{#2}
 }{\end{fulllineitems}}
 
-% similar to {funcdesc}, but doesn't add to the index
 \newcommand{\funclineni}[2]{%
   \py@sigline{\bfcode{#1}}{#2}}
+
+% similar to {funcdesc}, but doesn't add to the index
 \newenvironment{funcdescni}[2]{
   \begin{fulllineitems}
     \funclineni{#1}{#2}

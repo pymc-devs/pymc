@@ -14,7 +14,7 @@
 \usepackage{fullpage}
 \usepackage{amsmath}
 \usepackage{epsfig}
-
+\usepackage{color}
 %\usepackage{pdfsync} 
 
 % Flexible citation syntax
@@ -43,7 +43,9 @@
 %\usepackage{ifpdf}
 
 % Enable hyperlinks
-\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+\definecolor{Red}{rgb}{0.5,0,0}
+\definecolor{Blue}{rgb}{0,0,0.5}
+\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=Red,citecolor=Blue,urlcolor=Red]{hyperref}
 
 %\ifpdf
 %\usepackage[pdftex]{graphicx}
@@ -62,7 +64,7 @@ Installation and tutorial}
 
 
 %%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
+\newcommand{\rubric}[1]{\subsection{#1}}
 \newcommand{\titlereference}[1]{\textsl{#1}}
 \newlength{\locallinewidth}
 \setlength{\locallinewidth}{7in}
