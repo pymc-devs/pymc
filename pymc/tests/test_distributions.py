@@ -422,7 +422,7 @@ class test_dirichlet(TestCase):
         x = np.array([.4,.2,.4])
         l = flib.dirichlet(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
         f = dirichlet(x, theta)
-        assert_almost_equal(l, sum(np.log(f)), 5)
+        assert_almost_equal(l, np.sum(np.log(f)), 5)
 
     # Disabled vectorization bc got confused... AP
     # def test_vectorization(self):
