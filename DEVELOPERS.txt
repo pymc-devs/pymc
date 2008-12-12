@@ -1,0 +1,77 @@
+~~~~~~~~~~~~~~~~~~~~~
+Developer Cheat Sheet
+~~~~~~~~~~~~~~~~~~~~~
+
+Trunk stability
+~~~~~~~~~~~~~~~
+
+The trunk/ should always be stable; meaning that it should pass the test
+suite at all time. This means developers should always run pymc.test()
+before committing their changes. If a change breaks something that was
+not covered by the test suite, then it's a good idea to write a 
+regression test to make sure that doesn't happen again. 
+
+The setup.py file
+~~~~~~~~~~~~~~~~~
+The setup.py script describes how to build the software, and what is 
+needed to build the software is also what is included in the source 
+distribution. 
+
+To include other files, such as documentation, specify the names or 
+pattern in :file:`MANIFEST.in`. 
+
+Before uploading a package to PyPi, make sure you have the correct version
+number defined in setup.py. 
+
+
+
+Creating source and binary distributions:
+
+ * Source::
+  
+   python setup.py sdist
+
+ * Windows::
+  
+   python setup.py bdist_wininst
+ 
+ * POSIX::
+ 
+   python setup.py bdist
+ 
+
+To upload to PyPi::
+  
+   python setup.py sdist upload
+   
+   
+To simply change the information about the package, as defined in setup.py::
+
+   python setup.py register
+   
+   
+To tag the 2.1.1 release::
+
+   svn cp https://pymc.googlecode.com/svn/trunk \
+    https://pymc.googlecode.com/svn/tags/2.1.1 \
+    -m "Tagging the 2.1.1 release."
+    
+    
+Conventions: 
+
+ * alpha release (not everything is implemented): 2.1a
+ 
+ * beta release (released for testing): 2.1b
+ 
+ * release candidate 1(mostly finished): 2.1rc1
+ 
+ * Major release (some API breaking allowed): 2.0
+ 
+ * Minor release (no API breaks): 2.1
+ 
+ * Bug fix release: 2.1.1
+
+
+
+
+
