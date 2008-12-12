@@ -96,7 +96,7 @@ if __name__ == '__main__':
             #download_url="",
             license="Academic Free License",
             classifiers=[
-                'Development Status :: 4 - Beta',
+                'Development Status :: 5 - Production/Stable',
                 'Environment :: Console',
                 'Operating System :: OS Independent',
                 'Intended Audience :: Science/Research',
