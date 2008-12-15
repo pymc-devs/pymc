@@ -121,6 +121,6 @@ if __name__ == '__main__':
             ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
             """,
             packages=["pymc", "pymc/database", "pymc/examples", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
-            cmdclass={'uploadgoogle': googlecode.upload2google}, 
+            cmdclass={'upload2google': googlecode.upload2google}, 
             **(config_dict))
 

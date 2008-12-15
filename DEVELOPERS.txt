@@ -2,15 +2,6 @@
 Developer Cheat Sheet
 ~~~~~~~~~~~~~~~~~~~~~
 
-Trunk stability
-~~~~~~~~~~~~~~~
-
-The trunk/ should always be stable; meaning that it should pass the test
-suite at all time. This means developers should always run pymc.test()
-before committing their changes. If a change breaks something that was
-not covered by the test suite, then it's a good idea to write a 
-regression test to make sure that doesn't happen again. 
-
 The setup.py file
 ~~~~~~~~~~~~~~~~~
 The setup.py script describes how to build the software, and what is 
@@ -44,11 +35,14 @@ To upload to PyPi::
   
    python setup.py sdist upload
    
-   
-To simply change the information about the package, as defined in setup.py::
+To simply change the information about the package on the PyPi page (as defined in setup.py)::
 
    python setup.py register
    
+To upload to GoogleCode download section::
+
+   python setup.py upload2google --src (or --windows)
+
    
 To tag the 2.1.1 release::
 
@@ -59,19 +53,32 @@ To tag the 2.1.1 release::
     
 Conventions: 
 
- * alpha release (not everything is implemented): 2.1a
+ * alpha release (a) -- Not everything is implemented, this is generally for internal testers. PyMC is not likely to need alpha releases any time soon.
  
- * beta release (released for testing): 2.1b
+ * beta release (b) -- Everything is implemented, and the code is released to experienced users.
  
- * release candidate 1(mostly finished): 2.1rc1
+ * release candidate (rc1) -- Released to a wider audience to make sure there are no installation issues and tests pass on more platforms than those used by the devs.
  
- * Major release (some API breaking allowed): 2.0
+ * Major release (2.0) -- Release where some API breaking is allowed.
  
- * Minor release (no API breaks): 2.1
+ * Minor release (2.1) -- Release introducing new features, but no API breaks. 
  
- * Bug fix release: 2.1.1
+ * Bug fix release (2.1.1) -- Duh. 
 
 
 
+Buildind the docs
+~~~~~~~~~~~~~~~~~
+ 
+The docs are currently written in LaTeX and are stored in the docs/ directory. Some of the files (README.tex, INSTALL.tex and database.tex) are automatically generated from README.txt, INSTALL.txt and pymc/database/README.txt using rst2latex. The build process is coded in builddocs and is quite obfuscated. The plan is to move the documentation to Sphinx, since this is fast becoming the standard for Python projects. This will simplify  synchronising docstrings and the documentation. 
 
 
+
+Trunk stability
+~~~~~~~~~~~~~~~
+
+The trunk/ should always be stable; meaning that it should pass the test
+suite at all time. This means developers should always run pymc.test()
+before committing their changes. If a change breaks something that was
+not covered by the test suite, then it's a good idea to write a 
+regression test to make sure that doesn't happen again. 
