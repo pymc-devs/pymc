@@ -4,6 +4,7 @@
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os, sys
+import googlecode
 config = Configuration('pymc',parent_package=None,top_path=None)
 dist = sys.argv[1]
 
@@ -120,6 +121,6 @@ if __name__ == '__main__':
             ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
             """,
             packages=["pymc", "pymc/database", "pymc/examples", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
-            
+            cmdclass={'uploadgoogle': googlecode.upload2google}, 
             **(config_dict))
 
