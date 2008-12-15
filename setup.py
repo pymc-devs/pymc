@@ -4,7 +4,12 @@
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os, sys
-import googlecode
+#try:
+#    from googlecode import upload2google
+#except: 
+#    def upload2google():
+#        raise "This commmand is only available with the subversion development version."
+        
 config = Configuration('pymc',parent_package=None,top_path=None)
 dist = sys.argv[1]
 
@@ -121,6 +126,6 @@ if __name__ == '__main__':
             ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
             """,
             packages=["pymc", "pymc/database", "pymc/examples", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
-            cmdclass={'upload2google': googlecode.upload2google}, 
+            #cmdclass={'upload2google':upload2google}, 
             **(config_dict))
 
