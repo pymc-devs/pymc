@@ -344,7 +344,7 @@ Models' useful methods are:
     \item[\code{find_generations():}] Sets the \code{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
 \end{description}
 
-The helper functions \code{weight} and \code{graph} act on models. \code{weight} computes Bayes' factors (posterior probabilities of model correctness) for lists of models using the \code{draw_from_prior} method, and \code{graph} produces graphical representations \cite[see]{Jordan:2004p5439}. The \code{weight} function's algorithm can only be expected to perform well when the dimension of the parameter space is small (less than about 10).
+The helper function \code{graph} produces graphical representations of models \cite[see]{Jordan:2004p5439}.
 
 Models have the following important attributes:
 \begin{itemize}
