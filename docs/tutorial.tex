@@ -227,6 +227,8 @@ PyMC provides several objects that fit probability models (linked collections of
    from pymc import MCMC
    M = MCMC(DisasterModel)
 \end{verbatim}
+In this case \code{M} will expose variables \code{s}, \code{e}, \code{l}, \code{r} and \code{D} as attributes; that is, \code{M.s} will be the same object as \code{DisasterModel.s}.     
+
 To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired): 
 \begin{verbatim}
    M.isample(iter=10000, burn=1000, thin=10)
