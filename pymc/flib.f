@@ -279,6 +279,38 @@ cf2py double precision intent(out) :: like
         enddo
       END subroutine uniform_like
 
+
+      subroutine duniform_like(x,lower,upper,n,nlower,nupper,like)
+        
+c Return the discrete uniform likelihood of x.
+c CREATED 12/06 DH
+
+cf2py intent(hide) n,nlower,nupper
+cf2py intent(out) like
+        IMPLICIT NONE
+        
+        INTEGER n, nlower, nupper, i
+        INTEGER x(n), lower(nlower), upper(nupper)
+        DOUBLE PRECISION like, low, high
+        DOUBLE PRECISION infinity
+        PARAMETER (infinity = 1.7976931348623157d308)
+                
+        low = lower(1)
+        high = upper(1)       
+        like = 0.0
+        do i=1,n
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
+          if ((x(i) < low) .OR. (x(i) > high)) then
+            like = -infinity
+            RETURN
+          else
+            like = like - dlog(high-low+1.0D0)
+          endif
+        enddo
+      END subroutine duniform_like
+
+
       SUBROUTINE exponweib(x,a,c,loc,scale,n,na,nc,nloc,nscale,like)
       
 c Exponentiated log-likelihood function

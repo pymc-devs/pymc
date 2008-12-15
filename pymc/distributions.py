@@ -2168,7 +2168,7 @@ def discrete_uniform_like(x,lower, upper):
         Upper limit.
     """
     
-    return flib.uniform_like(x, lower, upper)
+    return flib.duniform_like(x, lower, upper)
 
 
 # Uniform--------------------------------------------------
