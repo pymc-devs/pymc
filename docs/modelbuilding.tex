@@ -212,7 +212,7 @@ Deterministic variables are less complicated than stochastic variables, and have
    \begin{description}
       \item[\code{LinearCombination}:] Has two parents $x$ and $y$, both of which must be iterable (\emph{i.e.} vector-valued). This function returns:
       \[
-      \sum_i x_i^{\prime} y_i.
+      \sum_i x_i^T y_i.
       \]
       \item[\code{Index}:] Has three parents $x$, $y$ and \code{index}. $x$ and $y$ must be iterables, \code{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \texttt{index}:
       \[
