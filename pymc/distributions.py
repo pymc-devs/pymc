@@ -2488,7 +2488,7 @@ def one_over_x_like(x):
 Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
 DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
 DiscreteUninformative.__name__ = 'DiscreteUninformative'
-OneOverX = stochastic_from_dist('one_over_x_like', logp = one_over_x_like)
+OneOverX = stochastic_from_dist('one_over_x', logp = one_over_x_like)
 
 
 

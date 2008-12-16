@@ -29,7 +29,7 @@ __all__ = ['Trace', 'Database', 'load']
 
 class TraceObject(base.Trace):
     """HDF5 Trace for Objects."""
-    def __init__(self, name, getfunc=None, db=None, vlarrays=[]):
+    def __init__(self, name, getfunc=None, db=None, vlarrays=None):
         """Create a Trace instance.
          
         :Parameters:
@@ -44,16 +44,18 @@ class TraceObject(base.Trace):
          """
         
         base.Trace.__init__(self, name, getfunc=getfunc, db=db)
+        if vlarrays is None:
+            vlarrays = []
         self._vlarrays = vlarrays  # This should be a dict keyed by chain. 
 
 
     def tally(self, chain):
         """Adds current value to trace"""
-        try:
-            self._vlarrays[chain].append(self._getfunc())
-        except:
-            print self._vlarrays, chain
-            raise AttributeError
+        # try:
+        self._vlarrays[chain].append(self._getfunc())
+        # except:
+        #     print self._vlarrays, chain
+        #     raise AttributeError
             
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
