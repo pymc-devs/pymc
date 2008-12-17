@@ -220,4 +220,4 @@ addressed to PyMC's `mailing list`_.
 
 .. _`issue tracker`: http://code.google.com/p/pymc/issues/list .
 
-.. _`mailing list`: pymc-users@fisher.forestry.uga.edu
+.. _`mailing list`: pymc@googlegroups.com

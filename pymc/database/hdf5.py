@@ -487,8 +487,7 @@ def load(dbname, dbmode='a'):
     return db
 
 
-# TODO: Check this. It seems that pickle will be the 
-# pickle backend, not the cPickle module. 
+# TODO: Check this. It seems that pickle is pymc.database.pickle, not the pickle module. 
 
 def save_sampler(sampler):
     """

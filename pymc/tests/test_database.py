@@ -294,7 +294,6 @@ class testHDF5Objects(TestCase):
         
         
         
-        
 def test_identical_object_names():
     A = pymc.Uniform('a', 0, 10)
     B = pymc.Uniform('a', 0, 10)
