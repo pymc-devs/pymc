@@ -106,7 +106,7 @@ class StepMethodMeta(type):
     if their init method has one and only one required argument.
     """
     def __init__(cls, name, bases, dict):
-        type.__init__(cls)
+        type.__init__(cls, name, bases, dict)
         args, varargs, varkw, defaults = inspect.getargspec(cls.__init__)
         auto_assignment_OK = False
         if len(args) == 2:
