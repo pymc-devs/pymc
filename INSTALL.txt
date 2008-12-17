@@ -24,7 +24,7 @@ PyMC requires some prerequisite packages to be present on the system.
 Fortunately, there are currently only a few dependencies, and all are 
 freely available online.
 
-* `Python`_ version 2.5 or later. 
+* `Python`_ version 2.5. 
 
 * `NumPy`_ (1.2 or newer): The fundamental scientific programming package, it provides a 
   multidimensional array type and many useful functions for numerical analysis. 
