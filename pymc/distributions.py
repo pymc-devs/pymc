@@ -1401,9 +1401,9 @@ def laplace_like(x, mu, tau):
     R"""
     laplace_like(x, mu, tau)
     
-    Laplace (doubel exponential) log-likelihood.
+    Laplace (double exponential) log-likelihood.
     
-    The Laplace (or double eexponential) distribution describes the
+    The Laplace (or double exponential) distribution describes the
     difference between two independent, identically distributed exponential
     events. It is often used as a heavier-tailed alternative to the normal.
     
@@ -2154,7 +2154,7 @@ def discrete_uniform_like(x,lower, upper):
     R"""
     discrete_uniform_like(x, lower, upper)
     
-    discrete_uniform log-likelihood.
+    Discrete uniform log-likelihood.
     
     .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
@@ -2294,8 +2294,8 @@ def wishart_like(X, n, Tau):
     matrix of a multivariate normal distribution. If Tau=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
     
-    For an alternative parameterization based on :math: `C=T{-1}`, see 
-    wishart_cov_like.
+    For an alternative parameterization based on :math:`C=T{-1}`, see 
+    `wishart_cov_like`.
     
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
@@ -2348,8 +2348,8 @@ def wishart_cov_like(X, n, C):
     matrix of a multivariate normal distribution. If C=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
     
-    For an alternative parameterization based on :math: `T=C{-1}`, see 
-    wishart_cov_like.
+    For an alternative parameterization based on :math:`T=C{-1}`, see 
+    `wishart_like`.
     
     .. math::
         f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}

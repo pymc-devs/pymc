@@ -4,7 +4,14 @@
 %\usepackage{babel}
 %\usepackage{times}
 %\usepackage[Bjarne]{fncychap}
-
+PyMC provides 35 built-in probability distributions, covering the vast majority of use cases. For each distribution, PyMC provides:
+\begin{itemize}
+    \item A function that evaluates its log-probability or log-density: \code{normal_like()}.
+    \item A function that draws random variables: \code{rnormal()}.
+    \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
+    \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
+\end{itemize} 
+This section describes the likelihood functions of these distributions. 
 \index{pymc.distributions (module)}
 
 \newenvironment{paramlist}{
@@ -19,7 +26,8 @@
 \section{Discrete distributions}
 \index{binomial\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.binomial_like}{}\begin{funcdesc}{binomial\_like}{x, n, p}
+\hypertarget{pymc.distributions.binomial_like}{}
+\begin{funcdesc}{binomial\_like}{x, n, p}
 Binomial log-likelihood.  The discrete probability distribution of the
 number of successes in a sequence of n independent yes/no experiments,
 each of which yields success with probability p.
@@ -59,7 +67,8 @@ $Var(X)=np(1-p)$
 
 
 \index{geometric\_like() (in module pymc.distributions)}
-\hypertarget{pymc.distributions.geometric_like}{}\begin{funcdesc}{geometric\_like}{x, p}
+\hypertarget{pymc.distributions.geometric_like}{}
+\begin{funcdesc}{geometric\_like}{x, p}
 Geometric log-likelihood. The probability that the first success in a
 sequence of Bernoulli trials occurs after x trials.
 \begin{gather}
@@ -91,7 +100,8 @@ $Var(X)=\frac{1-p}{p^2}$
 \end{funcdesc}
 \index{poisson\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.poisson_like}{}\begin{funcdesc}{poisson\_like}{x, mu}
+\hypertarget{pymc.distributions.poisson_like}{}
+\begin{funcdesc}{poisson\_like}{x, mu}
 Poisson log-likelihood. The Poisson is a discrete probability distribution.
 It expresses the probability of a number of events occurring in a fixed
 period of time if these events occur with a known average rate, and are
@@ -127,7 +137,8 @@ $Var(x)=\mu$
 \end{funcdesc}
 \index{negative\_binomial\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.negative_binomial_like}{}\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
+\hypertarget{pymc.distributions.negative_binomial_like}{}
+\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
 Negative binomial log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
@@ -158,7 +169,8 @@ is equal to $\mu$.
 \end{funcdesc}
 
 \index{categorical\_like() (in module pymc.distributions)}
-\hypertarget{pymc.distributions.categorical_like}{}\begin{funcdesc}{categorical\_like}{x, p}
+\hypertarget{pymc.distributions.categorical_like}{}
+\begin{funcdesc}{categorical\_like}{x, p}
 Categorical log-likelihood.
 \begin{gather}
 \begin{split}f(x=v_i \mid p) = p_i\end{split}\notag\\\begin{split}\end{split}\notag
@@ -180,8 +192,9 @@ $p > 0$, $\sum p = 1$
 \end{funcdesc}
 \index{discrete\_uniform\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.discrete_uniform_like}{}\begin{funcdesc}{discrete\_uniform\_like}{x, lower, upper}
-discrete\_uniform log-likelihood.
+\hypertarget{pymc.distributions.discrete_uniform_like}{}
+\begin{funcdesc}{discrete\_uniform\_like}{x, lower, upper}
+Discrete uniform log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -210,8 +223,9 @@ Upper limit.
 
 \index{bernoulli\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.bernoulli_like}{}\begin{funcdesc}{bernoulli\_like}{x, p}
-Bernoulli log-likelihood
+\hypertarget{pymc.distributions.bernoulli_like}{}
+\begin{funcdesc}{bernoulli\_like}{x, p}
+Bernoulli log-likelihood.
 
 The Bernoulli distribution describes the probability of successes (x=1) and
 failures (x=0).
@@ -248,7 +262,8 @@ $Var(x)= p(1-p)$
 
 \index{beta\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.beta_like}{}\begin{funcdesc}{beta\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.beta_like}{}
+\begin{funcdesc}{beta\_like}{x, alpha, beta}
 Beta log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -284,7 +299,8 @@ $Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
 \end{funcdesc}
 \index{cauchy\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.cauchy_like}{}\begin{funcdesc}{cauchy\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.cauchy_like}{}
+\begin{funcdesc}{cauchy\_like}{x, alpha, beta}
 Cauchy log-likelihood. The Cauchy distribution is also known as the
 Lorentz or the Breit-Wigner distribution.
 \begin{gather}
@@ -313,7 +329,8 @@ Mode and median are at alpha.
 \end{funcdesc}
 \index{chi2\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.chi2_like}{}\begin{funcdesc}{chi2\_like}{x, nu}
+\hypertarget{pymc.distributions.chi2_like}{}
+\begin{funcdesc}{chi2\_like}{x, nu}
 Chi-squared ($\chi^2$) log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -344,7 +361,8 @@ $Var(X)=2\nu$
 \end{funcdesc}
 \index{degenerate\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.degenerate_like}{}\begin{funcdesc}{degenerate\_like}{x, k}
+\hypertarget{pymc.distributions.degenerate_like}{}
+\begin{funcdesc}{degenerate\_like}{x, k}
 Degenerate log-likelihood, also known as point mass.
 \begin{gather}
 \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
@@ -366,7 +384,8 @@ degenerate value or location of point mass.
 \end{funcdesc}
 \index{exponential\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.exponential_like}{}\begin{funcdesc}{exponential\_like}{x, beta}
+\hypertarget{pymc.distributions.exponential_like}{}
+\begin{funcdesc}{exponential\_like}{x, beta}
 Exponential log-likelihood.
 
 The exponential distribution is a special case of the gamma distribution
@@ -400,7 +419,8 @@ $Var(X) = \beta^2$
 \end{funcdesc}
 \index{exponweib\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.exponweib_like}{}\begin{funcdesc}{exponweib\_like}{x, alpha, k, loc=0, scale=1}
+\hypertarget{pymc.distributions.exponweib_like}{}
+\begin{funcdesc}{exponweib\_like}{x, alpha, k, loc=0, scale=1}
 Exponentiated Weibull log-likelihood.
 
 The exponentiated Weibull distribution is a generalization of the Weibull
@@ -444,7 +464,8 @@ Scale parameter \textgreater{} 0.
 \end{funcdesc}
 \index{gamma\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.gamma_like}{}\begin{funcdesc}{gamma\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.gamma_like}{}
+\begin{funcdesc}{gamma\_like}{x, alpha, beta}
 Gamma log-likelihood.
 
 Represents the sum of alpha exponentially distributed random variables, each
@@ -484,7 +505,8 @@ $Var(X) = \frac{\alpha}{\beta^2}$
 \end{funcdesc}
 \index{half\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.half_normal_like}{}\begin{funcdesc}{half\_normal\_like}{x, tau}
+\hypertarget{pymc.distributions.half_normal_like}{}
+\begin{funcdesc}{half\_normal\_like}{x, tau}
 Half-normal log-likelihood, a normal distribution with mean 0 and limited
 to the domain $x \in [0, \infty)$.
 \begin{gather}
@@ -507,7 +529,8 @@ $\tau > 0$
 \end{funcdesc}
 \index{hypergeometric\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.hypergeometric_like}{}\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
+\hypertarget{pymc.distributions.hypergeometric_like}{}
+\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
 Hypergeometric log-likelihood. Discrete probability distribution that
 describes the number of successes in a sequence of draws from a finite
 population without replacement.
@@ -541,7 +564,8 @@ Total number of units in the population.
 \end{funcdesc}
 \index{inverse\_gamma\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.inverse_gamma_like}{}\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.inverse_gamma_like}{}
+\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
 Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
@@ -573,10 +597,11 @@ Scale parameter, $\beta > 0$.
 \end{funcdesc}
 \index{laplace\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.laplace_like}{}\begin{funcdesc}{laplace\_like}{x, mu, tau}
-Laplace (doubel exponential) log-likelihood.
+\hypertarget{pymc.distributions.laplace_like}{}
+\begin{funcdesc}{laplace\_like}{x, mu, tau}
+Laplace (double exponential) log-likelihood.
 
-The Laplace (or double eexponential) distribution describes the
+The Laplace (or double exponential) distribution describes the
 difference between two independent, identically distributed exponential
 events. It is often used as a heavier-tailed alternative to the normal.
 \begin{gather}
@@ -613,7 +638,8 @@ $Var(X) = \frac{2}{\tau^2}$
 \end{funcdesc}
 \index{logistic\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.logistic_like}{}\begin{funcdesc}{logistic\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.logistic_like}{}
+\begin{funcdesc}{logistic\_like}{x, mu, tau}
 Logistic log-likelihood.
 
 The logistic distribution is often used as a growth model; for example,
@@ -652,7 +678,8 @@ $Var(X) = \frac{\pi^2}{3\tau^2}$
 \end{funcdesc}
 \index{lognormal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.lognormal_like}{}\begin{funcdesc}{lognormal\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.lognormal_like}{}
+\begin{funcdesc}{lognormal\_like}{x, mu, tau}
 Log-normal log-likelihood. Distribution of any random variable whose
 logarithm is normally distributed. A variable might be modeled as
 log-normal if it can be thought of as the multiplicative product of many
@@ -686,7 +713,8 @@ $E(X)=e^{\mu+\frac{1}{2\tau}}$
 \end{funcdesc}
 \index{normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.normal_like}{}\begin{funcdesc}{normal\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.normal_like}{}
+\begin{funcdesc}{normal\_like}{x, mu, tau}
 Normal log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -722,7 +750,8 @@ $Var(X) = 1/\tau$
 \end{funcdesc}
 \index{t\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.t_like}{}\begin{funcdesc}{t\_like}{x, nu}
+\hypertarget{pymc.distributions.t_like}{}
+\begin{funcdesc}{t\_like}{x, nu}
 Student's t log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -743,7 +772,8 @@ Degrees of freedom.
 \end{funcdesc}
 \index{uniform\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.uniform_like}{}\begin{funcdesc}{uniform\_like}{x, lower, upper}
+\hypertarget{pymc.distributions.uniform_like}{}
+\begin{funcdesc}{uniform\_like}{x, lower, upper}
 Uniform log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -770,7 +800,8 @@ Upper limit.
 \end{funcdesc}
 \index{weibull\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.weibull_like}{}\begin{funcdesc}{weibull\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.weibull_like}{}
+\begin{funcdesc}{weibull\_like}{x, alpha, beta}
 Weibull log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
@@ -807,7 +838,8 @@ $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 \end{funcdesc}
 \index{skew\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.skew_normal_like}{}\begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
+\hypertarget{pymc.distributions.skew_normal_like}{}
+\begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
 Azzalini's skew-normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
@@ -849,7 +881,8 @@ See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
 \end{funcdesc}
 \index{truncnorm\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.truncnorm_like}{}\begin{funcdesc}{truncnorm\_like}{x, mu, tau, a, b}
+\hypertarget{pymc.distributions.truncnorm_like}{}
+\begin{funcdesc}{truncnorm\_like}{x, mu, tau, a, b}
 Truncated normal log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},\end{split}\notag\\\begin{split}\end{split}\notag
@@ -893,7 +926,8 @@ Right bound of the distribution.
 \section{Multivariate discrete distributions}
 \index{multivariate\_hypergeometric\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.multivariate_hypergeometric_like}{}\begin{funcdesc}{multivariate\_hypergeometric\_like}{x, m}
+\hypertarget{pymc.distributions.multivariate_hypergeometric_like}{}
+\begin{funcdesc}{multivariate\_hypergeometric\_like}{x, m}
 The multivariate hypergeometric describes the probability of drawing x{[}i{]}
 elements of the ith category, when the number of items in each category is
 given by m.
@@ -918,7 +952,8 @@ Number of items in each categoy.
 \end{funcdesc}
 \index{multinomial\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.multinomial_like}{}\begin{funcdesc}{multinomial\_like}{x, n, p}
+\hypertarget{pymc.distributions.multinomial_like}{}
+\begin{funcdesc}{multinomial\_like}{x, n, p}
 Multinomial log-likelihood. Generalization of the binomial
 distribution, but instead of each trial resulting in ``success'' or
 ``failure'', each one results in exactly one of some fixed finite number k
@@ -968,7 +1003,8 @@ $cov(X_i,X_j) = -n p_i p_j$
 \section{Multivariate continuous distributions}
 \index{dirichlet\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.dirichlet_like}{}\begin{funcdesc}{dirichlet\_like}{x, theta}
+\hypertarget{pymc.distributions.dirichlet_like}{}
+\begin{funcdesc}{dirichlet\_like}{x, theta}
 Dirichlet log-likelihood.
 
 This is a multivariate continuous distribution.
@@ -992,7 +1028,8 @@ $\theta > 0$
 \end{funcdesc}
 \index{inverse\_wishart\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.inverse_wishart_like}{}\begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
+\hypertarget{pymc.distributions.inverse_wishart_like}{}
+\begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
 Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate 
 prior for the covariance matrix of a multivariate normal distribution.
 \begin{gather}
@@ -1022,7 +1059,8 @@ Symmetric and positive definite
 \end{funcdesc}
 \index{mv\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.mv_normal_like}{}\begin{funcdesc}{mv\_normal\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.mv_normal_like}{}
+\begin{funcdesc}{mv\_normal\_like}{x, mu, tau}
 Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -1044,7 +1082,9 @@ Multivariate normal log-likelihood
 \end{funcdesc}
 \index{mv\_normal\_cov\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.mv_normal_cov_like}{}\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
+
+\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
+\hypertarget{pymc.distributions.mv_normal_cov_like}{}
 Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -1069,7 +1109,9 @@ Multivariate normal log-likelihood
 \end{funcdesc}
 \index{mv\_normal\_chol\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.mv_normal_chol_like}{}\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, tau}
+
+\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.mv_normal_chol_like}{}
 Multivariate normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -1091,14 +1133,16 @@ Multivariate normal log-likelihood
 \end{funcdesc}
 \index{wishart\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.wishart_like}{}\begin{funcdesc}{wishart\_like}{X, n, Tau}
+
+\begin{funcdesc}{wishart\_like}{X, n, Tau}
+\hypertarget{pymc.distributions.wishart_like}{}
 Wishart log-likelihood. The Wishart distribution is the probability
 distribution of the maximum-likelihood estimator (MLE) of the precision
 matrix of a multivariate normal distribution. If Tau=1, the distribution
 is identical to the chi-square distribution with n degrees of freedom.
 
-For an alternative parameterization based on :math: \emph{C=T\{-1\}}, see 
-wishart\_cov\_like.
+For an alternative parameterization based on $C=T\{-1\}$, see 
+\hyperlink{pymc.distributions.wishart_cov_like}{\code{wishart\_cov\_like}}.
 \begin{gather}
 \begin{split}f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -1126,14 +1170,16 @@ Symmetric and positive definite
 \end{funcdesc}
 \index{wishart\_cov\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.wishart_cov_like}{}\begin{funcdesc}{wishart\_cov\_like}{X, n, C}
+
+\begin{funcdesc}{wishart\_cov\_like}{X, n, C}
+\hypertarget{pymc.distributions.wishart_cov_like}{}
 Wishart log-likelihood. The Wishart distribution is the probability
 distribution of the maximum-likelihood estimator (MLE) of the covariance
 matrix of a multivariate normal distribution. If C=1, the distribution
 is identical to the chi-square distribution with n degrees of freedom.
 
-For an alternative parameterization based on :math: \emph{T=C\{-1\}}, see 
-wishart\_cov\_like.
+For an alternative parameterization based on $\emph{T=C\{-1\}}$, see 
+\hyperlink{pymc.distributions.wishart_like}{\code{wishart\_like}}.
 \begin{gather}
 \begin{split}f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
