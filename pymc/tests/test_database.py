@@ -79,6 +79,9 @@ class TestRam(TestBase):
         assert_array_equal(self.S.trace('e')[:].shape, (10,))
         assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
         assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('e', chain=1)[::2].shape, (5,))
+        assert_array_equal(self.S.trace('e', chain=1)[1::].shape, (9,))
+        assert_array_equal(self.S.trace('e', chain=1)[0],  self.S.trace('e', chain=1)[:][0])
         assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
                            
         self.S.db.close()

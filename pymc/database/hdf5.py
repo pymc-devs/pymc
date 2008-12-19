@@ -115,16 +115,16 @@ class Trace(base.Trace):
         slicing : slice object
           A slice overriding burn and thin assignement.
         """
-        if slicing is not None:
-            burn, stop, thin = slicing.start, slicing.stop, slicing.step
-            
+        
         if chain is not None:
             tables = [self.db._gettables()[chain],]
         else:
             tables = self.db._gettables()
         
         for i,table in enumerate(tables):
-            if slicing is None:
+            if slicing is not None:
+                burn, stop, thin = slicing.start, slicing.stop, slicing.step
+            if slicing is None or stop is None:
                 stop = table.nrows
             col = table.read(start=burn, stop=stop, step=thin, field=self.name)
             if i == 0:

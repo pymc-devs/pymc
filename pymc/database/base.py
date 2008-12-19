@@ -46,6 +46,7 @@ Some backends require being closed before saving the results. This needs to be
 done explicitly by the user. 
 """
 import pymc
+import types
 
 __all__=['Trace', 'Database']
 
@@ -109,11 +110,11 @@ class Trace(object):
         """Return the trace corresponding to item (or slice) i for the chain
         defined by self.db._default_chain. 
         """
-        try:
-            return self.gettrace(slicing=slice(i,i), chain=self.db._default_chain)
-        except:         # Slice object
+        if type(i) == types.SliceType:
             return self.gettrace(slicing=i, chain=self.db._default_chain)
-   
+        else:
+            return self.gettrace(slicing=slice(i,i), chain=self.db._default_chain)
+        
     def _finalize(self, chain):
         """Execute task necessary when tallying is over for this trace."""
         pass
