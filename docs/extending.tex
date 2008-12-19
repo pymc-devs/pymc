@@ -4,7 +4,7 @@ qPyMC tries to make standard things easy, but keep unusual things possible. Its 
 \section{Nonstandard Stochastics} \label{nonstandard}
 \pdfbookmark[0]{Nonstandard Stochastics}{nonstandard}
 
-The simplest way to create a \code{Stochastic} object with a nonstandard distribution is to use the medium or long decorator syntax. See chapter \ref{chap:modelbuilding}. If you want to create many stochastics with the same nonstandard distribution, the decorator syntax can become cumbersome. An actual subclass of \code{Stochastic} can be created using the class factory \code{stochastic_from_distribution}. This function takes the following arguments:
+The simplest way to create a \code{Stochastic} object with a nonstandard distribution is to use the medium or long decorator syntax. See chapter \ref{chap:modelbuilding}. If you want to create many stochastics with the same nonstandard distribution, the decorator syntax can become cumbersome. An actual subclass of \code{Stochastic} can be created using the class factory \code{stochastic_from_dist}. This function takes the following arguments:
 \begin{itemize}
    \item The name of the new class,
    \item A \code{logp} function,
