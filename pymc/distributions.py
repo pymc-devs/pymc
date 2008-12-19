@@ -705,7 +705,7 @@ def binomial_like(x, n, p):
     each of which yields success with probability p.
     
     .. math::
-        f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{1-x}
+        f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}
     
     :Parameters:
       x : float
