@@ -601,7 +601,7 @@ def bernoulli_like(x, p):
         f(x \mid p) = p^{x} (1-p)^{1-x}
     
     :Parameters:
-      x : sequence
+      x : sequence of Booleans
         Series of successes (1) and failures (0). :math:`x=0,1`
       p : float
         Probability of success. :math:`0 < p < 1`.
@@ -646,7 +646,7 @@ def beta_like(x, alpha, beta):
     R"""
     beta_like(x, alpha, beta)
     
-    Beta log-likelihood.
+    Beta log-likelihood. The conjugate prior for the parameter :math: `p` of the binomial distribution.
     
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
@@ -708,7 +708,7 @@ def binomial_like(x, n, p):
         f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}
     
     :Parameters:
-      x : float
+      x : int
         Number of successes, > 0.
       n : int
         Number of Bernoulli trials, > x.
@@ -738,7 +738,7 @@ def categorical_like(x, p, minval=0, step=1):
     R"""
     categorical_like(x,p)
     
-    Categorical log-likelihood.
+    Categorical log-likelihood. The most general discrete distribution.
     
     ..math::
         f(x=v_i \mid p) = p_i
@@ -1133,7 +1133,7 @@ def geometric_like(x, p):
     geometric_like(x, p)
     
     Geometric log-likelihood. The probability that the first success in a
-    sequence of Bernoulli trials occurs after x trials.
+    sequence of Bernoulli trials occurs on the x'th trial.
     
     .. math::
         f(x \mid p) = p(1-p)^{x-1}
@@ -1849,7 +1849,9 @@ def negative_binomial_like(x, mu, alpha):
     R"""
     negative_binomial_like(x, mu, alpha)
     
-    Negative binomial log-likelihood
+    Negative binomial log-likelihood. The negative binomial distribution describes a 
+    Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
+    parameterization makes this mixture interpretation more convenient to work with.
     
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
@@ -1857,14 +1859,12 @@ def negative_binomial_like(x, mu, alpha):
     x > 0, mu > 0, alpha > 0
     
     :Note:
-      In Wikipedia's parameterization,
+      - :math: E[x]=\mu
+      - In Wikipedia's parameterization,
         :math: r=\alpha
         :math: p=\alpha/(\mu+\alpha)
         :math: \mu=r(1-p)/p
       
-      This parameterization is convenient in the Gamma-Poisson mixture interpretation
-      of the negative binomial distribution. In that case the expectation of the rate
-      is equal to :math: \mu.
     """
     return flib.negbin2(x, mu, alpha)
 
@@ -1944,10 +1944,9 @@ def poisson_like(x,mu):
     poisson_like(x,mu)
     
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
-    It expresses the probability of a number of events occurring in a fixed
-    period of time if these events occur with a known average rate, and are
-    independent of the time since the last event. The Poisson distribution can
-    be derived as a limiting case of the binomial distribution.
+    It is often used to model the number of events occurring in a fixed period of 
+    time when the times at which events occur are independent. The Poisson 
+    distribution can be derived as a limiting case of the binomial distribution.
     
     .. math::
         f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
@@ -2110,7 +2109,9 @@ def rt(nu, size=1):
 def t_like(x, nu):
     R"""t_like(x, nu)
     
-    Student's t log-likelihood
+    Student's T log-likelihood. Describes a zero-mean normal variable whose precision is 
+    gamma distributed. Alternatively, describes the mean of several zero-mean normal 
+    random variables divided by their sample standard deviation.
     
     .. math::
         f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
@@ -2160,8 +2161,8 @@ def discrete_uniform_like(x,lower, upper):
         f(x \mid lower, upper) = \frac{1}{upper-lower}
     
     :Parameters:
-      x : float
-       :math:`lower \geq x \geq upper`
+      x : integer
+       :math:`lower \leq x \leq upper`
       lower : float
         Lower limit.
       upper : float
@@ -2200,7 +2201,7 @@ def uniform_like(x,lower, upper):
     
     :Parameters:
       x : float
-       :math:`lower \geq x \geq upper`
+       :math:`lower \leq x \leq upper`
       lower : float
         Lower limit.
       upper : float
