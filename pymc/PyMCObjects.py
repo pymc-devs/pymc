@@ -244,7 +244,7 @@ class Potential(PotentialBase):
 
         self._plot = plot
 
-        self._logp.force_compute()
+        # self._logp.force_compute()
         
         # Check initial value
         if not isinstance(self.logp, float):
@@ -342,7 +342,7 @@ class Deterministic(DeterministicBase):
                         plot=plot,
                         verbose=verbose)
                         
-        self._value.force_compute()
+        # self._value.force_compute()
         
     def gen_lazy_function(self):
 
