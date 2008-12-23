@@ -565,8 +565,7 @@ $\tau > 0$
 
 \hypertarget{pymc.distributions.inverse_gamma_like}{}
 \begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
-Inverse gamma log-likelihood. If $X$ is gamma distributed, $1/X$ is inverse gamma distributed.
-The conjugate prior for the variance of a normal random variable.
+Inverse gamma log-likelihood. If $X$ is gamma distributed, $1/X$ is inverse gamma distributed. The inverse gamma is the conjugate prior for the variance of a normal random variable.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -638,8 +637,7 @@ $Var(X) = \frac{2}{\tau^2}$
 
 \hypertarget{pymc.distributions.logistic_like}{}
 \begin{funcdesc}{logistic\_like}{x, mu, tau}
-Logistic log-likelihood. The logistic distribution is often used as a growth model; for example,
-populations, markets. Resembles a heavy-tailed normal distribution.
+Logistic log-likelihood. The logistic distribution is often used as a growth model for populations or markets. It resembles a heavy-tailed normal distribution.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\paragraph{Parameters}\begin{paramlist}
@@ -798,7 +796,7 @@ Upper limit.
 
 \hypertarget{pymc.distributions.weibull_like}{}
 \begin{funcdesc}{weibull\_like}{x, alpha, beta}
-Weibull log-likelihood
+Weibull log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
 \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -836,7 +834,7 @@ $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 
 \hypertarget{pymc.distributions.skew_normal_like}{}
 \begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
-Azzalini's skew-normal log-likelihood
+Azzalini's skew-normal log-likelihood,
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
@@ -942,7 +940,7 @@ Number of draws from each category, $< m$
 \item[] \textbf{m} : integer sequence
 \begin{quote}
 
-Number of items in each categoy.
+Number of items in each category.
 \end{quote}
 \end{paramlist}
 \end{funcdesc}
@@ -1001,7 +999,7 @@ $cov(X_i,X_j) = -n p_i p_j$
 
 \hypertarget{pymc.distributions.dirichlet_like}{}
 \begin{funcdesc}{dirichlet\_like}{x, theta}
-Dirichlet log-likelihood. A convenient distribution for variables that take values on the simplex. The conjugate prior for the multinomial distribution's $p$ parameter.
+Dirichlet log-likelihood. A convenient distribution for variables that take values on the simplex, it is the conjugate prior for the multinomial distribution's $p$ parameter.
 \begin{gather}
 \begin{split}f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\paragraph{Parameters}\begin{paramlist}
