@@ -2343,10 +2343,10 @@ cf2py intent(out) ltheta
       PARAMETER (infinity = 1.7976931348623157d308)      
       INTEGER n, i
       do i=1,n
-          if (theta(i).LE.0) then
-              ltheta(i) = -inf
-          else if (theta(i).GE.1) then
-              ltheta(i) = inf
+          if (theta(i).LE.0.0D0) then
+              ltheta(i) = -infinity
+          else if (theta(i).GE.1.0D0) then
+              ltheta(i) = infinity
           else
               ltheta(i) = dlog(theta(i) / (1.0D0-theta(i)))
           endif
