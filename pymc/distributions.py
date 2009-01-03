@@ -753,6 +753,7 @@ def categorical_like(x, p, minval=0, step=1):
         :math: `p > 0`
         :math: `\sum p = 1`
     """
+    
     return flib.categorical(x, p)
 
 
@@ -2556,8 +2557,7 @@ def rmod_categor(p,minval=0,step=1,size=1):
 
 class Categorical(Stochastic):
     __doc__ = """
-C = Categorical(name, p[, trace=True, value=None, rseed=False, 
-    observed=False, cache_depth=2, plot=None, verbose=0])
+C = Categorical(name, p, minval=0, step=1, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0)
 
 Stochastic variable with Categorical distribution.
 Parent is: p
