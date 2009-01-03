@@ -2266,7 +2266,7 @@ cf2py double precision intent(out) :: like
 c loop over number of elements in x      
       do i=1,n
 c elements should not be larger than the largest index
-        if (x(i).GT.(k-1)) then
+        if ((x(i).GT.(k-1)).OR.(x(i).LT.0)) then
           like = -infinity
           RETURN
         endif
