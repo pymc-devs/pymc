@@ -216,15 +216,15 @@ In Wikipedia's parameterization, $r=\alpha$, $p=\alpha/(\mu+\alpha)$ and $\mu=r(
 \begin{funcdesc}{categorical\_like}{x, p}
 Categorical log-likelihood. The most general discrete distribution.
 \begin{gather}
-\begin{split}f(x=v_i \mid p) = p_i\end{split}\notag\\\begin{split}\end{split}\notag
+\begin{split}f(x=i \mid p) = p_i\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{gather}
-\begin{split}v_i \in 0 \ldots k-1\end{split}\notag\\\begin{split}\end{split}\notag
+\begin{split}i \in 0 \ldots k-1\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 \paragraph{Parameters}
 \begin{paramlist}
 \item[] \textbf{x} : integer
 \begin{quote}
-$x \in v$, $v_i \in 0 \ldots k-1$
+$x \in 0 \ldots k-1$
 \end{quote}
 
 \item[]\textbf{p} : (k) float

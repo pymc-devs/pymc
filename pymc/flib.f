@@ -2263,6 +2263,10 @@ cf2py double precision intent(out) :: like
       PARAMETER (infinity = 1.7976931348623157d308)
 
       like = 0.0
+      sump = 0.0
+      do j=1,k-1
+          sump = sump + p(j)
+      end do
 c loop over number of elements in x      
       do i=1,n
 c elements should not be larger than the largest index
@@ -2270,23 +2274,12 @@ c elements should not be larger than the largest index
           like = -infinity
           RETURN
         endif
-c initialize current value      
-        val = 0
-        j = 0
-        sump = 0
-c check for appropriate bin        
-        do while (x(i).gt.val)
-c increment value    
-          sump = sump + p(j+1)
-          val = val + 1
-          j = j + 1
-        enddo
 c increment log-likelihood      
-        if (j.eq.(k-1)) then
+        if (x(i).eq.(k-1)) then
 c likelihood of the kth element
           like = like + dlog(1.0D0-sump)
         else
-          like = like + dlog(p(j+1))
+          like = like + dlog(p(x(i)+1))
         endif
       enddo
       return
