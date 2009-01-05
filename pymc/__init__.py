@@ -10,7 +10,7 @@ Required external components: TclTk
 
 """
 
-__version__ = '2.0rc2'
+__version__ = '2.0'
 
 # Core modules
 try:
