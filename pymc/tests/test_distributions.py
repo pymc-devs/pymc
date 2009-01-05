@@ -440,7 +440,7 @@ class test_exponential(TestCase):
     def test_consistency(self):
         parameters={'beta':4}
         hist, like, figdata = consistency(rexponential, exponential_like, 
-            parameters, nrandom=5000)
+            parameters, nrandom=6000)
         if PLOT:
             compare_hist(figname='exponential', **figdata)
         assert_array_almost_equal(hist, like,1)

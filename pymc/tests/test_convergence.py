@@ -14,7 +14,7 @@ import os,  warnings
 warnings.simplefilter('ignore', FutureWarning)
 
 S = pymc.MCMC(model, 'ram')
-S.sample(10000, 5000)
+S.sample(10000, 2000)
 #a = S.a.trace()
 #b = S.b.trace()
 
