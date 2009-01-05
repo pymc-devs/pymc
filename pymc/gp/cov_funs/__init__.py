@@ -7,6 +7,7 @@ import isotropic_cov_funs
 
 extra_parameters = {'gaussian': {'': ''}, 
                 'pow_exp': {'pow': 'The exponent in the exponential.'}, 
+                'exponential':{'':''},
                 'matern': {'diff_degree': 'The degree of differentiability of realizations.'},
                 'sphere': {'': ''},
                 'quadratic': {'phi': 'The characteristic (scaled) distance of decorrelation.'}}
@@ -14,3 +15,4 @@ extra_parameters = {'gaussian': {'': ''},
 
 for name in extra_parameters.iterkeys():
     locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name])
+

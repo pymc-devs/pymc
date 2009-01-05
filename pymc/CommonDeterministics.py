@@ -225,7 +225,7 @@ class CompletedDirichlet(pm.Deterministic):
     def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=None, verbose=0):
         
         def eval_fun(D):
-            N = D.shape[1]
+            N = len(D)
             out = np.empty((1,N+1))
             out[0,:N] = D
             out[0,N] = 1.-np.sum(D)

@@ -2496,6 +2496,11 @@ OneOverX = stochastic_from_dist('one_over_x', logp = one_over_x_like)
 # Conjugates of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
 
 def extend_dirichlet(p):
+    """
+    extend_dirichlet(p)
+    
+    Concatenates 1-sum(p) to the end of p and returns.
+    """
     if len(np.shape(p))>1:
         return np.hstack((p, np.atleast_2d(1.-np.sum(p))))
     else:

@@ -191,7 +191,7 @@ class covariance_wrapper(object):
 covariance_wrapperdoc = ["(x,y",""", amp=1., scale=1.)
 
 A covariance function. Remember, broadcasting for covariance functions works
-differently than for numpy universal functions. C(x,y) returns a np.matrix, and 
+differently than for numpy universal functions. C(x,y) returns a matrix, and 
 C(x) returns a vector.
 
 
@@ -215,7 +215,7 @@ class covariance_function_bundle(object):
     Attributes:
 
         - `raw`: The raw covariance function, which overwrites a 
-          distance np.matrix with a covariance np.matrix.
+          distance matrix with a covariance matrix.
 
         - `euclidean`: The covariance function wrapped to use
           Euclidean coordinates in R^n, with amp and scale arguments.
@@ -241,15 +241,15 @@ class covariance_function_bundle(object):
     Method: 
 
         - `add_distance_metric(distance_fun)`: Takes a function that computes a 
-          distance np.matrix for points in some coordinate system and returns 
+          distance matrix for points in some coordinate system and returns 
           the covariance function wrapped to use that coordinate system.
           
     :Arguments:
 
         - `cov_fun` should overwrite distance matrices with covariance 
-          matrices in-place. In addition to the distance np.matrix, it should
+          matrices in-place. In addition to the distance matrix, it should
           take an optional argument called 'symm' which indicates whether 
-          the output np.matrix will be symmetric.
+          the output matrix will be symmetric.
     """
     
     def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params):
@@ -307,7 +307,7 @@ class covariance_function_bundle(object):
 #     """
 #     A decorator for an isotropic covariance function. Takes one 
 #     additional argument, kernel, which takes a value for input 
-#     argument x and returns a kernel np.matrix Sigma(x), which is square, 
+#     argument x and returns a kernel matrix Sigma(x), which is square, 
 #     positive definite and  of the same rank as the dimension of x, as 
 #     in theorem 1 of the reference below.
 #     
@@ -351,17 +351,17 @@ class covariance_function_bundle(object):
 #             for i in range(len(y)):
 #                 kernels[i,:,:] = kernel(y[i,:])
 #         
-#         # Compute the distance np.matrix and the prefactors.
+#         # Compute the distance matrix and the prefactors.
 #         C = np.zeros((len(x),len(y)),dtype=flooat)
 #         prefacs = np.ones(len(x), len(y), dtype=float) * 2. ** (ndim*.5) * amp
 #         
 #         for i in range(len(x)):
-#             kern_x = asnp.matrix(kernels_x[i,:,:])
+#             kern_x = asmatrix(kernels_x[i,:,:])
 #             for j in range(len(y)):
 #                 if symm:
 #                     kern_y = kern_x
 #                 else:
-#                     kern_y = asnp.matrix(kernels_y[j,:,:])
+#                     kern_y = asmatrix(kernels_y[j,:,:])
 #                 sum_kern = .5 * (kern_x + kern_y)
 #                 dev = (x[i,:]-y[j,:])
 #                 # Eventually just make this a half-loop if symm=True, of course.
@@ -372,7 +372,7 @@ class covariance_function_bundle(object):
 #                 # not full rank.
 #                 prefacs[i,j] *= (det(kern_x) * det(kern_y))**(.25) / det(sum_kern)**.5
 #         
-#         # Overwrite the distance np.matrix using a Fortran covariance function
+#         # Overwrite the distance matrix using a Fortran covariance function
 #         cov_fun(C,*args,**kwargs)
 #         C *= prefacs
 #         

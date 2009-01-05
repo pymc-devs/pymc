@@ -302,6 +302,184 @@ cf2py threadsafe
       return
       END
 
+c
+
+      SUBROUTINE exponential(C,nx,ny,cmin,cmax,symm)
+
+cf2py intent(inplace) C
+cf2py intent(hide) nx,ny
+cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py threadsafe
+
+      INTEGER nx,ny,i,j,cmin,cmax
+      DOUBLE PRECISION C(nx,ny)
+      LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+
+
+      if(symm) then
+          
+        do j=cmin+1,cmax
+          C(j,j)=1.0D0         
+          do i=1,j-1
+            C(i,j) = dexp(-dabs(C(i,j)))
+!             C(j,i) = C(i,j)
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+            C(i,j) = dexp(-dabs(C(i,j))) 
+          enddo
+        enddo
+
+      endif
+      
+
+      return
+      END
+c
+
+      SUBROUTINE brownian(C,x,y,nx,ny,ndx,ndy,cmin,cmax,symm)
+
+cf2py intent(inplace) C
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
+cf2py logical intent(optional) :: symm=0
+cf2py intent(hide) nx, ny,ndx,ndy
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny), x(nx,ndx), y(ny,ndy)
+      INTEGER nx,ny,i,j,k,cmin,cmax,ndx,ndy
+      LOGICAL symm
+      DOUBLE PRECISION devx, devy, ampx, ampy, sampy
+      DOUBLE PRECISION devd, ampd
+
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
+
+      if(symm) then
+
+        do j=cmin+1,cmax
+          ampy = 0.0D0
+          do k=1,ndx
+              devy = y(j,k)
+              ampy = ampy + devy*devy
+          end do
+          sampy = dsqrt(ampy)          
+          C(j,j)=sampy
+          do i=1,j-1
+            ampx = 0.0D0
+            ampd = 0.0D0
+            do k=1,ndx
+              devx = x(i,k)
+              ampx = ampx + devx*devx
+              devd = x(i,k)-y(j,k)
+              ampd = ampd + devd*devd
+            enddo
+            C(i,j) = 0.5D0*(sampy + dsqrt(ampx) - dsqrt(ampd))
+          enddo
+        enddo
+      else
+        do j=cmin+1,cmax
+          ampy = 0.0D0
+          do k=1,ndx
+              devy = y(j,k)
+              ampy = ampy + devy*devy
+          end do
+          sampy = dsqrt(ampy)          
+          do i=1,nx
+            ampx = 0.0D0
+            ampd = 0.0D0
+            do k=1,ndx
+                devx = x(i,k)
+                ampx = ampx + devx*devx
+                devd = x(i,k)-y(j,k)
+                ampd = ampd + devd*devd                
+            enddo
+            C(i,j) = 0.5D0*(sampy + dsqrt(ampx) - dsqrt(ampd))
+          enddo    
+        enddo  
+      endif
+      RETURN
+      END
+
+c
+      SUBROUTINE frac_brownian(C,x,y,h,nx,ny,ndx,ndy,cmin,cmax,symm)
+
+cf2py intent(inplace) C
+cf2py integer intent(optional) :: cmin=0
+cf2py integer intent(optional) :: cmax=-1
+cf2py logical intent(optional) :: symm=0
+cf2py intent(hide) nx, ny,ndx,ndy
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny), x(nx,ndx), y(ny,ndy)
+      INTEGER nx,ny,i,j,k,cmin,cmax,ndx,ndy
+      LOGICAL symm
+      DOUBLE PRECISION devx, devy, ampx, ampy, sampy
+      DOUBLE PRECISION devd, ampd, h
+
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
+
+      if(symm) then
+
+        do j=cmin+1,cmax
+          ampy = 0.0D0
+          do k=1,ndx
+              devy = y(j,k)
+              ampy = ampy + devy*devy
+          end do
+          sampy = ampy**h       
+          C(j,j)=sampy
+          do i=1,j-1
+            ampx = 0.0D0
+            ampd = 0.0D0
+            do k=1,ndx
+              devx = x(i,k)
+              ampx = ampx + devx*devx
+              devd = x(i,k)-y(j,k)
+              ampd = ampd + devd*devd
+            enddo
+            C(i,j) = 0.5D0*(sampy + ampx**h - ampd**h)
+          enddo
+        enddo
+      else
+        do j=cmin+1,cmax
+          ampy = 0.0D0
+          do k=1,ndx
+              devy = y(j,k)
+              ampy = ampy + devy*devy
+          end do
+          sampy = ampy**h       
+          do i=1,nx
+            ampx = 0.0D0
+            ampd = 0.0D0
+            do k=1,ndx
+                devx = x(i,k)
+                ampx = ampx + devx*devx
+                devd = x(i,k)-y(j,k)
+                ampd = ampd + devd*devd                
+            enddo
+            C(i,j) = 0.5D0*(sampy + ampx**h - ampd**h)
+          enddo    
+        enddo  
+      endif
+      RETURN
+      END
+
 
       SUBROUTINE pow_exp(C,pow,nx,ny,cmin,cmax,symm)
 
