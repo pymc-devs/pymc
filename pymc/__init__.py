@@ -10,7 +10,12 @@ Required external components: TclTk
 
 """
 
-__version__ = '2.0'
+__version__ = '2.1alpha'
+
+try:
+    import numpy
+except ImportError:
+    raise ImportError, 'NumPy does not seem to be installed. Please see the user guide.'
 
 # Core modules
 from threadpool import *
