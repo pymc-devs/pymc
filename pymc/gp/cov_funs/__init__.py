@@ -3,6 +3,7 @@ from cov_utils import *
 from bases import *
 from wrapped_distances import *
 import isotropic_cov_funs
+from brownian import *
 
 
 extra_parameters = {'gaussian': {'': ''}, 

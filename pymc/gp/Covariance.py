@@ -470,7 +470,9 @@ class Covariance(object):
             # = Come up with a better solution, the diagonal is not necessarily constant. =
             # =============================================================================
             V=empty(lenx,dtype=float)
-            V.fill(self.params['amp']**2)
+            # V.fill(self.params['amp']**2)
+            for i in xrange(lenx):
+                V[i] = self.eval_fun(x[i],x[i],**self.params)
             if self.observed and observed:
                 for i in range(lenx):
                     V[i] -= Uo_Cxo[:,i].T*Uo_Cxo[:,i]

@@ -5,12 +5,13 @@ import wrapped_distances
 import inspect
 import imp
 import pickle
-from threading import Thread, Lock
 from isotropic_cov_funs import symmetrize, imul
 from copy import copy
 import sys
+from pymc import get_threadpool_size, map_noreturn
 
 __all__ = ['covariance_wrapper', 'covariance_function_bundle']
+
 
 def regularize_array(A):
     """
@@ -100,13 +101,7 @@ class covariance_wrapper(object):
 
         self.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
 
-    # Covariance_wrapper takes lots of time in the profiler, but it seems pretty 
-    # efficient in that it spends most of its time in distance_fun, cov_fun and
-    # the floating-point operations on C.
-    def __call__(self,x,y,amp=1.,scale=1.,n_threads=1,symm=None,*args,**kwargs):
-
-        # Thanks to Anne Archibald for handythread.py, the model for the
-        # multithreaded call.
+    def __call__(self,x,y,amp=1.,scale=1.,symm=None,*args,**kwargs):
 
         if amp<0. or scale<0.:
             raise ValueError, 'The amp and scale parameters must be positive.'
@@ -117,7 +112,7 @@ class covariance_wrapper(object):
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
         ny = y.shape[0]
-        n_threads = min(n_threads, nx*ny / 10000)        
+        n_threads = min(get_threadpool_size(), nx*ny / 10000)        
 
         if n_threads > 1:
             if not symm:
@@ -136,53 +131,23 @@ class covariance_wrapper(object):
         # Allocate the matrix
         C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
 
-        if n_threads <= 1:
-            # Compute full distance matrix
-            self.distance_fun(C,x,y,cmin=0,cmax=-1,symm=symm,**distance_arg_dict)
-            imul(C,1./scale,symm=symm)
-            # Compute full covariance matrix
-            self.cov_fun(C,cmin=0,cmax=-1,symm=symm,*args,**kwargs)
-            imul(C, amp*amp, cmin=0, cmax=-1, symm=symm)
-            # Possibly symmetrize full matrix
+        def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
+            # Compute distance for this bit
+            self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
+            imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
+            # Compute covariance for this bit
+            self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
+            imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
+            # Possibly symmetrize this bit
             if symm:
-                symmetrize(C)
-            
-        else:
-            
-            iteratorlock = Lock()
-            exceptions=[]
-            
-            def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
-                try:
-                    # Compute distance for this bit
-                    self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
-                    imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
-                    # Compute covariance for this bit
-                    self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
-                    imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
-                    # Possibly symmetrize this bit
-                    if symm:
-                        symmetrize(C, cmin=cmin, cmax=cmax)
-                        
-                except:
-                    e = sys.exc_info()
-                    iteratorlock.acquire()
-                    try:
-                        exceptions.append(e)
-                    finally:
-                        iteratorlock.release()
-                            
-            threads = []
-            for i in xrange(n_threads):
-                new_thread= Thread(target=targ, args=(C,x,y,bounds[i],bounds[i+1],symm))
-                threads.append(new_thread)
-                new_thread.start()
-            [thread.join() for thread in threads]        
-            
-            if exceptions:
-                a, b, c = exceptions[0]
-                raise a, b, c
+                symmetrize(C, cmin=cmin, cmax=cmax)
 
+        if n_threads < 1:
+            targ(C,x,y,0,-1,symm)            
+        else:
+            thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
+            map_noreturn(targ, thread_args)
+            
         return C
         
                 
@@ -244,7 +209,7 @@ class covariance_function_bundle(object):
           distance matrix for points in some coordinate system and returns 
           the covariance function wrapped to use that coordinate system.
           
-    :Arguments:
+    :Parameters:
 
         - `cov_fun` should overwrite distance matrices with covariance 
           matrices in-place. In addition to the distance matrix, it should
@@ -279,7 +244,7 @@ class covariance_function_bundle(object):
         self.euclidean and self.geographic and their docstrings.
         
         
-        :Arguments:
+        :Parameters:
         
             - `distance_fun`: Creates a distance matrix from two
               np.arrays of points, where the first index iterates

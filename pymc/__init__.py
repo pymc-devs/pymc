@@ -13,6 +13,7 @@ Required external components: TclTk
 __version__ = '2.0'
 
 # Core modules
+from threadpool import *
 try:
     import Container_values
     del Container_values
@@ -29,6 +30,7 @@ from MCMC import *
 from StepMethods import *
 from diagnostics import *
 from CommonDeterministics import *
+
 
 from tests import test
 
