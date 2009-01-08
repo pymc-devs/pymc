@@ -472,10 +472,12 @@ class Covariance(object):
             V=empty(lenx,dtype=float)
             # V.fill(self.params['amp']**2)
             for i in xrange(lenx):
-                V[i] = self.eval_fun(x[i],x[i],**self.params)
+                this_x = x[i].reshape((1,-1))
+                V[i] = self.eval_fun(this_x, this_x,**self.params)
             if self.observed and observed:
                 for i in range(lenx):
-                    V[i] -= Uo_Cxo[:,i].T*Uo_Cxo[:,i]
+                    this_Uo_Cxo = Uo_Cxo[:,i]
+                    V[i] -= this_Uo_Cxo.T*this_Uo_Cxo
             
             return V.reshape(orig_shape)
 
