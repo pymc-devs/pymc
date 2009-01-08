@@ -68,9 +68,6 @@ class Node(object):
         # Initialize
         self.parents = parents
         
-        # New lazy function
-        self.gen_lazy_function()
-    
     def _get_parents(self):
         # Get parents of this object
         return self._parents

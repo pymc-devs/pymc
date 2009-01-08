@@ -13,7 +13,7 @@ import pdb
 d_neg_inf = float(-1.7976931348623157e+308)
 
 # from PyrexLazyFunction import LazyFunction
-from LazyFunction import LazyFunction
+from LazyFunction import LazyFunction, Counter
 
 def extend_children(children):
     """
@@ -480,6 +480,7 @@ class Stochastic(StochasticBase):
                     verbose = 0,
                     isdata=None):                    
 
+        self.counter = Counter()
         self.ParentDict = ParentDict
         
         # Support legacy 'isdata' for a while
@@ -500,6 +501,7 @@ class Stochastic(StochasticBase):
         # taken from the constructor.
         self.rseed = rseed
         
+
         # Initialize value, either from value provided or from random function.
         if value is not None:
             if isinstance(value, ndarray):
@@ -522,7 +524,7 @@ class Stochastic(StochasticBase):
                 self._value = value
         else:
             self._value = None
-                
+
         Variable.__init__(  self, 
                         doc=doc, 
                         name=name, 
@@ -534,7 +536,7 @@ class Stochastic(StochasticBase):
                         verbose=verbose)
     
         # self._logp.force_compute()                   
-
+        
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
 
@@ -567,7 +569,6 @@ class Stochastic(StochasticBase):
                                     arguments = arguments, 
                                     ultimate_args = self.extended_parents | set([self]),
                                     cache_depth = self._cache_depth)   
-        
         self._logp.force_compute()             
     
     def get_value(self):
@@ -614,6 +615,7 @@ class Stochastic(StochasticBase):
         else:
             self._value = value
         
+        self.counter.click()
 
     value = property(fget=get_value, fset=set_value, doc="Self's current value.")
     
@@ -623,6 +625,7 @@ class Stochastic(StochasticBase):
         Sets self's value to self's last value. Bypasses the data cleaning in
         the set_value method.
         """
+        self.counter.unclick()
         self._value = self.last_value
 
 
