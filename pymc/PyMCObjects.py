@@ -9,6 +9,7 @@ from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase,
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
+from types import UnboundMethodType
 
 d_neg_inf = float(-1.7976931348623157e+308)
 
@@ -326,7 +327,8 @@ class Deterministic(DeterministicBase):
       LinearCombination, Index
     """
     def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=0):
-
+        # from IPython.Debugger import Pdb
+        # Pdb(color_scheme='Linux').set_trace()   
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
@@ -367,7 +369,6 @@ class Deterministic(DeterministicBase):
         raise AttributeError, 'Deterministic '+self.__name__+'\'s value cannot be set.'
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
-
 
 class Stochastic(StochasticBase):
     
@@ -710,3 +711,69 @@ class Stochastic(StochasticBase):
     def _get_markov_blanket(self):
         return self.moral_neighbors | set([self])
     markov_blanket = property(_get_markov_blanket, doc="Self's coparents, self's extended parents, self's children and self.")
+
+
+
+# ==========================================================
+# = Add special methods to variables to support FBC syntax =
+# ==========================================================
+
+def create_uni_method(op_name, cls):
+    def new_method(self):
+        def eval_fun(self,op=op):
+            return getattr(self, op)()
+        return Deterministic(eval_fun, 
+                                'A Deterministic returning the value of %s(%s)'%(op_name.replace('__',''),self.__name__),
+                                '('+op_name.replace('__','')+'_'+self.__name__+')', 
+                                {'self':self, 'op':op_name}, 
+                                trace=False, 
+                                plot=False)
+    new_method.__name__ = op_name
+    return UnboundMethodType(new_method, None, cls)
+    
+def create_bin_method(op_name, cls):
+    def new_method(self, other):
+        def eval_fun(self, other, op=op):
+            return getattr(self, op)(other)
+        return Deterministic(eval_fun, 
+                                'A Deterministic returning the value of %s(%s,%s)'%(op_name.replace('__',''),self.__name__, str(other)),
+                                '('+self.__name__+op_name.replace('__','_')+str(other)+')', 
+                                {'self':self, 'other':other, 'op':op_name}, 
+                                trace=False, 
+                                plot=False)
+    new_method.__name__ = op_name
+    return UnboundMethodType(new_method, None, cls)
+
+bin_ops = ['lt', 'le', 'eq', 'ne', 'gt', 'ge', 'getitem']
+bin_lr_ops = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']
+uni_ops = ['unicode','neg','pos','abs','invert','index']
+
+# These are not working
+nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains']
+# These should NOT be implemented because they are in-place updates.
+do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
+
+for cls in [Deterministic, Stochastic]:
+    # Left/right binary operators
+    for op in bin_lr_ops:
+        op_name = '__'+op+'__'
+        for prefix in ['', 'r']:
+            setattr(cls, op_name, create_bin_method(op_name ,cls))
+    # Binary operators
+    for op in bin_ops:
+        op_name = '__'+op+'__'        
+        setattr(cls, op_name, create_bin_method(op_name ,cls))
+    # Unary operators
+    for op in uni_ops:
+        op_name = '__'+op+'__'
+        setattr(cls, op_name, create_uni_method(op_name, cls))
+    def __call__(self, *args, **kwargs):
+        def eval_fun(self, args=args, kwargs=kwargs):
+            return self(*args, **kwargs)
+        return Deterministic(eval_fun, 
+                                'A Deterministic returning the value of %s(*%s, **%s)'%(self.__name__, str(args), str(kwargs)),
+                                self.__name__+'(*%s, **%s)'%(str(args), str(kwargs)), 
+                                {'self':self, 'args': args, 'kwargs': kwargs}, 
+                                trace=False, 
+                                plot=False)
+    cls.__call__ = UnboundMethodType(__call__, None, cls)

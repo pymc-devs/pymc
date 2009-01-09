@@ -172,15 +172,16 @@ class Variable(Node):
         """
         from utils import hpd, quantiles
         from numpy import sqrt
-    
-        trace = np.array(self.trace(), float)[start:]
+
+        try:    
+            trace = np.array(self.trace(), float)[start:]
         
-        n = len(trace)
-        if not n:
-            print 'Cannot generate statistics for zero-length trace in', self.__name__
-            return
+            n = len(trace)
+            if not n:
+                print 'Cannot generate statistics for zero-length trace in', self.__name__
+                return
         
-        try:
+
             return {
                 'n': n,
                 'standard deviation': trace.std(0),
@@ -191,7 +192,7 @@ class Variable(Node):
             }
         except:
             print 'Could not generate output statistics for', self.__name__
-
+        
 ContainerRegistry = []
 
 class ContainerMeta(type):
