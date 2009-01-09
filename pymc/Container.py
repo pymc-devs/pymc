@@ -1,5 +1,4 @@
-"""
-The point of Container.py is to provide a function Container which converts 
+"""The point of Container.py is to provide a function Container which converts 
 any old thing A to thing B which looks and acts just like A, but it has a 
 'value' attribute. B.value looks and acts just like A but every variable 
 'inside' B has been replaced by its value. Examples:
@@ -36,14 +35,14 @@ following sets: stochastics, deterministics, variables, nodes, containers, data,
 These flattened representations are useful for things like cache checking.
 """
 
-from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase
+from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
 from pymc.Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 import pdb
 
-__all__ = ['Container', 'DictContainer', 'ListContainer', 'TupleContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
+__all__ = ['Container', 'DictContainer', 'TupleContainer', 'ListContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -51,7 +50,6 @@ def filter_dict(obj):
         if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
-
 
 def Container(*args):
     """
@@ -132,36 +130,13 @@ def Container(*args):
     
     if isinstance(iterable, ContainerBase):
         return iterable
-        
-    if isinstance(iterable, Node):
-        return ListTupleContainer([iterable])
-    
-    # Wrap sets
-    if isinstance(iterable, set):
-        return SetContainer(iterable)
-    
-    # Wrap lists and tuples
-    elif isinstance(iterable, tuple): 
-        return TupleContainer(iterable)
-        
-    elif isinstance(iterable, list):
-        return ListContainer(iterable)
 
-    # Dictionaries
-    elif isinstance(iterable, dict):
-        return DictContainer(iterable)
-    
-    # Arrays of dtype=object
-    elif isinstance(iterable, ndarray):
-        if iterable.dtype == dtype('object'):
-            return ArrayContainer(iterable)
-    
-    # Wrap modules
-    elif isinstance(iterable, ModuleType):
-        return DictContainer(iterable.__dict__)
+    for container_class, containing_classes in ContainerRegistry:
+        if any([isinstance(iterable, containing_class) for containing_class in containing_classes]):
+            return container_class(iterable)
         
     # Wrap mutable objects
-    elif hasattr(iterable, '__dict__'):
+    if hasattr(iterable, '__dict__'):
         return ObjectContainer(iterable.__dict__)
         
     # Otherwise raise an error.
@@ -250,7 +225,7 @@ def file_items(container, iterable):
     
 value_doc = 'A copy of self, with all variables replaced by their values.'    
 
-class SetContainer(ContainerBase, set):
+class SetContainer(ContainerBase, frozenset):
     """
     SetContainers are containers that wrap sets.
     
@@ -282,10 +257,13 @@ class SetContainer(ContainerBase, set):
       Container, ListContainer, DictContainer, ArrayContainer, TupleContainer,
       ObjectContainer
     """
+    register=True
+    change_methods = []
+    containing_classes = [set, frozenset]
     def __init__(self, iterable):
-        set.__init__(self, iterable)
-        ContainerBase.__init__(self, iterable)
-        for item in iterable:
+        self.new_iterable = set(iterable)
+        ContainerBase.__init__(self, self.new_iterable)
+        for item in self.new_iterable:
             if isinstance(item, Variable) or isinstance(item, ContainerBase):
                 try:
                     hash(item.value)
@@ -293,19 +271,22 @@ class SetContainer(ContainerBase, set):
                     raise TypeError, 'Only objects with hashable values may be included in SetContainers.\n'\
                                     + item.__repr__() + ' has value of type ' +  item.value.__class__.__name__\
                                      + '\nwhich is not hashable.'
-        file_items(self, iterable)
+        file_items(self, self.new_iterable)
+        frozenset.__init__(self, self.new_iterable)
+        del self.new_iterable
         
     def replace(self, item, new_container, i):
-        self.discard(item)
-        self.add(new_container)
+        self.new_iterable.discard(item)
+        self.new_iterable.add(new_container)
         
     def get_value(self):
         _value = set(self)
-        for item in self:
-            if isinstance(item, Variable) or isinstance(item, ContainerBase):
-                set.discard(_value, item)
-                set.add(_value, item.value)
-                
+        for item in self.variables:
+            set.discard(_value, item)
+            set.add(_value, item.value)
+        for item in self.containers:
+            set.discard(_value, item)
+            set.add(_value, item.value)                
         return _value
 
     value = property(fget = get_value, doc=value_doc)
@@ -343,6 +324,9 @@ class TupleContainer(ContainerBase, tuple):
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
+    register=True
+    change_methods = []
+    containing_classes = [tuple]
     def __init__(self, iterable):
         tuple.__init__(self, file_items(self, iterable))
         # ContainerBase.__init__(self, iterable)        
@@ -359,7 +343,6 @@ class TupleContainer(ContainerBase, tuple):
         return TCValue(self)
 
     value = property(fget = get_value, doc=value_doc)
-
 
 class ListContainer(ContainerBase, list):
     """
@@ -393,6 +376,9 @@ class ListContainer(ContainerBase, list):
       Container, TupleContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
+    change_methods = ['__setitem__', '__delitem__', '__setslice__', '__delslice__', '__iadd__', '__imul__', 'append', 'extend', 'insert', 'pop', 'remove', 'reverse', 'sort']
+    containing_classes = [list]
+    register=True    
     def __init__(self, iterable):
         list.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)        
@@ -452,6 +438,9 @@ class DictContainer(ContainerBase, dict):
       Container, ListContainer, TupleContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
+    change_methods = ['__setitem__', '__delitem__', 'clear', 'pop', 'popitem', 'update']
+    containing_classes = [dict]
+    register=True
     def __init__(self, iterable):
         dict.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)        
@@ -469,7 +458,7 @@ class DictContainer(ContainerBase, dict):
         self.n_nonval = len(self) - self.n_val
         
     def replace(self, key, new_container):
-        dict.__setitem__(self, key, new_container)
+        dict.__setitem__(self, key, new_container)        
         
     def get_value(self):
         DCValue(self)
@@ -512,6 +501,7 @@ class ObjectContainer(ContainerBase):
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       TupleContainer
     """
+    register=False
     def __init__(self, input):
 
         if isinstance(input, dict):
@@ -576,9 +566,12 @@ class ArrayContainer(ContainerBase, ndarray):
       TupleContainer
     """
     
-    data=set()
-    
+    register=True
+    change_methods = []
+    containing_classes = [ndarray]
     def __new__(subtype, array_in):
+        if not array_in.dtype == dtype('object'):
+            raise ValueError, 'Cannot create container from array whose dtype is not object.'
 
         C = array(array_in, copy=True)
         

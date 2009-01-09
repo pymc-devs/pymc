@@ -8,6 +8,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 import os, pdb
 import numpy as np
+import types
 
 
 class ZeroProbability(ValueError):
@@ -190,6 +191,26 @@ class Variable(Node):
             }
         except:
             print 'Could not generate output statistics for', self.__name__
+
+ContainerRegistry = []
+
+class FreezingMetaclass(type):
+    """
+    Automatically registers new step methods if they can be automatically assigned:
+    if their init method has one and only one required argument.
+    """
+    def __init__(cls, name, bases, dict):
+        type.__init__(cls, name, bases, dict)
+        
+        def change_method(self, *args, **kwargs):
+            raise NotImplementedError, name + ' instances cannot be changed.'
+            
+        if cls.register:
+            ContainerRegistry.append((cls, cls.containing_classes))
+
+            for meth in cls.change_methods:
+                setattr(cls, meth, types.UnboundMethodType(change_method, None, cls))
+        cls.register=False
         
         
 class ContainerBase(object):
@@ -199,7 +220,10 @@ class ContainerBase(object):
     :SeeAlso: 
       ListContainer, SetContainer, DictContainer, TupleContainer, ArrayContainer
     """
-    __name__ = 'container'
+    register = False
+    __metaclass__ = FreezingMetaclass
+    change_methods = []
+    containing_classes = []
     
     def __init__(self, input):
         # ContainerBase class initialization

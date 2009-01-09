@@ -7,7 +7,6 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 from PyMCObjects import Node, ContainerBase, Variable
-from Container import ListContainer
 import numpy as np
 
 cdef extern from "stdlib.h":
