@@ -8,6 +8,7 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(in) :: sig
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide) :: info
+cf2py threadsafe
 
       DOUBLE PRECISION sig(n,n), x(n), mu(n), like
       INTEGER n, info, i
@@ -68,6 +69,7 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(copy) :: C
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide) :: info
+cf2py threadsafe
 
       DOUBLE PRECISION C(n,n), x(n), mu(n), like
       INTEGER n, info
@@ -103,6 +105,7 @@ cf2py double precision dimension(n), intent(copy) :: mu
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py double precision dimension(n,n), intent(copy) :: tau
 cf2py double precision intent(out) :: like
+cf2py threadsafe
 
       DOUBLE PRECISION tau(n,n), x(n), mu(n), like, gd
       INTEGER n, info, i
@@ -167,6 +170,7 @@ c Wishart log-likelihood function.
 cf2py double precision dimension(k,k),intent(copy) :: X,T
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
+cf2py threadsafe
 
       INTEGER i,k,n
       DOUBLE PRECISION X(k,k),T(k,k),bx(k,k)
@@ -244,6 +248,7 @@ c Doesn't vectorize the determinants, just the matrix multiplication.
 cf2py double precision dimension(k,k),intent(copy) :: V,X
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
+cf2py threadsafe
 
       INTEGER i,k,info, n
       DOUBLE PRECISION X(k,k),V(k,k),bx(k,k)
@@ -319,6 +324,7 @@ c Inverse Wishart log-likelihood function.
 cf2py double precision dimension(k,k),intent(copy) :: X,T
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
+cf2py threadsafe
 
       INTEGER i,k,n
       DOUBLE PRECISION X(k,k),T(k,k),TX(k,k)
@@ -392,6 +398,7 @@ c Get the trace and log-sqrt-determinants
 cf2py intent(inplace)::B
 cf2py integer intent(hide)::M
 cf2py integer intent(hide)::N
+cf2py threadsafe
 
       
 *     .. Scalar Arguments ..
@@ -421,6 +428,7 @@ cf2py integer intent(hide)::N
 cf2py intent(inplace)::B
 cf2py integer intent(hide)::M
 cf2py integer intent(hide)::N
+cf2py threadsafe
 
       
 *     .. Scalar Arguments ..
@@ -452,6 +460,7 @@ cf2py intent(hide) p
 cf2py intent(hide) work       
 cf2py intent(out) piv
 cf2py intent(out) info
+cf2py threadsafe
 
       integer lda,p,piv(p),job,info
       double precision a(p,p),work(p)      
@@ -716,6 +725,7 @@ cf2py integer depend(b), intent(hide)::m=shape(b,1)
 cf2py optional character intent(in):: uplo='U'
 cf2py integer intent(out)::info
 cf2py double precision intent(inplace), dimension(n,m)::b
+cf2py threadsafe
 
       DOUBLE PRECISION chol_fac(n,n), b(n,m)
       INTEGER n, info,m

@@ -1123,6 +1123,7 @@ CF2PY DOUBLE PRECISION INTENT(IN) :: Q,R,S,EPSILON
 CF2PY DOUBLE PRECISION INTENT(CACHE,HIDE), DIMENSION(2*ITERACNT) :: WORK
 CF2PY INTEGER, INTENT(OUT) :: NMIN, KTHIN, NBURN, NPREC, KMIND
 CF2PY INTEGER, INTENT(HIDE) :: R15
+CF2PY THREADSAFE
 ************************************************************************
 *                                                                      *
 *  The following variables hold various temporary values used in this  *

@@ -469,6 +469,7 @@ cf2py double precision dimension(n), intent(hide)::diag
 cf2py integer intent(hide), depend(c):: n = shape(c,0)
 cf2py integer intent(out)::m
 cf2py double precision intent(in) :: reltol
+cf2py threadsafe
 
       DOUBLE PRECISION c(n,n), sig(n,n), diag(n)
       DOUBLE PRECISION rowvec(n)

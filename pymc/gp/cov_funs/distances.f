@@ -59,7 +59,6 @@ cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) nx, ny
 cf2py intent(inplace) D
 cf2py threadsafe
-cf2py threadsafe
 
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
       integer nx,ny,j,i,i_hi,cmin,cmax
@@ -104,7 +103,6 @@ cf2py logical intent(optional) :: symm=0
 cf2py integer intent(optional) :: cmin=0
 cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) na, nx, ny
-cf2py threadsafe
 cf2py threadsafe
       
       DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)   

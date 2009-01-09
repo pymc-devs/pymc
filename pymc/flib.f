@@ -1,6 +1,7 @@
       SUBROUTINE logsum(x, nx, s)
 cf2py intent(hide) nx
 cf2py intent(out) s
+cf2py threadsafe
       DOUBLE PRECISION x(nx), s, diff, li
       INTEGER nx, i
       PARAMETER (li=709.78271289338397)
@@ -43,6 +44,7 @@ c DH, 5.02.2007
 cf2py intent(hide) nf
 cf2py intent(hide) n
 cf2py intent(out) t
+cf2py threadsafe
        DOUBLE PRECISION f(nf), t(n,n), d(n)
        INTEGER i_f,i_t,j_t
        i_f = 0
@@ -69,6 +71,7 @@ cf2py double precision dimension(nscale), intent(in) :: scale
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
 cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py threadsafe
 
 
       DOUBLE PRECISION x(n), loc(nloc), scale(nscale), z(n)
@@ -205,6 +208,7 @@ C Out of range of the table.
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph, tnx
 cf2py intent(out) x
+cf2py threadsafe
 
 
       INTEGER i, nx, nalph, nmu, ntau, tnx
@@ -255,6 +259,7 @@ cf2py integer intent(hide), depend(x) :: n=len(x)
 cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
 cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
 cf2py double precision intent(out) :: like
+cf2py threadsafe
 
         IMPLICIT NONE
         
@@ -287,6 +292,7 @@ c CREATED 12/06 DH
 
 cf2py intent(hide) n,nlower,nupper
 cf2py intent(out) like
+cf2py threadsafe
         IMPLICIT NONE
         
         INTEGER n, nlower, nupper, i
@@ -329,6 +335,7 @@ cf2py integer intent(hide),depend(c) :: nc=len(c)
 cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
 cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
 cf2py double precision intent(out) :: like
+cf2py threadsafe
 
       DOUBLE PRECISION x(n), z(n), a(na)
       DOUBLE PRECISION c(nc), loc(nloc), scale(nscale)
@@ -394,6 +401,7 @@ cf2py integer intent(hide),depend(q) :: n=len(q)
 cf2py integer intent(hide),depend(a) :: na=len(a)
 cf2py integer intent(hide),depend(c) :: nc=len(c)
 cf2py double precision dimension(n), intent(out) :: ppf
+cf2py threadsafe
 
 
       IMPLICIT NONE
@@ -434,6 +442,7 @@ cf2py integer intent(hide), depend(x) :: n = len(x)
 cf2py integer intent(hide), depend(a) :: na = len(a)
 cf2py integer intent(hide), depend(b) :: nb = len(b)
 cf2py logical intent(in) :: allow_equal
+cf2py threadsafe
 
 
       IMPLICIT NONE
@@ -479,6 +488,7 @@ cf2py double precision dimension(nmu),intent(in) :: mu
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n, i, nmu
@@ -529,6 +539,7 @@ cf2py double precision dimension(nnu),intent(in) :: nu
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n, i, nnu
@@ -570,6 +581,7 @@ cf2py integer intent(hide),depend(n) :: nn=shape(n,0)
 cf2py integer intent(hide),depend(p) :: np=shape(p,0)
 cf2py integer intent(hide),depend(x,p),check(k==shape(p,1)) :: k=shape(x,1)
 cf2py intent(out) like      
+cf2py threadsafe
 
       DOUBLE PRECISION like, factln, infinity, sump
       DOUBLE PRECISION p(np,k), p_tmp(k)
@@ -661,6 +673,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
 cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
+cf2py threadsafe
 
       DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
       DOUBLE PRECISION like, alphat, betat
@@ -705,6 +718,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,ntau,nmu
@@ -748,6 +762,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,ntau,nmu
@@ -791,6 +806,7 @@ cf2py double precision dimension(ntau),intent(in) :: tau
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(tau)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,ntau
@@ -833,6 +849,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
 cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,ntau,nmu
@@ -876,6 +893,7 @@ cf2py double precision intent(in) :: sigma, rho, beta
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,nmu
@@ -1011,6 +1029,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py threadsafe
 
 
       INTEGER i,n,na,nb
@@ -1069,6 +1088,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(alpha,n),check(na==1||na==n) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta,n),check(nb==1||nb==n) :: nb=len(beta)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER i,n,na,nb
@@ -1120,6 +1140,7 @@ cf2py integer intent(hide),depend(draws,n),check(nd==1||nd==n) :: nd=len(draws)
 cf2py integer intent(hide),depend(success,n),check(ns==1||ns==n) :: ns=len(success)
 cf2py integer intent(hide),depend(total,n),check(nt==1||nt==n) :: nt=len(total)
 cf2py double precision intent(out) :: like
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER i,n,nd,ns,nt
@@ -1181,6 +1202,7 @@ cf2py double precision dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
 cf2py double precision intent(out) :: like      
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,np,i
@@ -1275,6 +1297,7 @@ cf2py integer intent(hide),depend(x) :: nx=shape(x,0)
 cf2py integer intent(hide),depend(theta) :: nt=shape(theta,0)
 cf2py integer intent(hide),depend(x,theta) :: k=shape(theta,1)
 cf2py intent(out) like      
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER i,j,k,nx,nt
@@ -1341,6 +1364,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER nx,na,nb,i
@@ -1385,6 +1409,7 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(r,n),check(nr==1 || nr==n) :: nr=len(r)
 cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
 cf2py double precision intent(out) :: like      
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,nr,np,i
@@ -1436,6 +1461,7 @@ cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
 cf2py integer intent(hide),depend(a,x),check(na==1 || na==len(x)) :: na=len(a)
 cf2py double precision intent(out) :: like      
+cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n,i,nmu,na
@@ -1486,6 +1512,7 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
 cf2py integer intent(hide),depend(p),check(np==1 || np==len(x)) :: np=len(p)
 cf2py double precision intent(out) :: like      
+cf2py threadsafe
       IMPLICIT NONE
       INTEGER nx,nn,np,i
       DOUBLE PRECISION like, p(np)
@@ -1550,6 +1577,7 @@ cf2py double precision dimension(np),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(p),check(len(p)==1 || len(p)==len(x)):: np=len(p) 
 cf2py double precision intent(out) :: like      
+cf2py threadsafe
       IMPLICIT NONE
 
       INTEGER np,nx,i
@@ -1596,6 +1624,7 @@ cf2py integer intent(hide),depend(x) :: nx=len(x)
 cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
 cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
 cf2py double precision intent(out) :: like
+cf2py threadsafe
       IMPLICIT NONE
       INTEGER i,nx,na,nb
       DOUBLE PRECISION like
@@ -1644,6 +1673,7 @@ c Total number of balls in the urn = sum(color)
 cf2py integer dimension(k),intent(in) :: x,color
 cf2py integer intent(hide),depend(x) :: k=len(x)
 cf2py double precision intent(out) :: like
+cf2py threadsafe
 
       INTEGER x(k),color(k)
       INTEGER d,total,i,k
@@ -1684,6 +1714,7 @@ cf2py integer dimension(k),intent(in) :: x
 cf2py double precision dimension(k),intent(in) :: theta      
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: k=len(x)
+cf2py threadsafe
 
       INTEGER i,k,sumx
       INTEGER x(k)
@@ -1729,6 +1760,7 @@ cf2py double precision dimension(k,k),intent(in) :: X,sigma
 cf2py double precision intent(in) :: n
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
+cf2py threadsafe
 
       INTEGER i,k
       DOUBLE PRECISION X(k,k),sigma(k,k),bx(k,k)
@@ -1792,6 +1824,7 @@ c Corresponds to scipy.special.gammaln
 
 cf2py double precision intent(in) :: xx
 cf2py double precision intent(out) :: gx
+cf2py threadsafe
 
       INTEGER i
       DOUBLE PRECISION x,xx,ser,tmp,gx
@@ -1816,6 +1849,7 @@ cf2py double precision intent(out) :: gx
       
 cf2py double precision intent(in) :: y,p,ifault
 cf2py double precision intent(out) :: gammds
+cf2py threadsafe
       
 c
 c        Algorithm AS 147  Appl. Statist. (1980) Vol. 29, No. 1
@@ -1867,6 +1901,7 @@ cf2py double precision dimension(m,n),intent(in) :: mat
 cf2py double precision dimension(n,m),intent(out) :: tmat
 cf2py integer intent(hide),depend(mat) :: m=len(mat)
 cf2py integer intent(hide),depend(mat) :: n=shape(mat,1)
+cf2py threadsafe
 
       INTEGER i,j,m,n
       DOUBLE PRECISION mat(m,n),tmat(n,m)
@@ -1890,6 +1925,7 @@ cf2py double precision dimension(m,n),intent(in) :: mat1
 cf2py double precision dimension(p,q),intent(in) :: mat2
 cf2py integer intent(hide),depend(mat1) :: m=len(mat1),n=shape(mat1,1)
 cf2py integer intent(hide),depend(mat2) :: p=len(mat2),q=shape(mat2,1)
+cf2py threadsafe
 
 
       INTEGER i,j,k,m,n,p,q
@@ -1938,6 +1974,7 @@ C
 cf2py double precision dimension(N,N),intent(in) :: A
 cf2py double precision intent(out) :: D
 cf2py integer intent(hide),depend(A) :: N=len(A)      
+cf2py threadsafe
 
       DOUBLE PRECISION A(N,N), D
       INTEGER INDX(N)
@@ -2048,6 +2085,7 @@ c...perform a Cholesky decomposition of matrix a, returned as c
 cf2py double precision dimension(n,n),intent(in) :: a
 cf2py double precision dimension(n,n),intent(out) :: c
 cf2py integer intent(in),depend(a) :: n=len(a)
+cf2py threadsafe
 
       c(1,1) = sqrt(a(1,1))
       do i=2,n
@@ -2141,6 +2179,7 @@ C
 cf2py double precision intent(in) :: x
 cf2py integer intent(in) :: n
 cf2py double precision dimension(n+1),intent(out) :: cx
+cf2py threadsafe
 
       integer n,i
       double precision cx(n+1)
@@ -2255,6 +2294,7 @@ cf2py double precision dimension(k-1),intent(in) :: p
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(p) :: k=len(p)+1
 cf2py double precision intent(out) :: like
+cf2py threadsafe
             
       DOUBLE PRECISION p(k),val,like
       INTEGER x(n)
@@ -2295,6 +2335,7 @@ cf2py double precision dimension(n),intent(in) :: rands
 cf2py integer dimension(n),intent(out) :: s
 cf2py integer intent(hide),depend(p) :: k=len(p)+1
 cf2py integer intent(hide),depend(rands) :: n=len(rands)
+cf2py threadsafe
 
 
       DOUBLE PRECISION p(k-1),sump,u,rands(n)
@@ -2331,6 +2372,7 @@ c assign value to array
 c Maps (0,1) -> R.
 cf2py intent(hide) n
 cf2py intent(out) ltheta
+cf2py threadsafe
       DOUBLE PRECISION theta(n), ltheta(n)
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)      
@@ -2353,6 +2395,7 @@ c
 c Maps R -> (0,1).
 cf2py intent(hide) n
 cf2py intent(out) theta
+cf2py threadsafe
       DOUBLE PRECISION theta(n), ltheta(n)
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)      
@@ -2373,6 +2416,7 @@ c
 cf2py intent(hide) n, na1, na2
 cf2py intent(out) ltheta
 cf2py intent(copy) theta
+cf2py threadsafe
       DOUBLE PRECISION theta(n), ltheta(n)
       DOUBLE PRECISION a1(na1), a2(na2), a1t, a2t
       LOGICAL a1_isscalar, a2_isscalar      
@@ -2429,6 +2473,7 @@ c
 cf2py intent(hide) n, na1, na2
 cf2py intent(out) theta
 cf2py intent(copy) ltheta
+cf2py threadsafe
       DOUBLE PRECISION theta(n), ltheta(n)
       DOUBLE PRECISION a1(na1), a2(na2), a1t, a2t
       LOGICAL a1_isscalar, a2_isscalar

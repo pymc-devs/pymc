@@ -11,6 +11,7 @@ cf2py intent(out) Nu
 cf2py intent(out) ui
 cf2py intent(hide) N
 cf2py intent(hide) Nd
+cf2py threadsafe
       INTEGER N, Nd, i, j, k, rf(N), rt(N), Nr, ui(N)
       INTEGER Nu
       DOUBLE PRECISION x(N,Nd), xu(N,Nd)
@@ -63,6 +64,7 @@ cf2py integer intent(hide), depend(x_sofar):: N_sofar = shape(x_sofar,0)
 cf2py double precision intent(out), dimension(N) :: f
 cf2py integer intent(out), dimension(N):: new_indices
 cf2py integer intent(out):: N_new_indices
+cf2py threadsafe
       INTEGER N, N_dim, N_sofar,
      +N_new_indices, new_indices(N), i, j, k
       DOUBLE PRECISION x(N,N_dim), x_sofar(N_sofar, N_dim),
@@ -109,6 +111,7 @@ cf2py integer intent(out):: N_new_indices
       subroutine dcopy_wrap(x,y,nx)
 cf2py intent(inplace) y
 cf2py intent(hide) nx
+cf2py threadsafe
       double precision x(nx), y(nx)
       external dcopy
 !       dcopy(n,dx,incx,dy,incy)
@@ -164,6 +167,7 @@ cf2py optional character intent(in)::uplo='U'
 cf2py optional character intent(in)::transa='N'
 cf2py integer intent(hide), depend(A)::M=shape(A,0)
 cf2py integer intent(hide), depend(B)::N=shape(B,1)
+cf2py threadsafe
 
 
       
@@ -198,6 +202,7 @@ cf2py optional character intent(in)::transa='N'
 cf2py optional double precision intent(in)::alpha=1.0
 cf2py integer intent(hide), depend(A)::M=shape(A,0)
 cf2py integer intent(hide), depend(B)::N=shape(B,1)
+cf2py threadsafe
 
 
       
@@ -229,6 +234,7 @@ cf2py integer intent(hide), depend(B)::N=shape(B,1)
 cf2py double precision dimension(n,n), intent(inplace) :: A
 cf2py integer depend(A),intent(hide)::n=shape(A,0)
 cf2py integer intent(out)::info
+cf2py threadsafe
 
       DOUBLE PRECISION A(n,n)
       INTEGER n, info, i, j
@@ -253,6 +259,7 @@ cf2py intent(copy) x, mu
 cf2py intent(in) sig
 cf2py intent(out) like
 cf2py intent(hide) info, n
+cf2py threadsafe
 
       DOUBLE PRECISION sig(n,n), x(n), mu(n), like
       INTEGER n, info, i
