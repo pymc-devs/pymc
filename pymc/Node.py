@@ -194,11 +194,7 @@ class Variable(Node):
 
 ContainerRegistry = []
 
-class FreezingMetaclass(type):
-    """
-    Automatically registers new step methods if they can be automatically assigned:
-    if their init method has one and only one required argument.
-    """
+class ContainerMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         
@@ -221,7 +217,7 @@ class ContainerBase(object):
       ListContainer, SetContainer, DictContainer, TupleContainer, ArrayContainer
     """
     register = False
-    __metaclass__ = FreezingMetaclass
+    __metaclass__ = ContainerMeta
     change_methods = []
     containing_classes = []
     
@@ -255,7 +251,11 @@ class ContainerBase(object):
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
-
+StochasticRegistry = []
+class StochasticMeta(type):
+    def __init__(cls, name, bases, dict):
+        type.__init__(cls, name, bases, dict)
+        StochasticRegistry.append(cls)
 class StochasticBase(Variable):
     """
     Abstract base class.
@@ -263,9 +263,13 @@ class StochasticBase(Variable):
     :SeeAlso:
       Stochastic, Variable
     """
-    pass
+    __metaclass__ = StochasticMeta
 
-
+DeterministicRegistry = []
+class DeterministicMeta(type):
+    def __init__(cls, name, bases, dict):
+        type.__init__(cls, name, bases, dict)
+        DeterministicRegistry.append(cls)
 class DeterministicBase(Variable):
     """
     Abstract base class.
@@ -273,9 +277,13 @@ class DeterministicBase(Variable):
     :SeeAlso:
       Deterministic, Variable
     """
-    pass
+    __metaclass__ = DeterministicMeta
 
-
+PotentialRegistry = []
+class PotentialMeta(type):
+    def __init__(cls, name, bases, dict):
+        type.__init__(cls, name, bases, dict)
+        PotentialRegistry.append(cls)
 class PotentialBase(Node):
     """
     Abstract base class.
@@ -283,4 +291,4 @@ class PotentialBase(Node):
     :SeeAlso:
       Potential, Variable
     """
-    pass
+    __metaclass__ = PotentialMeta
