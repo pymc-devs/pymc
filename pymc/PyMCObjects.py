@@ -236,6 +236,8 @@ class Potential(PotentialBase):
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
         
+        self.errmsg = "Potential %s forbids its parents' current values"%name
+        
         Node.__init__(  self, 
                         doc=doc, 
                         name=name, 
@@ -276,7 +278,10 @@ class Potential(PotentialBase):
 
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
-            raise ZeroProbability, "Potential %s forbids its parents' current values: %s" % (self.__name__, self._parents.value)
+            if self.verbose > 0:
+                raise ZeroProbability, self.errmsg + ": %s" %self._parents.value
+            else:
+                raise ZeroProbability, self.errmsg
 
         return logp
         
@@ -502,6 +507,7 @@ class Stochastic(StochasticBase):
         # taken from the constructor.
         self.rseed = rseed
         
+        self.errmsg = "Stochastic %s's value is outside its support,\n or it forbids its parents' current values."%name
 
         # Initialize value, either from value provided or from random function.
         if value is not None:
@@ -649,7 +655,10 @@ class Stochastic(StochasticBase):
         
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
-            raise ZeroProbability, "Stochastic %s's value is outside its support,\n or it forbids its parents' current values.\nValue: %s\nParents' values:%s" % (self.__name__, self._value, self._parents.value)
+            if self.verbose > 0:                
+                raise ZeroProbability, self.errmsg + "\nValue: %s\nParents' values:%s" % (self._value, self._parents.value)
+            else:
+                raise ZeroProbability, self.errmsg
     
         return logp
 
