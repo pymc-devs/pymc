@@ -162,7 +162,7 @@ class StepMethod(object):
     def __init__(self, variables, verbose=0):
         # StepMethod initialization
         
-        if not iterable(variables):
+        if not iterable(variables) or isinstance(variables, Node):
             variables = [variables]
         
         self.stochastics = set()
@@ -839,7 +839,7 @@ class AdaptiveMetropolis(StepMethod):
         # Verbosity flag
         self.verbose = verbose
         
-        if not np.iterable(stochastic):
+        if not np.iterable(stochastic) or isinstance(stochastic, Variable):
             stochastic = [stochastic] 
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose)

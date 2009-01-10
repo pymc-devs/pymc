@@ -36,16 +36,16 @@ def mean(value=np.array([0., 0.])):
 
 obs = pymc.MvNormalCov('obs', mean, C, value=r, observed=True)
 
-def test_AM():
-    S = pymc.MCMC([mean, obs])
-    S.use_step_method(pymc.AdaptiveMetropolis,  mean, delay=200)
-    S.sample(1000)
-    S.sample(5000)
-    Cs = np.cov(S.trace('mean')[:].T)
-    assert_array_almost_equal(Cs,  C/N, 2)
+# def test_AM():
+S = pymc.MCMC([mean, obs])
+S.use_step_method(pymc.AdaptiveMetropolis,  mean, delay=200)
+S.sample(1000)
+S.sample(5000)
+Cs = np.cov(S.trace('mean')[:].T)
+assert_array_almost_equal(Cs,  C/N, 2)
 
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+# if __name__ == '__main__':
+#     import nose
+#     nose.runmodule()
 

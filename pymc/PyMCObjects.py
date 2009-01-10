@@ -718,6 +718,12 @@ class Stochastic(StochasticBase):
 # = Add special methods to variables to support FBC syntax =
 # ==========================================================
 
+# These are not working
+nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains']
+# These should NOT be implemented because they are in-place updates.
+do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
+
+
 def create_uni_method(op_name, cls):
     def new_method(self):
         def eval_fun(self,op=op):
@@ -744,29 +750,25 @@ def create_bin_method(op_name, cls):
     new_method.__name__ = op_name
     return UnboundMethodType(new_method, None, cls)
 
-bin_ops = ['lt', 'le', 'eq', 'ne', 'gt', 'ge', 'getitem']
-bin_lr_ops = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']
-uni_ops = ['unicode','neg','pos','abs','invert','index']
-
-# These are not working
-nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains']
-# These should NOT be implemented because they are in-place updates.
-do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
-
 for cls in [Deterministic, Stochastic]:
+
     # Left/right binary operators
-    for op in bin_lr_ops:
+    for op in ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
         op_name = '__'+op+'__'
         for prefix in ['', 'r']:
             setattr(cls, op_name, create_bin_method(op_name ,cls))
+
     # Binary operators
-    for op in bin_ops:
+    for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge', 'getitem']:
         op_name = '__'+op+'__'        
         setattr(cls, op_name, create_bin_method(op_name ,cls))
+
     # Unary operators
-    for op in uni_ops:
+    for op in ['unicode','neg','pos','abs','invert','index']:
         op_name = '__'+op+'__'
         setattr(cls, op_name, create_uni_method(op_name, cls))
+
+    # __call__
     def __call__(self, *args, **kwargs):
         def eval_fun(self, args=args, kwargs=kwargs):
             return self(*args, **kwargs)
@@ -777,3 +779,4 @@ for cls in [Deterministic, Stochastic]:
                                 trace=False, 
                                 plot=False)
     cls.__call__ = UnboundMethodType(__call__, None, cls)
+
