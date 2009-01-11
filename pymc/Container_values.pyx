@@ -5,110 +5,89 @@ from numpy import ndarray, array, zeros, shape, arange, where
 cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
 
-def TCValue(container):
+cdef class LCValue:
     """
-    Fills in a tuple container's value
-    
-    :SeeAlso: TupleContainer    
-    """
-    cdef int i
-    cdef object _value, isval
-    
-    isval = container.isval
-    _value = tuple()
-    
-    for i from 0 <= i < len(container):
-        if isval[i]:
-            _value = _value + (container[i].value,)
-        else:
-            _value = _value + (container[i],)
-                
-    return _value
+    l = LCValue(container)
+    l.run()    
 
+    run() method fills in value of ListContainer.    
+    """
+    cdef void **val_obj
+    cdef int *val_ind
+    cdef object _value
+    cdef int n_val
+    def __init__(self, container):
+        self._value = container._value
+        self.val_ind = <int*> PyArray_DATA(container.val_ind)
+        self.val_obj = <void**> PyArray_DATA(container.val_obj) 
+        self.n_val = container.n_val
+    def run(self):
+        cdef int i
+        for i from 0 <= i < self.n_val:
+            self._value[self.val_ind[i]] = (<object> self.val_obj[i]).value
 
-def LCValue(container):
+cdef class DCValue:
     """
-    Fills in a list container's value.
-    
-    :SeeAlso: ListContainer
-    """
-    cdef int i, ind
-    cdef object _value, val_ind, nonval_ind
-    
-    val_ind = container.val_ind
-    nonval_ind = container.nonval_ind
-    _value = container._value
-    
-    for i from 0 <= i < container.n_val:
-        ind = val_ind[i]
-        _value[ind] = container[ind].value
-    for i from 0 <= i < container.n_nonval:
-        ind = nonval_ind[i]
-        _value[ind] = container[ind]
+    d = DCValue(container)
+    d.run()    
 
-def DCValue(container):
+    run() method replaces DictContainers'keys corresponding to variables and containers 
+    with their values.    
     """
-    Fills in a dictionary container's value.
-    
-    :SeeAlso: DictContainer
-    """
-    cdef int i
-    cdef object _value, val_keys, nonval_keys, key
-    
-    val_keys = container.val_keys
-    nonval_keys = container.nonval_keys
-    _value = container._value
-    
-    for i from 0 <= i < container.n_val:
-        key = val_keys[i]
-        _value[key] = container[key].value
-    for i from 0 <= i < container.n_nonval:
-        key = nonval_keys[i]
-        _value[key] = container[key]
+    cdef void **val_obj, **val_keys
+    cdef object _value
+    cdef int n_val
+    def __init__(self, container):
+        self._value = container._value
+        self.val_keys = <void**> PyArray_DATA(container.val_keys)
+        self.val_obj = <void**> PyArray_DATA(container.val_obj) 
+        self.n_val = container.n_val
+    def run(self):
+        cdef int i
+        cdef object key
+        for i from 0 <= i < self.n_val:
+            key = <object> self.val_keys[i]
+            self._value[key] = (<object> self.val_obj[i]).value
 
-def OCValue(container):
+cdef class OCValue:
     """
-    Fills in an object container's value.
-    
-    :SeeAlso: ObjectContainer
-    """
-    cdef int i
-    cdef object _value, val_keys, nonval_keys, key, _dict_container
-    
-    _dict_container = container._dict_container
-    val_keys = _dict_container.val_keys
-    nonval_keys = _dict_container.nonval_keys
-    _value = container._value.__dict__
-    
-    
-    for i from 0 <= i < _dict_container.n_val:
-        key = val_keys[i]
-        _value[key] = _dict_container[key].value
-    for i from 0 <= i < _dict_container.n_nonval:
-        key = nonval_keys[i]
-        _value[key] = _dict_container[key]
-    
-def ACValue(container):
-    """
-    Fills in an array container's value.
-    
-    :SeeAlso: ArrayContainer
-    """
+    d = OCValue(container)
+    d.run()    
 
-    cdef int i
-    cdef long ind
-    
-    val_ind = container.val_ind
-    nonval_ind = container.nonval_ind
-    
-    ravelledvalue = container._ravelledvalue
-    ravelleddata = container._ravelleddata
-    
-    for i from 0 <= i < container.n_val:
-        ind = val_ind[i]
-        ravelledvalue[ind] = ravelleddata[ind].value
+    run() method fills in value of container.
+    """
+    cdef void **val_obj, **val_keys
+    cdef object _value
+    cdef int n_val
+    def __init__(self, container):
+        self._value = container._value.__dict__
+        self.val_keys = <void**> PyArray_DATA(container._dict_container.val_keys)
+        self.val_obj = <void**> PyArray_DATA(container._dict_container.val_obj) 
+        self.n_val = container._dict_container.n_val
+    def run(self):
+        cdef int i
+        cdef object key
+        for i from 0 <= i < self.n_val:
+            key = <object> self.val_keys[i]
+            self._value[key] = (<object> self.val_obj[i]).value
 
-    for i from 0 <= i < container.n_nonval:
-        ind = nonval_ind[i]
-        ravelledvalue[ind] = ravelleddata[ind]
-    
+cdef class ACValue:
+    """
+    A = ACValue(container)
+    A.run()    
+
+    run() method fills in value of ArrayContainer.    
+    """
+    cdef void **val_obj
+    cdef object _ravelledvalue
+    cdef int *val_ind
+    cdef int n_val
+    def __init__(self, container):
+        self.val_obj = <void**> PyArray_DATA(container.val_obj) 
+        self._ravelledvalue = container._ravelledvalue
+        self.val_ind = <int*> PyArray_DATA(container.val_ind)        
+        self.n_val = container.n_val
+    def run(self):
+        cdef int i
+        for i from 0 <= i < self.n_val:
+            self._ravelledvalue[self.val_ind[i]] = (<object> self.val_obj[i]).value

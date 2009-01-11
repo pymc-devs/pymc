@@ -4,7 +4,7 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
@@ -273,8 +273,8 @@ class Potential(PotentialBase):
         except:
             raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
 
-        if isnan(logp):
-            raise ValueError, self.__name__ + ': computed log-probability is nan'
+        if logp is NaN:
+            raise ValueError, self.__name__ + ': computed log-probability is NaN'
 
         # Check if the value is smaller than a double precision infinity:
         if logp <= d_neg_inf:
@@ -526,7 +526,7 @@ class Stochastic(StochasticBase):
                 try:
                     self._value = dtype(value)
                 except TypeError:
-                    self._value = asarray(value)
+                    self._value = asarray(value, dtype=dtype)
             else:
                 self._value = value
         else:
@@ -579,14 +579,10 @@ class Stochastic(StochasticBase):
         self._logp.force_compute()             
     
     def get_value(self):
-        # Define value attribute
-        
+        # Define value attribute        
         if self.verbose > 1:
             print '\t' + self.__name__ + ': value accessed.'
-        try:
-            return self._value.value
-        except AttributeError:
-            return self._value
+        return self._value
 
     
     def set_value(self, value):
@@ -618,7 +614,7 @@ class Stochastic(StochasticBase):
                 self._value = self.dtype(value)
             except TypeError:
                 self._value = asarray(value, dtype=self.dtype)
-       
+                
         else:
             self._value = value
         
@@ -647,8 +643,8 @@ class Stochastic(StochasticBase):
         except:
             raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
         
-        if isnan(logp):
-            raise ValueError, self.__name__ + ': computed log-probability is nan'
+        if logp is NaN:
+            raise ValueError, self.__name__ + ': computed log-probability is NaN'
         
         if self.verbose > 0:
             print '\t' + self.__name__ + ': Returning log-probability ', logp

@@ -38,7 +38,7 @@ These flattened representations are useful for things like cache checking.
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
-from pymc.Container_values import LCValue, TCValue, DCValue, ACValue, OCValue
+from pymc.Container_values import LCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 import pdb
 
@@ -147,7 +147,7 @@ def file_items(container, iterable):
     Files away objects into the appropriate attributes of the container.
     """
 
-    container._value = copy(iterable)
+    # container._value = copy(iterable)
     
     container.nodes = set()
     container.variables = set()
@@ -225,6 +225,25 @@ def file_items(container, iterable):
     
 value_doc = 'A copy of self, with all variables replaced by their values.'    
 
+def sort_list(container, _value):
+    val_ind = []   
+    val_obj = []
+    for i in xrange(len(_value)):
+        obj = _value[i]
+        if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
+            val_ind.append(i)
+            val_obj.append(obj)
+    # In case val_obj is only a single array, avert confusion.
+    # Leave this even though it's confusing!
+    val_obj.append(None)
+    n_val = len(val_ind)
+    val_ind = array(val_ind, dtype=int)
+    val_obj = array(val_obj, dtype=object)
+    container.val_ind = val_ind
+    container.val_obj = val_obj
+    container.n_val = n_val
+    container.LCValue = LCValue(container)
+
 class SetContainer(ContainerBase, frozenset):
     """
     SetContainers are containers that wrap sets.
@@ -262,35 +281,20 @@ class SetContainer(ContainerBase, frozenset):
     containing_classes = [set, frozenset]
     def __init__(self, iterable):
         self.new_iterable = set(iterable)
-        ContainerBase.__init__(self, self.new_iterable)
-        for item in self.new_iterable:
-            if isinstance(item, Variable) or isinstance(item, ContainerBase):
-                try:
-                    hash(item.value)
-                except TypeError:
-                    raise TypeError, 'Only objects with hashable values may be included in SetContainers.\n'\
-                                    + item.__repr__() + ' has value of type ' +  item.value.__class__.__name__\
-                                     + '\nwhich is not hashable.'
         file_items(self, self.new_iterable)
-        frozenset.__init__(self, self.new_iterable)
-        del self.new_iterable
-        
+        ContainerBase.__init__(self, self.new_iterable)
+        self._value = list(self)        
+        sort_list(self, self._value)
+
     def replace(self, item, new_container, i):
         self.new_iterable.discard(item)
         self.new_iterable.add(new_container)
-        
+
     def get_value(self):
-        _value = set(self)
-        for item in self.variables:
-            set.discard(_value, item)
-            set.add(_value, item.value)
-        for item in self.containers:
-            set.discard(_value, item)
-            set.add(_value, item.value)                
-        return _value
+        self.LCValue.run()
+        return set(self._value)
 
     value = property(fget = get_value, doc=value_doc)
-
 
 class TupleContainer(ContainerBase, tuple):
     """
@@ -327,20 +331,20 @@ class TupleContainer(ContainerBase, tuple):
     register=True
     change_methods = []
     containing_classes = [tuple]
+
     def __init__(self, iterable):
         tuple.__init__(self, file_items(self, iterable))
-        # ContainerBase.__init__(self, iterable)        
-        # file_items(self, iterable)
+        ContainerBase.__init__(self, iterable)        
+        file_items(self, iterable)
+        self._value = list(self)        
+        sort_list(self, self._value)
 
-        self.isval = []
-        for i in xrange(len(self)):
-            if isinstance(self[i], Variable) or isinstance(self[i], ContainerBase):
-                self.isval.append(True)
-            else:
-                self.isval.append(False)
+    def replace(self, item, new_container, i):
+        list.__setitem__(self, i, new_container)
 
     def get_value(self):
-        return TCValue(self)
+        self.LCValue.run()
+        return tuple(self._value)
 
     value = property(fget = get_value, doc=value_doc)
 
@@ -381,25 +385,16 @@ class ListContainer(ContainerBase, list):
     register=True    
     def __init__(self, iterable):
         list.__init__(self, iterable)
-        ContainerBase.__init__(self, iterable)        
+        ContainerBase.__init__(self, iterable)      
         file_items(self, iterable)
-        
-        self.val_ind = []   
-        self.nonval_ind = []
-        for i in xrange(len(self)):
-            if isinstance(self[i], Variable) or isinstance(self[i], ContainerBase):
-                self.val_ind.append(i)
-            else:
-                self.nonval_ind.append(i)
-                
-        self.n_val = len(self.val_ind)
-        self.n_nonval = len(self) - self.n_val
+        self._value = list(self)          
+        sort_list(self, self._value)
 
     def replace(self, item, new_container, i):
         list.__setitem__(self, i, new_container)
         
     def get_value(self):
-        LCValue(self)
+        self.LCValue.run()
         return self._value
 
     value = property(fget = get_value, doc=value_doc)
@@ -444,24 +439,33 @@ class DictContainer(ContainerBase, dict):
     def __init__(self, iterable):
         dict.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)        
+        self._value = copy(iterable)
         file_items(self, iterable)
         
         self.val_keys = []   
-        self.nonval_keys = []
-        for key in self.keys():
-            if isinstance(self[key], Variable) or isinstance(self[key], ContainerBase):
+        self.val_obj = []
+        self._value = {}
+        for key, obj in self.iteritems():
+            if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
                 self.val_keys.append(key)
+                self.val_obj.append(obj)
             else:
-                self.nonval_keys.append(key)
+                self._value[key] = obj
+        # In case val_obj is only a single array, avert confusion.
+        # Leave this even though it's confusing!
+        self.val_obj.append(None)
                 
-        self.n_val = len(self.val_keys)
-        self.n_nonval = len(self) - self.n_val
+        self.n_val = len(self.val_keys)        
+        self.val_keys = array(self.val_keys, dtype=object)
+        self.val_obj = array(self.val_obj, dtype=object)
+        self.DCValue = DCValue(self)
         
     def replace(self, key, new_container):
         dict.__setitem__(self, key, new_container)        
         
     def get_value(self):
-        DCValue(self)
+        # DCValue(self)
+        self.DCValue.run()
         return self._value
 
     value = property(fget = get_value, doc=value_doc)
@@ -520,13 +524,14 @@ class ObjectContainer(ContainerBase):
         
         self._value = copy(self)
         ContainerBase.__init__(self, input)
+        self.OCValue = OCValue(self)
 	
         
     def replace(self, item, new_container, key):
         dict.__setitem__(self.__dict__, key, new_container)
 
     def _get_value(self):
-        OCValue(self)
+        self.OCValue.run()
         return self._value
     value = property(fget = _get_value, doc=value_doc)
     
@@ -573,46 +578,41 @@ class ArrayContainer(ContainerBase, ndarray):
         if not array_in.dtype == dtype('object'):
             raise ValueError, 'Cannot create container from array whose dtype is not object.'
 
-        C = array(array_in, copy=True)
-        
-        C = C.view(subtype)
+        C = array(array_in, copy=True).view(subtype)
+        C_ravel = C.ravel()
         ContainerBase.__init__(C, array_in)
-                
-        # Ravelled versions of self, self.value, and self._pymc_finder.
-        C._ravelleddata = array(array_in, copy=True).ravel()
         
         # Sort out contents and wrap internal containers.
-        file_items(C, C._ravelleddata)
-        C._value = array_in.copy()        
+        file_items(C, C_ravel)
+        C._value = C.copy()        
         C._ravelledvalue = C._value.ravel()
         
         # An array range to keep around.        
-        C.iterrange = arange(len(C.ravel()))
+        C.iterrange = arange(len(C_ravel))
         
         C.val_ind = []
-        C.nonval_ind = []
-        for i in xrange(len(C._ravelleddata)):
-            if isinstance(C._ravelleddata[i], Variable) or isinstance(C._ravelleddata[i], ContainerBase):
+        C.val_obj = []
+        for i in xrange(len(C_ravel)):
+            obj = C_ravel[i]
+            if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
                 C.val_ind.append(i)
-            else:
-                C.nonval_ind.append(i)
-        
-        C.val_ind = array(C.val_ind, copy=True, dtype=int)
-        C.nonval_ind = array(C.nonval_ind, copy=True, dtype=int)
-        
+                C.val_obj.append(obj)
+        C.val_obj.append(None)
+        C.val_ind = array(C.val_ind, dtype=int)
+        C.val_obj = array(C.val_obj, dtype=object)
         C.n_val = len(C.val_ind)
-        C.n_nonval = len(C.nonval_ind)
         
         C.flags['W'] = False
+        C.ACValue = ACValue(C)
         
         return C
 
     def replace(self, item, new_container, i):
-        ndarray.__setitem__(self._ravelleddata,i, new_container)
+        ndarray.__setitem__(self.ravel(), i, new_container)
 
     # This method converts self to self.value.
     def get_value(self):
-        ACValue(self)
+        self.ACValue.run()
         return self._value
                 
     value = property(fget = get_value, doc=value_doc)
