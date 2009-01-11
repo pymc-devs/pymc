@@ -17,7 +17,7 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d
+from numpy import apply_along_axis, atleast_1d, min, max
 from utils import autocorr
 import pdb
 
@@ -326,7 +326,7 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(data, name, format='png', suffix='', path='./', new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
     
@@ -346,6 +346,10 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
             
+        common_scale (optional): bool
+            Specifies whether plots of multivariate nodes should be on the same scale
+            (defaults to True).
+            
     """
         
     # If there is only one data array, go ahead and plot it ...
@@ -360,9 +364,9 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
             figure(figsize=(10, 6))
         
         # Call trace
-        trace(data, name, rows=rows, columns=2, num=num, last=last)
+        trace(data, name, datarange=datarange, rows=rows, columns=2, num=num, last=last)
         # Call histogram
-        histogram(data, name, rows=rows, columns=2, num=num+1, last=last)
+        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last)
         
         if last:
             if not os.path.exists(path):
@@ -373,6 +377,11 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
     else:
         # ... otherwise plot recursively
         tdata = swapaxes(data, 0, 1)
+        
+        datarange = (None, None)
+        # Determine common range for plots
+        if common_scale:
+            datarange = (min(tdata), max(tdata))
         
         # How many rows?
         _rows = min(4, len(tdata))
@@ -386,11 +395,11 @@ def plot(data, name, format='png', suffix='', path='./', new=True, last=True, ro
             # Final subplot of current figure?
             _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
             
-            plot(tdata[i], name+'_'+str(i), format=format, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
+            plot(tdata[i], name+'_'+str(i), format=format, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
 @plotwrapper
-def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -409,6 +418,8 @@ def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1
         
         # Generate histogram
         hist(data.tolist(), nbins)
+        
+        xlim(datarange)
         
         # Plot options
         if last:
@@ -434,7 +445,7 @@ def histogram(data, name, nbins=None, format='png', suffix='', path='./', rows=1
 
 
 @plotwrapper
-def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Internal plotting specification for handling nested arrays
     
     # Stand-alone plot or subplot?
@@ -447,6 +458,7 @@ def trace(data, name, format='png', suffix='', path='./', rows=1, columns=1, num
     
     subplot(rows, columns, num)
     pyplot(data.tolist())
+    ylim(datarange)
     
     # Plot options
     if last:
