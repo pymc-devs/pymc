@@ -228,20 +228,26 @@ value_doc = 'A copy of self, with all variables replaced by their values.'
 def sort_list(container, _value):
     val_ind = []   
     val_obj = []
+    nonval_ind = []
+    nonval_obj = []
     for i in xrange(len(_value)):
         obj = _value[i]
         if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
             val_ind.append(i)
             val_obj.append(obj)
+        else:
+            nonval_ind.append(i)
+            nonval_obj.append(obj)
     # In case val_obj is only a single array, avert confusion.
     # Leave this even though it's confusing!
     val_obj.append(None)
-    n_val = len(val_ind)
-    val_ind = array(val_ind, dtype=int)
-    val_obj = array(val_obj, dtype=object)
-    container.val_ind = val_ind
-    container.val_obj = val_obj
-    container.n_val = n_val
+    nonval_obj.append(None)
+    container.n_val = len(val_ind)
+    container.n_nonval = len(nonval_ind)
+    container.val_ind = array(val_ind, dtype=int)
+    container.val_obj = array(val_obj, dtype=object)
+    container.nonval_ind = array(nonval_ind, dtype=int)
+    container.nonval_obj = array(nonval_obj, dtype=object)
     container.LCValue = LCValue(container)
 
 class SetContainer(ContainerBase, frozenset):
@@ -444,20 +450,27 @@ class DictContainer(ContainerBase, dict):
         
         self.val_keys = []   
         self.val_obj = []
+        self.nonval_keys = []
+        self.nonval_obj = []
         self._value = {}
         for key, obj in self.iteritems():
             if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
                 self.val_keys.append(key)
                 self.val_obj.append(obj)
             else:
-                self._value[key] = obj
+                self.nonval_keys.append(key)
+                self.nonval_obj.append(obj)
         # In case val_obj is only a single array, avert confusion.
         # Leave this even though it's confusing!
         self.val_obj.append(None)
+        self.nonval_obj.append(None)
                 
         self.n_val = len(self.val_keys)        
         self.val_keys = array(self.val_keys, dtype=object)
         self.val_obj = array(self.val_obj, dtype=object)
+        self.n_nonval = len(self.nonval_keys)                        
+        self.nonval_keys = array(self.nonval_keys, dtype=object)
+        self.nonval_obj = array(self.nonval_obj, dtype=object)        
         self.DCValue = DCValue(self)
         
     def replace(self, key, new_container):
@@ -590,17 +603,27 @@ class ArrayContainer(ContainerBase, ndarray):
         # An array range to keep around.        
         C.iterrange = arange(len(C_ravel))
         
-        C.val_ind = []
-        C.val_obj = []
+        val_ind = []
+        val_obj = []
+        nonval_ind = []
+        nonval_obj = []
         for i in xrange(len(C_ravel)):
             obj = C_ravel[i]
             if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
-                C.val_ind.append(i)
-                C.val_obj.append(obj)
-        C.val_obj.append(None)
-        C.val_ind = array(C.val_ind, dtype=int)
-        C.val_obj = array(C.val_obj, dtype=object)
-        C.n_val = len(C.val_ind)
+                val_ind.append(i)
+                val_obj.append(obj)
+            else:
+                nonval_ind.append(i)
+                nonval_obj.append(obj)
+        val_obj.append(None)
+        C.val_ind = array(val_ind, dtype=int)
+        C.val_obj = array(val_obj, dtype=object)
+        C.n_val = len(val_ind)
+        nonval_obj.append(None)
+        C.nonval_ind = array(nonval_ind, dtype=int)
+        C.nonval_obj = array(nonval_obj, dtype=object)
+        C.n_nonval = len(nonval_ind)
+        
         
         C.flags['W'] = False
         C.ACValue = ACValue(C)
