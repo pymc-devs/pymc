@@ -585,16 +585,16 @@ class Stochastic(StochasticBase):
         return self._value
 
     
-    def set_value(self, value):
+    def set_value(self, value, force=False):
         # Record new value and increment counter
         
+        # Value can't be updated if observed=True
+        if self.observed and not force:
+            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if observed flag is set'
+            
         if self.verbose > 0:
             print '\t' + self.__name__ + ': value set to ', value
         
-        # Value can't be updated if observed=True
-        if self.observed:
-            raise AttributeError, 'Stochastic '+self.__name__+'\'s value cannot be updated if observed flag is set'
-            
         # Save current value as last_value
         # Don't copy because caching depends on the object's reference. 
         self.last_value = self._value            
@@ -680,7 +680,8 @@ class Stochastic(StochasticBase):
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
         
         # Set Stochastic's value to drawn value
-        self.value = r
+        if not self.observed:
+            self.value = r
             
         return r
     
