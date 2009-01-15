@@ -11,12 +11,14 @@ equivalent functionality.
 __docformat__='reStructuredText'
 
 import PyMCObjects as pm
+from Node import Variable
 from Container import Container
 from InstantiationDecorators import deterministic
 import numpy as np
 import inspect
 from utils import safe_len
 from flib import logit, invlogit, stukel_logit, stukel_invlogit
+from types import UnboundMethodType
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit']
@@ -400,3 +402,182 @@ class Index(LinearCombination):
 
         self.sides = Container(self.sides)
         self.coefs = Container(self.coefs)
+
+
+# ==========================================================
+# = Add special methods to variables to support FBC syntax =
+# ==========================================================
+
+def create_uni_method(op_name, klass):
+    """
+    Creates a new univariate special method, such as A.__neg__() <=> -A,
+    for target class. The method is called __op_name__.
+    """
+    # This function will become the actual method.
+    def new_method(self):
+        # This code creates a Deterministic object.
+        def eval_fun(self,op=op):
+            return getattr(self, op)()
+        return pm.Deterministic(eval_fun,
+                                'A Deterministic returning the value of %s(%s)'%(op_name, self.__name__),
+                                '('+op_name+'_'+self.__name__+')',
+                                {'self':self, 'op': '__'+op_name+'__'},
+                                trace=False,
+                                plot=False)
+    # Make the function into a method for klass.
+    new_method.__name__ = '__'+op_name+'__'
+    setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
+
+
+def create_rl_bin_method(op_name, klass):
+    """
+    Creates a new binary special method with left and right versions, such as
+        A.__mul__(B) <=> A*B,
+        A.__rmul__(B) <=> [B*A if B.__mul__(A) fails]
+    for target class. The method is called __op_name__.
+    """
+    # Make left and right versions.
+    for prefix in ['r','']:
+        # This function will became the methods.
+        def new_method(self, other, prefix=prefix):
+            # This code will create one of two Deterministic objects.
+            if prefix == 'r':
+                # Right version: raises error on failure.
+                parents = {'self':self, 'other':other, 'op':'__r' + op_name + '__'}
+                def eval_fun(self,other,op):
+                    out = getattr(self, op)(other)
+                    if out is NotImplemented:
+                        # the rt version has failed, meainng the lft version has failed as well.
+                        raise TypeError, "unsupported operand type(s) for %s: '%s' and '%s'"%(op.replace('_',''), self.__class__.__name__, other.__class__.__name__)
+                    return out
+            else:
+                # Left version: tries right version on failure.
+                parents = {'self':self, 'other':other, 'op':'__' + op_name + '__', 'rt_op': '__r'+op_name+'__'}
+                def eval_fun(self, other, op, rt_op):
+                    out = getattr(self, op)(other)
+                    if out is NotImplemented:
+                        # if try the rt version.
+                        out = getattr(other, rt_op)(self)
+                    return out
+            return pm.Deterministic(eval_fun,
+                                    'A Deterministic returning the value of %s(%s,%s)'%(prefix+op_name,self.__name__, str(other)),
+                                    '('+'_'.join([self.__name__,prefix+op_name,str(other)])+')',
+                                    parents,
+                                    trace=False,
+                                    plot=False)
+        # Convert the functions into methods for klass.
+        new_method.__name__ = '__'+prefix+op_name+'__'
+        setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
+        
+        
+def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
+    """
+    Creates a new binary special method with left and right versions, such as
+        A.__mul__(B) <=> A*B,
+        A.__rmul__(B) <=> [B*A if B.__mul__(A) fails]
+    for target class. The method is called __op_name__.
+    """
+    # This function will became the methods.
+    def new_method(self, other, x_roles=x_roles, y_roles=y_roles):
+        x = []
+        y = []
+        for xr in x_roles:
+            if xr=='self':
+                x.append(self)
+            elif xr=='other':
+                x.append(other)
+            else:
+                x.append(xr)
+        for yr in y_roles:
+            if yr=='self':
+                y.append(self)
+            elif yr=='other':
+                y.append(other)
+            else:
+                y.append(yr)
+        # This code will create one of two Deterministic objects.
+        return LinearCombination('('+'_'.join([self.__name__,op_name,str(other)])+')', x, y, trace=False, plot=False)
+
+    # Convert the functions into methods for klass.
+    new_method.__name__ = '__'+op_name+'__'
+    setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
+
+def create_bin_method(op_name, klass):
+    """
+    Creates a new binary special method with only a left version, such as
+    A.__eq__(B) <=> A==B, for target class. The method is called __op_name__.
+    """
+    # This function will become the method.
+    def new_method(self, other):
+        # This code creates a Deterministic object.
+        def eval_fun(self, other, op):
+            return getattr(self, op)(other)
+        return pm.Deterministic(eval_fun,
+                                'A Deterministic returning the value of %s(%s,%s)'%(op_name,self.__name__, str(other)),
+                                '('+'_'.join([self.__name__,op_name,str(other)])+')',
+                                {'self':self, 'other':other, 'op':'__'+op_name+'__'},
+                                trace=False,
+                                plot=False)
+    # Convert the function into a method for klass.
+    new_method.__name__ = '__'+op_name+'__'
+    setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
+
+
+# Left/right binary operators
+for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
+    create_rl_bin_method(op, Variable)
+
+# Addition, subtraction, multiplication
+create_rl_lin_comb_method('add', Variable, ['self', 'other'], [1,1])
+create_rl_lin_comb_method('radd', Variable, ['self', 'other'], [1,1])
+create_rl_lin_comb_method('sub', Variable, ['self', 'other'], [1,-1])
+create_rl_lin_comb_method('rsub', Variable, ['self', 'other'], [-1,1])
+create_rl_lin_comb_method('mul', Variable, ['self'],['other'])
+create_rl_lin_comb_method('rmul', Variable, ['self'],['other'])
+
+# Binary operators
+for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
+    create_bin_method(op ,Variable)
+
+# Unary operators
+for op in ['unicode','neg','pos','abs','invert','index']:
+    create_uni_method(op, Variable)
+
+# Create __getitem__ method.
+def __getitem__(self, index):
+    # If index is number or number-valued variable, make an Index object
+    name = '('+'_'.join([self.__name__,'getitem',str(index)])+')'
+    if isinstance(index, Variable):
+        if np.isreal(index.value):
+            return Index(name, self, index)
+    elif np.isreal(index):
+        return Index(name, self, index, trace=False, plot=False)
+    # Otherwise make a standard Deterministic.
+    else:
+        def eval_fun(self, index):
+            return self[index]
+        return pm.Deterministic(eval_fun,
+                                'A Deterministic returning the value of %s(%s,%s)'%('getitem',self.__name__, str(index)),
+                                name,
+                                {'self':self, 'index':index},
+                                trace=False,
+                                plot=False)
+Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
+
+# Create __call__ method for Variable.
+def __call__(self, *args, **kwargs):
+    def eval_fun(self, args=args, kwargs=kwargs):
+        return self(*args, **kwargs)
+    return Deterministic(eval_fun,
+                            'A Deterministic returning the value of %s(*%s, **%s)'%(self.__name__, str(args), str(kwargs)),
+                            self.__name__+'(*%s, **%s)'%(str(args), str(kwargs)),
+                            {'self':self, 'args': args, 'kwargs': kwargs},
+                            trace=False,
+                            plot=False)
+Variable.__call__ = UnboundMethodType(__call__, None, Variable)
+
+
+# These are not working
+nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains']
+# These should NOT be implemented because they are in-place updates.
+do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']

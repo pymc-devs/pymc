@@ -27,14 +27,15 @@ except ImportError:
 from Node import *
 from Container import *
 from PyMCObjects import *
-from Model import *
-from distributions import *
 from InstantiationDecorators import *
-from NormalApproximation import *
-from MCMC import *
-from StepMethods import *
-from diagnostics import *
 from CommonDeterministics import *
+from distributions import *
+from Model import *
+from StepMethods import *
+from MCMC import *
+from NormalApproximation import *
+from diagnostics import *
+
 
 
 from tests import test
