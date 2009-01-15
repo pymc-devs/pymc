@@ -1,11 +1,20 @@
-# Convergence diagnostics
+# Convergence diagnostics and model validation
 # Heidelberger and Welch (1983) ?
 
-__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis']
+__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate']
 
 import numpy as np
+import scipy as sp
 import pymc
+from copy import copy
 import pdb
+
+def open01(x, limit=1.e-6):
+    """Constrain numbers to (0,1) interval"""
+    try:
+        return np.array([min(max(y, limit), 1.-limit) for y in x])
+    except TypeError:
+        return min(max(x, limit), 1.-limit)
 
 def diagnostic(f):
     """
@@ -41,6 +50,142 @@ def diagnostic(f):
         return f(pymc_obj, *args, **kwargs)
 
     return wrapper
+    
+    
+def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=False, db='ram', plot=True, verbose=0):
+    """
+    Model validation method, following Cook et al. (Journal of Computational and
+    Graphical Statistics, 2006, DOI: 10.1198/106186006X136976).
+    
+    Generates posterior samples based on draws of 'true' parameter values. The
+    quantiles of the parameter values are calculated, based on the samples. If
+    the model is valid, the quantiles should be uniformly distributed over [0,1].
+    
+    Since this relies on the generation of simulated data, all data stochastics
+    must have a valid random() method for validation to proceed.
+    
+    Parameters
+    ----------
+    sampler : Sampler
+      An MCMC sampler object.
+    replicates (optional) : int
+      The number of validation replicates (i.e. number of quantiles to be simulated).
+      Defaults to 100.
+    iterations (optional) : int
+      The number of MCMC iterations to be run per replicate. Defaults to 2000.
+    burn (optional) : int
+      The number of burn-in iterations to be run per replicate. Defaults to 1000.
+    deterministic (optional) : bool
+      Flag for inclusion of deterministic nodes in validation procedure. Defaults
+      to False.
+    db (optional) : string
+      The database backend to use for the validation runs. Defaults to 'ram'.
+    plot (optional) : bool
+      Flag for validation plots. Defaults to True.
+      
+    Returns
+    -------
+    stats : dict 
+      Return a dictionary containing tuples with the chi-square statistic and
+      associated p-value for each model parameter.
+    """
+    
+    # Set verbosity for models to zero
+    sampler.verbose = 0
+    
+    # Compute quantiles
+    parameters = sampler.stochastics
+    if deterministic:
+        # Add deterministics to the mix, if requested
+        parameters = parameters.union(sampler.deterministics)
+    
+    param_values = {}
+    # Sample paramter values from posterior samples
+    for s in parameters:
+        try:
+            t = s.trace()
+            indices = np.random.randint(len(t), size=replicates) 
+            values = t[indices]
+            param_values[s] = values
+        except AttributeError:
+            # Can't validate variable if there is no trace
+            pass
+    
+    # Assign database backend
+    original_backend = sampler.db.__name__
+    sampler._assign_database_backend(db)
+    
+    # Empty lists for quantiles
+    quantiles = {}
+    
+    if verbose:
+        print "\nExecuting Cook et al. (2006) validation procedure ...\n"
+    
+    # Loop over replicates
+    for i in range(replicates):
+        
+        # Specify parameter values
+        for s in sampler.stochastics:
+            s.value = param_values[s][i]
+        
+        # Generate simulated data, given paramter values
+        for o in sampler.observed_stochastics:
+            # Generate simuated data for data stochastic
+            o.set_value(o.random(), force=True)
+            o._logp.force_compute()
+    
+        try:
+            # Fit models given parameter values
+            sampler.sample(iterations, burn)
+    
+            for s in param_values:
+                
+                if not i:
+                    # Initialize dict
+                    quantiles[s.__name__] = []
+                trace = s.trace()
+                q = sum(trace<param_values[s][i], 0)/float(len(trace))
+                quantiles[s.__name__].append(open01(q))
+                
+        finally:
+            # Replace data values
+            for o in sampler.observed_stochastics:
+                o.revert()
+        
+            # Replace backend
+            sampler._assign_database_backend(original_backend)
+            
+        if not i % 10 and i and verbose:
+            print "\tCompleted validation replicate", i
+    
+    
+    # Replace data values
+    for o in sampler.observed_stochastics:
+        o.revert()
+        
+    # Replace backend
+    sampler._assign_database_backend(original_backend)
+    
+    stats = {}
+    # Calculate chi-square statistics
+    for param in quantiles:
+        q = quantiles[param]
+        # Calculate chi-square statistics
+        X2 = sum(sp.special.ndtri(q)**2)
+        # Calculate p-value
+        p = sp.special.chdtrc(len(q), X2)
+        
+        stats[param] = (X2, p)
+        
+    if plot:
+        # Convert p-values to z-scores
+        p = copy(stats)
+        for i in p:
+            p[i] = p[i][1]
+        pymc.Matplot.zplot(p, verbose=verbose)
+    
+    return stats
+        
 
 @diagnostic
 def geweke(x, first=.1, last=.5, intervals=20):

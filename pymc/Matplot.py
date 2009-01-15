@@ -10,16 +10,18 @@ from __future__ import division
 import matplotlib
 import pymc
 import os
-from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, figure, subplot, gca, scatter, axvline
+from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig
+from pylab import figure, subplot, gca, scatter, axvline, yticks
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show, text
 from pprint import pformat
 
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d, min, max
+from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones
 from utils import autocorr
 import pdb
+from scipy import special
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior']
 
@@ -786,3 +788,41 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
         os.mkdir(path)
     savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 
+def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    """Plots absolute values of z-scores for model validation output from 
+    diagnostics.validate()."""
+
+    if verbose:
+        print '\nGenerating model validation plot'
+    
+    x,y,labels = [],[],[]
+    
+    for i,var in enumerate(pvalue_dict):
+        
+        # Get p-values
+        pvals = pvalue_dict[var]
+        # Take absolute values of inverse-standard normals
+        zvals = abs(special.ndtri(pvals))
+        
+        x = append(x, zvals)
+        y = append(y, ones(size(zvals))*(i+1))
+        
+        vname = var
+        vname += " (%i)" % size(zvals)
+        labels = append(labels, vname)
+        
+    pyplot(x, y, 'o')
+    # Set range on y-axis
+    ylim(0, size(pvalue_dict)+2)
+    # Tick labels for y-axis
+    yticks(arange(len(labels)+2), append(append("", labels), ""))
+    # X label
+    xlabel("Absolute z transformation of p-values")
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+        
+    if name:
+        name += '-'
+        
+    savefig("%s%svalidation.%s" % (path, name, format))
