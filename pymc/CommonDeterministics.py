@@ -19,9 +19,11 @@ import inspect
 from utils import safe_len
 from flib import logit, invlogit, stukel_logit, stukel_invlogit
 from types import UnboundMethodType
+from copy import copy
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
-            'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit']
+            'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
+            'pfunc']
 
 class Lambda(pm.Deterministic):
     """
@@ -402,6 +404,67 @@ class Index(LinearCombination):
 
         self.sides = Container(self.sides)
         self.coefs = Container(self.coefs)
+
+# =================================================================
+# = pfunc converts ordinary functions to Deterministic factories. =
+# =================================================================
+def pfunc(func):
+    """
+    pf = pfunc(func)
+    
+    Returns a function that can be called just like func; however its arguments may be
+    PyMC objects or containers of PyMC objects, and its return value will be a deterministic.
+    
+    Example:
+    
+        >>> A = pymc.Normal('A',0,1,size=10)
+        >>> pprod = pymc.pfunc(numpy.prod)
+        >>> B = pprod(A, axis=0)
+        >>> B
+        <pymc.PyMCObjects.Deterministic 'prod(A_0)' at 0x3ce49b0>
+        >>> B.value
+        -0.0049333289649554912
+        >>> numpy.prod(A.value)
+        -0.0049333289649554912
+    """
+    fargs, fvarargs, fvarkw, fdefaults = inspect.getargspec(func)
+    n_fargs = len(fargs)
+    def dtrm_generator(*args, **kwds):
+        name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args) + kwds.values()])+')'
+        doc_str = 'A deterministic returning %s(%s, %s)'%(func.__name__, ', '.join([str(arg) for arg in args]), ', '.join(['%s=%s'%(key, str(val)) for key, val in kwds.iteritems()]))
+
+        parents = {}
+        varargs = []
+        for kwd, val in kwds.iteritems():
+            parents[kwd] = val
+        for i in xrange(len(args)):
+            if i < n_fargs:
+                parents[fargs[i]] = args[i]
+            else:
+                varargs.append(args[i])
+                
+        if len(varargs)==0:
+            eval_fun = func
+        else:
+            parents['varargs']=varargs
+            def wrapper(**wkwds_in):
+                wkwds = copy(wkwds_in)
+                wargs = []
+                for arg in fargs:
+                    wargs.append(wkwds.pop(arg))
+                wargs.extend(wkwds.pop('varargs'))
+                return func(*wargs, **wkwds)
+            eval_fun = wrapper
+        
+        return pm.Deterministic(eval_fun, doc_str, name, parents, trace=False, plot=False)
+    dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
+    dtrm_generator.__doc__ = """
+    Deterministic-generating wrapper for %s. Original docstring:
+    %s
+    
+    %s
+    """%(func.__name__, '_'*60, func.__doc__)
+    return dtrm_generator
 
 
 # ==========================================================
