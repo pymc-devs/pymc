@@ -9,7 +9,7 @@
 \RequirePackage{longtable}
 \RequirePackage{underscore}
 
-% Uncomment these two lines to ignore the paper size and make the page 
+% Uncomment these two lines to ignore the paper size and make the page
 % size more like a typical published manual.
 %\renewcommand{\paperheight}{9in}
 %\renewcommand{\paperwidth}{8.5in}   % typical squarish manual
@@ -71,7 +71,7 @@
   %
   % Macro that takes two args: the name to link to and the content of
   % the link.  This takes care of the PDF magic, getting the colors
-  % the same for each link, and avoids having lots of garbage all over 
+  % the same for each link, and avoids having lots of garbage all over
   % this style file.
   \newcommand{\py@linkToName}[2]{%
     \py@pdfstartlink attr{/Border [0 0 0]} goto name{#1}%
@@ -582,11 +582,11 @@
 \newcommand{\optional}[1]{%
   {\textnormal{\Large[}}{#1}\hspace{0.5mm}{\textnormal{\Large]}}}
 
-% This can be used when a function or method accepts an varying number 
+% This can be used when a function or method accepts an varying number
 % of arguments, such as by using the *args syntax in the parameter list.
 \newcommand{\py@moreargs}{...}
 
-% This can be used when you don't want to document the parameters to a 
+% This can be used when you don't want to document the parameters to a
 % function or method, but simply state that it's an alias for
 % something else.
 \newcommand{\py@unspecified}{...}
@@ -802,7 +802,7 @@
 
 \newcommand{\nodename}[1]{\label{#1}}
 
-% For these commands, use \command{} to get the typography right, not 
+% For these commands, use \command{} to get the typography right, not
 % {\command}.  This works better with the texinfo translation.
 \newcommand{\ABC}{{\sc abc}}
 \newcommand{\UNIX}{{\sc Unix}}
@@ -1169,7 +1169,7 @@
 %  \begin{seealso}
 %    \seemodule{rand}{Uniform random number generator.}; % Module xref
 %    \seetext{\emph{Encyclopedia Britannica}}.           % Ref to a book
-% 
+%
 %    % A funky case: module name contains '_'; have to supply an optional key
 %    \seemodule[copyreg]{copy_reg}{Interface constructor registration for
 %                                  \module{pickle}.}

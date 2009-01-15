@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# To run the following correctly, you will need a patched version of docutils to enable support for 
-# math directives. 
-# There is a dummy module in docs named distributions.py that imports all the PyMC likelihoods. 
-# By introspection, epydoc finds the related docstrings and creates a tex output. This way, 
+# To run the following correctly, you will need a patched version of docutils to enable support for
+# math directives.
+# There is a dummy module in docs named distributions.py that imports all the PyMC likelihoods.
+# By introspection, epydoc finds the related docstrings and creates a tex output. This way,
 # we avoid documenting all the stuff that lives in the real pymc.distributions.py
 
 # epydoc --verbose --debug --config epydoc.conf

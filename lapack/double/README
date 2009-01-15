@@ -80,7 +80,7 @@ consult the ScaLAPACK index on netlib:
 LAPACK has been thoroughly tested, on many different
 types of computers.  The LAPACK project supports the package in the
 sense that reports of errors or poor performance will gain immediate
-attention from the developers. Such reports, descriptions 
+attention from the developers. Such reports, descriptions
 of interesting applications, and other comments should be sent by
 electronic mail to lapack@cs.utk.edu.
 
@@ -90,7 +90,7 @@ maintained on netlib.
 
 A number of technical reports were written during the development of
 LAPACK and published as LAPACK Working Notes, initially by Argonne
-National Laboratory and later by the University of Tennessee.  Many of 
+National Laboratory and later by the University of Tennessee.  Many of
 these reports later appeared as journal articles.  Most of these working
 notes are available in pdf and postscript form from netlib.
   http://www.netlib.org/lapack/lawns/

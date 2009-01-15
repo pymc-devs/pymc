@@ -16,7 +16,7 @@
 %%%             Jan. 8th Modified package name base date option
 %%%             Jan. 22th Modified FmN and FmTi for error in book.cls
 %%%                  \MakeUppercase{#}->{\MakeUppercase#}
-%%%             Apr. 6th Modified Lenny option to prevent undesired 
+%%%             Apr. 6th Modified Lenny option to prevent undesired
 %%%                  skip of line.
 %%%             Nov. 8th Fixed \@chapapp for AMS
 %%%             Feb. 11th Fixed appendix problem related to Bjarne
@@ -193,7 +193,7 @@
     \mghrulefill{\RW}\par\nobreak%
     \vskip \pyy}%
     \vskip 20\p@}
- 
+
 
   \renewcommand{\DOTI}[1]{%
     \raggedright
@@ -224,7 +224,7 @@
     \addtolength{\py}{\myhi}
     \setlength{\pyy}{\py}
     \addtolength{\pyy}{-1\RW}
-     
+
     \raggedright
     \CNV\FmN{\@chapapp}\space\CNoV\thechapter
     \hskip 3pt\mghrulefill{\RW}\rule[-1\pyy]{2\RW}{\py}\par\nobreak}
@@ -257,7 +257,7 @@
 
 \DeclareOption{Conny}{%
   \ChNameUpperCase
-  \ChTitleUpperCase  
+  \ChTitleUpperCase
   \ChNameVar{\centering\Huge\rm\bfseries}
   \ChNumVar{\Huge}
   \ChTitleVar{\centering\Huge\rm}
@@ -288,7 +288,7 @@
 \DeclareOption{Rejne}{%
 
   \ChNameUpperCase
-  \ChTitleUpperCase  
+  \ChTitleUpperCase
   \ChNameVar{\centering\Large\rm}
   \ChNumVar{\Huge}
   \ChTitleVar{\centering\Huge\rm}
@@ -321,7 +321,7 @@ width\RW}\par\nobreak
     \setlength{\mylen}{\textwidth}
     \addtolength{\mylen}{-2\RW}
     \fbox{\parbox{\mylen}{\vskip
-2\baselineskip\CTV\FmTi{#1}\par\nobreak\vskip \baselineskip}} 
+2\baselineskip\CTV\FmTi{#1}\par\nobreak\vskip \baselineskip}}
     \setlength{\fboxrule}{\py}
     \vskip 60\p@
     }
@@ -332,7 +332,7 @@ width\RW}\par\nobreak
 
 \DeclareOption{Bjarne}{%
   \ChNameUpperCase
-  \ChTitleUpperCase  
+  \ChTitleUpperCase
   \ChNameVar{\raggedleft\normalsize\rm}
   \ChNumVar{\raggedleft \bfseries\Large}
   \ChTitleVar{\raggedleft \Large\rm}
@@ -363,14 +363,14 @@ width\RW}\par\nobreak
        \addtocounter{AlphaDecCnt}{-1}
        \addtocounter{AlphaCnt}{10}
      \fi
-     
-     
+
+
     \ifcase\number\theAlphaDecCnt\or TEN\or TWENTY\or THIRTY\or
     FORTY\or FIFTY\or SIXTY\or SEVENTY\or EIGHTY\or NINETY\fi
     }
   \newcommand{\TheAlphaChapter}{%
-    
-    \ifinapp 
+
+    \ifinapp
       \thechapter
     \else
       \setcounter{AlphaCnt}{\c@chapter}
@@ -380,10 +380,10 @@ width\RW}\par\nobreak
         \AlphaDecNo\AlphaNo
       \fi
     \fi
-    }  
+    }
   \renewcommand{\DOCH}{%
     \mghrulefill{\RW}\par\nobreak
-    \CNV\FmN{\@chapapp}\par\nobreak 
+    \CNV\FmN{\@chapapp}\par\nobreak
     \CNoV\TheAlphaChapter\par\nobreak
     \vskip -1\baselineskip\vskip 5pt\mghrulefill{\RW}\par\nobreak
     \vskip 20\p@

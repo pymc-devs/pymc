@@ -10,8 +10,8 @@ PyMC provides 35 built-in probability distributions. For each distribution, it p
     \item A function that draws random variables: \code{rnormal()}.
     \item A function that computes the expectation associated with the distribution: \code{normal_expval()}.
     \item A \code{Stochastic} subclass generated from the distribution: \code{Normal}.
-\end{itemize} 
-This section describes the likelihood functions of these distributions. 
+\end{itemize}
+This section describes the likelihood functions of these distributions.
 \index{pymc.distributions (module)}
 
 \newenvironment{paramlist}{
@@ -21,7 +21,7 @@ This section describes the likelihood functions of these distributions.
 \setlength{\topsep}{-1pt}}
  }{\end{list}}
 
- 
+
 
 \section{Discrete distributions}
 \index{binomial\_like() (in module pymc.distributions)}
@@ -56,10 +56,10 @@ Probability of success in each trial, $p \in [0,1]$.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X)=np$
 
-\item {} 
+\item {}
 $Var(X)=np(1-p)$
 
 \end{itemize}
@@ -90,10 +90,10 @@ Probability of success on an individual trial, $p \in [0,1]$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X)=1/p$
 
-\item {} 
+\item {}
 $Var(X)=\frac{1-p}{p^2}$
 
 \end{itemize}
@@ -139,8 +139,8 @@ Total number of units in the population.
 \hypertarget{pymc.distributions.poisson_like}{}
 \begin{funcdesc}{poisson\_like}{x, mu}
 Poisson log-likelihood. The Poisson is a discrete probability distribution.
-It is often used to model the number of events occurring in a fixed period of 
-time when the times at which events occur are independent. The Poisson 
+It is often used to model the number of events occurring in a fixed period of
+time when the times at which events occur are independent. The Poisson
 distribution can be derived as a limiting case of the binomial distribution.
 \begin{gather}
 \begin{split}f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -162,10 +162,10 @@ $\mu \geq 0$.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(x)=\mu$
 
-\item {} 
+\item {}
 $Var(x)=\mu$
 
 \end{itemize}
@@ -174,7 +174,7 @@ $Var(x)=\mu$
 
 \hypertarget{pymc.distributions.negative_binomial_like}{}
 \begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
-Negative binomial log-likelihood. The negative binomial distribution describes a 
+Negative binomial log-likelihood. The negative binomial distribution describes a
 Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
 parameterization makes this mixture interpretation more convenient to work with.
 \begin{gather}
@@ -200,7 +200,7 @@ Shape parameter of the gamma distribution of the Poisson rate, $>0$.
 
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(x)=\mu$
 
 \item {}
@@ -289,10 +289,10 @@ Probability of success. $0 < p < 1$.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(x)= p$
 
-\item {} 
+\item {}
 $Var(x)= p(1-p)$
 
 \end{itemize}
@@ -329,10 +329,10 @@ $\beta>0$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X)=\frac{\alpha}{\alpha+\beta}$
 
-\item {} 
+\item {}
 $Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
 
 \end{itemize}
@@ -363,7 +363,7 @@ Scale parameter \textgreater{} 0.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 Mode and median are at alpha.
 
 \end{itemize}
@@ -392,10 +392,10 @@ Degrees of freedom ( $nu > 0$)
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X)=\nu$
 
-\item {} 
+\item {}
 $Var(X)=2\nu$
 
 \end{itemize}
@@ -448,10 +448,10 @@ Survival parameter $\beta > 0$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X) = \beta$
 
-\item {} 
+\item {}
 $Var(X) = \beta^2$
 
 \end{itemize}
@@ -529,10 +529,10 @@ Scale parameter $\beta > 0$.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X) = \frac{\alpha}{\beta}$
 
-\item {} 
+\item {}
 $Var(X) = \frac{\alpha}{\beta^2}$
 
 \end{itemize}
@@ -625,10 +625,10 @@ Scale parameter $\tau > 0$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = \frac{2}{\tau^2}$
 
 \end{itemize}
@@ -662,10 +662,10 @@ Scale parameter $\tau > 0$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = \frac{\pi^2}{3\tau^2}$
 
 \end{itemize}
@@ -734,10 +734,10 @@ Precision of the distribution, $\tau>0$ ( corresponds to $1/\sigma^2$ ).
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = 1/\tau$
 
 \end{itemize}
@@ -822,10 +822,10 @@ $\beta>0$
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 $E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
 
-\item {} 
+\item {}
 $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 
 \end{itemize}
@@ -868,7 +868,7 @@ Shape parameter of the distribution.
 \end{paramlist}
 \paragraph{Notes}
 \begin{itemize}
-\item {} 
+\item {}
 See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
 
 \end{itemize}
@@ -980,14 +980,14 @@ $\sum_{i=1}^k p_i = 1$, $p_i \ge 0$.
 \paragraph{Notes}
 \begin{itemize}
 \item {} A Multinomial's parent $p$ may be Dirichlet, even though its value is length $k-1$.
-   
-\item {} 
+
+\item {}
 $E(X_i)=n p_i$
 
-\item {} 
+\item {}
 $var(X_i)=n p_i(1-p_i)$
 
-\item {} 
+\item {}
 $cov(X_i,X_j) = -n p_i p_j$
 
 \end{itemize}
@@ -1022,7 +1022,7 @@ $\theta > 0$
 
 \hypertarget{pymc.distributions.inverse_wishart_like}{}
 \begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
-Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate 
+Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
 prior for the covariance matrix of a multivariate normal distribution.
 \begin{gather}
 \begin{split}f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -1128,7 +1128,7 @@ Multivariate normal log-likelihood parameterized by the Cholesky factor of the c
 
 \begin{funcdesc}{wishart\_like}{X, n, Tau}
 \hypertarget{pymc.distributions.wishart_like}{}
-Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $C=T^{-1}$, see 
+Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $C=T^{-1}$, see
 \hyperlink{pymc.distributions.wishart_cov_like}{\code{wishart\_cov\_like}}.
 \begin{gather}
 \begin{split}f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
@@ -1160,7 +1160,7 @@ Symmetric and positive definite
 
 \begin{funcdesc}{wishart\_cov\_like}{X, n, C}
 \hypertarget{pymc.distributions.wishart_cov_like}{}
-Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $T=C^{-1}$, see 
+Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $T=C^{-1}$, see
 \hyperlink{pymc.distributions.wishart_like}{\code{wishart\_like}}.
 \begin{gather}
 \begin{split}f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}\end{split}\notag\\\begin{split}\end{split}\notag

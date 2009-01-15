@@ -1,4 +1,4 @@
-PyMC probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication. 
+PyMC probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
 
 PyMC provides three objects that fit models:
 \begin{itemize}
@@ -13,7 +13,7 @@ All three objects are subclasses of \code{Model}, which is PyMC's base class for
 The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
 \begin{itemize}
     \item \code{M = Model(set([a,b,c]))}
-    \item \code{M = Model(\{`a': a, `d': [b,c]\})} In this case, $M$ will expose $a$ and $d$ as attributes: \code{M.a} will be $a$, and \code{M.d} will be \code{[b,c]}.   
+    \item \code{M = Model(\{`a': a, `d': [b,c]\})} In this case, $M$ will expose $a$ and $d$ as attributes: \code{M.a} will be $a$, and \code{M.d} will be \code{[b,c]}.
     \item \code{M = Model([[a,b],c])}
     \item If file \code{MyModule} contains the definitions of \code{a}, \code{b} and \code{c}:
    \begin{verbatim}
@@ -25,17 +25,17 @@ M = Model(MyModule)
     \begin{verbatim}
 def make_model(x):
     a = Exponential('a',.5,beta=x)
-    
+
     @deterministic
     def b(a=a):
         return 100-a
-    
+
     @stochastic
     def c(value=.5, a=a, b=b);
         return (value-a)**2/b
-        
+
     return locals()
-    
+
 M = Model(make_model(3))
     \end{verbatim}
     In this case, $M$ will also expose $a$, $b$ and $c$ as attributes.
@@ -46,10 +46,10 @@ M = Model(make_model(3))
 \section{Maximum \emph{a posteriori} estimates} \label{sec:MAP}
 \pdfbookmark[1]{Maximum a posteriori estimates}{model}
 
-The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following  
+The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following
 \begin{verbatim}
 >>> import gelman_bioassay
->>> M = MAP(gelman_bioassay)    
+>>> M = MAP(gelman_bioassay)
 >>> M.fit()
 \end{verbatim}
 This call will cause $M$ to fit the model using Nelder-Mead optimization, which does not require derivatives. The variables in \code{DisasterModel} have now been set to their maximum \emph{a posteriori} values:
@@ -61,7 +61,7 @@ array(7.7488499785334168)
 \end{verbatim}
 In addition, the AIC and BIC of the model are now available:
 \begin{verbatim}
->>> M.AIC  
+>>> M.AIC
 7.9648372671389458
 >>> M.BIC
 6.7374259893787265
@@ -121,7 +121,7 @@ array([  2.50203663,  14.73815047,  11.32166303,   0.43115426,
         10.1182532 ,   7.4063525 ,  11.58584317,   8.99331152,
         11.04720439,   9.5084239 ])
 \end{verbatim}
-Any of the database backends can be used (chapter \ref{chap:database}).  
+Any of the database backends can be used (chapter \ref{chap:database}).
 
 \bigskip
 In addition to the methods and attributes of \code{MAP}, \code{NormApprox} provides the following methods:
@@ -143,15 +143,15 @@ Carlo: the \code{MCMC} class} \label{sec:mcmc}
 
 The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
 
-\code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in chapter \ref{chap:extending}.  
+\code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in chapter \ref{chap:extending}.
 
-\code{MCMC} provides the following useful methods:  
+\code{MCMC} provides the following useful methods:
 \begin{description}
     \item[\code{sample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] Runs the MCMC algorithm and produces the traces. The \code{iter} argument controls the total number of MCMC iterations. No tallying will be done during the first \code{burn} iterations; these samples will be forgotten. After this burn-in period, tallying will be done each \code{thin} iterations. Tuning will be done each \code{tune\_interval} iterations.
     \item[\code{isample(iter, burn=0, thin=1, tune\_interval=1000, verbose=0)}:] An interactive version of \code{sample}. The sampling loop may be paused at any time, returning control to the user.
     \item[\code{use_step_method(method, *args, **kwargs)}:] Creates an instance of step method class \code{method} to handle some stochastic variables. The extra arguments are passed to the \code{init} method of \code{method}. Assigning a step method to a variable manually will prevent the \code{MCMC} instance from automatically assigning one. However, you may handle a variable with multiple step methods.
     % \item[\code{assign_step_methods()}:] Assigns step methods to all stochastic variables that do not currently have any. This method is called whenever \code{sample} or \code{isample} is called, but it can be useful to call it directly to see what the default step methods will be.
-    
+
     % A variable is assigned a step method as follows: each eligible \code{StepMethod} subclass in existence is allowed to inspect the variable in question and determine its competence to handle the variable, on a scale of 0 to 3. An instance of the highest bidder is created to handle the variable.
     \item[\code{goodness()}:] Calculates goodness-of-fit (GOF) statistics according to \cite{Brooks:2000il}.
     \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
@@ -179,7 +179,7 @@ The major subclasses of \code{StepMethod} are \code{Metropolis} and \code{Gibbs}
 \code{Metropolis} and subclasses implement Metropolis-Hastings steps. To tell an \code{MCMC} object $M$ to handle a variable $x$ with a Metropolis step method, you might do the following:
 \begin{verbatim}
 M.use_step_method(Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
-\end{verbatim} 
+\end{verbatim}
 
 \code{Metropolis} itself handles float-valued variables, and subclasses \code{DiscreteMetropolis} and \code{BinaryMetropolis} handle integer- and boolean-valued variables, respectively. Subclasses of \code{Metropolis} must implement the following methods:
 \begin{description}
@@ -191,7 +191,7 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
 \code{Metropolis}' \texttt{init} method takes the following arguments:
 \begin{description}
    \item[\code{stochastic}:] The variable to handle.
-   \item[\code{proposal_sd}:] A float or array of floats. This sets the proposal standard deviation if the proposal distribution is normal.   
+   \item[\code{proposal_sd}:] A float or array of floats. This sets the proposal standard deviation if the proposal distribution is normal.
    \item[\code{scale}:] A float, defaulting to 1. If the \code{scale} argument is provided but not \code{proposal_sd}, \code{proposal\_sd} is computed as follows:
    \begin{verbatim}
    if all(self.stochastic.value != 0.):
@@ -200,7 +200,7 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
    else:
        self.proposal_sd = ones(shape(self.stochastic.value)) * scale
    \end{verbatim}
-   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise. 
+   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise.
    \item[\code{verbose}:] An integer.
 \end{description}
 
@@ -218,15 +218,15 @@ centered at the current value and then rounded to the
 nearest integer.
 
 \subsubsection[The BinaryMetropolis class]{The
-\code{BinaryMetropolis} class} 
-This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}. 
+\code{BinaryMetropolis} class}
+This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}.
 
 For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is. Like \code{Metropolis}' attribute \code{proposal_sd}, \code{p_jump} is tuned throughout the sampling loop via \code{adaptive_scale_factor}.
 
 For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{adaptive_scale_factor} parameters are not used in this case.
 
 \subsubsection[The AdaptiveMetropolis class]{The
-\code{AdaptiveMetropolis} class} 
+\code{AdaptiveMetropolis} class}
 \label{subsec:AM}
 The \code{AdaptativeMetropolis} (AM) step method works like a regular Metropolis step method, with the exception that its variables are block-updated using a multivariate jump distribution whose covariance is tuned during sampling. Although the chain is non-Markovian, it has correct ergodic properties (see \cite{Haario:2001lr}).
 
@@ -240,25 +240,25 @@ To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an \
 % cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0
 \begin{description}
    \item[\code{stochastics}:] The stochastic variables to handle. These will be updated jointly.
-   \item[\code{cov} (optional):] An initial covariance matrix. Defaults to the identity matrix, adjusted according to the \code{scales} argument. 
+   \item[\code{cov} (optional):] An initial covariance matrix. Defaults to the identity matrix, adjusted according to the \code{scales} argument.
    \item[\code{delay} (optional):] The number of iterations to delay before computing the empirical covariance matrix.
    \item[\code{scales} (optional):] The initial covariance matrix will be diagonal, and its diagonal elements will be set to \code{scales} times the stochastics' values, squared.
    \item[\code{interval} (optional):] The number of iterations between updates of the covariance matrix. Defaults to 1000.
-   \item[\code{greedy} (optional):] If \code{True}, only accepted jumps will be counted toward the delay before the covariance is first computed. Defaults to \code{True}. 
-   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method's printed output.   
+   \item[\code{greedy} (optional):] If \code{True}, only accepted jumps will be counted toward the delay before the covariance is first computed. Defaults to \code{True}.
+   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method's printed output.
 \end{description}
- 
+
 In this algorithm, jumps are proposed from a multivariate normal
 distribution with covariance matrix $\Sigma$. The algorithm first iterates
 until \code{delay} samples have been drawn (if \code{greedy} is true, until
-\code{delay} jumps have been accepted). At this point, $\Sigma$ is given 
+\code{delay} jumps have been accepted). At this point, $\Sigma$ is given
 the value of the empirical covariance of the trace so far and sampling
 resumes. The covariance is then updated each \code{interval}
 iterations throughout the entire sampling run\footnote{The covariance is
 estimated recursively from the previous value and the last \code{interval}
 samples, instead of computing it each time from the entire trace.}. It is
 this constant adaptation of the proposal distribution that makes the chain
-non-Markovian. 
+non-Markovian.
 
 % ==========================================================
 % = We can uncomment this when we actually release them... =
@@ -266,9 +266,9 @@ non-Markovian.
 % \hypertarget{gibbs}{}
 % \subsection{Gibbs step methods} \label{gibbs}
 % \pdfbookmark[1]{Gibbs step methods}{gibbs}
-% 
+%
 % Conjugate submodels (see \cite{gelman}) can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \code{AdaptiveMetropolis} even when Gibbs step methods are available.
-% 
+%
 % Alpha versions of Gibbs step methods handling the following conjugate submodels are available in the \code{sandbox} module, but they are not recommended and will not be assigned automatically:
 % \begin{itemize}
 %     \item Gamma-Gamma
@@ -282,7 +282,7 @@ non-Markovian.
 %     \item Normal-Normal (or Normal-MvNormal, etc.) (requires \code{cvxopt}, \href{http://abel.ee.ucla.edu/cvxopt}{http://abel.ee.ucla.edu/cvxopt} )
 % \end{itemize}
 % However, if you implement a custom Gibbs step method, subclassing the \code{Gibbs} class will ensure interopera
-% 
+%
 % Gibbs step methods have the following class attributes:
 % \begin{itemize}
 %     \item \code{child_class}: The step method can handle variables whose children are all of this class. \code{GammaNormal.child_class} is \code{Normal}, for example.
@@ -290,30 +290,30 @@ non-Markovian.
 %     \item \code{target_class}: The target variable should be of this class for the submodel to be fully conjugate. \code{GammaNormal.target_class} is \code{Gamma}.
 %     \item \code{linear_OK}: A flag indicating whether the variable's children can depend on a multiple of the variable. Such multiples must be implemented via the \code{Deterministic} subclass \code{LinearCombination}.
 % \end{itemize}
-% 
+%
 % A Gibbs step method can handle variables that are not of their target class, as long as all their children are of the appropriate class. If this is the case, the step method's \code{conjugate} attribute will be set to \code{False} and its acceptance rate will no longer be 1.
-% 
+%
 % Gibbs step methods are easy to use manually. To tell an \code{MCMC}
 % object $M$ to handle a variable $x$ using the \code{GammaNormal} class,
 % simply use the call
 % \begin{verbatim}
 %     M.use_step_method(GammaNormal, x)
 % \end{verbatim}
-% 
+%
 % To indicate a general preference for Gibbs step methods vs. Metropolis step methods, set the following global integer values:
 % \begin{itemize}
 %     \item \code{pymc.conjugate_Gibbs_competence}: Applicable Gibbs step methods' competence functions will return this value for variables that are not of their target classes. The default value is 0, meaning that these methods will never be assigned automatically. Set this value to 3 to ensure that Gibbs step methods are always be assigned to conjugate submodels, or to 1.5 to set their priorities between those of \code{Metropolis} and \code{AdaptiveMetropolis}.
 %     \item \code{pymc.nonconjugate_Gibbs_competence}: Applicable Gibbs step methods' competence functions will return this value for variables that are of their target classes. The default value is 0, meaning that these methods are never assigned automatically.
 % \end{itemize}
-% 
+%
 
-\subsection{Granularity of step methods: one-at-a-time vs. block updating} 
+\subsection{Granularity of step methods: one-at-a-time vs. block updating}
 \label{subsec:granularity}
 There is currently no way for a stochastic variable to compute individual terms of its log-probability; it is computed all together. This means that updating the elements of a array-valued variable individually would be inefficient, so all existing step methods update array-valued variables together, in a block update.
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
 \begin{verbatim}
-A = Normal('A', value=zeros(100), mu=0., tau=1.)    
+A = Normal('A', value=zeros(100), mu=0., tau=1.)
 \end{verbatim}
 do this:
 \begin{verbatim}
@@ -321,8 +321,8 @@ A = [Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in xrange(100)]
 \end{verbatim}
 An individual step method will be assigned to each element of \code{A} in the latter case, and the elements will be updated individually. Note that \code{A} can be broken up into larger blocks if desired.
 
-\subsection{Automatic assignment of step methods} 
-Every step method subclass (including user-defined ones) that does not require any \texttt{init} arguments other than the stochastic variable to be handled adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. If a stochastic variable in an \code{MCMC} object has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable. 
+\subsection{Automatic assignment of step methods}
+Every step method subclass (including user-defined ones) that does not require any \texttt{init} arguments other than the stochastic variable to be handled adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. If a stochastic variable in an \code{MCMC} object has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable.
 
 To do so, each step method implements a class method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. The \code{MCMC} object assigns the step method that returns the highest competence value to each of its stochastic variables.
 
@@ -365,7 +365,7 @@ In addition, models expose each node they contain as an attribute. For instance,
 Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
 \begin{description}
     \item[\code{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \code{iter} argument controls how many times the sampling loop will be run, and the \code{length} argument controls the initial size of the database that will be used to store the samples.
-    \item[\code{isample(iter, length=None, verbose=0)}:] The same as \code{sample}, but the sampling is done interactively: you can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful: 
+    \item[\code{isample(iter, length=None, verbose=0)}:] The same as \code{sample}, but the sampling is done interactively: you can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful:
     \begin{description}
         \item[\code{icontinue()}:] Continue interactive sampling.
         \item[\code{halt()}:] Truncate the database and clean up.
@@ -375,7 +375,7 @@ Samplers fit models with Monte Carlo fitting methods, which characterize the pos
     \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
     \item[\code{restore\_state()}:] Restores the sampler to the state stored in the database.
 	 \item[\code{stats()}:] Generate summary statistics for all nodes in the model.
-    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database. Note that the \code{trace_index} is different from the current iteration, since not all samples are necessarily saved due to burning and thinning. 
+    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database. Note that the \code{trace_index} is different from the current iteration, since not all samples are necessarily saved due to burning and thinning.
 \end{description}
 
 In addition, the sampler attribute \code{deviance} is a deterministic variable valued as the model's deviance at its current state.

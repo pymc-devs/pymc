@@ -25,7 +25,7 @@
 % distribution.
 %
 % The "fancyhdr" package makes nicer page footers reasonable to
-% implement, and is used to put the chapter and section information in 
+% implement, and is used to put the chapter and section information in
 % the footers.
 %
 \RequirePackage{fancyhdr}\typeout{Using fancier footers than usual.}

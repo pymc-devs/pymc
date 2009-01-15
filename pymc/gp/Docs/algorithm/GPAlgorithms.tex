@@ -1,7 +1,7 @@
-\documentclass{report} 
+\documentclass{report}
 \usepackage{pdfsync}
-\usepackage{epsfig} 
-\usepackage{amsfonts}  
+\usepackage{epsfig}
+\usepackage{amsfonts}
 \usepackage{fullpage}
 % \usepackage{underscore}
 
@@ -12,7 +12,7 @@ Algorithm documentation}
 \author{Anand Patil}
 \maketitle
 \tableofcontents
-    
+
 \chapter{Introduction}\label{cha:introduction} % (fold)
 
 This document describes the algorithms under the Random Realizations package, a handful of Python building blocks designed to make unrestricted and innovative use of GPs more accessible. These building blocks are:
@@ -24,7 +24,7 @@ This document describes the algorithms under the Random Realizations package, a 
 \end{itemize}
 Random Realizations attempts to provide an intuitive implementation by relying on objects that closely resemble the functional concepts they represent. It allows users to specify and fit probability models of their own devising involving Gaussian processes based on a conceptual understanding, without worrying about the underlying linear algebra.
 
-The source code and a user guide are available from 
+The source code and a user guide are available from
 \begin{verbatim}
     code.google.com/p/gaussian-process.
 \end{verbatim}
@@ -32,7 +32,7 @@ The source code and a user guide are available from
 The MCMC package with which Random Realizations interfaces is PyMC, version 2.0 and higher (\texttt{code.google.com/p/pymc}). PyMC is an open-source collaboration between Christopher Fonnesbeck, David Huard and myself. Like Random Realizations, it is implemented in Python.
 
 
-\section{Terminology, notation and calling conventions} 
+\section{Terminology, notation and calling conventions}
 
 In this document, the building blocks' user interfaces are presented Python, but their internal workings and the algorithms they use are presented in pseudocode. An overview of the notation and some terminology from object-oriented programming follows.
 
@@ -41,9 +41,9 @@ In this document, the building blocks' user interfaces are presented Python, but
 \begin{verbatim}
     f = Realization(M, C).
 \end{verbatim}
-    
+
     \item An \emph{attribute} of an object is an item associated with the object, which can be accessed via the object. I will denote object attribute access with a period. If $G$ is a random variable valued as a Gaussian process realization, \texttt{G.value} gives access to its current value (which is an instance of class \texttt{Realization}, like \texttt{f}).
-    
+
     \item A \emph{method} of an object is a special attribute of the object that can be called like a function. Calling an object's method causes the object to do something. If $C$ is a covariance function, The call \texttt{C.cholesky(x)} causes $C$ to compute the Cholesky factorization of its evaluation on the vector $x$ and return it.
 
     \item A \emph{callable object} is an object that can be called like a function. For example, the Gaussian process realization objects are callable because they are intended to represent random functions:
@@ -53,10 +53,10 @@ In this document, the building blocks' user interfaces are presented Python, but
 would evaluate $f$ at vector of values $x$.% Realizations need to `remember' all previous calls, so they cannot be represented by simple functions (at least not in Python).
 \end{itemize}
 
-Note that there is much more to object-oriented programming than this, and that different authors have varying views on the fundamental concepts. See Armstrong \cite{OOP_review} for a review of object-oriented concepts in practice or Silvert \cite{silvert_OOP} for an introduction to object-oriented programming in the context of ecological simulation. 
+Note that there is much more to object-oriented programming than this, and that different authors have varying views on the fundamental concepts. See Armstrong \cite{OOP_review} for a review of object-oriented concepts in practice or Silvert \cite{silvert_OOP} for an introduction to object-oriented programming in the context of ecological simulation.
 
 \medskip
-Code is represented in a typewriter font: 
+Code is represented in a typewriter font:
 \begin{verbatim}
     f = Realization(M, C)
 \end{verbatim}
@@ -105,7 +105,7 @@ Objects of class \texttt{Mean} represent mean functions. These objects are `wrap
 \begin{verbatim}
     def g(x, a, b, c):
         return a * x ** 2 + b * x + c
-    
+
     M = Mean(g, a = 2, b = 1, c = 3).
 \end{verbatim}
 The first initialization argument is the function $g$, and the subsequent initialization arguments are values for the extra parameters that $g$ requires. These values are `memorized' by $M$ and passed to $g$ at each subsequent call, so the call
@@ -116,9 +116,9 @@ is equivalent to
 \begin{verbatim}
     g(5, 2, 1, 3).
 \end{verbatim}
-Mean's only notable attribute is a method called \texttt{observe}, which will be described in chapter \ref{sec:obs} 
+Mean's only notable attribute is a method called \texttt{observe}, which will be described in chapter \ref{sec:obs}
 
-\section{Covariance functions} \label{sec:cov} 
+\section{Covariance functions} \label{sec:cov}
 
 GP covariance functions are represented by the class \texttt{Covariance}, and like \texttt{Mean} instances they are wrappers for ordinary functions. However, the underlying functions of \texttt{Covariance} instances take two input arguments. A Gaussian covariance function could be produced as follows:
 \begin{verbatim}
@@ -128,7 +128,7 @@ GP covariance functions are represented by the class \texttt{Covariance}, and li
             for j in range(len(y)):
                 D[i,j] = sqrt((x[i] - y[j]) ** 2)
         return D
-    
+
     def gaussian(x, y, amp, scale):
         C = euclidean_distance(x, y)
         C *= scale
@@ -136,7 +136,7 @@ GP covariance functions are represented by the class \texttt{Covariance}, and li
             for j in range(len(y)):
                 C[i,j] = amp * exp(- (C[i,j] / scale) ** 2)
         return C
-        
+
     C = Covariance(gaussian, amp = 10, scale = .1)
 \end{verbatim}
 The separation between the two stages of computation of the covariance matrix,
@@ -167,7 +167,7 @@ Covariance objects have a method called \texttt{observe} that, like \texttt{Mean
 \subsection{Covariances' Cholesky method}
 The following method call with length-$n$ vectors $x$ and $V$
 \begin{verbatim}
-    C.cholesky(x, V)    
+    C.cholesky(x, V)
 \end{verbatim}
 returns the following items:
 \begin{itemize}
@@ -203,7 +203,7 @@ $U$ is an incomplete Cholesky factor \cite{incompchol} for $C(x,x)+\textup{diag}
     \end{itemize}
     \item return $p$, $U[1:n, 1:n]$. $C(x,x) + \textup{diag}(V)$ is full-rank.
 \end{itemize}
-Similar algorithms are given by Golub and van Loan \cite{golub} and implemented in LINPACK (as subroutine \texttt{DCHDC}) \cite{Linpack}. Note that the full matrix $C(x,x)$ does not need to be computed ahead of time, and in fact if $m<n$ many of its elements will never be computed at all. More sophisticated pivot selection schemes than the greedy algorithm presented here are available, see for instance Bach and Jordan \cite{predictivechol}. 
+Similar algorithms are given by Golub and van Loan \cite{golub} and implemented in LINPACK (as subroutine \texttt{DCHDC}) \cite{Linpack}. Note that the full matrix $C(x,x)$ does not need to be computed ahead of time, and in fact if $m<n$ many of its elements will never be computed at all. More sophisticated pivot selection schemes than the greedy algorithm presented here are available, see for instance Bach and Jordan \cite{predictivechol}.
 
 \medskip
 After iteration $i$, the diagonals $d[i+1:n]$ give the conditional variance of a realization with covariance $C$ evaluated at $x[i+1:n]$ given the value of the realization evaluated at $x[1:i]$, observed with error variance diag$(V)$. The algorithm proceeds by selecting points in order of variance conditional on points already used, and terminates when all remaining points have conditional variance less than $d_*\epsilon$.
@@ -212,7 +212,7 @@ This Cholesky factor should eventually be computed as a low-rank update \cite{Se
 
 \subsection{Covariances' Cholesky continuation method}
 It is frequently desirable to compute an incomplete Cholesky factor for the covariance matrix
-$C(\{x,y\},\{x,y\}) + \textup{diag}(\{V_x,V_y\})$ when the corresponding factor $U_x$ of $C(x,x) + \textup{diag}(V_x)$ is known. 
+$C(\{x,y\},\{x,y\}) + \textup{diag}(\{V_x,V_y\})$ when the corresponding factor $U_x$ of $C(x,x) + \textup{diag}(V_x)$ is known.
 
 In this chapter, $U_x$, $p_x$ and $m_x$ denote the incomplete Cholesky factor of $C(x,x)+\textup{diag}(V_x)$ and the associated pivots and rank; $n_x$ and $n_y$ denote the lengths of $x$ and $y$. The combined length of $x$ and $y$ is denoted $n$.
 
@@ -251,10 +251,10 @@ In some cases, significant speed gains can be realized by representing a Gaussia
     \left.
     \begin{array}{ll}
         f(x) = M(x) + \sum_{i_0=0}^{n_0-1}\ldots \sum_{i_{N-1}=0}^{n_{N-1}-1} c_{i_1\ldots i_{N-1}} e_{i_1\ldots i_{N-1}}(x), &
-        \{c\}\sim \textup{N}(0,K). 
+        \{c\}\sim \textup{N}(0,K).
     \end{array}
     \right\}
-    \Rightarrow f \sim \textup{GP}(M,C) 
+    \Rightarrow f \sim \textup{GP}(M,C)
 \end{eqnarray*}
 where the covariance function $C$ is defined by
 \begin{eqnarray*}
@@ -265,7 +265,7 @@ Particularly successful applications of this idea are:
 \begin{description}
     \item[Random Fourier series:] $e_i(x) = \sin(i\pi x/L)$ or $\cos(i\pi x/L)$, for instance \cite{spanos}.
     \item[Gaussian process convolutions:] $e_i(x) = \exp(-(x-\mu_i)^2)$, for instance \cite{convolution}.
-    \item[Splines:] Several spline interpolations can be represented as linear combinations of basis functions, usually polynomials. \cite{micula, lang_pspline} 
+    \item[Splines:] Several spline interpolations can be represented as linear combinations of basis functions, usually polynomials. \cite{micula, lang_pspline}
 \end{description}
 
 Such covariances are represented by the classes \texttt{BasisCovariance} and \texttt{SeparableBasisCovariance}, which have the same methods and behavior as \texttt{Covariance}. The first initialization argument to these objects are bases, which are lists or arrays of functions. More details are given in the user guide.
@@ -282,7 +282,7 @@ The \texttt{observe} function and the \texttt{observe} methods of \texttt{Mean} 
         f \sim \textup{GP}(M,C)\\
     \end{array}\right\}\Rightarrow f|D \sim \textup{GP}(M_o, C_o).
 \end{equation}
-More specifically, the call 
+More specifically, the call
 \begin{verbatim}
     observe(M, C, o, D, V)
 \end{verbatim}
@@ -310,7 +310,7 @@ Normally-distributed observations are used in three important ways:
     \item After each call, a \texttt{Realization} object `remembers' the values it returned by means of the \texttt{observe} methods (with $V=0$) to maintain consistency.
 \end{itemize}
 
-Covariances' and means' observe methods are fairly complicated, but most users should not need to call them directly. Denote by $o_p$, $D_p$ and $V_p$ the values at which observations have been made previously, the observed values and the corresponding variances. These vectors may be length-0. Denote by $o_n$, $D_n$ and $V_n$ the analogous vectors corresponding to new observations, and by $o$, $D$ and $V$ the concatenation of these. Denote by $n_p$ and $m_p$ the size and rank of $C(o_p,o_p)$, and by $n$ and $m$ the rank of $C(\{o_p,o_n\},\{o_p,o_n\})$. 
+Covariances' and means' observe methods are fairly complicated, but most users should not need to call them directly. Denote by $o_p$, $D_p$ and $V_p$ the values at which observations have been made previously, the observed values and the corresponding variances. These vectors may be length-0. Denote by $o_n$, $D_n$ and $V_n$ the analogous vectors corresponding to new observations, and by $o$, $D$ and $V$ the concatenation of these. Denote by $n_p$ and $m_p$ the size and rank of $C(o_p,o_p)$, and by $n$ and $m$ the rank of $C(\{o_p,o_n\},\{o_p,o_n\})$.
 
 \subsection{Covariances' observe methods}
 The call
@@ -343,12 +343,12 @@ Unfortunately, in order for basis covariances' computational advantages to be fu
 \begin{eqnarray*}
     D_i \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(f(o_i, V_i))\\
     f = M + \sum_{i=1}^N c_i e_i(o)\\
-    c \sim \textup{N}(0, K) 
+    c \sim \textup{N}(0, K)
 \end{eqnarray*}
 can be solved to obtain the following heirarchical posterior for $f$:
 \begin{eqnarray*}
     f = M_o + \sum_{i=1}^N c_i e_i(o),\\
-    c|D \sim \textup{N}(0, K_o) 
+    c|D \sim \textup{N}(0, K_o)
 \end{eqnarray*}
 where
 \begin{eqnarray*}
@@ -405,7 +405,7 @@ The call \texttt{observe(M, C, o, D, V)} presented above simply does the followi
 \end{itemize}
 
 \subsection{Cross-validation}
-The incomplete Cholesky decomposition provides numerical stability; even if the covariance matrix is singular, calls to \texttt{observe} will execute successfully. However, because the incomplete Cholesky decomposition effectively ignores certain datapoints it is sometimes desirable to check those datapoints for consistency post hoc. 
+The incomplete Cholesky decomposition provides numerical stability; even if the covariance matrix is singular, calls to \texttt{observe} will execute successfully. However, because the incomplete Cholesky decomposition effectively ignores certain datapoints it is sometimes desirable to check those datapoints for consistency post hoc.
 
 The function \texttt{predictive\_check} optionally checks the remaining data values $D_{**}$ against $M_{o_*}(o_{**})$, and raises an error if any elements disagree by more than ten upper-bound standard deviations $\sqrt{\epsilon d_*}$, where $\epsilon$ can be set using the \texttt{relative\_precision} parameter in \texttt{Covariance}'s init method.
 
@@ -436,12 +436,12 @@ In order to provide this appealing behavior, realizations create internal copies
 
 Note that even if the Cholesky factor is low-rank, no cross-validation is necessary because any nearly-determined values of $f(y_*)$ are known a priori to fall close to their mean.
 
-\subsection{GP realizations with basis covariances} 
+\subsection{GP realizations with basis covariances}
 Calls to GP realizations will get slower as the length of $o_p$ increases. One of the most appealing features of the \texttt{BasisCovariance} class is that it prevents this degradation from happening. However, the tradeoff is that the expense of calls tends to increase exponentially with spatial dimension.
 
 If a realization is initialized with a \texttt{BasisCovariance} instance, it draws values for its coefficients immediately (the covariance matrix of the coefficients is factorized using an incomplete Cholesky decomposition in case it happens to be low-rank). Return values for subsequent calls to the realization are computed by simply evaluating the mean function and basis functions. Arguments are not checked for repeat calls.
 
-\chapter{Incorporating Gaussian processes in larger probability models}\label{sec:PyMC} 
+\chapter{Incorporating Gaussian processes in larger probability models}\label{sec:PyMC}
 
 Random Realizations includes objects that allow Gaussian processes to be mixed into probability models involving more mundane random variables specified using the open-source Markov Chain Monte Carlo package PyMC (\texttt{code.google.com/p/pymc}). PyMC is implemented in Python like Random Realizations, and has a decentralized approach to model-fitting that is designed to encourage such extensions.
 
@@ -468,9 +468,9 @@ The latter part of this chapter describes the objects by means of which realizat
 
 As in previous chapters the objects' internal workings are presented primarily using pseudocode, and any Python code should be sufficiently brief to be read even by non-Python programmers.
 
-\section{Random variables} 
+\section{Random variables}
 Instances of the \texttt{Stochastic} class represent random variables. A normally-distributed random variable $B$ could be created with initial value 0 as follows:
-\begin{verbatim}    
+\begin{verbatim}
     @stoch
     def B(value=0, mu=1, V=1.5):
         return -1/2 * log(det(V)*2*pi) - 1/2 * (value-mu) ** 2 / V
@@ -485,7 +485,7 @@ The parents of random variables may be other variables (either random or determi
 \end{verbatim}
 
 
-A random variable has the following notable attributes: 
+A random variable has the following notable attributes:
 \begin{itemize}
     \item \texttt{value}: The current value of the variable. Because Python is dynamically typed, there is no restriction whatsoever on what this value can be. In most cases it will be a number or array, but it can be any object.
     \item \texttt{logp}: When the variable's log-probability attribute is accessed, it checks its value and its parents' values against a cache and recomputes its log-probability or log-density if necessary.
@@ -512,8 +512,8 @@ Deterministic variables have the following notable attributes:
             return Covariance(gaussian, amp, scale)
     \end{verbatim}
     where \texttt{gaussian} is the function from chapter \ref{sec:cov}. An obvious exception to this rule would occur when a realization-valued random variable is used as a mean function.
-    
-    \item \texttt{parents}, \texttt{children}: These attributes are the same as the corresponding attributes of \texttt{Stochastic}. 
+
+    \item \texttt{parents}, \texttt{children}: These attributes are the same as the corresponding attributes of \texttt{Stochastic}.
 \end{itemize}
 
 \section{Step methods}
@@ -568,7 +568,7 @@ The a price of the `cop-out' of computing realization-valued parameters' log-pro
 
 A very important point is that neither of the step methods in this section care at all about how $K$ depends on $f$. This means that, like the standard Metropolis algorithm in more mundane probability models, they can theoretically be applied in an enormous range of probability models that involve Gaussian processes. In practice, of course, novel step methods will often be desirable to speed convergence. I hope authors of such step methods will share their objects by making them available for distribution with Random Realizations.
 
-\subsection{A Metropolis step method for realization-valued RV's} 
+\subsection{A Metropolis step method for realization-valued RV's}
 The Metropolis-Hastings acceptance ratio for a proposed value $f_p$ can be written as follows:
 \begin{eqnarray*}
     \frac{p(K|\tilde f_p, f_p(m))\ p(f_p(m) | P)\ q(f(m)|f_p(m),P)}{p(K|\tilde f, f(m))\ p(f(m) | P)\ q(f_p(m)|f(m),P)} \frac{Q(\tilde f|f(m),P)}{Q(\tilde f_p|f_p(m), P)} ,
@@ -581,18 +581,18 @@ where the measures $\theta$ and $\pi$ denote the proposal and prior measures res
 
 The evaluation $f(m)$ on the mesh is proposed from a multivariate normal distribution. By default, the covariance is a scalar multiple of $C(m,m)$, but this is tunable.
 
-\subsection{Metropolis step methods for parents of realization-valued RV's} 
+\subsection{Metropolis step methods for parents of realization-valued RV's}
 Similarly, the Metropolis-Hastings acceptance ratio for a proposed value $P_p$ of the parents \emph{and} a proposed value $\tilde f_p$ for the realization evaluated off the mesh is as follows:
 \begin{eqnarray*}
     \frac{p(K|\tilde f_p)\ p(f(m) | P_p)\ q(P)}{p(K|\tilde f)\ p(f(m) | P)\ q(P_p)} \frac{Q(\tilde f|f(m),P)}{Q(\tilde f_p|f(m), P_p)}
 \end{eqnarray*}
-If the same proposal distribution as above is used for $\tilde f$, the intractable term again does not have to be computed. In other words, every time a value is proposed for one of $f$'s parents, a value is proposed for $f$ itself conditional on its evaluation on its mesh. 
+If the same proposal distribution as above is used for $\tilde f$, the intractable term again does not have to be computed. In other words, every time a value is proposed for one of $f$'s parents, a value is proposed for $f$ itself conditional on its evaluation on its mesh.
 
 To implement this strategy, \texttt{GPParentMetropolis} modifies a host \texttt{Metropolis} instance. It replaces its host step method's \texttt{propose} and \texttt{reject} methods with special methods that call the host's native methods, and then propose and reject values for $\tilde f$ conditional on $f(m)$. \texttt{GPParentMetropolis} also modifies the host step method to include the likelihood term $p(K|\tilde f)$ in the acceptance ratio.
 
 This scheme works if $K$ depends on $P$ and if $P$ has extended children other than $f$, but for clarity these possibilites are not included in the acceptance ratio above. \texttt{GPParentMetropolis} can wrap Metropolis-Hastings step methods other than the simple Metropolis step method if desired.
 
-\subsection{Choosing a mesh} If a GP-valued random variable is assigned an empty mesh $m$, its value will be proposed from its prior, and rejection rates are likely to be quite large. If the mesh is too dense, on the other hand, computation of the log-density will be expensive, as it scales as the cube of the number of points in the mesh. Several choices for mesh density and some corresponding proposals $\tilde f_p$ are shown in figure \ref{fig:meshpropose}. 
+\subsection{Choosing a mesh} If a GP-valued random variable is assigned an empty mesh $m$, its value will be proposed from its prior, and rejection rates are likely to be quite large. If the mesh is too dense, on the other hand, computation of the log-density will be expensive, as it scales as the cube of the number of points in the mesh. Several choices for mesh density and some corresponding proposals $\tilde f_p$ are shown in figure \ref{fig:meshpropose}.
 
 If the mesh is very dense, the Markov chain may occasionally explore values for the parameters of the covariance $C$ for which $C(m,m)$ is numerically singular. When \texttt{GPParentMetropolis} instances encounter this situation, they reject the jump and optionally display a warning. A more correct approach would be to simply thin the mesh and continue sampling, but I have not implemented this extension.
 
@@ -600,7 +600,7 @@ If the mesh is very dense, the Markov chain may occasionally explore values for 
     \centering
         \epsfig{file=figs/nomeshpropose.pdf,width=8cm}
         \epsfig{file=figs/lightmeshpropose.pdf,width=8cm}
-        \epsfig{file=figs/densemeshpropose.pdf,width=8cm}        
+        \epsfig{file=figs/densemeshpropose.pdf,width=8cm}
     \caption{Several possible proposals of $\tilde f$ (curves) given proposed values for $f(m)$ (heavy dots) with no mesh (\textbf{top}), a sparse mesh (\textbf{middle}), and a dense mesh (\textbf{bottom}). Proposal distributions' one-standard-deviation envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $\tilde f$ is being proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $\tilde f$, but computing the log-probability will be more expensive.}
     \label{fig:meshpropose}
 \end{figure}
@@ -612,7 +612,7 @@ A realization-valued random variable's full conditional distribution \cite{gilks
     K_i |f \sim \textup{N}(f(o_i), V_i) & i=1\ldots N\\
     f|M,C\sim\textup{GP}(M,C)
 \end{eqnarray*}
-In other words, each of its children $K_i$ is normally distributed with variance $V_i$ and mean equal to $f(o_i)$, where each $o_i$ is an array of input values. In this case, $f$ can be handled by a \texttt{GPNormal} step method. These step methods maintain internal copies of $M$ and $C$, observed at input values $\{o_i\}$ with output values $\{K_i\}$ and variance $\{V_i\}$. 
+In other words, each of its children $K_i$ is normally distributed with variance $V_i$ and mean equal to $f(o_i)$, where each $o_i$ is an array of input values. In this case, $f$ can be handled by a \texttt{GPNormal} step method. These step methods maintain internal copies of $M$ and $C$, observed at input values $\{o_i\}$ with output values $\{K_i\}$ and variance $\{V_i\}$.
 
 An illustration of the respective performance of \texttt{GPMetropolis} and \texttt{GPNormal} for a model of the form
 \begin{equation}
@@ -622,21 +622,21 @@ An illustration of the respective performance of \texttt{GPMetropolis} and \text
         f|M,C\sim \textup{GP}(M,C)\\
         M|x= ax^2+bx+c\\
         C|x,y= \textup{Mat\`ern}(|x-y|,\nu, \phi, \alpha)\\
-        \nu,\phi,\alpha,a,b,c,V\sim \textup{priors}          
+        \nu,\phi,\alpha,a,b,c,V\sim \textup{priors}
     \end{array}
 \end{equation}
-with only two datapoints is shown in figure \ref{fig:MCMCOutput}. `Mat\`ern' indicates the Mat\`ern covariance function \cite{Banerjee}. 
+with only two datapoints is shown in figure \ref{fig:MCMCOutput}. `Mat\`ern' indicates the Mat\`ern covariance function \cite{Banerjee}.
 
 \begin{figure}
     \centering
         \epsfig{file=figs/gibbsSamples.pdf,width=12cm}
-        \epsfig{file=figs/metroSamples.pdf,width=12cm}          
+        \epsfig{file=figs/metroSamples.pdf,width=12cm}
     \caption{The output of an MCMC run for the model (\ref{eqn:simple_GP_model}) using the \texttt{GPNormal} (\textbf{top}) and \texttt{GPMetropolis} (\textbf{bottom}) step methods. Several samples are shown in the \textbf{left} panels, and the dynamic traces of the \texttt{GP}'s evaluation at the midpoint of the interval are shown in the \textbf{right} panels. Both the Metropolis and Gibbs samples' jumping distribution is modulated by the value of the prior parameters, which are updated by \texttt{GPParentMetropolis} step methods.}
     \label{fig:MCMCOutput}
 \end{figure}
 
 % \section{Example: Munch, Kottas and Mangel's stock-recruitment study}\label{sub:MMKMCMC}
-% 
+%
 % As a less trivial example, consider Munch, Kottas and Mangel's \cite{Munch} inference of stock-recruitment functions from fishery science. Their probability model follows, with the minor modification that the Mat\`ern covariance function is used. Here $f$ is the stock-recruitment function, $C$ is its covariance and $M$ is its mean.
 % \begin{equation}
 %     \label{eqn:MMKModel}
@@ -644,12 +644,12 @@ with only two datapoints is shown in figure \ref{fig:MCMCOutput}. `Mat\`ern' ind
 %         \textup{frye}|f \sim \textup{N}(\exp(f(\log(\textup{abundance}))), V)\\
 %         f\sim \textup{GP}(M,C)\\
 %         M|x= \beta_0+\beta_1 \log(x)\\
-%     C|x,y= \textup{Mat\`ern}(|x-y|,\nu, \phi, \alpha)\\        
+%     C|x,y= \textup{Mat\`ern}(|x-y|,\nu, \phi, \alpha)\\
 %     V,\ \beta_0,\ \beta_1,\ \nu,\ \phi,\ \alpha \sim \textup{priors}.
 %     \end{array}
-% \end{equation} 
+% \end{equation}
 % The `priors' are provided by the authors (except the prior on $\nu$, which is described in the documentation \cite{me_SR} ). The posterior distribution of $f$ for pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}. $f$ is handled by a \texttt{GPNormal} step method.
-% 
+%
 % \begin{figure}
 %     \centering
 %         \epsfig{file=figs/pinkfpost.pdf, width=10cm}
@@ -675,4 +675,4 @@ The other objects allow for Gaussian processes to be mixed into nearly arbitrary
 \bibliographystyle{plain}
 \bibliography{Anand_Patil_Thesis}
 
-\end{document} 
+\end{document}

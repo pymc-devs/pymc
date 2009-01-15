@@ -1585,7 +1585,7 @@ def multinomial_like(x, n, p):
 
     x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
     p = np.atleast_2d(p)
-    
+
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
@@ -2747,7 +2747,7 @@ def ImputeMissing(name, dist_class, values, missing=None, **parents):
         mask = np.array(values) == missing
         # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
-    
+
     # Initialise list
     vars = []
     for i in xrange(len(masked_values)):
@@ -2768,7 +2768,7 @@ def ImputeMissing(name, dist_class, values, missing=None, **parents):
             # Observed values
             vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
     return vars
-    
+
 Impute = ImputeMissing
 
 if __name__ == "__main__":

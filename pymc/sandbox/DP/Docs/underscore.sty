@@ -20,7 +20,7 @@
     \fi}
 \endgroup
 
-% At begin: set catcode; fix \long \ttdefault so I can use it in comparisons; 
+% At begin: set catcode; fix \long \ttdefault so I can use it in comparisons;
 \AtBeginDocument{%
   {\immediate\write\@auxout{\catcode\number\string`\_ \string\active}}%
   \catcode\string`\_\string=\active
@@ -98,11 +98,11 @@ Features:
 \_ prints an underscore so that the hyphenation of constituent words
 is not affected and hyphenation is permitted after the underscore.
 For example, "compound\_fracture" hyphenates as com- pound_- frac- ture.
-If you prefer the underscore to break without a hyphen (but still with 
+If you prefer the underscore to break without a hyphen (but still with
 the same rules for explicit hyphen-breaks) then use the [nohyphen]
 package option.
 
-A simple _  acts just like \_ in text mode, but makes a subscript in 
+A simple _  acts just like \_ in text mode, but makes a subscript in
 math mode: activation_energy $E_a$
 
 Both forms use an underscore character if the font encoding contains
@@ -116,10 +116,10 @@ The skips and penalties ruin any kerning with the underscore character
 any, such kerning in the ec fonts, and there is never any kerning with
 a rule.
 
-You must avoid "_" in file names and in cite or ref tags, or you must use 
-the babel package, with its active-character controls, or you must give 
-the [strings] option, which attempts to redefine several commands (and 
-may not work perfectly).  Even without the [strings] option or babel, you 
+You must avoid "_" in file names and in cite or ref tags, or you must use
+the babel package, with its active-character controls, or you must give
+the [strings] option, which attempts to redefine several commands (and
+may not work perfectly).  Even without the [strings] option or babel, you
 can use occasional underscores like: "\include{file\string_name}".
 
 Option: [strings]
@@ -174,9 +174,9 @@ as plain strings, and this catcode setting might disrupt other packages.
 The babel package implements a protection mechanism for many commands,
 and will be a complete fix for most documents without the [strings] option.
 Many add-on packages are compatible with babel, so they will get the
-strings protection also.  However, there are several commands that are 
-not covered by babel, but can easily be supported by the [strings] and 
-\UnderscoreCommands mechanism.  Beware that using both [strings] and babel 
+strings protection also.  However, there are several commands that are
+not covered by babel, but can easily be supported by the [strings] and
+\UnderscoreCommands mechanism.  Beware that using both [strings] and babel
 may lead to conflicts, but does appear to work (load babel last).
 
 Implementation Notes:
@@ -203,9 +203,9 @@ the font encoding).  After the underscore, it inserts a discretionary
 hyphenation point as "\usc@dischyph", which is usually just "\-"
 except that it still works in the tabbing environment, although it
 will give "\discretionary{}{}{}" under the [nohyphen] option.  After
-that, another piece of non-breaking interword glue is inserted. 
-Ordinarily, the comparison "\ifx\f@family\ttdefault" will always fail 
-because \ttdefault is `long' where \f@family is not (boooo hisss), but 
+that, another piece of non-breaking interword glue is inserted.
+Ordinarily, the comparison "\ifx\f@family\ttdefault" will always fail
+because \ttdefault is `long' where \f@family is not (boooo hisss), but
 \ttdefault is redefined to be non-long by "\AtBeginDocument".
 
 The "\_" command is then defined to use "\BreakableUnderscore".

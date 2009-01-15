@@ -9,31 +9,31 @@ General Comments
 ----------------
 
 The guide is well written and concise. The writing style is relaxed, which makes reading the guide a pleasant experience compared to R's terse and formal documents. I think the
-document describes in enough details the general working of pymc, though some users would probably be thankful for more examples. Since the intended audience probably goes from python novices to experts and MCMC newbies to gurus and all permutations, it is probably worthwhile to flesh out the introduction to provide more references and state the assumed competence of readers with respect to these topics. 
+document describes in enough details the general working of pymc, though some users would probably be thankful for more examples. Since the intended audience probably goes from python novices to experts and MCMC newbies to gurus and all permutations, it is probably worthwhile to flesh out the introduction to provide more references and state the assumed competence of readers with respect to these topics.
 
-An abstract and a conclusion are missing. 
+An abstract and a conclusion are missing.
 [AP] Do we really need an abstract and conclusion, even for JSS?
-[DH] Maybe not an abstract, but some kind of conclusion (what's next, get involved, ...) would still be nice. 
+[DH] Maybe not an abstract, but some kind of conclusion (what's next, get involved, ...) would still be nice.
 [AP] I added a conclusion, please feel free to change it completely & also add the features you're planning to work on in the future.
 
 Specific Comments
 -----------------
 
  * I had trouble latexing the file, specifically, I had to comment the includegraphics call for the poor_mixing figure (got endcsname errors).
- * Harmonize class names typeface.  
+ * Harmonize class names typeface.
 
 
-The line number is defined with respect to the pdf created from revision 954 with the 
-lineno package. 
+The line number is defined with respect to the pdf created from revision 954 with the
+lineno package.
 
 
 [AP] We ought to beef up our general MCMC citations a bit... all we really have is Gelman. Does anyone have a copy of 'MCMC in practice' by Gilks? Unfortunately Oxford kind of lacks a functioning science library... you can't take most books out of it.
 
 Line	Comment
 ----    ------------------------------------------------------------------------
-4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document. 
+4-7   	The intro needs to be fleshed out, with more examples of usage and a description of the structure of the document.
 8 		The features are a bit ragtag. Try to put some uniformity in there, bullet point style.
-[DH] first pass at it. 
+[DH] first pass at it.
 
 
 178		Wondering if it would be best to replace from pymc import ... by import pymc.

@@ -30,7 +30,7 @@
 % they exist (which should be true for all standard classes).
 % May 31, 1995:
 % version 1.9: The proposed \renewcommand{\headrulewidth}{\iffloatpage...
-% construction in the doc did not work properly with the fancyplain style. 
+% construction in the doc did not work properly with the fancyplain style.
 % June 1, 1995:
 % version 1.91: The definition of \@mkboth wasn't restored on subsequent
 % \pagestyle{fancy}'s.
@@ -51,7 +51,7 @@
 % define \@currsize. Unfortunately for latex209 calling \normalsize doesn't
 % work as this is optimized to do very little, so there \@normalsize should
 % be called. Hopefully this code works for all versions of LaTeX known to
-% mankind.  
+% mankind.
 % April 25, 1996:
 % version 1.96: initialize \headwidth to a magic (negative) value to catch
 % most common cases that people change it before calling \pagestyle{fancy}.
@@ -129,7 +129,7 @@
     \@forc\tmpf@ra{#2}%
         {\expandafter\if@in\tmpf@ra\temp@a{\edef#1{#1\tmpf@ra}}{}}%
     \ifx\@empty#1\def#1{#2}\fi}
-% 
+%
 % \if@in <char><set><truecase><falsecase>
 %
 \newcommand{\if@in}[4]{%
@@ -296,7 +296,7 @@
 % case that the user added something to \headwidth in the expectation that
 % it was initialized to \textwidth. We compensate this now. This loses if
 % the user intended to multiply it by a factor. But that case is more
-% likely done by saying something like \headwidth=1.2\textwidth. 
+% likely done by saying something like \headwidth=1.2\textwidth.
 % The doc says you have to change \headwidth after the first call to
 % \pagestyle{fancy}. This code is just to catch the most common cases were
 % that requirement is violated.

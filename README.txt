@@ -7,43 +7,43 @@ PyMC -- Markov chain Monte Carlo in Python
 :Contact: chris@trichech.us
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
-:License: PyMC is released under the MIT license. 
+:License: PyMC is released under the MIT license.
 :Version: 2.0
 
 Purpose
 =======
 
 PyMC is a python module that implements Bayesian statistical models and
-fitting algorithms, including Markov chain Monte Carlo. 
-Its flexibility makes it applicable to a large suite of problems as well as 
-easily extensible. Along with core sampling functionality, PyMC includes 
-methods for summarizing output, plotting, goodness-of-fit and convergence 
-diagnostics. 
+fitting algorithms, including Markov chain Monte Carlo.
+Its flexibility makes it applicable to a large suite of problems as well as
+easily extensible. Along with core sampling functionality, PyMC includes
+methods for summarizing output, plotting, goodness-of-fit and convergence
+diagnostics.
 
 
 Features
 ========
 
-* Fits Bayesian statistical models you create with Markov chain Monte Carlo and 
+* Fits Bayesian statistical models you create with Markov chain Monte Carlo and
   other algorithms.
 
 * Large suite of well-documented statistical distributions.
 
 * Gaussian processes.
-  
+
 * Sampling loops can be paused and tuned manually, or saved and restarted later.
 
 * Creates summaries including tables and plots.
 
 * Traces can be saved to the disk as plain text, Python pickles, SQLite or MySQL
-  database, or hdf5 archives. 
+  database, or hdf5 archives.
 
-* Convergence diagnostics. 
+* Convergence diagnostics.
 
-* Extensible: easily incorporates custom step methods and unusual probability 
+* Extensible: easily incorporates custom step methods and unusual probability
   distributions.
 
-* MCMC loops can be embedded in larger programs, and results can be analyzed 
+* MCMC loops can be embedded in larger programs, and results can be analyzed
   with the full power of Python.
 
 
@@ -52,7 +52,7 @@ What's new in 2.0
 
 * New flexible object model and syntax (not backward-compatible).
 
-* Reduced redundant computations: only relevant log-probability terms are 
+* Reduced redundant computations: only relevant log-probability terms are
   computed, and these are cached.
 
 * Optimized probability distributions.
@@ -77,7 +77,7 @@ First, define your model in a file, say mymodel.py (with comments, of course!)::
 
    # Priors on unknown parameters
    alpha = pymc.Normal('alpha',mu=0,tau=.01)
-   beta = pymc.Normal('beta',mu=0,tau=.01)   
+   beta = pymc.Normal('beta',mu=0,tau=.01)
 
    # Arbitrary deterministic function of parameters
    @pymc.deterministic
@@ -93,7 +93,7 @@ Save this file, then from a python shell (or another filein the same directory),
 
 	import pymc
 	import mymodel
-	
+
 	S = pymc.MCMC(mymodel, db='pickle')
 	S.sample(iter=10000, burn=5000, thin=2)
 	pymc.Matplot.plot(S)
@@ -114,10 +114,10 @@ Getting started
 ===============
 
 This user guide provides all the information needed to install PyMC, code
-a Bayesian statistical model, run the sampler, save and analyze the results. 
-In addition, the appendix contains a chapter on MCMC theory as well as the list of the 
-available statistical distributions. More `examples`_ of usage as well as 
-`tutorials`_  are available from the PyMC web site. 
+a Bayesian statistical model, run the sampler, save and analyze the results.
+In addition, the appendix contains a chapter on MCMC theory as well as the list of the
+available statistical distributions. More `examples`_ of usage as well as
+`tutorials`_  are available from the PyMC web site.
 
 .. _`examples`: http://code.google.com/p/pymc/
 
@@ -126,7 +126,7 @@ available statistical distributions. More `examples`_ of usage as well as
 Installation
 ============
 
-See the `INSTALL.txt`_ file. 
+See the `INSTALL.txt`_ file.
 
 
 .. _`INSTALL.txt`:

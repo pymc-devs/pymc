@@ -4,73 +4,73 @@ Developer Cheat Sheet
 
 The setup.py file
 ~~~~~~~~~~~~~~~~~
-The setup.py script describes how to build the software, and what is 
-needed to build the software is also what is included in the source 
-distribution. 
+The setup.py script describes how to build the software, and what is
+needed to build the software is also what is included in the source
+distribution.
 
-To include other files, such as documentation, specify the names or 
-pattern in :file:`MANIFEST.in`. 
+To include other files, such as documentation, specify the names or
+pattern in :file:`MANIFEST.in`.
 
 Before uploading a package to PyPi, make sure you have the correct version
-number defined in setup.py. 
+number defined in setup.py.
 
 
 
 Creating source and binary distributions:
 
  * Source::
-  
+
    python setup.py sdist
 
  * Windows::
-  
+
    python setup.py bdist_wininst
- 
+
  * POSIX::
- 
+
    python setup.py bdist
- 
+
 
 To upload to PyPi::
-  
+
    python setup.py sdist upload
-   
+
 To simply change the information about the package on the PyPi page (as defined in setup.py)::
 
    python setup.py register
-   
+
 To upload to GoogleCode download section::
 
    python setup.py upload2google --src (or --windows)
 
-   
+
 To tag the 2.1.1 release::
 
    svn cp https://pymc.googlecode.com/svn/trunk \
     https://pymc.googlecode.com/svn/tags/2.1.1 \
     -m "Tagging the 2.1.1 release."
-    
-    
-Conventions: 
+
+
+Conventions:
 
  * alpha release (a) -- Not everything is implemented, this is generally for internal testers. PyMC is not likely to need alpha releases any time soon.
- 
+
  * beta release (b) -- Everything is implemented, and the code is released to experienced users.
- 
+
  * release candidate (rc1) -- Released to a wider audience to make sure there are no installation issues and tests pass on more platforms than those used by the devs.
- 
+
  * Major release (2.0) -- Release where some API breaking is allowed.
- 
- * Minor release (2.1) -- Release introducing new features, but no API breaks. 
- 
- * Bug fix release (2.1.1) -- Duh. 
+
+ * Minor release (2.1) -- Release introducing new features, but no API breaks.
+
+ * Bug fix release (2.1.1) -- Duh.
 
 
 
 Buildind the docs
 ~~~~~~~~~~~~~~~~~
- 
-The docs are currently written in LaTeX and are stored in the docs/ directory. Some of the files (README.tex, INSTALL.tex and database.tex) are automatically generated from README.txt, INSTALL.txt and pymc/database/README.txt using rst2latex. The build process is coded in builddocs and is quite obfuscated. The plan is to move the documentation to Sphinx, since this is fast becoming the standard for Python projects. This will simplify  synchronising docstrings and the documentation. 
+
+The docs are currently written in LaTeX and are stored in the docs/ directory. Some of the files (README.tex, INSTALL.tex and database.tex) are automatically generated from README.txt, INSTALL.txt and pymc/database/README.txt using rst2latex. The build process is coded in builddocs and is quite obfuscated. The plan is to move the documentation to Sphinx, since this is fast becoming the standard for Python projects. This will simplify  synchronising docstrings and the documentation.
 
 
 
@@ -80,5 +80,5 @@ Trunk stability
 The trunk/ should always be stable; meaning that it should pass the test
 suite at all time. This means developers should always run pymc.test()
 before committing their changes. If a change breaks something that was
-not covered by the test suite, then it's a good idea to write a 
-regression test to make sure that doesn't happen again. 
+not covered by the test suite, then it's a good idea to write a
+regression test to make sure that doesn't happen again.

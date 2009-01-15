@@ -1,7 +1,7 @@
-Following the conventions of NumPy and SciPy, PyMC documentation 
+Following the conventions of NumPy and SciPy, PyMC documentation
 follows a convention for docstrings that provide
 for some consistency while also allowing epydoc to produce
-nicely-formatted reference guides. 
+nicely-formatted reference guides.
 
 The docstring format uses reST syntax as interpreted by epydoc
 (which should understand how to process some of our conventions at
@@ -19,10 +19,10 @@ Several sentences providing an extended description
         Explanation
     var2 : type information
         Explanation
-    long_variable_name : 
+    long_variable_name :
         Explanation
 
-:Returns: 
+:Returns:
     named : type
         Explanation
     list :
@@ -64,13 +64,13 @@ Comments:
 
 1) The first line of the signature should **not** copy the signature.
 If the function is written in C, then this first line should be the
-signature.  If the function signature is generic (uses *args or **kwds), 
+signature.  If the function signature is generic (uses *args or **kwds),
 then a function signature can be included
 
 2) Use optional in the "type" field for parameters that are
 non-keyword optional for C-functions.
 
-3) The OtherParameters section is for functions taking a lot of keywords 
+3) The OtherParameters section is for functions taking a lot of keywords
 which are not always used or neeeded and whose description would clutter
 then main purpose of the function.
 
@@ -83,7 +83,7 @@ use judgement when listing additional functions.  Routines that
 provide additional information in their docstrings for this function are
 useful to include here.
 
-5) The Notes section can contain algorithmic information if that is useful. 
+5) The Notes section can contain algorithmic information if that is useful.
 
 6) The Examples section is strongly encouraged.  The examples can provide a mini-tutorial as well as additional regression testing.
 

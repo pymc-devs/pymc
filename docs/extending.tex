@@ -1,4 +1,4 @@
-qPyMC tries to make standard things easy, but keep unusual things possible. Its openness, combined with Python's flexibility, invite extensions from using new step methods to exotic stochastic processes (see the Gaussian process module). This chapter briefly reviews the ways PyMC is designed to be extended. 
+qPyMC tries to make standard things easy, but keep unusual things possible. Its openness, combined with Python's flexibility, invite extensions from using new step methods to exotic stochastic processes (see the Gaussian process module). This chapter briefly reviews the ways PyMC is designed to be extended.
 
 \hypertarget{nonstandard}{}
 \section{Nonstandard Stochastics} \label{nonstandard}
@@ -23,14 +23,14 @@ The \code{StepMethod} class is meant to be subclassed. There are an enormous num
 
 \hypertarget{custom_stepper_example}{}
 \subsection{Example: an asymmetric Metropolis step} \label{user-gen}
-Consider the probability model in \file{examples/custom_step.py}: 
+Consider the probability model in \file{examples/custom_step.py}:
 \begin{verbatim}
 mu = pm.Normal('mu',0,.01, value=0)
 tau = pm.Exponential('tau',.01, value=1)
 cutoff = pm.Exponential('cutoff',1, value=1.3)
 D = pm.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
 \end{verbatim}
-The stochastic variable \code{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \code{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected. 
+The stochastic variable \code{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \code{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected.
 
 \medskip
 Suppose we want to handle \code{cutoff} with a smarter step method that doesn't propose illegal values. Specifically, we want to use the nonsymmetric proposal distribution
@@ -51,17 +51,17 @@ class TruncatedMetropolis(pm.Metropolis):
         self.stochastic.value = \
         pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-    # Hastings factor method accounts for asymmetric proposal distribution    
+    # Hastings factor method accounts for asymmetric proposal distribution
     def hastings_factor(self):
         tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 
         lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
+        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
 
         if self.verbose > 1:
-            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
+            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
         return lp_bak - lp_for
 \end{verbatim}
 
@@ -74,7 +74,7 @@ Having created our custom step method, we need to tell MCMC instances to use it 
 \begin{verbatim}
 M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 \end{verbatim}
-This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), np.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}. 
+This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), np.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}.
 
 \medskip
 It's often convenient to get a handle to a custom step method instance directly for debugging purposes. \code{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \code{cutoff}:
@@ -98,7 +98,7 @@ All step methods must implement the following methods:
    \item[\code{tune()}:] Tunes the jumping strategy based on performance so far. A default method is available that increases \code{self.adaptive_scale_factor} (see below) when acceptance rate is high, and decreases it when acceptance rate is low. This method should return \code{True} if additional tuning will be required later, and \code{False} otherwise.
    \item[\code{competence(s):}] A class method that examines stochastic variable $s$ and returns a value from 0 to 3 expressing the step method's ability to handle the variable. This method is used by \code{MCMC} instances when automatically assigning step methods. Conventions are:
    \begin{description}
-      \item[0] I cannot safely handle this variable. 
+      \item[0] I cannot safely handle this variable.
       \item[1] I can handle the variable about as well as the standard \code{Metropolis} step method.
       \item[2] I can do better than \code{Metropolis}.
       \item[3] I am the best step method you are likely to find for this variable in most cases.
@@ -108,7 +108,7 @@ All step methods must implement the following methods:
 class MyStepMethod(pm.StepMethod):
    def __init__(self, stochastic, *args, **kwargs):
       ...
-   
+
    @classmethod
    def competence(self, stochastic):
       if isinstance(stochastic, MyStochasticSubclass):
@@ -122,7 +122,7 @@ class MyStepMethod(pm.StepMethod):
 state = {}
 for s in self._state:
     state[s] = getattr(self, s)
-return state      
+return state
    \end{verbatim}
    \code{self._state} should be a list containing the names of the attributes needed to reproduce the current jumping strategy. If an \code{MCMC} object writes its state out to a database, these attributes will be preserved. If an \code{MCMC} object restores its state from the database later, the corresponding step method will have these attributes set to their saved values.
 \end{description}
@@ -159,7 +159,7 @@ By convention, Metropolis-Hastings step methods use attributes called \code{acce
 \subsection{Gibbs step methods} \label{user-gibbs}
 \pdfbookmark[1]{Gibbs step methods}{user-gibbs}
 
-Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children. 
+Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children.
 
 This section describes PyMC's current scheme for Gibbs step methods, several of which are in a semi-working state in the sandbox. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass StepMethod directly when writing Gibbs step methods if you prefer.
 
@@ -169,13 +169,13 @@ Gibbs step methods that subclass PyMC's \code{Gibbs} should define the following
    \item[\code{parent_class}:] The class of the parent.
    \item[\code{parent_label}:] The label the children would apply to the parent in a conjugate submodel. In the gamma-normal example, this would be \code{tau}.
    \item[\code{linear_OK}:] A flag indicating whether the children can use linear combinations involving the parent as their actual parent without destroying the conjugacy.
-\end{description}   
+\end{description}
 
 A subclass of \code{Gibbs} that defines these attributes only needs to implement a \code{propose()} method, which will be called by \code{Gibbs.step()}. The resulting step method will be able to handle both conjugate and `non-conjugate' cases. The conjugate case corresponds to an actual conjugate submodel. In the nonconjugate case all the children are of the required class, but the parent is not. In this case the parent's value is proposed from the likelihood and accepted based on its prior. The acceptance rate in the nonconjugate case will be less than one.
 
-The inherited class method \code{Gibbs.competence} will determine the new step method's ability to handle a variable $x$ by checking whether: 
+The inherited class method \code{Gibbs.competence} will determine the new step method's ability to handle a variable $x$ by checking whether:
 \begin{itemize}
-   \item all $x$'s children are of class \code{child_class}, and either apply \code{parent_label} to $x$ directly or (if \code{linear_OK=True}) to a \code{LinearCombination} object (chapter \ref{chap:modelbuilding}), one of whose parents contains $x$.   
+   \item all $x$'s children are of class \code{child_class}, and either apply \code{parent_label} to $x$ directly or (if \code{linear_OK=True}) to a \code{LinearCombination} object (chapter \ref{chap:modelbuilding}), one of whose parents contains $x$.
    \item $x$ is of class \code{parent_class}
 \end{itemize}
 If both conditions are met, \code{pymc.conjugate_Gibbs_competence} will be returned. If only the first is met, \code{pymc.nonconjugate_Gibbs_competence} will be returned.
@@ -184,7 +184,7 @@ If both conditions are met, \code{pymc.conjugate_Gibbs_competence} will be retur
 \section{New fitting algorithms} \label{custom-model}
 \pdfbookmark[0]{New fitting algorithms}{custom-model}
 
-PyMC provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}. 
+PyMC provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See chapter \ref{chap:modelfitting}.
 
 \hypertarget{custom-MC}{}
 \subsection{Monte Carlo fitting algorithms} \label{custom-MC}

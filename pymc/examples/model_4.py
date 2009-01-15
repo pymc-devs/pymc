@@ -27,15 +27,15 @@ n = len(disasters_array)
 
 switchpoint = DiscreteUniform('switchpoint',lower=0,upper=110)
 means = Exponential('means',beta=ones(2))
-    
+
 @stochastic(observed=True, dtype=int)
-def disasters(  value = disasters_array, 
-                means = means, 
+def disasters(  value = disasters_array,
+                means = means,
                 switchpoint = switchpoint):
     """Annual occurences of coal mining disasters."""
-    
-    def logp(value, means, switchpoint): 
+
+    def logp(value, means, switchpoint):
         return poisson_like(value[:switchpoint], means[0]) + poisson_like(value[switchpoint:], means[1])
-        
+
     def random(means, switchpoint):
         return append(rpoisson(means[0], size=switchpoint), rpoisson(means[1], size=n-switchpoint))

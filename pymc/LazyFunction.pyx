@@ -50,55 +50,55 @@ cdef class LazyFunction:
     """
     A function that is bound to its arguments, and which caches
     its last few evaluations so as to skip computation when possible.
-    
-    
-    
+
+
+
     L = LazyFunction(fun, arguments[, cache_depth])
     L.get()
-    
-    
-    
+
+
+
     :Arguments:
     fun:        The function that the LazyFunction uses to compute its
                 values.
-                
+
     arguments:  A dictionary of arguments that the LazyFunction passes
                 to its function. If any of the arguments is a Stochastic,
                 Deterministic, or Container, that argument's 'value' attribute
                 will be substituted for it when passed to fun.
-                
+
     cache_depth:    The number of prior computations to 'memoize' in
                     order to skip unnecessary computations.
-    
-    
-                    
+
+
+
     Externally-accessible methods:
-    
-    refresh_argument_values():  Iterates over LazyFunction's parents that are 
-                                Stochastics, Deterministics, or Containers and 
-                                records their current values for passing to self's 
+
+    refresh_argument_values():  Iterates over LazyFunction's parents that are
+                                Stochastics, Deterministics, or Containers and
+                                records their current values for passing to self's
                                 internal function.
-    
+
     get():  Refreshes argument values, checks cache, calls internal function if
             necessary, returns value.
-            
-    
-    
+
+
+
     Externally-accessible attributes:
-    
+
     arguments:  A dictionary containing self's arguments.
 
     fun:        Self's internal function.
-    
+
     argument_values:    A dictionary containing self's arguments, in which
                         Stochastics, Deterministics, and Containers have been
                         replaced by their 'value' attributes.
-    
-                
-    
+
+
+
     :SeeAlso: Stochastic, Deterministic, Container
     """
-    
+
     cdef public object arguments, fun, argument_values
     cdef int cache_depth, n_ultimate_args
     cdef public object ultimate_args
@@ -108,26 +108,26 @@ cdef class LazyFunction:
     cdef long* cached_counts,
     cdef long** ultimate_arg_counters
     # cdef public object frame_queue
-    
+
     def __init__(self, fun, arguments, ultimate_args, cache_depth):
-        
+
         cdef object arg, name
         cdef int i
         cdef Counter this_counter
-        
+
         # arguments will be parents and value for stochastics, just parents for deterministics.
         self.arguments = arguments
-        
+
         self.cache_depth = cache_depth
-                        
+
         # Populate argument iterables
         for name in arguments.iterkeys():
             # This object is arg.
             arg = arguments[name]
-            
+
         self.ultimate_args = list(ultimate_args)
         self.n_ultimate_args = len(self.ultimate_args)
-        
+
         # Initialize caches
         self.cached_args = []
         self.cached_values = []
@@ -138,9 +138,9 @@ cdef class LazyFunction:
 
         # Underlying function
         self.fun = fun
-        
+
         # C initializations
-        self.frame_queue = <int*> malloc(sizeof(int)*self.cache_depth)        
+        self.frame_queue = <int*> malloc(sizeof(int)*self.cache_depth)
         for i from 0<=i<self.cache_depth:
             self.frame_queue[i]=i
 
@@ -152,12 +152,12 @@ cdef class LazyFunction:
         self.cached_counts = <long*> malloc(sizeof(long)*self.n_ultimate_args*self.cache_depth)
         for i from 0 <= i < self.n_ultimate_args*self.cache_depth:
             self.cached_counts[i] = -1
-        
+
     def __dealloc__(self):
         free(self.frame_queue)
         free(self.ultimate_arg_counters)
         free(self.cached_counts)
-                    
+
 
     cdef int check_argument_caches(self)  except *:
         """
@@ -188,7 +188,7 @@ cdef class LazyFunction:
                 for k from j <= k < self.cache_depth-1:
                     self.frame_queue[k] = self.frame_queue[k+1]
                 self.frame_queue[self.cache_depth-1] = i
-                return i      
+                return i
 
         i=-1
         # TODO: Py_END_ALLOW_THREADS
@@ -219,7 +219,7 @@ cdef class LazyFunction:
         for i from 0<=i<self.cache_depth:
             out[i] = self.frame_queue[i]
         return out
-        
+
     def get_cached_counts(self):
         cdef int i, cf
         cdef object out
@@ -228,7 +228,7 @@ cdef class LazyFunction:
             for i from 0 <= i < self.n_ultimate_args:
                 out[i,cf] = self.cached_counts[cf * self.n_ultimate_args + i]
         return out
-        
+
     def get_ultimate_arg_counter(self):
         cdef object out
         cdef int i
@@ -236,8 +236,8 @@ cdef class LazyFunction:
         for i from 0 <= i < self.n_ultimate_args:
             out[self.ultimate_args[i]] = self.ultimate_arg_counters[i][0]
         return out
-        
-        
+
+
 
     def force_cache(self, value):
         """
@@ -245,17 +245,17 @@ cdef class LazyFunction:
         self's current input arguments. Use with caution!
         """
         self.cache(value)
-    
+
     def force_compute(self):
         """
         For debugging purposes. Skip cache checking and compute a value.
         """
         # Refresh parents' values
         value = self.fun(**self.arguments.value)
-        
+
         if self.cache_depth>0:
             self.cache(value)
-        
+
 
     def get(self):
         """
@@ -265,10 +265,10 @@ cdef class LazyFunction:
         """
         cdef int match_index
         # print 'get called'
-        
+
         if self.cache_depth == 0:
             return self.fun(**self.arguments.value)
-        
+
         match_index = self.check_argument_caches()
 
         if match_index < 0:
@@ -276,7 +276,7 @@ cdef class LazyFunction:
             #Recompute
             value = self.fun(**self.arguments.value)
             self.cache(value)
-        
+
         else:
             value = self.cached_values[match_index]
 

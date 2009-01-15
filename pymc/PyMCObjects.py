@@ -332,8 +332,6 @@ class Deterministic(DeterministicBase):
       LinearCombination, Index
     """
     def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=0):
-        # from IPython.Debugger import Pdb
-        # Pdb(color_scheme='Linux').set_trace()
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.

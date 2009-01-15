@@ -15,9 +15,9 @@ We represent our conceptual model formally as a statistical model:
             \end{array}\right.,&t\in[t_l,t_h]\\
         s\sim \textup{Discrete Uniform}(t_l, t_h)\\
         e\sim \textup{Exponential}(r_e)\\
-        l\sim \textup{Exponential}(r_l)        
+        l\sim \textup{Exponential}(r_l)
     \end{array}
-    \label{disastermodel} 
+    \label{disastermodel}
 \end{equation}
 The symbols are defined as:
 \begin{description}
@@ -34,7 +34,7 @@ Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter th
 
 \section{Two types of variables}
 
-At the model-specification stage (before the data are observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is \emph{epistemic}, meaning random variable $x$'s probability distribution $p(x)$ represents our knowledge and uncertainty about $x$'s value. Candidate values of $x$ for which $p(x)$ is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes \code{Stochastic} and \code{Deterministic}. 
+At the model-specification stage (before the data are observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is \emph{epistemic}, meaning random variable $x$'s probability distribution $p(x)$ represents our knowledge and uncertainty about $x$'s value. Candidate values of $x$ for which $p(x)$ is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes \code{Stochastic} and \code{Deterministic}.
 
 The only \code{Deterministic} in the model is $r$. If we knew the values of $r$'s parents ($s$, $l$ and $e$), we could compute the value of $r$ exactly. A \code{Deterministic} like $r$ is defined by a mathematical function that returns its value given values for its parents. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
 
@@ -56,15 +56,15 @@ Next, we enter the actual data values into an array:
 	                   0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
 	                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
 	                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
-\end{verbatim} 
+\end{verbatim}
 Next, we create the switchpoint variable $s$:
 \begin{verbatim}
-	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')  
+	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')
 \end{verbatim}
 \code{DiscreteUniform} is a subclass of \code{Stochastic} that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference \emph{a priori} regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables $e$ and $l$ for the early and late Poisson rates, respectively:
 \begin{verbatim}
 	e = Exponential('e', beta=1)
-	l = Exponential('l', beta=1)   
+	l = Exponential('l', beta=1)
 \end{verbatim}
 Next, we define the variable $r$, which selects the early rate $e$ for times before $s$ and the late rate $l$ for times after $s$. We create $r$ using the \code{deterministic} decorator, which converts the ordinary Python function $r$ into a \code{Deterministic} object.
 \begin{verbatim}
@@ -83,7 +83,7 @@ The last step is to define the number of disasters $D$. This is a stochastic var
 
 \subsection{Why are data and unknown variables represented by the same
 object?}
-Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data. 
+Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -103,7 +103,7 @@ Even after we observe the value of $D$, we need to use this process model to mak
 %     l|D\sim\cdot\\
 %     D=D_*
 % \end{eqnarray*}
-% 
+%
 % In one respect, this would have been more natural because we would have the unknown stochastic variables depending on the data. However, if we could write down that model using standard distributions we could trivially compute and sample from the posterior,
 % \begin{eqnarray*}
 %     p(s,e,l|D) = p(s|e, l, D) p(e|l, D) p(l|D),
@@ -130,7 +130,7 @@ We are using $r$ as a distributional parameter of $D$ (\emph{i.e.} $r$ is $D$'s 
 \end{verbatim}
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
-The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details. 
+The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details.
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
@@ -139,7 +139,7 @@ The following `directed acyclic graph' is a visualization of the parent-child re
 All PyMC variables have an attribute called \code{value} that stores the current value of that variable. Try examining $D$'s value, and you'll see the initial value we provided for it:
 \begin{verbatim}
    >>> D.value
-   >>> 
+   >>>
    array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
           4, 4, 1, 5, 5, 3, 4, 2, 5, 2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3,
           0, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1, 0, 1, 0, 1, 0,
@@ -160,7 +160,7 @@ If you check $e$'s, $s$'s and $l$'s values, you'll see random initial values gen
 Of course, since these are \code{Stochastic} elements, your values will be different than these. If you check $r$'s value, you'll see an array whose first $s$ elements are $e$ (here 0.33464706), and whose remaining elements are $l$ (here 2.64919368):
 \begin{verbatim}
    >>> r.value
-   >>> 
+   >>>
    array([ 0.33464706,  0.33464706,  0.33464706,  0.33464706,  0.33464706,
            0.33464706,  0.33464706,  0.33464706,  0.33464706,  0.33464706,
            0.33464706,  0.33464706,  0.33464706,  0.33464706,  0.33464706,
@@ -227,9 +227,9 @@ PyMC provides several objects that fit probability models (linked collections of
    from pymc import MCMC
    M = MCMC(DisasterModel)
 \end{verbatim}
-In this case \code{M} will expose variables \code{s}, \code{e}, \code{l}, \code{r} and \code{D} as attributes; that is, \code{M.s} will be the same object as \code{DisasterModel.s}.     
+In this case \code{M} will expose variables \code{s}, \code{e}, \code{l}, \code{r} and \code{D} as attributes; that is, \code{M.s} will be the same object as \code{DisasterModel.s}.
 
-To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired): 
+To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired):
 \begin{verbatim}
    M.isample(iter=10000, burn=1000, thin=10)
 \end{verbatim}
@@ -237,11 +237,11 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 \subsection{What does it mean to fit a model?}
 
-`Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\cite{gelman}) for \code{iter}  iterations. 
+`Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\cite{gelman}) for \code{iter}  iterations.
 
-After a sufficiently large number of iterations, the current values of $s$, $e$ and $l$ can be considered a sample from the posterior. PyMC assumes that the \code{burn} parameter specifies a `sufficiently large' number of iterations for convergence of the algorithm, so it is up to the user to verify that this is the case (see chapter \ref{chap:modelchecking}). Consecutive values sampled from $s$, $e$ and $l$ are necessarily dependent on the previous sample, since it is a Markov chain. However, MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is often effective to thin the sample by only retaining every $k$th sample, where $k$ is an integer value. This thinning interval is passed to the sampler via the \code{thin} argument. 
+After a sufficiently large number of iterations, the current values of $s$, $e$ and $l$ can be considered a sample from the posterior. PyMC assumes that the \code{burn} parameter specifies a `sufficiently large' number of iterations for convergence of the algorithm, so it is up to the user to verify that this is the case (see chapter \ref{chap:modelchecking}). Consecutive values sampled from $s$, $e$ and $l$ are necessarily dependent on the previous sample, since it is a Markov chain. However, MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is often effective to thin the sample by only retaining every $k$th sample, where $k$ is an integer value. This thinning interval is passed to the sampler via the \code{thin} argument.
 
-If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \cite{gelman} for general guidance.  
+If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \cite{gelman} for general guidance.
 
 \subsection{Accessing the samples}
 The output of the MCMC algorithm is a `trace', the sequence of retained
@@ -254,7 +254,7 @@ using the \code{trace(name, chain=-1)} method. For example:
 The trace slice \code{[start:stop:step]} works just like the NumPy array
 slice. By default, the returned trace array contains the samples from the
 last call to \code{sample}, that is, \code{chain=-1}, but the trace from
-previous sampling runs can be retrieved by specifying the correspondent 
+previous sampling runs can be retrieved by specifying the correspondent
 chain index. To return the trace from all chains, simply use
 \code{chain=None}.\footnote{Note that the unknown variables $s$, $e$, $l$ and $r$ will all
 accrue samples, but $D$ will not because its value has been observed and is
@@ -267,12 +267,12 @@ raise an error. }
 %   array([41, 40, 40, ..., 43, 44, 44])
 % \end{verbatim}
 
-\subsection{Sampling output} 
+\subsection{Sampling output}
 You can examine the marginal posterior of any variable by plotting a histogram of its trace:
 \begin{verbatim}
    >>> from pylab import hist, show
    >>> hist(M.trace('l')[:])
-   >>> 
+   >>>
    (array([   8,   52,  565, 1624, 2563, 2105, 1292,  488,  258,   45]),
     array([ 0.52721865,  0.60788251,  0.68854637,  0.76921023,  0.84987409,
            0.93053795,  1.01120181,  1.09186567,  1.17252953,  1.25319339]),
@@ -320,7 +320,7 @@ Count & Site & Observer & Temperature\\
 \end{tabular}
 \end{center}
 
-Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates. 
+Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates.
 
 In a Bayesian modelling framework, missing data are accommodated simply by treating them as unknown model parameters. Values for the missing data $\tilde{y}$ are estimated naturally, using the posterior predictive distribution:
 
@@ -330,7 +330,7 @@ In a Bayesian modelling framework, missing data are accommodated simply by treat
 
 This describes additional data $\tilde{y}$, which may either be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data.
 
-Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, -999. 
+Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, -999.
 
 \begin{verbatim}
 x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -342,12 +342,12 @@ x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim}
 
-To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{ma.masked_equal} function: 
+To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{ma.masked_equal} function:
 \begin{verbatim}
 >>> masked_data = numpy.ma.masked_equal(x, value=-999)
 >>> masked_data
 masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
- 4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0 
+ 4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0
  1 0 0 0 2 1 0 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1
  0 0 1 0 1],
  mask = [False False False False False False False False False False False False
@@ -383,11 +383,11 @@ The entire model looks very similar to the original model:
 
 \begin{verbatim}
 	# Switchpoint
-	s = DiscreteUniform('s', lower=0, upper=110)   
+	s = DiscreteUniform('s', lower=0, upper=110)
 	# Early mean
 	e = Exponential('e', beta=1)
 	# Late mean
-	l = Exponential('l', beta=1)   
+	l = Exponential('l', beta=1)
 
 	@deterministic(plot=False)
 	def r(s=s, e=e, l=l):
@@ -399,7 +399,7 @@ The entire model looks very similar to the original model:
 	    out[s:] = l
 	    return out
 
-	# Where the mask is true, the value is taken as missing. 
+	# Where the mask is true, the value is taken as missing.
 	masked_data = np.ma.masked_array(disasters_array, disasters_mask)
 	D = ImputeMissing('D', Poisson, masked_data, mu=r)
 \end{verbatim}
@@ -417,20 +417,20 @@ The main limitation of this approach for imputation is performance. Because each
 % section missing_data (end)
 
 
-\section{Fine-tuning the MCMC algorithm} 
+\section{Fine-tuning the MCMC algorithm}
 
 MCMC objects handle individual variables via \emph{step methods}, which determine how parameters are updated at each step of the MCMC algorithm. By default, step methods are automatically assigned to variables by PyMC. To see which step methods $M$ is using, look at its \code{step_method_dict} attribute with respect to each parameter:
 \begin{verbatim}
    >>> M.step_method_dict[s]
    >>> [<pymc.StepMethods.DiscreteMetropolis object at 0x3e8cb50>]
-   
+
    >>> M.step_method_dict[e]
    >>> [<pymc.StepMethods.Metropolis object at 0x3e8cbb0>]
 
    >>> M.step_method_dict[l]
    >>> [<pymc.StepMethods.Metropolis object at 0x3e8ccb0>]
 \end{verbatim}
-The value of \code{step_method_dict} corresponding to a particular variable is a list of the step methods $M$ is using to handle that variable. 
+The value of \code{step_method_dict} corresponding to a particular variable is a list of the step methods $M$ is using to handle that variable.
 
 You can force $M$ to use a particular step method by calling \code{M.use_step_method} before telling it to sample. The following call will cause $M$ to handle $l$ with a standard \code{Metropolis} step method, but with proposal standard deviation equal to $2$:
 \begin{verbatim}
@@ -449,4 +449,4 @@ That was a brief introduction to basic PyMC usage. Many more topics are covered 
    \item Saving traces to the disk, or streaming them to the disk during sampling
    \item Writing your own step methods and fitting algorithms.
 \end{itemize}
-Also, be sure to check out the documentation for the Gaussian process extension, which is available on the webpage. 
+Also, be sure to check out the documentation for the Gaussian process extension, which is available on the webpage.
