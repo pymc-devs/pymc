@@ -22,8 +22,6 @@ disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                    3, 3, 1, -999, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                    0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-# Mask for missing values
-disasters_mask = disasters_array == -999
 
 # Switchpoint
 s = DiscreteUniform('s', lower=0, upper=110)
@@ -44,5 +42,4 @@ def r(s=s, e=e, l=l):
 
 
 # Where the mask is true, the value is taken as missing.
-masked_data = np.ma.masked_array(disasters_array, disasters_mask)
-D = ImputeMissing('D', Poisson, masked_data, mu=r)
+D = Impute('D', Poisson, disasters_array, missing=-999, mu=r)
