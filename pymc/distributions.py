@@ -1943,12 +1943,10 @@ def von_mises_like(x, mu, kappa):
 
     .. math::
         f(x \mid \mu, k) = \\frac{{e}^{k \\operatorname{cos}\\left(x - u\\right)}}{2 \\pi I0(k)}
-    
-    \mu-\pi<= x <=mu+pi
 
     :Parameters:
       x : float
-        Input data. Must be between mu-pi and mu+pi
+        Input data.
       mu : float
         Mean of the distribution.
       kappa : float

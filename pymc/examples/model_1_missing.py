@@ -42,10 +42,7 @@ def r(s=s, e=e, l=l):
     out[s:] = l
     return out
 
-<<<<<<< .mine
+
 # Where the mask is true, the value is taken as missing.
 masked_data = np.ma.masked_array(disasters_array, disasters_mask)
 D = ImputeMissing('D', Poisson, masked_data, mu=r)
-=======
-# Where the value is -999, the datum is assumed to be missing.
-D = Impute('D', Poisson, disasters_array, missing=-999, mu=r)>>>>>>> .r1155

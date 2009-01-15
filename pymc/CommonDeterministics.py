@@ -411,12 +411,12 @@ class Index(LinearCombination):
 def pfunc(func):
     """
     pf = pfunc(func)
-    
+
     Returns a function that can be called just like func; however its arguments may be
     PyMC objects or containers of PyMC objects, and its return value will be a deterministic.
-    
+
     Example:
-    
+
         >>> A = pymc.Normal('A',0,1,size=10)
         >>> pprod = pymc.pfunc(numpy.prod)
         >>> B = pprod(A, axis=0)
@@ -442,7 +442,7 @@ def pfunc(func):
                 parents[fargs[i]] = args[i]
             else:
                 varargs.append(args[i])
-                
+
         if len(varargs)==0:
             eval_fun = func
         else:
@@ -455,13 +455,13 @@ def pfunc(func):
                 wargs.extend(wkwds.pop('varargs'))
                 return func(*wargs, **wkwds)
             eval_fun = wrapper
-        
+
         return pm.Deterministic(eval_fun, doc_str, name, parents, trace=False, plot=False)
     dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
     dtrm_generator.__doc__ = """
     Deterministic-generating wrapper for %s. Original docstring:
     %s
-    
+
     %s
     """%(func.__name__, '_'*60, func.__doc__)
     return dtrm_generator
@@ -531,8 +531,8 @@ def create_rl_bin_method(op_name, klass):
         # Convert the functions into methods for klass.
         new_method.__name__ = '__'+prefix+op_name+'__'
         setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
-        
-        
+
+
 def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
     """
     Creates a new binary special method with left and right versions, such as

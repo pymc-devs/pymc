@@ -2879,7 +2879,7 @@ cf2py threadsafe
       DOUBLE PRECISION like
       DOUBLE PRECISION tmp
       DOUBLE PRECISION x(n),mu(nmu),kappa(nkappa)
-      DOUBLE PRECISION mu_tmp, kappa_tmp, dev
+      DOUBLE PRECISION mu_tmp, kappa_tmp
       LOGICAL not_scalar_mu, not_scalar_kappa
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0) 
@@ -2897,17 +2897,12 @@ cf2py threadsafe
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_kappa) kappa_tmp=kappa(i)
-        dev = dabs(x(i)-mu_tmp)
-        if (dev .GT. PI) then
-            like = -infinity
-            RETURN
-        endif
         if (kappa_tmp .LT. 0.0) then
           like = -infinity
           RETURN
         endif
         like = like - dlog(2*PI*i0(kappa_tmp))
-        like = like + kappa_tmp*dcos(dev)
+        like = like + kappa_tmp*dcos(x(i)-mu_tmp)
       enddo
       return
       END

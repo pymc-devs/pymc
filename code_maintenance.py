@@ -25,19 +25,19 @@ def remove_whitespace(fname):
     for line in lines:
         fd.write(line+'\n')
     fd.close()
-    print 'Removed whitespace from %s'%fname
+    # print 'Removed whitespace from %s'%fname
 
-print
+# print
 
 # ====================
 # = Strip whitespace =
 # ====================
 for dirname, dirs, files in os.walk('.'):
     if dirname[1:].find('.')==-1:
-        print dirname
+        # print dirname
         for fname in files:
             if fname[-2:] in ['c', 'f'] or fname[-3:]=='.py' or fname[-4:] in ['.pyx', '.txt', '.tex', '.sty', '.cls'] or fname.find('.')==-1:
-                print fname
+                # print fname
                 remove_whitespace(dirname + '/' + fname)
 
 # ==========================
