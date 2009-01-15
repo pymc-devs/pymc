@@ -16,7 +16,7 @@ normcoef = 1.
 # B's value is a random function of A.
 @deterministic(verbose=verbose)
 def B(A=A):
-    # print 'B computing' 
+    # print 'B computing'
     return A + normcoef * normal()
 
 # Guarantee that initial state is OK
@@ -33,7 +33,7 @@ def C(value = 0., B=[A,B]):
          return -np.Inf
     else:
          return 0.
- 
+
 L = C._logp
 C.logp
 acc = True
@@ -52,10 +52,10 @@ for i in range(1000):
     A.value = 1. + normal()
     # print A.counter.get_count(),
     B.value
-    # print last_A_count, A.counter.get_count(), B._value.get_cached_counts()    
+    # print last_A_count, A.counter.get_count(), B._value.get_cached_counts()
 
     # Check the argument values
-    # L.refresh_argument_values()    
+    # L.refresh_argument_values()
     # assert(L.argument_values['B'] is B.value)
     assert(C in L.ultimate_args)
 
@@ -81,7 +81,7 @@ for i in range(1000):
         # print 'reverting!', A.counter.get_count()
 
         # Make sure A's value and last value occupy correct places in B's
-        # cached arguments        
+        # cached arguments
         cur_frame = B._value.get_frame_queue()[1]
         assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.get_count())
         # assert(B._value.cached_args[cur_frame] is A.last_value)
@@ -98,7 +98,7 @@ for i in range(1000):
         assert(L.get_cached_counts()[1,cur_frame] == C.counter.get_count())
         assert(L.cached_values[cur_frame] is C.logp)
 
-    # If jump was rejected:        
+    # If jump was rejected:
     else:
 
         # B's value should be at the back of C's cache.
@@ -111,63 +111,63 @@ for i in range(1000):
 # class test_LazyFunction(TestCase):
 #     def test(self):
 #         for i in range(1000):
-# 
+#
 #             # Record last values
 #             last_B_value = B.value
 #             last_C_logp = C.logp
-# 
+#
 #             # Propose a value
 #             A.value = 1. + normal()
-# 
+#
 #             # Check the argument values
-#             # L.refresh_argument_values()    
+#             # L.refresh_argument_values()
 #             # assert(L.argument_values['B'] is B.value)
 #             assert(C in L.ultimate_args)
-# 
+#
 #             # Accept or reject values
 #             acc = True
 #             try:
 #                 C.logp
-# 
+#
 #                 # Make sure A's value and last value occupy correct places in B's
 #                 # cached arguments
 #                 cur_frame = B._value.get_frame_queue()[1]
 #                 assert(B._value.get_cached_counts()[0,cur_frame] == A.counter.count[0])
 #                 assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.count[0]-1)
 #                 assert(B._value.ultimate_args[0] is A)
-# 
+#
 #             except ZeroProbability:
-# 
+#
 #                 acc = False
-# 
+#
 #                 # Reject jump
 #                 A.revert()
-# 
+#
 #                 # Make sure A's value and last value occupy correct places in B's
-#                 # cached arguments        
+#                 # cached arguments
 #                 cur_frame = B._value.get_frame_queue()[1]
 #                 assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.count[0])
 #                 # assert(B._value.cached_args[cur_frame] is A.last_value)
 #                 # assert(B._value.ultimate_args.value[0] is A.value)
 #                 assert(B.value is last_B_value)
-# 
-# 
+#
+#
 #             # Check C's cache
 #             cur_frame = L.get_frame_queue()[1]
-# 
+#
 #             # If jump was accepted:
 #             if acc:
 #                 # C's value should be at the head of C's cache
 #                 assert(L.get_cached_counts()[1,cur_frame] == C.counter.count[0])
 #                 assert(L.cached_values[cur_frame] is C.logp)
-# 
-#             # If jump was rejected:        
+#
+#             # If jump was rejected:
 #             else:
-# 
+#
 #                 # B's value should be at the back of C's cache.
 #                 assert(L.get_cached_counts()[1,1-cur_frame] == C.counter.count[0])
 #                 assert(L.cached_values[1-cur_frame] is C.logp)
-# 
+#
 #             # assert(L.ultimate_args.value[1] is C.value)
 
 

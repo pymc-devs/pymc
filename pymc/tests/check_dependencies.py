@@ -10,7 +10,7 @@ def test_dependencies():
     dep_files = {}
     for mod_str in mod_strs:
         dep_files[mod_str] = []
-    
+
     for dirname, dirs, files in os.walk('..'):
         for fname in files:
             if fname[-3:]=='.py' or fname[-4:]=='.pyx':
@@ -19,7 +19,7 @@ def test_dependencies():
                     for mod_str in mod_strs:
                         if file(dirname+'/'+fname).read().find(mod_str)>=0:
                             dep_files[mod_str].append(dirname+'/'+fname)
-                        
+
     print 'Instances of optional dependencies found are:'
     for mod_str in mod_strs:
         print '\t'+mod_str+':'

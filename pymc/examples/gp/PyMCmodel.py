@@ -15,7 +15,7 @@ diff_degree = pm.Uniform('diff_degree', .1, 3)
 amp = pm.Lognormal('amp', mu=.4, tau=1.)
 scale = pm.Lognormal('scale', mu=.5, tau=1.)
 
-# The covariance dtrm C is valued as a Covariance object.                    
+# The covariance dtrm C is valued as a Covariance object.
 @pm.deterministic
 def C(eval_fun = gp.matern.euclidean, diff_degree=diff_degree, amp=amp, scale=scale):
     return gp.FullRankCovariance(eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
@@ -28,7 +28,7 @@ c = pm.Normal('c', mu=2., tau=1.)
 
 # The mean M is valued as a Mean object.
 def linfun(x, a, b, c):
-    # return a * x ** 2 + b * x + c    
+    # return a * x ** 2 + b * x + c
     return 0.*x + c
 @pm.deterministic
 def M(eval_fun = linfun, a=a, b=b, c=c):

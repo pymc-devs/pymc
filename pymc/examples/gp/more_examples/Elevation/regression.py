@@ -10,7 +10,7 @@ C = Covariance(matern.geo_deg, diff_degree = .8, amp = std(elevation), scale = 1
 def constant(x, val):
     """docstring for parabolic_fun"""
     return zeros(x.shape[:-1],dtype=float) + val
-    
+
 M = Mean(constant, val = 0.)
 
 observe(M,C,obs_mesh = obs_mesh, obs_vals = elevation)

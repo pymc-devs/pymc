@@ -11,7 +11,7 @@ M = Mean(eval_fun = quadfun, a = 1., b = .5, c = 2.)
 def constant(x, val):
     """docstring for parabolic_fun"""
     return zeros(x.shape[:-1],dtype=float) + val
-    
+
 N = Mean(constant, val = 0.)
 
 x=arange(-1,1,.01)

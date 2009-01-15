@@ -13,7 +13,7 @@ euclidean.__doc__ = """
 
         - `x and y` are arrays of points in Euclidean coordinates
           formatted as follows:
-      
+
           [[x_{0,0} ... x_{0,ndim}],
            [x_{1,0} ... x_{1,ndim}],
            ...
@@ -21,11 +21,11 @@ euclidean.__doc__ = """
 
         - `symm` indicates whether x and y are references to
           the same array.
-          
+
         - `cmin' and `cmax' indicate which columns to compute.
           These are used for multithreaded evaluation.
 
-      
+
     Return value is a matrix D, where D[i,j] gives the Euclidean
     distance between the point x[i,:] and y[j,:].
 """
@@ -44,7 +44,7 @@ geo_rad.__doc__ = """
            [lon_1, lat_1],
            ...
            [lon_N, lat_N]]
- 
+
           Latitudes and longitudes should be in radians.
 
         - `cmin' and `cmax' indicate which columns to compute.
@@ -52,8 +52,8 @@ geo_rad.__doc__ = """
 
         - `symm` indicates whether x and y are references to
           the same array.
-      
-    Return value is a matrix D, where D[i,j] gives the great-circle 
+
+    Return value is a matrix D, where D[i,j] gives the great-circle
     distance between the point x[i,:] and y[j,:] on a sphere of unit
     radius.
 """
@@ -82,17 +82,17 @@ aniso_geo_rad.__doc__ = """
           Latitudes and longitudes should be in radians.
 
         - `inc` gives the eccentricity of the elliptical level sets of distance.
-        
-        - `ecc` gives the angle of inclination of the elliptical level sets of 
+
+        - `ecc` gives the angle of inclination of the elliptical level sets of
           distance, in radians.
 
         - `cmin' and `cmax' indicate which columns to compute.
-          These are used for multithreaded evaluation.        
+          These are used for multithreaded evaluation.
 
         - `symm` indicates whether x and y are references to
           the same array.
-  
-    Return value is a matrix D, where D[i,j] gives the great-circle 
+
+    Return value is a matrix D, where D[i,j] gives the great-circle
     distance between the point x[i,:] and y[j,:] on a sphere of unit
     radius.
 """

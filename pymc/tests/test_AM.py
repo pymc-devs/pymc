@@ -13,15 +13,15 @@ with the following parameters:
 
 and C = [ \sigma_1\sigma_1       \rho\sigma_1\sigma_2 ]
         [ \rho\sigma_2\sigma_1       \sigma_2\sigma_2 ]
-        
-Then, knowing the covariance matrix C and given the random samples, 
+
+Then, knowing the covariance matrix C and given the random samples,
 we want to estimate the posterior distribution of mu. Since the prior
-for mu is uniform, the mean posterior distribution is simply a bivariate 
-normal with the same correlation coefficient rho, but with variances 
-divided by sqrt(N), where N is the number of samples drawn. 
+for mu is uniform, the mean posterior distribution is simply a bivariate
+normal with the same correlation coefficient rho, but with variances
+divided by sqrt(N), where N is the number of samples drawn.
 
 We can check that the sampler works correctly by making sure that
-after a while, the covariance matrix of the samples for mu tend to C/N. 
+after a while, the covariance matrix of the samples for mu tend to C/N.
 
 """
 N=50

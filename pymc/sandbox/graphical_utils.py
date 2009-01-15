@@ -4,10 +4,10 @@ from pymc import *
 
 def find_generations(stochastics):
     """
-    A generation is the set of stochastic variables that only has parents in 
+    A generation is the set of stochastic variables that only has parents in
     previous generations.
     """
-    
+
     generations = []
 
     # Find root generation
@@ -47,7 +47,7 @@ def find_generations(stochastics):
 def ravel_submodel(stochastic_list):
     """
     Takes a list of stochastics and returns:
-        - Indices corresponding to each, 
+        - Indices corresponding to each,
         - Length of each,
         - Slices corresponding to each,
         - Total length,
@@ -91,11 +91,11 @@ def find_children_and_parents(stochastic_list):
                 children.append(s)
         if all([not parent in stochastic_list for parent in s.extended_parents]):
             parents.append(s)
-        
+
     return set(children), set(parents)
-    
-def order_stochastic_list(stochastics):      
-      
+
+def order_stochastic_list(stochastics):
+
     generations = find_generations(stochastics)
     out = []
     for generation in generations[::-1]:

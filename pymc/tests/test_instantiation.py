@@ -44,7 +44,7 @@ def e(value=1., rate=1.):
 def l(value=.1, rate = 1.):
     """Rate stochastic of poisson distribution."""
     return exponential_like(value, rate)
-        
+
 @data(dtype=int)
 def D(  value = D_array,
         s = s,
@@ -62,7 +62,7 @@ def F(value = D_array*.5,
         l = l):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
-        
+
 @data
 @stochastic
 def G(value = D_array*.5,
@@ -71,7 +71,7 @@ def G(value = D_array*.5,
         l = l):
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
-        
+
 class test_instantiation(TestCase):
     def test_data(self):
         assert(isinstance(D, Stochastic))

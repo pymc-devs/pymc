@@ -1,6 +1,6 @@
-"""The point of Container.py is to provide a function Container which converts 
-any old thing A to thing B which looks and acts just like A, but it has a 
-'value' attribute. B.value looks and acts just like A but every variable 
+"""The point of Container.py is to provide a function Container which converts
+any old thing A to thing B which looks and acts just like A, but it has a
+'value' attribute. B.value looks and acts just like A but every variable
 'inside' B has been replaced by its value. Examples:
 
     class MyObject(object):
@@ -28,7 +28,7 @@ Should work even with nested inputs:
 
     A = MyObject()
     B = Container(A)
-    
+
 
 In addition, container objects file away the objects they contain into the
 following sets: stochastics, deterministics, variables, nodes, containers, data, step methods.
@@ -57,53 +57,53 @@ def Container(*args):
     C = Container(module)
     C = Container(object)
     C = Container(obj_1, obj_2, obj_3, ...)
-    
-    Wraps an iterable object (currently a list, set, tuple, dictionary 
-    or ndarray), or a module or other object, or just a sequence of objects, 
+
+    Wraps an iterable object (currently a list, set, tuple, dictionary
+    or ndarray), or a module or other object, or just a sequence of objects,
     in a subclass of ContainerBase and returns it.
-    
-    Iterable subclasses of ContainerBase strive to emulate the iterables they 
-    wrap, with one important difference: They have a value attribute.        
+
+    Iterable subclasses of ContainerBase strive to emulate the iterables they
+    wrap, with one important difference: They have a value attribute.
     A container's value attribute behaves like the container itself, but
     it replaces every PyMC variable it contains with that variable's value.
-    
+
     Example:
-    
+
         @stochastic
         def A(value=0., mu=3, tau=2):
             return normal_like(value, mu, tau)
-        
+
         C = Container([A, 15.2])
-    
+
         will yield the following:
         C[0] = A
         C.value[0] = A.value
         C[1] = C.value[1] = 15.2
-    
-    
+
+
     The primary reason containers exist is to allow nodes to have large
     sets of parents without the need to refer to each of the parents by name.
     Example:
-    
+
         x = []
-    
+
         @stochastic
         def x_0(value=0, mu=0, tau=2):
             return normal_like(value, mu, tau)
-    
+
         x.append(x_0)
         last_x = x_0
-    
-        for i in range(1,N):          
+
+        for i in range(1,N):
             @stochastic
             def x_now(value=0, mu = last_x, tau=2):
                 return normal_like(value, mu, tau)
-                
+
             x_now.__name__ = 'x[%i]' % i
             last_x = x_now
-        
+
             x.append(x_now)
-        
+
         @stochastic
         def y(value=0, mu = x, tau = 100):
 
@@ -112,33 +112,33 @@ def Container(*args):
                 mean_sum = mean_sum + mu[i]
 
             return normal_like(value, mean_sum, tau)
-        
-    x.value will be passed into y's log-probability function as argument mu, 
+
+    x.value will be passed into y's log-probability function as argument mu,
     so mu[i] will return x.value[i] = x[i].value. Stochastic y
     will cache the values of each element of x, and will evaluate whether it
     needs to recompute based on all of them.
-    
-    :SeeAlso: 
-      ListContainer, TupleContainer, SetContainer, ArrayContainer, DictContainer, 
+
+    :SeeAlso:
+      ListContainer, TupleContainer, SetContainer, ArrayContainer, DictContainer,
       ObjectContainer
     """
-        
+
     if len(args)==1:
         iterable = args[0]
     else:
         iterable = args
-    
+
     if isinstance(iterable, ContainerBase):
         return iterable
 
     for container_class, containing_classes in ContainerRegistry:
         if any([isinstance(iterable, containing_class) for containing_class in containing_classes]):
             return container_class(iterable)
-        
+
     # Wrap mutable objects
     if hasattr(iterable, '__dict__'):
         return ObjectContainer(iterable.__dict__)
-        
+
     # Otherwise raise an error.
     raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
 
@@ -148,7 +148,7 @@ def file_items(container, iterable):
     """
 
     # container._value = copy(iterable)
-    
+
     container.nodes = set()
     container.variables = set()
     container.deterministics = set()
@@ -158,9 +158,9 @@ def file_items(container, iterable):
 
     # containers needs to be a list to hold unhashable items.
     container.containers = []
-    
+
     i=-1
-    
+
     for item in iterable:
 
         # If this is a dictionary, switch from key to item.
@@ -195,7 +195,7 @@ def file_items(container, iterable):
             if isinstance(item, ndarray):
                 if item.dtype!=dtype('object'):
                     continue
-            
+
             # If the item is iterable, wrap it in a container. Replace the item
             # with the wrapped version.
             try:
@@ -214,19 +214,19 @@ def file_items(container, iterable):
             container.assimilate(new_container)
 
     container.nodes = container.potentials | container.variables
-    
+
     # 'Freeze' markov blanket, moral neighbors, coparents of all constituent stochastics
     # for future use
     for attr in ['moral_neighbors', 'markov_blanket', 'coparents']:
         setattr(container, attr, {})
     for s in container.stochastics:
-        for attr in ['moral_neighbors', 'markov_blanket', 'coparents']:        
+        for attr in ['moral_neighbors', 'markov_blanket', 'coparents']:
             getattr(container, attr)[s] = getattr(s, attr)
-    
-value_doc = 'A copy of self, with all variables replaced by their values.'    
+
+value_doc = 'A copy of self, with all variables replaced by their values.'
 
 def sort_list(container, _value):
-    val_ind = []   
+    val_ind = []
     val_obj = []
     nonval_ind = []
     nonval_obj = []
@@ -253,10 +253,10 @@ def sort_list(container, _value):
 class SetContainer(ContainerBase, frozenset):
     """
     SetContainers are containers that wrap sets.
-    
+
     :Parameters:
       iterable : set.
-      
+
     :Attributes:
       value : set
         A copy of self, with all variables replaced with their values.
@@ -272,13 +272,13 @@ class SetContainer(ContainerBase, frozenset):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, ListContainer, DictContainer, ArrayContainer, TupleContainer,
       ObjectContainer
     """
@@ -289,7 +289,7 @@ class SetContainer(ContainerBase, frozenset):
         self.new_iterable = set(iterable)
         file_items(self, self.new_iterable)
         ContainerBase.__init__(self, self.new_iterable)
-        self._value = list(self)        
+        self._value = list(self)
         sort_list(self, self._value)
 
     def replace(self, item, new_container, i):
@@ -304,11 +304,11 @@ class SetContainer(ContainerBase, frozenset):
 
 class TupleContainer(ContainerBase, tuple):
     """
-    TupleContainers are containers that wrap tuples. 
-    
+    TupleContainers are containers that wrap tuples.
+
     :Parameters:
       iterable : tuple.
-      
+
     :Attributes:
       value : tuple
         A copy of self, with all variables replaced with their values.
@@ -324,13 +324,13 @@ class TupleContainer(ContainerBase, tuple):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
@@ -340,9 +340,9 @@ class TupleContainer(ContainerBase, tuple):
 
     def __init__(self, iterable):
         tuple.__init__(self, file_items(self, iterable))
-        ContainerBase.__init__(self, iterable)        
+        ContainerBase.__init__(self, iterable)
         file_items(self, iterable)
-        self._value = list(self)        
+        self._value = list(self)
         sort_list(self, self._value)
 
     def replace(self, item, new_container, i):
@@ -356,11 +356,11 @@ class TupleContainer(ContainerBase, tuple):
 
 class ListContainer(ContainerBase, list):
     """
-    ListContainers are containers that wrap lists. 
-    
+    ListContainers are containers that wrap lists.
+
     :Parameters:
       iterable : list.
-      
+
     :Attributes:
       value : list
         A copy of self, with all variables replaced with their values.
@@ -376,29 +376,29 @@ class ListContainer(ContainerBase, list):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, TupleContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
     change_methods = ['__setitem__', '__delitem__', '__setslice__', '__delslice__', '__iadd__', '__imul__', 'append', 'extend', 'insert', 'pop', 'remove', 'reverse', 'sort']
     containing_classes = [list]
-    register=True    
+    register=True
     def __init__(self, iterable):
         list.__init__(self, iterable)
-        ContainerBase.__init__(self, iterable)      
+        ContainerBase.__init__(self, iterable)
         file_items(self, iterable)
-        self._value = list(self)          
+        self._value = list(self)
         sort_list(self, self._value)
 
     def replace(self, item, new_container, i):
         list.__setitem__(self, i, new_container)
-        
+
     def get_value(self):
         self.LCValue.run()
         return self._value
@@ -409,11 +409,11 @@ class DictContainer(ContainerBase, dict):
     """
     DictContainers are containers that wrap dictionaries.
     Modules are converted into DictContainers, and variables' and potentials'
-    Parents objects are DictContainers also. 
-    
+    Parents objects are DictContainers also.
+
     :Parameters:
       iterable : dictionary or object with a __dict__.
-      
+
     :Attributes:
       value : dictionary
         A copy of self, with all variables replaced with their values.
@@ -429,13 +429,13 @@ class DictContainer(ContainerBase, dict):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, ListContainer, TupleContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
@@ -444,11 +444,11 @@ class DictContainer(ContainerBase, dict):
     register=True
     def __init__(self, iterable):
         dict.__init__(self, iterable)
-        ContainerBase.__init__(self, iterable)        
+        ContainerBase.__init__(self, iterable)
         self._value = copy(iterable)
         file_items(self, iterable)
-        
-        self.val_keys = []   
+
+        self.val_keys = []
         self.val_obj = []
         self.nonval_keys = []
         self.nonval_obj = []
@@ -464,18 +464,18 @@ class DictContainer(ContainerBase, dict):
         # Leave this even though it's confusing!
         self.val_obj.append(None)
         self.nonval_obj.append(None)
-                
-        self.n_val = len(self.val_keys)        
+
+        self.n_val = len(self.val_keys)
         self.val_keys = array(self.val_keys, dtype=object)
         self.val_obj = array(self.val_obj, dtype=object)
-        self.n_nonval = len(self.nonval_keys)                        
+        self.n_nonval = len(self.nonval_keys)
         self.nonval_keys = array(self.nonval_keys, dtype=object)
-        self.nonval_obj = array(self.nonval_obj, dtype=object)        
+        self.nonval_obj = array(self.nonval_obj, dtype=object)
         self.DCValue = DCValue(self)
-        
+
     def replace(self, key, new_container):
-        dict.__setitem__(self, key, new_container)        
-        
+        dict.__setitem__(self, key, new_container)
+
     def get_value(self):
         # DCValue(self)
         self.DCValue.run()
@@ -486,13 +486,13 @@ class DictContainer(ContainerBase, dict):
 class ObjectContainer(ContainerBase):
     """
     ObjectContainers wrap non-iterable objects.
-    
-    Contents of the input iterable, or attributes of the input object, 
+
+    Contents of the input iterable, or attributes of the input object,
     are exposed as attributes of the object.
-    
+
     :Parameters:
       iterable : dictionary or object with a __dict__.
-      
+
     :Attributes:
       value : object
         A copy of self, with all variables replaced with their values.
@@ -508,13 +508,13 @@ class ObjectContainer(ContainerBase):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       TupleContainer
     """
@@ -532,14 +532,14 @@ class ObjectContainer(ContainerBase):
             input_to_file = input.__dict__
             self.__dict__.update(input_to_file)
 
-        self._dict_container = DictContainer(self.__dict__)  
+        self._dict_container = DictContainer(self.__dict__)
         file_items(self, input_to_file)
-        
+
         self._value = copy(self)
         ContainerBase.__init__(self, input)
         self.OCValue = OCValue(self)
-	
-        
+
+
     def replace(self, item, new_container, key):
         dict.__setitem__(self.__dict__, key, new_container)
 
@@ -547,17 +547,17 @@ class ObjectContainer(ContainerBase):
         self.OCValue.run()
         return self._value
     value = property(fget = _get_value, doc=value_doc)
-    
+
 
 class ArrayContainer(ContainerBase, ndarray):
     """
-    ArrayContainers wrap Numerical Python ndarrays. These are full 
-    ndarray subclasses, and should support all of ndarrays' 
+    ArrayContainers wrap Numerical Python ndarrays. These are full
+    ndarray subclasses, and should support all of ndarrays'
     functionality.
-    
+
     :Parameters:
       iterable : array.
-      
+
     :Attributes:
       value : array.
         A copy of self, with all variables replaced with their values.
@@ -573,17 +573,17 @@ class ArrayContainer(ContainerBase, ndarray):
         All the stochastics self contains with observed=True.
       containers : list
         All the containers self contains.
-        
+
     :Note:
-      - nodes, deterministics, etc. include all the objects in nested 
+      - nodes, deterministics, etc. include all the objects in nested
         containers.
       - value replaces objects in nested containers.
-    
-    :SeeAlso: 
+
+    :SeeAlso:
       Container, ListContainer, DictContainer, ObjectContainer, SetContainer,
       TupleContainer
     """
-    
+
     register=True
     change_methods = []
     containing_classes = [ndarray]
@@ -594,15 +594,15 @@ class ArrayContainer(ContainerBase, ndarray):
         C = array(array_in, copy=True).view(subtype)
         C_ravel = C.ravel()
         ContainerBase.__init__(C, array_in)
-        
+
         # Sort out contents and wrap internal containers.
         file_items(C, C_ravel)
-        C._value = C.copy()        
+        C._value = C.copy()
         C._ravelledvalue = C._value.ravel()
-        
-        # An array range to keep around.        
+
+        # An array range to keep around.
         C.iterrange = arange(len(C_ravel))
-        
+
         val_ind = []
         val_obj = []
         nonval_ind = []
@@ -623,11 +623,11 @@ class ArrayContainer(ContainerBase, ndarray):
         C.nonval_ind = array(nonval_ind, dtype=int)
         C.nonval_obj = array(nonval_obj, dtype=object)
         C.n_nonval = len(nonval_ind)
-        
-        
+
+
         C.flags['W'] = False
         C.ACValue = ACValue(C)
-        
+
         return C
 
     def replace(self, item, new_container, i):
@@ -637,6 +637,6 @@ class ArrayContainer(ContainerBase, ndarray):
     def get_value(self):
         self.ACValue.run()
         return self._value
-                
+
     value = property(fget = get_value, doc=value_doc)
-            
+

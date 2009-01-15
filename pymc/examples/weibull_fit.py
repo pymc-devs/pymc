@@ -3,14 +3,14 @@
 Fitting the parameters of a statistical distribution
 ====================================================
 
-This simple example shows how to fit the parameters of a 
-statistical distribution given 
+This simple example shows how to fit the parameters of a
+statistical distribution given
  - a series of experimental data,
  - priors for the parameters.
 
-The statistical distribution chosen here is the Weibull 
+The statistical distribution chosen here is the Weibull
 distribution, but the same can be done for any other
-distribution. 
+distribution.
 """
 
 import pymc
@@ -26,7 +26,7 @@ N = 100
 dataset = pymc.rweibull(alpha,beta, N)
 
 """
-Now we create a pymc model that defines the likelihood 
+Now we create a pymc model that defines the likelihood
 of the data set and prior assumptions about the value
 of the parameters.
 """
@@ -35,7 +35,7 @@ b = pymc.Uniform('b', lower=0, upper=10, value=5, doc='Weibull beta parameter')
 like = pymc.Weibull('like', alpha=a, beta=b, value=dataset, observed=True)
 
 """
-The last step is simply to sample the parameters a and b and analyze the 
+The last step is simply to sample the parameters a and b and analyze the
 results.
 """
 if __name__=='__main__':

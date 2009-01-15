@@ -19,35 +19,35 @@ from pymc.examples import model_1, model_2, model_3
 from numpy.testing import *
 class test_model_ave(TestCase):
     def test(self):
-        
+
         # Changepoint model
         M1 = Model(model_1)
-        
+
         # Constant rate model
         M2 = Model(model_2)
-        
+
         # Exponentially varying rate model
         M3 = Model(model_3)
-        
+
         # print 'Docstring of model 1:'
         # print model_1.__doc__
         # print 'Docstring of model 2:'
         # print model_2.__doc__
         # print 'Docstring of model 3:'
         # print model_3.__doc__
-        
-        
+
+
         posterior = weight([M1,M2,M3],10000)[0]
 
         # print 'Log posterior probability of changepoint model: ',log(posterior[M1])
         # print 'Log posterior probability of constant rate model: ',log(posterior[M2])
         # print 'Log posterior probability of linearly varying rate model: ',log(posterior[M3])
 
-        
+
         assert(abs(log(posterior[M1]))<1e-10)
         assert(abs(log(posterior[M2])+30)<4)
         assert(abs(log(posterior[M3])+60)<30)
-        
+
 
 if __name__=='__main__':
     import unittest

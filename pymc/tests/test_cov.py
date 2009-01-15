@@ -13,6 +13,6 @@ class test_cov(TestCase):
 
         assert(C(x).shape == x.shape)
         assert(C(x,x).shape == (len(x), len(x)))
-             
+
         assert(D(y).shape == (y.shape[0],))
         assert(D(y,y).shape == (y.shape[0], y.shape[0]))

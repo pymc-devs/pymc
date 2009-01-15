@@ -21,9 +21,9 @@ disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                    3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                    0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-s = DiscreteUniform('s', lower=0, upper=110)   
+s = DiscreteUniform('s', lower=0, upper=110)
 e = Exponential('e', beta=1)
-l = Exponential('l', beta=1)   
+l = Exponential('l', beta=1)
 
 @deterministic(plot=False)
 def r(s=s, e=e, l=l):
@@ -32,5 +32,5 @@ def r(s=s, e=e, l=l):
     out[:s] = e
     out[s:] = l
     return out
- 
+
 D = Poisson('D', mu=r, value=disasters_array, observed=True)

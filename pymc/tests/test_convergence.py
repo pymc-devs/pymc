@@ -20,30 +20,30 @@ S.sample(10000, 2000)
 
 DIR = 'testresults'
 
-class test_geweke(TestCase):       
-        
+class test_geweke(TestCase):
+
     def test_simple(self):
         scores = pymc.geweke(S, intervals=20)
         a_scores = scores['a']
         assert_equal(len(a_scores), 20)
-        
+
         # If the model has converged, 95% the scores should lie
         # within 2 standard deviations of zero, under standard normal model
         assert(sum(np.abs(np.array(a_scores)[:,1]) > 1.96) < 2)
-        
+
         # Plot diagnostics (if plotting is available)
         try:
             from pymc.Matplot import geweke_plot as plot
             plot(scores,  path=DIR, verbose=0)
         except ImportError:
             pass
-        
+
 class test_raftery_lewis(TestCase):
-       
+
     def test_simple(self):
 
         nmin, kthin, nburn, nprec, kmind = pymc.raftery_lewis(S.a, 0.5, .05, verbose=0)
-        
+
         # nmin should approximately be the same as nprec/kmind
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 

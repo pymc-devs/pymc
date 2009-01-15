@@ -7,21 +7,21 @@ __all__ = ['sample_likelihood', 'weight']
 
 def sample_likelihood(model, iter, verbose=0):
     """
-    Returns iter samples of 
-    
+    Returns iter samples of
+
     log p(data|self.stochastics, self) * sum(self.potentials)
-        and 
+        and
     sum(self.potentials),
-    
+
     where 'sample' means that self.stochastics are drawn from their joint prior and then these
     quantities are evaluated. See documentation.
-    
-    Exponentiating, averaging and dividing the return values gives an estimate of the model 
+
+    Exponentiating, averaging and dividing the return values gives an estimate of the model
     likelihood, p(data|self).
     """
-    
+
     model._generations = find_generations(model)
-    
+
     loglikes = zeros(iter)
 
     if len (model.potentials) > 0:
@@ -45,7 +45,7 @@ def sample_likelihood(model, iter, verbose=0):
 
     except KeyboardInterrupt:
         print 'Halted at sample ', i, ' of ', iter
-    
+
     return loglikes[:i], logpots[:i]
 
 def weight(models, iter, priors = None, verbose=0):
@@ -64,14 +64,14 @@ def weight(models, iter, priors = None, verbose=0):
     Returns a dictionary keyed by model of the model posterior probabilities,
     and two similar dictionaries containing the log-likelihoods and log-potentials
     sampled over the course of the estimation.
-    
+
     WARNING: the weight() function will usually not work well unless
     the dimension of the parameter space is small. Please do not trust
     its output unless you check that it has weighted a large number of
     samples more or less evenly.
     """
-    
-    
+
+
     # TODO: Need to attach a standard error to the return values.
     loglikes = {}
     logpots = {}
@@ -92,11 +92,11 @@ def weight(models, iter, priors = None, verbose=0):
     posteriors = {}
     sumpost = 0
     for model in models:
-        
+
         # Regularize
         loglikes[model] -= max_loglike
         logpots[model] -= max_logpot
-        
+
         # Exponentiate and average
         posteriors[model] = mean(exp(loglikes[model])) / mean(exp(logpots[model]))
 

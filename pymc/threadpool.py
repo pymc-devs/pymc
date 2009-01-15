@@ -144,10 +144,10 @@ class WorkerThread(threading.Thread):
             if self._dismissed.isSet():
                 # we are dismissed, break out of loop
                 break
-                
-            # get next work request. 
+
+            # get next work request.
             request = self._requests_queue.get()
-            # print 'Worker thread %s running request %s' %(self, request)                        
+            # print 'Worker thread %s running request %s' %(self, request)
 
             if self._dismissed.isSet():
                 # we are dismissed, put back request in queue and exit loop
@@ -275,7 +275,7 @@ class ThreadPool:
         for i in range(min(num_workers, len(self.workers))):
             worker = self.workers.pop()
             worker.dismiss()
-            
+
     def setNumWorkers(self, num_workers):
         """Set number of worker threads to num_workers"""
         cur_num = len(self.workers)
@@ -326,7 +326,7 @@ if os.environ.has_key('OMP_NUM_THREADS'):
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 else:
     __PyMCThreadPool__ = ThreadPool(2)
-    
+
 def map_noreturn(targ, argslist):
     """
     parallel_call_noreturn(targ, argslist)
@@ -353,7 +353,7 @@ def map_noreturn(targ, argslist):
 
         rem[0] -= 1
         if rem[0] == 0:
-            dl.release()                
+            dl.release()
 
     def cb(wr, value, rem=remaining, dl=done_lock):
         rem[0] -= 1
@@ -362,8 +362,8 @@ def map_noreturn(targ, argslist):
 
     done_lock.acquire()
     for args in argslist:
-        __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))     
-    done_lock.acquire()           
+        __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))
+    done_lock.acquire()
     done_lock.release()
 
     if exceptions:
@@ -378,7 +378,7 @@ def set_threadpool_size(n):
 def get_threadpool_size():
     return len(__PyMCThreadPool__.workers)
 
-__PyMCLock__ = threading.Lock()        
+__PyMCLock__ = threading.Lock()
 __PyMCExcInfo__ = [None]
 
 

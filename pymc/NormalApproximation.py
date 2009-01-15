@@ -30,91 +30,91 @@ except ImportError:
 class NormApproxMu(object):
     """
     Returns the mean vector of some variables.
-    
-    Usage: If p1 and p2 are array-valued stochastic variables and N is a 
+
+    Usage: If p1 and p2 are array-valued stochastic variables and N is a
     NormApprox or MAP object,
-    
+
     N.mu(p1,p2)
-    
+
     will give the approximate posterior mean of the ravelled, concatenated
     values of p1 and p2.
     """
     def __init__(self, owner):
         self.owner = owner
-    
+
     def __getitem__(self, *stochastics):
-        
+
         if not self.owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before mu can be accessed.'
-        
+
         tot_len = 0
-        
+
         try:
             for p in stochastics[0]:
                 pass
             stochastic_tuple = stochastics[0]
         except:
             stochastic_tuple = stochastics
-        
+
         for p in stochastic_tuple:
             tot_len += self.owner.stochastic_len[p]
-            
+
         mu = zeros(tot_len, dtype=float)
-        
+
         start_index = 0
         for p in stochastic_tuple:
             mu[start_index:(start_index + self.owner.stochastic_len[p])] = self.owner._mu[self.owner._slices[p]]
             start_index += self.owner.stochastic_len[p]
-            
+
         return mu
-        
+
 
 class NormApproxC(object):
     """
     Returns the covariance matrix of some variables.
-    
+
     Usage: If p1 and p2 are array-valued stochastic variables and N is a
     NormApprox or MAP object,
-    
+
     N.C(p1,p2)
-    
-    will give the approximate covariance matrix of the ravelled, concatenated 
+
+    will give the approximate covariance matrix of the ravelled, concatenated
     values of p1 and p2
     """
     def __init__(self, owner):
         self.owner = owner
-            
+
     def __getitem__(self, *stochastics):
-        
+
         if not self.owner.fitted:
             raise ValueError, 'NormApprox object must be fitted before C can be accessed.'
-        
+
         tot_len = 0
-        
+
         try:
             for p in stochastics[0]:
                 pass
             stochastic_tuple = stochastics[0]
         except:
             stochastic_tuple = stochastics
-        
+
         for p in stochastic_tuple:
             tot_len += self.owner.stochastic_len[p]
 
         C = asmatrix(zeros((tot_len, tot_len)), dtype=float)
-            
+
         start_index1 = 0
         for p1 in stochastic_tuple:
             start_index2 = 0
-            for p2 in stochastic_tuple:                
+            for p2 in stochastic_tuple:
                 C[start_index1:(start_index1 + self.owner.stochastic_len[p1]), \
                 start_index2:(start_index2 + self.owner.stochastic_len[p2])] = \
                 self.owner._C[self.owner._slices[p1],self.owner._slices[p2]]
-                
+
                 start_index2 += self.owner.stochastic_len[p2]
-                
+
             start_index1 += self.owner.stochastic_len[p1]
-            
+
         return C
 
 class MAP(Model):
@@ -137,7 +137,7 @@ class MAP(Model):
 
     :Arguments:
     input: As for Model
-    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
+    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable
       as well as a scalar.
     diff_order: The order of the approximation used to compute derivatives.
 
@@ -190,9 +190,9 @@ class MAP(Model):
         for datum in self.observed_stochastics:
             self.data_len += len(ravel(datum.value))
 
-        # Unpack step    
+        # Unpack step
         self.eps = zeros(self.len,dtype=float)
-        if isinstance(eps,dict):        
+        if isinstance(eps,dict):
             for stochastic in self.stochastics:
                 self.eps[self._slices[stochastic]] = eps[stochastic]
         else:
@@ -253,48 +253,48 @@ class MAP(Model):
                 pass
 
         if self.method == 'fmin_ncg':
-            p=fmin_ncg( f = self.func, 
-                        x0 = p, 
-                        fprime = self.gradfunc, 
-                        fhess = self.hessfunc, 
-                        epsilon=self.eps, 
+            p=fmin_ncg( f = self.func,
+                        x0 = p,
+                        fprime = self.gradfunc,
+                        fhess = self.hessfunc,
+                        epsilon=self.eps,
                         maxiter=iterlim,
-                        callback=callback, 
-                        avextol=tol, 
+                        callback=callback,
+                        avextol=tol,
                         disp=verbose)
 
         elif self.method == 'fmin':
 
-            p=fmin( func = self.func, 
-                    x0=p, 
-                    callback=callback, 
+            p=fmin( func = self.func,
+                    x0=p,
+                    callback=callback,
                     maxiter=iterlim,
                     ftol=tol,
                     disp=verbose)
 
         elif self.method == 'fmin_powell':
-            p=fmin_powell(  func = self.func, 
-                            x0=p, 
-                            callback=callback, 
+            p=fmin_powell(  func = self.func,
+                            x0=p,
+                            callback=callback,
                             maxiter=iterlim,
                             ftol=tol,
                             disp=verbose)
 
         elif self.method == 'fmin_cg':
-            p=fmin_cg(  f = self.func, x0 = p, 
-                        fprime = self.gradfunc, 
-                        epsilon=self.eps, 
-                        callback=callback, 
+            p=fmin_cg(  f = self.func, x0 = p,
+                        fprime = self.gradfunc,
+                        epsilon=self.eps,
+                        callback=callback,
                         maxiter=iterlim,
                         gtol=tol,
                         disp=verbose)
 
         elif self.method == 'fmin_l_bfgs_b':
-            p=fmin_l_bfgs_b(func = self.func, 
-                            x0 = p, 
-                            fprime = self.gradfunc, 
-                            epsilon = self.eps, 
-                            # callback=callback, 
+            p=fmin_l_bfgs_b(func = self.func,
+                            x0 = p,
+                            fprime = self.gradfunc,
+                            epsilon = self.eps,
+                            # callback=callback,
                             pgtol=tol,
                             iprint=verbose-1)[0]
 
@@ -326,12 +326,12 @@ class MAP(Model):
 
     def gradfunc(self, p):
         """
-        The gradient-computing function that gets passed to the optimizers, 
+        The gradient-computing function that gets passed to the optimizers,
         if needed.
         """
         self._set_stochastics(p)
         for i in xrange(self.len):
-            self.grad[i] = self.diff(i)            
+            self.grad[i] = self.diff(i)
 
         return -1 * self.grad
 
@@ -407,7 +407,7 @@ class MAP(Model):
         """
         for i in xrange(self.len):
 
-            di = self.diff(i)            
+            di = self.diff(i)
             self.grad[i] = di
             self.hess[i,i] = self.diff(i,2)
 
@@ -427,7 +427,7 @@ class MAP(Model):
         self._set_stochastics(p)
         for i in xrange(self.len):
 
-            di = self.diff(i)            
+            di = self.diff(i)
             self.hess[i,i] = self.diff(i,2)
 
             if i < self.len - 1:
@@ -436,9 +436,9 @@ class MAP(Model):
                     dij = self.diff2(i,j)
 
                     self.hess[i,j] = dij
-                    self.hess[j,i] = dij 
+                    self.hess[j,i] = dij
 
-        return -1. * self.hess                   
+        return -1. * self.hess
 
     def revert_to_max(self):
         """
@@ -451,14 +451,14 @@ class MAP(Model):
 class NormApprox(MAP, Sampler):
     """
     N = NormApprox(input, db='ram', eps=.001, diff_order = 5, **kwds)
-    
+
     Normal approximation to the posterior of a model.
-    
+
     Useful methods:
     draw:           Draws values for all stochastic variables using normal approximation
     revert_to_max:  Sets all stochastic variables to mean value under normal approximation
     fit:            Finds the normal approximation.
-    
+
     Useful attributes (after fit() is called):
     mu[p1, p2, ...]:    Returns the posterior mean vector of stochastic variables p1, p2, ...
     C[p1, p2, ...]:     Returns the posterior covariance of stochastic variables p1, p2, ...
@@ -468,20 +468,20 @@ class NormApprox(MAP, Sampler):
     data_len:           The number of datapoints used ('n' in BIC)
     AIC:                Akaike's Information Criterion for the model
     BIC:                Bayesian Information Criterion for the model
-    
+
     :Arguments:
     input: As for Model
     db: A database backend
-    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
+    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable
       as well as a scalar.
     diff_order: The order of the approximation used to compute derivatives.
-        
+
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
     def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, **kwds):
         if not scipy_imported:
             raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
-        
+
         MAP.__init__(self, input, eps, diff_order)
 
         Sampler.__init__(self, input, db, reinit_model=False, **kwds)
@@ -491,16 +491,16 @@ class NormApprox(MAP, Sampler):
         MAP.fit(self, *args, **kwargs)
         self.fitted = False
         self.grad_and_hess()
-        
+
         self._C = -1. * self.hess.I
         self._sig = msqrt(self._C).T
-        
+
         self.fitted = True
-        
+
     def draw(self):
         """
         N.draw()
-        
+
         Sets all N's stochastics to random values drawn from
         the normal approximation to the posterior.
         """

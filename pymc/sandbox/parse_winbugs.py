@@ -1,6 +1,6 @@
 """
 Syntax needed:
-        
+
 arrays: x[n:m], x[], x[,3] just translate straight to numpy arrays
 
 repeated structures:
@@ -27,7 +27,7 @@ Can also write PyMC to WinBugs?
 import pyparsing as pp
 import pymc as pm
 import numpy as np
-    
+
 
 # ===========================================
 # = Map BUGS arithmetic obs to numpy ufuncs =
@@ -36,11 +36,11 @@ arith_ops = {'+':np.add,
             '*': np.multiply,
             '/': np.divide,
             '-': np.subtract}
-            
-            
+
+
 # ==================================================
 # = Map BUGS functions to numpy or scipy functions =
-# ==================================================            
+# ==================================================
 
 bugs_funs = {'cloglog': lambda x: log(-log(1-x)),
             # 'cut' : None   Not implemented.
@@ -58,10 +58,10 @@ bugs_funs = {'cloglog': lambda x: log(-log(1-x)),
             'sd': np.std,
             'step': lambda x: x>0,
             'trunc': np.floor}
-            
+
 for numpy_synonym in ['abs', 'cos', 'exp', 'log', 'max', 'mean', 'min', 'sin', 'sqrt', 'round', 'sum']:
     bugs_funs[numpy_synonym] = getattr(np, numpy_synonym)
-    
+
 try:
     import scipy
     bugs_funs.update({'logfact': scipy.special.gammaln,
@@ -106,7 +106,7 @@ bugs_dists = {'bern': (pm.Bernoulli, 'p'),
 def check_distribution(toks):
     if toks[0] not in bugs_dists:
         raise NameError, 'Distribution "%s" has no analogue in PyMC.' % toks[0]
-        
+
 def check_function(toks):
     if len(toks) > 1:
         if toks[0] not in bugs_funs:
@@ -150,7 +150,7 @@ BugsDistribution = (sl('d') + pp.Word(pp.alphas).setResultsName('dist') + sl('('
 BugsFunction = pp.Group(pp.Word(pp.alphas).setResultsName('fun') + sl('(') + pp.delimitedList(BugsExpr).setResultsName('args') + sl(')'))\
                 .setParseAction(lambda s, l, toks: check_function(toks))
 
-BugsExpr << pp.operatorPrecedence(BugsFunction ^ BugsAtom, 
+BugsExpr << pp.operatorPrecedence(BugsFunction ^ BugsAtom,
                                     [('-', 1, pp.opAssoc.RIGHT),
                                     (pp.oneOf('* /'),2, pp.opAssoc.LEFT),
                                     (pp.oneOf('- +'), 2, pp.opAssoc.LEFT)])
@@ -167,8 +167,8 @@ BugsSubModel = pp.OneOrMore(BugsStochastic ^ BugsDeterministic)
 
 # ===============================================
 # = Parse actions corresponding to BUGS grammar =
-# ===============================================        
-    
+# ===============================================
+
 
 if __name__ == '__main__':
 

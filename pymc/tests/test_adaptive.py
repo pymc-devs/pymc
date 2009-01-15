@@ -11,9 +11,9 @@ def test_square():
 
     M = pymc.MCMC([iw, mnc])
     M.sample(8)
-    
-    
-    
+
+
+
 if __name__ == '__main__':
     warnings.simplefilter('ignore',  FutureWarning)
     nose.runmodule()

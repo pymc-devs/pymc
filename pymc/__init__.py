@@ -2,7 +2,7 @@
 Markov Chain methods in Python.
 
 A toolkit of stochastic methods for biometric analysis. Features
-a Metropolis-Hastings MCMC sampler and both linear and unscented 
+a Metropolis-Hastings MCMC sampler and both linear and unscented
 (non-linear) Kalman filters.
 
 Pre-requisite modules: numpy, matplotlib
@@ -55,7 +55,7 @@ try:
     import parallel
 except ImportError:
     pass
-    
+
 try:
     import sandbox
 except ImportError:

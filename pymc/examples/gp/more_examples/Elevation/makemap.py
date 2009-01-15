@@ -46,7 +46,7 @@ m = Basemap(projection='cyl',
             # lon_1 = lon_mid,
             # lat_2 = urcrnrlat*1.5,
             # lon_2 = lon_mid,
-            llcrnrlon = llcrnrlon, 
+            llcrnrlon = llcrnrlon,
             llcrnrlat = llcrnrlat,
             urcrnrlon = urcrnrlon,
             urcrnrlat = urcrnrlat,
@@ -81,5 +81,5 @@ def make_map(fun=None):
         # m.contourf(x_plot,y_plot,fun(pts_plot))
         m.imshow(fun(pts_plot), cmap=cmap_map(lambda x: x*.9+.1, cm.bone))
         colorbar()
-        
+
     m.drawlsmask((255,255,255,0),(5,0,30,255),lakes=True)

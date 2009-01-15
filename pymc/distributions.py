@@ -3,7 +3,7 @@ pymc.distributions
 
 A collection of common probability distributions. The objects associated
 with a distribution called 'dist' are:
-  
+
   dist_like : function
     The log-likelihood function corresponding to dist. PyMC's convention
     is to sum the log-likelihoods of multiple input values, so all
@@ -51,7 +51,7 @@ class ArgumentError(AttributeError):
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
-'weibull','skew_normal', 'truncnorm']
+'weibull','skew_normal', 'truncnorm', 'von_mises']
 
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
 
@@ -81,7 +81,7 @@ def bind_size(randfun, size):
 def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
-    
+
     :Parameters:
       dtype : numpy dtype
         The dtype values of instances of this class.
@@ -100,21 +100,21 @@ def new_dist_class(*new_class_args):
       mv : boolean
         A flag indicating whether this class represents array-valued
         variables.
-      
+
       :Note:
         stochastic_from_dist provides a higher-level version.
-      
+
       :SeeAlso:
         stochastic_from_dist
     """
-    
+
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
             parents=parents_default
-            
+
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
             arg_vals = [None, parents, None, False, None, True, True, None, False, None, 0]
@@ -122,16 +122,16 @@ def new_dist_class(*new_class_args):
                 warnings.warn('"isdata" is deprecated, please use "observed" instead.')
                 kwds['observed'] = kwds['isdata']
                 pass
-                
-            
+
+
             # No size argument allowed for multivariate distributions.
             if mv:
                 arg_keys.pop(4)
                 arg_vals.pop(4)
-            
+
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed = ['name'] + parent_names + arg_keys[2:]
-            
+
             # Sort positional arguments
             for i in xrange(len(args)):
                 try:
@@ -143,7 +143,7 @@ def new_dist_class(*new_class_args):
                 except:
                     raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
 
-            
+
             # Sort keyword arguments
             for k in args_needed:
                 if k in parent_names:
@@ -161,7 +161,7 @@ def new_dist_class(*new_class_args):
                         pass
                 else:
                     raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
-        
+
         # Determine size desired for scalar variables.
         # Notes
         # -----
@@ -172,8 +172,8 @@ def new_dist_class(*new_class_args):
         # 1.3  | None         | n             | None | n           | 1
         # 1.4  | None         | n             | n(m) | n (Error)   | 1 (-)
         # 2.1  | scalar       | scalars       | None | 1           | 1
-        # 2.2  | scalar       | scalars       | n    | n           | n 
-        # 2.3  | scalar       | n             | None | n           | 1 
+        # 2.2  | scalar       | scalars       | n    | n           | n
+        # 2.3  | scalar       | n             | None | n           | 1
         # 2.4  | scalar       | n             | n(m) | n (Error)   | 1 (-)
         # 3.1  | n            | scalars       | None | n           | n
         # 3.2  | n            | scalars       | n(m) | n (Error)   | n (-)
@@ -181,18 +181,18 @@ def new_dist_class(*new_class_args):
         # 3.4  | n            | n             | n(m) | n (Error)   | 1 (-)
 
             if not mv:
-                size = arg_dict_out.pop('size') 
+                size = arg_dict_out.pop('size')
                 init_val = arg_dict_out['value']
                 init_val_size = np.alen(init_val)
                 parents_size = 1
                 for v in parents.values():
                     try:
                         parents_size = max(parents_size, np.size(v.value))
-                    except: 
+                    except:
                         parents_size = max(parents_size, np.size(v))
-                
+
                 bindsize = 1
-                
+
                 if np.size(init_val) == 1:
                     if size is not None:
                         if parents_size == 1:
@@ -215,33 +215,33 @@ def new_dist_class(*new_class_args):
                 if random is not None:
                     random = bind_size(random, bindsize)
                     test_val = random(**(pymc.DictContainer(parents).value))
-                
+
                 if init_val is not None and random is not None:
                     if np.size(init_val) != np.size(test_val):
                         raise AttributeError, \
                         'init_val size: %d, test_val size: %d'%(np.size(init_val),np.size(test_val))
-                
+
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
-                                    
-            
+
+
             # Call base class initialization method
             if arg_dict_out.pop('debug'):
                 logp = debug_wrapper(logp)
                 random = debug_wrapper(random)
             else:
                 Stochastic.__init__(self, logp=logp, random=random, dtype=dtype, **arg_dict_out)
-    
+
     new_class.__name__ = name
     new_class.parent_names = parent_names
-    
+
     return new_class
 
 
 def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
-    
+
     :Parameters:
       name : string
         The name of the new class.
@@ -254,7 +254,7 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
       mv : boolean
         A flag indicating whether this class represents
         array-valued variables.
-    
+
     :Example:
       >>> Exponential = stochastic_from_dist('exponential',
                                               logp=exponential_like,
@@ -262,24 +262,24 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
                                               dtype=np.float,
                                               mv=False)
       >>> A = Exponential(self_name, value, beta)
-    
+
     :Note:
       new_dist_class is a more flexible class factory. Also consider
       subclassing Stochastic directly.
-    
+
     :SeeAlso:
       new_dist_class
     """
-    
+
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
     parent_names = args[1:]
     try:
         parents_default = dict(zip(args[-len(defaults):], defaults))
     except TypeError: # No parents at all.
         parents_default = {}
-    
+
     name = capitalize(name)
-    
+
     # Build docstring from distribution
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, observed=False,'
     if not mv:
@@ -288,7 +288,7 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
-    
+
     logp=valuewrapper(logp)
     return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv)
 
@@ -301,25 +301,25 @@ def Vectorize(f):
     """
     Wrapper to vectorize a scalar function.
     """
-    
+
     return np.vectorize(f)
 
 def randomwrap(func):
     """
     Decorator for random value generators
-    
+
     Allows passing of sequence of parameters, as well as a size argument.
 
-    
+
     Convention:
-      
+
       - If size=1 and the parameters are all scalars, return a scalar.
       - If size=1, the random variates are 1D.
       - If the parameters are scalars and size > 1, the random variates are 1D.
       - If size > 1 and the parameters are sequences, the random variates are
         aligned as (size, max(length)), where length is the parameters size.
 
-    
+
     :Example:
       >>> rbernoulli(.1)
       0
@@ -332,14 +332,14 @@ def randomwrap(func):
              [0, 1]])
     """
 
-    
+
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
     mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
-    
+
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
         n = len(args)
@@ -350,7 +350,7 @@ def randomwrap(func):
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-        
+
         r = [];s=[];largs=[];nr = args[-1]
         length = [np.atleast_1d(a).shape[0] for a in args]
         dimension = [np.atleast_1d(a).ndim for a in args]
@@ -359,7 +359,7 @@ def randomwrap(func):
             raise 'Dimensions do not agree.'
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
-        
+
         for arg, s in zip(args, length):
             t = type(arg)
             arr = np.empty(N, type)
@@ -370,17 +370,17 @@ def randomwrap(func):
             else:
                 raise 'Arguments size not allowed.', s
             largs.append(arr)
-        
+
         if mv and N >1 and max(dimension)>1 and nr>1:
             raise 'Multivariate distributions cannot take s>1 and multiple values.'
-        
+
         if mv:
             for i, arg in enumerate(largs[:-1]):
                 largs[0] = np.atleast_2d(arg)
-        
+
         for arg in zip(*largs):
             r.append(func(*arg))
-        
+
         size = arg[-1]
         vec_stochastics = len(r)>1
         if mv:
@@ -395,28 +395,28 @@ def randomwrap(func):
                 return np.concatenate(r)
             else: # Scalar case
                 return r[0][0]
-    
+
     wrapper.__doc__ = func.__doc__
     wrapper.__name__ = func.__name__
     return wrapper
 
 def debugwrapper(func, name):
     # Wrapper to debug distributions
-    
+
     import pdb
-    
+
     def wrapper(*args, **kwargs):
-        
+
         print 'Debugging inside %s:' % name
         print '\tPress \'s\' to step into function for debugging'
         print '\tCall \'args\' to list function arguments'
-        
+
         # Set debugging trace
         pdb.set_trace()
-        
+
         # Call function
         return func(*args, **kwargs)
-    
+
     return wrapper
 
 
@@ -428,7 +428,7 @@ def constrain(value, lower=-np.Inf, upper=np.Inf, allow_equal=False):
     """
     Apply interval constraint on stochastic value.
     """
-    
+
     ok = flib.constrain(value, lower, upper, allow_equal)
     if ok == 0:
         raise ZeroProbability
@@ -436,10 +436,10 @@ def constrain(value, lower=-np.Inf, upper=np.Inf, allow_equal=False):
 def standardize(x, loc=0, scale=1):
     """
     Standardize x
-    
+
     Return (x-loc)/scale
     """
-    
+
     return flib.standardize(x,loc,scale)
 
 # ==================================
@@ -450,14 +450,14 @@ def gammaln(x):
     """
     Logarithm of the Gamma function
     """
-    
+
     return flib.gamfun(x)
 
 def expand_triangular(X,k):
     """
     Expand flattened triangular matrix.
     """
-    
+
     X = X.tolist()
     # Unflatten matrix
     Y = np.asarray([[0] * i + X[i * k - (i * (i - 1)) / 2 : i * k + (k - i)] for i in range(k)])
@@ -482,52 +482,52 @@ loss_functions = {'absolute':absolute_loss, 'squared':squared_loss, 'chi_square'
 def GOFpoints(x,y,expval,loss):
     # Return pairs of points for GOF calculation
     return np.sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)
-    
+
 def gofwrapper(f, loss_function='squared'):
     """
     Goodness-of-fit decorator function for likelihoods
     ==================================================
     Generates goodness-of-fit points for data likelihoods.
-    
+
     Wrap function f(*args, **kwds) where f is a likelihood.
-    
+
     Assume args = (x, parameter1, parameter2, ...)
     Before passing the arguments to the function, the wrapper makes sure that
     the parameters have the same shape as x.
     """
-    
+
     name = f.__name__[:-5]
     # Take a snapshot of the main namespace.
-    
+
     # Find the functions needed to compute the gof points.
     expval_func = eval(name+'_expval')
     random_func = eval('r'+name)
-    
+
     def wrapper(*args, **kwds):
         """
         This wraps a likelihood.
         """
-        
+
         """Return gof points."""
-        
+
         # Calculate loss
         loss = kwds.pop('gof', loss_functions[loss_function])
-        
+
         # Expected value, given parameters
         expval = expval_func(*args[1:], **kwds)
         y = random_func(size=len(args[0]), *args[1:], **kwds)
         f.gof_points = GOFpoints(args[0], y, expval, loss)
-    
+
         """Return likelihood."""
-        
+
         return f(*args, **kwds)
 
-    
+
     # Assign function attributes to wrapper.
     wrapper.__doc__ = f.__doc__
     wrapper.__name__ = f.__name__
     wrapper.name = name
-    
+
     return wrapper
 
 #--------------------------------------------------------
@@ -538,9 +538,9 @@ def gofwrapper(f, loss_function='squared'):
 # Autoregressive lognormal
 def rarlognormal(a, sigma, rho, size=1):
     """rarnormal(a, sigma, rho)
-    
+
     Autoregressive normal random variates.
-    
+
     If a is a scalar, generates one series of length size.
     If a is a sequence, generates size series of the same length
     as a.
@@ -558,13 +558,13 @@ def rarlognormal(a, sigma, rho, size=1):
 
 def arlognormal_like(x, a, sigma, rho):
     R"""arnormal(x, a, sigma, rho, beta=1)
-    
+
     Autoregressive lognormal log-likelihood.
-    
+
     .. math::
         x_i & = a_i \exp(e_i) \\
         e_i & = \rho e_{i-1} + \epsilon_i
-    
+
     where :math:`\epsilon_i \sim N(0,\sigma)`.
     """
     return flib.arlognormal(x, np.log(a), sigma, rho, beta=1)
@@ -575,49 +575,49 @@ def arlognormal_like(x, a, sigma, rho):
 def rbernoulli(p,size=1):
     """
     rbernoulli(p,size=1)
-    
+
     Random Bernoulli variates.
     """
-    
+
     return np.random.random(size)<p
 
 def bernoulli_expval(p):
     """
     bernoulli_expval(p)
-    
+
     Expected value of bernoulli distribution.
     """
-    
+
     return p
 
 
 def bernoulli_like(x, p):
     R"""Bernoulli log-likelihood
-    
+
     The Bernoulli distribution describes the probability of successes (x=1) and
     failures (x=0).
-    
+
     .. math::
         f(x \mid p) = p^{x} (1-p)^{1-x}
-    
+
     :Parameters:
       x : sequence of Booleans
         Series of successes (1) and failures (0). :math:`x=0,1`
       p : float
         Probability of success. :math:`0 < p < 1`.
-    
+
     :Example:
-    
+
     >>> bernoulli_like([0,1,0,1], .4)
     -2.8542325496673584
-    
+
     .. note::
 
       - :math:`E(x)= p`
       - :math:`Var(x)= p(1-p)`
-    
+
     """
-    
+
     return flib.bernoulli(x, p)
 
 
@@ -626,31 +626,31 @@ def bernoulli_like(x, p):
 def rbeta(alpha, beta, size=1):
     """
     rbeta(alpha, beta, size=1)
-    
+
     Random beta variates.
     """
-    
+
     return np.random.beta(alpha, beta,size)
 
 def beta_expval(alpha, beta):
     """
     beta_expval(alpha, beta)
-    
+
     Expected value of beta distribution.
     """
-    
+
     return 1.0 * alpha / (alpha + beta)
 
 
 def beta_like(x, alpha, beta):
     R"""
     beta_like(x, alpha, beta)
-    
+
     Beta log-likelihood. The conjugate prior for the parameter :math: `p` of the binomial distribution.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
-    
+
     :Parameters:
       x : float
           0 < x < 1
@@ -658,15 +658,15 @@ def beta_like(x, alpha, beta):
           alpha > 0
       beta : float
           beta > 0
-    
+
     :Example:
       >>> beta_like(.4,1,2)
       0.18232160806655884
-    
+
     :Note:
       - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
       - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
-    
+
     """
     # try:
     #     constrain(alpha, lower=0, allow_equal=True)
@@ -681,32 +681,32 @@ def beta_like(x, alpha, beta):
 def rbinomial(n, p, size=1):
     """
     rbinomial(n,p,size=1)
-    
+
     Random binomial variates.
     """
-    
+
     return np.random.binomial(n,p,size)
 
 def binomial_expval(n, p):
     """
     binomial_expval(n, p)
-    
+
     Expected value of binomial distribution.
     """
-    
+
     return p*n
 
 def binomial_like(x, n, p):
     R"""
     binomial_like(x, n, p)
-    
+
     Binomial log-likelihood.  The discrete probability distribution of the
     number of successes in a sequence of n independent yes/no experiments,
     each of which yields success with probability p.
-    
+
     .. math::
         f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}
-    
+
     :Parameters:
       x : int
         Number of successes, > 0.
@@ -714,12 +714,12 @@ def binomial_like(x, n, p):
         Number of Bernoulli trials, > x.
       p : float
         Probability of success in each trial, :math:`p \in [0,1]`.
-    
+
     :Note:
      - :math:`E(X)=np`
      - :math:`Var(X)=np(1-p)`
     """
-    
+
     return flib.binomial(x,n,p)
 
 # Categorical----------------------------------------------
@@ -737,14 +737,14 @@ def rcategorical(p, size=1):
 def categorical_like(x, p):
     R"""
     categorical_like(x,p)
-    
+
     Categorical log-likelihood. The most general discrete distribution.
-    
+
     ..math::
         f(x=i \mid p) = p_i
     ..math::
         i \in 0\ldots k-1
-    
+
     :Parameters:
       x : integer
         :math: `x \in 0\ldots k-1`
@@ -752,7 +752,7 @@ def categorical_like(x, p):
         :math: `p > 0`
         :math: `\sum p = 1`
     """
-    
+
     return flib.categorical(x, p)
 
 
@@ -761,42 +761,42 @@ def categorical_like(x, p):
 def rcauchy(alpha, beta, size=1):
     """
     rcauchy(alpha, beta, size=1)
-    
+
     Returns Cauchy random variates.
     """
-    
+
     return alpha + beta*np.tan(pi*random_number(size) - pi/2.0)
 
 def cauchy_expval(alpha, beta):
     """
     cauchy_expval(alpha, beta)
-    
+
     Expected value of cauchy distribution.
     """
-    
+
     return alpha
 
 # In wikipedia, the arguments name are k, x0.
 def cauchy_like(x, alpha, beta):
     R"""
     cauchy_like(x, alpha, beta)
-    
+
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
-    
+
     :Parameters:
       alpha : float
          Location parameter.
       beta : float
           Scale parameter > 0.
-    
+
     :Note:
       - Mode and median are at alpha.
     """
-    
+
     return flib.cauchy(x,alpha,beta)
 
 # Chi square----------------------------------------------
@@ -804,50 +804,50 @@ def cauchy_like(x, alpha, beta):
 def rchi2(nu, size=1):
     """
     rchi2(nu, size=1)
-    
+
     Random :math:`\chi^2` variates.
     """
-    
+
     return np.random.chisquare(nu, size)
 
 def chi2_expval(nu):
     """
     chi2_expval(nu)
-    
+
     Expected value of Chi-squared distribution.
     """
-    
+
     return nu
 
 def chi2_like(x, nu):
     R"""
     chi2_like(x, nu)
-    
+
     Chi-squared :math:`\chi^2` log-likelihood.
-    
+
     .. math::
         f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
-    
+
     :Parameters:
       x : float
           :math:`\ge 0`
       nu : int
           Degrees of freedom ( :math:`nu > 0`)
-    
+
     :Note:
       - :math:`E(X)=\nu`
       - :math:`Var(X)=2\nu`
-    
+
     """
-    
+
     return flib.gamma(x, 0.5*nu, 1./2)
-    
+
 # Degenerate---------------------------------------------
 @randomwrap
 def rdegenerate(k, size=1):
     """
     rdegenerate(k, size=1)
-    
+
     Random degenerate variates.
     """
     return np.ones(size)*k
@@ -855,7 +855,7 @@ def rdegenerate(k, size=1):
 def degenerate_expval(k):
     """
     degenerate_expval(k)
-    
+
     Expected value of degenerate distribution.
     """
     return k
@@ -863,12 +863,12 @@ def degenerate_expval(k):
 def degenerate_like(x, k):
     R"""
     degenerate_like(x, k)
-    
+
     Degenerate log-likelihood.
-    
+
     .. math::
         f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.
-    
+
     :Parameters:
       x : float
        :math:`x = k`
@@ -883,7 +883,7 @@ def degenerate_like(x, k):
 def rdirichlet(theta, size=1):
     """
     rdirichlet(theta, size=1)
-    
+
     Dirichlet random variates.
     """
     gammas = rgamma(theta,1,size)
@@ -897,7 +897,7 @@ def rdirichlet(theta, size=1):
 def dirichlet_expval(theta):
     """
     dirichlet_expval(theta)
-    
+
     Expected value of Dirichlet distribution.
     """
     return theta/np.sum(theta).astype(float)
@@ -905,14 +905,14 @@ def dirichlet_expval(theta):
 def dirichlet_like(x, theta):
     R"""
     dirichlet_like(x, theta)
-    
+
     Dirichlet log-likelihood.
-    
+
     This is a multivariate continuous distribution.
-    
+
     .. math::
         f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
-    
+
     :Parameters:
       x : (n,k-1) array
         Where `n` is the number of samples and `k` the dimension.
@@ -923,7 +923,7 @@ def dirichlet_like(x, theta):
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
     if (np.shape(x)[-1]+1) != np.shape(theta)[-1]:
-        raise ValueError, 'The dimension of x in dirichlet_like must be k-1.' 
+        raise ValueError, 'The dimension of x in dirichlet_like must be k-1.'
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------
@@ -931,16 +931,16 @@ def dirichlet_like(x, theta):
 def rexponential(beta, size=1):
     """
     rexponential(beta)
-    
+
     Exponential random variates.
     """
-    
+
     return np.random.exponential(1./beta,size)
 
 def exponential_expval(beta):
     """
     exponential_expval(beta)
-    
+
     Expected value of exponential distribution.
     """
     return 1./beta
@@ -949,26 +949,26 @@ def exponential_expval(beta):
 def exponential_like(x, beta):
     R"""
     exponential_like(x, beta)
-    
+
     Exponential log-likelihood.
-    
+
     The exponential distribution is a special case of the gamma distribution
     with alpha=1. It often describes the time until an event.
-    
+
     .. math::
         f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
       beta : float
         Survival parameter :math:`\beta > 0`
-    
+
     :Note:
       - :math:`E(X) = \beta`
       - :math:`Var(X) = \beta^2`
     """
-    
+
     return flib.gamma(x, 1, beta)
 
 
@@ -977,10 +977,10 @@ def exponential_like(x, beta):
 def rexponweib(alpha, k, loc=0, scale=1, size=1):
     """
     rexponweib(alpha, k, loc=0, scale=1, size=1)
-    
+
     Random exponentiated Weibull variates.
     """
-    
+
     q = np.random.uniform(size=size)
     r = flib.exponweib_ppf(q,alpha,k)
     return loc + r*scale
@@ -993,17 +993,17 @@ def exponweib_expval(alpha, k, loc, scale):
 def exponweib_like(x, alpha, k, loc=0, scale=1):
     R"""
     exponweib_like(x,alpha,k,loc=0,scale=1)
-    
+
     Exponentiated Weibull log-likelihood.
-    
+
     The exponentiated Weibull distribution is a generalization of the Weibull
     family. Its value lies in being able to model monotone and non-monotone
     failure rates.
-    
+
     .. math::
         f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
         z & = \frac{x-loc}{scale}
-    
+
     :Parameters:
       x : float
           x > 0
@@ -1015,7 +1015,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
           Location parameter
       scale : float
           Scale parameter > 0.
-    
+
     """
     return flib.exponweib(x,alpha,k,loc,scale)
 
@@ -1024,16 +1024,16 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 def rgamma(alpha, beta, size=1):
     """
     rgamma(alpha, beta,size=1)
-    
+
     Random gamma variates.
     """
-    
+
     return np.random.gamma(shape=alpha,scale=1./beta,size=size)
 
 def gamma_expval(alpha, beta):
     """
     gamma_expval(alpha, beta)
-    
+
     Expected value of gamma distribution.
     """
     return asarray(alpha) / beta
@@ -1041,15 +1041,15 @@ def gamma_expval(alpha, beta):
 def gamma_like(x, alpha, beta):
     R"""
     gamma_like(x, alpha, beta)
-    
+
     Gamma log-likelihood.
-    
+
     Represents the sum of alpha exponentially distributed random variables, each
     of which has mean beta.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
@@ -1057,13 +1057,13 @@ def gamma_like(x, alpha, beta):
         Shape parameter :math:`\alpha > 0`.
       beta : float
         Scale parameter :math:`\beta > 0`.
-    
+
     :Note:
       - :math:`E(X) = \frac{\alpha}{\beta}`
       - :math:`Var(X) = \frac{\alpha}{\beta^2}`
-    
+
     """
-    
+
     return flib.gamma(x, alpha, beta)
 
 
@@ -1073,10 +1073,10 @@ def gamma_like(x, alpha, beta):
 def rgev(xi, mu=0, sigma=1, size=1):
     """
     rgev(xi, mu=0, sigma=0, size=1)
-    
+
     Random generalized extreme value (GEV) variates.
     """
-    
+
     q = np.random.uniform(size=size)
     z = flib.gev_ppf(q,xi)
     return z*sigma + mu
@@ -1084,7 +1084,7 @@ def rgev(xi, mu=0, sigma=1, size=1):
 def gev_expval(xi, mu=0, sigma=1):
     """
     gev_expval(xi, mu=0, sigma=1)
-    
+
     Expected value of generalized extreme value distribution.
     """
     return mu - (sigma / xi) + (sigma / xi) * flib.gamfun(1 - xi)
@@ -1092,20 +1092,20 @@ def gev_expval(xi, mu=0, sigma=1):
 def gev_like(x, xi, mu=0, sigma=1):
     R"""
     gev_like(x, xi, mu=0, sigma=1)
-    
+
     Generalized Extreme Value log-likelihood
-    
+
     .. math::
         pdf(x \mid \xi,\mu,\sigma) = \frac{1}{\sigma}(1 + \xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi-1}\exp{-(1+\xi \left[\frac{x-\mu}{\sigma}\right])^{-1/\xi}}
-    
+
     .. math::
         \sigma & > 0,\\
         x & > \mu-\sigma/\xi \text{ if } \xi > 0,\\
         x & < \mu-\sigma/\xi \text{ if } \xi < 0\\
         x & \in [-\infty,\infty] \text{ if } \xi = 0
-    
+
     """
-    
+
     return flib.gev(x, xi, mu, sigma)
 
 # Geometric----------------------------------------------
@@ -1114,16 +1114,16 @@ def gev_like(x, xi, mu=0, sigma=1):
 def rgeometric(p, size=1):
     """
     rgeometric(p, size=1)
-    
+
     Random geometric variates.
     """
-    
+
     return np.random.geometric(p, size)
 
 def geometric_expval(p):
     """
     geometric_expval(p)
-    
+
     Expected value of geometric distribution.
     """
     return 1. / p
@@ -1131,67 +1131,67 @@ def geometric_expval(p):
 def geometric_like(x, p):
     R"""
     geometric_like(x, p)
-    
+
     Geometric log-likelihood. The probability that the first success in a
     sequence of Bernoulli trials occurs on the x'th trial.
-    
+
     .. math::
         f(x \mid p) = p(1-p)^{x-1}
-    
+
     :Parameters:
       x : int
         Number of trials before first success, > 0.
       p : float
         Probability of success on an individual trial, :math:`p \in [0,1]`
-    
+
     :Note:
       - :math:`E(X)=1/p`
       - :math:`Var(X)=\frac{1-p}{p^2}`
-    
+
     """
-    
+
     return flib.geometric(x, p)
-    
+
 # Half Cauchy----------------------------------------------
 @randomwrap
 def rhalf_cauchy(alpha, beta, size=1):
     """
     rhalf_cauchy(alpha, beta, size=1)
-    
+
     Returns half-Cauchy random variates.
     """
-    
+
     return abs(alpha + beta*np.tan(pi*random_number(size) - pi/2.0))
 
 def half_cauchy_expval(alpha, beta):
     """
     half_cauchy_expval(alpha, beta)
-    
+
     Expected value of cauchy distribution is undefined.
     """
-    
+
     return inf
 
 # In wikipedia, the arguments name are k, x0.
 def half_cauchy_like(x, alpha, beta):
     R"""
     half_cauchy_like(x, alpha, beta)
-    
+
     Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{2}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
-    
+
     :Parameters:
       alpha : float
          Location parameter.
       beta : float
           Scale parameter > 0.
-    
+
     :Note:
       - x must be non-negative
     """
-    
+
     x = np.atleast_1d(x)
     if sum(x<0): return -inf
     return flib.cauchy(x,alpha,beta) + len(x)*log(2)
@@ -1201,46 +1201,46 @@ def half_cauchy_like(x, alpha, beta):
 def rhalf_normal(tau, size=1):
     """
     rhalf_normal(tau, size=1)
-    
+
     Random half-normal variates.
     """
-    
+
     return abs(np.random.normal(0, np.sqrt(1/tau), size))
 
 def half_normal_expval(tau):
     """
     half_normal_expval(tau)
-    
+
     Expected value of half normal distribution.
     """
-    
+
     return np.sqrt(2. * pi / asarray(tau))
 
 def half_normal_like(x, tau):
     R"""
     half_normal_like(x, tau)
-    
+
     Half-normal log-likelihood, a normal distribution with mean 0 and limited
     to the domain :math:`x \in [0, \infty)`.
-    
+
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
       tau : float
         :math:`\tau > 0`
-    
+
     """
-    
+
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
 def rhypergeometric(n, m, N, size=1):
     """
     rhypergeometric(n, m, N, size=1)
-    
+
     Returns hypergeometric random variates.
     """
     if n==0:
@@ -1254,7 +1254,7 @@ def rhypergeometric(n, m, N, size=1):
 def hypergeometric_expval(n, m, N):
     """
     hypergeometric_expval(n, m, N)
-    
+
     Expected value of hypergeometric distribution.
     """
     return 1. * n * m / N
@@ -1262,14 +1262,14 @@ def hypergeometric_expval(n, m, N):
 def hypergeometric_like(x, n, m, N):
     R"""
     hypergeometric_like(x, n, m, N)
-    
+
     Hypergeometric log-likelihood. Discrete probability distribution that
     describes the number of successes in a sequence of draws from a finite
     population without replacement.
-    
+
     .. math::
         f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
-    
+
     :Parameters:
       x : int
         Number of successes in a sample drawn from a population.
@@ -1280,11 +1280,11 @@ def hypergeometric_like(x, n, m, N):
         Number of successes in the population.
       N : int
         Total number of units in the population.
-    
+
     :Note:
       :math:`E(X) = \frac{n n}{N}`
     """
-    
+
     return flib.hyperg(x, n, m, N)
 
 # Inverse gamma----------------------------------------------
@@ -1292,16 +1292,16 @@ def hypergeometric_like(x, n, m, N):
 def rinverse_gamma(alpha, beta,size=1):
     """
     rinverse_gamma(alpha, beta,size=1)
-    
+
     Random inverse gamma variates.
     """
-    
+
     return 1. / np.random.gamma(shape=alpha, scale=1./beta, size=size)
 
 def inverse_gamma_expval(alpha, beta):
     """
     inverse_gamma_expval(alpha, beta)
-    
+
     Expected value of inverse gamma distribution.
     """
     return 1. / (asarray(beta) * (alpha-1.))
@@ -1309,12 +1309,12 @@ def inverse_gamma_expval(alpha, beta):
 def inverse_gamma_like(x, alpha, beta):
     R"""
     inverse_gamma_like(x, alpha, beta)
-    
+
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)
-    
+
     :Parameters:
       x : float
         x > 0
@@ -1322,30 +1322,30 @@ def inverse_gamma_like(x, alpha, beta):
         Shape parameter, :math:`\alpha > 0`.
       beta : float
         Scale parameter, :math:`\beta > 0`.
-    
+
     :Note:
       :math:`E(X)=\frac{1}{\beta(\alpha-1)}`  for :math:`\alpha > 1`.
     """
-    
+
     return flib.igamma(x, alpha, beta)
-    
+
 # Inverse Wishart---------------------------------------------------
 def rinverse_wishart(n, Tau):
     """
     rinverse_wishart(n, Tau)
-    
+
     Return an inverse Wishart random matrix.
-    
+
     n is the degrees of freedom.
     Tau is a positive definite scale matrix.
     """
-    
+
     return rwishart(n, np.asmatrix(Tau).I).I
 
 def inverse_wishart_expval(n, Tau):
     """
     inverse_wishart_expval(n, Tau)
-    
+
     Expected value of inverse Wishart distribution.
     """
     return np.asarray(Tau)/(n-len(Tau)-1)
@@ -1353,15 +1353,15 @@ def inverse_wishart_expval(n, Tau):
 def inverse_wishart_like(X, n, Tau):
     R"""
     inverse_wishart_like(X, n, Tau)
-    
-    Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate 
+
+    Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
     prior for the covariance matrix of a multivariate normal distribution.
-    
+
     .. math::
         f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}
-    
+
     where :math:`k` is the rank of X.
-    
+
     :Parameters:
       X : matrix
         Symmetric, positive definite.
@@ -1369,7 +1369,7 @@ def inverse_wishart_like(X, n, Tau):
         Degrees of freedom, > 0.
       Tau : matrix
         Symmetric and positive definite
-    
+
     """
     return flib.blas_inv_wishart(X,n,Tau)
 
@@ -1378,10 +1378,10 @@ def inverse_wishart_like(X, n, Tau):
 def rlaplace(mu, tau, size=1):
     """
     rlaplace(mu, tau)
-    
+
     Laplace (double exponential) random variates.
     """
-    
+
     u = np.random.uniform(-0.5, 0.5, size)
     return mu - np.sign(u)*np.log(1 - 2*np.abs(u))/tau
 
@@ -1390,7 +1390,7 @@ rdexponential = rlaplace
 def laplace_expval(mu, tau):
     """
     laplace_expval(mu, tau)
-    
+
     Expected value of Laplace (double exponential) distribution.
     """
     return mu
@@ -1400,16 +1400,16 @@ dexponential_expval = laplace_expval
 def laplace_like(x, mu, tau):
     R"""
     laplace_like(x, mu, tau)
-    
+
     Laplace (double exponential) log-likelihood.
-    
+
     The Laplace (or double exponential) distribution describes the
     difference between two independent, identically distributed exponential
     events. It is often used as a heavier-tailed alternative to the normal.
-    
+
     .. math::
         f(x \mid \mu, tau) = \frac{\tau}{2}e^{-\tau\abs{x-\mu}}
-    
+
     :Parameters:
       x : float
         :math:`-\infty < x < \infty`
@@ -1417,12 +1417,12 @@ def laplace_like(x, mu, tau):
         Location parameter :math: `-\infty < mu < \infty`
       tau : float
         Scale parameter :math:`\tau > 0`
-    
+
     :Note:
       - :math:`E(X) = \mu`
       - :math:`Var(X) = \frac{2}{\tau^2}`
     """
-    
+
     return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
 
 dexponential_like = laplace_like
@@ -1432,10 +1432,10 @@ dexponential_like = laplace_like
 def rlogistic(mu, tau, size=1):
     """
     rlogistic(mu, tau)
-    
+
     Logistic random variates.
     """
-    
+
     u = np.random.random(size)
     return mu + np.log(u/(1-u))/tau
 
@@ -1443,7 +1443,7 @@ def rlogistic(mu, tau, size=1):
 def logistic_expval(mu, tau):
     """
     logistic_expval(mu, tau)
-    
+
     Expected value of logistic distribution.
     """
     return mu
@@ -1452,15 +1452,15 @@ def logistic_expval(mu, tau):
 def logistic_like(x, mu, tau):
     R"""
     logistic_like(x, mu, tau)
-    
+
     Logistic log-likelihood.
-    
+
     The logistic distribution is often used as a growth model; for example,
     populations, markets. Resembles a heavy-tailed normal distribution.
-    
+
     .. math::
         f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}
-    
+
     :Parameters:
       x : float
         :math:`-\infty < x < \infty`
@@ -1468,30 +1468,30 @@ def logistic_like(x, mu, tau):
         Location parameter :math: `-\infty < mu < \infty`
       tau : float
         Scale parameter :math:`\tau > 0`
-    
+
     :Note:
       - :math:`E(X) = \mu`
       - :math:`Var(X) = \frac{\pi^2}{3\tau^2}`
     """
-    
+
     return flib.logistic(x, mu, tau)
-    
+
 
 # Lognormal----------------------------------------------
 @randomwrap
 def rlognormal(mu, tau,size=1):
     """
     rlognormal(mu, tau,size=1)
-    
+
     Return random lognormal variates.
     """
-    
+
     return np.random.lognormal(mu, np.sqrt(1./tau),size)
 
 def lognormal_expval(mu, tau):
     """
     lognormal_expval(mu, tau)
-    
+
     Expected value of log-normal distribution.
     """
     return np.exp(mu + 1./2/tau)
@@ -1499,16 +1499,16 @@ def lognormal_expval(mu, tau):
 def lognormal_like(x, mu, tau):
     R"""
     lognormal_like(x, mu, tau)
-    
+
     Log-normal log-likelihood. Distribution of any random variable whose
     logarithm is normally distributed. A variable might be modeled as
     log-normal if it can be thought of as the multiplicative product of many
     small independent factors.
-    
+
     .. math::
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
         \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
-    
+
     :Parameters:
       x : float
         x > 0
@@ -1516,12 +1516,12 @@ def lognormal_like(x, mu, tau):
         Location parameter.
       tau : float
         Scale parameter, > 0.
-    
+
     :Note:
       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
     """
-    
-    
+
+
     return flib.lognormal(x,mu,tau)
 
 # Multinomial----------------------------------------------
@@ -1529,14 +1529,14 @@ def lognormal_like(x, mu, tau):
 def rmultinomial(n,p,size=None): # Leaving size=None as the default means return value is 1d array if not specified-- nicer.
     """
     rmultinomial(n,p,size=1)
-    
+
     Random multinomial variates.
     """
-    
+
     # Single value for p:
     if len(np.shape(p))==1:
         return np.random.multinomial(n,p,size)
-    
+
     # Multiple values for p:
     if np.isscalar(n):
         n = n * np.ones(np.shape(p)[0],dtype=np.int)
@@ -1548,7 +1548,7 @@ def rmultinomial(n,p,size=None): # Leaving size=None as the default means return
 def multinomial_expval(n,p):
     """
     multinomial_expval(n,p)
-    
+
     Expected value of multinomial distribution.
     """
     return asarray([pr * n for pr in p])
@@ -1556,16 +1556,16 @@ def multinomial_expval(n,p):
 def multinomial_like(x, n, p):
     R"""
     multinomial_like(x, n, p)
-    
+
     Multinomial log-likelihood. Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
     "failure", each one results in exactly one of some fixed finite number k
     of possible outcomes over n independent trials. 'x[i]' indicates the number
     of times outcome number i was observed over the n trials.
-    
+
     .. math::
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
-    
+
     :Parameters:
       x : (ns, k) int
         Random variable indicating the number of time outcome i is observed,
@@ -1575,14 +1575,14 @@ def multinomial_like(x, n, p):
       p : (k,) float
         Probability of each one of the different outcomes,
         :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
-    
+
     :Note:
       - :math:`E(X_i)=n p_i`
       - :math:`var(X_i)=n p_i(1-p_i)`
       - :math:`cov(X_i,X_j) = -n p_i p_j`
-    
+
     """
-    
+
     x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
     p = np.atleast_2d(p)
     
@@ -1592,30 +1592,30 @@ def multinomial_like(x, n, p):
 def rmultivariate_hypergeometric(n, m, size=None):
     """
     Random multivariate hypergeometric variates.
-    
+
     n : Number of draws.
     m : Number of items in each category.
     """
-    
+
     N = len(m)
     urn = np.repeat(np.arange(N), m)
-    
+
     if size:
         draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]] for j in range(size)])
-        
+
         r = [[np.sum(draw[j]==i) for i in range(len(m))] for j in range(size)]
     else:
         draw = np.array([urn[i] for i in np.random.permutation(len(urn))[:n]])
-        
+
         r = [np.sum(draw==i) for i in range(len(m))]
     return np.asarray(r)
 
 def multivariate_hypergeometric_expval(n, m):
     """
     multivariate_hypergeometric_expval(n, m)
-    
+
     Expected value of multivariate hypergeometric distribution.
-    
+
     n : number of items drawn.
     m : number of items in each category.
     """
@@ -1626,25 +1626,25 @@ def multivariate_hypergeometric_expval(n, m):
 def multivariate_hypergeometric_like(x, m):
     R"""
     multivariate_hypergeometric_like(x, m)
-    
+
     The multivariate hypergeometric describes the probability of drawing x[i]
     elements of the ith category, when the number of items in each category is
     given by m.
 
-    
+
     .. math::
         \frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}
-    
+
     where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
-    
+
     :Parameters:
         x : int sequence
             Number of draws from each category, :math:`< m`
         m : int sequence
             Number of items in each categoy.
     """
-    
-    
+
+
     return flib.mvhyperg(x, m)
 
 
@@ -1653,13 +1653,13 @@ def multivariate_hypergeometric_like(x, m):
 def rmv_normal(mu, tau, size=1):
     """
     rmv_normal(mu, tau, size=1)
-    
+
     Random multivariate normal variates.
     """
-    
+
     sig = np.linalg.cholesky(tau)
     mu_size = np.shape(mu)
-    
+
     if size==1:
         out = np.random.normal(size=mu_size)
         try:
@@ -1684,7 +1684,7 @@ def rmv_normal(mu, tau, size=1):
 def mv_normal_expval(mu, tau):
     """
     mv_normal_expval(mu, tau)
-    
+
     Expected value of multivariate normal distribution.
     """
     return mu
@@ -1692,17 +1692,17 @@ def mv_normal_expval(mu, tau):
 def mv_normal_like(x, mu, tau):
     R"""
     mv_normal_like(x, mu, tau)
-    
+
     Multivariate normal log-likelihood
-    
+
     .. math::
         f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
-    
+
     x: (n,k)
     mu: (k)
     tau: (k,k)
     tau positive definite
-    
+
     :SeeAlso:
       mv_normal_chol_like, mv_normal_cov_like
     """
@@ -1716,7 +1716,7 @@ def mv_normal_like(x, mu, tau):
 def rmv_normal_cov(mu, C, size=1):
     """
     rmv_normal_cov(mu, C)
-    
+
     Random multivariate normal variates.
     """
     mu_size = np.shape(mu)
@@ -1728,7 +1728,7 @@ def rmv_normal_cov(mu, C, size=1):
 def mv_normal_cov_expval(mu, C):
     """
     mv_normal_cov_expval(mu, C)
-    
+
     Expected value of multivariate normal distribution.
     """
     return mu
@@ -1736,17 +1736,17 @@ def mv_normal_cov_expval(mu, C):
 def mv_normal_cov_like(x, mu, C):
     R"""
     mv_normal_cov_like(x, mu, C)
-    
+
     Multivariate normal log-likelihood
-    
+
     .. math::
         f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
-    
+
     x: (n,k)
     mu: (k)
     C: (k,k)
     C positive definite
-    
+
     :SeeAlso:
       mv_normal_like, mv_normal_chol_like
     """
@@ -1761,11 +1761,11 @@ def mv_normal_cov_like(x, mu, C):
 def rmv_normal_chol(mu, sig, size=1):
     """
     rmv_normal(mu, sig)
-    
+
     Random multivariate normal variates.
     """
     mu_size = np.shape(mu)
-    
+
     if size==1:
         out = np.random.normal(size=mu_size)
         try:
@@ -1791,7 +1791,7 @@ def rmv_normal_chol(mu, sig, size=1):
 def mv_normal_chol_expval(mu, sig):
     """
     mv_normal_expval(mu, sig)
-    
+
     Expected value of multivariate normal distribution.
     """
     return mu
@@ -1799,18 +1799,18 @@ def mv_normal_chol_expval(mu, sig):
 def mv_normal_chol_like(x, mu, sig):
     R"""
     mv_normal_like(x, mu, tau)
-    
+
     Multivariate normal log-likelihood
-    
+
     .. math::
         f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
-    
+
     :Parameters:
       x : (n,k)
       mu : (k)
       sigma : (k,k)
       sigma lower triangular
-    
+
     :SeeAlso:
       mv_normal_like, mv_normal_cov_like
       """
@@ -1827,7 +1827,7 @@ def mv_normal_chol_like(x, mu, sig):
 def rnegative_binomial(mu, alpha, size=1):
     """
     rnegative_binomial(mu, alpha, size=1)
-    
+
     Random negative binomial variates.
     """
     # Using gamma-poisson mixture rather than numpy directly
@@ -1840,7 +1840,7 @@ def rnegative_binomial(mu, alpha, size=1):
 def negative_binomial_expval(mu, alpha):
     """
     negative_binomial_expval(mu, alpha)
-    
+
     Expected value of negative binomial distribution.
     """
     return mu
@@ -1849,23 +1849,23 @@ def negative_binomial_expval(mu, alpha):
 def negative_binomial_like(x, mu, alpha):
     R"""
     negative_binomial_like(x, mu, alpha)
-    
-    Negative binomial log-likelihood. The negative binomial distribution describes a 
+
+    Negative binomial log-likelihood. The negative binomial distribution describes a
     Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
     parameterization makes this mixture interpretation more convenient to work with.
-    
+
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
-    
+
     x > 0, mu > 0, alpha > 0
-    
+
     :Note:
       - :math: E[x]=\mu
       - In Wikipedia's parameterization,
         :math: r=\alpha
         :math: p=\alpha/(\mu+\alpha)
         :math: \mu=r(1-p)/p
-      
+
     """
     return flib.negbin2(x, mu, alpha)
 
@@ -1874,7 +1874,7 @@ def negative_binomial_like(x, mu, alpha):
 def rnormal(mu, tau,size=1):
     """
     rnormal(mu, tau, size=1)
-    
+
     Random normal variates.
     """
     return np.random.normal(mu, 1./np.sqrt(tau), size)
@@ -1882,7 +1882,7 @@ def rnormal(mu, tau,size=1):
 def normal_expval(mu, tau):
     """
     normal_expval(mu, tau)
-    
+
     Expected value of normal distribution.
     """
     return mu
@@ -1890,75 +1890,116 @@ def normal_expval(mu, tau):
 def normal_like(x, mu, tau):
     R"""
     normal_like(x, mu, tau)
-    
+
     Normal log-likelihood.
-    
+
     .. math::
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
-    
+
     :Parameters:
       x : float
         Input data.
       mu : float
         Mean of the distribution.
       tau : float
-        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ). 
-        
+        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ).
+
     :Note:
       - :math:`E(X) = \mu`
       - :math:`Var(X) = 1/\tau`
-    
+
     """
     # try:
     #     constrain(tau, lower=0)
     # except ZeroProbability:
     #     return -np.Inf
-    
+
     return flib.normal(x, mu, tau)
 
+# von Mises--------------------------------------------------
+@randomwrap
+def rvon_mises(mu, kappa, size=1):
+    """
+    rvon_mises(mu, kappa, size=1)
+
+    Random von Mises variates.
+    """
+    return np.random.mtrand.vonmises( mu, kappa, size)
+
+def von_mises_expval(mu, kappa):
+    """
+    von_mises_expval(mu, kappa)
+
+    Expected value of von Mises distribution.
+    """
+    return mu
+
+def von_mises_like(x, mu, kappa):
+    R"""
+    von_mises_like(x, mu, kappa)
+
+    von Mises log-likelihood.
+
+    .. math::
+        f(x \mid \mu, k) = \\frac{{e}^{k \\operatorname{cos}\\left(x - u\\right)}}{2 \\pi I0(k)}
+
+
+    :Parameters:
+      x : float
+        Input data.
+      mu : float
+        Mean of the distribution.
+      kappa : float
+        Dispersion of the distribution
+
+    :Note:
+      - :math:`E(X) = \mu`
+
+    """
+    return flib.vonmises(x, mu, kappa)
 
 # Poisson--------------------------------------------------
 @randomwrap
 def rpoisson(mu, size=1):
     """
     rpoisson(mu, size=1)
-    
+
     Random poisson variates.
     """
-    
+
     return np.random.poisson(mu,size)
 
 
 def poisson_expval(mu):
     """
     poisson_expval(mu)
-    
+
     Expected value of Poisson distribution.
     """
-    
+
     return mu
 
 
 def poisson_like(x,mu):
     R"""
     poisson_like(x,mu)
-    
+
     Poisson log-likelihood. The Poisson is a discrete probability distribution.
-    It is often used to model the number of events occurring in a fixed period of 
-    time when the times at which events occur are independent. The Poisson 
+    It is often used to model the number of events occurring in a fixed period of
+    time when the times at which events occur are independent. The Poisson
     distribution can be derived as a limiting case of the binomial distribution.
-    
+
     .. math::
         f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
-    
+
     :Parameters:
       x : int
         :math:`x \in {0,1,2,...}`
       mu : float
         Expected number of occurrences that occur during the given interval,
         :math:`\mu \geq 0`.
-    
+
     :Note:
       - :math:`E(x)=\mu`
       - :math:`Var(x)=\mu`
@@ -1974,26 +2015,26 @@ def poisson_like(x,mu):
 @randomwrap
 def rtruncnorm(mu, tau, a, b, size=1):
     """rtruncnorm(mu, tau, a, b, size=1)
-    
+
     Random truncated normal variates.
     """
     sigma = 1./np.sqrt(tau)
-    
+
     na = pymc.utils.normcdf((a-mu)/sigma)
     nb = pymc.utils.normcdf((b-mu)/sigma)
-    
+
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
     q = U * nb + (1-U)*na
     R = pymc.utils.invcdf(q)
-    
+
     # Unnormalize
     return R*sigma + mu
 
 
 def truncnorm_expval(mu, tau, a, b):
-    """Expectation value of the truncated normal distribution. 
-    
+    """Expectation value of the truncated normal distribution.
+
     .. math::
        E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma**2. """
     phia = np.exp(normal_like(a, mu, tau))
@@ -2008,21 +2049,21 @@ def truncnorm_expval(mu, tau, a, b):
 
 def truncnorm_like(x, mu, tau, a, b):
     R"""truncnorm_like(x, mu, tau, a, b)
-    
+
     Truncated normal log-likelihood.
-    
+
     .. math::
         f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},
-        
+
     where :math:`\sigma^2=1/\tau`.
-    
+
     :Parameters:
       x : float
         Input data.
       mu : float
         Mean of the distribution.
       tau : float
-        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ). 
+        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ).
       a : float
         Left bound of the distribution.
       b : float
@@ -2058,21 +2099,21 @@ def truncnorm_like(x, mu, tau, a, b):
 @randomwrap
 def rskew_normal(mu,tau,alpha,size=1):
     """rskew_normal(mu, tau, alpha, size=1)
-    
+
     Skew-normal random variates.
     """
     return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
 
 def skew_normal_like(x,mu,tau,alpha):
     R"""skew_normal_like(x, mu, tau, alpha)
-    
+
     Azzalini's skew-normal log-likelihood
-    
+
     .. math::
         f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
-        
+
     where :math: \Phi is the normal CDF and :math: \phi is the normal PDF.
-    
+
     :Parameters:
       x : float
         Input data.
@@ -2082,7 +2123,7 @@ def skew_normal_like(x,mu,tau,alpha):
         Precision of the distribution, > 0.
       alpha : float
         Shape parameter of the distribution.
-    
+
     :Note:
       - See http://azzalini.stat.unipd.it/SN/
     """
@@ -2092,54 +2133,54 @@ def skew_normal_like(x,mu,tau,alpha):
 
 def skew_normal_expval(mu,tau,alpha):
     """skew_normal_expval(mu, tau, alpha)
-    
+
     Expectation of skew-normal random variables.
     """
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
-    
+
 # Student's t-----------------------------------
 @randomwrap
 def rt(nu, size=1):
     """rt(nu, size=1)
-    
+
     Student's t random variates.
     """
     return rnormal(0,1,size) / np.sqrt(rchi2(nu,size)/nu)
 
 def t_like(x, nu):
     R"""t_like(x, nu)
-    
-    Student's T log-likelihood. Describes a zero-mean normal variable whose precision is 
-    gamma distributed. Alternatively, describes the mean of several zero-mean normal 
+
+    Student's T log-likelihood. Describes a zero-mean normal variable whose precision is
+    gamma distributed. Alternatively, describes the mean of several zero-mean normal
     random variables divided by their sample standard deviation.
-    
+
     .. math::
         f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
-    
+
     :Parameters:
       x : float
         Input data.
       nu : float
         Degrees of freedom.
-    
+
     """
     nu = np.asarray(nu)
     return flib.t(x, nu)
 
 def t_expval(nu):
     """t_expval(nu)
-    
+
     Expectation of Student's t random variables.
     """
     return 0
-    
+
 # DiscreteUniform--------------------------------------------------
 @randomwrap
 def rdiscrete_uniform(lower, upper, size=1):
     """
     rdiscrete_uniform(lower, upper, size=1)
-    
+
     Random discrete_uniform variates.
     """
     return np.random.randint(lower, upper+1, size)
@@ -2147,7 +2188,7 @@ def rdiscrete_uniform(lower, upper, size=1):
 def discrete_uniform_expval(lower, upper):
     """
     discrete_uniform_expval(lower, upper)
-    
+
     Expected value of discrete_uniform distribution.
     """
     return (upper - lower) / 2.
@@ -2155,12 +2196,12 @@ def discrete_uniform_expval(lower, upper):
 def discrete_uniform_like(x,lower, upper):
     R"""
     discrete_uniform_like(x, lower, upper)
-    
+
     Discrete uniform log-likelihood.
-    
+
     .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
-    
+
     :Parameters:
       x : integer
        :math:`lower \leq x \leq upper`
@@ -2169,7 +2210,7 @@ def discrete_uniform_like(x,lower, upper):
       upper : float
         Upper limit.
     """
-    
+
     return flib.duniform_like(x, lower, upper)
 
 
@@ -2178,7 +2219,7 @@ def discrete_uniform_like(x,lower, upper):
 def runiform(lower, upper, size=1):
     """
     runiform(lower, upper, size=1)
-    
+
     Random uniform variates.
     """
     return np.random.uniform(lower, upper, size)
@@ -2186,7 +2227,7 @@ def runiform(lower, upper, size=1):
 def uniform_expval(lower, upper):
     """
     uniform_expval(lower, upper)
-    
+
     Expected value of uniform distribution.
     """
     return (upper - lower) / 2.
@@ -2194,12 +2235,12 @@ def uniform_expval(lower, upper):
 def uniform_like(x,lower, upper):
     R"""
     uniform_like(x, lower, upper)
-    
+
     Uniform log-likelihood.
-    
+
     .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
-    
+
     :Parameters:
       x : float
        :math:`lower \leq x \leq upper`
@@ -2208,7 +2249,7 @@ def uniform_like(x,lower, upper):
       upper : float
         Upper limit.
     """
-    
+
     return flib.uniform_like(x, lower, upper)
 
 # Weibull--------------------------------------------------
@@ -2220,7 +2261,7 @@ def rweibull(alpha, beta,size=1):
 def weibull_expval(alpha,beta):
     """
     weibull_expval(alpha,beta)
-    
+
     Expected value of weibull distribution.
     """
     return beta * gammaln((alpha + 1.) / alpha)
@@ -2228,13 +2269,13 @@ def weibull_expval(alpha,beta):
 def weibull_like(x, alpha, beta):
     R"""
     weibull_like(x, alpha, beta)
-    
+
     Weibull log-likelihood
-    
+
     .. math::
         f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
         \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
-    
+
     :Parameters:
       x : float
         :math:`x \ge 0`
@@ -2242,7 +2283,7 @@ def weibull_like(x, alpha, beta):
         > 0
       beta : float
         > 0
-    
+
     :Note:
       - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`
       - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`
@@ -2259,12 +2300,12 @@ def weibull_like(x, alpha, beta):
 def rwishart(n, Tau):
     """
     rwishart(n, Tau)
-    
+
     Return a Wishart random matrix.
-    
+
     Tau is the inverse of the 'covariance' matrix :math:`C`.
     """
-    
+
     p = np.shape(Tau)[0]
     # sig = np.linalg.cholesky(np.linalg.inv(Tau))
     sig = np.linalg.cholesky(Tau)
@@ -2282,7 +2323,7 @@ def rwishart(n, Tau):
 def wishart_expval(n, Tau):
     """
     wishart_expval(n, Tau)
-    
+
     Expected value of wishart distribution.
     """
     return n * np.asarray(Tau.I)
@@ -2290,20 +2331,20 @@ def wishart_expval(n, Tau):
 def wishart_like(X, n, Tau):
     R"""
     wishart_like(X, n, Tau)
-    
+
     Wishart log-likelihood. The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
     matrix of a multivariate normal distribution. If Tau=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
-    
-    For an alternative parameterization based on :math:`C=T{-1}`, see 
+
+    For an alternative parameterization based on :math:`C=T{-1}`, see
     `wishart_cov_like`.
-    
+
     .. math::
         f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
-    
+
     where :math:`k` is the rank of X.
-    
+
     :Parameters:
       X : matrix
         Symmetric, positive definite.
@@ -2311,7 +2352,7 @@ def wishart_like(X, n, Tau):
         Degrees of freedom, > 0.
       Tau : matrix
         Symmetric and positive definite
-    
+
     """
     return flib.blas_wishart(X,n,Tau)
 
@@ -2319,7 +2360,7 @@ def wishart_like(X, n, Tau):
 def rwishart_cov(n, C):
     """
     rwishart(n, C)
-    
+
     Return a Wishart random matrix.
     """
     p = np.shape(C)[0]
@@ -2336,7 +2377,7 @@ def rwishart_cov(n, C):
 def wishart_cov_expval(n, C):
     """
     wishart_expval(n, C)
-    
+
     Expected value of wishart distribution.
     """
     return n * np.asarray(C)
@@ -2344,20 +2385,20 @@ def wishart_cov_expval(n, C):
 def wishart_cov_like(X, n, C):
     R"""
     wishart_like(X, n, C)
-    
+
     Wishart log-likelihood. The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the covariance
     matrix of a multivariate normal distribution. If C=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
-    
-    For an alternative parameterization based on :math:`T=C{-1}`, see 
+
+    For an alternative parameterization based on :math:`T=C{-1}`, see
     `wishart_like`.
-    
+
     .. math::
         f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}
-    
+
     where :math:`k` is the rank of X.
-    
+
     :Parameters:
       X : matrix
         Symmetric, positive definite.
@@ -2365,7 +2406,7 @@ def wishart_cov_like(X, n, C):
         Degrees of freedom, > 0.
       C : matrix
         Symmetric and positive definite
-    
+
     """
     return flib.blas_wishart_cov(X,n,C)
 
@@ -2381,17 +2422,17 @@ def name_to_funcs(name, module):
         module = copy(module)
     else:
         raise AttributeError
-    
+
     try:
        logp = module[name+"_like"]
     except:
         raise "No likelihood found with this name ", name+"_like"
-    
+
     try:
         random = module['r'+name]
     except:
         random = None
-    
+
     return logp, random
 
 
@@ -2433,7 +2474,7 @@ def local_decorated_likelihoods(obj):
     """
     New interface likelihoods
     """
-    
+
     for name, like in likelihoods.iteritems():
         obj[name+'_like'] = gofwrapper(like, snapshot)
 
@@ -2469,7 +2510,7 @@ Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random, dtype=np.b
 def uninformative_like(x):
     """
     uninformative_like(x)
-    
+
     Uninformative log-likelihood. Returns 0 regardless of the value of x.
     """
     return 0.
@@ -2478,7 +2519,7 @@ def uninformative_like(x):
 def one_over_x_like(x):
     """
     one_over_x_like(x)
-    
+
     returns -np.Inf if x<0, -np.log(x) otherwise.
     """
     if np.any(x<0):
@@ -2499,7 +2540,7 @@ OneOverX = stochastic_from_dist('one_over_x', logp = one_over_x_like)
 def extend_dirichlet(p):
     """
     extend_dirichlet(p)
-    
+
     Concatenates 1-sum(p) to the end of p and returns.
     """
     if len(np.shape(p))>1:
@@ -2511,17 +2552,17 @@ def extend_dirichlet(p):
 def mod_categorical_like(x,p):
     """
     mod_categorical_like(x,p)
-    
+
     Categorical log-likelihood with parent p of length k-1.
-    
+
     An implicit k'th category  is assumed to exist with associated
     probability 1-sum(p).
-    
+
     ..math::
         f(x=i \mid p, m, s) = p_i,
     ..math::
         i \in 0\ldots k-1
-    
+
     :Parameters:
       x : integer
         :math: `x \in 0\ldots k-1`
@@ -2538,9 +2579,9 @@ def mod_categorical_like(x,p):
 def mod_categorical_expval(p):
     """
     mod_categorical_expval(p)
-    
+
     Expected value of categorical distribution with parent p of length k-1.
-    
+
     An implicit k'th category  is assumed to exist with associated
     probability 1-sum(p).
     """
@@ -2551,9 +2592,9 @@ def mod_categorical_expval(p):
 def rmod_categor(p,size=1):
     """
     rmod_categor(p, size=1)
-    
+
     Categorical random variates with parent p of length k-1.
-    
+
     An implicit k'th category  is assumed to exist with associated
     probability 1-sum(p).
     """
@@ -2579,11 +2620,11 @@ Docstring of categorical_like (case where P is a Dirichlet):
     """\
     + categorical_like.__doc__
 
-    
+
     parent_names = ['p', 'minval', 'step']
-    
+
     def __init__(self, name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
-        
+
         if value is not None:
             if np.isscalar(value):
                 self.size = 1
@@ -2591,7 +2632,7 @@ Docstring of categorical_like (case where P is a Dirichlet):
                 self.size = len(value)
         else:
             self.size = size
-        
+
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A Categorical random variable', name=name,
                 parents={'p':p}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
@@ -2605,15 +2646,15 @@ Docstring of categorical_like (case where P is a Dirichlet):
 #     __doc__ = """
 # C = ModCategorical(name, p, minval, step[, trace=True, value=None,
 #    rseed=False, observed=False, cache_depth=2, plot=None, verbose=0])
-# 
+#
 # Stochastic variable with ModCategorical distribution.
 # Parents are: p, minval, step.
-# 
+#
 # If parent p is Dirichlet and has length k-1, an implicit k'th
 # category is assumed to exist with associated probability 1-sum(p.value).
-# 
+#
 # Otherwise parent p's value should sum to 1.
-# 
+#
 # Docstring of mod_categorical_like (case where P is not a Dirichlet):
 #     """\
 #     + mod_categorical_like.__doc__ +\
@@ -2621,12 +2662,12 @@ Docstring of categorical_like (case where P is a Dirichlet):
 # Docstring of mod_categorical_like (case where P is a Dirichlet):
 #     """\
 #     + mod_categorical_like.__doc__
-# 
-# 
+#
+#
 #     parent_names = ['p', 'minval', 'step']
-# 
+#
 #     def __init__(self, name, p, minval=0, step=1, value=None, dtype=np.float, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
-# 
+#
 #         if value is not None:
 #             if np.isscalar(value):
 #                 self.size = 1
@@ -2634,7 +2675,7 @@ Docstring of categorical_like (case where P is a Dirichlet):
 #                 self.size = len(value)
 #         else:
 #             self.size = size
-# 
+#
 #         if isinstance(p, Dirichlet):
 #             Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A ModCategorical random variable', name=name,
 #                 parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
@@ -2663,11 +2704,11 @@ category is assumed to exist with associated probability 1-sum(p.value).
 
 Otherwise parent p's value should sum to 1.
     """
-    
+
     parent_names = ['n', 'p']
-    
+
     def __init__(self, name, n, p, trace=True, value=None, rseed=False, observed=False, cache_depth=2, plot=None, verbose=0, **kwds):
-        
+
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like), doc='A Multinomial random variable', name=name,
                 parents={'n':n,'p':p}, random=mod_rmultinom, trace=trace, value=value, dtype=np.int, rseed=rseed,
@@ -2679,13 +2720,13 @@ Otherwise parent p's value should sum to 1.
 
 def ImputeMissing(name, dist_class, values, missing=None, **parents):
     """
-    This function accomodates missing elements for the data of simple 
-    Stochastic distribution subclasses. The masked_values argument is an 
+    This function accomodates missing elements for the data of simple
+    Stochastic distribution subclasses. The masked_values argument is an
     object of type numpy.ma.MaskedArray, which contains the raw data and
     a boolean mask indicating missing values. The resulting list contains
     a list of stochastics of type dist_class, with the extant values as data
     stochastics and the missing values as variable stochastics.
-    
+
     :Arguments:
       - name : string
         Name of the data stochastic

@@ -2858,3 +2858,51 @@ c
 !       return
 !       end
 ! 
+
+      SUBROUTINE vonmises(x,mu,kappa,n,nmu, nkappa, like)
+
+c von Mises log-likelihood function      
+
+c Written 13/01/2009 ADS.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(nkappa),intent(in) :: kappa
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(kappa,n),check(nkappa==1||nkappa==n) :: nkappa=len(kappa)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nkappa,nmu
+      DOUBLE PRECISION like
+      DOUBLE PRECISION tmp
+      DOUBLE PRECISION x(n),mu(nmu),kappa(nkappa)
+      DOUBLE PRECISION mu_tmp, kappa_tmp
+      LOGICAL not_scalar_mu, not_scalar_kappa
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      DOUBLE PRECISION i0
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_kappa = (nkappa .NE. 1)
+
+      mu_tmp = mu(1)
+      kappa_tmp = kappa(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_kappa) kappa_tmp=kappa(i)
+        if (kappa_tmp .LT. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        like = like - dlog(2*PI*i0(kappa_tmp))
+        like = like + kappa_tmp*dcos(x(i)-mu_tmp)
+      enddo
+      return
+      END

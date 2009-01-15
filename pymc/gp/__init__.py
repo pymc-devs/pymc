@@ -1,15 +1,15 @@
 # Copyright (c) Anand Patil, 2007
 
-__modules__ = [ 'GPutils', 
-                'Mean', 
-                'Covariance', 
-                'BasisCovariance', 
-                'FullRankCovariance', 
-                'NearlyFullRankCovariance', 
-                'Realization', 
+__modules__ = [ 'GPutils',
+                'Mean',
+                'Covariance',
+                'BasisCovariance',
+                'FullRankCovariance',
+                'NearlyFullRankCovariance',
+                'Realization',
                 'cov_funs',
                 'PyMC_objects']
-                
+
 __optmodules__ = ['gpplots']
 
 from GPutils import *

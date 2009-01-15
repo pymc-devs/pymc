@@ -6,8 +6,8 @@ Sample the parameters of a Generalized Extreme Value (GEV) distribution.
 from PyMC import data, parameter, Uniform, Beta, gev_like
 from numpy import array
 
-# Define the priors for the location (xi), scale (alpha) and shape (kappa) 
-# parameters. 
+# Define the priors for the location (xi), scale (alpha) and shape (kappa)
+# parameters.
 
 xi = Uniform('xi', rseed=True, lower=0, upper=60, doc='Location parameter')
 
@@ -25,9 +25,9 @@ annual_maxima = array([ 23.6,  11.9,  18.8,  13. ,  19.8,  19.8,  24.9,  21.6,  
         19.1,  30.2,  20.1,  22. ,  21.2,   9.9,  20.8,  44. ,  24.6,
         35. ,  14.8,  26.2,  18.2,  17.1,  27. ,  20.2,  20.8,  20.3,
         16.6,  17.2,  30.7,  18.6,  17.8,  24.5,  24.6,  35.8])
-        
+
 @data
 def D(value=annual_maxima, location=xi, scale=alpha, shape=kappa):
    return gev_like(value, shape, location, scale)
-   
+
 

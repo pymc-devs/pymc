@@ -10,15 +10,15 @@ for line in r:
     lons.append(float(line[2])/100.)
     lats.append(float(line[1])/100.)
     elevation.append(float(line[3]))
-    
-    
+
+
 lons = array(lons,dtype=float)
 lats = array(lats,dtype=float)
 elevation = array(elevation,dtype=float)
-    
+
 
 f.close()
- 
+
 lat_low = lats.min()
 lat_hi = lats.max()
 lon_low = lons.min()

@@ -8,10 +8,10 @@ from numpy import *
 obs_x = array([-.5,.5])
 V = array([.002,.002])
 data = array([3.1, 2.9])
-observe(M=M, 
+observe(M=M,
         C=C,
         obs_mesh=obs_x,
-        obs_V = V, 
+        obs_V = V,
         obs_vals = data)
 
 # Generate realizations
@@ -25,7 +25,7 @@ x=arange(-1.,1.,.01)
 #### - Plot - ####
 if __name__ == '__main__':
     from pylab import *
-    
+
     x=arange(-1.,1.,.01)
 
     clf()
@@ -35,10 +35,10 @@ if __name__ == '__main__':
     for f in f_list:
         plot(x, f(x))
 
-    xlabel('x')    
+    xlabel('x')
     ylabel('f(x)')
     title('Three realizations of the observed GP')
     axis('tight')
-    
-    
+
+
     # show()

@@ -25,8 +25,8 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
     """
     Intercept and slope of rate stochastic of poisson distribution
     Rate stochastic must be positive for t in [0,T]
-    
-    p(intercept, slope|tau,rate) = 
+
+    p(intercept, slope|tau,rate) =
     N(slope|0,tau) Exp(intercept|rate) 1(intercept>0) 1(intercept + slope * T>0)
     """
 
@@ -35,7 +35,7 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
             return normal_like(value[0],0.,tau) + exponential_like(value[1], rate)
         else:
             return -Inf
-        
+
     def random(tau, rate):
         val = zeros(2)
         val[0] = rnormal(0., tau)
@@ -44,8 +44,8 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate = 4.):
             val[0] = rnormal(0., tau)
             val[1] = rexponential(rate)
         return val
-        
-    
+
+
 @stochastic(observed=True, dtype=int)
 def disasters(value = disasters_array, params_of_mean = params_of_mean):
     """Annual occurences of coal mining disasters."""

@@ -29,4 +29,4 @@ def prop(func):
   http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/205183
   """
   return property(doc=func.__doc__, **func())
-  
+

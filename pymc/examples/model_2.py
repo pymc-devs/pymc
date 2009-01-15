@@ -18,7 +18,7 @@ disasters_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 # Define the data and stochastics
-global_rate = Exponential('global_rate',beta=1./3)    
+global_rate = Exponential('global_rate',beta=1./3)
 
 @stochastic(observed=True, dtype=int)
 def disasters(value = disasters_array, rate = global_rate):

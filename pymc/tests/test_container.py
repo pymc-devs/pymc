@@ -38,7 +38,7 @@ class test_Container(TestCase):
             assert(C[2] is A[2])
             assert(C.value[2] is A[2])
 
-        # Test array container:    
+        # Test array container:
 
         B = ndarray((3,3),dtype=object)
         B[0,:] = DM.e

@@ -142,10 +142,10 @@ class GladeWidget:
 
         elif self.sampler.status == 'paused':
             self.sampler.interactive_continue()
-            
+
             widget.set_label('Stop')
             widget.set_image(gtk.image_new_from_stock('gtk-stop', gtk.ICON_SIZE_BUTTON))
-            
+
             self.timer = Thread(target=gobject.timeout_add, args= (100, progress_timeout, self))
             self.timer.start()
 

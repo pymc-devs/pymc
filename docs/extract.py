@@ -13,7 +13,7 @@ def fextract(text, start=None, end=None):
     if end is not None:
         text =  re.split(end, text)[0]
     return text
-    
+
 parser=OptionParser()
 parser.add_option('-f', '--file', dest='filename', help='Input data file', default=None)
 parser.add_option('-o', '--outputfile', dest='output', help='Output data file', default=None)
@@ -29,16 +29,16 @@ options, args = parser.parse_args(sys.argv[1:])
 ##else:
 ##    start = args[0]
 ##    end = args[0]
-    
+
 if options.filename is not None:
     text = open(options.filename,'r').readlines()
 else:
     text=sys.stdin.readlines()
-       
+
 if options.output is None:
     output = sys.stdout
 else:
     output = open(options.output, 'w')
-    
+
 out = fextract(text, options.start, options.end)
 output.writelines(out)

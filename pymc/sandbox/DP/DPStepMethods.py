@@ -22,7 +22,7 @@ class DPParentMetropolis(StepMethod):
     propose a new DP to match.
     """
     pass
-    
+
 class DPDrawMetropolis(StepMethod):
     """
     Updates DP draws.

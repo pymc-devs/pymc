@@ -53,20 +53,20 @@ def get_index_list(shape, j):
 
 def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
     """
-    Returns an array whose ith row is the q[i]th quantile of the 
+    Returns an array whose ith row is the q[i]th quantile of the
     function.
 
     :Arguments:
-        func_stacks: The samples of the function. func_stacks[i,:] 
+        func_stacks: The samples of the function. func_stacks[i,:]
             gives sample i.
         qlist: A list or array of the quantiles you would like.
 
     :SeeAlso: func_envelopes, func_hist, weightplot
     """
 
-    # For very large objects, this will be rather long. 
+    # For very large objects, this will be rather long.
     # Too get the length of the table, use obj.trace.length()
-    
+
     if isinstance(node, pymc.Variable):
         func_stacks = node.trace()
     else:
@@ -95,11 +95,11 @@ def func_envelopes(node, CI=[.25, .5, .95]):
     func_envelopes(node, CI = [.25, .5, .95])
 
     Returns a list of centered_envelope objects for func_stacks,
-    each one corresponding to an element of CI, and one 
+    each one corresponding to an element of CI, and one
     corresponding to mass 0 (the median).
 
     :Arguments:
-        func_stacks: The samples of the function. func_stacks[i,:] 
+        func_stacks: The samples of the function. func_stacks[i,:]
             gives sample i.
         CI: A list or array containing the probability masses
             the envelopes should enclose.
@@ -134,7 +134,7 @@ class func_sd_envelope(object):
     F = func_sd_envelope(func_stacks)
     F.display(axes,xlab=None,ylab=None,name=None)
 
-    This object plots the mean and +/- 1 sd error bars for 
+    This object plots the mean and +/- 1 sd error bars for
     the one or two-dimensional function whose trace
     """
 
@@ -182,7 +182,7 @@ class func_sd_envelope(object):
             if xlab:
                 xlabel(xlab)
             if ylab:
-                ylabel(ylab)        
+                ylabel(ylab)
             colorbar()
 
             subplot(1,3,2)
@@ -192,7 +192,7 @@ class func_sd_envelope(object):
                 xlabel(xlab)
             if ylab:
                 ylabel(ylab)
-            colorbar()      
+            colorbar()
 
             subplot(1,3,3)
             contourf(axes[0],axes[1],self.hi,cmap=cm.bone)
@@ -210,12 +210,12 @@ class centered_envelope(object):
     """
     E = centered_envelope(sorted_func_stack, mass)
 
-    An object corresponding to the centered CI envelope 
+    An object corresponding to the centered CI envelope
     of a function enclosing a particular probability mass.
 
     :Arguments:
-        sorted_func_stack: The samples of the function, sorted. 
-            if func_stacks[i,:] gives sample i, then 
+        sorted_func_stack: The samples of the function, sorted.
+            if func_stacks[i,:] gives sample i, then
             sorted_func_stack is sort(func_stacks,0).
 
         mass: The probability mass enclosed by the CI envelope.
@@ -273,21 +273,21 @@ class centered_envelope(object):
 def plotwrapper(f):
     """
     This decorator allows for PyMC arguments of various types to be passed to
-    the plotting functions. It identifies the type of object and locates its 
+    the plotting functions. It identifies the type of object and locates its
     trace(s), then passes the data to the wrapped plotting function.
-    
+
     """
-    
+
     def wrapper(pymc_obj, *args, **kwargs):
-        
+
         start = 0
         if kwargs.has_key('start'):
             start = kwargs.pop('start')
-            
+
         # Figure out what type of object it is
         try:
             # First try Model type
-            for variable in pymc_obj._variables_to_tally:            
+            for variable in pymc_obj._variables_to_tally:
                 # Plot object
                 if variable._plot!=False:
                     data = variable.trace()[start:]
@@ -300,7 +300,7 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
-            
+
         try:
             # Then try Node type
             if pymc_obj._plot!=False:
@@ -310,7 +310,7 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
-            
+
         if type(pymc_obj) == dict:
             # Then try dictionary
             for i in pymc_obj:
@@ -318,10 +318,10 @@ def plotwrapper(f):
                 if args:
                     i = '%s_%s' % (args[0], i)
                 f(data, i, *args, **kwargs)
-            return  
+            return
         # If others fail, assume that raw data is passed
         f(pymc_obj, *args, **kwargs)
-    
+
     return wrapper
 
 
@@ -329,72 +329,72 @@ def plotwrapper(f):
 def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
-    
+
     :Arguments:
         data: array or list
             A trace from an MCMC sample.
-            
+
         name: string
             The name of the object.
-        
+
         format (optional): string
             Graphic output format (defaults to png).
-            
+
         suffix (optional): string
             Filename suffix.
-        
+
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
-            
+
         common_scale (optional): bool
             Specifies whether plots of multivariate nodes should be on the same scale
             (defaults to True).
-            
+
     """
-        
+
     # If there is only one data array, go ahead and plot it ...
     if rank(data)==1:
-        
+
         if verbose>0:
             print 'Plotting', name
-        
+
         # If new plot, generate new frame
         if new:
-            
+
             figure(figsize=(10, 6))
-        
+
         # Call trace
         trace(data, name, datarange=datarange, rows=rows, columns=2, num=num, last=last)
         # Call histogram
         histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last)
-        
+
         if last:
             if not os.path.exists(path):
                 os.mkdir(path)
-                
+
             savefig("%s%s%s.%s" % (path, name, suffix, format))
-    
+
     else:
         # ... otherwise plot recursively
         tdata = swapaxes(data, 0, 1)
-        
+
         datarange = (None, None)
         # Determine common range for plots
         if common_scale:
             datarange = (min(tdata), max(tdata))
-        
+
         # How many rows?
         _rows = min(4, len(tdata))
-        
+
         for i in range(len(tdata)):
-            
+
             # New plot or adding to existing?
             _new = not i % _rows
             # Current subplot number
             _num = i % _rows * 2 + 1
             # Final subplot of current figure?
             _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
-            
+
             plot(tdata[i], name+'_'+str(i), format=format, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
@@ -403,43 +403,43 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 
     # Internal histogram specification for handling nested arrays
     try:
-        
+
         # Stand-alone plot or subplot?
         standalone = rows==1 and columns==1 and num==1
         if standalone:
             if verbose>0:
                 print 'Generating histogram of', name
             figure()
-        
+
         subplot(rows, columns, num)
-        
+
         #Specify number of bins (10 as default)
         nbins = nbins or int(4 + 1.5*log(len(data)))
-        
+
         # Generate histogram
         hist(data.tolist(), nbins)
-        
+
         xlim(datarange)
-        
+
         # Plot options
         if last:
             xlabel(name, fontsize='x-small')
-        
+
         ylabel("Frequency", fontsize='x-small')
-        
+
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
         tlabels = gca().get_yticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
-        
+
         if standalone:
             if not os.path.exists(path):
                 os.mkdir(path)
             # Save to file
             savefig("%s%s%s.%s" % (path, name, suffix, format))
             #close()
-    
+
     except OverflowError:
         print '... cannot generate histogram'
 
@@ -447,31 +447,31 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 @plotwrapper
 def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Internal plotting specification for handling nested arrays
-    
+
     # Stand-alone plot or subplot?
     standalone = rows==1 and columns==1 and num==1
-    
+
     if standalone:
         if verbose>0:
             print 'Plotting', name
         figure()
-    
+
     subplot(rows, columns, num)
     pyplot(data.tolist())
     ylim(datarange)
-    
+
     # Plot options
     if last:
         xlabel('Iteration', fontsize='x-small')
     ylabel(name, fontsize='x-small')
-    
+
     # Smaller tick labels
     tlabels = gca().get_xticklabels()
     setp(tlabels, 'fontsize', fontmap[rows])
-    
+
     tlabels = gca().get_yticklabels()
     setp(tlabels, 'fontsize', fontmap[rows])
-    
+
     if standalone:
         if not os.path.exists(path):
             os.mkdir(path)
@@ -481,28 +481,28 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
 
 @plotwrapper
 def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
-    
+
     # Generate Geweke (1992) diagnostic plots
-    
+
     # print 'Plotting', name+suffix
-    
+
     # Generate new scatter plot
     figure()
     x, y = transpose(data)
     scatter(x.tolist(), y.tolist())
-    
+
     # Plot options
     xlabel('First iteration', fontsize='x-small')
     ylabel('Z-score', fontsize='x-small')
-    
+
     # Plot lines at +/- 2 sd from zero
     pyplot((min(x), max(x)), (2, 2), '--')
     pyplot((min(x), max(x)), (-2, -2), '--')
-    
+
     # Set plot bound
     ylim(min(-2.5, min(y)), max(2.5, max(y)))
     xlim(0, max(x))
-    
+
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
@@ -514,7 +514,7 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
         print 'Plotting', name+suffix
-        
+
     # Generate new scatter plot
     figure()
     try:
@@ -522,7 +522,7 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     except ValueError:
         x, y = data
     scatter(x, y)
-    
+
     # Plot x=y line
     lo = min(ravel(data))
     hi = max(ravel(data))
@@ -530,39 +530,39 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     lo -= 0.1*datarange
     hi += 0.1*datarange
     pyplot((lo, hi), (lo, hi))
-    
+
     # Plot options
     xlabel('Observed deviates', fontsize='x-small')
     ylabel('Simulated deviates', fontsize='x-small')
-    
+
     if report_p:
         # Put p-value in legend
         count = sum(s>o for o,s in zip(x,y))
         text(lo+0.1*datarange, hi-0.1*datarange,
              'p=%.3f' % (count/len(x)), horizontalalignment='center',
              fontsize=10)
-    
+
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
-    
+
 def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
-    
+
     if ndim(trueval)==1 and ndim(simdata==2):
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
             gof(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
-        
+
     if verbose>0:
         print 'Plotting', (name or 'MCMC') + suffix
-        
+
     figure()
-    
+
     #Specify number of bins (10 as default)
     nbins = nbins or int(4 + 1.5*log(len(simdata)))
 
@@ -582,7 +582,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 
     # Plot vertical line at location of true data value
     axvline(x=trueval, linewidth=2, color='r', linestyle='dotted')
-    
+
     if not os.path.exists(path):
         os.mkdir(path)
     # Save to file
@@ -594,63 +594,63 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
     """
     Generate bar plot of a series, usually autocorrelation
     or autocovariance.
-    
+
     :Arguments:
         data: array or list
             A trace from an MCMC sample.
-            
+
         name: string
             The name of the object.
-        
+
         format (optional): string
             Graphic output format (defaults to png).
-            
+
         suffix (optional): string
             Filename suffix.
-        
+
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
     """
-    
+
     # If there is just one data series, wrap it in a list
     if rank(data)==1:
         data = [data]
-    
+
     # Number of plots per page
     rows = min(len(data), 4)
-    
+
     for i,values in enumerate(data):
         if verbose>0:
             print 'Plotting', name+suffix
-        
+
         if not i % rows:
              # Generate new figure
             figure(figsize=(10, 6))
-        
+
         # New subplot
         subplot(rows, 1, i - (rows*(i/rows)) + 1)
         x = arange(maxlag)
         y = [autocorr(values, lag=i) for i in x]
-        
+
         bar(x, y)
-        
+
         # Set axis bounds
         ylim(-1.0, 1.0)
         xlim(0, len(y))
-        
+
         # Plot options
         ylabel(name, fontsize='x-small')
         tlabels = gca().get_yticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
         tlabels = gca().get_xticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
-        
+
         # Save to file
         if not (i+1) % rows or i == len(values)-1:
-            
+
             # Label X-axis on last subplot
             xlabel('Lag', fontsize='x-small')
-            
+
             if not os.path.exists(path):
                 os.mkdir(path)
             if rows>4:

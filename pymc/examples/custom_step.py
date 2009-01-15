@@ -13,21 +13,21 @@ class TruncatedMetropolis(pm.Metropolis):
         tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         self.stochastic.value = pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-    # Hastings factor method accounts for asymmetric proposal distribution    
+    # Hastings factor method accounts for asymmetric proposal distribution
     def hastings_factor(self):
         tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 
         lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)   
+        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
 
         if self.verbose > 1:
-            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)     
+            print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
         return lp_bak - lp_for
 
 
-# Maximum data value is around 1 (plot the histogram).        
+# Maximum data value is around 1 (plot the histogram).
 data = np.array([-1.6464815 , -0.86463278,  0.80656378,  0.67664181, -0.34312965,
        -0.29654303,  0.76170081,  0.30418603, -0.45473639, -0.24894277,
        -0.07173209, -1.64602289,  0.0804062 , -0.82159472,  0.98224623,
@@ -45,7 +45,7 @@ data = np.array([-1.6464815 , -0.86463278,  0.80656378,  0.67664181, -0.34312965
        -1.09374674, -0.72749811, -0.54892116, -1.89631844, -0.94393545,
        -0.2521341 ,  0.26840341,  0.23563219,  0.35333094])
 
-# Model: the data are truncated-normally distributed with unknown upper bound.       
+# Model: the data are truncated-normally distributed with unknown upper bound.
 mu = pm.Normal('mu',0,.01, value=0)
 tau = pm.Exponential('tau',.01, value=1)
 cutoff = pm.Exponential('cutoff',1, value=1.3)

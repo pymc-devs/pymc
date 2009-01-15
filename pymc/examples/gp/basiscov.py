@@ -24,46 +24,46 @@ obs_x = array([-.5,.5])
 V = array([.002,.002])
 data = array([3.1, 2.9])
 
-observe(M=M, 
+observe(M=M,
         C=C,
         obs_mesh=obs_x,
-        obs_V = V, 
+        obs_V = V,
         obs_vals = data)
 
 if __name__ == '__main__':
     from pylab import *
-    
+
     close('all')
     x=arange(-1.,1.,.01)
-    
+
     figure()
     # Plot the covariance function
     subplot(1,2,1)
 
-    
+
     contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.bone)
-    
+
     xlabel('x')
     ylabel('y')
     title('C(x,y)')
     axis('tight')
     colorbar()
-    
+
     # Plot a slice of the covariance function
     subplot(1,2,2)
-    
+
     plot(x,C(x,0.).view(ndarray).ravel(),'k-')
-    
+
     xlabel('x')
     ylabel('C(x,.5)')
     title('A slice of C')
-    
+
     figure()
     plot_envelope(M,C,x)
     for i in range(3):
         f = Realization(M,C)
         plot(x,f(x))
         title('Three realizations')
-    
-    
+
+
     # show()

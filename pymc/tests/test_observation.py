@@ -11,14 +11,14 @@ C = copy(C)
 # Impose observations on the GP
 class test_observation(TestCase):
     def test(self):
-        
+
         obs_x = array([-.5,.5])
         V = array([.002,.002])
         data = array([3.1, 2.9])
-        observe(M=M, 
+        observe(M=M,
                 C=C,
                 obs_mesh=obs_x,
-                obs_V = V, 
+                obs_V = V,
                 obs_vals = data)
 
         # Generate realizations
@@ -26,4 +26,4 @@ class test_observation(TestCase):
         for i in range(3):
             f = Realization(M, C)
             f(x)
-            
+

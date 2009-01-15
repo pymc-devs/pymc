@@ -13,7 +13,7 @@ X_init_val_true = 2.
 X_true[:K_true] = X_init_val_true
 for i in xrange(K_true,T):
     X_true[i] = sum(A_true * X_true[i-K_true:i]) + normal()
-    
+
 obs_interval = 5
 X_obs_vals = X_true[::obs_interval] + normal(size=T/obs_interval)
 
@@ -40,18 +40,18 @@ A_init[:K_true] = A_true
 def A(value=A_init, mu=-1.*ones(K_max,dtype=float), tau=ones(K_max,dtype=float)):
     """A ~ normal(mu, tau)"""
     return normal_like(value, mu, tau)
-    
+
 @stoch(trace=False)
 def X(value=X_true, K=K, A=A, mu = mu_x_init, tau = tau_x_init):
     """Autoregression"""
 
     # Initial data
     logp=normal_like(value[:K], mu, tau)
-    
+
     # Difference equation
     for i in xrange(K,T):
-        logp += normal_like(value[i], sum(A[:K]*value[i-K:i]), 1.)        
-        
+        logp += normal_like(value[i], sum(A[:K]*value[i-K:i]), 1.)
+
     return logp
 
 @data

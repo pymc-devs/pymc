@@ -6,8 +6,8 @@ import isotropic_cov_funs
 from brownian import *
 
 
-extra_parameters = {'gaussian': {'': ''}, 
-                'pow_exp': {'pow': 'The exponent in the exponential.'}, 
+extra_parameters = {'gaussian': {'': ''},
+                'pow_exp': {'pow': 'The exponent in the exponential.'},
                 'exponential':{'':''},
                 'matern': {'diff_degree': 'The degree of differentiability of realizations.'},
                 'sphere': {'': ''},

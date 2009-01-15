@@ -29,10 +29,10 @@ class EM(MAP):
     input: As for Model
     sampler: Should be a Sampler instance handling a submodel of input. The variables in
       sampler will be integrated out; only the marginal probability of the other variables in input
-      will be maximized. The 'expectation' step will be computed using samples obtained from the 
+      will be maximized. The 'expectation' step will be computed using samples obtained from the
       sampler.
     db: A database backend.
-    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable 
+    eps: 'h' for computing numerical derivatives. May be a dictionary keyed by stochastic variable
       as well as a scalar.
     diff_order: The order of the approximation used to compute derivatives.
 
@@ -58,27 +58,27 @@ class EM(MAP):
                 self.stochastics_to_integrate.add(s)
 
 
-    def fit(self, iterlim=1000, tol=.0001, 
-            na_method = 'fmin', na_iterlim=1000, na_tol=.0001, 
+    def fit(self, iterlim=1000, tol=.0001,
+            na_method = 'fmin', na_iterlim=1000, na_tol=.0001,
             sa_iter = 10000, sa_burn=1000, sa_thin=10):
         """
-        N.fit(iterlim=1000, tol=.0001, 
-        na_method='fmin', na_iterlim=1000, na_tol=.0001, 
+        N.fit(iterlim=1000, tol=.0001,
+        na_method='fmin', na_iterlim=1000, na_tol=.0001,
         sa_iter = 10000, sa_burn=1000, sa_thin=10)
-        
+
         Arguments 'iterlim' and 'tol' control the top-level EM iteration.
         Arguments beginning with 'na' are passed to NormApprox.fit() during the M steps.
         Arguments beginning with 'sa' are passed to self.sampler during the E-steps.
-        
-        The 'E' step consists of running the sampler, which will keep a trace. In the 'M' step, the 
-        log-probability of variables in the sampler's Markov blanket are averaged and combined with 
-        the log-probabilities of self's other variables to produce a joint log-probability. This 
+
+        The 'E' step consists of running the sampler, which will keep a trace. In the 'M' step, the
+        log-probability of variables in the sampler's Markov blanket are averaged and combined with
+        the log-probabilities of self's other variables to produce a joint log-probability. This
         quantity is maximized.
         """
 
         logps = []
         for i in xrange(iterlim):
-            
+
             # E step
             self.sampler.sample(sa_iter, sa_burn, sa_thin, verbose = self.verbose, tune_interval = self.tune_interval)
 
@@ -100,7 +100,7 @@ class EM(MAP):
         Evaluates the log-probability of the Markov blanket of
         a stochastic owning a particular index. Used for computing derivatives.
 
-        Averages over the sampler's trace for variables in the sampler's 
+        Averages over the sampler's trace for variables in the sampler's
         Markov blanket.
         """
         all_relevant_stochastics = set()
@@ -133,7 +133,7 @@ class EM(MAP):
         self._set_stochastics(p)
         logps = []
         for i in xrange(sampler.db.length):
-            sampler.remember(i-1)            
+            sampler.remember(i-1)
             try:
                 logps.append(self.logp)
             except pm.ZeroProbability:

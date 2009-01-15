@@ -14,5 +14,5 @@ def K(B=B):
        return Class0()
    else:
        return Class1()
-           
-           
+
+

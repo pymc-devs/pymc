@@ -13,8 +13,8 @@ class test_Sampler(NumpyTestCase):
         M = Sampler(trans_dimensional)
         M.sample(5000,0,10,verbose=False)
         M.plot()
-            
+
 
 if __name__ == '__main__':
     NumpyTest().run()
-    
+

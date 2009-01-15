@@ -17,9 +17,9 @@ M = Mean(zero_fun)
 #### - Plot - ####
 if __name__ == '__main__':
     from pylab import *
-    
+
     x=arange(-1.,1.,.01)
-    
+
     close('all')
     figure()
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     title('C(x,y)')
     axis('tight')
     colorbar()
-    
+
     # Plot a slice of the covariance function
     subplot(2,2,2)
 
@@ -43,17 +43,17 @@ if __name__ == '__main__':
     xlabel('x')
     ylabel('C(x,0)')
     title('A slice of C')
-    
+
     subplot(2,1,2)
-    
+
     # plot_envelope(M, C, mesh=x)
     for i in range(3):
         f = Realization(M, C)
         plot(x, f(x))
-    
-    xlabel('x')    
+
+    xlabel('x')
     ylabel('f(x)')
     title('Three realizations')
     axis([-1,1,-2,2])
-    
+
     # show()

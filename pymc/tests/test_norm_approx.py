@@ -4,9 +4,9 @@ try:
     from pylab import *
 except:
     pass
-    
+
 from numpy import *
-from numpy.testing import * 
+from numpy.testing import *
 from numpy.linalg import cholesky
 import nose
 PLOT=False
@@ -38,7 +38,7 @@ class test_norm_approx(TestCase):
     def test_sig(self):
         N = NormApprox(model)
         N.fit('fmin')
-        assert((abs(N._sig * N._sig.T - N._C) < 1.0e-14).all())        
+        assert((abs(N._sig * N._sig.T - N._C) < 1.0e-14).all())
     def test_draws(self):
         N = NormApprox(model)
         N.fit('fmin')
@@ -47,7 +47,7 @@ class test_norm_approx(TestCase):
             plot(N.alpha.trace(),N.beta.trace(),'k.')
             xlabel(r'$\alpha$')
             ylabel(r'$\beta$')
-        
+
 if __name__=='__main__':
     import unittest
     unittest.main()
