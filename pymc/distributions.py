@@ -1585,6 +1585,7 @@ def multinomial_like(x, n, p):
     
     x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
     p = np.atleast_2d(p)
+    
     return flib.multinomial(x, n, p)
 
 # Multivariate hypergeometric------------------------------
@@ -2676,7 +2677,7 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def ImputeMissing(name, dist_class, masked_values, **parents):
+def ImputeMissing(name, dist_class, values, missing=None, **parents):
     """
     This function accomodates missing elements for the data of simple 
     Stochastic distribution subclasses. The masked_values argument is an 
@@ -2690,11 +2691,21 @@ def ImputeMissing(name, dist_class, masked_values, **parents):
         Name of the data stochastic
       - dist_class : Stochastic
         Stochastic subclass such as Poisson, Normal, etc.
-      - value : numpy.ma.core.MaskedArray
-        A masked array with missing elements. Where mask=True, value is assumed missing.
+      - values : numpy.ma.core.MaskedArray or iterable
+        A masked array with missing elements (where mask=True, value is assumed missing),
+        or an iterable that contains missing elements, identified by 'missing' argument
+      - missing (optional): obj
+        A placeholder value that indicates missing data values. Only required if 'values'
+        is not a masked array already.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
+    masked_values = values
+    if not type(masked_values) == np.ma.core.MaskedArray:
+        # Generate mask
+        mask = np.array(values) == missing
+        # Generate masked array
+        masked_values = np.ma.masked_array(values, mask)
     
     # Initialise list
     vars = []
@@ -2705,7 +2716,7 @@ def ImputeMissing(name, dist_class, masked_values, **parents):
         these_parents = {}
         # Parse parents
         for key, parent in parents.iteritems():
-            if len(parent.value) > 1:
+            if np.size(parent.value) > 1:
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
@@ -2716,6 +2727,8 @@ def ImputeMissing(name, dist_class, masked_values, **parents):
             # Observed values
             vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
     return vars
+    
+Impute = ImputeMissing
 
 if __name__ == "__main__":
     import doctest
