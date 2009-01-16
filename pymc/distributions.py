@@ -1925,7 +1925,8 @@ def rvon_mises(mu, kappa, size=1):
 
     Random von Mises variates.
     """
-    return np.random.mtrand.vonmises( mu, kappa, size)
+    # TODO: Just return straight from numpy after release 1.3
+    return (np.random.mtrand.vonmises( mu, kappa, size) + np.pi)%(2.*np.pi)-np.pi
 
 def von_mises_expval(mu, kappa):
     """
