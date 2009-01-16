@@ -590,14 +590,6 @@ def create_bin_method(op_name, klass):
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
     create_rl_bin_method(op, Variable)
 
-# Addition, subtraction, multiplication
-create_rl_lin_comb_method('add', Variable, ['self', 'other'], [1,1])
-create_rl_lin_comb_method('radd', Variable, ['self', 'other'], [1,1])
-create_rl_lin_comb_method('sub', Variable, ['self', 'other'], [1,-1])
-create_rl_lin_comb_method('rsub', Variable, ['self', 'other'], [-1,1])
-create_rl_lin_comb_method('mul', Variable, ['self'],['other'])
-create_rl_lin_comb_method('rmul', Variable, ['self'],['other'])
-
 # Binary operators
 for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
     create_bin_method(op ,Variable)
@@ -606,14 +598,27 @@ for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
 for op in ['unicode','neg','pos','abs','invert','index']:
     create_uni_method(op, Variable)
 
+# Addition, subtraction, multiplication
+# TODO: Uncomment once LinearCombination issues are ironed out.
+# create_rl_lin_comb_method('add', Variable, ['self', 'other'], [1,1])
+# create_rl_lin_comb_method('radd', Variable, ['self', 'other'], [1,1])
+# create_rl_lin_comb_method('sub', Variable, ['self', 'other'], [1,-1])
+# create_rl_lin_comb_method('rsub', Variable, ['self', 'other'], [-1,1])
+# create_rl_lin_comb_method('mul', Variable, ['self'],['other'])
+# create_rl_lin_comb_method('rmul', Variable, ['self'],['other'])
+#TODO: Comment once LinearCombination issues are ironed out.
+for op in ['add', 'mul', 'sub']:
+    create_rl_bin_method(op, Variable)
+
+
 # Create __getitem__ method.
 def __getitem__(self, index):
     # If index is number or number-valued variable, make an Index object
     name = '('+'_'.join([self.__name__,'getitem',str(index)])+')'
     if isinstance(index, Variable):
-        if np.isreal(index.value):
+        if np.isreal(index.value) and np.isscalar(index.value):
             return Index(name, self, index)
-    elif np.isreal(index):
+    elif np.isreal(index) and np.isscalar(index):
         return Index(name, self, index, trace=False, plot=False)
     # Otherwise make a standard Deterministic.
     else:
