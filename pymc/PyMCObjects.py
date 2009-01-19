@@ -491,7 +491,7 @@ class Stochastic(StochasticBase):
         if isdata is not None:
             print "Deprecation Warning: the 'isdata' flag has been replaced by 'observed'. Please update your model accordingly."
             self.observed = isdata
-
+        
         # A flag indicating whether self's value has been observed.
         self.observed = observed
 
@@ -521,9 +521,9 @@ class Stochastic(StochasticBase):
                 else:
                     self._value = value
             elif dtype and dtype is not object:
-                try:
+                if size(value) == 1:
                     self._value = dtype(value)
-                except TypeError:
+                else:
                     self._value = asarray(value, dtype=dtype)
             else:
                 self._value = value
@@ -608,9 +608,9 @@ class Stochastic(StochasticBase):
                 self._value = value
 
         elif self.dtype and self.dtype is not object:
-            try:
+            if size(value) == 1:
                 self._value = self.dtype(value)
-            except TypeError:
+            else:
                 self._value = asarray(value, dtype=self.dtype)
 
         else:
