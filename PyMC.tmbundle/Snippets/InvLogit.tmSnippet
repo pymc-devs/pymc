@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = InvLogit('$1', ltheta=${2:ltheta})$0</string>
+	<key>name</key>
+	<string>Inverse-logit deterministic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>invlogit</string>
+	<key>uuid</key>
+	<string>FC601171-4B25-4133-B161-82D976E7FF8E</string>
+</dict>
+</plist>

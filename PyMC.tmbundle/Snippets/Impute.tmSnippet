@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Impute('$1', ${2:dist_class}, ${3:value}, missing=${3:-999})$0</string>
+	<key>name</key>
+	<string>Data stochastic with imputed values</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>impute</string>
+	<key>uuid</key>
+	<string>48CEA3D9-6928-4F11-9C7F-D4E777F7A61C</string>
+</dict>
+</plist>

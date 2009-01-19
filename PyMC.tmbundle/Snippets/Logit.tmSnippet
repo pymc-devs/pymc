@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>${1:name} = Logit('$1', theta=${2:theta})$0</string>
+	<key>name</key>
+	<string>Logit deterministic</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>tabTrigger</key>
+	<string>logit</string>
+	<key>uuid</key>
+	<string>CC4CB645-D1F2-499C-AB58-6FCA9C790E04</string>
+</dict>
+</plist>
