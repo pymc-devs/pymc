@@ -47,7 +47,7 @@ class MCMC(Sampler):
 
     :SeeAlso: Model, Sampler, StepMethod.
     """
-    def __init__(self, input=None, db='ram', name='MCMC', **kwds):
+    def __init__(self, input=None, db='ram', name='MCMC', calc_deviance=True, **kwds):
         """Initialize an MCMC instance.
 
         :Parameters:
@@ -62,7 +62,7 @@ class MCMC(Sampler):
           - **kwds :
               Keywords arguments to be passed to the database instantiation method.
         """
-        Sampler.__init__(self, input, db, name, calc_deviance=True, **kwds)
+        Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
 
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -120,9 +120,9 @@ class MCMC(Sampler):
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
-
+        
         self.assign_step_methods()
-
+        
         if burn >= iter:
             raise ValueError, 'Burn interval must be smaller than specified number of iterations.'
         self._iter = int(iter)
@@ -137,7 +137,7 @@ class MCMC(Sampler):
         # Flags for tuning
         self._tuning = True
         self._tuned_count = 0
-
+        
         Sampler.sample(self, iter, length, verbose)
 
     def _loop(self):
