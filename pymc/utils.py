@@ -754,8 +754,9 @@ def crawl_dataless(sofar, gens):
     new_gen = set([])
     all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
     for p in all_ext_parents:
-        if len(p.extended_children & sofar) == len(p.extended_children):
-            new_gen.add(p)
+        if p._random is not None:
+            if len(p.extended_children & sofar) == len(p.extended_children):
+                new_gen.add(p)
     if len(new_gen)==0:
         return sofar, gens
     else:
