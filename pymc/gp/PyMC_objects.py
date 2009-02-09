@@ -166,6 +166,7 @@ class GP(pm.Stochastic):
                             doc=doc,
                             name=name,
                             parents={'M': M, 'C': C},
+                            dtype=np.dtype('object'),
                             random = random_fun,
                             trace=trace,
                             value=init_val.value,
@@ -194,13 +195,6 @@ class GP(pm.Stochastic):
 
         else:
             self.random()
-
-    def _set_value(self, v):
-        self.last_value = self._value
-        self._value = v
-    def _get_value(self):
-        return self._value
-    value = property(_get_value, _set_value)
 
 class GPParentMetropolis(pm.Metropolis):
 

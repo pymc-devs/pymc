@@ -789,28 +789,28 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
     savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 
 def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
-    """Plots absolute values of z-scores for model validation output from 
+    """Plots absolute values of z-scores for model validation output from
     diagnostics.validate()."""
 
     if verbose:
         print '\nGenerating model validation plot'
-    
+
     x,y,labels = [],[],[]
-    
+
     for i,var in enumerate(pvalue_dict):
-        
+
         # Get p-values
         pvals = pvalue_dict[var]
         # Take absolute values of inverse-standard normals
         zvals = abs(special.ndtri(pvals))
-        
+
         x = append(x, zvals)
         y = append(y, ones(size(zvals))*(i+1))
-        
+
         vname = var
         vname += " (%i)" % size(zvals)
         labels = append(labels, vname)
-        
+
     pyplot(x, y, 'o')
     # Set range on y-axis
     ylim(0, size(pvalue_dict)+2)
@@ -821,8 +821,8 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
 
     if not os.path.exists(path):
         os.mkdir(path)
-        
+
     if name:
         name += '-'
-        
+
     savefig("%s%svalidation.%s" % (path, name, format))

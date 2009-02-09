@@ -369,7 +369,7 @@ class NoStepper(StepMethod):
         pass
     def tune(self, *args, **kwargs):
         pass
-    
+
 # The default StepMethod, which Model uses to handle singleton stochastics.
 class Metropolis(StepMethod):
     """
@@ -393,7 +393,7 @@ class Metropolis(StepMethod):
 
     - proposal_distribution (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
-            'Prior' or None. If None is provided, a proposal distribution is chosen 
+            'Prior' or None. If None is provided, a proposal distribution is chosen
             by examining P.value's type.
 
     - verbose (optional) : integer
@@ -602,12 +602,12 @@ class DrawFromPrior(StepMethod):
     def __init__(self, variables, generations, verbose=0):
         StepMethod.__init__(self, variables, verbose)
         self.generations = generations
-        
+
     def step(self):
         for generation in self.generations:
             for s in generation:
                 s.rand()
-        
+
     @classmethod
     def competence(s):
         # Dataless gets assigned specially before other step methods.

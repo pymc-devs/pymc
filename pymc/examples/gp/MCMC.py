@@ -3,12 +3,15 @@ from pymc import *
 from pylab import *
 from PyMCmodel import *
 
-x = linspace(-1,1,100)
+x = linspace(-1,1,400)
 
 GPSampler = MCMC(PyMCmodel)
+#
+# GPSampler.assign_step_methods()
+# q = GPSampler.step_method_dict[f][0]
 
 # Uncomment this to use the GPNormal step method instead of the default GPMetropolis
-# GPSampler.use_step_method(gp.GPNormal, f=f, obs_mesh=fmesh, obs_V=V, obs_vals=d, same_mesh=True)
+GPSampler.use_step_method(gp.GPNormal, f=f, obs_mesh=fmesh, obs_V=V, obs_vals=d, same_mesh=True)
 
 GPSampler.isample(iter=5000,burn=1000,thin=100)
 

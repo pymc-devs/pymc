@@ -105,12 +105,12 @@ class MCMC(Sampler):
         for s in self.stochastics:
             if s._random is not None:
                 if len(s.extended_children)==0:
-                    last_gen.add(s)                
-        
+                    last_gen.add(s)
+
         dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
         if len(dataless) > 0:
             new_method = DrawFromPrior(dataless, dataless_gens[::-1])
-            setattr(new_method, '_model', self)        
+            setattr(new_method, '_model', self)
             for d in dataless:
                 self.step_method_dict[d].append(new_method)
                 if self.verbose > 1:
@@ -137,9 +137,9 @@ class MCMC(Sampler):
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         """
-        
+
         self.assign_step_methods()
-        
+
         if burn >= iter:
             raise ValueError, 'Burn interval must be smaller than specified number of iterations.'
         self._iter = int(iter)
@@ -154,7 +154,7 @@ class MCMC(Sampler):
         # Flags for tuning
         self._tuning = True
         self._tuned_count = 0
-        
+
         Sampler.sample(self, iter, length, verbose)
 
     def _loop(self):

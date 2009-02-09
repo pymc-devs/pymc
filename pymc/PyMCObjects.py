@@ -4,11 +4,13 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN
+from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN, asanyarray
+import numpy as np
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
+import sys
 
 
 d_neg_inf = float(-1.7976931348623157e+308)
@@ -491,7 +493,7 @@ class Stochastic(StochasticBase):
         if isdata is not None:
             print "Deprecation Warning: the 'isdata' flag has been replaced by 'observed'. Please update your model accordingly."
             self.observed = isdata
-        
+
         # A flag indicating whether self's value has been observed.
         self.observed = observed
 
@@ -507,28 +509,20 @@ class Stochastic(StochasticBase):
 
         self.errmsg = "Stochastic %s's value is outside its support,\n or it forbids its parents' current values."%name
 
+        dtype = np.dtype(dtype)
+
         # Initialize value, either from value provided or from random function.
-        if value is not None:
-            if isinstance(value, ndarray):
-                if dtype is not None:
-                    if not dtype is value.dtype and not isinstance(value, ArrayContainer):
-                        try:
-                            self._value = asarray(value, dtype=dtype).view(value.__class__)
-                        except ValueError:
-                            self._value = value
-                    else:
-                        self._value = value
-                else:
-                    self._value = value
-            elif dtype and dtype is not object:
-                if size(value) == 1:
-                    self._value = dtype(value)
-                else:
-                    self._value = asarray(value, dtype=dtype)
+        try:
+            if dtype.kind != 'O' and value is not None:
+                self._value = asanyarray(value, dtype=dtype)
+                self._value.flags['W']=False
             else:
                 self._value = value
-        else:
-            self._value = None
+        except:
+            cls, inst, tb = sys.exc_info()
+            new_inst = cls('Stochastic %s: Failed to cast initial value to required dtype.\n\nOriginal error message:\n'%name + inst.message)
+            raise cls, new_inst, tb
+
 
         Variable.__init__(  self,
                         doc=doc,
@@ -559,7 +553,7 @@ class Stochastic(StochasticBase):
 
             # Use random function if provided
             if self._random is not None:
-                self._value = self._random(**self._parents.value)
+                self.value = self._random(**self._parents.value)
 
             # Otherwise leave initial value at None and warn.
             else:
@@ -597,22 +591,9 @@ class Stochastic(StochasticBase):
         # Don't copy because caching depends on the object's reference.
         self.last_value = self._value
 
-        if isinstance(value, ndarray):
-            value.flags['W'] = False
-            if self.dtype is not None:
-                if not self.dtype is value.dtype:
-                    self._value = asarray(value, dtype=self.dtype).view(value.__class__)
-                else:
-                    self._value = value
-            else:
-                self._value = value
-
-        elif self.dtype and self.dtype is not object:
-            if size(value) == 1:
-                self._value = self.dtype(value)
-            else:
-                self._value = asarray(value, dtype=self.dtype)
-
+        if self.dtype.kind != 'O':
+            self._value = asanyarray(value, dtype=self.dtype)
+            self._value.flags['W']=False
         else:
             self._value = value
 
@@ -681,7 +662,7 @@ class Stochastic(StochasticBase):
         if not self.observed:
             self.value = r
 
-        return r
+        return self._value
 
     # Shortcut alias to random
     rand = random

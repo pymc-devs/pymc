@@ -763,7 +763,7 @@ def crawl_dataless(sofar, gens):
         sofar |= new_gen
         gens.append(new_gen)
         return crawl_dataless(sofar, gens)
-                
+
 
 def find_generations(container, with_data = False):
     """

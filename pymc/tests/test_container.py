@@ -8,7 +8,7 @@ class test_Container(TestCase):
 
 # Test set container:
 
-        S = set([DM.e, DM.s, DM.l])
+        S = [DM.e, DM.s, DM.l]
         R = Container(S)
 
         for item in R:
