@@ -148,10 +148,10 @@ class Variable(Node):
         Node.__init__(self, doc, name, parents, cache_depth, verbose=verbose)
 
         if self.dtype is None:
-            try:
-                self.dtype = getattr(self._value, 'dtype')
-            except:
-                self.dtype = np.dtype(self._value.__class__)
+            if hasattr(self._value, 'dtype'):
+                self.dtype = self._value.dtype
+            else:
+                self.dtype = np.dtype(type(self._value))
 
     def __str__(self):
         return self.__name__
