@@ -103,8 +103,9 @@ class MCMC(Sampler):
         # Assign dataless stepper first
         last_gen = set([])
         for s in self.stochastics:
-            if len(s.extended_children)==0:
-                last_gen.add(s)                
+            if s._random is not None:
+                if len(s.extended_children)==0:
+                    last_gen.add(s)                
         
         dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
         if len(dataless) > 0:
