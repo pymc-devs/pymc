@@ -7,7 +7,7 @@ Base classes Model and Sampler are defined here.
 # 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
 
 __docformat__='reStructuredText'
-__all__ = ['find_generations', 'Model', 'Sampler']
+__all__ = ['Model', 'Sampler']
 
 """ Summary"""
 
@@ -30,51 +30,6 @@ Paused = 'Computation paused'
 
 class EndofSampling(Exception):
     pass
-
-
-def find_generations(container, with_data = False):
-    """
-    A generation is the set of stochastic variables that only has parents in
-    previous generations.
-    """
-
-    generations = []
-
-    # Find root generation
-    generations.append(set())
-    all_children = set()
-    if with_data:
-        stochastics_to_iterate = container.stochastics | container.observed_stochastics
-    else:
-        stochastics_to_iterate = container.stochastics
-    for s in stochastics_to_iterate:
-        all_children.update(s.extended_children & stochastics_to_iterate)
-    generations[0] = stochastics_to_iterate - all_children
-
-    # Find subsequent _generations
-    children_remaining = True
-    gen_num = 0
-    while children_remaining:
-        gen_num += 1
-
-
-        # Find children of last generation
-        generations.append(set())
-        for s in generations[gen_num-1]:
-            generations[gen_num].update(s.extended_children & stochastics_to_iterate)
-
-
-        # Take away stochastics that have parents in the current generation.
-        thisgen_children = set()
-        for s in generations[gen_num]:
-            thisgen_children.update(s.extended_children & stochastics_to_iterate)
-        generations[gen_num] -= thisgen_children
-
-
-        # Stop when no subsequent _generations remain
-        if len(thisgen_children) == 0:
-            children_remaining = False
-    return generations
 
 
 class Model(ObjectContainer):
@@ -139,7 +94,7 @@ class Model(ObjectContainer):
 
     def _get_generations(self):
         if not hasattr(self, '_generations'):
-            self._generations = find_generations(self)
+            self._generations = utils.find_generations(self)
         return self._generations
     generations = property(_get_generations)
 

@@ -6,10 +6,11 @@ __all__ = ['MCMC']
 
 from Model import Sampler
 from Node import ZeroProbability
-from StepMethods import StepMethodRegistry, assign_method
+from StepMethods import StepMethodRegistry, assign_method, DrawFromPrior
 from distributions import absolute_loss, squared_loss, chi_square_loss
 import sys, time, pdb
 import numpy as np
+from utils import crawl_dataless
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -98,6 +99,21 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
+
+        # Assign dataless stepper first
+        last_gen = set([])
+        for s in self.stochastics:
+            if len(s.extended_children)==0:
+                last_gen.add(s)                
+        
+        dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
+        if len(dataless) > 0:
+            new_method = DrawFromPrior(dataless, dataless_gens[::-1])
+            setattr(new_method, '_model', self)        
+            for d in dataless:
+                self.step_method_dict[d].append(new_method)
+                if self.verbose > 1:
+                    print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
 
         for s in self.stochastics:
             # If not handled by any step method, make it a new step method using the registry

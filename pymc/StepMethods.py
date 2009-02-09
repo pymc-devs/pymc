@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
@@ -27,7 +27,7 @@ nonconjugate_Gibbs_competence = 0
 
 class AdaptationError(ValueError): pass
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence']
+__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
 
 StepMethodRegistry = []
 
@@ -369,7 +369,7 @@ class NoStepper(StepMethod):
         pass
     def tune(self, *args, **kwargs):
         pass
-
+    
 # The default StepMethod, which Model uses to handle singleton stochastics.
 class Metropolis(StepMethod):
     """
@@ -393,8 +393,8 @@ class Metropolis(StepMethod):
 
     - proposal_distribution (optional) : string
             The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
-            'Prior' or None. If None is provided, a proposal distribution is
-            chosen by examining P.value's type.
+            'Prior' or None. If None is provided, a proposal distribution is chosen 
+            by examining P.value's type.
 
     - verbose (optional) : integer
             Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
@@ -439,14 +439,6 @@ class Metropolis(StepMethod):
             # Pick Gaussian by default
             self.proposal_distribution = "Normal"
 
-            # If self has no children, proposing from the prior is best.
-            if len(self.children) == 0:
-                try:
-                    self.stochastic.random()
-                    self.proposal_distribution = "Prior"
-                except:
-                    pass
-
         else:
             self.proposal_distribution = proposal_distribution
 
@@ -455,19 +447,6 @@ class Metropolis(StepMethod):
         """
         The competence function for Metropolis
         """
-        # If no stochastics depend on this stochastic, I'll just propose it from its conditional prior.
-        # This is the best possible step method for this stochastic.
-        if len(s.extended_children)==0:
-
-            if s.observed:
-                return 0
-            else:
-                try:
-                    s.rand()
-                    return 3
-                except:
-                    pass
-
         if s.dtype is None:
             return .5
 
@@ -614,6 +593,25 @@ class Gibbs(Metropolis):
 
     def propose(self):
         raise NotImplementedError, 'The Gibbs class has to be subclassed, it is not usable directly.'
+
+
+class DrawFromPrior(StepMethod):
+    """
+    Handles dataless submodels.
+    """
+    def __init__(self, variables, generations, verbose=0):
+        StepMethod.__init__(self, variables, verbose)
+        self.generations = generations
+        
+    def step(self):
+        for generation in self.generations:
+            for s in generation:
+                s.rand()
+        
+    @classmethod
+    def competence(s):
+        # Dataless gets assigned specially before other step methods.
+        return 0
 
 
 class NoStepper(StepMethod):

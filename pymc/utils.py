@@ -18,7 +18,7 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, vectorize, inf, shape, ndim, swapaxes, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless']
 
 
 def check_list(thing, label):
@@ -743,6 +743,70 @@ def getInput():
             input += os.read(sock, 4096)
 
     return input
+
+
+def crawl_dataless(sofar, gens):
+    """
+    Crawls out from v to find the biggest dataless submodel containing v.
+    TODO: Let MCMC start the crawl from its last generation. It doesn't
+    matter that there won't be one contiguous group.
+    """
+    new_gen = set([])
+    all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
+    for p in all_ext_parents:
+        if len(p.extended_children & sofar) == len(p.extended_children):
+            new_gen.add(p)
+    if len(new_gen)==0:
+        return sofar, gens
+    else:
+        sofar |= new_gen
+        gens.append(new_gen)
+        return crawl_dataless(sofar, gens)
+                
+
+def find_generations(container, with_data = False):
+    """
+    A generation is the set of stochastic variables that only has parents in
+    previous generations.
+    """
+
+    generations = []
+
+    # Find root generation
+    generations.append(set())
+    all_children = set()
+    if with_data:
+        stochastics_to_iterate = container.stochastics | container.observed_stochastics
+    else:
+        stochastics_to_iterate = container.stochastics
+    for s in stochastics_to_iterate:
+        all_children.update(s.extended_children & stochastics_to_iterate)
+    generations[0] = stochastics_to_iterate - all_children
+
+    # Find subsequent _generations
+    children_remaining = True
+    gen_num = 0
+    while children_remaining:
+        gen_num += 1
+
+
+        # Find children of last generation
+        generations.append(set())
+        for s in generations[gen_num-1]:
+            generations[gen_num].update(s.extended_children & stochastics_to_iterate)
+
+
+        # Take away stochastics that have parents in the current generation.
+        thisgen_children = set()
+        for s in generations[gen_num]:
+            thisgen_children.update(s.extended_children & stochastics_to_iterate)
+        generations[gen_num] -= thisgen_children
+
+
+        # Stop when no subsequent _generations remain
+        if len(thisgen_children) == 0:
+            children_remaining = False
+    return generations
 
 def discrepancy(observed, simulated, expected):
     """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
