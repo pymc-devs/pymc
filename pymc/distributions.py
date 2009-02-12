@@ -617,7 +617,7 @@ def bernoulli_like(x, p):
       - :math:`Var(x)= p(1-p)`
 
     """
-
+    
     return flib.bernoulli(x, p)
 
 
@@ -2718,7 +2718,7 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def ImputeMissing(name, dist_class, values, missing=None, **parents):
+def Impute(name, dist_class, values, missing=None, **parents):
     """
     This function accomodates missing elements for the data of simple
     Stochastic distribution subclasses. The masked_values argument is an
@@ -2757,10 +2757,18 @@ def ImputeMissing(name, dist_class, values, missing=None, **parents):
         these_parents = {}
         # Parse parents
         for key, parent in parents.iteritems():
-            if np.size(parent.value) > 1:
+            
+            try:
+                # If parent is a PyMCObject
+                size = np.size(parent.value)
+            except AttributeError:
+                size = np.size(parent)
+                
+            if size > 1:
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
+                
         if masked_values.mask[i]:
             # Missing values
             vars.append(dist_class(this_name, **these_parents))
@@ -2769,7 +2777,7 @@ def ImputeMissing(name, dist_class, values, missing=None, **parents):
             vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
     return vars
 
-Impute = ImputeMissing
+ImputeMissing = Impute
 
 if __name__ == "__main__":
     import doctest
