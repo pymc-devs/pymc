@@ -126,7 +126,10 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
 
         # Specify parameter values
         for s in sampler.stochastics:
-            s.value = param_values[s][i]
+            try:
+                s.value = param_values[s][i]
+            except KeyError:
+                s._logp.force_compute()
 
         # Generate simulated data, given paramter values
         for o in sampler.observed_stochastics:
