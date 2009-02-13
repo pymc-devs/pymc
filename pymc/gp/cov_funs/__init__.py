@@ -11,7 +11,8 @@ extra_parameters = {'gaussian': {'': ''},
                 'exponential':{'':''},
                 'matern': {'diff_degree': 'The degree of differentiability of realizations.'},
                 'sphere': {'': ''},
-                'quadratic': {'phi': 'The characteristic (scaled) distance of decorrelation.'}}
+                'quadratic': {'phi': 'The characteristic (scaled) distance of decorrelation.'},
+                'exponential': {'': ''}}
 
 
 for name in extra_parameters.iterkeys():
