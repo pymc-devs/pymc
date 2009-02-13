@@ -85,9 +85,9 @@ def round_array(array_in):
     Rounds an array and recasts it to int. Also works on scalars.
     """
     if isinstance(array_in, ndarray):
-        return asarray(array_in, dtype=int)
+        return np.round(array_in).astype(int)
     else:
-        return int(array_in)
+        return int(np.round(array_in))
 
 try:
     from flib import dchdc_wrap
@@ -831,3 +831,6 @@ def discrepancy(observed, simulated, expected):
     D_sim = sum([(sqrt(s)-sqrt(e))**2 for s,e in zip(simulated, expected)])
 
     return D_obs, D_sim
+    
+        
+    

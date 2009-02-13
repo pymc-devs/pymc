@@ -10,6 +10,30 @@ import os, pdb
 import numpy as np
 import types
 
+def batchsd(trace, batches=5):
+    """
+    Calculates the simulation standard error, accounting for non-independent
+    samples. The trace is divided into batches, and the standard deviation of
+    the batch means is calculated.
+    """
+    
+    if len(shape(trace)) > 1:
+        
+        return np.array([batchsd(t, batches) for t in trace])
+        
+    else:
+        if batches == 1: return np.std(trace)/np.sqrt(len(trace))
+    
+        try:
+            batched_traces = np.resize(trace, (batches, len(trace)/batches))
+        except ValueError:
+            # If batches do not divide evenly, trim excess samples
+            resid = len(trace) % batches
+            batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
+        
+        means = np.mean(batched_traces, 1)
+    
+        return np.std(means)/np.sqrt(batches)
 
 class ZeroProbability(ValueError):
     "Log-probability is undefined or negative infinity"
@@ -166,7 +190,7 @@ class Variable(Node):
 
     plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
 
-    def stats(self, alpha=0.05, start=0):
+    def stats(self, alpha=0.05, start=0, batches=100):
         """
         Generate posterior statistics for node.
         """
@@ -187,7 +211,7 @@ class Variable(Node):
                 'standard deviation': trace.std(0),
                 'mean': trace.mean(0),
                 '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
-                'mc error': trace.std(0) / sqrt(n),
+                'mc error': batchsd(trace, batches),
                 'quantiles': quantiles(trace)
             }
         except:

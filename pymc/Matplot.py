@@ -810,7 +810,10 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
         vname = var
         vname += " (%i)" % size(zvals)
         labels = append(labels, vname)
-
+        
+    # Spawn new figure
+    figure()
+    # Plot scores
     pyplot(x, y, 'o')
     # Set range on y-axis
     ylim(0, size(pvalue_dict)+2)
