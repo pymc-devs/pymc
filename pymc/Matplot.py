@@ -11,7 +11,7 @@ import matplotlib
 import pymc
 import os
 from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig
-from pylab import figure, subplot, gca, scatter, axvline, yticks
+from pylab import figure, subplot, subplots_adjust, gca, scatter, axvline, yticks
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show, text
 from pprint import pformat
 
@@ -813,10 +813,13 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
         
     # Spawn new figure
     figure()
+    subplot(111)
+    subplots_adjust(left=0.25, bottom=0.1)
     # Plot scores
     pyplot(x, y, 'o')
-    # Set range on y-axis
+    # Set range on axes
     ylim(0, size(pvalue_dict)+2)
+    xlim(xmin=0)
     # Tick labels for y-axis
     yticks(arange(len(labels)+2), append(append("", labels), ""))
     # X label

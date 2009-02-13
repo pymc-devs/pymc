@@ -22,10 +22,9 @@ marginalizing x from
 where p(x) stands for the prior for the true input and p(a,b) the prior for the
 regression parameters.
 """
-from pymc import stochastic, observed, deterministic, uniform_like, normal_like, runiform, rnormal, Sampler
+from pymc import stochastic, observed, deterministic, uniform_like, runiform, rnormal, Sampler, Normal, Uniform
 from numpy import inf, log, cos,array
 import pylab
-#from PyMC.sandbox import AdaptativeSampler
 
 # ------------------------------------------------------------------------------
 # Synthetic values
@@ -57,10 +56,8 @@ def theta(value=array([2.,5.])):
 
 init_x = data_x.clip(min=0, max=50)
 
-@stochastic
-def x(value=init_x):
-    """Inferred true inputs."""
-    return uniform_like(value, 0,50)
+# Inferred true inputs.
+x = Uniform('x', lower=0, upper=50, value=init_x)
 
 @deterministic
 def modelled_y(x=x, theta=theta):
@@ -69,32 +66,18 @@ def modelled_y(x=x, theta=theta):
     slope, intercept = theta
     return slope*x + intercept
 
-@observed
-def measured_input(value=data_x, x=x, sigma_x=2):
-    """Input error model.
-    Define the probability of measuring x knowing the true value. """
-    return normal_like(value, x, sigma_x)
 
-@observed
-def y(value=data_y, y=modelled_y, sigma_y=2):
-    """Output error model.
+"""
+Input error model.
+
+    Define the probability of measuring x knowing the true value. 
+"""
+measured_input = Normal('measured_input', mu=x, tau=2, value=data_x, observed=True)
+
+"""
+Output error model.
     Define the probability of measuring x knowing the true value.
     In this case, the true value is assumed to be given by the model, but
-    structural errors could be integrated to the analysis as well."""
-    return normal_like(value, y, sigma_y)
-
-
-##def plot(model):
-##    """Plot the objects of the straightline model."""
-##    s = pylab.subplot(111)
-##    s.plot(true_x, true_y, 'ko')
-##    s.plot(model.x.value, model.modelled_y.value, 'bo')
-##    s.plot(model.x.value, model.modelled_y.value, 'b-')
-##    return s
-
-
-
-##if __name__=='__main__':
-##    S = AdaptativeSampler(locals(), 'ram')
-##    S.sample(100,0,1)
-##    S.close()
+    structural errors could be integrated to the analysis as well.
+"""
+y = Normal('y', mu=modelled_y, tau=2, value=data_y, observed=True)

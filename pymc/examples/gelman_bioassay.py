@@ -17,8 +17,5 @@ def theta(a=alpha, b=beta, d=dose):
     """theta = inv_logit(a+b)"""
     return invlogit(a+b*d)
 
-@observed
-@stochastic(dtype=int)
-def deaths(value=array([0,1,3,5],dtype=float), n=n, p=theta):
-    """deaths ~ binomial(n, p)"""
-    return binomial_like(value, n, p)
+"""deaths ~ binomial(n, p)"""    
+deaths = Binomial('deaths', n=n, p=theta, value=array([0,1,3,5], dtype=float), observed=True)
