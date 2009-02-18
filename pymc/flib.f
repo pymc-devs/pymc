@@ -59,6 +59,32 @@ cf2py threadsafe
        RETURN
        END
        
+      SUBROUTINE mod_to_circle(x, nx, u, nu, l, nl, mx)
+      
+cf2py intent(hide) nx, nu, nl
+cf2py intent(out) mx
+      
+      DOUBLE PRECISION x(nx), u(nu), l(nl), mx(nx)
+      DOUBLE PRECISION hi, lo, xi, in
+      INTEGER nx, nu, nl, i
+      
+      lo = l(1)
+      hi = u(1)       
+      do i=1,nx
+        if (nl .NE. 1) lo = l(i)
+        if (nu .NE. 1) hi = u(i)
+        xi = x(i)
+        if (xi < lo) then
+            xi = hi-dmod(lo-xi, hi - lo)
+        end if
+        if (xi >= hi) then
+            xi = lo+dmod(xi-hi, hi - lo)
+        end if
+        mx(i) = xi        
+      enddo
+      
+      RETURN
+      END
 
       SUBROUTINE standardize(x, loc, scale, n, nloc, nscale, z)
       

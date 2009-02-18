@@ -43,6 +43,7 @@ from tests import test
 # Utilities modules
 import utils
 import CommonDeterministics
+from CircularStochastic import *
 import distributions
 import gp
 
