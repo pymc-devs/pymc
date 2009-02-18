@@ -52,14 +52,15 @@ def diagnostic(f):
     return wrapper
 
 
-def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=False, db='ram', plot=True, verbose=0):
+def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, deterministic=False, db='ram', plot=True, verbose=0):
     """
     Model validation method, following Cook et al. (Journal of Computational and
     Graphical Statistics, 2006, DOI: 10.1198/106186006X136976).
 
-    Generates posterior samples based on draws of 'true' parameter values. The
-    quantiles of the parameter values are calculated, based on the samples. If
-    the model is valid, the quantiles should be uniformly distributed over [0,1].
+    Generates posterior samples based on 'true' parameter values and data simulated
+    from the priors. The quantiles of the parameter values are calculated, based on 
+    the samples. If the model is valid, the quantiles should be uniformly distributed 
+    over [0,1].
 
     Since this relies on the generation of simulated data, all data stochastics
     must have a valid random() method for validation to proceed.
@@ -75,6 +76,8 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
       The number of MCMC iterations to be run per replicate. Defaults to 2000.
     burn (optional) : int
       The number of burn-in iterations to be run per replicate. Defaults to 1000.
+    thin (optional) : int
+      The thinning factor to be applied to posterior sample. Defaults to 1 (no thinning)
     deterministic (optional) : bool
       Flag for inclusion of deterministic nodes in validation procedure. Defaults
       to False.
@@ -87,29 +90,17 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
     -------
     stats : dict
       Return a dictionary containing tuples with the chi-square statistic and
-      associated p-value for each model parameter.
+      associated p-value for each data stochastic.
     """
-
+    
     # Set verbosity for models to zero
     sampler.verbose = 0
 
-    # Compute quantiles
+    # Specify parameters to be evaluated
     parameters = sampler.stochastics
     if deterministic:
         # Add deterministics to the mix, if requested
         parameters = parameters.union(sampler.deterministics)
-
-    param_values = {}
-    # Sample paramter values from posterior samples
-    for s in parameters:
-        try:
-            t = s.trace()
-            indices = np.random.randint(len(t), size=replicates)
-            values = t[indices]
-            param_values[s] = values
-        except AttributeError:
-            # Can't validate variable if there is no trace
-            pass
 
     # Assign database backend
     original_backend = sampler.db.__name__
@@ -123,23 +114,27 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
 
     # Loop over replicates
     for i in range(replicates):
-
-        # Specify parameter values
-        for s in sampler.stochastics:
-            try:
-                s.value = param_values[s][i]
-            except KeyError:
-                s._logp.force_compute()
-
-        # Generate simulated data, given paramter values
+        
+        # Sample from priors
+        for p in sampler.stochastics:
+            if not p.extended_parents:
+                p.random()
+            
+        # Sample "true" data values
         for o in sampler.observed_stochastics:
             # Generate simuated data for data stochastic
             o.set_value(o.random(), force=True)
-            o._logp.force_compute()
+            if verbose:
+                print "Data for %s is %s" % (o.__name__, o.value)
+            
+        param_values = {}
+        # Record data-generating parameter values
+        for s in parameters:
+            param_values[s] = s.value
 
         try:
             # Fit models given parameter values
-            sampler.sample(iterations, burn)
+            sampler.sample(iterations, burn=burn, thin=thin)
 
             for s in param_values:
 
@@ -147,8 +142,12 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
                     # Initialize dict
                     quantiles[s.__name__] = []
                 trace = s.trace()
-                q = sum(trace<param_values[s][i], 0)/float(len(trace))
+                q = sum(trace<param_values[s], 0)/float(len(trace))
                 quantiles[s.__name__].append(open01(q))
+                
+            # Replace data values
+            for o in sampler.observed_stochastics:
+                o.revert()
 
         finally:
             # Replace data values
@@ -162,13 +161,9 @@ def validate(sampler, replicates=100, iterations=2000, burn=1000, deterministic=
             print "\tCompleted validation replicate", i
 
 
-    # Replace data values
-    for o in sampler.observed_stochastics:
-        o.revert()
-
     # Replace backend
     sampler._assign_database_backend(original_backend)
-
+    
     stats = {}
     # Calculate chi-square statistics
     for param in quantiles:

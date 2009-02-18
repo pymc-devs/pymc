@@ -662,7 +662,7 @@ class Stochastic(StochasticBase):
         if not self.observed:
             self.value = r
 
-        return self._value
+        return r
 
     # Shortcut alias to random
     rand = random
