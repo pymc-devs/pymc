@@ -64,7 +64,7 @@ class MCMC(Sampler):
               Keywords arguments to be passed to the database instantiation method.
         """
         Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
-
+        
         self.step_method_dict = {}
         for s in self.stochastics:
             self.step_method_dict[s] = []
@@ -108,13 +108,14 @@ class MCMC(Sampler):
                     last_gen.add(s)
 
         dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
-        if len(dataless) > 0:
+        if len(dataless):
             new_method = DrawFromPrior(dataless, dataless_gens[::-1])
             setattr(new_method, '_model', self)
             for d in dataless:
-                self.step_method_dict[d].append(new_method)
-                if self.verbose > 1:
-                    print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
+                if not d.observed:
+                    self.step_method_dict[d].append(new_method)
+                    if self.verbose > 1:
+                        print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
 
         for s in self.stochastics:
             # If not handled by any step method, make it a new step method using the registry

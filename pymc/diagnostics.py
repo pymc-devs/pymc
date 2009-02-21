@@ -171,7 +171,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
         # Calculate chi-square statistics
         X2 = sum(sp.special.ndtri(q)**2)
         # Calculate p-value
-        p = sp.special.chdtrc(len(q), X2)
+        p = sp.special.chdtrc(replicates, X2)
 
         stats[param] = (X2, p)
 

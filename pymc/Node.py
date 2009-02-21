@@ -17,7 +17,7 @@ def batchsd(trace, batches=5):
     the batch means is calculated.
     """
     
-    if len(shape(trace)) > 1:
+    if len(np.shape(trace)) > 1:
         
         return np.array([batchsd(t, batches) for t in trace])
         
@@ -196,9 +196,9 @@ class Variable(Node):
         """
         from utils import hpd, quantiles
         from numpy import sqrt
-
+        
         try:
-            trace = np.array(self.trace(), float)[start:]
+            trace = np.squeeze(np.array(self.trace(), float)[start:])
 
             n = len(trace)
             if not n:
@@ -216,6 +216,7 @@ class Variable(Node):
             }
         except:
             print 'Could not generate output statistics for', self.__name__
+            return
 
 ContainerRegistry = []
 
