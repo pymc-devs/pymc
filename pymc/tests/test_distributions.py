@@ -670,8 +670,8 @@ class test_multinomial(TestCase):
     def test_vectorization(self):
         p = array([[.2,.3,.5], [.2,.3,.5]])
         r = rmultinomial(10, p=p[0], size=2)
-        a = multinomial_like(r[:,:-1],10,p[0,:-1])
-        b = multinomial_like(r[:,:-1],[10,10],p[:,:-1])
+        a = multinomial_like(r,10,p[0])
+        b = multinomial_like(r,[10,10],p)
         assert_equal(a,b)
 
 class test_multivariate_hypergeometric(TestCase):
