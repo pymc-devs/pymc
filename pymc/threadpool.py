@@ -157,6 +157,7 @@ class WorkerThread(threading.Thread):
                 result = request.callable(*request.args, **request.kwds)
                 if request.callback:
                     request.callback(request, result)
+                del result
             except:
                 request.exception = True
                 if request.exc_callback:
