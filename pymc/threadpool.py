@@ -123,7 +123,7 @@ class WorkerThread(threading.Thread):
 
     """
 
-    def __init__(self, requests_queue, results_queue, **kwds):
+    def __init__(self, requests_queue, **kwds):
         """Set up thread in daemonic mode and start it immediatedly.
 
         ``requests_queue`` and ``results_queue`` are instances of
@@ -134,7 +134,7 @@ class WorkerThread(threading.Thread):
         threading.Thread.__init__(self, **kwds)
         self.setDaemon(1)
         self._requests_queue = requests_queue
-        self._results_queue = results_queue
+        # self._results_queue = results_queue
         self._dismissed = threading.Event()
         self.start()
 
@@ -254,7 +254,7 @@ class ThreadPool:
             ``ThreadPool.putRequest()`` and catch ``Queue.Full`` exceptions.
         """
         self._requests_queue = Queue.Queue(q_size)
-        self._results_queue = Queue.Queue(resq_size)
+        # self._results_queue = Queue.Queue(resq_size)
         self.workers = []
         self.workRequests = {}
         self.createWorkers(num_workers)
@@ -268,7 +268,7 @@ class ThreadPool:
 
         """
         for i in range(num_workers):
-            self.workers.append(WorkerThread(self._requests_queue, self._results_queue))
+            self.workers.append(WorkerThread(self._requests_queue))
 
     def dismissWorkers(self, num_workers):
         """Tell num_workers worker threads to quit after their current task."""
@@ -291,35 +291,6 @@ class ThreadPool:
         self._requests_queue.put(request, block, timeout)
         self.workRequests[request.requestID] = request
 
-    def poll(self, block=False):
-        """Process any new results in the queue."""
-        while True:
-            # still results pending?
-            if not self.workRequests:
-                raise NoResultsPending
-            # are there still workers to process remaining requests?
-            elif block and not self.workers:
-                raise NoWorkersAvailable
-            try:
-                # get back next results
-                request, result = self._results_queue.get(block=block)
-                # has an exception occured?
-                if request.exception and request.exc_callback:
-                    request.exc_callback(request, result)
-                # hand results to callback, if any
-                elif request.callback:
-                    request.callback(request, result)
-                del self.workRequests[request.requestID]
-            except Queue.Empty:
-                break
-
-    def wait(self):
-        """Wait for results, blocking until all have arrived."""
-        while 1:
-            try:
-                self.poll(True)
-            except NoResultsPending:
-                break
 
 
 if os.environ.has_key('OMP_NUM_THREADS'):
@@ -380,91 +351,3 @@ def get_threadpool_size():
 
 __PyMCLock__ = threading.Lock()
 __PyMCExcInfo__ = [None]
-
-
-################
-# USAGE EXAMPLE
-################
-
-if __name__ == '__main__':
-    import random
-    import time
-
-    # the work the threads will have to do (rather trivial in our example)
-    def do_something(data):
-        time.sleep(random.randint(1,5))
-        result = round(random.random() * data, 5)
-        # just to show off, we throw an exception once in a while
-        if result > 5:
-            raise RuntimeError("Something extraordinary happened!")
-        return result
-
-    # this will be called each time a result is available
-    def print_result(request, result):
-        print "**** Result from request #%s: %r" % (request.requestID, result)
-
-    # this will be called when an exception occurs within a thread
-    # this example exception handler does little more than the default handler
-    def handle_exception(request, exc_info):
-        if not isinstance(exc_info, tuple):
-            # Something is seriously wrong...
-            print request
-            print exc_info
-            raise SystemExit
-        print "**** Exception occured in request #%s: %s" % \
-          (request.requestID, exc_info)
-
-    # assemble the arguments for each job to a list...
-    data = [random.randint(1,10) for i in range(20)]
-    # ... and build a WorkRequest object for each item in data
-    requests = makeRequests(do_something, data, print_result, handle_exception)
-    # to use the default exception handler, uncomment next line and comment out
-    # the preceding one.
-    #requests = makeRequests(do_something, data, print_result)
-
-    # or the other form of args_lists accepted by makeRequests: ((,), {})
-    data = [((random.randint(1,10),), {}) for i in range(20)]
-    requests.extend(
-        makeRequests(do_something, data, print_result, handle_exception)
-        #makeRequests(do_something, data, print_result)
-        # to use the default exception handler, uncomment next line and comment
-        # out the preceding one.
-    )
-
-    # we create a pool of 3 worker threads
-    print "Creating thread pool with 3 worker threads."
-    main = ThreadPool(3)
-
-    # then we put the work requests in the queue...
-    for req in requests:
-        main.putRequest(req)
-        print "Work request #%s added." % req.requestID
-    # or shorter:
-    # [main.putRequest(req) for req in requests]
-
-    # ...and wait for the results to arrive in the result queue
-    # by using ThreadPool.wait(). This would block until results for
-    # all work requests have arrived:
-    # main.wait()
-
-    # instead we can poll for results while doing something else:
-    i = 0
-    while True:
-        try:
-            time.sleep(0.5)
-            main.poll()
-            print "Main thread working...",
-            print "(active worker threads: %i)" % (threading.activeCount()-1, )
-            if i == 10:
-                print "**** Adding 3 more worker threads..."
-                main.createWorkers(3)
-            if i == 20:
-                print "**** Dismissing 2 worker threads..."
-                main.dismissWorkers(2)
-            i += 1
-        except KeyboardInterrupt:
-            print "**** Interrupted!"
-            break
-        except NoResultsPending:
-            print "**** No pending results."
-            break
