@@ -20,6 +20,7 @@ from utils import safe_len
 from flib import logit, invlogit, stukel_logit, stukel_invlogit
 from types import UnboundMethodType
 from copy import copy
+import sys
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
@@ -405,10 +406,15 @@ class Index(LinearCombination):
         self.sides = Container(self.sides)
         self.coefs = Container(self.coefs)
 
+# TODO: Write tests for all this!
+
 # =================================================================
 # = pfunc converts ordinary functions to Deterministic factories. =
 # =================================================================
 def pufunc(func):
+    """
+    Called by pfunc to convert NumPy ufuncs to deterministic factories.
+    """
     def dtrm_generator(*args):
         if len(args) != func.nin:
             raise ValueError, 'invalid number of arguments'
@@ -451,8 +457,18 @@ def pfunc(func):
     """
     if isinstance(func, np.ufunc):
         return pufunc(func)
+    elif not inspect.isfunction(func):
+        if func.__name__ == '__call__':
+            raise ValueError, 'Cannot get argspec of call method. Is it builtin?'
+        try:
+            return pfunc(func.__call__)
+        except:
+            cls, inst, tb = sys.exc_info()
+            inst = cls('Failed to create pfunc wrapper from object %s. Original error message:\n\n%s'%(func, inst.message))
+            raise cls, inst, tb
     fargs, fvarargs, fvarkw, fdefaults = inspect.getargspec(func)
     n_fargs = len(fargs)
+    
     def dtrm_generator(*args, **kwds):
         name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args) + kwds.values()])+')'
         doc_str = 'A deterministic returning %s(%s, %s)'%(func.__name__, ', '.join([str(arg) for arg in args]), ', '.join(['%s=%s'%(key, str(val)) for key, val in kwds.iteritems()]))
