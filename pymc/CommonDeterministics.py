@@ -676,7 +676,7 @@ Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
 def __call__(self, *args, **kwargs):
     def eval_fun(self, args=args, kwargs=kwargs):
         return self(*args, **kwargs)
-    return Deterministic(eval_fun,
+    return pm.Deterministic(eval_fun,
                             'A Deterministic returning the value of %s(*%s, **%s)'%(self.__name__, str(args), str(kwargs)),
                             self.__name__+'(*%s, **%s)'%(str(args), str(kwargs)),
                             {'self':self, 'args': args, 'kwargs': kwargs},
