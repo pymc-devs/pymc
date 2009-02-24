@@ -408,6 +408,28 @@ class Index(LinearCombination):
 # =================================================================
 # = pfunc converts ordinary functions to Deterministic factories. =
 # =================================================================
+def pufunc(func):
+    def dtrm_generator(*args):
+        if len(args) != func.nin:
+            raise ValueError, 'invalid number of arguments'
+        name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args)])+')'
+        doc_str = 'A deterministic returning %s(%s)'%(func.__name__, ', '.join([str(arg) for arg in args]))
+        parents = {}
+        for i in xrange(func.nin):
+            parents['in%i'%i] = args[i]
+        def wrapper(**kwargs):
+            return func(*[kwargs['in%i'%i] for i in xrange(func.nin)])
+        return pm.Deterministic(wrapper, doc_str, name, parents, trace=False, plot=False)
+    dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
+    dtrm_generator.__doc__ = """
+Deterministic-generating wrapper for %s. Original docstring:
+%s
+
+%s
+    """%(func.__name__, '_'*60, func.__doc__)
+    return dtrm_generator
+        
+
 def pfunc(func):
     """
     pf = pfunc(func)
@@ -427,6 +449,8 @@ def pfunc(func):
         >>> numpy.prod(A.value)
         -0.0049333289649554912
     """
+    if isinstance(func, np.ufunc):
+        return pufunc(func)
     fargs, fvarargs, fvarkw, fdefaults = inspect.getargspec(func)
     n_fargs = len(fargs)
     def dtrm_generator(*args, **kwds):
@@ -459,10 +483,10 @@ def pfunc(func):
         return pm.Deterministic(eval_fun, doc_str, name, parents, trace=False, plot=False)
     dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
     dtrm_generator.__doc__ = """
-    Deterministic-generating wrapper for %s. Original docstring:
-    %s
+Deterministic-generating wrapper for %s. Original docstring:
+%s
 
-    %s
+%s
     """%(func.__name__, '_'*60, func.__doc__)
     return dtrm_generator
 
