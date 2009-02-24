@@ -495,7 +495,7 @@ class Stochastic(StochasticBase):
             self.observed = isdata
 
         # A flag indicating whether self's value has been observed.
-        self.observed = observed
+        self._observed = observed
 
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
@@ -670,12 +670,17 @@ class Stochastic(StochasticBase):
     def _get_isdata(self):
         import warnings
         warnings.warn('"isdata" is deprecated, please use "observed" instead.')
-        return self.observed
+        return self._observed
     def _set_isdata(self, isdata):
-        import warnings
-        warnings.warn('"isdata" is deprecated, please use "observed" instead.')
-        self.observed = isdata
+        raise ValueError, 'Stochastic %s: "observed" flag cannot be changed.'%self.__name__
     isdata = property(_get_isdata, _set_isdata)
+
+    def _get_observed(self):
+        return self._observed
+    def _set_observed(self, observed):
+        raise ValueError, 'Stochastic %s: "observed" flag cannot be changed.'%self.__name__
+    observed = property(_get_observed, _set_observed)
+    
 
     def _get_coparents(self):
         coparents = set()

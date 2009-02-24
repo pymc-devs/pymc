@@ -233,7 +233,7 @@ def observed(obj=None, **kwds):
 
     if obj is not None:
         if isinstance(obj, Stochastic):
-            obj.observed=True
+            obj._observed=True
             return obj
         else:
             p = stochastic(__func__=obj, observed=True, **kwds)
