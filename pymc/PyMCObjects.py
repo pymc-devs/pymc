@@ -496,6 +496,8 @@ class Stochastic(StochasticBase):
 
         # A flag indicating whether self's value has been observed.
         self._observed = observed
+        if observed and value is None:
+            raise ValueError, 'Stochastic %s must be given an initial value if observed=True.'%name
 
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
