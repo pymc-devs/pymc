@@ -656,20 +656,21 @@ def __getitem__(self, index):
     # If index is number or number-valued variable, make an Index object
     name = '('+'_'.join([self.__name__,'getitem',str(index)])+')'
     if isinstance(index, Variable):
-        if np.isreal(index.value) and np.isscalar(index.value):
-            return Index(name, self, index)
-    elif np.isreal(index) and np.isscalar(index):
-        return Index(name, self, index, trace=False, plot=False)
+        if np.isscalar(index.value):
+            if np.isreal(index.value):
+                return Index(name, self, index)
+    elif np.isscalar(index):
+        if np.isreal(index):
+            return Index(name, self, index, trace=False, plot=False)
     # Otherwise make a standard Deterministic.
-    else:
-        def eval_fun(self, index):
-            return self[index]
-        return pm.Deterministic(eval_fun,
-                                'A Deterministic returning the value of %s(%s,%s)'%('getitem',self.__name__, str(index)),
-                                name,
-                                {'self':self, 'index':index},
-                                trace=False,
-                                plot=False)
+    def eval_fun(self, index):
+        return self[index]
+    return pm.Deterministic(eval_fun,
+                            'A Deterministic returning the value of %s(%s,%s)'%('getitem',self.__name__, str(index)),
+                            name,
+                            {'self':self, 'index':index},
+                            trace=False,
+                            plot=False)
 Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
 
 # Create __call__ method for Variable.
