@@ -21,6 +21,7 @@ Oct. 24, 2008: Implemented savestate. Implemented parallel chain tallying. DH
 import base, ram
 import os, datetime, shutil, re
 import numpy as np
+from numpy import array
 import string
 
 __all__ = ['Trace', 'Database', 'load']
@@ -114,6 +115,7 @@ class Database(base.Database):
 
     def savestate(self, state):
         """Save the sampler's state in a state.txt file."""
+        np.set_printoptions(threshold=1e6)
         file = open(os.path.join(self._directory, 'state.txt'), 'w')
         print >> file, state
         file.close()

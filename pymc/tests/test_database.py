@@ -319,6 +319,11 @@ def test_interactive():
            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
            dbmode='w')
     M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
+        
+#def test_getitem():
+#    class tmp(database.base.Database):
+#        def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
+#            return 
 
 
 if __name__ == '__main__':
