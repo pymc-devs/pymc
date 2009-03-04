@@ -158,13 +158,12 @@ class WorkerThread(threading.Thread):
                 if request.callback:
                     request.callback(request, result)
                 del result
+                self._requests_queue.task_done()
             except:
                 request.exception = True
                 if request.exc_callback:
                     request.exc_callback(request)
-            finally:
-                # print 'Removing %s' % request
-                self._requests_queue.task_done()
+                self._requests_queue.task_done()                
 
     def dismiss(self):
         """Sets a flag to tell the thread to exit when done with current job."""
