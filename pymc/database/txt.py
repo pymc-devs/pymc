@@ -115,10 +115,14 @@ class Database(base.Database):
 
     def savestate(self, state):
         """Save the sampler's state in a state.txt file."""
+        oldstate = np.get_printoptions()
         np.set_printoptions(threshold=1e6)
-        file = open(os.path.join(self._directory, 'state.txt'), 'w')
-        print >> file, state
-        file.close()
+        try:
+            file = open(os.path.join(self._directory, 'state.txt'), 'w')
+            print >> file, state
+            file.close()
+        finally:
+            np.set_printoptions(**oldstate)
 
 
 
