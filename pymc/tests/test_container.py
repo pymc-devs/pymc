@@ -1,9 +1,16 @@
 from numpy.testing import *
 from numpy import *
 from pymc.examples import DisasterModel as DM
-from pymc import Container
+from pymc import Container, Normal
 
 class test_Container(TestCase):
+    def test_container_parents(self):
+        A = Normal('A',0,1)
+        B = Normal('B',0,1)
+        C = Normal('C',[A,B],1)
+        
+        assert_equal(C.parents.value['mu'], [A.value, B.value])
+        
     def test(self):
 
 # Test set container:
