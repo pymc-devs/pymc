@@ -181,13 +181,13 @@ class Database(object):
                 if self.model._tally_fns.has_key(name):
                     self._traces[name]._getfunc = self.model._tally_fns[name]
                 else:
-                    print 'No getfunc available for %s'%name
+                    print 'Warning, no getfunc available for %s'%name
                     self._traces.pop(name)
                     
 
         [t._initialize(self.chains, length) for t in self._traces.itervalues()]
         
-        self.fns_to_tally.append(tuple(names))
+        self.fns_to_tally.append(self._traces.iterkeys())
 
         self.chains += 1
 
@@ -240,11 +240,11 @@ class Database(object):
                 name = var.__name__
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = var.get_value
-                    names.remove(name)
+                    names.discard(name)
             for name, fn in model._tally_fns.iteritems():
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = fn
-                    names.remove(name)
+                    names.discard(name)
                 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
