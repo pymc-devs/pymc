@@ -177,6 +177,13 @@ class Database(object):
                 raise RuntimeError, 'fn is none'
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fn, db=self)
+            elif self._traces[name]._getfunc is None:
+                if self.model._tally_fns.has_key(name):
+                    self._traces[name]._getfunc = self.model._tally_fns[name]
+                else:
+                    print 'No getfunc available for %s'%name
+                    self._traces.pop(name)
+                    
 
         [t._initialize(self.chains, length) for t in self._traces.itervalues()]
         
@@ -194,6 +201,12 @@ class Database(object):
         """
         chain = range(self.chains)[chain]
         for name in self.fns_to_tally[chain]:
+            if self._traces[name]._getfunc is None:
+                if self.model._tally_fns.has_key(name):
+                    self._traces[name]._getfunc = self.model._tally_fns[name]
+                else:
+                    print 'Warning, unable to tally %s'%name
+                    self.fns_to_tally[chain].remove(name)
             self._traces[name].tally(chain)
 
 
@@ -228,12 +241,10 @@ class Database(object):
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = var.get_value
                     names.remove(name)
-            for name, fn in zip(model._tally_fn_names, model._tally_fns):
+            for name, fn in model._tally_fns.iteritems():
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = fn
                     names.remove(name)
-            if len(names) > 0:
-                print 'Some objects from the database have not been assigned a getfunc', names
                 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.

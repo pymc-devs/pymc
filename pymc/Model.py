@@ -184,8 +184,7 @@ class Sampler(Model):
         if calc_deviance:
             self._init_deviance()
 
-        self._tally_fn_names = []
-        self._tally_fns = []
+        self._tally_fns = {}
 
         # Specify database backend and save its keywords
         self._db_args = kwds
@@ -233,9 +232,9 @@ class Sampler(Model):
         # Initialize database -> initialize traces.
         if length is None:
             length = iter
-        tally_fn_names = self._tally_fn_names + [v.__name__ for v in self._variables_to_tally]
-        tally_fns = self._tally_fns + [v.get_value for v in self._variables_to_tally]
-        self.db._initialize(tally_fn_names, tally_fns, length)
+        tally_fns = copy(self._tally_fns)
+        tally_fns.update(dict(zip([v.__name__ for v in self._variables_to_tally], [v.get_value for v in self._variables_to_tally])))
+        self.db._initialize(tally_fns.keys(), tally_fns.values(), length)
 
         # Loop
         self._current_iter = 0
