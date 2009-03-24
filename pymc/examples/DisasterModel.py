@@ -37,6 +37,6 @@ D = Poisson('D', mu=r, value=disasters_array, observed=True)
 
 if __name__ == '__main__':
     from pymc import MCMC, Metropolis
-    M = MCMC([s,e,l,D])
+    M = MCMC([s,e,l,D], db='hdf5')
     M.use_step_method(Metropolis, e, tally=True)
     M.isample(1000)

@@ -195,7 +195,8 @@ class Database(pickle.Database):
         self.__Trace__ = Trace
         self.mode = dbmode
 
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.fns_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.fns_to_tally = []
         self._traces = {} # A dictionary of the Trace objects.
 
         # Deprecation of complevel and complib
@@ -255,7 +256,7 @@ class Database(pickle.Database):
                     setattr(db, k.name, k)
 
             varnames = db._tables[-1].colnames+ objects.keys()
-            db.variables_to_tally = db.chains * [varnames,]
+            db.fns_to_tally = db.chains * [varnames,]
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -282,7 +283,7 @@ class Database(pickle.Database):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.variables_to_tally))
+            names = set(reduce(list.__add__, self.fns_to_tally))
             for var in model._variables_to_tally:
                 name = var.__name__
                 if self._traces.has_key(name):
@@ -377,12 +378,12 @@ class Database(pickle.Database):
             self._traces[name]._initialize(self.chains, length)
 
 
-        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
+        self.fns_to_tally.append(tuple([obj.__name__ for obj in variables]))
         self.chains += 1
 
     def tally(self, chain=-1):
         chain = range(self.chains)[chain]
-        for name in self.variables_to_tally[chain]:
+        for name in self.fns_to_tally[chain]:
             self._traces[name].tally(chain)
         self._rows[chain].append()
         self._tables[chain].flush()

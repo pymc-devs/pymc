@@ -44,10 +44,10 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def test_simple_sample(self):
-
+        
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
         self.S.sample(50,25,5)
 
         assert_array_equal(self.S.e.trace().shape, (5,))
@@ -94,7 +94,6 @@ class TestPickle(TestRam):
                            db='pickle',
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
@@ -118,6 +117,7 @@ class TestPickle(TestRam):
     def test_yrestore_state(self):
         db = self.load()
         S = pymc.MCMC(DisasterModel, db=db)
+        S.use_step_method(pymc.Metropolis, self.S.e, tally=True)        
         S.sample(10)
         sm = S.step_methods.pop()
         assert_equal(sm.accepted+sm.rejected, 75)

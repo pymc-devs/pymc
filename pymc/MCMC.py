@@ -64,6 +64,7 @@ class MCMC(Sampler):
               Keywords arguments to be passed to the database instantiation method.
         """
         Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
+        self._sm_assigned = False
         
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -99,6 +100,9 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
+
+        if self._sm_assigned:
+            return
 
         # Assign dataless stepper first
         last_gen = set([])
@@ -136,6 +140,8 @@ class MCMC(Sampler):
                 self._tally_fns += [lambda name=name: getattr(sm, name) for name in sm._tuning_info]
 
         self.restore_sm_state()
+        
+        self._sm_assigned=True
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0):
         """

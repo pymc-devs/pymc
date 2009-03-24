@@ -79,7 +79,7 @@ class Database(base.Database):
         self.__Trace__ = Trace
         self.mode = dbmode
 
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.fns_to_tally = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
@@ -105,13 +105,13 @@ class Database(base.Database):
         chains.sort()
         return chains
 
-    def _initialize(self, variables, length):
+    def _initialize(self, names, fns, length):
         """Create folder to store simulation results."""
 
         dir = os.path.join(self._directory, CHAIN_NAME%self.chains)
         os.mkdir(dir)
 
-        base.Database._initialize(self, variables, length)
+        base.Database._initialize(self, names, fns, length)
 
     def savestate(self, state):
         """Save the sampler's state in a state.txt file."""
@@ -139,7 +139,7 @@ def load(dirname):
     for chain, folder in enumerate(chain_folders):
         files = os.listdir(folder)
         varnames = varname(files)
-        db.variables_to_tally.append(varnames)
+        db.fns_to_tally.append(varnames)
         for file in files:
             name = varname(file)
             try:
