@@ -157,6 +157,13 @@ class Database(object):
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
+        
+    def _add_funcs(self, names, funcs, length):
+        """Adds some functions to be tallied. MUST be called after _initialize()."""
+        for name, f in zip(names, funcs):
+            self._traces[name] = self.__Trace__(name=name, getfunc=f, db=self)
+            self._traces[name]._initialize(self.chains-1, length)
+        self.variables_to_tally[-1] += tuple(names)
 
     def _initialize(self, variables, length=None):
         """Initialize the tallyable objects.
@@ -177,9 +184,10 @@ class Database(object):
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=obj.get_value, db=self)
 
-            self._traces[name]._initialize(self.chains, length)
-
-        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
+        [t._initialize(self.chains, length) for t in self._traces.itervalues()]
+        
+        new_vars = tuple([obj.__name__ for obj in variables])
+        self.variables_to_tally.append(new_vars)
 
         self.chains += 1
 

@@ -129,6 +129,11 @@ class MCMC(Sampler):
         self.step_methods = set()
         for s in self.stochastics:
             self.step_methods |= set(self.step_method_dict[s])
+            
+        for sm in self.step_methods:
+            if sm.tally:
+                self._tally_fn_names += [sm._id + '_' + name for name in sm._tuning_info]
+                self._tally_fns += [lambda name=name: getattr(sm, name) for name in sm._tuning_info]
 
         self.restore_sm_state()
 

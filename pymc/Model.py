@@ -187,6 +187,8 @@ class Sampler(Model):
         # Specify database backend and save its keywords
         self._db_args = kwds
         self._assign_database_backend(db)
+        self._tally_fn_names = []
+        self._tally_fns = []
 
         # Flag for model state
         self.status = 'ready'
@@ -230,6 +232,7 @@ class Sampler(Model):
         if length is None:
             length = iter
         self.db._initialize(self._variables_to_tally, length)
+        self.db._add_funcs(self._tally_fn_names, self._tally_fns, length)
 
         # Loop
         self._current_iter = 0

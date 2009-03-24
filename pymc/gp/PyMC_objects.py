@@ -219,7 +219,7 @@ class GPParentMetropolis(pm.Metropolis):
 
     :SeeAlso: GPMetropolis, GPNormal
     """
-    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None, min_adaptive_scale_factor=0):
+    def __init__(self, stochastic=None, scale=1., verbose=False, metro_method = None, min_adaptive_scale_factor=0, tally=False):
 
         if (stochastic is None and metro_method is None) or (stochastic is not None and metro_method is not None):
             raise ValueError, 'Either stochastic OR metro_method should be provided, not both.'
@@ -243,8 +243,11 @@ class GPParentMetropolis(pm.Metropolis):
             stochastics = metro_method.stochastics
 
         # Call to pm.StepMethod's init method.
-        pm.StepMethod.__init__(self, stochastics, verbose=verbose)
+        pm.StepMethod.__init__(self, stochastics, verbose=verbose, tally=tally)
         self.min_adaptive_scale_factor=min_adaptive_scale_factor
+        
+        self._tuning_info = ['metro_method_adaptive_scale_factor']
+        
 
         # Extend self's children through the GP-valued stochastics
         # and add them to the wrapped method's children.
@@ -369,6 +372,10 @@ class GPParentMetropolis(pm.Metropolis):
         self._verbose = verbose
         self.metro_method.verbose = verbose
     verbose = property(_get_verbose, _set_verbose)
+    
+    def _get_metro_method_adaptive_scale_factor(self):
+        return self.metro_method.adaptive_scale_factor
+    metro_method_adaptive_scale_factor = property(_get_metro_method_adaptive_scale_factor)
 
     # Step method just passes the call on to the wrapped method.
     # Remember that the wrapped method's reject() and propose()
@@ -405,11 +412,11 @@ class GPMetropolis(pm.Metropolis):
 
     :SeeAlso: GPParentMetropolis, GPNormal
     """
-    def __init__(self, stochastic, scale=.1, verbose=False):
+    def __init__(self, stochastic, scale=.1, verbose=False, tally=False):
 
         f = stochastic
         self.f = stochastic
-        pm.StepMethod.__init__(self, [f], verbose)
+        pm.Metropolis.__init__(self, f, verbose=verbose, tally=tally)
         self._id = 'GPMetropolis_'+self.f.__name__
 
         self.scale = scale
