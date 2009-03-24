@@ -19,7 +19,7 @@ Right after a Database is instantiated, the Sampler tells it to connect itself
 the model. This is taken care of by the connect_model method. This method
 creates Trace objects for all the tallyable pymc objects. These traces are
 stored in a dictionary called _traces, owned by the Database instance of this
-Sampler. Previously, the Trace instances were owned by the tallyable fns
+Sampler. Previously, the Trace instances were owned by the tallyable variables
 themselves. As A.P. pointed out, this is problematic if the same object is used
 in different models, because each new Sampler will overwrite the last Trace
 instance of the variable.
@@ -153,41 +153,33 @@ class Database(object):
         self.__Trace__ = Trace
         self.__name__ = 'base'
         self.dbname = dbname
-        self.fns_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
 
-    def _initialize(self, names, fns, length=None):
+    def _initialize(self, variables, length=None):
         """Initialize the tallyable objects.
 
         Makes sure a Trace object exists for each variable and then initialize
         the Traces.
 
         :Parameters:
-        fns : sequence
-          Functions whose value should be tallied.
+        variables : sequence
+          Tallyable objects.
         length : int
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
 
-        for name, fn in zip(names, fns):
-            if fn is None:
-                raise RuntimeError, 'fn is none'
+        for obj in variables:
+            name = obj.__name__
             if not self._traces.has_key(name):
-                self._traces[name] = self.__Trace__(name=name, getfunc=fn, db=self)
-            elif self._traces[name]._getfunc is None:
-                if self.model._tally_fns.has_key(name):
-                    self._traces[name]._getfunc = self.model._tally_fns[name]
-                else:
-                    print 'Warning, no getfunc available for %s'%name
-                    self._traces.pop(name)
-                    
+                self._traces[name] = self.__Trace__(name=name, getfunc=obj.get_value, db=self)
 
-        [t._initialize(self.chains, length) for t in self._traces.itervalues()]
-        
-        self.fns_to_tally.append(self._traces.iterkeys())
+            self._traces[name]._initialize(self.chains, length)
+
+        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
 
         self.chains += 1
 
@@ -200,13 +192,7 @@ class Database(object):
          are appended to the last chain.
         """
         chain = range(self.chains)[chain]
-        for name in self.fns_to_tally[chain]:
-            if self._traces[name]._getfunc is None:
-                if self.model._tally_fns.has_key(name):
-                    self._traces[name]._getfunc = self.model._tally_fns[name]
-                else:
-                    print 'Warning, unable to tally %s'%name
-                    self.fns_to_tally[chain].remove(name)
+        for name in self.variables_to_tally[chain]:
             self._traces[name].tally(chain)
 
 
@@ -235,17 +221,15 @@ class Database(object):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.fns_to_tally))
+            names = set(reduce(list.__add__, self.variables_to_tally))
             for var in model._variables_to_tally:
                 name = var.__name__
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = var.get_value
-                    names.discard(name)
-            for name, fn in model._tally_fns.iteritems():
-                if self._traces.has_key(name):
-                    self._traces[name]._getfunc = fn
-                    names.discard(name)
-                
+                    names.remove(name)
+            if len(names) > 0:
+                print "Some objects from the database have not been assigned a getfunc", names
+
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
         else:
@@ -259,14 +243,14 @@ class Database(object):
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
         chain = range(self.chains)[chain]
-        for name in self.fns_to_tally[chain]:
+        for name in self.variables_to_tally[chain]:
             self._traces[name]._finalize(chain)
         self.commit()
 
     def truncate(self, index, chain=-1):
         """Tell the traces to truncate themselves at the given index."""
         chain = range(self.chains)[chain]
-        for name in self.fns_to_tally[chain]:
+        for name in self.variables_to_tally[chain]:
             self._traces[name].truncate(index, chain)
 
     def commit(self):

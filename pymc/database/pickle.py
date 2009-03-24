@@ -38,7 +38,7 @@ class Database(base.Database):
         self.__name__ = 'pickle'
         self.filename = dbname
         self.__Trace__ = Trace
-        self.fns_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
@@ -83,7 +83,7 @@ def load(filename):
             variables.add(k)
 
     db.chains = chains
-    db.fns_to_tally = chains*[list(variables)]
+    db.variables_to_tally = chains*[list(variables)]
 
     return db
 

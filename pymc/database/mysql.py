@@ -95,7 +95,7 @@ class Database(sqlite.Database):
         self.dbname = dbname
         self.__Trace__ = Trace
 
-        self.fns_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
@@ -161,7 +161,7 @@ def load(dbname='', dbuser='', dbpass='', dbhost='localhost', dbport=3306):
         chains = max(chains, db.cur.fetchall()[0][0]+1)
 
     db.chains=chains
-    db.fns_to_tally = chains * [tables,]
+    db.variables_to_tally = chains * [tables,]
     db._state_ = {}
     return db
 

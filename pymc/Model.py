@@ -184,8 +184,6 @@ class Sampler(Model):
         if calc_deviance:
             self._init_deviance()
 
-        self._tally_fns = {}
-
         # Specify database backend and save its keywords
         self._db_args = kwds
         self._assign_database_backend(db)
@@ -220,7 +218,6 @@ class Sampler(Model):
         """
         Draws iter samples from the posterior.
         """
-
         self._cur_trace_index=0
         self.max_trace_length = iter
         self._iter = iter
@@ -232,9 +229,7 @@ class Sampler(Model):
         # Initialize database -> initialize traces.
         if length is None:
             length = iter
-        tally_fns = copy(self._tally_fns)
-        tally_fns.update(dict(zip([v.__name__ for v in self._variables_to_tally], [v.get_value for v in self._variables_to_tally])))
-        self.db._initialize(tally_fns.keys(), tally_fns.values(), length)
+        self.db._initialize(self._variables_to_tally, length)
 
         # Loop
         self._current_iter = 0

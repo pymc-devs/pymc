@@ -46,8 +46,7 @@ class TestRam(TestBase):
         self.S = pymc.MCMC(DisasterModel, db='ram')
 
     def test_simple_sample(self):
-        
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
+
         self.S.sample(50,25,5)
 
         assert_array_equal(self.S.e.trace().shape, (5,))
@@ -117,7 +116,6 @@ class TestPickle(TestRam):
     def test_yrestore_state(self):
         db = self.load()
         S = pymc.MCMC(DisasterModel, db=db)
-        S.use_step_method(pymc.Metropolis, self.S.e, tally=True)        
         S.sample(10)
         sm = S.step_methods.pop()
         assert_equal(sm.accepted+sm.rejected, 75)
@@ -165,7 +163,6 @@ class TestMySQL(TestPickle):
                            dbpass='bayesian',
                            dbhost='www.freesql.org',
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.mysql.load(dbname='pymc_test',
@@ -188,7 +185,6 @@ class TestHDF5(TestPickle):
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
