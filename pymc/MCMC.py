@@ -132,11 +132,27 @@ class MCMC(Sampler):
 
         self.restore_sm_state()
 
-    def sample(self, iter, burn=0, thin=1, tune_interval=1000, save_interval=None, verbose=0):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0):
         """
-        sample(iter, burn, thin, tune_interval, save_interval, verbose)
+        sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose)
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
+        
+        :Parameters:
+          - iter : int
+            Total number of iterations to do
+          - burn : int
+            Variables will not be tallied until this many iterations are complete, default 0
+          - thin : int
+            Variables will be tallied at intervals of this many iterations, default 1
+          - tune_interval : int
+            Step methods will be tuned at intervals of this many iterations, default 1000
+          - tune_throughout : boolean
+            If true, tuning will continue after the burnin period (True); otherwise tuning 
+            will halt at the end of the burnin period.
+          - save_interval : int or None
+            If given, the model state will be saved at intervals of this many iterations
+          - verbose : boolean
         """
 
         self.assign_step_methods()
@@ -147,6 +163,7 @@ class MCMC(Sampler):
         self._burn = int(burn)
         self._thin = int(thin)
         self._tune_interval = int(tune_interval)
+        self._tune_throughout = tune_throughout
         self._save_interval = save_interval
 
         length = int(np.ceil((1.0*iter-burn)/thin))
@@ -172,17 +189,22 @@ class MCMC(Sampler):
 
                 i = self._current_iter
 
-                if i == self._burn and self.verbose>0:
-                    print 'Burn-in interval complete'
-
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
+                
+                if i == self._burn: 
+                    if self.verbose>0:
+                        print 'Burn-in interval complete'
+                    if not self._tune_throughout:
+                        if self.verbose > 0:
+                            print 'Stopping tuning due to burn-in being complete.'
+                        self._tuning = False
 
                 # Tell all the step methods to take a step
                 for step_method in self.step_methods:
                     if self.verbose > 2:
-                        print 'Step method %s stepping.' % step_method._id
+                        print 'Step method %s stepping' % step_method._id
                     # Step the step method
                     step_method.step()
 
