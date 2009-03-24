@@ -44,6 +44,7 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def test_simple_sample(self):
 
@@ -93,6 +94,7 @@ class TestPickle(TestRam):
                            db='pickle',
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
@@ -163,6 +165,7 @@ class TestMySQL(TestPickle):
                            dbpass='bayesian',
                            dbhost='www.freesql.org',
                            dbmode='w')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.mysql.load(dbname='pymc_test',
@@ -185,6 +188,7 @@ class TestHDF5(TestPickle):
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
                            dbmode='w')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
