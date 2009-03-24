@@ -159,7 +159,7 @@ class StepMethod(object):
 
     __metaclass__ = StepMethodMeta
 
-    def __init__(self, variables, verbose=0):
+    def __init__(self, variables, verbose=0, tally=False):
         # StepMethod initialization
 
         if not iterable(variables) or isinstance(variables, Node):
@@ -168,12 +168,10 @@ class StepMethod(object):
         self.stochastics = set()
         self.children = set()
         self.parents = set()
+        self.tally = tally
 
-        # Initialize hidden attributes
-        self.adaptive_scale_factor = 1.
-        self.accepted = 0.
-        self.rejected = 0.
-        self._state = ['rejected', 'accepted', 'adaptive_scale_factor']
+        self._state = []
+        self._tuning_info = []
         self.verbose = verbose
 
         # File away the variables
@@ -252,75 +250,8 @@ class StepMethod(object):
         return 0
 
 
-    def tune(self, divergence_threshold=1e10, verbose=0):
-        """
-        Tunes the scaling parameter for the proposal distribution
-        according to the acceptance rate of the last k proposals:
-
-        Rate    Variance adaptation
-        ----    -------------------
-        <0.001        x 0.1
-        <0.05         x 0.5
-        <0.2          x 0.9
-        >0.5          x 1.1
-        >0.75         x 2
-        >0.95         x 10
-
-        This method is called exclusively during the burn-in period of the
-        sampling algorithm.
-
-        May be overridden in subclasses.
-        """
-
-        # Verbose feedback
-        if verbose > 0 or self.verbose > 0:
-            print '\t%s tuning:' % self._id
-
-        # Flag for tuning state
-        tuning = True
-
-        # Calculate recent acceptance rate
-        if not (self.accepted + self.rejected): return tuning
-        acc_rate = self.accepted / (self.accepted + self.rejected)
-
-
-        # Switch statement
-        if acc_rate<0.001:
-            # reduce by 90 percent
-            self.adaptive_scale_factor *= 0.1
-        elif acc_rate<0.05:
-            # reduce by 50 percent
-            self.adaptive_scale_factor *= 0.5
-        elif acc_rate<0.2:
-            # reduce by ten percent
-            self.adaptive_scale_factor *= 0.9
-        elif acc_rate>0.95:
-            # increase by factor of ten
-            self.adaptive_scale_factor *= 10.0
-        elif acc_rate>0.75:
-            # increase by double
-            self.adaptive_scale_factor *= 2.0
-        elif acc_rate>0.5:
-            # increase by ten percent
-            self.adaptive_scale_factor *= 1.1
-        else:
-            tuning = False
-
-        # Re-initialize rejection count
-        self.rejected = 0.
-        self.accepted = 0.
-
-        # More verbose feedback, if requested
-        # Warning: self.stochastic is not defined above. The following assumes
-        # that the class has created this value, which is a bit fragile. DH
-        if verbose > 0 or self.verbose > 0:
-            if hasattr(self, 'stochastic'):
-                print '\t\tvalue:', self.stochastic.value
-            print '\t\tacceptance rate:', acc_rate
-            print '\t\tadaptive scale factor:', self.adaptive_scale_factor
-            print
-
-        return tuning
+    def tune(self, *args, **kwargs):
+        return False
 
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
@@ -351,6 +282,7 @@ class StepMethod(object):
         for s in self._state:
             state[s] = getattr(self, s)
         return state
+        
 
     @prop
     def ratio():
@@ -402,18 +334,22 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0, tally=False):
         # Metropolis class initialization
 
         # Initialize superclass
-        StepMethod.__init__(self, [stochastic], verbose=verbose)
+        StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)
+
+        # Initialize hidden attributes
+        self.adaptive_scale_factor = 1.
+        self.accepted = 0.
+        self.rejected = 0.
+        self._state = ['rejected', 'accepted', 'adaptive_scale_factor', 'proposal_sd', 'proposal_distribution']
+        self._tuning_info = 'adaptive_scale_factor'
 
         # Set public attributes
         self.stochastic = stochastic
         self.verbose = verbose
-
-        # Add proposal_sd to state
-        self._state += ['proposal_sd', 'proposal_distribution']
 
         # Avoid zeros when setting proposal variance
         if proposal_sd is not None:
@@ -560,6 +496,77 @@ class Metropolis(StepMethod):
             self.stochastic.value = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd)
         elif self.proposal_distribution == "Prior":
             self.stochastic.random()
+            
+    def tune(self, divergence_threshold=1e10, verbose=0):
+        """
+        Tunes the scaling parameter for the proposal distribution
+        according to the acceptance rate of the last k proposals:
+
+        Rate    Variance adaptation
+        ----    -------------------
+        <0.001        x 0.1
+        <0.05         x 0.5
+        <0.2          x 0.9
+        >0.5          x 1.1
+        >0.75         x 2
+        >0.95         x 10
+
+        This method is called exclusively during the burn-in period of the
+        sampling algorithm.
+
+        May be overridden in subclasses.
+        """
+
+        # Verbose feedback
+        if verbose > 0 or self.verbose > 0:
+            print '\t%s tuning:' % self._id
+
+        # Flag for tuning state
+        tuning = True
+
+        # Calculate recent acceptance rate
+        if not (self.accepted + self.rejected): return tuning
+        acc_rate = self.accepted / (self.accepted + self.rejected)
+
+
+        # Switch statement
+        if acc_rate<0.001:
+            # reduce by 90 percent
+            self.adaptive_scale_factor *= 0.1
+        elif acc_rate<0.05:
+            # reduce by 50 percent
+            self.adaptive_scale_factor *= 0.5
+        elif acc_rate<0.2:
+            # reduce by ten percent
+            self.adaptive_scale_factor *= 0.9
+        elif acc_rate>0.95:
+            # increase by factor of ten
+            self.adaptive_scale_factor *= 10.0
+        elif acc_rate>0.75:
+            # increase by double
+            self.adaptive_scale_factor *= 2.0
+        elif acc_rate>0.5:
+            # increase by ten percent
+            self.adaptive_scale_factor *= 1.1
+        else:
+            tuning = False
+
+        # Re-initialize rejection count
+        self.rejected = 0.
+        self.accepted = 0.
+
+        # More verbose feedback, if requested
+        # Warning: self.stochastic is not defined above. The following assumes
+        # that the class has created this value, which is a bit fragile. DH
+        if verbose > 0 or self.verbose > 0:
+            if hasattr(self, 'stochastic'):
+                print '\t\tvalue:', self.stochastic.value
+            print '\t\tacceptance rate:', acc_rate
+            print '\t\tadaptive scale factor:', self.adaptive_scale_factor
+            print
+
+        return tuning
+
 
 
 class Gibbs(Metropolis):
@@ -567,7 +574,7 @@ class Gibbs(Metropolis):
     Base class for the Gibbs step methods
     """
     def __init__(self, stochastic, verbose=0):
-        Metropolis.__init__(self, stochastic, verbose=verbose)
+        Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
     # Override Metropolis's competence.
     competence = classmethod(StepMethod.competence)
@@ -600,7 +607,7 @@ class DrawFromPrior(StepMethod):
     Handles dataless submodels.
     """
     def __init__(self, variables, generations, verbose=0):
-        StepMethod.__init__(self, variables, verbose)
+        StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
 
     def step(self):
@@ -631,11 +638,11 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False, verbose=0, tally=False):
         # DiscreteMetropolis class initialization
 
         # Initialize superclass
-        Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution=proposal_distribution)
+        Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution=proposal_distribution, verbose=verbose, tally=tally)
 
         # Initialize verbose feedback string
         self._id = stochastic.__name__
@@ -689,11 +696,11 @@ class BinaryMetropolis(Metropolis):
 
     """
 
-    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0):
+    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0, tally=False):
         # BinaryMetropolis class initialization
 
         # Initialize superclass
-        Metropolis.__init__(self, stochastic, proposal_distribution=proposal_distribution, verbose=verbose)
+        Metropolis.__init__(self, stochastic, proposal_distribution=proposal_distribution, verbose=verbose, tally=tally)
 
         self._state.remove('proposal_sd')
 
@@ -832,20 +839,24 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=0):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=0, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
+        
+        self.accepted = 0
+        self.rejected = 0
 
         if not np.iterable(stochastic) or isinstance(stochastic, Variable):
             stochastic = [stochastic]
         # Initialize superclass
-        StepMethod.__init__(self, stochastic, verbose)
+        StepMethod.__init__(self, stochastic, verbose, tally)
 
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
-        self._state += ['_trace_count', '_current_iter', 'C', 'proposal_sd',
+        self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',
         '_proposal_deviate', '_trace']
+        self._tuning_info = ['C']
 
         self.proposal_sd = None
 

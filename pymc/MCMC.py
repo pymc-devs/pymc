@@ -65,6 +65,7 @@ class MCMC(Sampler):
         """
         Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
         
+        self._sm_assigned = False
         self.step_method_dict = {}
         for s in self.stochastics:
             self.step_method_dict[s] = []
@@ -99,38 +100,45 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
+        
+        if not self._sm_assigned:
 
-        # Assign dataless stepper first
-        last_gen = set([])
-        for s in self.stochastics:
-            if s._random is not None:
-                if len(s.extended_children)==0:
-                    last_gen.add(s)
+            # Assign dataless stepper first
+            last_gen = set([])
+            for s in self.stochastics:
+                if s._random is not None:
+                    if len(s.extended_children)==0:
+                        last_gen.add(s)
 
-        dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
-        if len(dataless):
-            new_method = DrawFromPrior(dataless, dataless_gens[::-1])
-            setattr(new_method, '_model', self)
-            for d in dataless:
-                if not d.observed:
-                    self.step_method_dict[d].append(new_method)
-                    if self.verbose > 1:
-                        print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
-
-        for s in self.stochastics:
-            # If not handled by any step method, make it a new step method using the registry
-            if len(self.step_method_dict[s])==0:
-                new_method = assign_method(s)
+            dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
+            if len(dataless):
+                new_method = DrawFromPrior(dataless, dataless_gens[::-1])
                 setattr(new_method, '_model', self)
-                self.step_method_dict[s].append(new_method)
-                if self.verbose > 1:
-                    print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, s.__name__)
+                for d in dataless:
+                    if not d.observed:
+                        self.step_method_dict[d].append(new_method)
+                        if self.verbose > 1:
+                            print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
 
-        self.step_methods = set()
-        for s in self.stochastics:
-            self.step_methods |= set(self.step_method_dict[s])
+            for s in self.stochastics:
+                # If not handled by any step method, make it a new step method using the registry
+                if len(self.step_method_dict[s])==0:
+                    new_method = assign_method(s)
+                    setattr(new_method, '_model', self)
+                    self.step_method_dict[s].append(new_method)
+                    if self.verbose > 1:
+                        print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, s.__name__)
+
+            self.step_methods = set()
+            for s in self.stochastics:
+                self.step_methods |= set(self.step_method_dict[s])
+            
+            for sm in self.step_methods:
+                for name in sm._tuning_info:
+                    self._funs_to_tally[sm._id+'_'+name] = lambda name=name: getattr(sm, name)
 
         self.restore_sm_state()
+        self._sm_assigned = True
 
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0):
         """
@@ -207,9 +215,6 @@ class MCMC(Sampler):
                         print 'Step method %s stepping' % step_method._id
                     # Step the step method
                     step_method.step()
-
-                # Calculate deviance
-                self.deviance._value.force_compute()
 
                 if i % self._thin == 0 and i >= self._burn:
                     self.tally()
@@ -320,12 +325,7 @@ class MCMC(Sampler):
             # Set current value to mean
             stochastic.value = mean_value
 
-        # Calculate deviance at the means
-        try:
-            self.deviance._value.force_compute()
-            deviance_at_mean = self.deviance.value
-        except ZeroProbability:
-            deviance_at_mean = -np.inf
+        deviance_at_mean = self._calc_deviance()
         # Return twice deviance minus deviance at means
         return 2*mean_deviance - deviance_at_mean
 

@@ -182,7 +182,9 @@ class Sampler(Model):
 
         # Initialize deviance, if asked
         if calc_deviance:
-            self._init_deviance()
+            self._funs_to_tally = {'deviance': self._sum_deviance}
+        else:
+            self._funs_to_tally = {}
 
         # Specify database backend and save its keywords
         self._db_args = kwds
@@ -200,19 +202,6 @@ class Sampler(Model):
         # Sum deviance from all stochastics
 
         return -2*sum([v.get_logp() for v in self.observed_stochastics])
-
-    def _init_deviance(self):
-        """
-        Initialize deviance variable.
-        """
-
-        self.deviance = Deterministic(  eval = self._sum_deviance,
-                            name = 'deviance',
-                            parents = {},
-                            doc = 'Model deviance',
-                            trace = True,
-                            verbose = 0,
-                            cache_depth = 0)
 
     def sample(self, iter, length=None, verbose=0):
         """
@@ -358,10 +347,6 @@ class Sampler(Model):
                 object.trace = no_trace.Trace(object.__name__)
 
         check_valid_object_name(self._variables_to_tally)
-
-        # Add model deviance to backend
-        if hasattr(self, 'deviance'):
-            self._variables_to_tally.add(self.deviance)
 
         # If not already done, load the trace backend from the database
         # module, and assign a database instance to Model.
