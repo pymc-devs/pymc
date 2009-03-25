@@ -182,7 +182,7 @@ class Database(object):
         self.trace_names.append(self._traces.keys())
 
         self.chains += 1
-        
+                
     def tally(self, chain=-1):
         """Append the current value of all tallyable object.
 
@@ -191,6 +191,7 @@ class Database(object):
          The index of the chain to append the values to. By default, the values
          are appended to the last chain.
         """
+
         chain = range(self.chains)[chain]
         for name in self.trace_names[chain]:
             try:
@@ -205,8 +206,8 @@ as were tallyable last time you used the database file?
 Error:
 
 %s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
-            self.trace_names[chain].remove(name)
-
+                self.trace_names[chain].remove(name)
+            
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -247,7 +248,7 @@ Error:
             for name, fun in model._funs_to_tally.iteritems():
                 if not self._traces.has_key(name):
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
-
+                    
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
         chain = range(self.chains)[chain]
@@ -291,7 +292,7 @@ Error:
         """
         self._default_chain = chain
         return self._traces[name]
-
+        
 def load(dbname):
     """Return a Database instance from the traces stored on disk.
 

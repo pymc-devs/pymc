@@ -378,6 +378,7 @@ class Sampler(Model):
 
         # Assign Trace instances to tallyable objects.
         self.db.connect_model(self)
+        
 
     def pause(self):
         """Pause the sampler. Sampling can be resumed by calling `icontinue`.

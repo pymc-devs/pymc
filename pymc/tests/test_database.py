@@ -10,6 +10,8 @@ import nose
 import warnings
 warnings.simplefilter('ignore', UserWarning)
 
+TestCase = object
+
 testdir = 'testresults'
 try:
     os.mkdir(testdir)
@@ -44,11 +46,13 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)        
 
     def test_simple_sample(self):
 
+        
         self.S.sample(50,25,5)
+
 
         assert_array_equal(self.S.e.trace().shape, (5,))
         assert_array_equal(self.S.e.trace(chain=0).shape, (5,))
@@ -124,25 +128,26 @@ class TestPickle(TestRam):
         assert_equal(sm.accepted+sm.rejected, 75)
 
 
-# class TestTxt(TestPickle):
-#     @classmethod
-#     def setUpClass(self):
-#         self.S = pymc.MCMC(DisasterModel,
-#                            db='txt',
-#                            dbname=os.path.join(testdir, 'Disaster.txt'),
-#                            dbmode='w')
-# 
-#     def load(self):
-#         return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
-# 
-# 
+class TestTxt(TestPickle):
+    @classmethod
+    def setUpClass(self):
+                
+        self.S = pymc.MCMC(DisasterModel,
+                           db='txt',
+                           dbname=os.path.join(testdir, 'Disaster.txt'),
+                           dbmode='w')
+
+    def load(self):
+        return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
+
+
 # class TestSqlite(TestPickle):
 #     @classmethod
 #     def setUpClass(self):
 #         if 'sqlite' not in dir(pymc.database):
 #             raise nose.SkipTest
-#         #if os.path.exists('Disaster.sqlite'):
-#         #    os.remove('Disaster.sqlite')
+#         if os.path.exists('Disaster.sqlite'):
+#            os.remove('Disaster.sqlite')
 #         self.S = pymc.MCMC(DisasterModel,
 #                            db='sqlite',
 #                            dbname=os.path.join(testdir, 'Disaster.sqlite'),
@@ -300,21 +305,21 @@ class TestPickle(TestRam):
 # 
 # 
 # 
-# def test_identical_object_names():
-#     A = pymc.Uniform('a', 0, 10)
-#     B = pymc.Uniform('a', 0, 10)
-#     try:
-#         M = MCMC([A,B])
-#     except ValueError:
-#         pass
-# 
-# 
-# def test_regression_155():
-#     """thin > iter"""
-#     M = MCMC(DisasterModel, db='ram')
-#     M.sample(10,0,100)
-# 
-# 
+def test_identical_object_names():
+    A = pymc.Uniform('a', 0, 10)
+    B = pymc.Uniform('a', 0, 10)
+    try:
+        M = MCMC([A,B])
+    except ValueError:
+        pass
+
+
+def test_regression_155():
+    """thin > iter"""
+    M = MCMC(DisasterModel, db='ram')
+    M.sample(10,0,100)
+
+
 # def test_interactive():
 #     if 'sqlite' not in dir(pymc.database):
 #         raise nose.SkipTest
@@ -323,17 +328,21 @@ class TestPickle(TestRam):
 #            dbmode='w')
 #     M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
 #         
-# #def test_getitem():
-# #    class tmp(database.base.Database):
-# #        def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
-# #            return 
-# 
-# 
-if __name__ == '__main__':
+#def test_getitem():
+#    class tmp(database.base.Database):
+#        def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
+#            return 
 
-    C =nose.config.Config(verbosity=3)
-    nose.runmodule(config=C)
-    try:
-        S.db.close()
-    except:
-        pass
+
+if __name__ == '__main__':
+    tester = TestTxt()
+    tester.setUpClass()
+    tester.test_init()
+    tester.test_simple_sample()
+    tester.test_xload()
+    # C =nose.config.Config(verbosity=3)
+    # nose.runmodule(config=C)
+    # try:
+    #     S.db.close()
+    # except:
+    #     pass

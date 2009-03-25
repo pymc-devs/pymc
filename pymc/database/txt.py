@@ -52,7 +52,6 @@ class Trace(ram.Trace):
         chain : int
           The chain index.
         """
-
         path = os.path.join(self.db._directory, self.db.get_chains()[chain], self.name+'.txt')
         arr = self.gettrace(chain=chain)
         f = open(path, 'w')
@@ -79,7 +78,7 @@ class Database(base.Database):
         self.__Trace__ = Trace
         self.mode = dbmode
 
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
@@ -105,13 +104,13 @@ class Database(base.Database):
         chains.sort()
         return chains
 
-    def _initialize(self, variables, length):
+    def _initialize(self, funs_to_tally, length):
         """Create folder to store simulation results."""
 
         dir = os.path.join(self._directory, CHAIN_NAME%self.chains)
         os.mkdir(dir)
 
-        base.Database._initialize(self, variables, length)
+        base.Database._initialize(self, funs_to_tally, length)
 
     def savestate(self, state):
         """Save the sampler's state in a state.txt file."""
@@ -138,10 +137,10 @@ def load(dirname):
     data = {}
     for chain, folder in enumerate(chain_folders):
         files = os.listdir(folder)
-        varnames = varname(files)
-        db.variables_to_tally.append(varnames)
+        funnames = funname(files)
+        db.trace_names.append(funnames)
         for file in files:
-            name = varname(file)
+            name = funname(file)
             try:
                 data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',')
             except:
@@ -160,9 +159,10 @@ def load(dirname):
         db._state_ = eval(file.read())
     else:
         db._state_= {}
+        
     return db
 
-def varname(file):
+def funname(file):
     """Return variable names from file names."""
     if type(file) is str:
         files = [file]
