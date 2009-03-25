@@ -159,88 +159,88 @@ class TestSqlite(TestPickle):
     def test_yrestore_state(self):
         raise nose.SkipTest, "Not implemented."
 
-# class TestMySQL(TestPickle):
-#     @classmethod
-#     def setUpClass(self):
-#         if 'mysql' not in dir(pymc.database):
-#             raise nose.SkipTest
-#         self.S = pymc.MCMC(DisasterModel,
-#                            db='mysql',
-#                            dbname='pymc_test',
-#                            dbuser='pymc',
-#                            dbpass='bayesian',
-#                            dbhost='www.freesql.org',
-#                            dbmode='w')
-# 
-#     def load(self):
-#         return pymc.database.mysql.load(dbname='pymc_test',
-#                                         dbuser='pymc',
-#                                         dbpass='bayesian',
-#                                         dbhost='www.freesql.org')
-# 
-#     def test_yrestore_state(self):
-#         raise nose.SkipTest, "Not implemented."
-# 
-# 
-# 
-# class TestHDF5(TestPickle):
-# 
-#     @classmethod
-#     def setUpClass(self):
-#         if 'hdf5' not in dir(pymc.database):
-#             raise nose.SkipTest
-#         self.S = pymc.MCMC(DisasterModel,
-#                            db='hdf5',
-#                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
-#                            dbmode='w')
-# 
-#     def load(self):
-#         return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
-# 
-#     def test_xdata_attributes(self):
-#         db = self.load()
-#         assert_array_equal(db.D, DisasterModel.disasters_array)
-#         db.close()
-#         del db
-# 
-#     def test_xattribute_assignement(self):
-#         arr = np.array([[1,2],[3,4]])
-#         db = self.load()
-#         db.add_attr('some_list', [1,2,3])
-#         db.add_attr('some_dict', {'a':5})
-#         db.add_attr('some_array', arr, array=True)
-#         assert_array_equal(db.some_list, [1,2,3])
-#         assert_equal(db.some_dict['a'], 5)
-#         assert_array_equal(db.some_array.read(), arr)
-#         db.close()
-#         del db
-# 
-#         db = self.load()
-#         assert_array_equal(db.some_list, [1,2,3])
-#         assert_equal(db.some_dict['a'], 5)
-#         assert_array_equal(db.some_array, arr)
-#         db.close()
-#         del db
-# 
-#     def test_xhdf5_col(self):
-#         import tables
-#         db = self.load()
-#         col = db.e.hdf5_col()
-#         assert col.__class__ == tables.table.Column
-#         assert_equal(len(col), len(db.e()))
-#         db.close()
-#         del db
-# 
-#     def test_zcompression(self):
-#         db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
-#                                          dbmode='w',
-#                                          dbcomplevel=5)
-#         S = MCMC(DisasterModel, db=db)
-#         S.sample(45,10,1)
-#         assert_array_equal(S.e.trace().shape, (35,))
-#         S.db.close()
-#         db.close()
-#         del S
+class TestMySQL(TestPickle):
+    @classmethod
+    def setUpClass(self):
+        if 'mysql' not in dir(pymc.database):
+            raise nose.SkipTest
+        self.S = pymc.MCMC(DisasterModel,
+                           db='mysql',
+                           dbname='pymc_test',
+                           dbuser='pymc',
+                           dbpass='bayesian',
+                           dbhost='www.freesql.org',
+                           dbmode='w')
+
+    def load(self):
+        return pymc.database.mysql.load(dbname='pymc_test',
+                                        dbuser='pymc',
+                                        dbpass='bayesian',
+                                        dbhost='www.freesql.org')
+
+    def test_yrestore_state(self):
+        raise nose.SkipTest, "Not implemented."
+
+
+
+class TestHDF5(TestPickle):
+
+    @classmethod
+    def setUpClass(self):
+        if 'hdf5' not in dir(pymc.database):
+            raise nose.SkipTest
+        self.S = pymc.MCMC(DisasterModel,
+                           db='hdf5',
+                           dbname=os.path.join(testdir, 'Disaster.hdf5'),
+                           dbmode='w')
+
+    def load(self):
+        return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
+
+    def test_xdata_attributes(self):
+        db = self.load()
+        assert_array_equal(db.D, DisasterModel.disasters_array)
+        db.close()
+        del db
+
+    def test_xattribute_assignement(self):
+        arr = np.array([[1,2],[3,4]])
+        db = self.load()
+        db.add_attr('some_list', [1,2,3])
+        db.add_attr('some_dict', {'a':5})
+        db.add_attr('some_array', arr, array=True)
+        assert_array_equal(db.some_list, [1,2,3])
+        assert_equal(db.some_dict['a'], 5)
+        assert_array_equal(db.some_array.read(), arr)
+        db.close()
+        del db
+
+        db = self.load()
+        assert_array_equal(db.some_list, [1,2,3])
+        assert_equal(db.some_dict['a'], 5)
+        assert_array_equal(db.some_array, arr)
+        db.close()
+        del db
+
+    def test_xhdf5_col(self):
+        import tables
+        db = self.load()
+        col = db.e.hdf5_col()
+        assert col.__class__ == tables.table.Column
+        assert_equal(len(col), len(db.e()))
+        db.close()
+        del db
+
+    def test_zcompression(self):
+        db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
+                                         dbmode='w',
+                                         dbcomplevel=5)
+        S = MCMC(DisasterModel, db=db)
+        S.sample(45,10,1)
+        assert_array_equal(S.e.trace().shape, (35,))
+        S.db.close()
+        db.close()
+        del S
 # 
 # 
 # 
@@ -320,15 +320,15 @@ def test_regression_155():
     M.sample(10,0,100)
 
 
-# def test_interactive():
-#     if 'sqlite' not in dir(pymc.database):
-#         raise nose.SkipTest
-#     M=MCMC(DisasterModel,db='sqlite',
-#            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
-#            dbmode='w')
-#     M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
-#         
-#def test_getitem():
+def test_interactive():
+    if 'sqlite' not in dir(pymc.database):
+        raise nose.SkipTest
+    M=MCMC(DisasterModel,db='sqlite',
+           dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
+           dbmode='w')
+    M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
+        
+# def test_getitem():
 #    class tmp(database.base.Database):
 #        def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
 #            return 

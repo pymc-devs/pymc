@@ -23,7 +23,7 @@ import pymc
 from pymc.database import base, pickle
 from copy import copy
 import tables
-import os, warnings
+import os, warnings, sys, traceback
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -195,7 +195,7 @@ class Database(pickle.Database):
         self.__Trace__ = Trace
         self.mode = dbmode
 
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
 
         # Deprecation of complevel and complib
@@ -255,7 +255,7 @@ class Database(pickle.Database):
                     setattr(db, k.name, k)
 
             varnames = db._tables[-1].colnames+ objects.keys()
-            db.variables_to_tally = db.chains * [varnames,]
+            db.trace_names = db.chains * [varnames,]
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -282,31 +282,27 @@ class Database(pickle.Database):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.variables_to_tally))
-            for var in model._variables_to_tally:
-                name = var.__name__
+            names = set(reduce(list.__add__, self.trace_names))
+            for fun, name in model._funs_to_tally.iteritems():
                 if self._traces.has_key(name):
-                    self._traces[name]._getfunc = var.get_value
+                    self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
                 print "Some objects from the database have not been assigned a getfunc", names
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:
-            for o in model._variables_to_tally:
-                name = o.__name__
-                if np.array(o.value).dtype is np.dtype('object'):
-                    self._traces[name] = TraceObject(name, getfunc=o.get_value, db=self)
+            for name, fun in model._funs_to_tally.iteritems():
+                if np.array(fun()).dtype is np.dtype('object'):
+                    self._traces[name] = TraceObject(name, getfunc=fun, db=self)
                 else:
-                    self._traces[name] = Trace(name, getfunc=o.get_value, db=self)
-
-                o.trace = self._traces[name]
+                    self._traces[name] = Trace(name, getfunc=fun, db=self)
 
     def nchains(self):
         """Return the number of existing chains."""
         return len(self._h5file.listNodes('/'))
 
-    def _initialize(self, variables, length):
+    def _initialize(self, funs_to_tally, length):
         """
         Create a group named ``Chain#`` to store all data for this chain.
         The group contains one pyTables Table, and at least one subgroup
@@ -323,10 +319,9 @@ class Database(pickle.Database):
 
         # Create the Table in the chain# group, and ObjectAtoms in chain#/group#.
         table_descr = {}
-        for obj in variables:
+        for name, fun in funs_to_tally.iteritems():
 
-            name = obj.__name__
-            arr = asarray(obj.value)
+            arr = asarray(fun())
 
             if arr.dtype is np.dtype('object'):
 
@@ -365,25 +360,37 @@ class Database(pickle.Database):
 
 
        # Make sure the variables have a corresponding Trace instance.
-        for obj in variables:
-            name = obj.__name__
-            if not self._traces.has_key(obj.__name__):
-                if np.array(obj.value).dtype is np.dtype('object'):
-                    self._traces[name] = TraceObject(name, getfunc=obj.get_value, db=self)
+        for name, fun in funs_to_tally.iteritems():
+            if not self._traces.has_key(name):
+                if np.array(fun()).dtype is np.dtype('object'):
+                    self._traces[name] = TraceObject(name, getfunc=fun, db=self)
                 else:
-                    self._traces[name] = Trace(name, getfunc=obj.get_value, db=self)
+                    self._traces[name] = Trace(name, getfunc=fun, db=self)
 
 
             self._traces[name]._initialize(self.chains, length)
 
 
-        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
+        self.trace_names.append(funs_to_tally.keys())
         self.chains += 1
 
     def tally(self, chain=-1):
         chain = range(self.chains)[chain]
-        for name in self.variables_to_tally[chain]:
-            self._traces[name].tally(chain)
+        for name in self.trace_names[chain]:
+            try:
+                self._traces[name].tally(chain)
+            except:
+                cls, inst, tb = sys.exc_info()
+                print """
+Error tallying %s, will not try to tally it again this chain. 
+Did you make all the samevariables and step methods tallyable 
+as were tallyable last time you used the database file?
+
+Error:
+
+%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
+                self.trace_names[chain].remove(name)
+            
         self._rows[chain].append()
         self._tables[chain].flush()
         self._rows[chain] = self._tables[chain].row
@@ -412,9 +419,9 @@ class Database(pickle.Database):
       in terms of PyTables
         columns, and a"""
         D = {}
-        for o in self.model._variables_to_tally:
-            arr = asarray(o.value)
-            D[o.__name__] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
+        for name, fun in self.model._funs_to_tally.iteritems():
+            arr = asarray(fun())
+            D[name] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
         return D, {}
 
     def _file_trace_description(self):

@@ -159,27 +159,27 @@ class Database(object):
         self.chains = 0
         self._default_chain = -1
 
-    def _initialize(self, trace_names, length=None):
+    def _initialize(self, funs_to_tally, length=None):
         """Initialize the tallyable objects.
 
         Makes sure a Trace object exists for each variable and then initialize
         the Traces.
 
         :Parameters:
-        trace_names : dict
+        funs_to_tally : dict
           Name- function pairs.
         length : int
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
         
-        for name, fun in trace_names.iteritems():
+        for name, fun in funs_to_tally.iteritems():
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
             self._traces[name]._initialize(self.chains, length)
 
-        self.trace_names.append(self._traces.keys())
+        self.trace_names.append(funs_to_tally.keys())
 
         self.chains += 1
                 
