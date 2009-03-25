@@ -153,33 +153,31 @@ class Database(object):
         self.__Trace__ = Trace
         self.__name__ = 'base'
         self.dbname = dbname
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
 
-    def _initialize(self, variables, length=None):
+    def _initialize(self, trace_names, length=None):
         """Initialize the tallyable objects.
 
         Makes sure a Trace object exists for each variable and then initialize
         the Traces.
 
         :Parameters:
-        variables : sequence
-          Tallyable objects.
+        trace_names : dict
+          Name- function pairs.
         length : int
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
-
-        for obj in variables:
-            name = obj.__name__
+        for name, fun in trace_names.iteritems():
             if not self._traces.has_key(name):
-                self._traces[name] = self.__Trace__(name=name, getfunc=obj.get_value, db=self)
+                self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
             self._traces[name]._initialize(self.chains, length)
 
-        self.variables_to_tally.append(tuple([obj.__name__ for obj in variables]))
+        self.trace_names.append(self._traces.keys())
 
         self.chains += 1
 
@@ -192,7 +190,7 @@ class Database(object):
          are appended to the last chain.
         """
         chain = range(self.chains)[chain]
-        for name in self.variables_to_tally[chain]:
+        for name in self.trace_names[chain]:
             self._traces[name].tally(chain)
 
 
@@ -221,7 +219,7 @@ class Database(object):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.variables_to_tally))
+            names = set(reduce(list.__add__, self.trace_names))
             for var in model._variables_to_tally:
                 name = var.__name__
                 if self._traces.has_key(name):
@@ -243,14 +241,14 @@ class Database(object):
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
         chain = range(self.chains)[chain]
-        for name in self.variables_to_tally[chain]:
+        for name in self.trace_names[chain]:
             self._traces[name]._finalize(chain)
         self.commit()
 
     def truncate(self, index, chain=-1):
         """Tell the traces to truncate themselves at the given index."""
         chain = range(self.chains)[chain]
-        for name in self.variables_to_tally[chain]:
+        for name in self.trace_names[chain]:
             self._traces[name].truncate(index, chain)
 
     def commit(self):

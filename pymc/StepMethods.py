@@ -345,7 +345,7 @@ class Metropolis(StepMethod):
         self.accepted = 0.
         self.rejected = 0.
         self._state = ['rejected', 'accepted', 'adaptive_scale_factor', 'proposal_sd', 'proposal_distribution']
-        self._tuning_info = 'adaptive_scale_factor'
+        self._tuning_info = ['adaptive_scale_factor']
 
         # Set public attributes
         self.stochastic = stochastic

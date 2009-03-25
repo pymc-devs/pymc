@@ -144,7 +144,7 @@ class Database(base.Database):
         self.__name__ = 'ram'
         self.__Trace__ = Trace
         self.dbname = dbname
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1

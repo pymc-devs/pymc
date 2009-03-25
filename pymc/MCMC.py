@@ -135,7 +135,7 @@ class MCMC(Sampler):
             
             for sm in self.step_methods:
                 for name in sm._tuning_info:
-                    self._funs_to_tally[sm._id+'_'+name] = lambda name=name: getattr(sm, name)
+                    self._funs_to_tally[sm._id+'_'+name] = lambda name=name, sm=sm: getattr(sm, name)
 
         self.restore_sm_state()
         self._sm_assigned = True

@@ -218,7 +218,7 @@ class Sampler(Model):
         # Initialize database -> initialize traces.
         if length is None:
             length = iter
-        self.db._initialize(self._variables_to_tally, length)
+        self.db._initialize(self._funs_to_tally, length)
 
         # Loop
         self._current_iter = 0
@@ -343,6 +343,7 @@ class Sampler(Model):
 
             if object.trace:
                 self._variables_to_tally.add(object)
+                self._funs_to_tally[object.__name__] = object.get_value
             else:
                 object.trace = no_trace.Trace(object.__name__)
 
