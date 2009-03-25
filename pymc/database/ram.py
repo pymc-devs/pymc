@@ -57,6 +57,7 @@ class Trace(base.Trace):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
+
         # First, see if the object has an explicit dtype.
         value = np.array(self._getfunc())
 

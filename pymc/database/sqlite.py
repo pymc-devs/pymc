@@ -40,6 +40,10 @@ class Trace(base.Trace):
     def _initialize(self, chain, length):
         """Create an SQL table.
         """
+        
+        if self._getfunc is None:
+            self._getfunc = self.db.model._funs_to_tally[self.name]
+        
         # If the table already exists, exit now.
         if chain != 0:
             return
