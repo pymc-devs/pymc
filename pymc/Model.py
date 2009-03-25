@@ -619,6 +619,10 @@ class Sampler(Model):
             return self.db.trace(name.__name__, chain)
         else:
             raise ValueError, 'Name argument must be string or Variable, got %s.'%name
+            
+    def _get_deviance(self):
+        return self._sum_deviance()
+    deviance = property(_get_deviance)
 
 def check_valid_object_name(sequence):
     """Check that the names of the objects are all different."""
