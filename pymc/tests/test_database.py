@@ -10,7 +10,7 @@ import nose
 import warnings
 warnings.simplefilter('ignore', UserWarning)
 
-TestCase = object
+# TestCase = object
 
 testdir = 'testresults'
 try:
@@ -141,24 +141,24 @@ class TestTxt(TestPickle):
         return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
 
 
-# class TestSqlite(TestPickle):
-#     @classmethod
-#     def setUpClass(self):
-#         if 'sqlite' not in dir(pymc.database):
-#             raise nose.SkipTest
-#         if os.path.exists('Disaster.sqlite'):
-#            os.remove('Disaster.sqlite')
-#         self.S = pymc.MCMC(DisasterModel,
-#                            db='sqlite',
-#                            dbname=os.path.join(testdir, 'Disaster.sqlite'),
-#                            dbmode='w')
-# 
-#     def load(self):
-#         return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
-# 
-#     def test_yrestore_state(self):
-#         raise nose.SkipTest, "Not implemented."
-# 
+class TestSqlite(TestPickle):
+    @classmethod
+    def setUpClass(self):
+        if 'sqlite' not in dir(pymc.database):
+            raise nose.SkipTest
+        if os.path.exists('Disaster.sqlite'):
+           os.remove('Disaster.sqlite')
+        self.S = pymc.MCMC(DisasterModel,
+                           db='sqlite',
+                           dbname=os.path.join(testdir, 'Disaster.sqlite'),
+                           dbmode='w')
+
+    def load(self):
+        return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
+
+    def test_yrestore_state(self):
+        raise nose.SkipTest, "Not implemented."
+
 # class TestMySQL(TestPickle):
 #     @classmethod
 #     def setUpClass(self):
@@ -335,14 +335,14 @@ def test_regression_155():
 
 
 if __name__ == '__main__':
-    tester = TestTxt()
-    tester.setUpClass()
-    tester.test_init()
-    tester.test_simple_sample()
-    tester.test_xload()
-    # C =nose.config.Config(verbosity=3)
-    # nose.runmodule(config=C)
-    # try:
-    #     S.db.close()
-    # except:
-    #     pass
+    # tester = TestTxt()
+    # tester.setUpClass()
+    # tester.test_init()
+    # tester.test_simple_sample()
+    # tester.test_xload()
+    C =nose.config.Config(verbosity=3)
+    nose.runmodule(config=C)
+    try:
+        S.db.close()
+    except:
+        pass
