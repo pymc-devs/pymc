@@ -38,7 +38,7 @@ class Database(base.Database):
         self.__name__ = 'pickle'
         self.filename = dbname
         self.__Trace__ = Trace
-        self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
+        self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
         self._default_chain = -1
@@ -51,7 +51,7 @@ class Database(base.Database):
         """Dump traces using cPickle."""
         container={}
         try:
-            for name in self._traces.keys():
+            for name in self._traces.iterkeys():
                 container[name] = self._traces[name]._trace
             container['_state_'] = self._state_
 
@@ -72,7 +72,7 @@ def load(filename):
     file.close()
     db = Database(file.name)
     chains = 0
-    variables = set()
+    funs = set()
     for k,v in container.iteritems():
         if k == '_state_':
            db._state_ = v
@@ -80,10 +80,10 @@ def load(filename):
             db._traces[k] = Trace(name=k, value=v, db=db)
             setattr(db, k, db._traces[k])
             chains = max(chains, len(v))
-            variables.add(k)
+            funs.add(k)
 
     db.chains = chains
-    db.variables_to_tally = chains*[list(variables)]
+    db.trace_names = chains*[list(funs)]
 
     return db
 

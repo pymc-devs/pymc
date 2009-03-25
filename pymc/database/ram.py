@@ -52,6 +52,11 @@ class Trace(base.Trace):
         """Create an array of zeros with shape (length, shape(obj)), where
         obj is the internal PyMC Stochastic or Deterministic.
         """
+        # If this db was loaded from the disk, it may not have its
+        # tallied step methods' getfuncs yet.
+        if self._getfunc is None:
+            self._getfunc = self.db.model._funs_to_tally[self.name]
+
         # First, see if the object has an explicit dtype.
         value = np.array(self._getfunc())
 
@@ -79,10 +84,13 @@ class Trace(base.Trace):
         chain : integer
           Chain index.
         """
+        
+        value = self._getfunc()
+
         try:
-            self._trace[chain][self._index[chain]] = self._getfunc().copy()
+            self._trace[chain][self._index[chain]] = value.copy()
         except AttributeError:
-            self._trace[chain][self._index[chain]] = self._getfunc()
+            self._trace[chain][self._index[chain]] = value
         self._index[chain] += 1
 
     def truncate(self, index, chain):

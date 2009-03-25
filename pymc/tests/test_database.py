@@ -87,41 +87,43 @@ class TestRam(TestBase):
 
         self.S.db.close()
 
-# class TestPickle(TestRam):
-#     @classmethod
-#     def setUpClass(self):
-#         self.S = pymc.MCMC(DisasterModel,
-#                            db='pickle',
-#                            dbname=os.path.join(testdir, 'Disaster.pickle'),
-#                            dbmode='w')
-# 
-#     def load(self):
-#         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
-# 
-#     def test_xload(self):
-#         db = self.load()
-#         assert_array_equal(db.e(chain=0).shape, (5,))
-#         assert_array_equal(db.e(chain=1).shape, (10,))
-#         assert_array_equal(db.e(chain=-1).shape, (10,))
-#         assert_array_equal(db.e(chain=None).shape, (15,))
-#         db.close()
-# 
-#     def test_yconnect_and_sample(self):
-#         db = self.load()
-#         S = pymc.MCMC(DisasterModel, db=db)
-#         S.sample(5)
-#         assert_array_equal(db.e(chain=-1).shape, (5,))
-#         assert_array_equal(db.e(chain=None).shape, (20,))
-#         db.close()
-# 
-#     def test_yrestore_state(self):
-#         db = self.load()
-#         S = pymc.MCMC(DisasterModel, db=db)
-#         S.sample(10)
-#         sm = S.step_methods.pop()
-#         assert_equal(sm.accepted+sm.rejected, 75)
-# 
-# 
+class TestPickle(TestRam):
+    @classmethod
+    def setUpClass(self):
+        self.S = pymc.MCMC(DisasterModel,
+                           db='pickle',
+                           dbname=os.path.join(testdir, 'Disaster.pickle'),
+                           dbmode='w')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)                           
+
+    def load(self):
+        return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
+
+    def test_xload(self):
+        db = self.load()
+        assert_array_equal(db.e(chain=0).shape, (5,))
+        assert_array_equal(db.e(chain=1).shape, (10,))
+        assert_array_equal(db.e(chain=-1).shape, (10,))
+        assert_array_equal(db.e(chain=None).shape, (15,))
+        db.close()
+
+    def test_yconnect_and_sample(self):
+        db = self.load()
+        S = pymc.MCMC(DisasterModel, db=db)
+        S.use_step_method(pymc.Metropolis, S.e, tally=True)                           
+        S.sample(5)
+        assert_array_equal(db.e(chain=-1).shape, (5,))
+        assert_array_equal(db.e(chain=None).shape, (20,))
+        db.close()
+
+    def test_yrestore_state(self):
+        db = self.load()
+        S = pymc.MCMC(DisasterModel, db=db)
+        S.sample(10)
+        sm = S.step_methods.pop()
+        assert_equal(sm.accepted+sm.rejected, 75)
+
+
 # class TestTxt(TestPickle):
 #     @classmethod
 #     def setUpClass(self):

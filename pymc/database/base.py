@@ -47,6 +47,7 @@ done explicitly by the user.
 """
 import pymc
 import types
+import sys, traceback
 
 __all__=['Trace', 'Database']
 
@@ -171,6 +172,7 @@ class Database(object):
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
+        
         for name, fun in trace_names.iteritems():
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
@@ -180,7 +182,7 @@ class Database(object):
         self.trace_names.append(self._traces.keys())
 
         self.chains += 1
-
+        
     def tally(self, chain=-1):
         """Append the current value of all tallyable object.
 
@@ -191,7 +193,19 @@ class Database(object):
         """
         chain = range(self.chains)[chain]
         for name in self.trace_names[chain]:
-            self._traces[name].tally(chain)
+            try:
+                self._traces[name].tally(chain)
+            except:
+                cls, inst, tb = sys.exc_info()
+                print """
+Error tallying %s, will not try to tally it again this chain. 
+Did you make all the samevariables and step methods tallyable 
+as were tallyable last time you used the database file?
+
+Error:
+
+%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
+            self.trace_names[chain].remove(name)
 
 
     def connect_model(self, model):
@@ -219,24 +233,20 @@ class Database(object):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.trace_names))
-            for var in model._variables_to_tally:
-                name = var.__name__
+            names = set(reduce(list.__add__, self.trace_names, []))
+            for name, fun in model._funs_to_tally.iteritems():
                 if self._traces.has_key(name):
-                    self._traces[name]._getfunc = var.get_value
-                    names.remove(name)
-            if len(names) > 0:
-                print "Some objects from the database have not been assigned a getfunc", names
+                    self._traces[name]._getfunc = fun
+                    names.discard(name)
+            # if len(names) > 0:
+            #     print "Some objects from the database have not been assigned a getfunc", names
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
         else:
-            for obj in model._variables_to_tally:
-                name = obj.__name__
+            for name, fun in model._funs_to_tally.iteritems():
                 if not self._traces.has_key(name):
-                    self._traces[name] = self.__Trace__(name=name, getfunc=obj.get_value, db=self)
-
-                obj.trace = self._traces[name]
+                    self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""

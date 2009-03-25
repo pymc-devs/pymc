@@ -644,9 +644,6 @@ class DiscreteMetropolis(Metropolis):
         # Initialize superclass
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution=proposal_distribution, verbose=verbose, tally=tally)
 
-        # Initialize verbose feedback string
-        self._id = stochastic.__name__
-
         # Flag for positive-only values
         self._positive = positive
 
@@ -703,9 +700,6 @@ class BinaryMetropolis(Metropolis):
         Metropolis.__init__(self, stochastic, proposal_distribution=proposal_distribution, verbose=verbose, tally=tally)
 
         self._state.remove('proposal_sd')
-
-        # Initialize verbose feedback string
-        self._id = stochastic.__name__
 
         # adaptive_scale_factor controls the jump probability
         self.adaptive_scale_factor = log(1.-p_jump) / log(.5)

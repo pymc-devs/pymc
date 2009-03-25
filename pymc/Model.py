@@ -220,6 +220,10 @@ class Sampler(Model):
             length = iter
         self.db._initialize(self._funs_to_tally, length)
 
+        # Put traces on objects
+        for v in self._variables_to_tally:
+            v.trace = self.db._traces[v.__name__]
+
         # Loop
         self._current_iter = 0
         self._loop()
