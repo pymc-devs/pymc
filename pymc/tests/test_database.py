@@ -44,6 +44,7 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def test_simple_sample(self):
 
