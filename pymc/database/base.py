@@ -77,7 +77,11 @@ class Trace(object):
 
     def _initialize(self, chain, length):
         """Prepare for tallying. Create a new chain."""
-        pass
+        # If this db was loaded from the disk, it may not have its
+        # tallied step methods' getfuncs yet.
+        if self._getfunc is None:
+            self._getfunc = self.db.model._funs_to_tally[self.name]
+        
 
     def tally(self, chain):
         """Appends the object's value to a chain.
