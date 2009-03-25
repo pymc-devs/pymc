@@ -193,7 +193,6 @@ class TestHDF5(TestPickle):
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
@@ -336,12 +335,11 @@ def test_interactive():
 
 
 if __name__ == '__main__':
-    # tester = testHDF5Objects()
+    # tester = TestTxt()
     # tester.setUpClass()
-    # # tester.test_init()
+    # tester.test_init()
     # tester.test_simple_sample()
     # tester.test_xload()
-    # tester.test_yconnect_and_sample()
     C =nose.config.Config(verbosity=3)
     nose.runmodule(config=C)
     try:
