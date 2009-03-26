@@ -1,0 +1,5 @@
+#!/bin/bash
+
+python setupegg.py sdist_dsc --extra-cfg-file stdeb_all.cfg
+cd deb_dist/pymc-2.0
+dpkg-buildpackage -rfakeroot -uc -us
