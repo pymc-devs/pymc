@@ -159,9 +159,11 @@ def new_dist_class(*new_class_args):
                         arg_dict_out[k] = kwds.pop(k)
                     except:
                         pass
-                else:
-                    raise ValueError, 'Keyword '+ k + ' not recognized. Arguments recognized are ' + str(args_needed)
-
+            
+            # Remaining unrecognized arguments raise an error. 
+            if len(kwds) > 0:
+                raise TypeError, 'Keyword '+ kwds.keys() + ' not recognized. Arguments recognized are ' + str(args_needed)
+            
         # Determine size desired for scalar variables.
         # Notes
         # -----

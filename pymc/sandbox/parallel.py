@@ -93,7 +93,7 @@ class Parallel(Sampler):
         #mec.execute('from pymc.database.parallel import Database')
         #for i in range(nproc):
         #    mec.execute(i, 'db = Database(%d)'%i)
-        mec.execute('S = MCMC(input)', proc)
+        mec.execute("S = MCMC(input, db='txt')", proc)
 
         self.mec = mec
         self.proc = proc
@@ -116,7 +116,7 @@ class Parallel(Sampler):
         # Launch a subprocess that will tally the traces of each sampler.
         #self.tally()
 
-    def tally(self):
+    def fetch_samples(self):
         """Read in the traces dumped by the samplers."""
         mec = self.mec
         data = {}

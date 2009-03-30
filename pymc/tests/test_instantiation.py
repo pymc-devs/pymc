@@ -82,9 +82,21 @@ class test_instantiation(TestCase):
         assert(F.observed)
         assert(isinstance(G, Stochastic))
         assert(G.observed)
+    
     def test_stochastic(self):
         assert(isinstance(l, Stochastic))
         assert(not l.observed)
+    
+    def test_invalid_keyword(self): # Ticket 239
+        # Normal is given values instead of value and should raise an error
+        try:
+            pymc.Normal(name='alpha', values=D_array, mu=1, tau=1)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError, 'Instantiation should fail.'
+
+
 
 if __name__ == '__main__':
     import unittest
