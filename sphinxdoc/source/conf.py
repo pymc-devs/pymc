@@ -144,7 +144,7 @@ html_static_path = ['.static']
 #html_use_opensearch = ''
 
 # If nonempty, this is the file name suffix for HTML files (e.g. ".xhtml").
-#html_file_suffix = ''
+html_file_suffix = '.html'
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pymcdoc'
