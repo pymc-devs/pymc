@@ -18,7 +18,7 @@ from pymc import Sampler, data, stochastic, deterministic, \
     Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
 from pymc import uniform_like, exponential_like, poisson_like
-
+import warnings
 
 D_array =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                     3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -97,7 +97,19 @@ class test_instantiation(TestCase):
             raise AssertionError, 'Instantiation should fail.'
 
 
-
+class test_out_of_bound_initialization(TestCase):
+    
+    def test_simple(self):
+        # There is a very slim chance that the lower bound will have a 
+        # valid value at the instantiation time of data. 
+        # This checks the mechanism in PyMCObjects that redraws values for parents in an attempt
+        # to avoid failure so early. 
+        warnings.simplefilter('ignore',  UserWarning)
+        lower = pymc.Uniform('lower', .9, 2., value=None, rseed=True,  verbose=0)
+        data = pymc.Uniform('data', lower=lower, upper=5, value=[1, 2, 3, 4],  observed=True,  verbose=0)
+        warnings.simplefilter('default',  UserWarning)
+        
+        
 if __name__ == '__main__':
     import unittest
     unittest.main()
