@@ -1,0 +1,265 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. Installation Instructions &mdash; pymc v2.0 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pymc v2.0 documentation" href="index.html" />
+    <link rel="next" title="3. Tutorial" href="tutorial.html" />
+    <link rel="prev" title="1. Introduction" href="README.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="3. Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="README.html" title="1. Introduction"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installation-instructions">
+<h1>2. Installation Instructions<a class="headerlink" href="#installation-instructions" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Date:</th><td class="field-body">Oct 14, 2008</td>
+</tr>
+<tr class="field"><th class="field-name">Authors:</th><td class="field-body">Chris Fonnesbeck, Anand Patil, David Huard</td>
+</tr>
+<tr class="field"><th class="field-name">Web site:</th><td class="field-body"><a class="reference external" href="http://code.google.com/p/pymc/">http://code.google.com/p/pymc/</a></td>
+</tr>
+<tr class="field"><th class="field-name">Copyright:</th><td class="field-body">This document has been placed in the public domain.</td>
+</tr>
+</tbody>
+</table>
+<p>PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be
+able to work on just about any platform for which Python, a Fortran compiler
+and the NumPy module are  available. However, installing some extra
+depencies can greatly improve PyMC&#8217;s performance and versatility.
+The following describes the required and optional dependencies and takes you
+through the installation process.</p>
+<div class="section" id="dependencies">
+<h2>2.1. Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>PyMC requires some prerequisite packages to be present on the system.
+Fortunately, there are currently only a few dependencies, and all are
+freely available online.</p>
+<ul class="simple">
+<li><a class="reference external" href="http://www.python.org/.">Python</a> version 2.5.</li>
+<li><a class="reference external" href="http://www.scipy.org/NumPy">NumPy</a> (1.2 or newer): The fundamental scientific programming package, it provides a
+multidimensional array type and many useful functions for numerical analysis.</li>
+<li><a class="reference external" href="http://matplotlib.sourceforge.net/">Matplotlib</a> (optional): 2D plotting library which produces publication
+quality figures in a variety of image formats and interactive environments</li>
+<li><a class="reference external" href="http://www.pytables.org/moin">pyTables</a> (optional): Package for managing hierarchical datasets and
+designed to efficiently and easily cope with extremely large amounts of data.
+Requires the <a class="reference external" href="http://www.hdfgroup.org/HDF5/">HDF5</a> library.</li>
+<li><a class="reference external" href="http://code.google.com/p/pydot/">pydot</a> (optional): Python interface to Graphviz&#8217;s Dot language, it allows
+PyMC to create both directed and non-directed graphical representations of models.
+Requires the <a class="reference external" href="http://www.graphviz.org/">Graphviz</a> library.</li>
+<li><a class="reference external" href="http://www.scipy.org/">SciPy</a> (optional): Library of algorithms for mathematics, science
+and engineering.</li>
+<li><a class="reference external" href="http://ipython.scipy.org/">IPython</a> (optional): An enhanced interactive Python shell and an
+architecture for interactive parallel computing.</li>
+<li><a class="reference external" href="http://somethingaboutorange.com/mrl/projects/nose/">nose</a> (optional): A test discovery-based unittest extension (required
+to run the test suite).</li>
+</ul>
+<p>There are prebuilt distributions that include all required dependencies. For
+Mac OSX users, we recommend the <a class="reference external" href="http://www.activestate.com/Products/ActivePython/">MacPython</a> distribution, the
+<a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought Python Distribution</a>, or Python 2.5.1 that ships with
+OSX 10.5 (Leopard). Windows users should download and install the
+<a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought Python Distribution</a>. The Enthought Python Distribution comes
+bundled with these prerequisites. Note that depending on the currency of these
+distributions, some packages may need to be updated manually.</p>
+<p>If instead of installing the prebuilt binaries you prefer (or have) to build
+<tt class="docutils literal"><span class="pre">pymc</span></tt> yourself, make sure you have a Fortran and a C compiler. There are free
+compilers (gfortran, gcc) available on all platforms. Other compilers have not been
+tested with PyMC but may work nonetheless.</p>
+</div>
+<div class="section" id="installation-using-easyinstall">
+<h2>2.2. Installation using EasyInstall<a class="headerlink" href="#installation-using-easyinstall" title="Permalink to this headline">¶</a></h2>
+<p>The easiest way to install PyMC is to type in a terminal:</p>
+<div class="highlight-python"><pre>easy_install pymc</pre>
+</div>
+<p>Provided <a class="reference external" href="http://peak.telecommunity.com/DevCenter/EasyInstall">EasyInstall</a> (part of the <a class="reference external" href="http://peak.telecommunity.com/DevCenter/setuptools">setuptools</a> module) is installed
+and in your path, this should fetch and install the package from the
+<a class="reference external" href="http://pypi.python.org/pypi">Python Package Index</a>. Make sure you have the appropriate administrative
+privileges to install software on your computer.</p>
+</div>
+<div class="section" id="installing-from-pre-built-binaries">
+<h2>2.3. Installing from pre-built binaries<a class="headerlink" href="#installing-from-pre-built-binaries" title="Permalink to this headline">¶</a></h2>
+<p>Pre-built binaries are available for Windows XP and Mac OS X. There are at least
+two ways to install these:</p>
+<ol class="arabic simple">
+<li>Download the installer for your platform from <a class="reference external" href="http://pypi.python.org/pypi/pymc/">PyPI</a>.</li>
+<li>Double-click the executable installation package, then follow the
+on-screen instructions.</li>
+</ol>
+<p>For other platforms, you will need to build the package yourself from source.
+Fortunately, this should be relatively straightforward.</p>
+</div>
+<div class="section" id="compiling-the-source-code">
+<h2>2.4. Compiling the source code<a class="headerlink" href="#compiling-the-source-code" title="Permalink to this headline">¶</a></h2>
+<p>First download the source code tarball from <a class="reference external" href="http://pypi.python.org/pypi/pymc/">PyPI</a> and unpack it. Then move
+into the unpacked directory and follow the platform specific instructions.</p>
+<div class="section" id="windows">
+<h3>2.4.1. Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h3>
+<p>One way to compile PyMC on Windows is to install <a class="reference external" href="http://www.mingw.org/">MinGW</a> and <a class="reference external" href="http://www.mingw.org/wiki/MSYS">MSYS</a>. MinGW is
+the GNU Compiler Collection (GCC) augmented with Windows specific headers and
+libraries. MSYS is a POSIX-like console (bash) with UNIX command line tools.
+Download the <a class="reference external" href="http://sourceforge.net/project/showfiles.php?group_id=2435">Automated MinGW Installer</a> and double-click on it to launch
+the installation process. You will be asked to select which
+components are to be installed: make sure the g77 compiler is selected and
+proceed with the instructions. Then download and install <a class="reference external" href="http://downloads.sourceforge.net/mingw/MSYS-1.0.10.exe">MSYS-1.0.exe</a>,
+launch it and again follow the on-screen instructions.</p>
+<p>Once this is done, launch the MSYS console, change into the PyMC directory and
+type:</p>
+<div class="highlight-python"><pre>python setup.py install</pre>
+</div>
+<p>This will build the C and Fortran extension and copy the libraries and python
+modules in the C:/Python25/Lib/site-packages/pymc directory.</p>
+</div>
+<div class="section" id="mac-os-x-or-linux">
+<h3>2.4.2. Mac OS X or Linux<a class="headerlink" href="#mac-os-x-or-linux" title="Permalink to this headline">¶</a></h3>
+<p>In a terminal, type:</p>
+<div class="highlight-python"><pre>python setup.py build
+sudo python setup.py install</pre>
+</div>
+<p>The <cite>sudo</cite> command is required to install PyMC into the Python <tt class="docutils literal"><span class="pre">site-packages</span></tt>
+directory if it has restricted privileges. You will be prompted for a password,
+and provided you have superuser privileges, the installation will proceed.</p>
+</div>
+</div>
+<div class="section" id="development-version">
+<h2>2.5. Development version<a class="headerlink" href="#development-version" title="Permalink to this headline">¶</a></h2>
+<p>You can check out the bleeding edge version of the code from the <a class="reference external" href="http://subversion.tigris.org/">subversion</a>
+repository:</p>
+<div class="highlight-python"><pre>svn checkout http://pymc.googlecode.com/svn/trunk/ pymc</pre>
+</div>
+<p>Previous versions are available in the <tt class="docutils literal"><span class="pre">/tags</span></tt> directory.</p>
+</div>
+<div class="section" id="running-the-test-suite">
+<h2>2.6. Running the test suite<a class="headerlink" href="#running-the-test-suite" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">pymc</span></tt> comes with a set of tests that verify that the critical components
+of the code work as expected. To run these tests, users must have <a class="reference external" href="http://somethingaboutorange.com/mrl/projects/nose/">nose</a>
+installed. The tests are launched from a python shell:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">import</span> <span class="nn">pymc</span>
+<span class="n">pymc</span><span class="o">.</span><span class="n">test</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In case of failures, messages detailing the nature of these failures will
+appear. In case this happens (it shouldn&#8217;t), please report
+the problems on the <a class="reference external" href="http://code.google.com/p/pymc/issues/list.">issue tracker</a>, specifying the version you are using and
+the environment.</p>
+</div>
+<div class="section" id="bugs-and-feature-requests">
+<h2>2.7. Bugs and feature requests<a class="headerlink" href="#bugs-and-feature-requests" title="Permalink to this headline">¶</a></h2>
+<p>Report problems with the installation, bugs in the code or feature request at
+the <a class="reference external" href="http://code.google.com/p/pymc/issues/list.">issue tracker</a>. Comments and questions are welcome and should be
+addressed to PyMC&#8217;s <a class="reference external" href="mailto:pymc&#37;&#52;&#48;googlegroups&#46;com">mailing list</a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon_small.png" alt="Logo"/>
+            </a></p>
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">2. Installation Instructions</a><ul>
+<li><a class="reference external" href="#dependencies">2.1. Dependencies</a></li>
+<li><a class="reference external" href="#installation-using-easyinstall">2.2. Installation using EasyInstall</a></li>
+<li><a class="reference external" href="#installing-from-pre-built-binaries">2.3. Installing from pre-built binaries</a></li>
+<li><a class="reference external" href="#compiling-the-source-code">2.4. Compiling the source code</a><ul>
+<li><a class="reference external" href="#windows">2.4.1. Windows</a></li>
+<li><a class="reference external" href="#mac-os-x-or-linux">2.4.2. Mac OS X or Linux</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#development-version">2.5. Development version</a></li>
+<li><a class="reference external" href="#running-the-test-suite">2.6. Running the test suite</a></li>
+<li><a class="reference external" href="#bugs-and-feature-requests">2.7. Bugs and feature requests</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="README.html"
+                                  title="previous chapter">1. Introduction</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="tutorial.html"
+                                  title="next chapter">3. Tutorial</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/INSTALL.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="3. Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="README.html" title="1. Introduction"
+             >previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2008, Chris Fonnesbeck, Anand Patil, David Huard.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.7.
+    </div>
+  </body>
+</html>
