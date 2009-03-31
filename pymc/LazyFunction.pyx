@@ -102,7 +102,7 @@ cdef class LazyFunction:
     cdef public object arguments, fun, argument_values
     cdef int cache_depth, n_ultimate_args
     cdef public object ultimate_args
-    cdef public object cached_args, cached_values
+    cdef public object cached_values
     # cdef object ultimate_arg_counter
     cdef int *frame_queue
     cdef long* cached_counts,
@@ -129,12 +129,9 @@ cdef class LazyFunction:
         self.n_ultimate_args = len(self.ultimate_args)
 
         # Initialize caches
-        self.cached_args = []
         self.cached_values = []
         for i in range(self.cache_depth):
             self.cached_values.append(None)
-            for j in xrange(self.n_ultimate_args):
-                self.cached_args.append(None)
 
         # Underlying function
         self.fun = fun
@@ -244,7 +241,12 @@ cdef class LazyFunction:
         Forces an arbitrary value into the cache, associated with
         self's current input arguments. Use with caution!
         """
-        self.cache(value)
+        cdef int match_index
+        match_index = self.check_argument_caches()
+        if match_index<0:
+            self.cache(value)
+        else:
+            self.cached_values[match_index]=value
 
     def force_compute(self):
         """

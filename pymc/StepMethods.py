@@ -334,7 +334,7 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0, tally=False):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0, tally=True):
         # Metropolis class initialization
 
         # Initialize superclass
@@ -638,7 +638,7 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False, verbose=0, tally=False):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False, verbose=0, tally=True):
         # DiscreteMetropolis class initialization
 
         # Initialize superclass
@@ -693,7 +693,7 @@ class BinaryMetropolis(Metropolis):
 
     """
 
-    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0, tally=False):
+    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0, tally=True):
         # BinaryMetropolis class initialization
 
         # Initialize superclass

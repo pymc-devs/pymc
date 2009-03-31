@@ -141,6 +141,8 @@ It provides the following additional attributes:
 Carlo: the \code{MCMC} class} \label{sec:mcmc}
 \pdfbookmark[1]{The MCMC class}{mcmc}
 
+\textbf{XXX DESCRIBE WHERE TO GET TUNING PARAMETER TRACES}
+
 The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
 
 \code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in chapter \ref{chap:extending}.
@@ -204,7 +206,9 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
    \item[\code{verbose}:] An integer.
 \end{description}
 
-Metropolis step methods adjust their initial proposal standard deviations using an attribute called \code{adaptive_scale_factor}. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}. It is usually OK to keep tuning throughout the MCMC loop even though the resulting chain is not actually Markov \citep{tuning}. % This attribute is hidden, and should not be altered manually by the user. S'OK if they alter it, I do it sometimes.
+Metropolis step methods adjust their initial proposal standard deviations using an attribute called \code{adaptive_scale_factor}. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}. 
+
+By default, tuning will continue throughout the sampling loop, even after the burnin period is over. This can be changed via the \texttt{tune\_throughout} argument to \texttt{MCMC.sample}. If an adaptive step method's \texttt{tally} flag is set (the default for \texttt{Metropolis}), a trace of its tuning parameters will be kept. If you allow tuning to continue throughout the sampling loop, it is important to verify that the `Diminishing Tuning' condition of \cite{tuning} is satisfied: the amount of tuning should decrease to zero, or tuning should become very infrequent.
 
 If a Metropolis step method handles an array-valued variable, it proposes all elements independently but simultaneously. That is, it decides whether to accept or reject all elements together but it does not attempt to take the posterior correlation between elements into account. The \code{AdaptiveMetropolis} class (see below), on the other hand, does make correlated proposals.
 

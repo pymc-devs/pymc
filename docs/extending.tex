@@ -131,6 +131,7 @@ Step methods should also maintain the following attributes:
 \begin{description}
    \item[\code{_id}:] A string that can identify each step method uniquely (usually something like \code{<class_name>_<stochastic_name>}).
    \item[\code{adaptive_scale_factor}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
+   \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \texttt{Metropolis} instances, this would be \texttt{adaptive_scale_factor}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \cite{tuning}. 
 \end{description}
 
 All step methods have a property called \code{loglike}, which returns the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio.
