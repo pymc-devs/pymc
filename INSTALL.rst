@@ -1,7 +1,6 @@
-==============================
-PyMC Installation Instructions
-==============================
-
+*************************
+Installation Instructions
+*************************
 
 :Date: Oct 14, 2008
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard

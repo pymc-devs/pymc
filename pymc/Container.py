@@ -169,7 +169,7 @@ def file_items(container, iterable):
             item = iterable[key]
         # Item counter
         else:
-    	    i += 1
+            i += 1
 
         # If the item isn't iterable, file it away.
         if isinstance(item, Variable):

@@ -1,6 +1,6 @@
-==========================================
-PyMC -- Markov chain Monte Carlo in Python
-==========================================
+************
+Introduction
+************
 
 :Date: April 6, 2007
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard
@@ -123,12 +123,5 @@ available statistical distributions. More `examples`_ of usage as well as
 
 .. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
 
-Installation
-============
 
-See the `INSTALL.txt`_ file.
-
-
-.. _`INSTALL.txt`:
-   ./INSTALL.txt
 

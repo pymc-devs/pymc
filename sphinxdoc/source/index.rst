@@ -9,17 +9,12 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :numbered:
    
-   README
-   INSTALL
+   ../../README
+   ../../INSTALL
    tutorial
-   theory
    modelbuilding
-   modelfitting
-   database
-   modelchecking
-   extending
-   distributions
    references
 
 Indices and tables
