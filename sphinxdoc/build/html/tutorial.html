@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
     <title>3. Tutorial &mdash; pymc v2.0 documentation</title>
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -38,7 +38,64 @@
              accesskey="P">previous</a> |</li>
         <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
       </ul>
-    </div>  
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon_small.png" alt="Logo"/>
+            </a></p>
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">3. Tutorial</a><ul>
+<li><a class="reference external" href="#an-example-statistical-model">3.1. An example statistical model</a></li>
+<li><a class="reference external" href="#two-types-of-variables">3.2. Two types of variables</a><ul>
+<li><a class="reference external" href="#why-are-data-and-unknown-variables-represented-by-the-same-object">3.2.1. Why are data and unknown variables represented by the same object?</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#parents-and-children">3.3. Parents and children</a></li>
+<li><a class="reference external" href="#variables-values-and-log-probabilities">3.4. Variables&#8217; values and log-probabilities</a><ul>
+<li><a class="reference external" href="#using-variables-as-parents-of-other-variables">3.4.1. Using Variables as parents of other Variables</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#fitting-the-model-with-mcmc">3.5. Fitting the model with MCMC</a><ul>
+<li><a class="reference external" href="#what-does-it-mean-to-fit-a-model">3.5.1. What does it mean to fit a model?</a></li>
+<li><a class="reference external" href="#accessing-the-samples">3.5.2. Accessing the samples</a></li>
+<li><a class="reference external" href="#sampling-output">3.5.3. Sampling output</a></li>
+<li><a class="reference external" href="#imputation-of-missing-data">3.5.4. Imputation of Missing Data</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#fine-tuning-the-mcmc-algorithm">3.6. Fine-tuning the MCMC algorithm</a></li>
+<li><a class="reference external" href="#beyond-the-basics">3.7. Beyond the basics</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="INSTALL.html"
+                                  title="previous chapter">2. Installation Instructions</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="modelbuilding.html"
+                                  title="next chapter">4. Building models</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/tutorial.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
 
     <div class="document">
       <div class="documentwrapper">
@@ -652,63 +709,6 @@ observed and is not updated. Hence <img class="math" src="_images/math/9ffb44891
 
 
           </div>
-        </div>
-      </div>
-      <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
-            <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/icon_small.png" alt="Logo"/>
-            </a></p>
-            <h3><a href="index.html">Table Of Contents</a></h3>
-            <ul>
-<li><a class="reference external" href="">3. Tutorial</a><ul>
-<li><a class="reference external" href="#an-example-statistical-model">3.1. An example statistical model</a></li>
-<li><a class="reference external" href="#two-types-of-variables">3.2. Two types of variables</a><ul>
-<li><a class="reference external" href="#why-are-data-and-unknown-variables-represented-by-the-same-object">3.2.1. Why are data and unknown variables represented by the same object?</a></li>
-</ul>
-</li>
-<li><a class="reference external" href="#parents-and-children">3.3. Parents and children</a></li>
-<li><a class="reference external" href="#variables-values-and-log-probabilities">3.4. Variables&#8217; values and log-probabilities</a><ul>
-<li><a class="reference external" href="#using-variables-as-parents-of-other-variables">3.4.1. Using Variables as parents of other Variables</a></li>
-</ul>
-</li>
-<li><a class="reference external" href="#fitting-the-model-with-mcmc">3.5. Fitting the model with MCMC</a><ul>
-<li><a class="reference external" href="#what-does-it-mean-to-fit-a-model">3.5.1. What does it mean to fit a model?</a></li>
-<li><a class="reference external" href="#accessing-the-samples">3.5.2. Accessing the samples</a></li>
-<li><a class="reference external" href="#sampling-output">3.5.3. Sampling output</a></li>
-<li><a class="reference external" href="#imputation-of-missing-data">3.5.4. Imputation of Missing Data</a></li>
-</ul>
-</li>
-<li><a class="reference external" href="#fine-tuning-the-mcmc-algorithm">3.6. Fine-tuning the MCMC algorithm</a></li>
-<li><a class="reference external" href="#beyond-the-basics">3.7. Beyond the basics</a></li>
-</ul>
-</li>
-</ul>
-
-            <h4>Previous topic</h4>
-            <p class="topless"><a href="INSTALL.html"
-                                  title="previous chapter">2. Installation Instructions</a></p>
-            <h4>Next topic</h4>
-            <p class="topless"><a href="modelbuilding.html"
-                                  title="next chapter">4. Building models</a></p>
-            <h3>This Page</h3>
-            <ul class="this-page-menu">
-              <li><a href="_sources/tutorial.txt"
-                     rel="nofollow">Show Source</a></li>
-            </ul>
-          <div id="searchbox" style="display: none">
-            <h3>Quick search</h3>
-              <form class="search" action="search.html" method="get">
-                <input type="text" name="q" size="18" />
-                <input type="submit" value="Go" />
-                <input type="hidden" name="check_keywords" value="yes" />
-                <input type="hidden" name="area" value="default" />
-              </form>
-              <p class="searchtip" style="font-size: 90%">
-              Enter search terms or a module, class or function name.
-              </p>
-          </div>
-          <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>

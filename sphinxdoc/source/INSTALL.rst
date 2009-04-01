@@ -1,175 +1,222 @@
-==============================
-PyMC Installation Instructions
-==============================
+*************************
+Installation Instructions
+*************************
 
-
-:Date: April 5, 2007
+:Date: Oct 14, 2008
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
 
-PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be 
-able to work on just about any platform for which Python and the numpy module 
-are  available. Before installing PyMC, you will need to install some dependencies. 
+PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be
+able to work on just about any platform for which Python, a Fortran compiler
+and the NumPy module are  available. However, installing some extra
+depencies can greatly improve PyMC's performance and versatility.
+The following describes the required and optional dependencies and takes you
+through the installation process.
+
 
 
 Dependencies
 ============
 
-PyMC requires some prerequisite packages to be present on the system before the 
-PyMC package itself is installed. Fortunately, there are currently only a few 
-dependencies, and all are freely available online.
+PyMC requires some prerequisite packages to be present on the system.
+Fortunately, there are currently only a few dependencies, and all are
+freely available online.
 
-* `Python`_ version 2.5 or later. 
+* `Python`_ version 2.5.
 
-* `NumPy`_: The fundamental scientific programming package, it provides a 
-  multidimensional array type and many useful functions for numerical analysis. 
-  Use the latest version preferably. 
+* `NumPy`_ (1.2 or newer): The fundamental scientific programming package, it provides a
+  multidimensional array type and many useful functions for numerical analysis.
 
-* `Matplotlib`_ (optional): A plotting package.
+* `Matplotlib`_ (optional): 2D plotting library which produces publication
+  quality figures in a variety of image formats and interactive environments
 
-* `SciPy`_ (optional): A scientific package with a lot of functionality. 
+* `pyTables`_ (optional): Package for managing hierarchical datasets and
+  designed to efficiently and easily cope with extremely large amounts of data.
+  Requires the `HDF5`_ library.
 
-* `IPython`_ (optional): A convenient python shell coming with parallel 
-  computing facilities. 
+* `pydot`_ (optional): Python interface to Graphviz's Dot language, it allows
+  PyMC to create both directed and non-directed graphical representations of models.
+  Requires the `Graphviz`_ library.
 
-* `pyTables`_ (optional): An interface to the HDF5 library for storing datasets
-  in binary format.
+* `SciPy`_ (optional): Library of algorithms for mathematics, science
+  and engineering.
 
+* `IPython`_ (optional): An enhanced interactive Python shell and an
+  architecture for interactive parallel computing.
 
-
-There are prebuilt distributions that include all the needed dependencies. For 
-Mac OSX users, we recommend the `MacPython`_ distribution, the `Enthought Python Distribution`_, or Python 2.5.1 that
-ships with OSX 10.5 (Leopard). Windows users should download and install the 
-`Enthought Python Distribution`_. The Enthought Python Distribution comes bundled with 
-these prerequisites.
-
-If instead of installing the prebuilt binaries you prefer (or have) to build PyMC 
-yourself, make sure you have a Fortran and a C compiler. There are free
-compilers (g77, gcc) available on all platforms. Other compilers have not been
-tested with PyMC but may work nonetheless. 
+* `nose`_ (optional): A test discovery-based unittest extension (required
+  to run the test suite).
 
 
-.. _`Python`:
-   http://www.python.org/. 
+There are prebuilt distributions that include all required dependencies. For
+Mac OSX users, we recommend the `MacPython`_ distribution, the
+`Enthought Python Distribution`_, or Python 2.5.1 that ships with
+OSX 10.5 (Leopard). Windows users should download and install the
+`Enthought Python Distribution`_. The Enthought Python Distribution comes
+bundled with these prerequisites. Note that depending on the currency of these
+distributions, some packages may need to be updated manually.
 
-.. _`NumPy`: 
-   http://www.scipy.org/NumPy
+If instead of installing the prebuilt binaries you prefer (or have) to build
+``pymc`` yourself, make sure you have a Fortran and a C compiler. There are free
+compilers (gfortran, gcc) available on all platforms. Other compilers have not been
+tested with PyMC but may work nonetheless.
 
-.. _`Matplotlib`:
-   http://matplotlib.sourceforge.net/
 
-.. _`MacPython`:
-   http://www.activestate.com/Products/ActivePython/
+.. _`Python`: http://www.python.org/.
+
+.. _`NumPy`: http://www.scipy.org/NumPy
+
+.. _`Matplotlib`: http://matplotlib.sourceforge.net/
+
+.. _`MacPython`: http://www.activestate.com/Products/ActivePython/
 
 .. _`Enthought Python Distribution`:
    http://www.enthought.com/products/epddownload.php
 
-.. _`SciPy`:
-   http://www.scipy.org/
+.. _`SciPy`: http://www.scipy.org/
 
-.. _`IPython`:
-   http://ipython.scipy.org/
+.. _`IPython`: http://ipython.scipy.org/
 
-.. _`pyTables`:
-   http://www.pytables.org/moin
+.. _`pyTables`: http://www.pytables.org/moin
+
+.. _`HDF5`: http://www.hdfgroup.org/HDF5/
+
+.. _`pydot`: http://code.google.com/p/pydot/
+
+.. _`Graphviz`: http://www.graphviz.org/
 
 
-Platform-specific instructions
+Installation using EasyInstall
 ==============================
+
+The easiest way to install PyMC is to type in a terminal::
+
+  easy_install pymc
+
+Provided `EasyInstall`_ (part of the `setuptools`_ module) is installed
+and in your path, this should fetch and install the package from the
+`Python Package Index`_. Make sure you have the appropriate administrative
+privileges to install software on your computer.
+
+.. _`Python Package Index`: http://pypi.python.org/pypi
+
+
+.. _`setuptools`: http://peak.telecommunity.com/DevCenter/setuptools
+
+
+Installing from pre-built binaries
+==================================
+
+Pre-built binaries are available for Windows XP and Mac OS X. There are at least
+two ways to install these:
+
+1. Download the installer for your platform from `PyPI`_.
+
+2. Double-click the executable installation package, then follow the
+   on-screen instructions.
+
+For other platforms, you will need to build the package yourself from source.
+Fortunately, this should be relatively straightforward.
+
+.. _`PyMC site`: pymc.googlecode.com
+
+
+Compiling the source code
+=========================
+
+First download the source code tarball from `PyPI`_ and unpack it. Then move
+into the unpacked directory and follow the platform specific instructions.
 
 Windows
 -------
-1. Download the prebuilt binary installer from 
-2. Simply double-click the executable installation package, and follow the on-screen instructions.
 
-To build from source, get the source code tarball or checkout the subversion
-repository, move into the resulting source directory in the command terminal 
-and type::
+One way to compile PyMC on Windows is to install `MinGW`_ and `MSYS`_. MinGW is
+the GNU Compiler Collection (GCC) augmented with Windows specific headers and
+libraries. MSYS is a POSIX-like console (bash) with UNIX command line tools.
+Download the `Automated MinGW Installer`_ and double-click on it to launch
+the installation process. You will be asked to select which
+components are to be installed: make sure the g77 compiler is selected and
+proceed with the instructions. Then download and install `MSYS-1.0.exe`_,
+launch it and again follow the on-screen instructions.
 
-    python setup.py build --compiler=mingw32 install
+Once this is done, launch the MSYS console, change into the PyMC directory and
+type::
 
-This assumes you are using the GCC compiler (recommended). Otherwise, 
-change the --compiler argument accordingly. 
+    python setup.py install
 
-Mac OS X
---------
-Mac binaries are installed using `EasyInstall`_, part of the setuptools suite. 
-Once EasyInstall is on your system, simply type::
+This will build the C and Fortran extension and copy the libraries and python
+modules in the C:/Python25/Lib/site-packages/pymc directory.
 
-    sudo easy_install -Z -i http://drop.io/superpack pymc
-    
-The `sudo` command will be required to install PyMC into the Python site-packages 
-directory if it has restricted privileges. You will be prompted for a  password, and 
-provided you have superuser privileges, the installation will proceed.
 
-To build and install PyMC from source:
+.. _`MinGW`: http://www.mingw.org/
 
-1. Download the source tarball or checkout the subversion repository.
-2. Untar the source archive, then move into the resulting source directory in
-   the command terminal and type::
+.. _`MSYS`: http://www.mingw.org/wiki/MSYS
 
-       python setup.py build
-       sudo python setup.py install
+.. _`Automated MinGW Installer`: http://sourceforge.net/project/showfiles.php?group_id=2435
 
-Linux
------
-Unfortunately, binary installers are not currently available for Linux systems, 
-but it is straightforward to build the package yourself. 
+.. _`MSYS-1.0.exe`: http://downloads.sourceforge.net/mingw/MSYS-1.0.10.exe
 
-1. Download the source tarball or checkout the subversion repository.
-2. Untar the package archive, then move to the resulting archive directory and type::
 
-       python setup.py build
-       python setup.py install
+Mac OS X or Linux
+-----------------
+In a terminal, type::
 
-The `sudo` command will be required to install PyMC into the Python site-packages 
-directory if it has restricted privileges::
+    python setup.py build
+    sudo python setup.py install
 
-       sudo python setup.py install
+The `sudo` command is required to install PyMC into the Python ``site-packages``
+directory if it has restricted privileges. You will be prompted for a password,
+and provided you have superuser privileges, the installation will proceed.
 
-You will be prompted for a  password, and provided you have superuser privileges, 
-the installation will proceed.
 
-.. _`PyMC download page`:
-   http://code.google.com/p/pymc/downloads/list
-  
-.. _`EasyInstall`:
-   http://peak.telecommunity.com/DevCenter/EasyInstall
+.. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
 
-Subversion repository
-=====================
 
-You can check out the bleeding edge version of the code from the subversion 
+.. _`PyPI`: http://pypi.python.org/pypi/pymc/
+
+
+Development version
+===================
+
+You can check out the bleeding edge version of the code from the `subversion`_
 repository::
 
     svn checkout http://pymc.googlecode.com/svn/trunk/ pymc
-  
 
-Previous versions are available in the /tags/ directory. 
+Previous versions are available in the ``/tags`` directory.
+
+.. _`subversion`: http://subversion.tigris.org/
 
 
 Running the test suite
 ======================
 
-To make sure everything is working correctly, open a python shell and type::
-  
-    from pymc import testsuite
-    testsuite.test()
+``pymc`` comes with a set of tests that verify that the critical components
+of the code work as expected. To run these tests, users must have `nose`_
+installed. The tests are launched from a python shell::
 
-You should see a lot of tests being run, and messages appear if errors are 
-raised or if some tests fail. In case this happens (it shouldn't), please report
-the problems on the `issue tracker`_, specifying the version you are using and the
-environment. Some of the tests require SciPy, if it is not installed on your 
-system, you should not worry too much about failing tests. 
+    import pymc
+    pymc.test()
+
+In case of failures, messages detailing the nature of these failures will
+appear. In case this happens (it shouldn't), please report
+the problems on the `issue tracker`_, specifying the version you are using and
+the environment.
+
+.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
+
+
 
 
 Bugs and feature requests
 =========================
 
-Report problems with the installation, bugs in the code or feature request at 
-the `issue tracker`_ at http://code.google.com/p/pymc/issues/list .
+Report problems with the installation, bugs in the code or feature request at
+the `issue tracker`_. Comments and questions are welcome and should be
+addressed to PyMC's `mailing list`_.
 
-.. _`issue tracker`:
-   http://code.google.com/p/pymc/issues/list .
 
+.. _`issue tracker`: http://code.google.com/p/pymc/issues/list .
+
+.. _`mailing list`: pymc@googlegroups.com
