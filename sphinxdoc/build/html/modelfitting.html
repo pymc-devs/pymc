@@ -1,0 +1,724 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5. Fitting Models &mdash; pymc v2.0 documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pymc v2.0 documentation" href="index.html" />
+    <link rel="next" title="6. References" href="references.html" />
+    <link rel="prev" title="4. Building models" href="modelbuilding.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="references.html" title="6. References"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modelbuilding.html" title="4. Building models"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon_small.png" alt="Logo"/>
+            </a></p>
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">5. Fitting Models</a><ul>
+<li><a class="reference external" href="#creating-models">5.1. Creating models</a></li>
+<li><a class="reference external" href="#maximum-a-posteriori-estimates">5.2. Maximum a posteriori estimates</a></li>
+<li><a class="reference external" href="#normal-approximations">5.3. Normal approximations</a></li>
+<li><a class="reference external" href="#markov-chain-monte-carlo-the-mcmc-class">5.4. Markov chain Monte Carlo: the MCMC class</a></li>
+<li><a class="reference external" href="#step-methods">5.5. Step methods</a><ul>
+<li><a class="reference external" href="#metropolis-step-methods">5.5.1. Metropolis step methods</a></li>
+<li><a class="reference external" href="#the-discretemetropolis-class">5.5.2. The DiscreteMetropolis class</a></li>
+<li><a class="reference external" href="#the-binarymetropolis-class">5.5.3. The BinaryMetropolis class</a></li>
+<li><a class="reference external" href="#the-adaptivemetropolis-class">5.5.4. The AdaptiveMetropolis class</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#gibbs-step-methods">5.6. Gibbs step methods</a><ul>
+<li><a class="reference external" href="#granularity-of-step-methods-one-at-a-time-vs-block-updating">5.6.1. Granularity of step methods: one-at-a-time vs. block updating</a></li>
+<li><a class="reference external" href="#automatic-assignment-of-step-methods">5.6.2. Automatic assignment of step methods</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#the-model-class">5.7. The Model class</a></li>
+<li><a class="reference external" href="#the-sampler-class">5.8. The Sampler class</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="modelbuilding.html"
+                                  title="previous chapter">4. Building models</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="references.html"
+                                  title="next chapter">6. References</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/modelfitting.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="fitting-models">
+<span id="chap-modelfitting"></span><h1>5. Fitting Models<a class="headerlink" href="#fitting-models" title="Permalink to this headline">¶</a></h1>
+<p>PyMC probability models are linked collections of nodes. These nodes are only
+informed by the values of their parents. <tt class="docutils literal"><span class="pre">Deterministic</span></tt> instances can compute
+their values given their parents&#8217; values, <tt class="docutils literal"><span class="pre">Stochastic</span></tt> instances can compute
+their log-probabilities or draw new values, and <tt class="docutils literal"><span class="pre">Potential</span></tt> instances can
+compute their log-probabilities. Fitting probability models requires larger-
+scale coordination and communication.</p>
+<p>PyMC provides three objects that fit models:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">MCMC</span></tt>, which coordinates Markov chain Monte Carlo algorithms. The actual
+work of updating stochastic variables conditional on the rest of the model is
+done by <tt class="docutils literal"><span class="pre">StepMethod</span></tt> objects, which are described in this chapter.</li>
+<li><tt class="docutils literal"><span class="pre">MAP</span></tt>, which computes maximum <em>a posteriori</em> estimates.</li>
+<li><tt class="docutils literal"><span class="pre">NormApprox</span></tt>, which computes the &#8216;normal approximation&#8217; <a class="reference external" href="references.html#gelman2004">[Gelman2004]</a>: the joint
+distribution of all stochastic variables in a model is approximated as normal
+using local information at the maximum <em>a posteriori</em> estimate.</li>
+</ul>
+<p>All three objects are subclasses of <tt class="docutils literal"><span class="pre">Model</span></tt>, which is PyMC&#8217;s base class for
+fitting methods. <tt class="docutils literal"><span class="pre">MCMC</span></tt> and <tt class="docutils literal"><span class="pre">NormApprox</span></tt>, both of which can produce samples
+from the posterior, are subclasses of <tt class="docutils literal"><span class="pre">Sampler</span></tt>, which is PyMC&#8217;s base class
+for Monte Carlo fitting methods. <tt class="docutils literal"><span class="pre">Sampler</span></tt> provides a generic sampling loop
+method and database support for storing large sets of joint samples. These base
+classes implement some basic methods that are inherited by the three implemented
+fitting methods, so they are documented at the end of this chapter.</p>
+<div class="section" id="creating-models">
+<span id="sec-modelinstantiation"></span><h2>5.1. Creating models<a class="headerlink" href="#creating-models" title="Permalink to this headline">¶</a></h2>
+<p>The first argument to any fitting method&#8217;s <tt class="docutils literal"><span class="pre">init</span></tt> method, including that of
+<tt class="docutils literal"><span class="pre">MCMC</span></tt>, is called <tt class="docutils literal"><span class="pre">input</span></tt>. The <tt class="docutils literal"><span class="pre">input</span></tt> argument can be just about
+anything; once you have defined the nodes that make up your model, you shouldn&#8217;t
+even have to think about how to wrap them in a <tt class="docutils literal"><span class="pre">Model</span></tt> instance. Some examples
+of model instantiation using nodes <tt class="docutils literal"><span class="pre">a</span></tt>, <tt class="docutils literal"><span class="pre">b</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> follow:</p>
+<ul>
+<li><p class="first"><tt class="docutils literal"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">Model(set([a,b,c]))</span></tt></p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">Model({`a':</span> <span class="pre">a,</span> <span class="pre">`d':</span> <span class="pre">[b,c]})</span></tt> In this case, <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> will expose
+<img class="math" src="_images/math/c7d457e388298246adb06c587bccd419ea67f7e8.png" alt="a"/> and <img class="math" src="_images/math/96ab646de7704969b91c76a214126b45f2b07b25.png" alt="d"/> as attributes: <tt class="docutils literal"><span class="pre">M.a</span></tt> will be <img class="math" src="_images/math/c7d457e388298246adb06c587bccd419ea67f7e8.png" alt="a"/>, and <tt class="docutils literal"><span class="pre">M.d</span></tt>
+will be <tt class="docutils literal"><span class="pre">[b,c]</span></tt>.</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">Model([[a,b],c])</span></tt></p>
+</li>
+<li><p class="first">If file <tt class="docutils literal"><span class="pre">MyModule</span></tt> contains the definitions of <tt class="docutils literal"><span class="pre">a</span></tt>, <tt class="docutils literal"><span class="pre">b</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">import</span> <span class="nn">MyModule</span>
+<span class="n">M</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">MyModule</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case, <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> will expose <img class="math" src="_images/math/c7d457e388298246adb06c587bccd419ea67f7e8.png" alt="a"/>, <img class="math" src="_images/math/8136a7ef6a03334a7246df9097e5bcc31ba33fd2.png" alt="b"/> and <img class="math" src="_images/math/3372c1cb6d68cf97c2d231acc0b47b95a9ed04cc.png" alt="c"/> as
+attributes.</p>
+</li>
+<li><p class="first">Using a &#8216;model factory&#8217; function:</p>
+<div class="highlight-python"><pre>def make_model(x):
+    a = Exponential('a',.5,beta=x)
+
+    @deterministic
+    def b(a=a):
+        return 100-a
+
+    @stochastic
+    def c(value=.5, a=a, b=b);
+        return (value-a)**2/b
+
+    return locals()
+
+M = Model(make_model(3))</pre>
+</div>
+<p>In this case, <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> will also expose <img class="math" src="_images/math/c7d457e388298246adb06c587bccd419ea67f7e8.png" alt="a"/>, <img class="math" src="_images/math/8136a7ef6a03334a7246df9097e5bcc31ba33fd2.png" alt="b"/> and <img class="math" src="_images/math/3372c1cb6d68cf97c2d231acc0b47b95a9ed04cc.png" alt="c"/> as
+attributes.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="maximum-a-posteriori-estimates">
+<span id="sec-map"></span><h2>5.2. Maximum a posteriori estimates<a class="headerlink" href="#maximum-a-posteriori-estimates" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">MAP</span></tt> class sets all stochastic variables to their maximum <em>a posteriori</em>
+values using functions in SciPy&#8217;s <tt class="docutils literal"><span class="pre">optimize</span></tt> package. SciPy must be installed
+to use it. <tt class="docutils literal"><span class="pre">MAP</span></tt> can only handle variables whose dtype is <tt class="docutils literal"><span class="pre">float</span></tt>, so it
+will not work on model <a href="#equation-disastermodel">(?)</a>. To fit the model in
+<tt class="docutils literal"><span class="pre">examples/gelman_bioassay.py</span></tt> using <tt class="docutils literal"><span class="pre">MAP</span></tt>, do the following</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">import</span> <span class="nn">gelman_bioassay</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="n">MAP</span><span class="p">(</span><span class="n">gelman_bioassay</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This call will cause <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> to fit the model using Nelder-Mead optimization,
+which does not require derivatives. The variables in <tt class="docutils literal"><span class="pre">DisasterModel</span></tt> have now
+been set to their maximum <em>a posteriori</em> values:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">value</span>
+<span class="go">array(0.8465892309923545)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="n">value</span>
+<span class="go">array(7.7488499785334168)</span>
+</pre></div>
+</div>
+<p>In addition, the AIC and BIC of the model are now available:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">AIC</span>
+<span class="go">7.9648372671389458</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">BIC</span>
+<span class="go">6.7374259893787265</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">MAP</span></tt> has two useful methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">fit(method</span> <span class="pre">='fmin',</span> <span class="pre">iterlim=1000,</span> <span class="pre">tol=.0001)</span></tt>:</dt>
+<dd>The optimization method may be <tt class="docutils literal"><span class="pre">fmin</span></tt>, <tt class="docutils literal"><span class="pre">fmin_l_bfgs_b</span></tt>, <tt class="docutils literal"><span class="pre">fmin_ncg</span></tt>,
+<tt class="docutils literal"><span class="pre">fmin_cg</span></tt>, or <tt class="docutils literal"><span class="pre">fmin_powell</span></tt>. See the documentation of SciPy&#8217;s <tt class="docutils literal"><span class="pre">optimize</span></tt>
+package for the details of these methods. The <tt class="docutils literal"><span class="pre">tol</span></tt> and <tt class="docutils literal"><span class="pre">iterlim</span></tt> parameters
+are passed to the optimization function under the appropriate names.</dd>
+<dt><tt class="docutils literal"><span class="pre">revert_to_max()</span></tt>:</dt>
+<dd>If the values of the constituent stochastic variables change after fitting, this
+function will reset them to their maximum <em>a posteriori</em> values.</dd>
+</dl>
+<p>If you&#8217;re going to use an optimization method that requires derivatives,
+<tt class="docutils literal"><span class="pre">MAP</span></tt>&#8216;s <tt class="docutils literal"><span class="pre">init</span></tt> method can take additional parameters <tt class="docutils literal"><span class="pre">eps</span></tt> and
+<tt class="docutils literal"><span class="pre">diff_order</span></tt>. <tt class="docutils literal"><span class="pre">diff_order</span></tt>, which must be an integer, specifies the order of
+the numerical approximation (see the SciPy function <tt class="docutils literal"><span class="pre">derivative</span></tt>). The step
+size for numerical derivatives is controlled by <tt class="docutils literal"><span class="pre">eps</span></tt>, which may be either a
+single value or a dictionary of values whose keys are variables (actual objects,
+not names).</p>
+<p>The useful attributes of <tt class="docutils literal"><span class="pre">MAP</span></tt> are:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">logp</span></tt>:</dt>
+<dd>The joint log-probability of the model.</dd>
+<dt><tt class="docutils literal"><span class="pre">logp_at_max</span></tt>:</dt>
+<dd>The maximum joint log-probability of the model.</dd>
+<dt><tt class="docutils literal"><span class="pre">AIC</span></tt>:</dt>
+<dd>Akaike&#8217;s information criterion for this model (<a class="reference external" href="references.html#akaike1973">[Akaike1973]</a>,[Burnham:2002]_).</dd>
+<dt><tt class="docutils literal"><span class="pre">BIC</span></tt>:</dt>
+<dd>The Bayesian information criterion for this model <a class="reference external" href="references.html#schwarz1978">[Schwarz1978]</a>.</dd>
+</dl>
+<p>One use of the <tt class="docutils literal"><span class="pre">MAP</span></tt> class is finding reasonable initial states for MCMC
+chains. Note that multiple <tt class="docutils literal"><span class="pre">Model</span></tt> subclasses can handle the same collection
+of nodes.</p>
+</div>
+<div class="section" id="normal-approximations">
+<span id="sec-norm-approx"></span><h2>5.3. Normal approximations<a class="headerlink" href="#normal-approximations" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">NormApprox</span></tt> class extends the <tt class="docutils literal"><span class="pre">MAP</span></tt> class by approximating the
+posterior covariance of the model using the Fisher information matrix, or the
+Hessian of the joint log probability at the maximum. To fit the model in
+<tt class="docutils literal"><span class="pre">examples/gelman_bioassay.py</span></tt> using <tt class="docutils literal"><span class="pre">NormApprox</span></tt>, do:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="n">NormApprox</span><span class="p">(</span><span class="n">gelman_bioassay</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The approximate joint posterior mean and covariance of the variables are
+available via the attributes <tt class="docutils literal"><span class="pre">mu</span></tt> and <tt class="docutils literal"><span class="pre">C</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">N</span><span class="o">.</span><span class="n">alpha</span><span class="p">]</span>
+<span class="go">array([ 0.84658923])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">N</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">N</span><span class="o">.</span><span class="n">beta</span><span class="p">]</span>
+<span class="go">array([ 0.84658923,  7.74884998])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">N</span><span class="o">.</span><span class="n">alpha</span><span class="p">]</span>
+<span class="go">matrix([[ 1.03854093]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">N</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">N</span><span class="o">.</span><span class="n">beta</span><span class="p">]</span>
+<span class="go">matrix([[  1.03854093,   3.54601911],</span>
+<span class="go">        [  3.54601911,  23.74406919]])</span>
+</pre></div>
+</div>
+<p>As with <tt class="docutils literal"><span class="pre">MAP</span></tt>, the variables have been set to their maximum <em>a posteriori</em>
+values (which are also in the <tt class="docutils literal"><span class="pre">mu</span></tt> attribute) and the AIC and BIC of the model
+are available.</p>
+<p>In addition, it&#8217;s now possible to generate samples from the posterior as with
+<tt class="docutils literal"><span class="pre">MCMC</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;alpha&#39;</span><span class="p">)[::</span><span class="mf">10</span><span class="p">]</span>
+<span class="go">array([-0.85001278,  1.58982854,  1.0388088 ,  0.07626688,  1.15359581,</span>
+<span class="go">       -0.25211939,  1.39264616,  0.22551586,  2.69729987,  1.21722872])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;beta&#39;</span><span class="p">)[::</span><span class="mf">10</span><span class="p">]</span>
+<span class="go">array([  2.50203663,  14.73815047,  11.32166303,   0.43115426,</span>
+<span class="go">        10.1182532 ,   7.4063525 ,  11.58584317,   8.99331152,</span>
+<span class="go">        11.04720439,   9.5084239 ])</span>
+</pre></div>
+</div>
+<p>Any of the database backends can be used (chapter <em class="xref">chap:database</em>).</p>
+<p>In addition to the methods and attributes of <tt class="docutils literal"><span class="pre">MAP</span></tt>, <tt class="docutils literal"><span class="pre">NormApprox</span></tt> provides
+the following methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">sample(iter)</span></tt>:</dt>
+<dd>Samples from the approximate posterior distribution are drawn and stored.</dd>
+<dt><tt class="docutils literal"><span class="pre">isample(iter)</span></tt>:</dt>
+<dd>An &#8216;interactive&#8217; version of <tt class="docutils literal"><span class="pre">sample()</span></tt>: sampling can be paused, returning
+control to the user.</dd>
+<dt><tt class="docutils literal"><span class="pre">draw</span></tt>:</dt>
+<dd>Sets all variables to random values drawn from the approximate posterior.</dd>
+</dl>
+<p>It provides the following additional attributes:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">mu</span></tt>:</dt>
+<dd>A special dictionary-like object that can be keyed with multiple variables.
+<tt class="docutils literal"><span class="pre">N.mu[p1,</span> <span class="pre">p2,</span> <span class="pre">p3]</span></tt> would return the approximate posterior mean values of
+stochastic variables <tt class="docutils literal"><span class="pre">p1</span></tt>, <tt class="docutils literal"><span class="pre">p2</span></tt> and <tt class="docutils literal"><span class="pre">p3</span></tt>, ravelled and concatenated to
+form a vector.</dd>
+<dt><tt class="docutils literal"><span class="pre">C</span></tt>:</dt>
+<dd>Another special dictionary-like object. <tt class="docutils literal"><span class="pre">N.C[p1,</span> <span class="pre">p2,</span> <span class="pre">p3]</span></tt> would return the
+approximate posterior covariance matrix of stochastic variables <tt class="docutils literal"><span class="pre">p1</span></tt>, <tt class="docutils literal"><span class="pre">p2</span></tt>
+and <tt class="docutils literal"><span class="pre">p3</span></tt>. As with <tt class="docutils literal"><span class="pre">mu</span></tt>, these variables&#8217; values are ravelled and
+concatenated before their covariance matrix is constructed.</dd>
+</dl>
+</div>
+<div class="section" id="markov-chain-monte-carlo-the-mcmc-class">
+<span id="sec-mcmc"></span><h2>5.4. Markov chain Monte Carlo: the MCMC class<a class="headerlink" href="#markov-chain-monte-carlo-the-mcmc-class" title="Permalink to this headline">¶</a></h2>
+<p><strong>XXX DESCRIBE WHERE TO GET TUNING PARAMETER TRACES</strong></p>
+<p>The <tt class="docutils literal"><span class="pre">MCMC</span></tt> class implements PyMC&#8217;s core business: producing &#8216;traces&#8217; for a
+model&#8217;s variables which, with careful thinning, can be considered independent
+joint samples from the posterior. See chapter <em class="xref">chap:tutorial</em> for an
+example of basic usage.</p>
+<p><tt class="docutils literal"><span class="pre">MCMC</span></tt>&#8216;s primary job is to create and coordinate a collection of &#8216;step
+methods&#8217;, each of which is responsible for updating one or more variables. The
+available step methods are described below. Instructions on how to create your
+own step method are available in chapter <em class="xref">chap:extending</em>.</p>
+<p><tt class="docutils literal"><span class="pre">MCMC</span></tt> provides the following useful methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">sample(iter,</span> <span class="pre">burn=0,</span> <span class="pre">thin=1,</span> <span class="pre">tune_interval=1000,</span> <span class="pre">tune_throughout=True,</span> <span class="pre">save_interval=None,</span> <span class="pre">verbose=0)</span></tt>:</dt>
+<dd>Runs the MCMC algorithm and produces the traces. The <tt class="docutils literal"><span class="pre">iter</span></tt> argument controls
+the total number of MCMC iterations. No tallying will be done during the first
+<tt class="docutils literal"><span class="pre">burn</span></tt> iterations; these samples will be forgotten. After this burn-in period,
+tallying will be done each <tt class="docutils literal"><span class="pre">thin</span></tt> iterations. Tuning will be done each
+<tt class="docutils literal"><span class="pre">tune_interval</span></tt> iterations. If <tt class="docutils literal"><span class="pre">tune_throughout=False</span></tt>, no more tuning will
+be done after the burnin period. The model state will be saved every
+<tt class="docutils literal"><span class="pre">save_interval</span></tt> iterations, if given.</dd>
+<dt><tt class="docutils literal"><span class="pre">isample(iter,</span> <span class="pre">burn=0,</span> <span class="pre">thin=1,</span> <span class="pre">tune_interval=1000,</span> <span class="pre">tune_throughout=True,</span> <span class="pre">save_interval=None,</span> <span class="pre">verbose=0)</span></tt>:</dt>
+<dd>An interactive version of <tt class="docutils literal"><span class="pre">sample</span></tt>. The sampling loop may be paused at any
+time, returning control to the user.</dd>
+<dt><tt class="docutils literal"><span class="pre">use_step_method(method,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></tt>:</dt>
+<dd>Creates an instance of step method class <tt class="docutils literal"><span class="pre">method</span></tt> to handle some stochastic
+variables. The extra arguments are passed to the <tt class="docutils literal"><span class="pre">init</span></tt> method of <tt class="docutils literal"><span class="pre">method</span></tt>.
+Assigning a step method to a variable manually will prevent the <tt class="docutils literal"><span class="pre">MCMC</span></tt>
+instance from automatically assigning one. However, you may handle a variable
+with multiple step methods.</dd>
+<dt><tt class="docutils literal"><span class="pre">goodness()</span></tt>:</dt>
+<dd>Calculates goodness-of-fit (GOF) statistics according to <a class="reference external" href="references.html#brooks-2000">[Brooks:2000]</a>.</dd>
+<dt><tt class="docutils literal"><span class="pre">save_state()</span></tt>:</dt>
+<dd>Saves the current state of the sampler, including all stochastics, to the
+database. This allows the sampler to be reconstituted at a later time to resume
+sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.</dd>
+<dt><tt class="docutils literal"><span class="pre">restore_state()</span></tt>:</dt>
+<dd>Restores the sampler to the state stored in the database.</dd>
+<dt><tt class="docutils literal"><span class="pre">stats()</span></tt>:</dt>
+<dd>Generate summary statistics for all nodes in the model.</dd>
+<dt><tt class="docutils literal"><span class="pre">remember(trace_index)</span></tt>:</dt>
+<dd>Set all variables&#8217; values from frame <tt class="docutils literal"><span class="pre">trace_index</span></tt> in the database.</dd>
+</dl>
+<p>MCMC samplers&#8217; step methods can be accessed via the <tt class="docutils literal"><span class="pre">step_method_dict</span></tt>
+attribute. <tt class="docutils literal"><span class="pre">M.step_method_dict[x]</span></tt> returns a list of the step methods <tt class="docutils literal"><span class="pre">M</span></tt>
+will use to handle the stochastic variable <tt class="docutils literal"><span class="pre">x</span></tt>.</p>
+</div>
+<div class="section" id="step-methods">
+<span id="sec-stepmethod"></span><h2>5.5. Step methods<a class="headerlink" href="#step-methods" title="Permalink to this headline">¶</a></h2>
+<p>Step method objects handle individual stochastic variables, or sometimes groups
+of them. They are responsible for making the variables they handle take single
+MCMC steps conditional on the rest of the model. Each subclass of <tt class="docutils literal"><span class="pre">StepMethod</span></tt>
+implements a method called <tt class="docutils literal"><span class="pre">step()</span></tt>, which is called by <tt class="docutils literal"><span class="pre">MCMC</span></tt>. Step methods
+with adaptive tuning parameters can optionally implement a method called
+<tt class="docutils literal"><span class="pre">tune()</span></tt>, which causes them to assess performance so far and adjust.</p>
+<p>The major subclasses of <tt class="docutils literal"><span class="pre">StepMethod</span></tt> are <tt class="docutils literal"><span class="pre">Metropolis</span></tt> and <tt class="docutils literal"><span class="pre">Gibbs</span></tt>. PyMC
+provides several flavors of the basic Metropolis steps, but the Gibbs steps are
+not ready for use as of the current release.</p>
+<div class="section" id="metropolis-step-methods">
+<span id="metropolis"></span><h3>5.5.1. Metropolis step methods<a class="headerlink" href="#metropolis-step-methods" title="Permalink to this headline">¶</a></h3>
+<p><tt class="docutils literal"><span class="pre">Metropolis</span></tt> and subclasses implement Metropolis-Hastings steps. To tell an
+<tt class="docutils literal"><span class="pre">MCMC</span></tt> object <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> to handle a variable <img class="math" src="_images/math/26eeb5258ca5099acf8fe96b2a1049c48c89a5e6.png" alt="x"/> with a Metropolis step
+method, you might do the following:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">Metropolis</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">proposal_sd</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">proposal_distribution</span><span class="o">=</span><span class="s">&#39;Normal&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">Metropolis</span></tt> itself handles float-valued variables, and subclasses
+<tt class="docutils literal"><span class="pre">DiscreteMetropolis</span></tt> and <tt class="docutils literal"><span class="pre">BinaryMetropolis</span></tt> handle integer- and boolean-
+valued variables, respectively. Subclasses of <tt class="docutils literal"><span class="pre">Metropolis</span></tt> must implement the
+following methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">propose()</span></tt>:</dt>
+<dd>Sets the values of the variables handled by the Metropolis step method to
+proposed values.</dd>
+<dt><tt class="docutils literal"><span class="pre">reject()</span></tt>:</dt>
+<dd>If the Metropolis-Hastings acceptance test fails, this method is called to reset
+the values of the variables to their values before <tt class="docutils literal"><span class="pre">propose()</span></tt> was called.</dd>
+</dl>
+<p>Note that there is no <tt class="docutils literal"><span class="pre">accept()</span></tt> method; if a proposal is accepted, the
+variables&#8217; values are simply left alone. Subclasses that use proposal
+distributions other than symmetric random-walk may specify the &#8216;Hastings factor&#8217;
+by changing the <tt class="docutils literal"><span class="pre">hastings_factor</span></tt> method. See chapter <em class="xref">chap:extending</em>
+for an example.</p>
+<p><tt class="docutils literal"><span class="pre">Metropolis</span></tt>&#8216; <tt class="docutils literal"><span class="pre">init</span></tt> method takes the following arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">stochastic</span></tt>:</dt>
+<dd>The variable to handle.</dd>
+<dt><tt class="docutils literal"><span class="pre">proposal_sd</span></tt>:</dt>
+<dd>A float or array of floats. This sets the proposal standard deviation if the
+proposal distribution is normal.</dd>
+<dt><tt class="docutils literal"><span class="pre">scale</span></tt>:</dt>
+<dd><p class="first">A float, defaulting to 1. If the <tt class="docutils literal"><span class="pre">scale</span></tt> argument is provided but not
+<tt class="docutils literal"><span class="pre">proposal_sd</span></tt>, <tt class="docutils literal"><span class="pre">proposal_sd</span></tt> is computed as follows:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="k">if</span> <span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span> <span class="o">!=</span> <span class="mf">0.</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">proposal_sd</span> <span class="o">=</span> <span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span><span class="p">))</span> <span class="o">*</span> \
+                        <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">proposal_sd</span> <span class="o">=</span> <span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span><span class="p">))</span> <span class="o">*</span> <span class="n">scale</span>
+</pre></div>
+</div>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">proposal_distribution</span></tt>:</dt>
+<dd>A string indicating which distribution should be used for proposals. Current
+options are <tt class="docutils literal"><span class="pre">'Normal'</span></tt> and <tt class="docutils literal"><span class="pre">'Prior'</span></tt>. If <tt class="docutils literal"><span class="pre">proposal_distribution=None</span></tt>, the
+proposal distribution is chosen automatically. It is set to <tt class="docutils literal"><span class="pre">'Prior'</span></tt> if the
+variable has no children and has a random method, and to <tt class="docutils literal"><span class="pre">'Normal'</span></tt> otherwise.</dd>
+<dt><tt class="docutils literal"><span class="pre">verbose</span></tt>:</dt>
+<dd>An integer.</dd>
+</dl>
+<p>Metropolis step methods adjust their initial proposal standard deviations using
+an attribute called <tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt>. When <tt class="docutils literal"><span class="pre">tune()</span></tt> is called, the
+acceptance ratio of the step method is examined and this scale factor is updated
+accordingly. If the proposal distribution is normal, proposals will have
+standard deviation <tt class="docutils literal"><span class="pre">self.proposal_sd</span> <span class="pre">*</span> <span class="pre">self.adaptive_scale_factor</span></tt>.</p>
+<p>By default, tuning will continue throughout the sampling loop, even after the
+burnin period is over. This can be changed via the <tt class="docutils literal"><span class="pre">tune_throughout</span></tt> argument
+to <tt class="docutils literal"><span class="pre">MCMC.sample</span></tt>. If an adaptive step method&#8217;s <tt class="docutils literal"><span class="pre">tally</span></tt> flag is set (the
+default for <tt class="docutils literal"><span class="pre">Metropolis</span></tt>), a trace of its tuning parameters will be kept. If
+you allow tuning to continue throughout the sampling loop, it is important to
+verify that the &#8216;Diminishing Tuning&#8217; condition of [tuning] is satisfied: the
+amount of tuning should decrease to zero, or tuning should become very
+infrequent.</p>
+<p>If a Metropolis step method handles an array-valued variable, it proposes all
+elements independently but simultaneously. That is, it decides whether to accept
+or reject all elements together but it does not attempt to take the posterior
+correlation between elements into account. The <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> class (see
+below), on the other hand, does make correlated proposals.</p>
+</div>
+<div class="section" id="the-discretemetropolis-class">
+<h3>5.5.2. The DiscreteMetropolis class<a class="headerlink" href="#the-discretemetropolis-class" title="Permalink to this headline">¶</a></h3>
+<p>This class is just like <tt class="docutils literal"><span class="pre">Metropolis</span></tt>, but specialized to handle <tt class="docutils literal"><span class="pre">Stochastic</span></tt>
+instances with dtype <tt class="docutils literal"><span class="pre">int</span></tt>. The jump proposal distribution can either be
+<tt class="docutils literal"><span class="pre">'Normal'</span></tt>, <tt class="docutils literal"><span class="pre">'Prior'</span></tt> or <tt class="docutils literal"><span class="pre">'Poisson'</span></tt>. In the normal case, the proposed
+value is drawn from a normal distribution centered at the current value and then
+rounded to the nearest integer.</p>
+</div>
+<div class="section" id="the-binarymetropolis-class">
+<h3>5.5.3. The BinaryMetropolis class<a class="headerlink" href="#the-binarymetropolis-class" title="Permalink to this headline">¶</a></h3>
+<p>This class is specialized to handle <tt class="docutils literal"><span class="pre">Stochastic</span></tt> instances with dtype
+<tt class="docutils literal"><span class="pre">bool</span></tt>.</p>
+<p>For array-valued variables, <tt class="docutils literal"><span class="pre">BinaryMetropolis</span></tt> can be set to propose from the
+prior by passing in <tt class="docutils literal"><span class="pre">dist=&quot;Prior&quot;</span></tt>. Otherwise, the argument <tt class="docutils literal"><span class="pre">p_jump</span></tt> of the
+init method specifies how probable a change is. Like <tt class="docutils literal"><span class="pre">Metropolis</span></tt>&#8216; attribute
+<tt class="docutils literal"><span class="pre">proposal_sd</span></tt>, <tt class="docutils literal"><span class="pre">p_jump</span></tt> is tuned throughout the sampling loop via
+<tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt>.</p>
+<p>For scalar-valued variables, <tt class="docutils literal"><span class="pre">BinaryMetropolis</span></tt> behaves like a Gibbs sampler,
+since this requires no additional expense. The <tt class="docutils literal"><span class="pre">p_jump</span></tt> and
+<tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt> parameters are not used in this case.</p>
+</div>
+<div class="section" id="the-adaptivemetropolis-class">
+<span id="subsec-am"></span><h3>5.5.4. The AdaptiveMetropolis class<a class="headerlink" href="#the-adaptivemetropolis-class" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">AdaptativeMetropolis</span></tt> (AM) step method works like a regular Metropolis
+step method, with the exception that its variables are block-updated using a
+multivariate jump distribution whose covariance is tuned during sampling.
+Although the chain is non-Markovian, it has correct ergodic properties (see
+[Haario:2001lr]).</p>
+<p>To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> to handle variables <img class="math" src="_images/math/26eeb5258ca5099acf8fe96b2a1049c48c89a5e6.png" alt="x"/>, <img class="math" src="_images/math/092e364e1d9d19ad5fffb0b46ef4cc7f2da02c1c.png" alt="y"/>
+and <img class="math" src="_images/math/b13f21416d84e13708696f34dea81026cda583c9.png" alt="z"/> with an <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> instance, you might do the
+following:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">AdaptiveMetropolis</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">],</span> \
+                   <span class="n">scales</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:</span><span class="mf">1</span><span class="p">,</span> <span class="s">&#39;y&#39;</span><span class="p">:</span><span class="mf">2</span><span class="p">,</span> <span class="s">&#39;z&#39;</span><span class="p">:</span><span class="o">.</span><span class="mf">5</span><span class="p">},</span> <span class="n">delay</span><span class="o">=</span><span class="mf">10000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">AdaptativeMetropolis</span></tt>&#8216; init method takes the following arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">stochastics</span></tt>:</dt>
+<dd>The stochastic variables to handle. These will be updated jointly.</dd>
+<dt><tt class="docutils literal"><span class="pre">cov</span></tt> (optional):</dt>
+<dd>An initial covariance matrix. Defaults to the identity matrix, adjusted
+according to the <tt class="docutils literal"><span class="pre">scales</span></tt> argument.</dd>
+<dt><tt class="docutils literal"><span class="pre">delay</span></tt> (optional):</dt>
+<dd>The number of iterations to delay before computing the empirical covariance
+matrix.</dd>
+<dt><tt class="docutils literal"><span class="pre">scales</span></tt> (optional):</dt>
+<dd>The initial covariance matrix will be diagonal, and its diagonal elements will
+be set to <tt class="docutils literal"><span class="pre">scales</span></tt> times the stochastics&#8217; values, squared.</dd>
+<dt><tt class="docutils literal"><span class="pre">interval</span></tt> (optional):</dt>
+<dd>The number of iterations between updates of the covariance matrix. Defaults to
+1000.</dd>
+<dt><tt class="docutils literal"><span class="pre">greedy</span></tt> (optional):</dt>
+<dd>If <tt class="xref docutils literal"><span class="pre">True</span></tt>, only accepted jumps will be counted toward the delay before the
+covariance is first computed. Defaults to <tt class="xref docutils literal"><span class="pre">True</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">verbose</span></tt>:</dt>
+<dd>An integer from 0 to 3 controlling the verbosity of the step method&#8217;s printed
+output.</dd>
+</dl>
+<p>In this algorithm, jumps are proposed from a multivariate normal distribution
+with covariance matrix <img class="math" src="_images/math/c8f77e3035db5fe9a4975967750ac1a6454bda8c.png" alt="\Sigma"/>. The algorithm first iterates until
+<tt class="docutils literal"><span class="pre">delay</span></tt> samples have been drawn (if <tt class="docutils literal"><span class="pre">greedy</span></tt> is true, until <tt class="docutils literal"><span class="pre">delay</span></tt> jumps
+have been accepted). At this point, <img class="math" src="_images/math/c8f77e3035db5fe9a4975967750ac1a6454bda8c.png" alt="\Sigma"/> is given the value of the
+empirical covariance of the trace so far and sampling resumes. The covariance is
+then updated each <tt class="docutils literal"><span class="pre">interval</span></tt> iterations throughout the entire sampling run
+<a class="footnote-reference" href="#id10" id="id7">[1]</a>. It is this constant adaptation of the proposal distribution that makes the
+chain non-Markovian.</p>
+</div>
+</div>
+<div class="section" id="gibbs-step-methods">
+<span id="gibbs"></span><h2>5.6. Gibbs step methods<a class="headerlink" href="#gibbs-step-methods" title="Permalink to this headline">¶</a></h2>
+<p>Conjugate submodels (see <a class="reference external" href="references.html#gelman2004">[Gelman2004]</a>) can be handled by Gibbs step methods rather
+than the default Metropolis methods. Gibbs step methods are Metropolis methods
+whose acceptance rate is always 1. They can be convenient because they relieve
+the user from having to worry about tuning the acceptance rate, but they can be
+computationally expensive. When variables are highly dependent on one another,
+better mixing can often be obtained by using <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> even when
+Gibbs step methods are available.</p>
+<p>Alpha versions of Gibbs step methods handling the following conjugate submodels
+are available in the <tt class="docutils literal"><span class="pre">sandbox</span></tt> module, but they are not recommended and will
+not be assigned automatically:</p>
+<ul class="simple">
+<li>Gamma-Gamma</li>
+<li>Gamma-Exponential</li>
+<li>Gamma-Poisson</li>
+<li>Gamma-Normal</li>
+<li>Beta-Geometric</li>
+<li>Beta-Binomial</li>
+<li>Wishart-Multivariate Normal (represented by the <tt class="docutils literal"><span class="pre">MvNormal</span></tt> class, which is
+parameterized by precision)</li>
+<li>Dirichlet-Multinomial.</li>
+<li>Normal-Normal (or Normal-MvNormal, etc.) (requires <tt class="docutils literal"><span class="pre">cvxopt</span></tt>,
+<em class="xref">http://abel.ee.ucla.edu/cvxopt</em><a class="reference external" href="http://abel.ee.ucla.edu/cvxopt">http://abel.ee.ucla.edu/cvxopt</a> )</li>
+</ul>
+<p>However, if you implement a custom Gibbs step method, subclassing the <tt class="docutils literal"><span class="pre">Gibbs</span></tt>
+class will ensure interopera</p>
+<p>Gibbs step methods have the following class attributes:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">child_class</span></tt>: The step method can handle variables whose children are all
+of this class. <tt class="docutils literal"><span class="pre">GammaNormal.child_class</span></tt> is <tt class="docutils literal"><span class="pre">Normal</span></tt>, for example.</li>
+<li><tt class="docutils literal"><span class="pre">parent_label</span></tt>: The target variable&#8217;s children must refer to it by this
+label. <tt class="docutils literal"><span class="pre">GammaNormal.parent_label</span></tt> is <tt class="docutils literal"><span class="pre">'mu'</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">target_class</span></tt>: The target variable should be of this class for the submodel
+to be fully conjugate. <tt class="docutils literal"><span class="pre">GammaNormal.target_class</span></tt> is <tt class="docutils literal"><span class="pre">Gamma</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">linear_OK</span></tt>: A flag indicating whether the variable&#8217;s children can depend on
+a multiple of the variable. Such multiples must be implemented via the
+<tt class="docutils literal"><span class="pre">Deterministic</span></tt> subclass <tt class="docutils literal"><span class="pre">LinearCombination</span></tt>.</li>
+</ul>
+<p>A Gibbs step method can handle variables that are not of their target class, as
+long as all their children are of the appropriate class. If this is the case,
+the step method&#8217;s <tt class="docutils literal"><span class="pre">conjugate</span></tt> attribute will be set to <tt class="xref docutils literal"><span class="pre">False</span></tt> and its
+acceptance rate will no longer be 1.</p>
+<p>Gibbs step methods are easy to use manually. To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object
+<img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> to handle a variable <img class="math" src="_images/math/26eeb5258ca5099acf8fe96b2a1049c48c89a5e6.png" alt="x"/> using the <tt class="docutils literal"><span class="pre">GammaNormal</span></tt> class, simply
+use the call</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">GammaNormal</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To indicate a general preference for Gibbs step methods vs. Metropolis step
+methods, set the following global integer values:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">pymc.conjugate_Gibbs_competence</span></tt>: Applicable Gibbs step methods&#8217; competence
+functions will return this value for variables that are not of their target
+classes. The default value is 0, meaning that these methods will never be
+assigned automatically. Set this value to 3 to ensure that Gibbs step methods
+are always be assigned to conjugate submodels, or to 1.5 to set their priorities
+between those of <tt class="docutils literal"><span class="pre">Metropolis</span></tt> and <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">pymc.nonconjugate_Gibbs_competence</span></tt>: Applicable Gibbs step methods&#8217;
+competence functions will return this value for variables that are of their
+target classes. The default value is 0, meaning that these methods are never
+assigned automatically.</li>
+</ul>
+<div class="section" id="granularity-of-step-methods-one-at-a-time-vs-block-updating">
+<span id="subsec-granularity"></span><h3>5.6.1. Granularity of step methods: one-at-a-time vs. block updating<a class="headerlink" href="#granularity-of-step-methods-one-at-a-time-vs-block-updating" title="Permalink to this headline">¶</a></h3>
+<p>There is currently no way for a stochastic variable to compute individual terms
+of its log-probability; it is computed all together. This means that updating
+the elements of a array-valued variable individually would be inefficient, so
+all existing step methods update array-valued variables together, in a block
+update.</p>
+<p>To update an array-valued variable&#8217;s elements individually, simply break it up
+into an array of scalar-valued variables. Instead of this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">A</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s">&#39;A&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">zeros</span><span class="p">(</span><span class="mf">100</span><span class="p">),</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>do this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">A</span> <span class="o">=</span> <span class="p">[</span><span class="n">Normal</span><span class="p">(</span><span class="s">&#39;A_</span><span class="si">%i</span><span class="s">&#39;</span><span class="o">%</span><span class="n">i</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mf">100</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>An individual step method will be assigned to each element of <tt class="docutils literal"><span class="pre">A</span></tt> in the
+latter case, and the elements will be updated individually. Note that <tt class="docutils literal"><span class="pre">A</span></tt> can
+be broken up into larger blocks if desired.</p>
+</div>
+<div class="section" id="automatic-assignment-of-step-methods">
+<h3>5.6.2. Automatic assignment of step methods<a class="headerlink" href="#automatic-assignment-of-step-methods" title="Permalink to this headline">¶</a></h3>
+<p>Every step method subclass (including user-defined ones) that does not require
+any <tt class="docutils literal"><span class="pre">init</span></tt> arguments other than the stochastic variable to be handled adds
+itself to a list called <tt class="docutils literal"><span class="pre">StepMethodRegistry</span></tt> in the PyMC namespace. If a
+stochastic variable in an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object has not been explicitly assigned a
+step method, each class in <tt class="docutils literal"><span class="pre">StepMethodRegistry</span></tt> is allowed to examine the
+variable.</p>
+<p>To do so, each step method implements a class method called
+<tt class="docutils literal"><span class="pre">competence(stochastic)</span></tt>, whose only argument is a single stochastic variable.
+These methods return values from 0 to 3; 0 meaning the step method cannot safely
+handle the variable and 3 meaning it will most likely perform well for variables
+like this. The <tt class="docutils literal"><span class="pre">MCMC</span></tt> object assigns the step method that returns the highest
+competence value to each of its stochastic variables.</p>
+</div>
+</div>
+<div class="section" id="the-model-class">
+<span id="sec-model"></span><h2>5.7. The Model class<a class="headerlink" href="#the-model-class" title="Permalink to this headline">¶</a></h2>
+<p>This class serves as a container for probability models and as a base class for
+the classes responsible for model fitting, such as <tt class="docutils literal"><span class="pre">MCMC</span></tt>. Like any Python
+class, its properties are inherited by subclasses.</p>
+<p><tt class="docutils literal"><span class="pre">Model</span></tt>&#8216;s init method takes the following arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">input</span></tt>:</dt>
+<dd>Some collection of PyMC nodes defining a probability model. These may be stored
+in a list, set, tuple, dictionary, array, module, or any object with a
+<tt class="docutils literal"><span class="pre">__dict__</span></tt> attribute.</dd>
+<dt><tt class="docutils literal"><span class="pre">verbose</span></tt> (optional):</dt>
+<dd>An integer controlling the verbosity of the model&#8217;s output.</dd>
+</dl>
+<p>Models&#8217; useful methods are:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">draw_from_prior()</span></tt>:</dt>
+<dd>Sets all stochastic variables&#8217; values to new random values, which would be a
+sample from the joint distribution if all data and <tt class="docutils literal"><span class="pre">Potential</span></tt> instances&#8217; log-
+probability functions returned zero. If any stochastic variables lack a<tt class="docutils literal"><span class="pre">random()</span></tt> method, PyMC will raise an exception.</dd>
+<dt><tt class="docutils literal"><span class="pre">seed()</span></tt>:</dt>
+<dd>Same as <tt class="docutils literal"><span class="pre">draw_from_prior</span></tt>, but only <tt class="docutils literal"><span class="pre">stochastics</span></tt> whose <tt class="docutils literal"><span class="pre">rseed</span></tt> attribute
+is not <tt class="xref docutils literal"><span class="pre">None</span></tt> are changed.</dd>
+<dt><tt class="docutils literal"><span class="pre">find_generations():</span></tt></dt>
+<dd>Sets the <tt class="docutils literal"><span class="pre">generations</span></tt> attribute. This attribute is a list whose elements are
+sets of stochastic variables. The zeroth set has no extended parents in the
+model, the first set only has extended parents in the zeroth set, and so on.</dd>
+</dl>
+<p>The helper function <tt class="docutils literal"><span class="pre">graph</span></tt> produces graphical representations of models (see
+[Jordan:2004p5439]).</p>
+<p>Models have the following important attributes:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">variables</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">stochastics</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">potentials</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">deterministics</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">data_stochastics</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">step_methods</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">value</span></tt></li>
+</ul>
+<p>In addition, models expose each node they contain as an attribute. For instance,
+if model <tt class="docutils literal"><span class="pre">M</span></tt> were produced from model (<a href="#equation-disastermodel">(?)</a>) <tt class="docutils literal"><span class="pre">M.s</span></tt> would
+return the switchpoint variable. It&#8217;s a good idea to give each variable a unique
+name if you want to access them this way.</p>
+</div>
+<div class="section" id="the-sampler-class">
+<span id="sec-sampler"></span><h2>5.8. The Sampler class<a class="headerlink" href="#the-sampler-class" title="Permalink to this headline">¶</a></h2>
+<p>Samplers fit models with Monte Carlo fitting methods, which characterize the
+posterior distribution by approximate samples from it. They are initialized as
+follows: <tt class="docutils literal"><span class="pre">Sampler(input=None,</span> <span class="pre">db='ram',</span> <span class="pre">name='Sampler',</span> <span class="pre">reinit_model=True,</span>
+<span class="pre">calc_deviance=False)</span></tt>. The <tt class="docutils literal"><span class="pre">input</span></tt> argument is a module, list, tuple,
+dictionary, set, or object that contains all elements of the model, the <tt class="docutils literal"><span class="pre">db</span></tt>
+argument indicates which database backend should be used to store the samples
+(see chapter <em class="xref">chap:database</em>), <tt class="docutils literal"><span class="pre">reinit_model</span></tt> is a boolean flag that
+indicates whether the model should be re-initialised before running, and
+<tt class="docutils literal"><span class="pre">calc_deviance</span></tt> is a boolean flag indicating whether deviance should be
+calculated for the model at each iteration. Samplers have the following
+important methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">sample(iter,</span> <span class="pre">length=None,</span> <span class="pre">verbose=0)</span></tt>:</dt>
+<dd>Samples from the joint distribution. The <tt class="docutils literal"><span class="pre">iter</span></tt> argument controls how many
+times the sampling loop will be run, and the <tt class="docutils literal"><span class="pre">length</span></tt> argument controls the
+initial size of the database that will be used to store the samples.</dd>
+<dt><tt class="docutils literal"><span class="pre">isample(iter,</span> <span class="pre">length=None,</span> <span class="pre">verbose=0)</span></tt>:</dt>
+<dd><p class="first">The same as <tt class="docutils literal"><span class="pre">sample</span></tt>, but the sampling is done interactively: you can pause
+sampling at any point and be returned to the Python prompt to inspect progress
+and adjust fitting parameters. While sampling is paused, the following methods
+are useful:</p>
+<dl class="last docutils">
+<dt><tt class="docutils literal"><span class="pre">icontinue()</span></tt>:</dt>
+<dd>Continue interactive sampling.</dd>
+<dt><tt class="docutils literal"><span class="pre">halt()</span></tt>:</dt>
+<dd>Truncate the database and clean up.</dd>
+</dl>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">tally()</span></tt>:</dt>
+<dd>Write all variables&#8217; current values to the database. The actual write operation
+depends on the specified database backend.</dd>
+<dt><tt class="docutils literal"><span class="pre">save_state()</span></tt>:</dt>
+<dd>Saves the current state of the sampler, including all stochastics, to the
+database. This allows the sampler to be reconstituted at a later time to resume
+sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.</dd>
+<dt><tt class="docutils literal"><span class="pre">restore_state()</span></tt>:</dt>
+<dd>Restores the sampler to the state stored in the database.</dd>
+<dt><tt class="docutils literal"><span class="pre">stats()</span></tt>:</dt>
+<dd>Generate summary statistics for all nodes in the model.</dd>
+<dt><tt class="docutils literal"><span class="pre">remember(trace_index)</span></tt>:</dt>
+<dd>Set all variables&#8217; values from frame <tt class="docutils literal"><span class="pre">trace_index</span></tt> in the database. Note that
+the <tt class="docutils literal"><span class="pre">trace_index</span></tt> is different from the current iteration, since not all
+samples are necessarily saved due to burning and thinning.</dd>
+</dl>
+<p>In addition, the sampler attribute <tt class="docutils literal"><span class="pre">deviance</span></tt> is a deterministic variable
+valued as the model&#8217;s deviance at its current state.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="id10" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id7">[1]</a></td><td>The covariance is estimated recursively from the previous value and the last
+<tt class="docutils literal"><span class="pre">interval</span></tt> samples, instead of computing it each time from the entire trace.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="references.html" title="6. References"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modelbuilding.html" title="4. Building models"
+             >previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2008, Chris Fonnesbeck, Anand Patil, David Huard.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.7.
+    </div>
+  </body>
+</html>

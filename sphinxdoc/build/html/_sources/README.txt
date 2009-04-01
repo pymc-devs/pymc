@@ -2,14 +2,6 @@
 Introduction
 ************
 
-:Date: April 6, 2007
-:Authors: Chris Fonnesbeck, Anand Patil, David Huard
-:Contact: chris@trichech.us
-:Web site: http://code.google.com/p/pymc/
-:Copyright: This document has been placed in the public domain.
-:License: PyMC is released under the MIT license.
-:Version: 2.0
-
 Purpose
 =======
 
@@ -47,19 +39,10 @@ Features
   with the full power of Python.
 
 
-What's new in 2.0
+What's new in 2.1
 =================
 
-* New flexible object model and syntax (not backward-compatible).
-
-* Reduced redundant computations: only relevant log-probability terms are
-  computed, and these are cached.
-
-* Optimized probability distributions.
-
-* New adaptive blocked Metropolis step method.
-
-* Much more!
+To do
 
 
 Usage

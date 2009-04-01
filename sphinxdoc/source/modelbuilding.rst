@@ -1,5 +1,5 @@
 
-.. _chap-modelbuilding:
+.. _chap:modelbuilding:
 
 ***************
 Building models
@@ -10,8 +10,6 @@ unknown variables to data. PyMC provides three basic building blocks for
 Bayesian probability models: ``Stochastic``, ``Deterministic`` and
 ``Potential``.
 
-.. % \section{Summary}\label{sec:PyMCObjects}
-
 A ``Stochastic`` object represents a variable whose value is not completely
 determined by its parents, and a ``Deterministic`` object represents a variable
 that is entirely determined by its parents. In object-oriented programming
@@ -20,7 +18,7 @@ parlance, ``Stochastic`` and ``Deterministic`` are subclasses of the
 never actually implemented in models.
 
 The third basic class, ``Potential``, represents 'factor potentials'
-([dawidmarkov,Jordan:2004p5439]_), which are *not* variables but simply terms
+([Lauritzen:1990]_,[Jordan:2004]_), which are *not* variables but simply terms
 and/or constraints that are multiplied into joint distributions to modify them.
 ``Potential`` and ``Variable`` are subclasses of ``Node``.
 
@@ -30,9 +28,14 @@ awareness of the models in which they are embedded and do not themselves possess
 methods for updating their values in fitting algorithms. Objects responsible for
 fitting probability models are described in chapter :ref:`chap:modelfitting`.
 
-.. % TODO: Need a better description of what a Potential is. Given the description of Stochastic and Deterministic we have given, its not clear where Potential fits in, as it classifies the world into 2 things -- completely determined by parents and not.
-.. % PyMC also provides container classes for variables to make it easier to program of certain dependency situations, such as when a variable is defined by its dependence on an entire Markov chain.
+.. todo::
 
+   Need a better description of what a Potential is. Given the description
+   of Stochastic and Deterministic we have given, its not clear where
+   Potential fits in, as it classifies the world into 2 things --
+   completely determined by parents and not. .. 
+   
+   
 .. _stochastic:
 
 The Stochastic class
@@ -56,7 +59,7 @@ specified automatically, and only overridden under particular circumstances:
    A dictionary containing the variable's parents. The keys of the dictionary
    correspond to the names assigned to the variable's parents by the variable, and
    the values correspond to the actual parents. For example, the keys of
-   :math:`s`'s parents dictionary in model (:ref:`disastermodel`) would be
+   :math:`s`'s parents dictionary in model (:eq:`disastermodel`) would be
    ``'t_l'`` and ``'t_h'``. Thanks to Python's dynamic typing, the actual parents
    (*i.e.* the values of the dictionary) may be of any class or type.
 
@@ -99,11 +102,11 @@ Creation of stochastic variables
 There are three main ways to create stochastic variables, called the
 **automatic**, **decorator**, and **direct** interfaces.
 
-Automatic
+**Automatic**
    Stochastic variables with standard distributions provided by PyMC (see chapter
    :ref:`chap:distributions`) can be created in a single line using special
    subclasses of ``Stochastic``. For example, the uniformly-distributed discrete
-   variable :math:`s` in (:ref:`disastermodel`) could be created using the
+   variable :math:`s` in (:eq:`disastermodel`) could be created using the
    automatic interface as follows::
 
       s = DiscreteUniform('s', 1851, 1962, value=1900)
@@ -129,9 +132,9 @@ Automatic
    .. % \item[\code{cache_depth}:] See section \ref{sec:caching}.
    .. % \end{description}
 
-Decorator
+**Decorator**
    Uniformly-distributed discrete stochastic variable :math:`s` in
-   (:ref:`disastermodel`) could alternatively be created from a function that
+   (:eq:`disastermodel`) could alternatively be created from a function that
    computes its log-probability as follows::
 
       @stochastic(dtype=int)
@@ -211,7 +214,7 @@ Decorator
    ``random`` method is provided; if no initial value is provided, it will be drawn
    automatically using the ``random`` method.
 
-Direct
+**Direct**
    It's possible to instantiate ``Stochastic`` directly::
 
       def s_logp(value, t_l, t_h):
@@ -300,8 +303,6 @@ top of the ``@stochastic`` decorator::
    @observed
    @stochastic(dtype=int)
 
-.. % \hypertarget{deterministic}{}
-
 
 .. _deterministic:
 
@@ -310,7 +311,7 @@ The Deterministic class
 
 The ``Deterministic`` class represents variables whose values are completely
 determined by the values of their parents. For example, in model
-(:ref:`disastermodel`), :math:`r` is a ``deterministic`` variable. Recall it was
+(:eq:`disastermodel`), :math:`r` is a ``deterministic`` variable. Recall it was
 defined by 
 
 .. math::
@@ -321,9 +322,6 @@ defined by
           e & t\le s\\ l & t>s
           \end{array}\right.,
   \end{eqnarray*}
-
-
-.. % \pdfbookmark[0]{The Deterministic class}{deterministic}
 
 so :math:`r`'s value can be computed exactly from the values of its parents
 :math:`e`, :math:`l` and :math:`s`.
@@ -356,7 +354,7 @@ Creation of deterministic variables
 Deterministic variables are less complicated than stochastic variables, and have
 similar **automatic**, **decorator**, and **direct** interfaces:
 
-Automatic
+**Automatic**
    A handful of common functions have been wrapped in Deterministic objects. These
    are brief enough to list:
 
@@ -392,7 +390,7 @@ Automatic
    methods (Gibbs step methods in particular) implicitly know how to take them into
    account.
 
-Decorator
+**Decorator**
    A deterministic variable can be created via a decorator in a way very similar to
    ``Stochastic``'s decorator interface::
 
@@ -418,7 +416,7 @@ Decorator
    variates, the longer implementation of the decorator interface available to
    ``Stochastic`` objects is not relevant here.
 
-Direct
+**Direct**
    Deterministic objects can also be instantiated directly, by passing the
    evaluation function to the ``Deterministic`` class as an argument::
 
@@ -455,8 +453,6 @@ parent of some variable. Consider :math:`y` in the following model:
       y|x &\sim \textup N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
   \end{align*}
 
-
-.. % \pdfbookmark[0]{Containers}{container}
 
 Here, :math:`y` depends on every element of the Markov chain :math:`x`, but we
 wouldn't want to manually enter :math:`N` parent labels ```x_0'``, ```x_1'``,
@@ -531,7 +527,7 @@ container, and within any containers in the container.
 The Potential class
 ===================
 
-The joint density corresponding to model (:ref:`disastermodel`) can be written
+The joint density corresponding to model (:eq:`disastermodel`) can be written
 as follows: 
 
 .. math::
@@ -541,9 +537,6 @@ as follows:
       p(D,s,l,e) = p(D|s,l,e) p(s) p(l) p(e).
   \end{eqnarray*}
 
-
-.. % \pdfbookmark[0]{The Potential class}{potential}
-.. % See the two examples here and the extended example below. Is that enough?
 
 Each factor in the joint distribution is a proper, normalized probability
 distribution for one of the variables conditional on its parents. Such factors
@@ -563,7 +556,7 @@ parents, for example:
 
 In other cases we may want to add probability terms to existing models. For
 example, suppose we want to constrain the difference between :math:`e` and
-:math:`l` in (:ref:`disastermodel`) to be less than 1, so that the joint density
+:math:`l` in (:eq:`disastermodel`) to be less than 1, so that the joint density
 becomes 
 
 .. math::
@@ -580,12 +573,12 @@ uncomfortable to do so.
 
 Arbitrary factors such as :math:`\psi` and the indicator function
 :math:`I(|e-l|<1)` are implemented by objects of class ``Potential``
-([dawidmarkov]_ and [Jordan:2004p5439]_ call these terms 'factor potentials').
-Bayesian hierarchical notation (cf model (:ref:`disastermodel`)) doesn't
+([Lauritzen:1990]_ and [Jordan:2004]_ call these terms 'factor potentials').
+Bayesian hierarchical notation (cf model (:eq:`disastermodel`)) doesn't
 accomodate these potentials. They are often used in cases where there is no
 natural dependence hierarchy, such as the first example above (which is known as
 a Markov random field). They are also useful for expressing 'soft data'
-[Christakos:2002p5506]_ as in the second example above.
+[Christakos:2002]_ as in the second example above.
 
 Potentials have one important attribute, ``logp``, the log of their current
 probability or probability density value given the values of their parents. The
@@ -668,7 +661,7 @@ Creation of Potentials
 
 There are two ways to create potentials:
 
-Decorator
+**Decorator**
    A potential can be created via a decorator in a way very similar to
    ``Deterministic``'s decorator interface::
 
@@ -681,7 +674,7 @@ Decorator
    *log*-density as a Numpy ``float``. The ``potential`` decorator can take
    ``verbose`` and ``cache_depth`` arguments like the ``stochastic`` decorator.
 
-Direct
+**Direct**
    The same potential could be created directly as follows::
 
       def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
@@ -694,8 +687,6 @@ Direct
                           verbose = 0,
                           cache_depth = 2)
 
-.. % \hypertarget{graphical}{}
-
 
 .. _graphical:
 
@@ -704,8 +695,8 @@ Graphing models
 
 The function ``graph`` in ``pymc.graph`` draws graphical representations of
 ``Model`` (Chapter :ref:`chap:modelfitting`) instances using GraphViz via the
-Python package PyDot (if they are installed). See [dawidmarkov]_ and
-[Jordan:2004p5439]_ for more discussion of useful information that can be read
+Python package PyDot (if they are installed). See [Lauritzen:1990]_ and
+[Jordan:2004]_ for more discussion of useful information that can be read
 off of graphical models. Note that these authors do not consider deterministic
 variables.
 

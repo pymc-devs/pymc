@@ -6,13 +6,13 @@ An example statistical model
 ============================
 
 Consider the following dataset, which is a time series of recorded coal
-mining disasters in the UK from 1851 to 1962 [Jarrett:1979fr]_. 
+mining disasters in the UK from 1851 to 1962 [Jarrett:1979]_. 
 
 .. _disastersts:
 
 .. figure:: disastersts_web.png
    :alt: Disasters time series.
-   :scale: 30
+   :scale: 100
    :align: center
 
    Number of mining disasters each year in the UK. 
@@ -38,28 +38,13 @@ We represent our conceptual model formally as a statistical model:
        
 The symbols are defined as:
 
-:math:`D_t`:
-   The number of disasters in year :math:`t`.
-
-:math:`r_t`:
-   The rate parameter of the Poisson distribution of disasters in year :math:`t`.
-
-:math:`s`:
-   The year in which the rate parameter changes (the switchpoint).
-
-:math:`e`:
-   The rate parameter before the switchpoint :math:`s`.
-
-:math:`l`:
-   The rate parameter after the switchpoint :math:`s`.
-
-:math:`t_l`, :math:`t_h`:
-   The lower and upper boundaries of year :math:`t`.
-
-:math:`r_e`, :math:`r_l`:
-   The rate parameters of the priors of the early and late rates, respectively.
-
-   .. % \item[:math:`\beta_e`, :math:`\beta_l`:] Prior parameters (also called hyperparameters).
+* :math:`D_t`: The number of disasters in year :math:`t`.
+* :math:`r_t`: The rate parameter of the Poisson distribution of disasters in year :math:`t`.
+* :math:`s`:   The year in which the rate parameter changes (the switchpoint).
+* :math:`e`:   The rate parameter before the switchpoint :math:`s`.
+* :math:`l`:   The rate parameter after the switchpoint :math:`s`.
+* :math:`t_l`, :math:`t_h`:    The lower and upper boundaries of year :math:`t`.
+* :math:`r_e`, :math:`r_l`:    The rate parameters of the priors of the early and late rates, respectively.
 
 Because we have defined :math:`D` by its dependence on :math:`s`,
 :math:`e` and :math:`l`, the latter three are known as the 'parents' of
@@ -70,7 +55,6 @@ Because we have defined :math:`D` by its dependence on :math:`s`,
 
 Two types of variables
 ======================
-
 
 At the model-specification stage (before the data are observed), :math:`D`,
 :math:`s`, :math:`e`, :math:`r` and :math:`l` are all random variables. Bayesian
@@ -228,6 +212,10 @@ filled ellipse and deterministic variable :math:`r` is a triangle. Arrows point
 from parent to child and display the label that the child assigns to the parent.
 See section :ref:`graphical` for more details.
 
+.. warning::
+
+   Missing image.
+   
 .. figure:: DisasterModel2.pdf
    :alt: Disasters time series.
    :scale: 30
@@ -318,7 +306,7 @@ probabilities and :math:`e`'s and :math:`l`'s log-densities::
 its value. Just as we created :math:`r` by decorating a function that computes
 its value, it's possible to create custom ``Stochastic`` objects by decorating
 functions that compute their log-probabilities or densities (see chapter
-:ref:`chap-modelbuilding`). Users are thus not limited to the set of of
+:ref:`chap:modelbuilding`). Users are thus not limited to the set of of
 statistical distributions provided by PyMC.
 
 
@@ -379,7 +367,7 @@ What does it mean to fit a model?
 this case, we are trying to represent the posterior :math:`p(s,e,l|D)` by a set
 of joint samples from it. To produce these samples, the MCMC sampler randomly
 updates the values of :math:`s`, :math:`e` and :math:`l` according to the
-Metropolis-Hastings algorithm ([gelman]_) for ``iter``  iterations.
+Metropolis-Hastings algorithm ([Gelman et al., 2004]_) for ``iter``  iterations.
 
 After a sufficiently large number of iterations, the current values of
 :math:`s`, :math:`e` and :math:`l` can be considered a sample from the
@@ -397,7 +385,7 @@ via the ``thin`` argument.
 If you are not sure ahead of time what values to choose for the ``burn`` and
 ``thin`` parameters, you may want to retain all the MCMC samples, that is to set
 ``burn=0`` and ``thin=1``, and then discard the 'burnin period' and thin the
-samples after examining the traces (the series of samples). See [gelman]_ for
+samples after examining the traces (the series of samples). See [Gelman et al., 2004]_ for
 general guidance.
 
 
@@ -448,7 +436,7 @@ this one for the switchpoint in the disasters model:
 The left-hand pane of this figure shows the temporal series of the samples from
 :math:`s`, while the right-hand pane shows a histogram of the trace. The trace
 is useful for evaluating and diagnosing the algorithm's performance (see
-[gelman]_), while the histogram is useful for visualizing the posterior.
+[Gelman et al., 2004]_), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call ``M.stats()``.
 
@@ -589,7 +577,7 @@ the model iterates over each node at every iteration.
 
 .. figure:: missing.png
    :alt: Trace and posterior distribution figure. 
-   :scale: 30
+   :scale: 70
    :align: center
 
    Trace and posterior distribution of the second missing data point in the example.

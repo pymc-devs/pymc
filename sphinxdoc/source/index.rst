@@ -2,10 +2,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pymc's documentation!
-================================
+PyMC's User Guide
+=================
 
-Contents:
+Table of contents 
+-----------------
 
 .. toctree::
    :maxdepth: 2
@@ -15,7 +16,14 @@ Contents:
    ../../INSTALL
    tutorial
    modelbuilding
+   modelfitting
    references
+   
+   
+The incomplete laundry list
+---------------------------
+
+.. todolist::
 
 Indices and tables
 ==================

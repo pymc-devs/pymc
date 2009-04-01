@@ -20,7 +20,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="pymc v2.0 documentation" href="index.html" />
-    <link rel="next" title="5. References" href="references.html" />
+    <link rel="next" title="5. Fitting Models" href="modelfitting.html" />
     <link rel="prev" title="3. Tutorial" href="tutorial.html" /> 
   </head>
   <body>
@@ -31,7 +31,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="references.html" title="5. References"
+          <a href="modelfitting.html" title="5. Fitting Models"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"
@@ -75,8 +75,8 @@
             <p class="topless"><a href="tutorial.html"
                                   title="previous chapter">3. Tutorial</a></p>
             <h4>Next topic</h4>
-            <p class="topless"><a href="references.html"
-                                  title="next chapter">5. References</a></p>
+            <p class="topless"><a href="modelfitting.html"
+                                  title="next chapter">5. Fitting Models</a></p>
             <h3>This Page</h3>
             <ul class="this-page-menu">
               <li><a href="_sources/modelbuilding.txt"
@@ -116,14 +116,21 @@ parlance, <tt class="docutils literal"><span class="pre">Stochastic</span></tt> 
 <tt class="docutils literal"><span class="pre">Variable</span></tt> class, which only serves as a template for other classes and is
 never actually implemented in models.</p>
 <p>The third basic class, <tt class="docutils literal"><span class="pre">Potential</span></tt>, represents &#8216;factor potentials&#8217;
-([dawidmarkov,Jordan:2004p5439]_), which are <em>not</em> variables but simply terms
+(<a class="reference external" href="references.html#lauritzen-1990">[Lauritzen:1990]</a>,[Jordan:2004]_), which are <em>not</em> variables but simply terms
 and/or constraints that are multiplied into joint distributions to modify them.
 <tt class="docutils literal"><span class="pre">Potential</span></tt> and <tt class="docutils literal"><span class="pre">Variable</span></tt> are subclasses of <tt class="docutils literal"><span class="pre">Node</span></tt>.</p>
 <p>PyMC probability models are simply linked groups of <tt class="docutils literal"><span class="pre">Stochastic</span></tt>,
 <tt class="docutils literal"><span class="pre">Deterministic</span></tt> and <tt class="docutils literal"><span class="pre">Potential</span></tt> objects. These objects have very limited
 awareness of the models in which they are embedded and do not themselves possess
 methods for updating their values in fitting algorithms. Objects responsible for
-fitting probability models are described in chapter <em class="xref">chap:modelfitting</em>.</p>
+fitting probability models are described in chapter <a class="reference external" href="modelfitting.html#chap-modelfitting"><em>Fitting Models</em></a>.</p>
+<div class="admonition-todo admonition " id="todo-8">
+<p class="first admonition-title">Todo</p>
+<p class="last">Need a better description of what a Potential is. Given the description
+of Stochastic and Deterministic we have given, its not clear where
+Potential fits in, as it classifies the world into 2 things &#8211;
+completely determined by parents and not. ..</p>
+</div>
 <div class="section" id="the-stochastic-class">
 <span id="stochastic"></span><h2>4.1. The Stochastic class<a class="headerlink" href="#the-stochastic-class" title="Permalink to this headline">¶</a></h2>
 <p>A stochastic variable has the following primary attributes:</p>
@@ -135,7 +142,7 @@ fitting probability models are described in chapter <em class="xref">chap:modelf
 parents.</dd>
 </dl>
 <p>A stochastic variable can optionally be endowed with a method called <tt class="docutils literal"><span class="pre">random</span></tt>,
-which draws a value for the variable given the values of its parents <a class="footnote-reference" href="#id10" id="id1">[1]</a>.
+which draws a value for the variable given the values of its parents <a class="footnote-reference" href="#id11" id="id2">[1]</a>.
 Stochastic objects have the following additional attributes that are generally
 specified automatically, and only overridden under particular circumstances:</p>
 <dl class="docutils">
@@ -143,7 +150,7 @@ specified automatically, and only overridden under particular circumstances:</p>
 <dd>A dictionary containing the variable&#8217;s parents. The keys of the dictionary
 correspond to the names assigned to the variable&#8217;s parents by the variable, and
 the values correspond to the actual parents. For example, the keys of
-<img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>&#8216;s parents dictionary in model (<em class="xref">disastermodel</em>) would be
+<img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>&#8216;s parents dictionary in model (<a href="#equation-disastermodel">(?)</a>) would be
 <tt class="docutils literal"><span class="pre">'t_l'</span></tt> and <tt class="docutils literal"><span class="pre">'t_h'</span></tt>. Thanks to Python&#8217;s dynamic typing, the actual parents
 (<em>i.e.</em> the values of the dictionary) may be of any class or type.</dd>
 <dt><tt class="docutils literal"><span class="pre">children</span></tt>:</dt>
@@ -171,11 +178,11 @@ is enforced.</dd>
 <p>There are three main ways to create stochastic variables, called the
 <strong>automatic</strong>, <strong>decorator</strong>, and <strong>direct</strong> interfaces.</p>
 <dl class="docutils">
-<dt>Automatic</dt>
+<dt><strong>Automatic</strong></dt>
 <dd><p class="first">Stochastic variables with standard distributions provided by PyMC (see chapter
 <em class="xref">chap:distributions</em>) can be created in a single line using special
 subclasses of <tt class="docutils literal"><span class="pre">Stochastic</span></tt>. For example, the uniformly-distributed discrete
-variable <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/> in (<em class="xref">disastermodel</em>) could be created using the
+variable <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/> in (<a href="#equation-disastermodel">(?)</a>) could be created using the
 automatic interface as follows:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">s</span> <span class="o">=</span> <span class="n">DiscreteUniform</span><span class="p">(</span><span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="mf">1851</span><span class="p">,</span> <span class="mf">1962</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1900</span><span class="p">)</span>
 </pre></div>
@@ -188,9 +195,9 @@ submodule <tt class="docutils literal"><span class="pre">pymc.SciPyDistributions
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt> subclasses of their own from probability distributions not
 included with PyMC.</p>
 </dd>
-<dt>Decorator</dt>
+<dt><strong>Decorator</strong></dt>
 <dd><p class="first">Uniformly-distributed discrete stochastic variable <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/> in
-(<em class="xref">disastermodel</em>) could alternatively be created from a function that
+(<a href="#equation-disastermodel">(?)</a>) could alternatively be created from a function that
 computes its log-probability as follows:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@stochastic</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">s</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mf">1900</span><span class="p">,</span> <span class="n">t_l</span><span class="o">=</span><span class="mf">1851</span><span class="p">,</span> <span class="n">t_h</span><span class="o">=</span><span class="mf">1962</span><span class="p">):</span>
@@ -283,7 +290,7 @@ automatically using the <tt class="docutils literal"><span class="pre">random</s
 </li>
 </ul>
 <dl class="docutils">
-<dt>Direct</dt>
+<dt><strong>Direct</strong></dt>
 <dd><p class="first">It&#8217;s possible to instantiate <tt class="docutils literal"><span class="pre">Stochastic</span></tt> directly:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">s_logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
@@ -340,7 +347,7 @@ variables stored in an array or list.</p>
 </div>
 </div>
 <div class="section" id="data">
-<span id="id2"></span><h2>4.2. Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h2>
+<span id="id3"></span><h2>4.2. Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h2>
 <p>Although the data are modelled with statistical distributions, their values
 should be treated as immutable (since they have been observed). Data are
 represented by <tt class="docutils literal"><span class="pre">Stochastic</span></tt> objects whose <tt class="docutils literal"><span class="pre">observed</span></tt> attribute is set to
@@ -370,7 +377,7 @@ top of the <tt class="docutils literal"><span class="pre">&#64;stochastic</span>
 <span id="deterministic"></span><h2>4.3. The Deterministic class<a class="headerlink" href="#the-deterministic-class" title="Permalink to this headline">¶</a></h2>
 <p>The <tt class="docutils literal"><span class="pre">Deterministic</span></tt> class represents variables whose values are completely
 determined by the values of their parents. For example, in model
-(<em class="xref">disastermodel</em>), <img class="math" src="_images/math/b55ca7a0aa88ab7d58f4fc035317fdac39b17861.png" alt="r"/> is a <tt class="docutils literal"><span class="pre">deterministic</span></tt> variable. Recall it was
+(<a href="#equation-disastermodel">(?)</a>), <img class="math" src="_images/math/b55ca7a0aa88ab7d58f4fc035317fdac39b17861.png" alt="r"/> is a <tt class="docutils literal"><span class="pre">deterministic</span></tt> variable. Recall it was
 defined by</p>
 <div class="math">
 <p><img src="_images/math/ab066a06c41fef3196d89b51efb572bf1e48cde0.png" alt="\begin{eqnarray*}
@@ -400,7 +407,7 @@ parents may be of any class or type.</dd>
 <p>Deterministic variables are less complicated than stochastic variables, and have
 similar <strong>automatic</strong>, <strong>decorator</strong>, and <strong>direct</strong> interfaces:</p>
 <dl class="docutils">
-<dt>Automatic</dt>
+<dt><strong>Automatic</strong></dt>
 <dd><p class="first">A handful of common functions have been wrapped in Deterministic objects. These
 are brief enough to list:</p>
 <dl class="docutils">
@@ -428,7 +435,7 @@ value of its parent <img class="math" src="_images/math/9ffb448918db29f2a72f8f87
 methods (Gibbs step methods in particular) implicitly know how to take them into
 account.</p>
 </dd>
-<dt>Decorator</dt>
+<dt><strong>Decorator</strong></dt>
 <dd><p class="first">A deterministic variable can be created via a decorator in a way very similar to
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt>&#8216;s decorator interface:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@deterministic</span>
@@ -448,12 +455,12 @@ there is no <tt class="docutils literal"><span class="pre">value</span></tt> arg
 deterministically by the function itself. Arguments&#8217; keys and values are
 converted into a parent dictionary as with <tt class="docutils literal"><span class="pre">Stochastic</span></tt>&#8216;s short interface. The
 <tt class="docutils literal"><span class="pre">deterministic</span></tt> decorator can take <tt class="docutils literal"><span class="pre">trace</span></tt>, <tt class="docutils literal"><span class="pre">verbose</span></tt> and <tt class="docutils literal"><span class="pre">plot</span></tt>
-arguments, like the <tt class="docutils literal"><span class="pre">stochastic</span></tt> decorator <a class="footnote-reference" href="#id11" id="id3">[2]</a>.</p>
+arguments, like the <tt class="docutils literal"><span class="pre">stochastic</span></tt> decorator <a class="footnote-reference" href="#id12" id="id4">[2]</a>.</p>
 <p class="last">Of course, since deterministic nodes are not expected to generate random
 variates, the longer implementation of the decorator interface available to
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt> objects is not relevant here.</p>
 </dd>
-<dt>Direct</dt>
+<dt><strong>Direct</strong></dt>
 <dd><p class="first">Deterministic objects can also be instantiated directly, by passing the
 evaluation function to the <tt class="docutils literal"><span class="pre">Deterministic</span></tt> class as an argument:</p>
 <div class="last highlight-python"><pre>def r_eval(switchpoint = s, early_rate = e, late_rate = l):
@@ -530,7 +537,7 @@ corresponding value.</p>
 <p>Containers can currently be constructed from lists, tuples, dictionaries, Numpy
 arrays, modules, sets or any object with a <tt class="docutils literal"><span class="pre">__dict__</span></tt> attribute. Variables and
 non-variables can be freely mixed in these containers, and different types of
-containers can be nested <a class="footnote-reference" href="#id12" id="id4">[3]</a>. Containers attempt to behave like the objects
+containers can be nested <a class="footnote-reference" href="#id13" id="id5">[3]</a>. Containers attempt to behave like the objects
 they wrap. All containers are subclasses of <tt class="docutils literal"><span class="pre">ContainerBase</span></tt>.</p>
 <p>Containers have the following useful attributes in addition to <tt class="docutils literal"><span class="pre">value</span></tt>:</p>
 <ul class="simple">
@@ -546,7 +553,7 @@ container, and within any containers in the container.</p>
 </div>
 <div class="section" id="the-potential-class">
 <span id="potential"></span><h2>4.5. The Potential class<a class="headerlink" href="#the-potential-class" title="Permalink to this headline">¶</a></h2>
-<p>The joint density corresponding to model (<em class="xref">disastermodel</em>) can be written
+<p>The joint density corresponding to model (<a href="#equation-disastermodel">(?)</a>) can be written
 as follows:</p>
 <div class="math">
 <p><img src="_images/math/c818cb56ff026e8567a172a1506fa36698c8869e.png" alt="\begin{eqnarray*}
@@ -564,7 +571,7 @@ parents, for example:</p>
 \end{eqnarray*}" />
 </div></p><p>In other cases we may want to add probability terms to existing models. For
 example, suppose we want to constrain the difference between <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and
-<img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> in (<em class="xref">disastermodel</em>) to be less than 1, so that the joint density
+<img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> in (<a href="#equation-disastermodel">(?)</a>) to be less than 1, so that the joint density
 becomes</p>
 <div class="math">
 <p><img src="_images/math/51262bb4ed6a8d20fc2824abe182d0430fece40b.png" alt="\begin{eqnarray*}
@@ -575,12 +582,12 @@ grouping <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874
 uncomfortable to do so.</p>
 <p>Arbitrary factors such as <img class="math" src="_images/math/8ada738001410f131563551fb68731e4f302048d.png" alt="\psi"/> and the indicator function
 <img class="math" src="_images/math/9386f1c1fd70eb885d71df61fcf9c51ff78eaba2.png" alt="I(|e-l|&lt;1)"/> are implemented by objects of class <tt class="docutils literal"><span class="pre">Potential</span></tt>
-([dawidmarkov] and [Jordan:2004p5439] call these terms &#8216;factor potentials&#8217;).
-Bayesian hierarchical notation (cf model (<em class="xref">disastermodel</em>)) doesn&#8217;t
+(<a class="reference external" href="references.html#lauritzen-1990">[Lauritzen:1990]</a> and <a class="reference external" href="references.html#jordan-2004">[Jordan:2004]</a> call these terms &#8216;factor potentials&#8217;).
+Bayesian hierarchical notation (cf model (<a href="#equation-disastermodel">(?)</a>)) doesn&#8217;t
 accomodate these potentials. They are often used in cases where there is no
 natural dependence hierarchy, such as the first example above (which is known as
 a Markov random field). They are also useful for expressing &#8216;soft data&#8217;
-[Christakos:2002p5506] as in the second example above.</p>
+<a class="reference external" href="references.html#christakos-2002">[Christakos:2002]</a> as in the second example above.</p>
 <p>Potentials have one important attribute, <tt class="docutils literal"><span class="pre">logp</span></tt>, the log of their current
 probability or probability density value given the values of their parents. The
 only other additional attribute of interest is <tt class="docutils literal"><span class="pre">parents</span></tt>, a dictionary
@@ -639,7 +646,7 @@ that we are incorporating in the joint distribution.</p>
 <h3>4.5.2. Creation of Potentials<a class="headerlink" href="#creation-of-potentials" title="Permalink to this headline">¶</a></h3>
 <p>There are two ways to create potentials:</p>
 <dl class="docutils">
-<dt>Decorator</dt>
+<dt><strong>Decorator</strong></dt>
 <dd><p class="first">A potential can be created via a decorator in a way very similar to
 <tt class="docutils literal"><span class="pre">Deterministic</span></tt>&#8216;s decorator interface:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@potential</span>
@@ -652,7 +659,7 @@ that we are incorporating in the joint distribution.</p>
 <em>log</em>-density as a Numpy <tt class="docutils literal"><span class="pre">float</span></tt>. The <tt class="docutils literal"><span class="pre">potential</span></tt> decorator can take
 <tt class="docutils literal"><span class="pre">verbose</span></tt> and <tt class="docutils literal"><span class="pre">cache_depth</span></tt> arguments like the <tt class="docutils literal"><span class="pre">stochastic</span></tt> decorator.</p>
 </dd>
-<dt>Direct</dt>
+<dt><strong>Direct</strong></dt>
 <dd><p class="first">The same potential could be created directly as follows:</p>
 <div class="last highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">psi_i_logp</span><span class="p">(</span><span class="n">x_lo</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x_hi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mf">1</span><span class="p">]):</span>
     <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="n">xlo</span> <span class="o">-</span> <span class="n">xhi</span><span class="p">)</span><span class="o">**</span><span class="mf">2</span>
@@ -672,9 +679,9 @@ that we are incorporating in the joint distribution.</p>
 <div class="section" id="graphing-models">
 <span id="graphical"></span><h2>4.6. Graphing models<a class="headerlink" href="#graphing-models" title="Permalink to this headline">¶</a></h2>
 <p>The function <tt class="docutils literal"><span class="pre">graph</span></tt> in <tt class="docutils literal"><span class="pre">pymc.graph</span></tt> draws graphical representations of
-<tt class="docutils literal"><span class="pre">Model</span></tt> (Chapter <em class="xref">chap:modelfitting</em>) instances using GraphViz via the
-Python package PyDot (if they are installed). See [dawidmarkov] and
-[Jordan:2004p5439] for more discussion of useful information that can be read
+<tt class="docutils literal"><span class="pre">Model</span></tt> (Chapter <a class="reference external" href="modelfitting.html#chap-modelfitting"><em>Fitting Models</em></a>) instances using GraphViz via the
+Python package PyDot (if they are installed). See <a class="reference external" href="references.html#lauritzen-1990">[Lauritzen:1990]</a> and
+<a class="reference external" href="references.html#jordan-2004">[Jordan:2004]</a> for more discussion of useful information that can be read
 off of graphical models. Note that these authors do not consider deterministic
 variables.</p>
 <p>The symbol for stochastic variables is an ellipse. Parent-child relationships
@@ -725,27 +732,27 @@ algorithms involving proposed values that may be rejected.</p>
 <p>Lazy functions are implemented in C using Pyrex, a language for writing Python
 extensions.</p>
 <p class="rubric">Footnotes</p>
-<table class="docutils footnote" frame="void" id="id10" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Note that the <tt class="docutils literal"><span class="pre">random</span></tt> method does not provide a Gibbs sample unless the
-variable has no children.</td></tr>
-</tbody>
-</table>
 <table class="docutils footnote" frame="void" id="id11" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>Note that deterministic variables have no <tt class="docutils literal"><span class="pre">observed</span></tt> flag. If a deterministic
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>Note that the <tt class="docutils literal"><span class="pre">random</span></tt> method does not provide a Gibbs sample unless the
+variable has no children.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id12" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[2]</a></td><td>Note that deterministic variables have no <tt class="docutils literal"><span class="pre">observed</span></tt> flag. If a deterministic
 variable&#8217;s value were known, its parents would be restricted to the inverse
 image of that value under the deterministic variable&#8217;s evaluation function. This
 usage would be extremely difficult to support in general, but it can be
 implemented for particular applications at the <tt class="docutils literal"><span class="pre">StepMethod</span></tt> level.</td></tr>
 </tbody>
 </table>
-<table class="docutils footnote" frame="void" id="id12" rules="none">
+<table class="docutils footnote" frame="void" id="id13" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id4">[3]</a></td><td>Nodes whose parents are containers make private shallow copies of those
+<tr><td class="label"><a class="fn-backref" href="#id5">[3]</a></td><td>Nodes whose parents are containers make private shallow copies of those
 containers. This is done for technical reasons rather than to protect users from
 accidental misuse.</td></tr>
 </tbody>
@@ -766,7 +773,7 @@ accidental misuse.</td></tr>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="references.html" title="5. References"
+          <a href="modelfitting.html" title="5. Fitting Models"
              >next</a> |</li>
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"

@@ -2,18 +2,12 @@
 Installation Instructions
 *************************
 
-:Date: Oct 14, 2008
-:Authors: Chris Fonnesbeck, Anand Patil, David Huard
-:Web site: http://code.google.com/p/pymc/
-:Copyright: This document has been placed in the public domain.
-
 PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be
 able to work on just about any platform for which Python, a Fortran compiler
 and the NumPy module are  available. However, installing some extra
 depencies can greatly improve PyMC's performance and versatility.
 The following describes the required and optional dependencies and takes you
 through the installation process.
-
 
 
 Dependencies

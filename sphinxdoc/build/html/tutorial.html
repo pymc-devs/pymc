@@ -107,9 +107,9 @@
 <div class="section" id="an-example-statistical-model">
 <h2>3.1. An example statistical model<a class="headerlink" href="#an-example-statistical-model" title="Permalink to this headline">¶</a></h2>
 <p>Consider the following dataset, which is a time series of recorded coal
-mining disasters in the UK from 1851 to 1962 [Jarrett:1979fr].</p>
+mining disasters in the UK from 1851 to 1962 <a class="reference external" href="references.html#jarrett-1979">[Jarrett:1979]</a>.</p>
 <div align="center" class="figure" id="disastersts">
-<a class="reference external image-reference" href="_images/disastersts_web.png"><img alt="Disasters time series." src="_images/disastersts_web.png" style="width: 144.0px; height: 72.0px;" /></a>
+<a class="reference external image-reference" href="_images/disastersts_web.png"><img alt="Disasters time series." src="_images/disastersts_web.png" style="width: 480.0px; height: 240.0px;" /></a>
 <p class="caption">Number of mining disasters each year in the UK.</p>
 </div>
 <p>Occurrences of disasters in the time series is thought to be derived from
@@ -128,22 +128,15 @@ related to changes in mining safety regulations.</p>
         l\sim \textup{Exponential}(r_l)
     \end{array}" />
 </div></p><p>The symbols are defined as:</p>
-<dl class="docutils">
-<dt><img class="math" src="_images/math/56ff51eb4870ec165ac7daed4a82c7323caf4e78.png" alt="D_t"/>:</dt>
-<dd>The number of disasters in year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</dd>
-<dt><img class="math" src="_images/math/2c67102ec937a734c3f5b8c00723d32f0008978e.png" alt="r_t"/>:</dt>
-<dd>The rate parameter of the Poisson distribution of disasters in year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</dd>
-<dt><img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>:</dt>
-<dd>The year in which the rate parameter changes (the switchpoint).</dd>
-<dt><img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/>:</dt>
-<dd>The rate parameter before the switchpoint <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>.</dd>
-<dt><img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/>:</dt>
-<dd>The rate parameter after the switchpoint <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>.</dd>
-<dt><img class="math" src="_images/math/8e0b9f92fa1d1f3b8b4c42698703c470dad70615.png" alt="t_l"/>, <img class="math" src="_images/math/cdb0b5d73c0bcf07ab79e7d5929b5f6c2906c75c.png" alt="t_h"/>:</dt>
-<dd>The lower and upper boundaries of year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</dd>
-<dt><img class="math" src="_images/math/3586216dffe0ec0c67477348b2c3ebd91b489edf.png" alt="r_e"/>, <img class="math" src="_images/math/e6237d428c648e1670c2e4989a7837467d4ec53b.png" alt="r_l"/>:</dt>
-<dd>The rate parameters of the priors of the early and late rates, respectively.</dd>
-</dl>
+<ul class="simple">
+<li><img class="math" src="_images/math/56ff51eb4870ec165ac7daed4a82c7323caf4e78.png" alt="D_t"/>: The number of disasters in year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</li>
+<li><img class="math" src="_images/math/2c67102ec937a734c3f5b8c00723d32f0008978e.png" alt="r_t"/>: The rate parameter of the Poisson distribution of disasters in year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</li>
+<li><img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>:   The year in which the rate parameter changes (the switchpoint).</li>
+<li><img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/>:   The rate parameter before the switchpoint <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>.</li>
+<li><img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/>:   The rate parameter after the switchpoint <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>.</li>
+<li><img class="math" src="_images/math/8e0b9f92fa1d1f3b8b4c42698703c470dad70615.png" alt="t_l"/>, <img class="math" src="_images/math/cdb0b5d73c0bcf07ab79e7d5929b5f6c2906c75c.png" alt="t_h"/>:    The lower and upper boundaries of year <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/>.</li>
+<li><img class="math" src="_images/math/3586216dffe0ec0c67477348b2c3ebd91b489edf.png" alt="r_e"/>, <img class="math" src="_images/math/e6237d428c648e1670c2e4989a7837467d4ec53b.png" alt="r_l"/>:    The rate parameters of the priors of the early and late rates, respectively.</li>
+</ul>
 <p>Because we have defined <img class="math" src="_images/math/9ffb448918db29f2a72f8f87f421b3b3cad18f95.png" alt="D"/> by its dependence on <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>,
 <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/>, the latter three are known as the &#8216;parents&#8217; of
 <img class="math" src="_images/math/9ffb448918db29f2a72f8f87f421b3b3cad18f95.png" alt="D"/> and <img class="math" src="_images/math/9ffb448918db29f2a72f8f87f421b3b3cad18f95.png" alt="D"/> is called their &#8216;child&#8217;. Similarly, the parents of
@@ -295,6 +288,10 @@ and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6
 filled ellipse and deterministic variable <img class="math" src="_images/math/b55ca7a0aa88ab7d58f4fc035317fdac39b17861.png" alt="r"/> is a triangle. Arrows point
 from parent to child and display the label that the child assigns to the parent.
 See section <a class="reference external" href="modelbuilding.html#graphical"><em>Graphing models</em></a> for more details.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Missing image.</p>
+</div>
 <div align="center" class="figure">
 <a class="reference external image-reference" href="DisasterModel2.pdf"><img alt="Disasters time series." src="DisasterModel2.pdf" /></a>
 </div>
@@ -434,7 +431,7 @@ model has been fitted.</p>
 this case, we are trying to represent the posterior <img class="math" src="_images/math/69bb80927b6a922910f5bb77cc95a872d6a12eff.png" alt="p(s,e,l|D)"/> by a set
 of joint samples from it. To produce these samples, the MCMC sampler randomly
 updates the values of <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> according to the
-Metropolis-Hastings algorithm ([gelman]) for <tt class="docutils literal"><span class="pre">iter</span></tt>  iterations.</p>
+Metropolis-Hastings algorithm ([Gelman et al., 2004]_) for <tt class="docutils literal"><span class="pre">iter</span></tt>  iterations.</p>
 <p>After a sufficiently large number of iterations, the current values of
 <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> can be considered a sample from the
 posterior. PyMC assumes that the <tt class="docutils literal"><span class="pre">burn</span></tt> parameter specifies a &#8216;sufficiently
@@ -450,7 +447,7 @@ via the <tt class="docutils literal"><span class="pre">thin</span></tt> argument
 <p>If you are not sure ahead of time what values to choose for the <tt class="docutils literal"><span class="pre">burn</span></tt> and
 <tt class="docutils literal"><span class="pre">thin</span></tt> parameters, you may want to retain all the MCMC samples, that is to set
 <tt class="docutils literal"><span class="pre">burn=0</span></tt> and <tt class="docutils literal"><span class="pre">thin=1</span></tt>, and then discard the &#8216;burnin period&#8217; and thin the
-samples after examining the traces (the series of samples). See [gelman] for
+samples after examining the traces (the series of samples). See [Gelman et al., 2004]_ for
 general guidance.</p>
 </div>
 <div class="section" id="accessing-the-samples">
@@ -466,7 +463,7 @@ for each variable in the model. These traces can be accessed using the
 default, the returned trace array contains the samples from the last call to
 <tt class="docutils literal"><span class="pre">sample</span></tt>, that is, <tt class="docutils literal"><span class="pre">chain=-1</span></tt>, but the trace from previous sampling runs can
 be retrieved by specifying the correspondent chain index. To return the trace
-from all chains, simply use <tt class="docutils literal"><span class="pre">chain=None</span></tt>. <a class="footnote-reference" href="#id6" id="id4">[1]</a></p>
+from all chains, simply use <tt class="docutils literal"><span class="pre">chain=None</span></tt>. <a class="footnote-reference" href="#id3" id="id2">[1]</a></p>
 </div>
 <div class="section" id="sampling-output">
 <h3>3.5.3. Sampling output<a class="headerlink" href="#sampling-output" title="Permalink to this headline">¶</a></h3>
@@ -495,7 +492,7 @@ this one for the switchpoint in the disasters model:</p>
 <p>The left-hand pane of this figure shows the temporal series of the samples from
 <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, while the right-hand pane shows a histogram of the trace. The trace
 is useful for evaluating and diagnosing the algorithm&#8217;s performance (see
-[gelman]), while the histogram is useful for visualizing the posterior.</p>
+[Gelman et al., 2004]_), while the histogram is useful for visualizing the posterior.</p>
 <p>For a non-graphical summary of the posterior, simply call <tt class="docutils literal"><span class="pre">M.stats()</span></tt>.</p>
 </div>
 <div class="section" id="imputation-of-missing-data">
@@ -644,7 +641,7 @@ single Stochastic for the entire array, the number of nodes in the overall model
 increases from 4 to 113. This significantly slows the rate of sampling, since
 the model iterates over each node at every iteration.</p>
 <div align="center" class="figure" id="fig-missing">
-<a class="reference external image-reference" href="_images/missing.png"><img alt="Trace and posterior distribution figure." src="_images/missing.png" style="width: 300.0px; height: 180.0px;" /></a>
+<a class="reference external image-reference" href="_images/missing.png"><img alt="Trace and posterior distribution figure." src="_images/missing.png" style="width: 700.0px; height: 420.0px;" /></a>
 <p class="caption">Trace and posterior distribution of the second missing data point in the example.</p>
 </div>
 </div>
@@ -695,10 +692,10 @@ to <tt class="docutils literal"><span class="pre">Stochastic</span></tt> and <tt
 <p>Also, be sure to check out the documentation for the Gaussian process extension,
 which is available on the webpage.</p>
 <p class="rubric">Footnotes</p>
-<table class="docutils footnote" frame="void" id="id6" rules="none">
+<table class="docutils footnote" frame="void" id="id3" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id4">[1]</a></td><td>Note that the unknown variables <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/>, <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> and <img class="math" src="_images/math/b55ca7a0aa88ab7d58f4fc035317fdac39b17861.png" alt="r"/>
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>Note that the unknown variables <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/>, <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> and <img class="math" src="_images/math/b55ca7a0aa88ab7d58f4fc035317fdac39b17861.png" alt="r"/>
 will all accrue samples, but <img class="math" src="_images/math/9ffb448918db29f2a72f8f87f421b3b3cad18f95.png" alt="D"/> will not because its value has been
 observed and is not updated. Hence <img class="math" src="_images/math/9ffb448918db29f2a72f8f87f421b3b3cad18f95.png" alt="D"/> has no trace and calling
 <tt class="docutils literal"><span class="pre">M.trace('D')[:]</span></tt> will raise an error.</td></tr>
