@@ -436,7 +436,7 @@ Metropolis-Hastings algorithm ([Gelman et al., 2004]_) for <tt class="docutils l
 <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> can be considered a sample from the
 posterior. PyMC assumes that the <tt class="docutils literal"><span class="pre">burn</span></tt> parameter specifies a &#8216;sufficiently
 large&#8217; number of iterations for convergence of the algorithm, so it is up to the
-user to verify that this is the case (see chapter <em class="xref">chap:modelchecking</em>).
+user to verify that this is the case (see chapter <a class="reference external" href="modelchecking.html#chap-modelchecking"><em>Convergence Diagnostics</em></a>).
 Consecutive values sampled from <img class="math" src="_images/math/f37bba504894945c07a32f5496d74299a37aa51c.png" alt="s"/>, <img class="math" src="_images/math/a3a59bb1293ee3f6dec19de4019a7178874219ae.png" alt="e"/> and <img class="math" src="_images/math/9b25f8e64b484493fda944d25cad453423041fe6.png" alt="l"/> are
 necessarily dependent on the previous sample, since it is a Markov chain.
 However, MCMC often results in strong autocorrelation among samples that can

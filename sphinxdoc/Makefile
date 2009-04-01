@@ -78,6 +78,7 @@ linkcheck:
 propset: 
 	svn add build/html/*
 	svn add build/html/_sources/*
+	svn add build/html/_images/*
 	svn add build/html/_images/math/*
 	svn propset -R svn:mime-type text/html `find build/html/ -name .svn -type f -prune -o -name *.html`
 	svn propset -R svn:mime-type image/x-png `find build/html/ -name .svn -type f -prune -o -name *.png`

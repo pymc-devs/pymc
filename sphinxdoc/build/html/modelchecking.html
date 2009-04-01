@@ -1,0 +1,508 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>7. Convergence Diagnostics &mdash; pymc v2.0 documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pymc v2.0 documentation" href="index.html" />
+    <link rel="next" title="8. References" href="references.html" />
+    <link rel="prev" title="6. Saving and managing sampling results" href="database.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="references.html" title="8. References"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="database.html" title="6. Saving and managing sampling results"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon_small.png" alt="Logo"/>
+            </a></p>
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">7. Convergence Diagnostics</a><ul>
+<li><a class="reference external" href="#informal-methods">7.1. Informal Methods</a></li>
+<li><a class="reference external" href="#formal-methods">7.2. Formal Methods</a></li>
+<li><a class="reference external" href="#method-usage">7.3. Method Usage</a></li>
+<li><a class="reference external" href="#id3">7.4. Method Usage</a></li>
+<li><a class="reference external" href="#id7">7.5. Method Usage</a></li>
+<li><a class="reference external" href="#id8">7.6. Method Usage</a><ul>
+<li><a class="reference external" href="#autocorrelation-plots">7.6.1. Autocorrelation Plots</a></li>
+<li><a class="reference external" href="#goodness-of-fit">7.6.2. Goodness of Fit</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="database.html"
+                                  title="previous chapter">6. Saving and managing sampling results</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="references.html"
+                                  title="next chapter">8. References</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/modelchecking.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="convergence-diagnostics">
+<span id="chap-modelchecking"></span><h1>7. Convergence Diagnostics<a class="headerlink" href="#convergence-diagnostics" title="Permalink to this headline">¶</a></h1>
+<p>Valid inferences from sequences of MCMC samples are based on the assumption that
+the samples are derived from the true posterior distribution of interest. Theory
+guarantees this condition as the number of iterations approaches infinity. It is
+important, therefore, to determine the minimum number of samples required to
+ensure a reasonable approximation to the target posterior density.
+Unfortunately, no universal threshold exists across all problems, so convergence
+must be assessed independently each time MCMC estimation is performed. The
+procedures for verifying convergence are collectively known as convergence
+diagnostics.</p>
+<p>One approach to analyzing convergence is analytical, whereby the variance of the
+sample at different sections of the chain are compared to that of the limiting
+distribution. These methods use distance metrics to analyze convergence, or
+place theoretical bounds on the sample variance, and though they are promising,
+they are generally difficult to use and are not prominent in the MCMC
+literature. More common is a statistical approach to assessing convergence. With
+this approach, rather than considering the properties of the theoretical target
+distribution, only the statistical properties of the observed chain are
+analyzed. Reliance on the sample alone restricts such convergence criteria to
+heuristics; that is, convergence cannot be guaranteed. Although evidence for
+lack of convergence using statistical convergence diagnostics will correctly
+imply lack of convergence in the chain, the absence of such evidence will not
+<em>guarantee</em> convergence in the chain. Nevertheless, negative results for one or
+more criteria will provide some measure of assurance to most users that their
+sample will provide valid inferences.</p>
+<p>For most simple models, convergence will occur quickly, sometimes within a
+the first several hundred iterations, after which all remaining samples of
+the chain may be used to calculate posterior quantities. For many more
+complex models, convergence requires a significantly longer burn-in
+period; sometimes orders of magnitude more samples are needed. Frequently,
+lack of convergence will be caused by poor mixing (Figure <a class="reference internal" href="#fig-mix"><em>poor mixing</em></a>).
+Recall that <em>mixing</em> refers to the degree to which the Markov chain
+explores the support of the posterior distribution. Poor mixing may stem
+from inappropriate proposals (if one is using the Metropolis-Hastings
+sampler) or from attempting to estimate models with highly correlated
+variables.</p>
+<div align="center" class="figure" id="fig-mix">
+<img alt="Poor mixing figure" src="_images/poor_mixing.png" />
+<p class="caption">An example of a poorly-mixing sample in two dimensions. Notice that the
+chain is trapped in a region of low probability relative to the mean
+(dot) and variance (oval) of the true posterior quantity.</p>
+</div>
+<div class="section" id="informal-methods">
+<h2>7.1. Informal Methods<a class="headerlink" href="#informal-methods" title="Permalink to this headline">¶</a></h2>
+<p>The most straightforward approach for assessing convergence is based on simply
+plotting and inspecting traces and histograms of the observed MCMC sample. If
+the trace of values for each of the stochastics exhibits asymptotic behaviour
+<a class="footnote-reference" href="#id11" id="id1">[1]</a> over the last <img class="math" src="_images/math/f5047d1e0cbb50ec208923a22cd517c55100fa7b.png" alt="m"/> iterations, this may be satisfactory evidence for
+convergence. A similar approach involves plotting a histogram for every set of
+<img class="math" src="_images/math/8c325612684d41304b9751c175df7bcc0f61f64f.png" alt="k"/> iterations (perhaps 50-100) beyond some burn in threshold <img class="math" src="_images/math/174fadd07fd54c9afe288e96558c92e0c1da733a.png" alt="n"/>;
+if the histograms are not visibly different among the sample intervals, this is
+reasonable evidence for convergence. Note that such diagnostics should be
+carried out for each stochastic estimated by the MCMC algorithm, because
+convergent behaviour by one variable does not imply evidence for convergence for
+other variables in the analysis. An extension of this approach can be taken when
+multiple parallel chains are run, rather than just a single, long chain. In this
+case, the final values of <img class="math" src="_images/math/3372c1cb6d68cf97c2d231acc0b47b95a9ed04cc.png" alt="c"/> chains run for <img class="math" src="_images/math/174fadd07fd54c9afe288e96558c92e0c1da733a.png" alt="n"/> iterations are
+plotted in a histogram; just as above, this is repeated every <img class="math" src="_images/math/8c325612684d41304b9751c175df7bcc0f61f64f.png" alt="k"/>
+iterations thereafter, and the histograms of the endpoints are plotted again and
+compared to the previous histogram. This is repeated until consecutive
+histograms are indistinguishable.</p>
+<p>Another <em>ad hoc</em> method for detecting convergence is to examine the traces of
+several MCMC chains initialized with different starting values. Overlaying these
+traces on the same set of axes should (if convergence has occurred) show each
+chain tending toward the same equilibrium value, with approximately the same
+variance. Recall that the tendency for some Markov chains to converge to the
+true (unknown) value from diverse initial values is called <em>ergodicity</em>. This
+property is guaranteed by the reversible chains constructed using MCMC, and
+should be observable using this technique. Again, however, this approach is only
+a heuristic method, and cannot always detect lack of convergence, even though
+chains may appear ergodic.</p>
+<div align="center" class="figure" id="fig-metas">
+<img alt="_images/metastable.png" src="_images/metastable.png" />
+<p class="caption">An example of metastability in a two-dimensional parameter space. The
+chain appears to be stable in one region of the parameter space for an
+extended period, then unpredictably jumps to another region of the
+space.</p>
+</div>
+<p>A principal reason that evidence from informal techniques cannot guarantee
+convergence is a phenomenon called metastability. Chains may appear to have
+converged to the true equilibrium value, displaying excellent qualities by any
+of the methods described above. However, after some period of stability around
+this value, the chain may suddenly move to another region of the parameter space
+(Figure <a class="reference internal" href="#fig-metas"><em>metastability</em></a>). This period of metastability can sometimes be very
+long, and therefore escape detection by these convergence diagnostics.
+Unfortunately, there is no statistical technique available for detecting
+metastability.</p>
+</div>
+<div class="section" id="formal-methods">
+<h2>7.2. Formal Methods<a class="headerlink" href="#formal-methods" title="Permalink to this headline">¶</a></h2>
+<p>Along with the <em>ad hoc</em> techniques described above, a number of more formal
+methods exist which are prevalent in the literature. These are considered more
+formal because they are based on existing statistical methods, such as time
+series analysis.</p>
+<p>PyMC currently includes two formal convergence diagnostic methods. The first,
+proposed by <a class="reference external" href="references.html#geweke-1992">[Geweke:1992]</a>, is a time-series approach that compares the mean
+and variance of segments from the beginning and end of a single chain.</p>
+<div class="math">
+<p><img src="_images/math/e3499ce1b3ebe37c890552e4479c2cb869a6816f.png" alt="z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}" />
+</div></p><p>where <img class="math" src="_images/math/c7d457e388298246adb06c587bccd419ea67f7e8.png" alt="a"/> is the early interval and <img class="math" src="_images/math/8136a7ef6a03334a7246df9097e5bcc31ba33fd2.png" alt="b"/> the late interval. If the
+z-scores (theoretically distributed as standard normal variates) of these two
+segments are similar, it can provide evidence for convergence. PyMC calculates
+z-scores of the difference between various initial segments along the chain, and
+the last 50% of the remaining chain. If the chain has converged, the majority of
+points should fall within 2 standard deviations of zero.</p>
+<p>Diagnostic z-scores can be obtained by calling the <tt class="docutils literal"><span class="pre">geweke</span></tt> function. It
+accepts either (1) a single trace, (2) a dictionary of traces, (3) a Node
+object, or (4) an entire Model object.</p>
+</div>
+<div class="section" id="method-usage">
+<h2>7.3. Method Usage<a class="headerlink" href="#method-usage" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">geweke</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">intervals</span><span class="o">=</span><span class="mf">20</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">x</span></tt>: The object that is or contains the output trace(s).</li>
+<li><tt class="docutils literal"><span class="pre">first</span></tt> (optional): First portion of chain to be used in Geweke diagnostic.
+Defaults to 0.1 (i.e. first 10% of chain).</li>
+<li><tt class="docutils literal"><span class="pre">last</span></tt> (optional): Last portion of chain to be used in Geweke diagnostic.
+Defaults to 0.5 (i.e. last 50% of chain).</li>
+<li><tt class="docutils literal"><span class="pre">intervals</span></tt> (optional): Number of sub-chains to analyze. Defaults to 20.</li>
+</ul>
+<p>The resulting scores are best interpreted graphically, using the <tt class="docutils literal"><span class="pre">geweke_plot</span></tt>
+function. This displays the scores in series, in relation to the 2 standard
+deviation boundaries around zero. Hence, it is easy to see departures from the
+standard normal assumption.</p>
+<p><tt class="docutils literal"><span class="pre">geweke_plot</span></tt> takes either a single set of scores, or a dictionary of scores
+(output by <tt class="docutils literal"><span class="pre">geweke</span></tt> when an entire Sampler is passed) as its argument:</p>
+<div align="center" class="figure" id="fig-geweke">
+<img alt="Geweke figure." src="_images/geweke.png" />
+<p class="caption">Sample plot of Geweke z-scores for a variable using <tt class="docutils literal"><span class="pre">geweke_plot</span></tt>.
+The occurrence of the scores well within 2 standard deviations of zero
+gives not indication of lack of convergence.</p>
+</div>
+</div>
+<div class="section" id="id3">
+<h2>7.4. Method Usage<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><pre>def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', \
+                path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)</pre>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">data</span></tt>: The object that contains the Geweke scores. Can be a list (one set)
+or a dictionary (multiple sets).</li>
+<li><tt class="docutils literal"><span class="pre">name</span></tt> (optional): Name used for output files. For multiple scores, the
+dictionary keys are used as names.</li>
+<li><tt class="docutils literal"><span class="pre">format</span></tt> (optional): Graphic output file format (defaults to <em>png</em>).</li>
+<li><tt class="docutils literal"><span class="pre">suffix</span></tt> (optional): Suffix to filename (defaults to <em>-diagnostic</em>)</li>
+<li><tt class="docutils literal"><span class="pre">path</span></tt> (optional): The path for output graphics (defaults to working
+directory).</li>
+<li><tt class="docutils literal"><span class="pre">fontmap</span></tt> (optional): Dictionary containing the font map for the labels of
+the graphic.</li>
+<li><tt class="docutils literal"><span class="pre">verbose</span></tt> (optional): Verbosity level for output (defaults to 1).</li>
+</ul>
+<p>To illustrate, consider a model <tt class="docutils literal"><span class="pre">my_model</span></tt> that is used to instantiate a MCMC
+sampler. The sampler is then run for a given number of iterations:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">S</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MCMC</span><span class="p">(</span><span class="n">my_model</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">S</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">10000</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mf">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is easiest simply to pass the entire sampler <tt class="docutils literal"><span class="pre">S</span></tt> the <tt class="docutils literal"><span class="pre">geweke</span></tt> function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">scores</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">geweke</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">intervals</span><span class="o">=</span><span class="mf">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pymc</span><span class="o">.</span><span class="n">geweke_plot</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively, individual stochastics within <tt class="docutils literal"><span class="pre">S</span></tt> can be analyzed for
+convergence:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">trace</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">alpha_scores</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">geweke</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="s">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">intervals</span><span class="o">=</span><span class="mf">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pymc</span><span class="o">.</span><span class="n">geweke_plot</span><span class="p">(</span><span class="n">alpha_scores</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The second diagnostic provided by PyMC is the <a class="reference external" href="references.html#raftery-1995">[Raftery:1995]</a> procedure. This
+approach estimates the number of iterations required to reach convergence, along
+with the number of burn-in samples to be discarded and the appropriate thinning
+interval. A separate estimate of both quantities can be obtained for each
+variable in a given model.</p>
+<p>As the criterion for determining convergence, the Raftery and Lewis approach
+uses the accuracy of estimation of a user-specified quantile. For example, we
+may want to estimate the quantile <img class="math" src="_images/math/b57e1c88bc5795cad15fcdf5e6f8f37a2d54bca3.png" alt="q=0.975"/> to within <img class="math" src="_images/math/b3839b02be632fcf6ee31391e400b94a617de955.png" alt="r=0.005"/> with
+probability <img class="math" src="_images/math/84c4bd08bdac4c4e4c979697c63181d77a2389de.png" alt="s=0.95"/>. In other words,</p>
+<div class="math">
+<p><img src="_images/math/4dbc423c9ccb068f848e82ea5594d68a138e4e6b.png" alt="Pr(|\hat{q}-q| \le r) = s" />
+</div></p><p>From any sample of <img class="math" src="_images/math/52e8ed7a3ba22130ad3984eb2cd413406475a689.png" alt="\theta"/>, one can construct a binary chain:</p>
+<div class="math">
+<p><img src="_images/math/21ae54f9435fb4f32a7c82a8253b9881bb4beed2.png" alt="Z^{(j)} = I(\theta^{(j)} \le u_q)" />
+</div></p><p>where <img class="math" src="_images/math/da032096affce0c13be8e8c79bddbcf20e4632a2.png" alt="u_q"/> is the quantile value and <img class="math" src="_images/math/027f4a11d6090f9eac0ce2488df6384dad1263ea.png" alt="I"/> is the indicator function.
+While <img class="math" src="_images/math/7f2be6f45ad555fabdeb3ee8c39249dcd2425bbc.png" alt="\{\theta^{(j)}\}"/> is a Markov chain, <img class="math" src="_images/math/7e849925f9ec11ef8f9902f19bdf84aaab8f363f.png" alt="\{Z^{(j)}\}"/> is not
+necessarily so. In any case, the serial dependency among <img class="math" src="_images/math/0d58c4f3458b6e0471a23e11b62bf5a797a94db3.png" alt="Z^{(j)}"/>
+decreases as the thinning interval <img class="math" src="_images/math/8c325612684d41304b9751c175df7bcc0f61f64f.png" alt="k"/> increases. A value of <img class="math" src="_images/math/8c325612684d41304b9751c175df7bcc0f61f64f.png" alt="k"/> is
+chosen to be the smallest value such that the first order Markov chain is
+preferable to the second order Markov chain.</p>
+<p>This thinned sample is used to determine number of burn-in samples. This is done
+by comparing the remaining samples from burn-in intervals of increasing length
+to the limiting distribution of the chain. An appropriate value is one for which
+the truncated sample&#8217;s distribution is within <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> (arbitrarily
+small) of the limiting distribution. See <a class="reference external" href="references.html#raftery-1995">[Raftery:1995]</a> or <a class="reference external" href="references.html#gamerman-1997">[Gamerman:1997]</a> for
+computational details. Estimates for sample size tend to be conservative.</p>
+<p>This diagnostic is best used on a short pilot run of a particular model, and the
+results used to parameterize a subsequent sample that is to be used for
+inference.</p>
+</div>
+<div class="section" id="id7">
+<h2>7.5. Method Usage<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">raftery_lewis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="o">=.</span><span class="mf">95</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=.</span><span class="mf">001</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mf">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">x</span></tt>: The object that contains the Geweke scores. Can be a list (one set) or
+a dictionary (multiple sets).</li>
+<li><tt class="docutils literal"><span class="pre">q</span></tt>: Desired quantile to be estimated.</li>
+<li><tt class="docutils literal"><span class="pre">r</span></tt>: Desired accuracy for quantile.</li>
+<li><tt class="docutils literal"><span class="pre">s</span></tt>(optional): Probability of attaining the requested accuracy (defaults
+to 0.95).</li>
+<li><tt class="docutils literal"><span class="pre">epsilon</span></tt> (optional) : Half width of the tolerance interval required for the
+q-quantile (defaults to 0.001).</li>
+<li><tt class="docutils literal"><span class="pre">verbose</span></tt> (optional) : Verbosity level for output (defaults to 1).</li>
+</ul>
+<p>The code for <tt class="docutils literal"><span class="pre">raftery_lewis</span></tt> is based on the FORTRAN program <em>gibbsit</em>, which
+was written by Steven Lewis.</p>
+<p>Additional convergence diagnostics are available in the <a class="reference external" href="http://lib.stat.cmu.edu/r/cran/">R</a> statistical
+package, via the <a class="reference external" href="http://www-fis.iarc.fr/coda/">CODA</a> module. PyMC includes a method <tt class="docutils literal"><span class="pre">coda</span></tt> for
+exporting model traces in a format that may be directly read by <a class="reference external" href="http://www-fis.iarc.fr/coda/">CODA</a>.</p>
+</div>
+<div class="section" id="id8">
+<h2>7.6. Method Usage<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pymc</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">coda</span><span class="p">(</span><span class="n">pymc_object</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">pymc_object</span></tt>: The PyMC sampler for which output is desired.</li>
+</ul>
+<p>Calling <tt class="docutils literal"><span class="pre">coda</span></tt> yields a file containing raw trace values (suffix <tt class="docutils literal"><span class="pre">.out</span></tt>) and
+a file containing indices to the trace values (suffix <tt class="docutils literal"><span class="pre">.ind</span></tt>).</p>
+<div class="section" id="autocorrelation-plots">
+<h3>7.6.1. Autocorrelation Plots<a class="headerlink" href="#autocorrelation-plots" title="Permalink to this headline">¶</a></h3>
+<p>Samples from MCMC algorithms are ususally autocorrelated, due partly to the
+inherent Markovian dependence structure. The degree of autocorrelation can be
+quantified using the autocorrelation function:</p>
+<div class="math">
+<p><img src="_images/math/c9ffd3f44f25f9f5252150b3bc7af148e0c1510a.png" alt="\rho_k &amp; = \frac{\mbox{Cov}(X_t,  X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}}
+
+      &amp; = \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}" />
+</div></p><p>PyMC includes a function for plotting the autocorrelation function for each
+stochastics in the sampler (Figure <a class="reference internal" href="#fig-autocorr"><em>autocorrelation</em></a>). This allows users to
+examine the relationship among successive samples within sampled chains.
+Significant autocorrelation suggests that chains require thinning prior to use
+of the posterior statistics for inference.</p>
+<div align="center" class="figure" id="fig-autocorr">
+<a class="reference external image-reference" href="_images/autocorr.png"><img alt="Autocorrelation figure" src="_images/autocorr.png" style="width: 700.0px; height: 420.0px;" /></a>
+<p class="caption">Sample autocorrelation plots for two Poisson variables from coal mining
+disasters example model.</p>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">autocorrelation</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">maxlag</span><span class="o">=</span><span class="mf">100</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="s">&#39;png&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s">&#39;-acf&#39;</span><span class="p">,</span>
+<span class="n">path</span><span class="o">=</span><span class="s">&#39;./&#39;</span><span class="p">,</span> <span class="n">fontmap</span> <span class="o">=</span> <span class="p">{</span><span class="mf">1</span><span class="p">:</span><span class="mf">10</span><span class="p">,</span> <span class="mf">2</span><span class="p">:</span><span class="mf">8</span><span class="p">,</span> <span class="mf">3</span><span class="p">:</span><span class="mf">6</span><span class="p">,</span> <span class="mf">4</span><span class="p">:</span><span class="mf">5</span><span class="p">,</span> <span class="mf">5</span><span class="p">:</span><span class="mf">4</span><span class="p">},</span> <span class="n">verbose</span><span class="o">=</span><span class="mf">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">data</span></tt>: The object that is or contains the output trace(s).</li>
+<li><tt class="docutils literal"><span class="pre">name</span></tt>: Name used for output files.</li>
+<li><tt class="docutils literal"><span class="pre">maxlag</span></tt>: The highest lag interval for which autocorrelation is calculated.</li>
+<li><tt class="docutils literal"><span class="pre">format</span></tt> (optional): Graphic output file format (defaults to <em>png</em>).</li>
+<li><tt class="docutils literal"><span class="pre">suffix</span></tt> (optional): Suffix to filename (defaults to <em>-diagnostic</em>)</li>
+<li><tt class="docutils literal"><span class="pre">path</span></tt> (optional): The path for output graphics (defaults to working
+directory).</li>
+<li><tt class="docutils literal"><span class="pre">fontmap</span></tt> (optional): Dictionary containing the font map for the labels of
+the graphic.</li>
+<li><tt class="docutils literal"><span class="pre">verbose</span></tt> (optional): Verbosity level for output (defaults to 1).</li>
+</ul>
+</div>
+<div class="section" id="goodness-of-fit">
+<h3>7.6.2. Goodness of Fit<a class="headerlink" href="#goodness-of-fit" title="Permalink to this headline">¶</a></h3>
+<p>Checking for model convergence is only the first step in the evaluation of MCMC
+model outputs. It is possible for an entirely unsuitable model to converge, so
+additional steps are needed to ensure that the estimated model adequately fits
+the data. One intuitive way for evaluating model fit is to compare model
+predictions with actual observations. In other words, the fitted model can be
+used to simulate data, and the distribution of the simulated data should
+resemble the distribution of the actual data.</p>
+<p>Fortunately, simulating data from the model is a natural component of the
+Bayesian modelling framework. Recall, from the discussion on imputation of
+missing data, the posterior predictive distribution:</p>
+<div class="math">
+<p><img src="_images/math/cad45692fc0a7d9776d053ea25d278bcdbb52850.png" alt="p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta" />
+</div></p><p>Here, <img class="math" src="_images/math/d3996d8ffdbe9dc1bc1d53445a8fd4082c187d86.png" alt="\tilde{y}"/> represents some hypothetical new data that would be
+expected, taking into account the posterior uncertainty in the model parameters.
+Sampling from the posterior predictive distribution is easy in PyMC. The code
+looks identical to the corresponding data stochastic, with two modifications:
+(1) the node should be specified as deterministic and (2) the statistical
+likelihoods should be replaced by random number generators. As an example,
+consider the Poisson data likelihood of the coal mining disasters example:</p>
+<div class="highlight-python"><pre>@pm.stochastic(observed=True, dtype=int)
+def disasters(  value = disasters_array,
+                early_mean = early_mean,
+                late_mean = late_mean,
+                switchpoint = switchpoint):
+    """Annual occurences of coal mining disasters."""
+    return pm.poisson_like(value[:switchpoint],early_mean) +
+ pm.poisson_like(value[switchpoint:],late_mean)</pre>
+</div>
+<p>This is a mixture of Poisson processes, one with a higher early mean and another
+with a lower late mean. Here is the corresponding sample from the posterior
+predictive distribution:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@pm</span><span class="o">.</span><span class="n">deterministic</span>
+<span class="k">def</span> <span class="nf">disasters_sim</span><span class="p">(</span><span class="n">early_mean</span> <span class="o">=</span> <span class="n">early_mean</span><span class="p">,</span>
+                <span class="n">late_mean</span> <span class="o">=</span> <span class="n">late_mean</span><span class="p">,</span>
+                <span class="n">switchpoint</span> <span class="o">=</span> <span class="n">switchpoint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Coal mining disasters sampled from the posterior predictive distribution&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">concatenate</span><span class="p">(</span> <span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">rpoisson</span><span class="p">(</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">switchpoint</span><span class="p">),</span>
+ <span class="n">pm</span><span class="o">.</span><span class="n">rpoisson</span><span class="p">(</span><span class="n">late_mean</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n</span><span class="o">-</span><span class="n">switchpoint</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>Notice that <tt class="docutils literal"><span class="pre">&#64;pm.stochastic</span></tt> has been replaced with <tt class="docutils literal"><span class="pre">&#64;pm.deterministic</span></tt> and
+<tt class="docutils literal"><span class="pre">pm.poisson_like</span></tt> with <tt class="docutils literal"><span class="pre">pm.rpoisson</span></tt>. The simulated values from each of the
+Poisson processes are concatenated together before returning them.</p>
+<p>The degree to which simulated data correspond to observations can be evaluated
+in at least two ways. First, these quantities can simply be compared visually.
+This allows for a qualitative comparison of model-based replicates and
+observations. If there is poor fit, the true value of the data may appear in the
+tails of the histogram of replicated data, while a good fit will tend to show
+the true data in high-probability regions of the posterior predictive
+distribution (Figure <a class="reference internal" href="#fig-gof"><em>GOF</em></a>).</p>
+<p>The Matplot package in PyMC provides an easy way of producing such plots, via
+the <tt class="docutils literal"><span class="pre">gof_plot</span></tt> function. To illustrate, consider a single data point <tt class="docutils literal"><span class="pre">x</span></tt> and
+an array of values <tt class="docutils literal"><span class="pre">x_sim</span></tt> sampled from the posterior predictive distribution.
+The histogram is generated by calling:</p>
+<div align="center" class="figure" id="fig-gof">
+<a class="reference external image-reference" href="_images/gof.png"><img alt="GOF figure" src="_images/gof.png" style="width: 420.0px; height: 280.0px;" /></a>
+<p class="caption">Data sampled from the posterior predictive distribution of a model for
+some observation <img class="math" src="_images/math/5f61118f2ae912f86e683687c005145b5eb54aec.png" alt="\mathbf{x}"/>. The true value of
+<img class="math" src="_images/math/5f61118f2ae912f86e683687c005145b5eb54aec.png" alt="\mathbf{x}"/> is shown by the dotted red line.</p>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pm</span><span class="o">.</span><span class="n">Matplot</span><span class="o">.</span><span class="n">gof_plot</span><span class="p">(</span><span class="n">x_sim</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A second approach for evaluating goodness of fit using samples from the
+posterior predictive distribution involves the use of a statistical criterion.
+For example, the Bayesian p-value <a class="reference external" href="references.html#gelman-1996">[Gelman:1996]</a> uses a discrepancy measure
+that quantifies the difference between data (observed or simulated) and the
+expected value, conditional on some model. One such discrepancy measure is the
+Freeman-Tukey statistic <a class="reference external" href="references.html#brooks-2000">[Brooks:2000]</a>:</p>
+<div class="math">
+<p><img src="_images/math/06c74279e3bc3309b1ae1b2e7f6ebc4a0523ef78.png" alt="D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2" />
+</div></p><p>Model fit is assessed by comparing the discrepancies from observed data to those
+from simulated data. On average, we expect the difference between them to be
+zero; hence, the Bayesian p-value is simply the proportion of simulated
+discrepancies that are larger than their corresponding observed discrepancies:</p>
+<div class="math">
+<p><img src="_images/math/d7fba49558798c14b0e46103abf5f4fca0d689e9.png" alt="p = Pr[ D(\text{sim}) &gt; D(\text{obs}) ]" />
+</div></p><p>If <img class="math" src="_images/math/36f73fc1312ee0349b3f3a0f3bd9eb5504339011.png" alt="p"/> is very large (e.g. <img class="math" src="_images/math/809dc1c3f91dfbc45d8194a7a344b1f14c7d5c73.png" alt="&gt;0.975"/>) or very small (e.g.
+<img class="math" src="_images/math/2a990082bcf8e378714e69a4e97e762eeb1eee30.png" alt="&lt;0.025"/>) this implies that the model is not consistent with the data, and
+thus is evidence of lack of fit. Graphically, data and simulated discrepancies
+plotted together should be clustered along a 45 degree line passing through the
+origin, as shown in Figure <a class="reference internal" href="#fig-deviate"><em>deviates</em></a>.</p>
+<p>The <tt class="docutils literal"><span class="pre">discrepancy</span></tt> function in the <tt class="docutils literal"><span class="pre">utils</span></tt> package can be used to generate
+discrepancy statistics from arrays of data, simulated values, and expected
+values:</p>
+<div align="center" class="figure" id="fig-deviate">
+<a class="reference external image-reference" href="_images/deviates.png"><img alt="deviates figure" src="_images/deviates.png" style="width: 600.0px; height: 400.0px;" /></a>
+<p class="caption">Plot of deviates of observed and simulated data from expected values.
+The cluster of points symmetrically about the 45 degree line (and the
+reported p-value) suggests acceptable fit for the modeled parameter.</p>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">D</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">discrepancy</span><span class="p">(</span><span class="n">observed</span><span class="p">,</span> <span class="n">simulated</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A call to this function returns two arrays of discrepancy values, which can be
+passed to the <tt class="docutils literal"><span class="pre">discrepancy_plot</span></tt> function in the Matplot module to generate a
+scatter plot, and if desired, a p-value:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pm</span><span class="o">.</span><span class="n">Matplot</span><span class="o">.</span><span class="n">discrepancy_plot</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;D&#39;</span><span class="p">,</span> <span class="n">report_p</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Additional optional arguments for <tt class="docutils literal"><span class="pre">discrepancy_plot</span></tt> are identical to other
+PyMC plotting functions.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="id11" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Asymptotic behaviour implies that the variance and the mean value of the sample
+stays relatively constant over some arbitrary period.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="references.html" title="8. References"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="database.html" title="6. Saving and managing sampling results"
+             >previous</a> |</li>
+        <li><a href="index.html">pymc v2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2008, Chris Fonnesbeck, Anand Patil, David Huard.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.7.
+    </div>
+  </body>
+</html>

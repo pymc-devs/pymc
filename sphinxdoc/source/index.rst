@@ -17,8 +17,10 @@ Table of contents
    tutorial
    modelbuilding
    modelfitting
+   database
+   modelchecking
    references
-   
+
    
 The incomplete laundry list
 ---------------------------

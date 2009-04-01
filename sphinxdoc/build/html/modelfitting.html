@@ -115,7 +115,7 @@ scale coordination and communication.</p>
 work of updating stochastic variables conditional on the rest of the model is
 done by <tt class="docutils literal"><span class="pre">StepMethod</span></tt> objects, which are described in this chapter.</li>
 <li><tt class="docutils literal"><span class="pre">MAP</span></tt>, which computes maximum <em>a posteriori</em> estimates.</li>
-<li><tt class="docutils literal"><span class="pre">NormApprox</span></tt>, which computes the &#8216;normal approximation&#8217; <a class="reference external" href="references.html#gelman2004">[Gelman2004]</a>: the joint
+<li><tt class="docutils literal"><span class="pre">NormApprox</span></tt>, which computes the &#8216;normal approximation&#8217; <a class="reference external" href="references.html#gelman-2004">[Gelman:2004]</a>: the joint
 distribution of all stochastic variables in a model is approximated as normal
 using local information at the maximum <em>a posteriori</em> estimate.</li>
 </ul>
@@ -224,9 +224,9 @@ not names).</p>
 <dt><tt class="docutils literal"><span class="pre">logp_at_max</span></tt>:</dt>
 <dd>The maximum joint log-probability of the model.</dd>
 <dt><tt class="docutils literal"><span class="pre">AIC</span></tt>:</dt>
-<dd>Akaike&#8217;s information criterion for this model (<a class="reference external" href="references.html#akaike1973">[Akaike1973]</a>,[Burnham:2002]_).</dd>
+<dd>Akaike&#8217;s information criterion for this model (<a class="reference external" href="references.html#akaike-1973">[Akaike:1973]</a>,[Burnham:2002]_).</dd>
 <dt><tt class="docutils literal"><span class="pre">BIC</span></tt>:</dt>
-<dd>The Bayesian information criterion for this model <a class="reference external" href="references.html#schwarz1978">[Schwarz1978]</a>.</dd>
+<dd>The Bayesian information criterion for this model <a class="reference external" href="references.html#schwarz-1978">[Schwarz:1978]</a>.</dd>
 </dl>
 <p>One use of the <tt class="docutils literal"><span class="pre">MAP</span></tt> class is finding reasonable initial states for MCMC
 chains. Note that multiple <tt class="docutils literal"><span class="pre">Model</span></tt> subclasses can handle the same collection
@@ -451,7 +451,7 @@ since this requires no additional expense. The <tt class="docutils literal"><spa
 step method, with the exception that its variables are block-updated using a
 multivariate jump distribution whose covariance is tuned during sampling.
 Although the chain is non-Markovian, it has correct ergodic properties (see
-[Haario:2001lr]).</p>
+<a class="reference external" href="references.html#haario-2001">[Haario:2001]</a>).</p>
 <p>To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object <img class="math" src="_images/math/5d1e4485dc90c450e8c76826516c1b2ccb8fce16.png" alt="M"/> to handle variables <img class="math" src="_images/math/26eeb5258ca5099acf8fe96b2a1049c48c89a5e6.png" alt="x"/>, <img class="math" src="_images/math/092e364e1d9d19ad5fffb0b46ef4cc7f2da02c1c.png" alt="y"/>
 and <img class="math" src="_images/math/b13f21416d84e13708696f34dea81026cda583c9.png" alt="z"/> with an <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> instance, you might do the
 following:</p>
@@ -494,7 +494,7 @@ chain non-Markovian.</p>
 </div>
 <div class="section" id="gibbs-step-methods">
 <span id="gibbs"></span><h2>5.6. Gibbs step methods<a class="headerlink" href="#gibbs-step-methods" title="Permalink to this headline">¶</a></h2>
-<p>Conjugate submodels (see <a class="reference external" href="references.html#gelman2004">[Gelman2004]</a>) can be handled by Gibbs step methods rather
+<p>Conjugate submodels (see <a class="reference external" href="references.html#gelman-2004">[Gelman:2004]</a>) can be handled by Gibbs step methods rather
 than the default Metropolis methods. Gibbs step methods are Metropolis methods
 whose acceptance rate is always 1. They can be convenient because they relieve
 the user from having to worry about tuning the acceptance rate, but they can be
@@ -620,7 +620,7 @@ sets of stochastic variables. The zeroth set has no extended parents in the
 model, the first set only has extended parents in the zeroth set, and so on.</dd>
 </dl>
 <p>The helper function <tt class="docutils literal"><span class="pre">graph</span></tt> produces graphical representations of models (see
-[Jordan:2004p5439]).</p>
+<a class="reference external" href="references.html#jordan-2004">[Jordan:2004]</a>).</p>
 <p>Models have the following important attributes:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">variables</span></tt></li>

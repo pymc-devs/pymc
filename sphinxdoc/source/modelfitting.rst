@@ -19,7 +19,7 @@ PyMC provides three objects that fit models:
 
 * ``MAP``, which computes maximum *a posteriori* estimates.
 
-* ``NormApprox``, which computes the 'normal approximation' [Gelman2004]_: the joint
+* ``NormApprox``, which computes the 'normal approximation' [Gelman:2004]_: the joint
   distribution of all stochastic variables in a model is approximated as normal
   using local information at the maximum *a posteriori* estimate.
 
@@ -147,10 +147,10 @@ The useful attributes of ``MAP`` are:
    .. % \item[\code{data_len}:] The total number number of elements in all the stochastic variables in the model with \code{observed=True}.
 
 ``AIC``:
-   Akaike's information criterion for this model ([Akaike1973]_,[Burnham:2002]_).
+   Akaike's information criterion for this model ([Akaike:1973]_,[Burnham:2002]_).
 
 ``BIC``:
-   The Bayesian information criterion for this model [Schwarz1978]_.
+   The Bayesian information criterion for this model [Schwarz:1978]_.
 
 One use of the ``MAP`` class is finding reasonable initial states for MCMC
 chains. Note that multiple ``Model`` subclasses can handle the same collection
@@ -431,7 +431,7 @@ The ``AdaptativeMetropolis`` (AM) step method works like a regular Metropolis
 step method, with the exception that its variables are block-updated using a
 multivariate jump distribution whose covariance is tuned during sampling.
 Although the chain is non-Markovian, it has correct ergodic properties (see
-[Haario:2001lr]_).
+[Haario:2001]_).
 
 To tell an ``MCMC`` object :math:`M` to handle variables :math:`x`, :math:`y`
 and :math:`z` with an ``AdaptiveMetropolis`` instance, you might do the
@@ -487,7 +487,7 @@ Gibbs step methods
 ==================
 
 
-Conjugate submodels (see [Gelman2004]_) can be handled by Gibbs step methods rather
+Conjugate submodels (see [Gelman:2004]_) can be handled by Gibbs step methods rather
 than the default Metropolis methods. Gibbs step methods are Metropolis methods
 whose acceptance rate is always 1. They can be convenient because they relieve
 the user from having to worry about tuning the acceptance rate, but they can be
@@ -646,7 +646,7 @@ Models' useful methods are:
    model, the first set only has extended parents in the zeroth set, and so on.
 
 The helper function ``graph`` produces graphical representations of models (see
-[Jordan:2004p5439]_).
+[Jordan:2004]_).
 
 Models have the following important attributes:
 

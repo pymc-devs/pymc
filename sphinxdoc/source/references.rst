@@ -17,12 +17,20 @@ References
 
 .. [Gamerman:1997] D. Gamerman. *Markov Chain Monte Carlo: statistical simulation for Bayesian inference*. London, 1997.
 
+.. [Gelman:1996] A. Gelman, X.L. Meng, and H. Stern. Posterior predictive
+   assessment of model fitness via realized discrepencies with discussion.
+   *Statistica Sinica*, 6, 1996.
+
 .. [Gelman:2004] A. Gelman, J.B. Carlin, H.S. Stern, and D.B. Rubin. Bayesian
    Data Analysis, Second Edition. Chapman and Hall/CRC, Boca Raton, FL,
    2004.
 
-.. [Haario:2001] Heikki Haario, Eero Saksman, and Johanna Tamminen. An adaptive metropolis 
-   algorithm. *Bernoulli*, 70 (2):0, 223-242, 2001.
+.. [Geweke:1992] J. Geweke. Evaluating the accuracy of sampling-based
+   approaches to calculating posterior moments. In Bernardo et al. [1992],
+   pages 169–193.
+
+.. [Haario:2001] Heikki Haario, Eero Saksman, and Johanna Tamminen. An
+   adaptive metropolis algorithm. *Bernoulli*, 70 (2):0, 223-242, 2001.
 
 .. [Jarrett:1979] R.G. Jarrett. A note on the intervals between coal
    mining disasters. *Biometrika*, 66, 191-193, 1979.
@@ -36,6 +44,11 @@ References
 .. [Levine:2005] Richard A. Levine, Zhaoxia Yu, William G. Hanley, and John J.Nitao. 
    Implementing componentwise hastings algorithms.
    *Computational statistics & data analysis*, 48:0, 363-389, 2005.
+
+.. [Raftery:1995] A.E. Raftery and S.M. Lewis. *The number of iterations,
+   convergence diagnostics and generic metropolis algorithms*. In D.J.
+   Spiegelhalter W.R. Gilks and S. Richardson, editors, Practical Markov
+   Chain Monte Carlo. Chapman and Hall, London, U.K., 1995.
 
 .. [Schwarz:1978] Gideon Schwarz. Estimating the dimension of a model. *The Annals of Statistics*,
    60(2):0, 461-464, 1978. 
