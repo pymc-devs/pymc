@@ -22,7 +22,7 @@ help:
 	@echo "  latex     to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
 	@echo "  changes   to make an overview over all changed/added/deprecated items"
 	@echo "  linkcheck to check all external links for integrity"
-	@echo "  propset   to set the mime properties of the files in the build/html directory"
+	@echo "  publish   "
 
 clean:
 	-rm -rf build/*
@@ -75,13 +75,5 @@ linkcheck:
 	@echo "Link check complete; look for any errors in the above output " \
 	      "or in build/linkcheck/output.txt."
 	      
-propset: 
-	svn add build/html/*
-	svn add build/html/_sources/*
-	svn add build/html/_images/*
-	svn add build/html/_images/math/*
-	svn propset -R svn:mime-type text/html `find build/html/ -name .svn -type f -prune -o -name *.html`
-	svn propset -R svn:mime-type image/x-png `find build/html/ -name .svn -type f -prune -o -name *.png`
-	svn propset -R svn:mime-type text/css `find build/html/ -name .svn -type f -prune -o -name *.css`
-	svn propset -R svn:mime-type text/javascript `find build/html/ -name .svn -type f -prune -o -name *.js`
+publish:
 

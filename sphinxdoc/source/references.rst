@@ -32,10 +32,16 @@ References
 .. [Haario:2001] Heikki Haario, Eero Saksman, and Johanna Tamminen. An
    adaptive metropolis algorithm. *Bernoulli*, 70 (2):0, 223-242, 2001.
 
+.. [Ishwaran:2001] Ishwaran, H. and James, L.F., Gibbs sampling methods
+   for stick-breaking priors, *JASA*, 96(453), 161-173, 2001.
+
 .. [Jarrett:1979] R.G. Jarrett. A note on the intervals between coal
    mining disasters. *Biometrika*, 66, 191-193, 1979.
                  
 .. [Jordan:2004] Michael I. Jordan. Graphical models. *Statist. Sci.*, 19(1):140–155, 2004.
+
+.. [Kerman:2004] Kerman, J. and Gelman, A., *Fully Bayesian computing*,
+   Available at SSRN: http://ssrn.com/abstract=1010387, 2004. 
 
 .. [Lauritzen:1990] S. L. Lauritzen, A.P. Dawid, B. N. Larsen, and H. G. Leimer.
    Independence properties of directed {M}arkov fields. *Networks*, 
@@ -50,6 +56,17 @@ References
    Spiegelhalter W.R. Gilks and S. Richardson, editors, Practical Markov
    Chain Monte Carlo. Chapman and Hall, London, U.K., 1995.
 
+.. [Roberts:2007] Roberts, Gareth O. and Rosenthal, Jeffrey S..
+   Implementing componentwise Hastings algorithms, *Journal of Applied
+   Probability*, 44(2), 458-475, 2007.
+	
 .. [Schwarz:1978] Gideon Schwarz. Estimating the dimension of a model. *The Annals of Statistics*,
    60(2):0, 461-464, 1978. 
+
+.. [West:1997] West, M. and Harrison, J., *Bayesian forecasting and
+   dynamic models*, Springer, 1997.
+   
+.. [Wilkinson:2004] Wilkinson, D.J. and Yeung, S.K.H., A sparse matrix
+   approach to Bayesian computation in large linear models, *Computational
+   statistics \& data analysis*, 44, 493-516, 2004. 
 

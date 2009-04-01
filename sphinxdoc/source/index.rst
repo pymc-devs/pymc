@@ -19,6 +19,9 @@ Table of contents
    modelfitting
    database
    modelchecking
+   extending
+   conclusion
+   theory
    references
 
    

@@ -1,3 +1,5 @@
+.. _chap:database:
+
 ************************************
 Saving and managing sampling results
 ************************************
