@@ -10,7 +10,6 @@ hope it does the same for you!
 
 
 
-
 What's next?
 ============
 
@@ -54,6 +53,8 @@ any of the features above, or to improve PyMC itself in some other way, please
 introduce yourself on our `mailing list`_. If you
 would like to share code written in PyMC, for example a tutorial or a
 specialized step method, please feel free to edit our `wiki page`_.
+
+.. _`mailing list`: pymc@googlegroups.com
 
 .. _`wiki page`: http://code.google.com/p/pymc/w/list
 

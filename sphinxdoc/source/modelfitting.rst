@@ -384,7 +384,7 @@ burnin period is over. This can be changed via the ``tune_throughout`` argument
 to ``MCMC.sample``. If an adaptive step method's ``tally`` flag is set (the
 default for ``Metropolis``), a trace of its tuning parameters will be kept. If
 you allow tuning to continue throughout the sampling loop, it is important to
-verify that the 'Diminishing Tuning' condition of [tuning]_ is satisfied: the
+verify that the 'Diminishing Tuning' condition of [Roberts:2007]_ is satisfied: the
 amount of tuning should decrease to zero, or tuning should become very
 infrequent.
 
@@ -516,8 +516,9 @@ not be assigned automatically:
 
 * Dirichlet-Multinomial.
 
-* Normal-Normal (or Normal-MvNormal, etc.) (requires ``cvxopt``,
-  :ref:`http://abel.ee.ucla.edu/cvxopt`\ http://abel.ee.ucla.edu/cvxopt )
+* Normal-Normal (or Normal-MvNormal, etc.) (requires `cvxopt`)
+
+.. _`cvxopt`: http://abel.ee.ucla.edu/cvxopt
 
 However, if you implement a custom Gibbs step method, subclassing the ``Gibbs``
 class will ensure interopera

@@ -77,7 +77,7 @@ fall under the curve (Figure :ref:`rejection <fig:bound>`).
 
 .. _fig:bound:
 
-.. figure:: reject.png
+.. figure:: figs/reject.png
    :alt: Rejection figure.
    :align: center
    :scale: 100
@@ -93,7 +93,7 @@ posterior distributions.
 
 .. _fig:unbound:
 
-.. figure:: envelope.png
+.. figure:: figs/envelope.png
    :alt: envelope figure
    :align: center
    :scale: 100

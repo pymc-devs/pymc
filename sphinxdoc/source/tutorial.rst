@@ -12,7 +12,7 @@ mining disasters in the UK from 1851 to 1962 [Jarrett:1979]_.
 
 .. _disastersts:
 
-.. figure:: disastersts_web.png
+.. figure:: figs/disastersts_web.png
    :alt: Disasters time series.
    :scale: 100
    :align: center
@@ -218,7 +218,7 @@ See section :ref:`graphical` for more details.
 
    Missing image.
    
-.. figure:: DisasterModel2.pdf
+.. figure:: figs/DisasterModel2.png
    :alt: Disasters time series.
    :scale: 30
    :align: center
@@ -577,7 +577,7 @@ the model iterates over each node at every iteration.
 
 .. _fig:missing:
 
-.. figure:: missing.png
+.. figure:: figs/missing.png
    :alt: Trace and posterior distribution figure. 
    :scale: 70
    :align: center

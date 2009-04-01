@@ -12,14 +12,15 @@ Table of contents
    :maxdepth: 2
    :numbered:
    
-   ../../README
-   ../../INSTALL
+   introduction
+   installation
    tutorial
    modelbuilding
    modelfitting
    database
    modelchecking
    extending
+   distributions
    conclusion
    theory
    references

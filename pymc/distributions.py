@@ -603,18 +603,14 @@ def bernoulli_like(x, p):
         f(x \mid p) = p^{x} (1-p)^{1-x}
 
     :Parameters:
-      x : sequence of Booleans
-        Series of successes (1) and failures (0). :math:`x=0,1`
-      p : float
-        Probability of success. :math:`0 < p < 1`.
+      - `x` : Series of successes (1) and failures (0). :math:`x=0,1`
+      - `p` : Probability of success. :math:`0 < p < 1`.
 
     :Example:
-
-    >>> bernoulli_like([0,1,0,1], .4)
-    -2.8542325496673584
+       >>> bernoulli_like([0,1,0,1], .4)
+       -2.8542325496673584
 
     .. note::
-
       - :math:`E(x)= p`
       - :math:`Var(x)= p(1-p)`
 
@@ -665,7 +661,8 @@ def beta_like(x, alpha, beta):
       >>> beta_like(.4,1,2)
       0.18232160806655884
 
-    :Note:
+    .. note::
+    
       - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
       - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
@@ -710,16 +707,13 @@ def binomial_like(x, n, p):
         f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}
 
     :Parameters:
-      x : int
-        Number of successes, > 0.
-      n : int
-        Number of Bernoulli trials, > x.
-      p : float
-        Probability of success in each trial, :math:`p \in [0,1]`.
+      - `x` : [int] Number of successes, > 0.
+      - `n` : [int] Number of Bernoulli trials, > x.
+      - `p` : Probability of success in each trial, :math:`p \in [0,1]`.
 
-    :Note:
-     - :math:`E(X)=np`
-     - :math:`Var(X)=np(1-p)`
+    .. note::
+       - :math:`E(X)=np`
+       - :math:`Var(X)=np(1-p)`
     """
 
     return flib.binomial(x,n,p)
@@ -742,17 +736,13 @@ def categorical_like(x, p):
 
     Categorical log-likelihood. The most general discrete distribution.
 
-    ..math::
-        f(x=i \mid p) = p_i
-    ..math::
-        i \in 0\ldots k-1
+    .. math::
+    
+       f(x=i \mid p) = p_i for i \in 0 \ldots k-1
 
     :Parameters:
-      x : integer
-        :math: `x \in 0\ldots k-1`
-      p : (k) float
-        :math: `p > 0`
-        :math: `\sum p = 1`
+      - `x` : [int] :math:`x \in 0\ldots k-1`
+      - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
     """
 
     return flib.categorical(x, p)
@@ -787,6 +777,7 @@ def cauchy_like(x, alpha, beta):
     Lorentz or the Breit-Wigner distribution.
 
     .. math::
+    
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     :Parameters:
@@ -795,8 +786,9 @@ def cauchy_like(x, alpha, beta):
       beta : float
           Scale parameter > 0.
 
-    :Note:
-      - Mode and median are at alpha.
+    .. note::
+    
+       - Mode and median are at alpha.
     """
 
     return flib.cauchy(x,alpha,beta)
@@ -1270,6 +1262,7 @@ def hypergeometric_like(x, n, m, N):
     population without replacement.
 
     .. math::
+    
         f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
 
     :Parameters:
@@ -1283,8 +1276,9 @@ def hypergeometric_like(x, n, m, N):
       N : int
         Total number of units in the population.
 
-    :Note:
-      :math:`E(X) = \frac{n n}{N}`
+    .. note::
+    
+       :math:`E(X) = \frac{n n}{N}`
     """
 
     return flib.hyperg(x, n, m, N)
@@ -2002,9 +1996,9 @@ def poisson_like(x,mu):
         Expected number of occurrences that occur during the given interval,
         :math:`\mu \geq 0`.
 
-    :Note:
-      - :math:`E(x)=\mu`
-      - :math:`Var(x)=\mu`
+    .. note::
+       - :math:`E(x)=\mu`
+       - :math:`Var(x)=\mu`
     """
     # try:
     #     constrain(x, lower=0,allow_equal=True)
