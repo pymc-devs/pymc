@@ -7,7 +7,7 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
+from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential, ZeroProbability
 import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
@@ -133,6 +133,22 @@ except:
                 sig[:,i] = vec[:,i]*sqrt(val[i])
         return np.asmatrix(sig).T
 
+def logp_of_set(s):
+    exc = None
+    logp = 0.
+    for obj in s:
+        try:
+            logp += obj.logp
+        except:
+            cls, inst, tb = sys.exc_info()
+            if cls is ZeroProbability:
+                raise cls, inst, tb
+            elif exc is None:
+                exc = (cls, inst, tb)
+    if exc is None:
+        return logp
+    else:
+        raise exc[0], exc[1], exc[2]
 
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None)

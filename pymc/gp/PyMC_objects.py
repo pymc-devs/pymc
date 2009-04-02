@@ -306,6 +306,7 @@ class GPParentMetropolis(pm.Metropolis):
                 print self._id + ' proposing'
             self.metro_class.propose(metro_method)
 
+            # FIXME: This may not be necessary anymore now that likelihoods are computed with logp_of_sum.
             # First make sure the proposed values are OK with f's current value
             # on its mesh, as that will not be changed here.
             try:

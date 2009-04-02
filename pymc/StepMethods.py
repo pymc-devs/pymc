@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable
 from numpy.linalg.linalg import LinAlgError
 from numpy.random import randint, random
@@ -255,19 +255,7 @@ class StepMethod(object):
 
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
-
-        # Initialize sum
-        sum = 0.
-
-        # Loop over children
-        for child in self.children:
-
-            # Verbose feedback
-            if self.verbose > 1:
-                print '\t'+self._id+' Getting log-probability from child ' + child.__name__
-
-            # Increment sum
-            sum += child.logp
+        sum = logp_of_set(self.children)
         if self.verbose > 1:
             print '\t' + self._id + ' Current log-likelihood ', sum
         return sum
@@ -1147,7 +1135,7 @@ class AdaptiveMetropolis(StepMethod):
         """
 
         # Probability and likelihood for stochastic's current value:
-        logp = sum([stochastic.logp for stochastic in self.stochastics])
+        logp = logp_of_set(self.stochastics)
         loglike = self.loglike
         if self.verbose > 1:
             print 'Current value: ', self.stoch2array()
@@ -1160,7 +1148,7 @@ class AdaptiveMetropolis(StepMethod):
         accept = False
         try:
             # Probability and likelihood for stochastic's proposed value:
-            logp_p = sum([stochastic.logp for stochastic in self.stochastics])
+            logp_p = logp_of_set(self.stochastics)
             loglike_p = self.loglike
             if self.verbose > 2:
                 print 'Current value: ', self.stoch2array()

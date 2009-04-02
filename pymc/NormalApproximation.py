@@ -17,7 +17,7 @@ from Model import Model, Sampler
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type, round_array
+from utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
 try:
@@ -362,7 +362,7 @@ class MAP(Model):
         all_relevant_stochastics = set()
         p,i = self.stochastic_indices[index]
         try:
-            return p.logp + sum([child.logp for child in p.extended_children])
+            return p.logp + logp_of_set(p.extended_children)
         except ZeroProbability:
             return -Inf
 
