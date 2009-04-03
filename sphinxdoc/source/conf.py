@@ -86,10 +86,13 @@ todo_include_todos = True
 # Options for HTML output
 # -----------------------
 
+html_theme = "pymcdoc"
+html_theme_path = ["."]
+
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
 # given in html_static_path.
-html_theme = "sphinxdoc"
+# html_style = 'sphinxdoc.css' 
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
