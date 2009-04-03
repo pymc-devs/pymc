@@ -476,7 +476,8 @@
 
       character curterms(20)*24
       character currecrd*512
-      character delimit*1 /' '/
+      character delimit*1 
+      data delimit/' '/
 
       integer   collimit
       integer   curcnt
@@ -747,7 +748,8 @@
 
       character septerms(20)*24
       character charinpt*512
-      character delimit*1 /' '/
+      character delimit*1 
+      data delimit /' '/
 
       integer   veclimit
       integer   v1
