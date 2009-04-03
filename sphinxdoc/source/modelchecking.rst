@@ -1,9 +1,12 @@
 .. _chap:modelchecking:
 
-***********************
-Convergence Diagnostics
-***********************
+******************************
+Model checking and diagnostics
+******************************
+    
 
+Convergence Diagnostics
+=======================
 
 Valid inferences from sequences of MCMC samples are based on the assumption that
 the samples are derived from the true posterior distribution of interest. Theory

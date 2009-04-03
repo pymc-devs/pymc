@@ -26,7 +26,7 @@ Table of contents
    theory
    references
 
-   
+
 The incomplete laundry list
 ===========================
 
@@ -40,3 +40,8 @@ Indices and tables
 * :ref:`search`
 * :ref:`api`
 
+
+.. toctree::
+   :hidden:
+
+   api

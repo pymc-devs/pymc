@@ -101,7 +101,7 @@ def new_dist_class(*new_class_args):
         A flag indicating whether this class represents array-valued
         variables.
 
-      :Note:
+      .. note::
         stochastic_from_dist provides a higher-level version.
 
       :SeeAlso:
@@ -265,7 +265,7 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
                                               mv=False)
       >>> A = Exponential(self_name, value, beta)
 
-    :Note:
+    .. note::
       new_dist_class is a more flexible class factory. Also consider
       subclassing Stochastic directly.
 
@@ -599,8 +599,7 @@ def bernoulli_like(x, p):
     The Bernoulli distribution describes the probability of successes (x=1) and
     failures (x=0).
 
-    .. math::
-        f(x \mid p) = p^{x} (1-p)^{1-x}
+    .. math::  f(x \mid p) = p^{x} (1-p)^{1-x}
 
     :Parameters:
       - `x` : Series of successes (1) and failures (0). :math:`x=0,1`
@@ -650,19 +649,15 @@ def beta_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
 
     :Parameters:
-      x : float
-          0 < x < 1
-      alpha : float
-          alpha > 0
-      beta : float
-          beta > 0
+      - `x` : 0 < x < 1
+      - `alpha` : alpha > 0
+      - `beta` : beta > 0
 
     :Example:
       >>> beta_like(.4,1,2)
       0.18232160806655884
 
     .. note::
-    
       - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
       - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
@@ -736,9 +731,9 @@ def categorical_like(x, p):
 
     Categorical log-likelihood. The most general discrete distribution.
 
-    .. math::
+    .. math::  f(x=i \mid p) = p_i 
     
-       f(x=i \mid p) = p_i for i \in 0 \ldots k-1
+    for :math:`i \in 0 \ldots k-1`.
 
     :Parameters:
       - `x` : [int] :math:`x \in 0\ldots k-1`
@@ -777,17 +772,13 @@ def cauchy_like(x, alpha, beta):
     Lorentz or the Breit-Wigner distribution.
 
     .. math::
-    
         f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     :Parameters:
-      alpha : float
-         Location parameter.
-      beta : float
-          Scale parameter > 0.
+      - `alpha` : Location parameter.
+      - `beta` : Scale parameter > 0.
 
     .. note::
-    
        - Mode and median are at alpha.
     """
 
@@ -823,12 +814,10 @@ def chi2_like(x, nu):
         f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
     :Parameters:
-      x : float
-          :math:`\ge 0`
-      nu : int
-          Degrees of freedom ( :math:`nu > 0`)
+      - `x` : > 0 
+      - `nu` : [int] Degrees of freedom ( nu > 0 )
 
-    :Note:
+    .. note::
       - :math:`E(X)=\nu`
       - :math:`Var(X)=2\nu`
 
@@ -864,10 +853,8 @@ def degenerate_like(x, k):
         f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.
 
     :Parameters:
-      x : float
-       :math:`x = k`
-      k : float
-        degenerate value.
+      - `x` : Input value.
+      - `k` : Degenerate value.
     """
     x = np.asarray(x)
     return sum(np.log([i==k for i in x]))
@@ -908,11 +895,10 @@ def dirichlet_like(x, theta):
         f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
 
     :Parameters:
-      x : (n,k-1) array
-        Where `n` is the number of samples and `k` the dimension.
-        :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
-      theta : (n,k) or (1,k) float
-        :math:`\theta > 0`
+      - `x` : An (n,k-1) array where `n` is the number of samples and `k` the dimension.
+          :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
+      - `theta` : An (n,k) or (1,k) array > 0. 
+        
     """
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
@@ -949,16 +935,13 @@ def exponential_like(x, beta):
     The exponential distribution is a special case of the gamma distribution
     with alpha=1. It often describes the time until an event.
 
-    .. math::
-        f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
+    .. math:: f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
 
     :Parameters:
-      x : float
-        :math:`x \ge 0`
-      beta : float
-        Survival parameter :math:`\beta > 0`
+      - `x` : x > 0
+      - `beta` : Survival parameter (beta > 0).
 
-    :Note:
+    .. note::
       - :math:`E(X) = \beta`
       - :math:`Var(X) = \beta^2`
     """
@@ -999,16 +982,11 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
         z & = \frac{x-loc}{scale}
 
     :Parameters:
-      x : float
-          x > 0
-      alpha : float
-          Shape parameter
-      k : float
-          k > 0
-      loc : float
-          Location parameter
-      scale : float
-          Scale parameter > 0.
+      - `x` : x > 0
+      - `alpha` : Shape parameter
+      - `k` : k > 0
+      - `loc` : Location parameter
+      - `scale` : Scale parameter (scale > 0).
 
     """
     return flib.exponweib(x,alpha,k,loc,scale)
@@ -1045,16 +1023,13 @@ def gamma_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
     :Parameters:
-      x : float
-        :math:`x \ge 0`
-      alpha : float
-        Shape parameter :math:`\alpha > 0`.
-      beta : float
-        Scale parameter :math:`\beta > 0`.
+      - `x` : math:`x \ge 0`
+      - `alpha` : Shape parameter (alpha > 0).
+      - `beta` : Scale parameter (beta > 0).
 
-    :Note:
-      - :math:`E(X) = \frac{\alpha}{\beta}`
-      - :math:`Var(X) = \frac{\alpha}{\beta^2}`
+    .. note::
+       - :math:`E(X) = \frac{\alpha}{\beta}`
+       - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
 
@@ -1133,12 +1108,10 @@ def geometric_like(x, p):
         f(x \mid p) = p(1-p)^{x-1}
 
     :Parameters:
-      x : int
-        Number of trials before first success, > 0.
-      p : float
-        Probability of success on an individual trial, :math:`p \in [0,1]`
+      - `x` : [int] Number of trials before first success (x > 0).
+      - `p` : Probability of success on an individual trial, :math:`p \in [0,1]`
 
-    :Note:
+    .. note::
       - :math:`E(X)=1/p`
       - :math:`Var(X)=\frac{1-p}{p^2}`
 
@@ -1177,13 +1150,11 @@ def half_cauchy_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{2}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
     :Parameters:
-      alpha : float
-         Location parameter.
-      beta : float
-          Scale parameter > 0.
+      - `alpha` : Location parameter.
+      - `beta` : Scale parameter (beta > 0).
 
-    :Note:
-      - x must be non-negative
+    .. note::
+      - x must be non-negative.
     """
 
     x = np.atleast_1d(x)
@@ -1221,10 +1192,8 @@ def half_normal_like(x, tau):
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
     :Parameters:
-      x : float
-        :math:`x \ge 0`
-      tau : float
-        :math:`\tau > 0`
+      - `x` : :math:`x \ge 0`
+      - `tau` : tau > 0
 
     """
 
@@ -1266,18 +1235,13 @@ def hypergeometric_like(x, n, m, N):
         f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
 
     :Parameters:
-      x : int
-        Number of successes in a sample drawn from a population.
-        :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
-      n : int
-        Size of sample drawn from the population.
-      m : int
-        Number of successes in the population.
-      N : int
-        Total number of units in the population.
+      - `x` : [int] Number of successes in a sample drawn from a population.
+              :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
+      - `n` : [int] Size of sample drawn from the population.
+      - `m` : [int] Number of successes in the population.
+      - `N` : [int] Total number of units in the population.
 
     .. note::
-    
        :math:`E(X) = \frac{n n}{N}`
     """
 
@@ -1312,15 +1276,12 @@ def inverse_gamma_like(x, alpha, beta):
         f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)
 
     :Parameters:
-      x : float
-        x > 0
-      alpha : float
-        Shape parameter, :math:`\alpha > 0`.
-      beta : float
-        Scale parameter, :math:`\beta > 0`.
+      - `x` : x > 0
+      - `alpha` : Shape parameter (alpha > 0).
+      - `beta` : Scale parameter (beta > 0).
 
-    :Note:
-      :math:`E(X)=\frac{1}{\beta(\alpha-1)}`  for :math:`\alpha > 1`.
+    .. note::
+       :math:`E(X)=\frac{1}{\beta(\alpha-1)}`  for :math:`\alpha > 1`.
     """
 
     return flib.igamma(x, alpha, beta)
@@ -1359,12 +1320,9 @@ def inverse_wishart_like(X, n, Tau):
     where :math:`k` is the rank of X.
 
     :Parameters:
-      X : matrix
-        Symmetric, positive definite.
-      n : int
-        Degrees of freedom, > 0.
-      Tau : matrix
-        Symmetric and positive definite
+      - `X` : Symmetric, positive definite matrix.
+      - `n` : [int] Degrees of freedom (n > 0).
+      - `Tau` : Symmetric and positive definite matrix.
 
     """
     return flib.blas_inv_wishart(X,n,Tau)
@@ -1404,17 +1362,14 @@ def laplace_like(x, mu, tau):
     events. It is often used as a heavier-tailed alternative to the normal.
 
     .. math::
-        f(x \mid \mu, tau) = \frac{\tau}{2}e^{-\tau\abs{x-\mu}}
+        f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau |x-\mu|}
 
     :Parameters:
-      x : float
-        :math:`-\infty < x < \infty`
-      mu : float
-        Location parameter :math: `-\infty < mu < \infty`
-      tau : float
-        Scale parameter :math:`\tau > 0`
+      - `x` : :math:`-\infty < x < \infty`
+      - `mu` : Location parameter :math: `-\infty < mu < \infty`
+      - `tau` : Scale parameter :math:`\tau > 0`
 
-    :Note:
+    .. note::
       - :math:`E(X) = \mu`
       - :math:`Var(X) = \frac{2}{\tau^2}`
     """
@@ -1458,14 +1413,11 @@ def logistic_like(x, mu, tau):
         f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}
 
     :Parameters:
-      x : float
-        :math:`-\infty < x < \infty`
-      mu : float
-        Location parameter :math: `-\infty < mu < \infty`
-      tau : float
-        Scale parameter :math:`\tau > 0`
+      - `x` : :math:`-\infty < x < \infty`
+      - `mu` : Location parameter :math: `-\infty < mu < \infty`
+      - `tau` : Scale parameter (tau > 0)
 
-    :Note:
+    .. note::
       - :math:`E(X) = \mu`
       - :math:`Var(X) = \frac{\pi^2}{3\tau^2}`
     """
@@ -1506,15 +1458,12 @@ def lognormal_like(x, mu, tau):
         \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
     :Parameters:
-      x : float
-        x > 0
-      mu : float
-        Location parameter.
-      tau : float
-        Scale parameter, > 0.
+      - `x` : x > 0
+      - `mu` : Location parameter.
+      - `tau` : Scale parameter (tau > 0).
 
-    :Note:
-      :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
+    .. note::
+       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
     """
 
 
@@ -1563,19 +1512,16 @@ def multinomial_like(x, n, p):
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
     :Parameters:
-      x : (ns, k) int
-        Random variable indicating the number of time outcome i is observed,
-        :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
-      n : int
-        Number of trials.
-      p : (k,) float
-        Probability of each one of the different outcomes,
-        :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+      - `x` : [(ns, k) int] Random variable indicating the number of time outcome i is observed,
+              :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
+      - `n` : [int] Number of trials.
+      - `p` : (k,) Probability of each one of the different outcomes,
+              :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
 
-    :Note:
-      - :math:`E(X_i)=n p_i`
-      - :math:`var(X_i)=n p_i(1-p_i)`
-      - :math:`cov(X_i,X_j) = -n p_i p_j`
+    .. note::
+       - :math:`E(X_i)=n p_i`
+       - :math:`var(X_i)=n p_i(1-p_i)`
+       - :math:`cov(X_i,X_j) = -n p_i p_j`
 
     """
 
@@ -1634,10 +1580,8 @@ def multivariate_hypergeometric_like(x, m):
     where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
 
     :Parameters:
-        x : int sequence
-            Number of draws from each category, :math:`< m`
-        m : int sequence
-            Number of items in each categoy.
+      - `x` : [int sequence] Number of draws from each category, (x < m).
+      - `m` : [int sequence] Number of items in each categoy.
     """
 
 
@@ -1694,13 +1638,12 @@ def mv_normal_like(x, mu, tau):
     .. math::
         f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
-    x: (n,k)
-    mu: (k)
-    tau: (k,k)
-    tau positive definite
+    :Parameters:
+      - `x`: (n,k)
+      - `mu`: (k) Location parameter sequence.  
+      - `tau`: (k,k) Positive definite precision matrix.
 
-    :SeeAlso:
-      mv_normal_chol_like, mv_normal_cov_like
+    .. seealso:: :func:`mv_normal_chol_like`, :func:`mv_normal_cov_like`
     """
     # TODO: Vectorize in Fortran
     if len(np.shape(x))>1:
@@ -1743,8 +1686,7 @@ def mv_normal_cov_like(x, mu, C):
     C: (k,k)
     C positive definite
 
-    :SeeAlso:
-      mv_normal_like, mv_normal_chol_like
+    .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_chol_like`
     """
     # TODO: Vectorize in Fortran
     if len(np.shape(x))>1:
@@ -1807,8 +1749,7 @@ def mv_normal_chol_like(x, mu, sig):
       sigma : (k,k)
       sigma lower triangular
 
-    :SeeAlso:
-      mv_normal_like, mv_normal_cov_like
+    .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_cov_like`
       """
     # TODO: Vectorize in Fortran
     if len(np.shape(x))>1:
@@ -1853,9 +1794,12 @@ def negative_binomial_like(x, mu, alpha):
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
-    x > 0, mu > 0, alpha > 0
+    :Parameters:
+      - `x` : Input data (x > 0).
+      - `mu` : mu > 0
+      - `alpha` : alpha > 0
 
-    :Note:
+    .. note::
       - :math: E[x]=\mu
       - In Wikipedia's parameterization,
         :math: r=\alpha
@@ -1892,18 +1836,14 @@ def normal_like(x, mu, tau):
     .. math::
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
-
     :Parameters:
-      x : float
-        Input data.
-      mu : float
-        Mean of the distribution.
-      tau : float
-        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ).
+      - `x` : Input data.
+      - `mu` : Mean of the distribution.
+      - `tau` : Precision of the distribution, which corresponds to 1/sigma**2 (tau > 0).
 
-    :Note:
-      - :math:`E(X) = \mu`
-      - :math:`Var(X) = 1/\tau`
+    .. note::
+       - :math:`E(X) = \mu`
+       - :math:`Var(X) = 1/\tau`
 
     """
     # try:
@@ -1939,18 +1879,17 @@ def von_mises_like(x, mu, kappa):
     von Mises log-likelihood.
 
     .. math::
-        f(x \mid \mu, k) = \\frac{{e}^{k \\operatorname{cos}\\left(x - u\\right)}}{2 \\pi I0(k)}
+        f(x \mid \mu, k) = \frac{e^{k \cos(x - \mu)}}{2 \pi I_0(k)}
+    
+    where `I_0` is the modified Bessel function of order 0. 
 
     :Parameters:
-      x : float
-        Input data.
-      mu : float
-        Mean of the distribution.
-      kappa : float
-        Dispersion of the distribution
+      - `x` : Input data.
+      - `mu` : Mean of the distribution.
+      - `kappa` : Dispersion of the distribution
 
-    :Note:
-      - :math:`E(X) = \mu`
+    .. note::
+       - :math:`E(X) = \mu`
 
     """
     return flib.vonmises(x, mu, kappa)
@@ -1990,11 +1929,9 @@ def poisson_like(x,mu):
         f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     :Parameters:
-      x : int
-        :math:`x \in {0,1,2,...}`
-      mu : float
-        Expected number of occurrences that occur during the given interval,
-        :math:`\mu \geq 0`.
+      - `x` : [int] :math:`x \in {0,1,2,...}`
+      - `mu` : Expected number of occurrences during the given interval,
+               :math:`\mu \geq 0`.
 
     .. note::
        - :math:`E(x)=\mu`
@@ -2054,16 +1991,11 @@ def truncnorm_like(x, mu, tau, a, b):
     where :math:`\sigma^2=1/\tau`.
 
     :Parameters:
-      x : float
-        Input data.
-      mu : float
-        Mean of the distribution.
-      tau : float
-        Precision of the distribution, > 0 ( corresponds to 1/sigma**2 ).
-      a : float
-        Left bound of the distribution.
-      b : float
-        Right bound of the distribution.
+      - `x` : Input data.
+      - `mu` : Mean of the distribution.
+      - `tau` : Precision of the distribution, which corresponds to 1/sigma**2 (tau > 0).
+      - `a` : Left bound of the distribution.
+      - `b` : Right bound of the distribution.
     """
     x = np.atleast_1d(x)
     a = np.atleast_1d(a)
@@ -2120,7 +2052,7 @@ def skew_normal_like(x,mu,tau,alpha):
       alpha : float
         Shape parameter of the distribution.
 
-    :Note:
+    .. note::
       - See http://azzalini.stat.unipd.it/SN/
     """
     mu = np.asarray(mu)
@@ -2199,12 +2131,9 @@ def discrete_uniform_like(x,lower, upper):
         f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     :Parameters:
-      x : integer
-       :math:`lower \leq x \leq upper`
-      lower : float
-        Lower limit.
-      upper : float
-        Upper limit.
+      - `x` : [int] :math:`lower \leq x \leq upper`
+      - `lower` : Lower limit.
+      - `upper` : Upper limit (upper > lower).
     """
 
     return flib.duniform_like(x, lower, upper)
@@ -2238,12 +2167,9 @@ def uniform_like(x,lower, upper):
         f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     :Parameters:
-      x : float
-       :math:`lower \leq x \leq upper`
-      lower : float
-        Lower limit.
-      upper : float
-        Upper limit.
+      - `x` : :math:`lower \leq x \leq upper`
+      - `lower` : Lower limit.
+      - `upper` : Upper limit (upper > lower).
     """
 
     return flib.uniform_like(x, lower, upper)
@@ -2273,14 +2199,11 @@ def weibull_like(x, alpha, beta):
         \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
     :Parameters:
-      x : float
-        :math:`x \ge 0`
-      alpha : float
-        > 0
-      beta : float
-        > 0
-
-    :Note:
+      - `x` : :math:`x \ge 0`
+      - `alpha` : alpha > 0
+      - `beta` : beta > 0
+        
+    .. note::
       - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`
       - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`
     """

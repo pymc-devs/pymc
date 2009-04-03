@@ -36,11 +36,74 @@ Discrete distributions
 .. autofunction:: poisson_like
 
 
-   
-   
+
 Continuous distributions
 ========================
 
 .. autofunction:: beta_like
+
+.. autofunction:: cauchy_like
+
+.. autofunction:: chi2_like
+
+.. autofunction:: degenerate_like
+
+.. autofunction:: exponential_like
+
+.. autofunction:: exponweib_like
+
+.. autofunction:: gamma_like
+
+.. autofunction:: half_normal_like
+
+.. autofunction:: hypergeometric_like
+
+.. autofunction:: inverse_gamma_like
+
+.. autofunction:: laplace_like
+
+.. autofunction:: logistic_like
+
+.. autofunction:: lognormal_like
+
+.. autofunction:: normal_like
+
+.. autofunction:: skew_normal_like
+
+.. autofunction:: t_like
+
+.. autofunction:: truncnorm_like
+
+.. autofunction:: uniform_like
+
+.. autofunction:: von_mises_like
+
+.. autofunction:: weibull_like
+
+
+Multivariate discrete distributions
+===================================
+
+.. autofunction:: multivariate_hypergeometric_like
+
+.. autofunction:: multinomial_like
+
+
+Multivariate continuous distributions
+=====================================
+
+.. autofunction:: dirichlet_like
+
+.. autofunction:: inverse_wishart_like
+
+.. autofunction:: mv_normal_like
+
+.. autofunction:: mv_normal_chol_like
+
+.. autofunction:: mv_normal_cov_like
+
+.. autofunction:: wishart_like
+
+.. autofunction:: wishart_cov_like
 
 
