@@ -70,6 +70,6 @@ except ImportError:
 
 try:
     import Matplot
-except ImportError:
+except:
     pass
 
