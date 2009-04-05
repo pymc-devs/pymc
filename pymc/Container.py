@@ -38,7 +38,7 @@ These flattened representations are useful for things like cache checking.
 from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
-from pymc.Container_values import LCValue, DCValue, ACValue, OCValue
+from pymc.Container_values import LCValue, DCValue, ACValue, OCValue, set_tup_item
 from types import ModuleType
 import pdb
 
@@ -202,16 +202,17 @@ def file_items(container, iterable):
                 new_container = Container(item)
             except:
                 continue
-            if isinstance(container, dict):
-                container.replace(key, new_container)
-            elif isinstance(container, tuple):
-                return iterable[:i] + (new_container,) + iterable[i+1:]
-            else:
-                container.replace(item, new_container, i)
 
             # Update all of container's variables, potentials, etc. with the new wrapped
             # iterable's. This process recursively unpacks nested iterables.
             container.assimilate(new_container)
+
+            if isinstance(container, dict):
+                container.replace(key, new_container)
+            elif isinstance(container, tuple):
+                return container[:i] + (new_container,) + container[i+1:]
+            else:
+                container.replace(item, new_container, i)
 
     container.nodes = container.potentials | container.variables
 
@@ -339,7 +340,12 @@ class TupleContainer(ContainerBase, tuple):
     containing_classes = [tuple]
 
     def __init__(self, iterable):
-        tuple.__init__(self, file_items(self, iterable))
+        new_tup = file_items(self, iterable)
+        if len(self.containers)>0:
+            raise NotImplementedError, """We have not figured out how to satisfactorily implement nested TupleContainers.
+The reason is there is no way to change an element of a tuple after it has been created.
+Even the Python-C API makes this impossible by checking that a tuple is new
+before allowing you to change one of its elements."""
         ContainerBase.__init__(self, iterable)
         file_items(self, iterable)
         self._value = list(self)
