@@ -18,7 +18,7 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones
+from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones, dtype
 from utils import autocorr
 import pdb
 from scipy import special
@@ -294,6 +294,8 @@ def plotwrapper(f):
                 if variable._plot!=False:
                     data = variable.trace()[start:]
                     if size(data[-1])>=10 and variable._plot!=True:
+                        continue
+                    elif variable.dtype is dtype('object'):
                         continue
                     name = variable.__name__
                     if args:
