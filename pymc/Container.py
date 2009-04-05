@@ -169,7 +169,7 @@ def file_items(container, iterable):
             item = iterable[key]
         # Item counter
         else:
-            i += 1
+    	    i += 1
 
         # If the item isn't iterable, file it away.
         if isinstance(item, Variable):
@@ -244,9 +244,9 @@ def sort_list(container, _value):
     nonval_obj.append(None)
     container.n_val = len(val_ind)
     container.n_nonval = len(nonval_ind)
-    container.val_ind = array(val_ind, dtype=int)
+    container.val_ind = array(val_ind, dtype='int32')
     container.val_obj = array(val_obj, dtype=object)
-    container.nonval_ind = array(nonval_ind, dtype=int)
+    container.nonval_ind = array(nonval_ind, dtype='int32')
     container.nonval_obj = array(nonval_obj, dtype=object)
     container.LCValue = LCValue(container)
 
@@ -616,11 +616,11 @@ class ArrayContainer(ContainerBase, ndarray):
                 nonval_ind.append(i)
                 nonval_obj.append(obj)
         val_obj.append(None)
-        C.val_ind = array(val_ind, dtype=int)
+        C.val_ind = array(val_ind, dtype='int32')
         C.val_obj = array(val_obj, dtype=object)
         C.n_val = len(val_ind)
         nonval_obj.append(None)
-        C.nonval_ind = array(nonval_ind, dtype=int)
+        C.nonval_ind = array(nonval_ind, dtype='int32')
         C.nonval_obj = array(nonval_obj, dtype=object)
         C.n_nonval = len(nonval_ind)
 
