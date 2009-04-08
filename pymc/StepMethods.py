@@ -200,6 +200,10 @@ class StepMethod(object):
         # Remove own stochastics from children and parents.
         self.children -= self.stochastics
         self.parents -= self.stochastics
+        
+        # self.markov_blanket is a list, because we want self.stochastics to have the chance to
+        # raise ZeroProbability exceptions before self.children.
+        self.markov_blanket = list(self.stochastics)+list(self.children)
 
         # ID string for verbose feedback
         self._id = self.__class__.__name__ + '_' + '_'.join([s.__name__ for s in self.stochastics])
@@ -262,6 +266,15 @@ class StepMethod(object):
 
     # Make get property for retrieving log-probability
     loglike = property(fget = _get_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, with self.stochastics removed.")
+    
+    def _get_logp_plus_loglike(self):
+        sum = logp_of_set(self.markov_blanket)
+        if self.verbose > 1:
+            print '\t' + self._id + ' Current log-likelihood plus current log-probability', sum
+        return sum
+
+    # Make get property for retrieving log-probability
+    logp_plus_loglike = property(fget = _get_logp_plus_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
 
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
@@ -397,17 +410,12 @@ class Metropolis(StepMethod):
 
         if self.verbose > 0:
             print
-            print self._id + ' getting initial prior.'
+            print self._id + ' getting initial logp.'
 
         if self.proposal_distribution == "Prior":
-            # No children
-            logp = 0.
+            logp = self.loglike
         else:
-            logp = self.stochastic.logp
-
-        if self.verbose > 0:
-            print self._id + ' getting initial likelihood.'
-        loglike = self.loglike
+            logp = self.logp_plus_loglike
 
         if self.verbose > 0:
             print self._id + ' proposing.'
@@ -418,12 +426,11 @@ class Metropolis(StepMethod):
         # Probability and likelihood for s's proposed value:
         try:
             if self.proposal_distribution == "Prior":
-                logp_p = 0.
+                logp_p = self.loglike
                 # Check for weirdness before accepting jump
                 self.stochastic.logp
             else:
-                logp_p = self.stochastic.logp
-            loglike_p = self.loglike
+                logp_p = self.logp_plus_loglike
 
         except ZeroProbability:
 
@@ -441,12 +448,11 @@ class Metropolis(StepMethod):
 
         if self.verbose > 1:
             print 'logp_p - logp: ', logp_p - logp
-            print 'loglike_p - loglike: ', loglike_p - loglike
 
         HF = self.hastings_factor()
 
         # Evaluate acceptance ratio
-        if log(random()) > logp_p + loglike_p - logp - loglike + HF:
+        if log(random()) > logp_p - logp + HF:
 
             # Revert s if fail
             self.reject()
@@ -711,8 +717,7 @@ class BinaryMetropolis(Metropolis):
             self.stochastic.value = True
 
             try:
-                logp_true = self.stochastic.logp
-                loglike_true = self.loglike
+                logp_true = self.logp_plus_loglike
             except ZeroProbability:
                 self.stochastic.value = False
                 return
@@ -721,25 +726,22 @@ class BinaryMetropolis(Metropolis):
             self.stochastic.value = False
 
             try:
-                logp_false = self.stochastic.logp
-                loglike_false = self.loglike
+                logp_false = self.logp_plus_loglike
             except ZeroProbability:
                 self.stochastic.value = True
                 return
 
             # Test
-            p_true = exp(logp_true + loglike_true)
-            p_false = exp(logp_false + loglike_false)
+            p_true = exp(logp_true)
+            p_false = exp(logp_false)
 
             if self.verbose>1:
                 print """%s step information:
     - logp_true: %f
-    - loglike_true: %f
     - logp_false: %f
-    - loglike_false: %f
     - p_true: %f
     - p_false: %f
-                """ % (self._id, logp_true, loglike_true, logp_false, loglike_false, p_true, p_false)
+                """ % (self._id, logp_true, logp_false, p_true, p_false)
 
             # Stochastically set value according to relative
             # probabilities of True and False
@@ -1135,11 +1137,10 @@ class AdaptiveMetropolis(StepMethod):
         """
 
         # Probability and likelihood for stochastic's current value:
-        logp = logp_of_set(self.stochastics)
-        loglike = self.loglike
+        logp = self.logp_plus_loglike
         if self.verbose > 1:
             print 'Current value: ', self.stoch2array()
-            print 'Current likelihood: ', logp+loglike
+            print 'Current likelihood: ', logp
 
         # Sample a candidate value
         self.propose()
@@ -1148,13 +1149,12 @@ class AdaptiveMetropolis(StepMethod):
         accept = False
         try:
             # Probability and likelihood for stochastic's proposed value:
-            logp_p = logp_of_set(self.stochastics)
-            loglike_p = self.loglike
+            logp_p = self.logp_plus_loglike
             if self.verbose > 2:
                 print 'Current value: ', self.stoch2array()
-                print 'Current likelihood: ', logp+loglike
+                print 'Current likelihood: ', logp
 
-            if np.log(random()) < logp_p + loglike_p - logp - loglike:
+            if np.log(random()) < logp_p - logp:
                 accept = True
                 self.accepted += 1
                 if self.verbose > 2:
@@ -1166,14 +1166,12 @@ class AdaptiveMetropolis(StepMethod):
         except ZeroProbability:
             self.rejected += 1
             logp_p = None
-            loglike_p = None
             if self.verbose > 2:
                     print 'Rejected with ZeroProbability Error.'
 
         if (not self._current_iter % self.interval) and self.verbose > 1:
             print "Step ", self._current_iter
             print "\tLogprobability (current, proposed): ", logp, logp_p
-            print "\tloglike (current, proposed):      : ", loglike, loglike_p
             for stochastic in self.stochastics:
                 print "\t", stochastic.__name__, stochastic.last_value, stochastic.value
             if accept:
