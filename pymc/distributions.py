@@ -2666,10 +2666,11 @@ def Impute(name, dist_class, values, missing=None, **parents):
         mask = np.array(values) == missing
         # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
-
+    
     # Initialise list
     vars = []
     for i in xrange(len(masked_values)):
+        
         # Name of element
         this_name = name + '[%i]'%i
         # Dictionary to hold parents
@@ -2683,7 +2684,7 @@ def Impute(name, dist_class, values, missing=None, **parents):
             except AttributeError:
                 size = np.size(parent)
                 
-            if size > 1:
+            if size == len(masked_values):
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
