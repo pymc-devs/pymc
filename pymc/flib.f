@@ -20,6 +20,30 @@ cf2py threadsafe
 
       RETURN
       END
+
+      SUBROUTINE logsum_cpx(x, nx, s)
+cf2py intent(hide) nx
+cf2py intent(out) s
+cf2py threadsafe
+      COMPLEX*16 x(nx), s
+      DOUBLE PRECISION li, diff
+      INTEGER nx, i
+      PARAMETER (li=709.78271289338397)
+
+      s = x(1)
+
+      do i=2,nx
+!           If x(i) swamps the sum so far, ditch the sum so far.
+          diff = REALPART(x(i)-s)
+          if (diff.GE.li) then
+              s = x(i)
+          else
+              s = s + CDLOG((1.0D0,0.0D0)+CDEXP(x(i)-s))
+          end if
+      end do
+
+      RETURN
+      END
           
           
 
