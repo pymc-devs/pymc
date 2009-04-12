@@ -12,8 +12,6 @@ from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
 import sys
 import warnings
-import math
-pynan = math.sqrt(-1)
 
 d_neg_inf = float(-1.7976931348623157e+308)
 
@@ -277,7 +275,7 @@ class Potential(PotentialBase):
         except:
             raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
 
-        if logp is NaN or logp is pynan:
+        if logp != logp:
             raise ValueError, self.__name__ + ': computed log-probability is NaN'
 
         # Check if the value is smaller than a double precision infinity:
@@ -643,7 +641,7 @@ class Stochastic(StochasticBase):
         except:
             raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
 
-        if logp is NaN or logp is pynan:
+        if logp != logp:
             raise ValueError, self.__name__ + ': computed log-probability is NaN'
 
         if self.verbose > 0:
