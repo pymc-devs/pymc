@@ -1706,6 +1706,63 @@ cf2py threadsafe
       return
       END
       
+      
+      SUBROUTINE betabin_like(x,alpha,beta,n,nx,na,nb,nn,like)
+
+c Beta-binomial log-likelihood function      
+
+cf2py integer dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer dimension(nn),intent(in) :: n
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
+cf2py double precision intent(out) :: like
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb,nn
+      DOUBLE PRECISION like
+      DOUBLE PRECISION alpha(na),beta(nb)
+      INTEGER x(nx),n(nn)
+      DOUBLE PRECISION atmp,btmp,ntmp
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity,one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      ntmp = n(1)
+      like = 0.0
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+        if (nn .NE. 1) ntmp = n(i)
+        if ((atmp.LE.0.0).OR.(btmp.LE.0.0).OR.(ntmp.LE.0)) then
+          like = -infinity
+          RETURN
+        endif
+        if (x(i) .LT. 0) then
+          like = -infinity
+          RETURN
+        endif
+        like =like + gammln(atmp+btmp) 
+        like =like - gammln(atmp) - gammln(btmp)
+        
+        like =like + gammln(ntmp+one) 
+        like =like - gammln(x(i)+one) - gammln(ntmp-x(i)+one)
+        
+        like =like + gammln(atmp+x(i)) + gammln(ntmp+btmp-x(i)) 
+        like =like - gammln(atmp+btmp+ntmp)
+        
+      enddo   
+
+      return
+      END
+      
 
       SUBROUTINE mvhyperg(x,color,k,like)
 

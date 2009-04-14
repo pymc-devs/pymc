@@ -712,6 +712,54 @@ def binomial_like(x, n, p):
     """
 
     return flib.binomial(x,n,p)
+    
+# Beta----------------------------------------------
+@randomwrap
+def rbetabin(alpha, beta, n, size=1):
+    """
+    rbetabin(alpha, beta, n, size=1)
+
+    Random beta-binomial variates.
+    """
+
+    phi = np.random.beta(alpha, beta, size)
+    return np.random.binomial(n,phi)
+
+def betabin_expval(alpha, beta, n):
+    """
+    betabin_expval(alpha, beta)
+
+    Expected value of beta-binomial distribution.
+    """
+
+    return n * alpha / (alpha + beta)
+
+
+def betabin_like(x, alpha, beta, n):
+    R"""
+    betabin_like(x, alpha, beta)
+
+    Beta-binomial log-likelihood. Equivalent to binomial random variables with probabilities drawn from a :math: `\texttt{Beta}(\alpha,\beta)` distribution.
+
+    .. math::
+        f(x \mid \alpha, \beta, n) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)} \frac{\Gamma(n+1)}{\Gamma(x+1)\Gamma(n-x+1)} \frac{\Gamma(\alpha + x)\Gamma(n+\beta-x)}{\Gamma(\alpha+\beta+n)}
+
+    :Parameters:
+      - `x` : x=0,1,\ldots,n
+      - `alpha` : alpha > 0
+      - `beta` : beta > 0
+      - `n` : n=x,x+1,\ldots
+
+    :Example:
+      >>> betabin_like(3,1,1,10)
+      -2.3978952727989
+
+    .. note::
+      - :math:`E(X)=n\frac{\alpha}{\alpha+\beta}`
+      - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+
+    """
+    return flib.betbin_like(x, alpha, beta, n)
 
 # Categorical----------------------------------------------
 # Note that because categorical elements are not ordinal, there

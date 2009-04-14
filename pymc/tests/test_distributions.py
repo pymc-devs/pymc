@@ -355,6 +355,28 @@ class test_binomial(TestCase):
         c = flib.binomial([3,4,5], [7,7,7], [.7,.7,.7])
         assert_equal(a,b)
         assert_equal(a,c)
+        
+class test_betabin(TestCase):
+    def test_consistency(self):
+        parameters={'n':7, 'alpha':1, 'beta':2}
+        hist, like, figdata = discrete_consistency(rbetabin, flib.betabin_like, \
+            parameters, nrandom=2000)
+        assert_array_almost_equal(hist, like,1)
+        if PLOT:
+            compare_hist(figname='beta-binomial', **figdata)
+        # test_normalization
+        assert_almost_equal(like.sum(), 1, 4)
+
+    def test_normalization(self):
+        parameters = {'n':20, 'alpha':1, 'beta':2}
+        summation = discrete_normalization(flib.betabin_like, parameters, 21)
+
+    def test_calling(self):
+        a = flib.betabin_like([3,4,5], 7., 3., 7,)
+        b = flib.betabin_like([3,4,5], 7., 3., [7,7,7])
+        c = flib.betabin_like([3,4,5], [7.,7.,7.], [3.,3.,3.], [7,7,7])
+        assert_equal(a,b)
+        assert_equal(a,c)
 
 class test_categorical(TestCase):
     def test_consistency(self):
