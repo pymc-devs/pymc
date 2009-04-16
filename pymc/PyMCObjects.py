@@ -552,10 +552,14 @@ class Stochastic(StochasticBase):
                 break
             except ZeroProbability:
                 tweaked = True
+                a,b,c=sys.exc_info()
                 for parent in self.extended_parents:
                     if parent.rseed is True and hasattr(parent, 'random'):
-                        if parent.random is not None:
+                        try:
                             parent.random()
+                        except:
+                            raise a,b,c
+                            
         if tweaked:
             warnings.warn("The initial values of %s's parents led to a ZeroProbability error. In an attempt to avoid failure, random values for the extendend parents were drawn %d times before a valid log probability was obtained."%(name,  i))
         
