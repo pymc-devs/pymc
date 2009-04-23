@@ -12,6 +12,7 @@ import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
+from Node import logp_of_set
 
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
@@ -132,23 +133,6 @@ except:
                     val[i]=0.
                 sig[:,i] = vec[:,i]*sqrt(val[i])
         return np.asmatrix(sig).T
-
-def logp_of_set(s):
-    exc = None
-    logp = 0.
-    for obj in s:
-        try:
-            logp += obj.logp
-        except:
-            cls, inst, tb = sys.exc_info()
-            if cls is ZeroProbability:
-                raise cls, inst, tb
-            elif exc is None:
-                exc = (cls, inst, tb)
-    if exc is None:
-        return logp
-    else:
-        raise exc[0], exc[1], exc[2]
 
 def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None)

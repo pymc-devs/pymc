@@ -6,9 +6,28 @@ __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-import os, pdb
+import os, sys, pdb
 import numpy as np
 import types
+
+
+def logp_of_set(s):
+    exc = None
+    logp = 0.
+    for obj in s:
+        try:
+            logp += obj.logp
+        except:
+            cls, inst, tb = sys.exc_info()
+            if cls is ZeroProbability:
+                raise cls, inst, tb
+            elif exc is None:
+                exc = (cls, inst, tb)
+    if exc is None:
+        return logp
+    else:
+        raise exc[0], exc[1], exc[2]
+
 
 def batchsd(trace, batches=5):
     """
@@ -275,7 +294,7 @@ class ContainerBase(object):
 
     def _get_logp(self):
         # Return total log-probabilities from all elements
-        return sum(obj.logp for obj in self.stochastics | self.potentials | self.observed_stochastics)
+        return logp_of_set(self.stochastics | self.potentials | self.observed_stochastics)
 
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
