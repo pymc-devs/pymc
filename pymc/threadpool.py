@@ -163,7 +163,9 @@ class WorkerThread(threading.Thread):
                 request.exception = True
                 if request.exc_callback:
                     request.exc_callback(request)
-                self._requests_queue.task_done()                
+                self._requests_queue.task_done()   
+            finally:
+                request.self_destruct()             
 
     def dismiss(self):
         """Sets a flag to tell the thread to exit when done with current job."""
@@ -224,6 +226,15 @@ class WorkRequest:
     def __str__(self):
         return "<WorkRequest id=%s>" % \
             (self.str_requestID)
+    
+    def self_destruct(self):
+        """
+        Avoids strange memory leak... for some reason the work request itself never
+        gets let go, so if it has big arguments, or if its callable closes on big
+        variables, there's trouble.
+        """
+        for attr in ['exception', 'callback', 'exc_callback', 'callable', 'args', 'kwds']:
+            delattr(self, attr)
 
 class ThreadPool:
     """A thread pool, distributing work requests and collecting results.
