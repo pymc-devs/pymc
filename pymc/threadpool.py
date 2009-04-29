@@ -310,27 +310,32 @@ def map_noreturn(targ, argslist):
     """
 
     # Thanks to Anne Archibald's handythread.py for the exception handling mechanism.
-    exc_lock = threading.Lock()
-    done_lock = threading.Lock()
-
     exceptions=[]
     n_threads = len(argslist)
     remaining = [n_threads]
+    
+    exc_lock = threading.Lock()
+    done_lock = threading.Lock()
+    rem_lock = threading.Lock()
 
-    def eb(wr, el=exc_lock, ex=exceptions, rem=remaining, dl=done_lock):
+    def eb(wr, el=exc_lock, ex=exceptions, rem=remaining, dl=done_lock, rl=rem_lock):
         el.acquire()
         ex.append(sys.exc_info())
         el.release()
 
+        rl.acquire()
         rem[0] -= 1
         if rem[0] == 0:
             dl.release()
+        rl.release()
 
-    def cb(wr, value, rem=remaining, dl=done_lock):
+    def cb(wr, value, rem=remaining, dl=done_lock, rl=rem_lock):
+        rl.acquire()
         rem[0] -= 1
         if rem[0] == 0:
             dl.release()
-
+        rl.release()
+    
     done_lock.acquire()
     for args in argslist:
         __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))

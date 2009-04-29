@@ -127,7 +127,6 @@ class covariance_wrapper(object):
                 if key in kwargs.keys():
                     distance_arg_dict[key] = kwargs.pop(key)
 
-
         # Allocate the matrix
         C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
 
@@ -147,6 +146,7 @@ class covariance_wrapper(object):
         else:
             thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
             map_noreturn(targ, thread_args)
+            
 
         return C
 
