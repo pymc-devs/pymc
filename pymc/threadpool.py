@@ -297,6 +297,23 @@ if os.environ.has_key('OMP_NUM_THREADS'):
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 else:
     __PyMCThreadPool__ = ThreadPool(2)
+    
+class CountDownLatch(object):
+    def __init__(self, n):
+        self.n = n
+        self.main_lock = threading.Lock()
+        self.counter_lock = threading.Lock()
+        self.main_lock.acquire()
+    def countdown(self):
+        self.counter_lock.acquire()
+        self.n -= 1
+        if self.n == 0:
+            self.main_lock.release()        
+        self.counter_lock.release()
+    def await(self):
+        self.main_lock.acquire()
+        self.main_lock.release()
+        
 
 def map_noreturn(targ, argslist):
     """
@@ -312,36 +329,24 @@ def map_noreturn(targ, argslist):
     # Thanks to Anne Archibald's handythread.py for the exception handling mechanism.
     exceptions=[]
     n_threads = len(argslist)
-    remaining = [n_threads]
     
     exc_lock = threading.Lock()
-    done_lock = threading.Lock()
-    rem_lock = threading.Lock()
+    done_lock = CountDownLatch(n_threads)
 
-    def eb(wr, el=exc_lock, ex=exceptions, rem=remaining, dl=done_lock, rl=rem_lock):
+    def eb(wr, el=exc_lock, ex=exceptions, dl=done_lock):
         el.acquire()
         ex.append(sys.exc_info())
         el.release()
 
-        rl.acquire()
-        rem[0] -= 1
-        if rem[0] == 0:
-            dl.release()
-        rl.release()
-
-    def cb(wr, value, rem=remaining, dl=done_lock, rl=rem_lock):
-        rl.acquire()
-        rem[0] -= 1
-        if rem[0] == 0:
-            dl.release()
-        rl.release()
-    
-    done_lock.acquire()
+        dl.countdown()
+        
+    def cb(wr, value, dl=done_lock):
+        dl.countdown()
+        
     for args in argslist:
         __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))
-    done_lock.acquire()
-    done_lock.release()
-
+    done_lock.await()
+    
     if exceptions:
         a, b, c = exceptions[0]
         raise a, b, c
