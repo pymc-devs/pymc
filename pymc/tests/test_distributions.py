@@ -803,6 +803,24 @@ class test_poisson(TestCase):
         a = flib.poisson([1,2,3], 2)
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
+        
+class test_truncated_poisson(TestCase):
+    def test_consistency(self):
+        parameters = {'mu':4., 'k':1}
+        hist,like, figdata = discrete_consistency(rtruncated_poisson, flib.trpoisson, parameters, nrandom=5000, range=[1,10])
+        if PLOT:
+            compare_hist(figname='poisson', **figdata)
+        assert_array_almost_equal(hist, like,1)
+
+    def test_normalization(self):
+        parameters = {'mu':4., 'k':1}
+        summation=discrete_normalization(flib.trpoisson,parameters,20)
+        assert_almost_equal(summation, 1, 2)
+
+    def test_calling(self):
+        a = flib.trpoisson([3,4,5], 4, 1)
+        b = flib.trpoisson([3,4,5], [4,4,4], [1,1,1])
+        assert_equal(a,b)
 
 class test_skew_normal(TestCase):
     def test_consistency(self):

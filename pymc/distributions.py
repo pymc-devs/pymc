@@ -38,6 +38,8 @@ import pdb
 import utils
 import warnings
 
+poiscdf = np.vectorize(flib.gammq)
+
 # Import utility functions
 import inspect, types
 from copy import copy
@@ -51,9 +53,9 @@ class ArgumentError(AttributeError):
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
-'weibull','skew_normal', 'truncnorm', 'von_mises']
+'weibull','skew_normal', 'truncated_normal', 'von_mises']
 
-sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform']
+sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform', 'truncated_poisson']
 
 mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
@@ -1992,10 +1994,81 @@ def poisson_like(x,mu):
     #     return -np.Inf
     return flib.poisson(x,mu)
 
+# Truncated Poisson--------------------------------------------------
+@randomwrap
+def rtruncated_poisson(mu, k, size=1):
+    """
+    rtruncpoisson(mu, k, size=1)
+
+    Random truncated Poisson variates with minimum value k, generated 
+    using rejection sampling.
+    """
+    
+    k=k-1
+    
+    # Calculate m
+    m = max(0, np.floor(k+1-mu))
+    
+    # Calculate constant for acceptance probability
+    C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
+    
+    # Empty array to hold random variates
+    rvs = np.empty(0, int)
+    
+    while(len(rvs)<size):
+        # Propose values by sampling from untruncated Poisson with mean mu + m
+        proposals = np.random.poisson(mu+m, size*4)
+        
+        # Acceptance probability
+        a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
+        a *= proposals > k
+        
+        # Uniform random variates
+        u = np.random.random(size*4)
+        
+        rvs = np.append(rvs, proposals[u<a])
+        
+    return rvs[:size]
+        
+
+def truncated_poisson_expval(mu, k):
+    """
+    truncpoisson_expval(mu, k)
+
+    Expected value of Poisson distribution truncated to be no smaller than k.
+    """
+
+    return mu/(1.-poiscdf(k, mu))
+
+
+def truncated_poisson_like(x,mu,k):
+    R"""
+    truncpoisson_like(x,mu,k)
+
+    Truncated Poisson log-likelihood. The Truncated Poisson is a discrete 
+    probability distribution that is arbitrarily truncated to be greater than some
+    minimum value k. For example, zero-truncated Poisson distributions can be used 
+    to model counts that are constrained to be non-negative.
+
+    .. math::
+        f(x \mid \mu, k) = \frac{e^{-\mu}\mu^x}{x!(1-F(k|\mu))}
+
+    :Parameters:
+      - `x` : [int] :math:`x \in {0,1,2,...}`
+      - `mu` : Expected number of occurrences during the given interval,
+               :math:`\mu \geq 0`.
+      - `k` : Truncation point representing the minimum allowable value.
+
+    .. note::
+       - :math:`E(x)=\frac{\mu}{1-F(k|\mu)}`
+       - :math:`Var(x)=\frac{\mu}{1-F(k|\mu)}`
+    """
+    return flib.trpoisson(x,mu,k)
+
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncnorm(mu, tau, a, b, size=1):
-    """rtruncnorm(mu, tau, a, b, size=1)
+def rtruncated_normal(mu, tau, a, b, size=1):
+    """rtruncated_normal(mu, tau, a, b, size=1)
 
     Random truncated normal variates.
     """
@@ -2012,8 +2085,9 @@ def rtruncnorm(mu, tau, a, b, size=1):
     # Unnormalize
     return R*sigma + mu
 
+rtruncnorm = rtruncated_normal
 
-def truncnorm_expval(mu, tau, a, b):
+def truncated_normal_expval(mu, tau, a, b):
     """Expectation value of the truncated normal distribution.
 
     .. math::
@@ -2027,8 +2101,10 @@ def truncnorm_expval(mu, tau, a, b):
     else:
         Phib = pymc.utils.normcdf((b-mu)/sigma)
     return (mu + (phia-phib)/(Phib - Phia))[0]
+    
+truncnorm_expval = truncated_normal_expval
 
-def truncnorm_like(x, mu, tau, a, b):
+def truncated_normal_like(x, mu, tau, a, b):
     R"""truncnorm_like(x, mu, tau, a, b)
 
     Truncated normal log-likelihood.
@@ -2070,6 +2146,8 @@ def truncnorm_like(x, mu, tau, a, b):
         if np.isnan(Phi) or np.isinf(Phi):
             return -np.inf
         return phi - Phi
+        
+truncnorm_like = truncated_normal_like
 
 # Azzalini's skew-normal-----------------------------------
 @randomwrap

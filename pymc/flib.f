@@ -89,7 +89,7 @@ cf2py intent(hide) nx, nu, nl
 cf2py intent(out) mx
       
       DOUBLE PRECISION x(nx), u(nu), l(nl), mx(nx)
-      DOUBLE PRECISION hi, lo, xi, in
+      DOUBLE PRECISION hi, lo, xi
       INTEGER nx, nu, nl, i
       
       lo = l(1)
@@ -577,6 +577,66 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
         endif
       enddo
       like = sumx - sumfact
+      return
+      END
+      
+      SUBROUTINE trpoisson(x,mu,k,n,nmu,like)
+
+c Truncated poisson log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py integer dimension(nmu),intent(in) :: k
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nmu, kt
+      INTEGER x(n), k(nmu)
+      DOUBLE PRECISION mu(nmu), like, cdf
+      DOUBLE PRECISION sumx, mut, infinity, sumfact, sumcdf
+      DOUBLE PRECISION factln, gammq
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
+      mut = mu(1)
+      kt = k(1)
+      
+      sumx = 0.0
+      sumfact = 0.0
+      sumcdf = 0.0
+      do i=1,n
+        if (nmu .NE. 1) then
+          mut = mu(i)
+          kt = k(i)
+        endif
+        
+        if (mut .LT. kt) then
+          like = -infinity
+          RETURN
+        endif
+        
+        if (kt .LT. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+    
+        if (x(i) .LT. kt) then
+          like = -infinity
+          RETURN
+        endif
+    
+        if (.NOT.((x(i) .EQ. kt) .AND. (mut .EQ. kt))) then
+          sumx = sumx + x(i)*dlog(mut) - mut      
+          sumfact = sumfact + factln(x(i))
+          cdf = gammq(dble(kt), mut)
+          sumcdf = sumcdf + dlog(1.-cdf)
+        endif
+      enddo
+      like = sumx - sumfact - sumcdf
       return
       END
       
@@ -1998,6 +2058,93 @@ c
       gammds = gammds*f
       return
       end
+      
+      
+      SUBROUTINE gser(gamser,a,x,gln) 
+      INTEGER ITMAX 
+      DOUBLE PRECISION a,gamser,gln,x,EPS 
+      PARAMETER (ITMAX=100,EPS=3.e-7) 
+C USES gammln 
+C Returns the incomplete gamma function P (a, x) evaluated by its series representation as 
+C gamser. Also returns ln Γ(a) as gln. 
+      INTEGER n 
+      DOUBLE PRECISION ap,del,sum,gammln 
+      
+      gln=gammln(a) 
+      if(x.le.0.)then 
+        if(x.lt.0.) write (*,*) 'x < 0 in gser'
+        gamser=0. 
+        return 
+      endif 
+      ap=a 
+      sum=1./a 
+      del=sum 
+      do n=1,ITMAX 
+        ap=ap+1. 
+        del=del*x/ap 
+        sum=sum+del 
+        if (abs(del).lt.abs(sum)*EPS) goto 1 
+      enddo
+      write (*,*) 'a too large, ITMAX too small in gser'
+    1 gamser=sum*exp(-x+a*log(x)-gln) 
+      return 
+      END 
+      
+      
+      SUBROUTINE gcf(gammcf,a,x,gln) 
+      INTEGER ITMAX 
+      DOUBLE PRECISION a,gammcf,gln,x,EPS,FPMIN 
+      PARAMETER (ITMAX=100,EPS=3.e-7,FPMIN=1.e-30) 
+C USES gammln 
+C Returns the incomplete gamma function Q(a, x) evaluated by its continued fraction 
+C representation as gammcf. Also returns ln Γ(a) as gln. 
+C Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative 
+C accuracy; FPMIN is a number near the smallest representable ﬂoating-point number. 
+      INTEGER i 
+      DOUBLE PRECISION an,b,c,d,del,h,gammln 
+      gln=gammln(a) 
+      b=x+1.-a  
+      c=1./FPMIN 
+      d=1./b 
+      h=d 
+      do i=1,ITMAX 
+        an=-i*(i-a) 
+        b=b+2. 
+        d=an*d+b 
+        if(abs(d).lt.FPMIN)d=FPMIN 
+        c=b+an/c 
+        if(abs(c).lt.FPMIN)c=FPMIN 
+        d=1./d 
+        del=d*c
+        h=h*del 
+        if(abs(del-1.).lt.EPS)goto 1 
+      enddo
+      write (*,*) 'a too large, ITMAX too small in gcf'
+    1 gammcf=exp(-x+a*log(x)-gln)*h 
+      return 
+      END 
+
+      
+      FUNCTION gammq(a,x) 
+cf2py double precision intent(in) :: a,x
+cf2py double precision intent(out) :: gammaq
+cf2py threadsafe
+      DOUBLE PRECISION a,gammq,x 
+C USES gcf,gser 
+C Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x). 
+      DOUBLE PRECISION gammcf,gamser,gln 
+      if(x.lt.0..or.a.le.0.) write (*,*) 'bad arguments in gammq'
+      if(x.lt.a+1.)then 
+C Use the series representation 
+        call gser(gamser,a,x,gln) 
+        gammq=1.-gamser
+      else 
+C Use the continued fraction representation. 
+        call gcf(gammcf,a,x,gln) 
+      gammq=gammcf 
+      endif 
+      return 
+      END
 
 
       SUBROUTINE trans(mat,tmat,m,n)
