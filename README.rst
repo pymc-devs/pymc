@@ -4,7 +4,7 @@ Introduction
 
 :Date: April 6, 2007
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard
-:Contact: chris@trichech.us
+:Contact: pymc@googlegroups.com
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the MIT license.

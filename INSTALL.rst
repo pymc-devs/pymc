@@ -15,7 +15,6 @@ The following describes the required and optional dependencies and takes you
 through the installation process.
 
 
-
 Dependencies
 ============
 
