@@ -10,7 +10,6 @@ Introduction
 :License: PyMC is released under the MIT license.
 :Version: 2.0
 
-
 Purpose
 =======
 
