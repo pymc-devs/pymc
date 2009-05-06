@@ -101,6 +101,7 @@ if __name__ == '__main__':
     import numpy
     import pymc
     from pylab import *
+
     N = 100
     x,y=numpy.meshgrid(linspace(.01,1,N), linspace(.01,1,N))
     z = numpy.empty((N,N,2))
