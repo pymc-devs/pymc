@@ -434,7 +434,7 @@ Deterministic-generating wrapper for %s. Original docstring:
 %s
     """%(func.__name__, '_'*60, func.__doc__)
     return dtrm_generator
-        
+
 
 def pfunc(func):
     """
@@ -468,7 +468,7 @@ def pfunc(func):
             raise cls, inst, tb
     fargs, fvarargs, fvarkw, fdefaults = inspect.getargspec(func)
     n_fargs = len(fargs)
-    
+
     def dtrm_generator(*args, **kwds):
         name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args) + kwds.values()])+')'
         doc_str = 'A deterministic returning %s(%s, %s)'%(func.__name__, ', '.join([str(arg) for arg in args]), ', '.join(['%s=%s'%(key, str(val)) for key, val in kwds.iteritems()]))

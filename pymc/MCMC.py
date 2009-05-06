@@ -64,7 +64,7 @@ class MCMC(Sampler):
               Keywords arguments to be passed to the database instantiation method.
         """
         Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
-        
+
         self._sm_assigned = False
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -100,7 +100,7 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
-        
+
         if not self._sm_assigned:
 
             # Assign dataless stepper first
@@ -132,7 +132,7 @@ class MCMC(Sampler):
             self.step_methods = set()
             for s in self.stochastics:
                 self.step_methods |= set(self.step_method_dict[s])
-            
+
             for sm in self.step_methods:
                 if sm.tally:
                     for name in sm._tuning_info:
@@ -146,7 +146,7 @@ class MCMC(Sampler):
         sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose)
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
-        
+
         :Parameters:
           - iter : int
             Total number of iterations to do
@@ -157,7 +157,7 @@ class MCMC(Sampler):
           - tune_interval : int
             Step methods will be tuned at intervals of this many iterations, default 1000
           - tune_throughout : boolean
-            If true, tuning will continue after the burnin period (True); otherwise tuning 
+            If true, tuning will continue after the burnin period (True); otherwise tuning
             will halt at the end of the burnin period.
           - save_interval : int or None
             If given, the model state will be saved at intervals of this many iterations
@@ -201,8 +201,8 @@ class MCMC(Sampler):
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
-                
-                if i == self._burn: 
+
+                if i == self._burn:
                     if self.verbose>0:
                         print 'Burn-in interval complete'
                     if not self._tune_throughout:

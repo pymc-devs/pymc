@@ -159,7 +159,7 @@ def load(dirname):
         db._state_ = eval(file.read())
     else:
         db._state_= {}
-        
+
     return db
 
 def funname(file):
