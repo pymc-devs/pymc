@@ -81,7 +81,7 @@ class Trace(object):
         # tallied step methods' getfuncs yet.
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
-        
+
 
     def tally(self, chain):
         """Appends the object's value to a chain.
@@ -176,7 +176,7 @@ class Database(object):
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
-        
+
         for name, fun in funs_to_tally.iteritems():
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
@@ -186,7 +186,7 @@ class Database(object):
         self.trace_names.append(funs_to_tally.keys())
 
         self.chains += 1
-                
+
     def tally(self, chain=-1):
         """Append the current value of all tallyable object.
 
@@ -203,15 +203,15 @@ class Database(object):
             except:
                 cls, inst, tb = sys.exc_info()
                 print """
-Error tallying %s, will not try to tally it again this chain. 
-Did you make all the samevariables and step methods tallyable 
+Error tallying %s, will not try to tally it again this chain.
+Did you make all the samevariables and step methods tallyable
 as were tallyable last time you used the database file?
 
 Error:
 
 %s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
                 self.trace_names[chain].remove(name)
-            
+
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -252,7 +252,7 @@ Error:
             for name, fun in model._funs_to_tally.iteritems():
                 if not self._traces.has_key(name):
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
-                    
+
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
         chain = range(self.chains)[chain]
@@ -296,7 +296,7 @@ Error:
         """
         self._default_chain = chain
         return self._traces[name]
-        
+
 def load(dbname):
     """Return a Database instance from the traces stored on disk.
 

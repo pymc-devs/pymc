@@ -200,7 +200,7 @@ class StepMethod(object):
         # Remove own stochastics from children and parents.
         self.children -= self.stochastics
         self.parents -= self.stochastics
-        
+
         # self.markov_blanket is a list, because we want self.stochastics to have the chance to
         # raise ZeroProbability exceptions before self.children.
         self.markov_blanket = list(self.stochastics)+list(self.children)
@@ -266,7 +266,7 @@ class StepMethod(object):
 
     # Make get property for retrieving log-probability
     loglike = property(fget = _get_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, with self.stochastics removed.")
-    
+
     def _get_logp_plus_loglike(self):
         sum = logp_of_set(self.markov_blanket)
         if self.verbose > 1:
@@ -283,7 +283,7 @@ class StepMethod(object):
         for s in self._state:
             state[s] = getattr(self, s)
         return state
-        
+
 
     @prop
     def ratio():
@@ -490,7 +490,7 @@ class Metropolis(StepMethod):
             self.stochastic.value = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd)
         elif self.proposal_distribution == "Prior":
             self.stochastic.random()
-            
+
     def tune(self, divergence_threshold=1e10, verbose=0):
         """
         Tunes the scaling parameter for the proposal distribution
@@ -827,7 +827,7 @@ class AdaptiveMetropolis(StepMethod):
 
         # Verbosity flag
         self.verbose = verbose
-        
+
         self.accepted = 0
         self.rejected = 0
 

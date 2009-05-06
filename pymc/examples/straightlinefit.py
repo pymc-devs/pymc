@@ -70,7 +70,7 @@ def modelled_y(x=x, theta=theta):
 """
 Input error model.
 
-    Define the probability of measuring x knowing the true value. 
+    Define the probability of measuring x knowing the true value.
 """
 measured_input = Normal('measured_input', mu=x, tau=2, value=data_x, observed=True)
 

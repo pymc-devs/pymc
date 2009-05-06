@@ -18,7 +18,7 @@ cdef class LCValue:
     cdef int n_val, n_nonval
 
     def __init__(self, container):
-        
+
         cdef int i
         self._value = container._value
         self.val_ind = <int*> PyArray_DATA(container.val_ind)
@@ -27,7 +27,7 @@ cdef class LCValue:
         self.nonval_ind = <int*> PyArray_DATA(container.nonval_ind)
         self.nonval_obj = <void**> PyArray_DATA(container.nonval_obj)
         self.n_nonval = container.n_nonval
-                    
+
     def run(self):
         cdef int i
         for i from 0 <= i < self.n_val:

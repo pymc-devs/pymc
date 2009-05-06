@@ -544,7 +544,7 @@ class Stochastic(StochasticBase):
         # Check initial value
         # Sometimes, the random values assigned to parents will cause a
         # ZeroProbability error at instantiation time. The loop below
-        # will draw random values for the parents until logp behaves. 
+        # will draw random values for the parents until logp behaves.
         tweaked = False
         for i in range(100):
             try:
@@ -559,10 +559,10 @@ class Stochastic(StochasticBase):
                             parent.random()
                         except:
                             raise a,b,c
-                            
+
         if tweaked:
             warnings.warn("The initial values of %s's parents led to a ZeroProbability error. In an attempt to avoid failure, random values for the extendend parents were drawn %d times before a valid log probability was obtained."%(name,  i))
-        
+
         if not isinstance(logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
@@ -704,7 +704,7 @@ class Stochastic(StochasticBase):
     def _set_observed(self, observed):
         raise ValueError, 'Stochastic %s: "observed" flag cannot be changed.'%self.__name__
     observed = property(_get_observed, _set_observed)
-    
+
 
     def _get_coparents(self):
         coparents = set()

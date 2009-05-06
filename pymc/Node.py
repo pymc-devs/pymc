@@ -35,26 +35,26 @@ def batchsd(trace, batches=5):
     samples. The trace is divided into batches, and the standard deviation of
     the batch means is calculated.
     """
-    
+
     if len(np.shape(trace)) > 1:
-        
+
         ttrace = np.transpose(trace)
         dims = np.shape(ttrace)
-        
+
         return np.array([batchsd(t, batches) for t in np.reshape(ttrace, (dims[0], sum(dims[1:])))])
-        
+
     else:
         if batches == 1: return np.std(trace)/np.sqrt(len(trace))
-    
+
         try:
             batched_traces = np.resize(trace, (batches, len(trace)/batches))
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(trace) % batches
             batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
-        
+
         means = np.mean(batched_traces, 1)
-    
+
         return np.std(means)/np.sqrt(batches)
 
 class ZeroProbability(ValueError):
@@ -218,7 +218,7 @@ class Variable(Node):
         """
         from utils import hpd, quantiles
         from numpy import sqrt
-        
+
         try:
             trace = np.squeeze(np.array(self.trace(), float)[start:])
 

@@ -85,7 +85,7 @@ class Trace(base.Trace):
         chain : integer
           Chain index.
         """
-        
+
         value = self._getfunc()
 
         try:
