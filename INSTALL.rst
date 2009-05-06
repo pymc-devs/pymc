@@ -14,7 +14,6 @@ depencies can greatly improve PyMC's performance and versatility.
 The following describes the required and optional dependencies and takes you
 through the installation process.
 
-
 Dependencies
 ============
 
