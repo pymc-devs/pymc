@@ -355,7 +355,7 @@ class test_binomial(TestCase):
         c = flib.binomial([3,4,5], [7,7,7], [.7,.7,.7])
         assert_equal(a,b)
         assert_equal(a,c)
-        
+
 class test_betabin(TestCase):
     def test_consistency(self):
         parameters={'n':7, 'alpha':1, 'beta':2}
@@ -803,7 +803,7 @@ class test_poisson(TestCase):
         a = flib.poisson([1,2,3], 2)
         b = flib.poisson([1,2,3], [2,2,2])
         assert_equal(a,b)
-        
+
 class test_truncated_poisson(TestCase):
     def test_consistency(self):
         parameters = {'mu':4., 'k':1}

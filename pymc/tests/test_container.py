@@ -13,7 +13,7 @@ class test_Container(TestCase):
 
         assert_equal(Container([A,B]).value, [A.value, B.value])
         assert_equal(C.parents.value['mu'], [A.value, B.value])
-    
+
     def test_nested_tuple_container(self):
         A = Normal('A',0,1)
         try:
@@ -21,8 +21,8 @@ class test_Container(TestCase):
             raise AssertionError, 'A NotImplementedError should have resulted.'
         except NotImplementedError:
             pass
-        
-        
+
+
     def test(self):
 
 # Test set container:

@@ -58,8 +58,8 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
     Graphical Statistics, 2006, DOI: 10.1198/106186006X136976).
 
     Generates posterior samples based on 'true' parameter values and data simulated
-    from the priors. The quantiles of the parameter values are calculated, based on 
-    the samples. If the model is valid, the quantiles should be uniformly distributed 
+    from the priors. The quantiles of the parameter values are calculated, based on
+    the samples. If the model is valid, the quantiles should be uniformly distributed
     over [0,1].
 
     Since this relies on the generation of simulated data, all data stochastics
@@ -92,7 +92,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
       Return a dictionary containing tuples with the chi-square statistic and
       associated p-value for each data stochastic.
     """
-    
+
     # Set verbosity for models to zero
     sampler.verbose = 0
 
@@ -114,19 +114,19 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
 
     # Loop over replicates
     for i in range(replicates):
-        
+
         # Sample from priors
         for p in sampler.stochastics:
             if not p.extended_parents:
                 p.random()
-            
+
         # Sample "true" data values
         for o in sampler.observed_stochastics:
             # Generate simuated data for data stochastic
             o.set_value(o.random(), force=True)
             if verbose:
                 print "Data for %s is %s" % (o.__name__, o.value)
-            
+
         param_values = {}
         # Record data-generating parameter values
         for s in parameters:
@@ -144,7 +144,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
                 trace = s.trace()
                 q = sum(trace<param_values[s], 0)/float(len(trace))
                 quantiles[s.__name__].append(open01(q))
-                
+
             # Replace data values
             for o in sampler.observed_stochastics:
                 o.revert()
@@ -163,7 +163,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
 
     # Replace backend
     sampler._assign_database_backend(original_backend)
-    
+
     stats = {}
     # Calculate chi-square statistics
     for param in quantiles:

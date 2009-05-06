@@ -17,12 +17,12 @@ class test_logp_of_set(TestCase):
         else:
             return 0.
     E.value = 2
-    
+
     def test_logp(self):
         self.B.rand()
         lp1 = utils.logp_of_set(set([self.A,self.B,self.D]))
         assert_equal(lp1, self.A.logp+self.B.logp+self.D.logp)
-        
+
     def test_ZeroProb(self):
         self.B.value = -1
         for i in xrange(1000):
@@ -40,7 +40,7 @@ class test_logp_of_set(TestCase):
             except:
                 cls,  inst, tb = sys.exc_info()
                 assert(cls is RuntimeError)
-        
+
 
 if __name__ == '__main__':
     C =nose.config.Config(verbosity=1)

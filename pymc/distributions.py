@@ -161,11 +161,11 @@ def new_dist_class(*new_class_args):
                         arg_dict_out[k] = kwds.pop(k)
                     except:
                         pass
-            
-            # Remaining unrecognized arguments raise an error. 
+
+            # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
                 raise TypeError, 'Keyword '+ kwds.keys() + ' not recognized. Arguments recognized are ' + str(args_needed)
-            
+
         # Determine size desired for scalar variables.
         # Notes
         # -----
@@ -616,7 +616,7 @@ def bernoulli_like(x, p):
       - :math:`Var(x)= p(1-p)`
 
     """
-    
+
     return flib.bernoulli(x, p)
 
 
@@ -714,7 +714,7 @@ def binomial_like(x, n, p):
     """
 
     return flib.binomial(x,n,p)
-    
+
 # Beta----------------------------------------------
 @randomwrap
 def rbetabin(alpha, beta, n, size=1):
@@ -781,8 +781,8 @@ def categorical_like(x, p):
 
     Categorical log-likelihood. The most general discrete distribution.
 
-    .. math::  f(x=i \mid p) = p_i 
-    
+    .. math::  f(x=i \mid p) = p_i
+
     for :math:`i \in 0 \ldots k-1`.
 
     :Parameters:
@@ -864,7 +864,7 @@ def chi2_like(x, nu):
         f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
     :Parameters:
-      - `x` : > 0 
+      - `x` : > 0
       - `nu` : [int] Degrees of freedom ( nu > 0 )
 
     .. note::
@@ -947,8 +947,8 @@ def dirichlet_like(x, theta):
     :Parameters:
       - `x` : An (n,k-1) array where `n` is the number of samples and `k` the dimension.
           :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
-      - `theta` : An (n,k) or (1,k) array > 0. 
-        
+      - `theta` : An (n,k) or (1,k) array > 0.
+
     """
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
@@ -1281,7 +1281,7 @@ def hypergeometric_like(x, n, m, N):
     population without replacement.
 
     .. math::
-    
+
         f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
 
     :Parameters:
@@ -1690,7 +1690,7 @@ def mv_normal_like(x, mu, tau):
 
     :Parameters:
       - `x`: (n,k)
-      - `mu`: (k) Location parameter sequence.  
+      - `mu`: (k) Location parameter sequence.
       - `tau`: (k,k) Positive definite precision matrix.
 
     .. seealso:: :func:`mv_normal_chol_like`, :func:`mv_normal_cov_like`
@@ -1930,8 +1930,8 @@ def von_mises_like(x, mu, kappa):
 
     .. math::
         f(x \mid \mu, k) = \frac{e^{k \cos(x - \mu)}}{2 \pi I_0(k)}
-    
-    where `I_0` is the modified Bessel function of order 0. 
+
+    where `I_0` is the modified Bessel function of order 0.
 
     :Parameters:
       - `x` : Input data.
@@ -2000,36 +2000,36 @@ def rtruncated_poisson(mu, k, size=1):
     """
     rtruncpoisson(mu, k, size=1)
 
-    Random truncated Poisson variates with minimum value k, generated 
+    Random truncated Poisson variates with minimum value k, generated
     using rejection sampling.
     """
-    
+
     k=k-1
-    
+
     # Calculate m
     m = max(0, np.floor(k+1-mu))
-    
+
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
-    
+
     # Empty array to hold random variates
     rvs = np.empty(0, int)
-    
+
     while(len(rvs)<size):
         # Propose values by sampling from untruncated Poisson with mean mu + m
         proposals = np.random.poisson(mu+m, size*4)
-        
+
         # Acceptance probability
         a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
         a *= proposals > k
-        
+
         # Uniform random variates
         u = np.random.random(size*4)
-        
+
         rvs = np.append(rvs, proposals[u<a])
-        
+
     return rvs[:size]
-        
+
 
 def truncated_poisson_expval(mu, k):
     """
@@ -2045,9 +2045,9 @@ def truncated_poisson_like(x,mu,k):
     R"""
     truncpoisson_like(x,mu,k)
 
-    Truncated Poisson log-likelihood. The Truncated Poisson is a discrete 
+    Truncated Poisson log-likelihood. The Truncated Poisson is a discrete
     probability distribution that is arbitrarily truncated to be greater than some
-    minimum value k. For example, zero-truncated Poisson distributions can be used 
+    minimum value k. For example, zero-truncated Poisson distributions can be used
     to model counts that are constrained to be non-negative.
 
     .. math::
@@ -2101,7 +2101,7 @@ def truncated_normal_expval(mu, tau, a, b):
     else:
         Phib = pymc.utils.normcdf((b-mu)/sigma)
     return (mu + (phia-phib)/(Phib - Phia))[0]
-    
+
 truncnorm_expval = truncated_normal_expval
 
 def truncated_normal_like(x, mu, tau, a, b):
@@ -2146,7 +2146,7 @@ def truncated_normal_like(x, mu, tau, a, b):
         if np.isnan(Phi) or np.isinf(Phi):
             return -np.inf
         return phi - Phi
-        
+
 truncnorm_like = truncated_normal_like
 
 # Azzalini's skew-normal-----------------------------------
@@ -2328,7 +2328,7 @@ def weibull_like(x, alpha, beta):
       - `x` : :math:`x \ge 0`
       - `alpha` : alpha > 0
       - `beta` : beta > 0
-        
+
     .. note::
       - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`
       - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`
@@ -2792,29 +2792,29 @@ def Impute(name, dist_class, values, missing=None, **parents):
         mask = np.array(values) == missing
         # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
-    
+
     # Initialise list
     vars = []
     for i in xrange(len(masked_values)):
-        
+
         # Name of element
         this_name = name + '[%i]'%i
         # Dictionary to hold parents
         these_parents = {}
         # Parse parents
         for key, parent in parents.iteritems():
-            
+
             try:
                 # If parent is a PyMCObject
                 size = np.size(parent.value)
             except AttributeError:
                 size = np.size(parent)
-                
+
             if size == len(masked_values):
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
-                
+
         if masked_values.mask[i]:
             # Missing values
             vars.append(dist_class(this_name, **these_parents))

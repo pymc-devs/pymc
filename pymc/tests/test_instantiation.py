@@ -82,11 +82,11 @@ class test_instantiation(TestCase):
         assert(F.observed)
         assert(isinstance(G, Stochastic))
         assert(G.observed)
-    
+
     def test_stochastic(self):
         assert(isinstance(l, Stochastic))
         assert(not l.observed)
-    
+
     def test_invalid_keyword(self): # Ticket 239
         # Normal is given values instead of value and should raise an error
         try:
@@ -98,18 +98,18 @@ class test_instantiation(TestCase):
 
 
 class test_out_of_bound_initialization(TestCase):
-    
+
     def test_simple(self):
-        # There is a very slim chance that the lower bound will have a 
-        # valid value at the instantiation time of data. 
+        # There is a very slim chance that the lower bound will have a
+        # valid value at the instantiation time of data.
         # This checks the mechanism in PyMCObjects that redraws values for parents in an attempt
-        # to avoid failure so early. 
+        # to avoid failure so early.
         warnings.simplefilter('ignore',  UserWarning)
         lower = pymc.Uniform('lower', .9, 2., value=None, rseed=True,  verbose=0)
         data = pymc.Uniform('data', lower=lower, upper=5, value=[1, 2, 3, 4],  observed=True,  verbose=0)
         warnings.simplefilter('default',  UserWarning)
-        
-        
+
+
 if __name__ == '__main__':
     import unittest
     unittest.main()

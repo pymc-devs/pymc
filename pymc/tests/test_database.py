@@ -46,11 +46,11 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)        
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def test_simple_sample(self):
 
-        
+
         self.S.sample(50,25,5)
 
 
@@ -98,7 +98,7 @@ class TestPickle(TestRam):
                            db='pickle',
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)                           
+        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def load(self):
         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
@@ -114,7 +114,7 @@ class TestPickle(TestRam):
     def test_yconnect_and_sample(self):
         db = self.load()
         S = pymc.MCMC(DisasterModel, db=db)
-        S.use_step_method(pymc.Metropolis, S.e, tally=True)                           
+        S.use_step_method(pymc.Metropolis, S.e, tally=True)
         S.sample(5)
         assert_array_equal(db.e(chain=-1).shape, (5,))
         assert_array_equal(db.e(chain=None).shape, (20,))
@@ -131,7 +131,7 @@ class TestPickle(TestRam):
 class TestTxt(TestPickle):
     @classmethod
     def setUpClass(self):
-                
+
         self.S = pymc.MCMC(DisasterModel,
                            db='txt',
                            dbname=os.path.join(testdir, 'Disaster.txt'),
@@ -328,11 +328,11 @@ def test_interactive():
            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
            dbmode='w')
     M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
-        
+
 # def test_getitem():
 #    class tmp(database.base.Database):
 #        def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
-#            return 
+#            return
 
 
 if __name__ == '__main__':

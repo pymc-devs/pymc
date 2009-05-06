@@ -163,9 +163,9 @@ class WorkerThread(threading.Thread):
                 request.exception = True
                 if request.exc_callback:
                     request.exc_callback(request)
-                self._requests_queue.task_done()   
+                self._requests_queue.task_done()
             finally:
-                request.self_destruct()             
+                request.self_destruct()
 
     def dismiss(self):
         """Sets a flag to tell the thread to exit when done with current job."""
@@ -226,7 +226,7 @@ class WorkRequest:
     def __str__(self):
         return "<WorkRequest id=%s>" % \
             (self.str_requestID)
-    
+
     def self_destruct(self):
         """
         Avoids strange memory leak... for some reason the work request itself never
@@ -308,7 +308,7 @@ if os.environ.has_key('OMP_NUM_THREADS'):
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 else:
     __PyMCThreadPool__ = ThreadPool(2)
-    
+
 class CountDownLatch(object):
     def __init__(self, n):
         self.n = n
@@ -319,12 +319,12 @@ class CountDownLatch(object):
         self.counter_lock.acquire()
         self.n -= 1
         if self.n == 0:
-            self.main_lock.release()        
+            self.main_lock.release()
         self.counter_lock.release()
     def await(self):
         self.main_lock.acquire()
         self.main_lock.release()
-        
+
 
 def map_noreturn(targ, argslist):
     """
@@ -340,7 +340,7 @@ def map_noreturn(targ, argslist):
     # Thanks to Anne Archibald's handythread.py for the exception handling mechanism.
     exceptions=[]
     n_threads = len(argslist)
-    
+
     exc_lock = threading.Lock()
     done_lock = CountDownLatch(n_threads)
 
@@ -350,14 +350,14 @@ def map_noreturn(targ, argslist):
         el.release()
 
         dl.countdown()
-        
+
     def cb(wr, value, dl=done_lock):
         dl.countdown()
-        
+
     for args in argslist:
         __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))
     done_lock.await()
-    
+
     if exceptions:
         a, b, c = exceptions[0]
         raise a, b, c

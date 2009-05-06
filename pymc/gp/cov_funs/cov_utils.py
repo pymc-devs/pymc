@@ -52,12 +52,12 @@ def import_nested_module(name):
     root = tree[0]
     submods = tree[1:]
     mod = imp.load_module(root, *imp.find_module(root, mod_search_path))
-    
+
     for name in submods:
         mod = getattr(mod,name)
-        
+
     return mod
-    
+
 
 class covariance_wrapper(object):
     """
@@ -84,22 +84,9 @@ class covariance_wrapper(object):
         self.distance_fun_name = distance_fun_name
 
         cov_fun_module = import_nested_module(cov_fun_module)
-        # exec('import %s'%cov_fun_module)
-        
-        
-        # try:
-        # cov_fun_module = locals()[cov_fun_module]
-        # except:
-        #     from IPython.Debugger import Pdb
-        #     Pdb(color_scheme='Linux').set_trace()
-            
-            
         cov_fun = getattr(cov_fun_module, cov_fun_name)
 
-        # exec('import %s'%distance_fun_module)
-        # distance_fun_module = locals()[distance_fun_module]
-        
-        distance_fun_module = import_nested_module(distance_fun_module)        
+        distance_fun_module = import_nested_module(distance_fun_module)
         distance_fun = getattr(distance_fun_module, distance_fun_name)
 
         self.cov_fun_module = cov_fun_module
@@ -174,7 +161,7 @@ class covariance_wrapper(object):
         else:
             thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
             map_noreturn(targ, thread_args)
-            
+
 
         return C
 
