@@ -189,6 +189,11 @@ Previous versions are available in the ``/tags`` directory.
 .. _`subversion`: http://subversion.tigris.org/
 
 
+You can also get the code from the GIT mirror::
+
+    git clone git://github.com/pymc-devs/pymc.git pymc
+
+
 Running the test suite
 ======================
 
