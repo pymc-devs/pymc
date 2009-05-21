@@ -153,14 +153,18 @@ class covariance_wrapper(object):
             self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
             imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
             # Possibly symmetrize this bit
-            if symm:
-                symmetrize(C, cmin=cmin, cmax=cmax)
+            # FIXME: Intermittent errors apparently originating in symmetrize!
+            # if symm:
+            #     symmetrize(C, cmin=cmin, cmax=cmax)
 
         if n_threads <= 1:
             targ(C,x,y,0,-1,symm)
         else:
             thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
             map_noreturn(targ, thread_args)
+            
+        if symm:
+            symmetrize(C)
 
 
         return C
