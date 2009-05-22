@@ -5,9 +5,6 @@ from numpy import ndarray, array, zeros, shape, arange, where
 cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
     
-cdef extern from "Python.h":
-    void* PyList_GetItem(object obj, int i)
-
 cdef class LCValue:
     """
     l = LCValue(container)
@@ -34,7 +31,7 @@ cdef class LCValue:
     def run(self):
         cdef int i
         for i from 0 <= i < self.n_val:
-            self._value[self.val_ind[i]] = (<object> PyList_GetItem(self.val_obj,i)).value
+            self._value[self.val_ind[i]] = self.val_obj[i].value
         for i from 0 <= i < self.n_nonval:
             self._value[self.nonval_ind[i]] = (<object> self.nonval_obj[i])
 
@@ -65,7 +62,7 @@ cdef class DCValue:
         cdef object key
         for i from 0 <= i < self.n_val:
             key = <object> self.val_keys[i]
-            self._value[key] = (<object> PyList_GetItem(self.val_obj,i)).value
+            self._value[key] = self.val_obj[i].value
         for i from 0 <= i < self.n_nonval:
             key = <object> self.nonval_keys[i]
             self._value[key] = (<object> self.nonval_obj[i])
@@ -93,7 +90,7 @@ cdef class OCValue:
         cdef object key
         for i from 0 <= i < self.n_val:
             key = <object> self.val_keys[i]
-            self._value[key] = (<object> PyList_GetItem(self.val_obj,i)).value
+            self._value[key] = self.val_obj[i].value
         for i from 0 <= i < self.n_nonval:
             key = <object> self.nonval_keys[i]
             self._value[key] = (<object> self.nonval_obj[i])
@@ -120,6 +117,6 @@ cdef class ACValue:
     def run(self):
         cdef int i
         for i from 0 <= i < self.n_val:
-            self._ravelledvalue[self.val_ind[i]] = (<object> PyList_GetItem(self.val_obj,i)).value
+            self._ravelledvalue[self.val_ind[i]] = self.val_obj[i].value
         for i from 0 <= i < self.n_nonval:
             self._ravelledvalue[self.nonval_ind[i]] = (<object> self.nonval_obj[i])
