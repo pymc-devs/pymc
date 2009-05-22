@@ -246,7 +246,7 @@ def sort_list(container, _value):
     container.n_val = len(val_ind)
     container.n_nonval = len(nonval_ind)
     container.val_ind = array(val_ind, dtype='int32')
-    container.val_obj = array(val_obj, dtype=object)
+    container.val_obj = val_obj
     container.nonval_ind = array(nonval_ind, dtype='int32')
     container.nonval_obj = array(nonval_obj, dtype=object)
     container.LCValue = LCValue(container)
@@ -473,7 +473,7 @@ class DictContainer(ContainerBase, dict):
 
         self.n_val = len(self.val_keys)
         self.val_keys = array(self.val_keys, dtype=object)
-        self.val_obj = array(self.val_obj, dtype=object)
+        # self.val_obj = array(self.val_obj, dtype=object)
         self.n_nonval = len(self.nonval_keys)
         self.nonval_keys = array(self.nonval_keys, dtype=object)
         self.nonval_obj = array(self.nonval_obj, dtype=object)
@@ -623,7 +623,7 @@ class ArrayContainer(ContainerBase, ndarray):
                 nonval_obj.append(obj)
         val_obj.append(None)
         C.val_ind = array(val_ind, dtype='int32')
-        C.val_obj = array(val_obj, dtype=object)
+        C.val_obj = val_obj
         C.n_val = len(val_ind)
         nonval_obj.append(None)
         C.nonval_ind = array(nonval_ind, dtype='int32')
