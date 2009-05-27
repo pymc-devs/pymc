@@ -162,7 +162,7 @@ class covariance_wrapper(object):
         else:
             thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
             map_noreturn(targ, thread_args)
-            
+
         if symm:
             symmetrize(C)
 
