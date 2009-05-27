@@ -583,6 +583,8 @@ class Sampler(Model):
             try:
                 sm.value = stoch_state[sm.__name__]
             except:
+                from IPython.Debugger import Pdb
+                Pdb(color_scheme='Linux').set_trace()   
                 warnings.warn(\
     'Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__), exceptions.UserWarning)
                 #print 'Error message:'
