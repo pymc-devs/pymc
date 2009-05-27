@@ -258,9 +258,6 @@ class Database(pickle.Database):
 
             varnames = db._tables[-1].colnames+ objects.keys()
             db.trace_names = db.chains * [varnames,]
-        
-        from IPython.Debugger import Pdb
-        Pdb(color_scheme='Linux').set_trace()   
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -418,7 +415,7 @@ Error:
             s = self._h5file.createVLArray(cur_chain,'_state_',tables.ObjectAtom(),title='The saved state of the sampler',filters=self.filter)
             s.append(state)
         self._h5file.flush()
-        
+
     def getstate(self, chain=-1):
         if len(self._chains)==0:
             return {}
@@ -426,7 +423,7 @@ Error:
             return self._chains[chain]._state_[0]
         else:
             return {}
-            
+
     def _model_trace_description(self):
         """Return a description of the table and the ObjectAtoms to be created.
 
@@ -482,7 +479,7 @@ Error:
             raise TypeError, "chain must be a scalar integer."
 
         table = self._tables[chain]
-        
+
         if array is False:
             table.setAttr(name, object)
             obj = getattr(table.attrs, name)

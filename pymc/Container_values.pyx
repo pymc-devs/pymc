@@ -4,7 +4,7 @@ from numpy import ndarray, array, zeros, shape, arange, where
 
 cdef extern from "numpy/ndarrayobject.h":
     void* PyArray_DATA(object obj)
-    
+
 cdef class LCValue:
     """
     l = LCValue(container)
