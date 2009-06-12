@@ -53,7 +53,7 @@ class Covariance(object):
         self.relative_precision = relative_precision
 
 
-    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True):
+    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
         """
 
         U = C.cholesky(x[, observed=True, nugget=None])
@@ -125,8 +125,9 @@ class Covariance(object):
         # ==================================
         # = Call to Fortran function ichol =
         # ==================================
-        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x)
-
+        if rank_limit == 0:
+            rank_limit = N_new
+        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x, rl=rank_limit)
         U = asmatrix(U)
 
 
