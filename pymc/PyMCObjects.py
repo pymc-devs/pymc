@@ -525,6 +525,8 @@ class Stochastic(StochasticBase):
             new_inst = cls('Stochastic %s: Failed to cast initial value to required dtype.\n\nOriginal error message:\n'%name + inst.message)
             raise cls, new_inst, tb
 
+        # Store the shape of the stochastic value
+        self._shape = np.shape(self._value)
 
         Variable.__init__(  self,
                         doc=doc,
@@ -625,6 +627,14 @@ class Stochastic(StochasticBase):
 
     value = property(fget=get_value, fset=set_value, doc="Self's current value.")
 
+    def shape():
+        doc = "The shape of the value of self."
+        def fget(self):
+            if self.verbose > 1:
+                print '\t' + self.__name__ + ': shape accessed.'
+            return self._shape
+        return locals()
+    shape = property(**shape())
 
     def revert(self):
         """
@@ -675,17 +685,20 @@ class Stochastic(StochasticBase):
 
         Raises an error if no 'random' argument was passed to __init__.
         """
-
+        
         if self._random:
             # Get current values of parents for use as arguments for _random()
             r = self._random(**self.parents.value)
         else:
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
+            
+        if self.shape:
+            r = np.reshape(r, self.shape)
 
         # Set Stochastic's value to drawn value
         if not self.observed:
             self.value = r
-
+            
         return r
 
     # Shortcut alias to random
