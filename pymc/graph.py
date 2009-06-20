@@ -223,3 +223,6 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
         model.dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
 
     return model.dot_object
+
+# Alias as dag
+dag = graph
