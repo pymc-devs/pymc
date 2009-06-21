@@ -65,7 +65,7 @@ def moral_graph(model, format='raw', prog='dot', path=None):
 
 
 def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False,
-        collapse_deterministics = False, collapse_potentials = False):
+        collapse_deterministics = False, collapse_potentials = False, label_edges=True):
     """
     graph(  model,
             format='raw',
@@ -177,6 +177,8 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             for key in parent_dict.iterkeys():
 
                 key_val = parent_dict[key]
+                
+                label = label_edges*key or ''
 
                 if hasattr(key_val,'__name__'):
                     const_node_name = parent_dict.__name__
@@ -188,19 +190,19 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
                 if isinstance(parent_dict[key], Variable):
 
                     for name in obj_substitute_names[key_val]:
-                        model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=key))
+                        model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=label))
                 elif isinstance(parent_dict[key], ContainerBase):
                     for var in key_val.variables:
                         for name in obj_substitute_names[var]:
-                            model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=key))
+                            model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=label))
                     if len(key_val.variables)==0:
                         if consts:
                             model.dot_object.add_node(pydot.Node(name=const_node_name, style='filled'))
-                            model.dot_object.add_edge(pydot.Edge(src=const_node_name, dst=node.__name__, label=key))
+                            model.dot_object.add_edge(pydot.Edge(src=const_node_name, dst=node.__name__, label=label))
 
                 elif consts:
                     model.dot_object.add_node(pydot.Node(name=const_node_name, style='filled'))
-                    model.dot_object.add_edge(pydot.Edge(src=const_node_name, dst=node.__name__, label=key))
+                    model.dot_object.add_edge(pydot.Edge(src=const_node_name, dst=node.__name__, label=label))
 
     # Add legend if requested
     if legend:
@@ -223,3 +225,6 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
         model.dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
 
     return model.dot_object
+
+# Alias as dag
+dag = graph
