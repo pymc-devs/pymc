@@ -1,3 +1,4 @@
 #!/bin/sh
 rm -rf build
 python setup.py config_fc --fcompiler gnu95 build
+sudo python setupegg.py develop

@@ -484,7 +484,7 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
         #close()
 
 @plotwrapper
-def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Generate Geweke (1992) diagnostic plots
 
@@ -497,7 +497,7 @@ def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', path='.
 
     # Plot options
     xlabel('First iteration', fontsize='x-small')
-    ylabel('Z-score', fontsize='x-small')
+    ylabel('Z-score for %s' % name, fontsize='x-small')
 
     # Plot lines at +/- 2 sd from zero
     pyplot((min(x), max(x)), (2, 2), '--')

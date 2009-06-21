@@ -2491,20 +2491,6 @@ def valuewrapper(f):
     wrapper.__dict__.update(f.__dict__)
     return wrapper
 
-def random_method_wrapper(f, size, shape):
-    """
-    Wraps functions to return values of appropriate shape.
-    """
-    if f is None:
-        return f
-    def wrapper(**kwds):
-        value = f(size=size, **kwds)
-        if shape is not None:
-            value= np.reshape(value, shape)
-        return value
-    return wrapper
-
-
 """
 Decorate the likelihoods
 """
