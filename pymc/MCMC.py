@@ -267,18 +267,19 @@ class MCMC(Sampler):
             if self.verbose > 1:
                 print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
                 sys.stdout.flush()
+        
+        if not self._tune_throughout:
+            if not tuning_count:
+                # If no step methods needed tuning, increment count
+                self._tuned_count += 1
+            else:
+                # Otherwise re-initialize count
+                self._tuned_count = 0
 
-        if not tuning_count:
-            # If no step methods needed tuning, increment count
-            self._tuned_count += 1
-        else:
-            # Otherwise re-initialize count
-            self._tuned_count = 0
-
-        # 5 consecutive clean intervals removed tuning
-        if self._tuned_count == 5:
-            if self.verbose > 0: print 'Finished tuning'
-            self._tuning = False
+            # 5 consecutive clean intervals removed tuning
+            if self._tuned_count == 5:
+                if self.verbose > 0: print 'Finished tuning'
+                self._tuning = False
 
 
     def get_state(self):
