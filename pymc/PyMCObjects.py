@@ -685,20 +685,20 @@ class Stochastic(StochasticBase):
 
         Raises an error if no 'random' argument was passed to __init__.
         """
-        
+
         if self._random:
             # Get current values of parents for use as arguments for _random()
             r = self._random(**self.parents.value)
         else:
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
-            
+
         if self.shape:
             r = np.reshape(r, self.shape)
 
         # Set Stochastic's value to drawn value
         if not self.observed:
             self.value = r
-            
+
         return r
 
     # Shortcut alias to random

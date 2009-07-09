@@ -177,7 +177,7 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
             for key in parent_dict.iterkeys():
 
                 key_val = parent_dict[key]
-                
+
                 label = label_edges*key or ''
 
                 if hasattr(key_val,'__name__'):
