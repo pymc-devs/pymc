@@ -1,11 +1,8 @@
 ! Copyright (c) Anand Patil, 2007
 
       subroutine ichol_continue      
-     *(n,nnew,sig,nnewpmold,m,diag,piv,reltol,x,ndim,rowfun)
-cf2py intent(hide) nnew
-cf2py intent(hide) n
-cf2py intent(hide) nnewpmold
-cf2py intent(hide) ndim
+     *(n,nnew,sig,m,diag,piv,reltol,x,ndim,rowfun,rl,mold)
+cf2py intent(hide) nnew,n,ndim,rl
 cf2py intent(copy) x
 c
 c m is the total rank of the matrix
@@ -17,13 +14,10 @@ cf2py intent(inplace) sig
 c
 c The pivot vector is are of size nnew
 cf2py intent(in,out) piv
-c
-c The user has to tell it what the rank is so far.
-cf2py intent(in) mold
-        integer nnew, nold, nnewpmold, ptemp, ndim
+        integer nnew, nold, ptemp, ndim,rl
         integer i, n, m, mold, piv(n), p(n), j
         double precision rowvec(n), diag(nnew), x(n,ndim)
-        double precision sig(nnewpmold,n)
+        double precision sig(rl,n)
 c rowfun is the 'get-row' function.
         external rowfun
 
@@ -52,7 +46,7 @@ c rowfun is the 'get-row' function.
         EXTERNAL IDAMAX
 *       IDAMAX(N,DX,INCX)
 
-        mold = nnewpmold - nnew
+        mold = rl - nnew
         nold = n - nnew
 
 !       Make diagonal and index vectors
@@ -208,7 +202,6 @@ c rowfun is the get-row function
       
         tol = maxdiag * reltol
         m = rl
-
 
 !       Main loop
         do i=1,rl
