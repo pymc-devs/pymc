@@ -408,7 +408,6 @@ Error:
         """Store a dictionnary containing the state of the Model and its
         StepMethods."""
         cur_chain = self._chains[chain]
-        print 'Called'
         if hasattr(cur_chain, '_state_'):
             cur_chain._state_[0] = state
         else:

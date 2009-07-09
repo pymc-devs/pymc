@@ -267,7 +267,7 @@ class MCMC(Sampler):
             if self.verbose > 1:
                 print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
                 sys.stdout.flush()
-        
+
         if not self._tune_throughout:
             if not tuning_count:
                 # If no step methods needed tuning, increment count

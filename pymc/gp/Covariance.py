@@ -249,11 +249,11 @@ class Covariance(object):
         # ============================================
         # = Call to Fortran function ichol_continue. =
         # ============================================
-        
+
 
         # Early return if rank is all used up.
         if m_new_max > 0:
-            
+
             # ============================================
             # = Call to Fortran function ichol_continue. =
             # ============================================
@@ -409,7 +409,7 @@ class Covariance(object):
                                                 observed = False,
                                                 regularize=False,
                                                 nugget = obs_V,
-                                                assume_full_rank = assume_full_rank, 
+                                                assume_full_rank = assume_full_rank,
                                                 rank_limit = self.rank_limit)
 
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.

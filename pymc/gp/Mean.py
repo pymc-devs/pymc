@@ -119,7 +119,7 @@ class Mean(object):
             M = self.C._obs_eval(self, M, x)
 
         return M.reshape(orig_shape)
-        
+
 def zero_mean():
     "Returns a Mean object whose function simply returns zero."
     return Mean(lambda x:x.shape[:-1])
