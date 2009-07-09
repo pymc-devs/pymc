@@ -164,7 +164,7 @@ def new_dist_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError, 'Keyword '+ kwds.keys() + ' not recognized. Arguments recognized are ' + str(args_needed)
+                raise TypeError, 'Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed)
 
         # Determine size desired for scalar variables.
         # Notes
