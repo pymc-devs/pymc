@@ -632,7 +632,7 @@ class DiscreteMetropolis(Metropolis):
     Good for discrete stochastics.
     """
     
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, positive=False, verbose=0, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution="Poisson", positive=False, verbose=0, tally=True):
         # DiscreteMetropolis class initialization
         
         # Initialize superclass
