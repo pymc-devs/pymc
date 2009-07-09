@@ -14,7 +14,7 @@ cf2py intent(inplace) sig
 c
 c The pivot vector is are of size nnew
 cf2py intent(in,out) piv
-        integer nnew, nold, ptemp, ndim,rl
+        integer nnew, nold, ptemp, ndim,rl,nnewmax
         integer i, n, m, mold, piv(n), p(n), j
         double precision rowvec(n), diag(nnew), x(n,ndim)
         double precision sig(rl,n)
@@ -46,8 +46,8 @@ c rowfun is the 'get-row' function.
         EXTERNAL IDAMAX
 *       IDAMAX(N,DX,INCX)
 
-        mold = rl - nnew
         nold = n - nnew
+        nnewmax = rl-mold
 
 !       Make diagonal and index vectors
         do i=1,nnew
@@ -66,7 +66,7 @@ c rowfun is the 'get-row' function.
 
 
 !       Main loop
-        do i=1,nnew
+        do i=1,nnewmax
           
           
 !         Find maximum remaining pivot
@@ -129,7 +129,7 @@ c rowfun is the 'get-row' function.
 
 !         Implement Cholesky algorithm.
         CALL DGEMV('T',itot-1,n-itot,negone,sig(1,itot+1),
-     1                  nnew+mold,
+     1                  rl,
      2                  sig(1,itot),
      3                  1,
      4                  one,rowvec(itot+1),1)
@@ -152,7 +152,7 @@ c rowfun is the 'get-row' function.
         enddo        
 
         
-        m = mold + nnew
+        m = rl
         return
         end
 

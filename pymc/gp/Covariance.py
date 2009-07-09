@@ -202,6 +202,10 @@ class Covariance(object):
 
         # Number of new points.
         N_new = x.shape[0]
+        if rank_limit == 0:
+            m_new_max = N_new
+        else:
+            m_new_max = min(N_new,max(0,rank_limit-m_old))
 
 
         # get-row function
@@ -222,7 +226,7 @@ class Covariance(object):
 
 
         # Arrange U for input to ichol. See documentation.
-        U = asmatrix(zeros((N_new + m_old, N_old + N_new), dtype=float, order='F'))
+        U = asmatrix(zeros((m_new_max + m_old, N_old + N_new), dtype=float, order='F'))
         U[:m_old, :m_old] = U_old[:,:m_old]
         U[:m_old,N_new+m_old:] = U_old[:,m_old:]
 
@@ -245,18 +249,29 @@ class Covariance(object):
         # ============================================
         # = Call to Fortran function ichol_continue. =
         # ============================================
-        if not assume_full_rank:
-            m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:], mold=m_old)
-        else:
-            m= m_old + N_new
-            U2 = self.__call__(x,x,observed=True,regularize=False)
-            U2 = cholesky(U2).T
-            U[m_old:,m_old:N_new+m_old] = U2
+        
 
-            if m_old < N_old:
-                offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
-                trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
-                U[m_old:,N_new+m_old:] = offdiag2
+        # Early return if rank is all used up.
+        if m_new_max > 0:
+            
+            # ============================================
+            # = Call to Fortran function ichol_continue. =
+            # ============================================
+            if not assume_full_rank:
+                m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:], mold=m_old)
+            else:
+                m = m_old + N_new
+                U2 = self.__call__(x,x,observed=True,regularize=False)
+                U2 = cholesky(U2).T
+                U[m_old:,m_old:N_new+m_old] = U2
+
+                if m_old < N_old:
+                    offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
+                    trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
+                    U[m_old:,N_new+m_old:] = offdiag2
+
+        else:
+            m = m_old
 
 
 
