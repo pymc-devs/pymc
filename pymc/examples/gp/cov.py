@@ -2,7 +2,7 @@ from pymc.gp import *
 from pymc.gp.cov_funs import matern
 from numpy import *
 
-C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
+C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1., rank_limit=10)
 # C = FullRankCovariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
 # C = NearlyFullRankCovariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
 

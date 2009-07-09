@@ -35,7 +35,7 @@ class Covariance(object):
     """
 
 
-    def __init__(self, eval_fun, relative_precision = 1.0E-15, **params):
+    def __init__(self, eval_fun, relative_precision = 1.0E-15, rank_limit=0, **params):
 
         self.ndim = None
         self.observed = False
@@ -51,6 +51,7 @@ class Covariance(object):
         self.eval_fun = eval_fun
         self.params = params
         self.relative_precision = relative_precision
+        self.rank_limit = rank_limit
 
 
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
@@ -127,7 +128,7 @@ class Covariance(object):
         # ==================================
         if rank_limit == 0:
             rank_limit = N_new
-        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x, rl=rank_limit)
+        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x, rl=min(rank_limit,N_new))
         U = asmatrix(U)
 
 
@@ -144,7 +145,7 @@ class Covariance(object):
             return U[:m,argsort(piv)]
 
 
-    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False):
+    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False, rank_limit=0):
         """
 
         U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
@@ -245,7 +246,7 @@ class Covariance(object):
         # = Call to Fortran function ichol_continue. =
         # ============================================
         if not assume_full_rank:
-            m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:])
+            m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:], mold=m_old)
         else:
             m= m_old + N_new
             U2 = self.__call__(x,x,observed=True,regularize=False)
@@ -322,7 +323,7 @@ class Covariance(object):
             N_old = 0
 
             if not assume_full_rank:
-                obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False)
+                obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False, rank_limit = self.rank_limit)
             else:
                 C = self.__call__(obs_mesh,obs_mesh,regularize=False)
                 for i in xrange(C.shape[0]):
@@ -393,7 +394,8 @@ class Covariance(object):
                                                 observed = False,
                                                 regularize=False,
                                                 nugget = obs_V,
-                                                assume_full_rank = assume_full_rank)
+                                                assume_full_rank = assume_full_rank, 
+                                                rank_limit = self.rank_limit)
 
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
             self.full_Uo = obs_dict_new['U']
