@@ -36,8 +36,10 @@ class NearlyFullRankCovariance(Covariance):
 
     :SeeAlso: Mean, BasisCovariance, SeparableBasisCovariance, Realization, observe
     """
+    def __init__(self, eval_fun, relative_precision = 1.0E-15, **params):
+        Covariance.__init__(self, eval_fun, relative_precision, rank_limit=0, **params)
 
-    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True):
+    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
         """
 
         U = C.cholesky(x[, observed=True, nugget=None])
@@ -68,6 +70,8 @@ class NearlyFullRankCovariance(Covariance):
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
         """
+        if rank_limit > 0:
+            raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
 
         if regularize:
             x=regularize_array(x)
@@ -110,7 +114,7 @@ class NearlyFullRankCovariance(Covariance):
             # Useful for users. U.T*U = C(x,x)
             return U[:m,argsort(piv)]
 
-    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank=False):
+    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank=False, rank_limit=0):
         """
 
         U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
@@ -151,6 +155,9 @@ class NearlyFullRankCovariance(Covariance):
         """
         if regularize:
             x=regularize_array(x)
+            
+        if rank_limit > 0:
+            raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
 
         # Concatenation of the old points and new points.
         xtot = vstack((x_old,x))
