@@ -26,7 +26,7 @@ x=arange(-1.,1.,.01)
 if __name__ == '__main__':
     from pylab import *
 
-    x=arange(-1.,1.,.0001)
+    x=arange(-1.,1.,.01)
 
     clf()
 
