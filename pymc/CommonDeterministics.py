@@ -29,8 +29,7 @@ __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda
 class Lambda(pm.Deterministic):
     """
     L = Lambda(name, lambda p1=p1, p2=p2: f(p1, p2)[,
-        doc, dtype=None, trace=True, cache_depth=2, plot=None,
-        verbose=0])
+        doc, dtype=None, trace=True, cache_depth=2, plot=None])
 
     Converts second argument, an anonymous function, into a
     Deterministic object with specified name.
@@ -91,7 +90,7 @@ def lam_dtrm(*args, **kwargs):
 class Logit(pm.Deterministic):
     """
     L = Logit(name, theta[, doc, dtype=None, trace=True,
-        cache_depth=2, plot=None, verbose=0])
+        cache_depth=2, plot=None])
 
     A deterministic variable whose value is the logit of parent theta.
 
@@ -114,7 +113,7 @@ class Logit(pm.Deterministic):
 class InvLogit(pm.Deterministic):
     """
     P = InvLogit(name, ltheta[, doc, dtype=None, trace=True,
-        cache_depth=2, plot=None, verbose=0])
+        cache_depth=2, plot=None])
 
     A Deterministic whose value is the inverse logit of parent ltheta.
 
@@ -137,7 +136,7 @@ class InvLogit(pm.Deterministic):
 class StukelLogit(pm.Deterministic):
     """
     S = StukelLogit(name, theta, a1, a2, [, doc, dtype=None, trace=True,
-        cache_depth=2, plot=None, verbose=0])
+        cache_depth=2, plot=None])
 
     A Deterministic whose value is Stukel's link function with
     parameters a1 and a2 applied to theta.
@@ -174,7 +173,7 @@ class StukelLogit(pm.Deterministic):
 class StukelInvLogit(pm.Deterministic):
     """
     P = StukelInvLogit(name, ltheta, a1, a2, [, doc, dtype=None,
-        trace=True, cache_depth=2, plot=None, verbose=0])
+        trace=True, cache_depth=2, plot=None])
 
     A Deterministic whose value is Stukel's inverse link function with
     parameters a1 and a2 applied to ltheta.
@@ -211,7 +210,7 @@ class StukelInvLogit(pm.Deterministic):
 class CompletedDirichlet(pm.Deterministic):
     """
     CD = CompletedDirichlet(name, D[, doc, trace=True,
-        cache_depth=2, plot=None, verbose=0])
+        cache_depth=2, plot=None])
 
     'Completes' the value of D by appending 1-sum(D.value) to the end.
 
@@ -227,7 +226,7 @@ class CompletedDirichlet(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Index, LinearCombination
     """
-    def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=None, verbose=0):
+    def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=None, verbose=None):
 
         def eval_fun(D):
             N = len(D)
@@ -246,7 +245,7 @@ class CompletedDirichlet(pm.Deterministic):
 class LinearCombination(pm.Deterministic):
     """
     L = LinearCombination(name, x, y[, doc, dtype=None,
-        trace=True, cache_depth=2, plot=None, verbose=0])
+        trace=True, cache_depth=2, plot=None])
 
     A Deterministic returning the sum of dot(x[i],y[i]).
 
@@ -337,7 +336,7 @@ class LinearCombination(pm.Deterministic):
 class Index(LinearCombination):
     """
     I = Index(name, x, y, index[, doc, dtype=None, trace=True,
-        cache_depth=2, plot=None, verbose=0])
+        cache_depth=2, plot=None])
 
     A deterministic returning dot(x[index], y[index]).
 

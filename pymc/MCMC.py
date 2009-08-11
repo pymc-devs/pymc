@@ -262,9 +262,13 @@ class MCMC(Sampler):
         tuning_count = 0
 
         for step_method in self.step_methods:
+            
+            verbose = self.verbose
+            if step_method.verbose is not None:
+                verbose = step_method.verbose
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)
-            if self.verbose > 1:
+            if verbose > 1:
                 print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
                 sys.stdout.flush()
 

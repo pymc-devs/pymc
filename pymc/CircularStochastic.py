@@ -30,7 +30,7 @@ class CircularStochastic(Stochastic):
 
 class CircVonMises(CircularStochastic):
     """
-    V = CircVonMises(name, mu, kappa, value=None, observed=False, size=1, trace=True, rseed=True, doc=None, verbose=0)
+    V = CircVonMises(name, mu, kappa, value=None, observed=False, size=1, trace=True, rseed=True, doc=None)
 
     Stochastic variable with Von Mises distribution.
     Parents are: mu, kappa.
@@ -47,7 +47,7 @@ class CircVonMises(CircularStochastic):
                     cache_depth=2,
                     rseed=True,
                     plot=None,
-                    verbose = 0):
+                    verbose=None):
 
         if value is None:
             arg_eval = Container([mu, kappa]).value

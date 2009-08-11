@@ -231,7 +231,7 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=0):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None):
 
         self.ParentDict = ParentDict
 
@@ -333,7 +333,7 @@ class Deterministic(DeterministicBase):
       Stochastic, Potential, deterministic, MCMC, Lambda,
       LinearCombination, Index
     """
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=0):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None):
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
@@ -483,7 +483,7 @@ class Stochastic(StochasticBase):
                     observed=False,
                     cache_depth=2,
                     plot=None,
-                    verbose = 0,
+                    verbose = None,
                     isdata=None):
 
         self.counter = Counter()
