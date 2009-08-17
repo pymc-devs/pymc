@@ -38,7 +38,7 @@ import pdb
 import utils
 import warnings
 
-poiscdf = np.vectorize(flib.gammq)
+poiscdf = np.vectorize(lambda a, x: flib.gammq(a,x))
 
 # Import utility functions
 import inspect, types
