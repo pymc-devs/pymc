@@ -1,0 +1,189 @@
+	
+==========================
+Referee Report for JSS 438
+==========================
+
+TITLE: PyMC 2.0: Bayesian Stochastic Modelling in Python
+AUTHORS: Anand Patil, David Huard, and Christopher Fonnesbeck
+
+
+--------
+Review 1
+--------
+
+This paper is a user guide for a python-based Bayesian modeling system, PyMC.  It follows a traditional user guide format of introduction, installation, tutorial, and then has five chapters of details, and a conclusion.  A brief introduction to MCMC for Bayesian analysis is also included as Appendix A.
+
+I think that the PyMC package will provide a valuable tool for statistical modeling in python, and, because of the way it focuses on MCMC sampling, could become an important alternative to BUGS for high-level implementation of Bayesian model fitting with MCMC.  The user guide is clearly written and appropriately detailed, and the early focus on usage (Section 1.4) and tutorial (Section 3) make it a very practical guide for new users.
+
+At 82 pages (59 + Appendices), this user guide is a bit on the long side, so while I recommend that you accept it, I recommend that the authors go through the manuscript again and trim it down as much as possible (especially in the later sections).  The following minor comments include the places where I think the paper could be tightened up, and also a few places where I think that _more_ detail could be helpful as well.
+
+
+p. v, line -2, -5:  more details on where to find the issue tracker would be helpful.
+
+p. vi, line 1:  this tutorial assumes some familiarity with python, so it would be good to point uninitiated readers towards some online tutorial or introductory book.
+
+p. vii, line 5:  maybe include a reference for this Bayesian interpretation of probability, e.g. Jaynes, _Probability Theory: the logic of science_.
+
+p. vii, line 13:  I've also heard "DeterminedByValuesOfParents" called the "Systemic Part" of the model
+
+p. viii, line -16:  p(D|e,s,l) = p(D|r) is potentially confusing, I would prefer just p(D|e,s,l)
+
+p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit
+
+p. xii, line 16: the description beginning "After a sufficiently large number of iterations..." seems imprecise.  I would prefer it to say "As the number of samples tends to infinity, the MCMC distribution converges to the stationary distribution."
+
+p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results
+
+p. xvi, line -6: "iterates over each node at every iteration" seems like awkward phrasing (too many iters)
+
+p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
+
+p. xxx:  consider merging section 5.1 and 5.6
+
+p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step method
+
+p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help.
+
+p. xxxv, line 20:  description of verbose option could be more verbose
+
+p. xxxv, line -8:  what does poisson jump proposal do?
+
+p. xxxvi, line 4: consider moving AdaptiveMetropolis description to before DiscreteMetropolis
+
+p. xxxvii, line -4: typo, need space between a and random()
+
+p. xxxviii: consider merging section 5.7 into 5.4
+
+p. xlvii, line 2: typo/awkward phrase, "gives not indication ..."; could say instead "gives evidence of convergence".  Perhaps it would be more helpful to show a Geweke plot that proves a chain has _not_ converged, however.
+
+p. xlvii, line -8: an example use of the raftery_lewis function would be very helpful.
+
+p. xlvii, line -1: it might be beyond the scope of this manual, but an example of using CODA with R on pymc output would be very helpful.
+
+p. lii, line 3: Does this suggest an acceptable fit?  It doesn't look very good to me.
+
+p. lii, line -8: typo 'qPyMC'
+
+p. lxiv, lines 9-13: typos/leftover notes
+
+There are several figures which are very pixilated, which could be re-rendered more beautifully.  Also, there are many cross-references that came up as '??' in the pdf you sent me.  I'm sure that this will be corrected in the final version
+
+
+
+--------
+Review 2
+--------
+
+General comments:
+
+The article describes a python package implementing an approach to MCMC
+simulation.  The perspective is that of a tutorial/reference with a
+brief theory part.  While from this perspective the content of the paper
+is appropriate, it might benefit from placing pyMC in the context of
+other packages with similar functionality.  In particular, an assessment
+of differences in the design, implementation, and performance would help
+position the package against its competitors.
+
+The functionality offered by pyMC is impressive and the interface is
+very convenient.  However, no benchmarking and testing is mentioned, and
+it is therefore difficult to judge whether the package is able to
+deliver satisfactory results.  Its numerical accuracy is partially
+dependent on the accuracy of the underlying arithmetics, and the authors
+do not state clearly to what extent numerical libraries such as numpy
+are used in favour of the base python numerics.
+
+For an article over 80 pages long the lack of a contents table is
+unacceptable.  (This might be an editorial detail.)  The structure is
+relatively clear, and the overall balance between theoretical and
+practical parts seems appropriate.
+
+The package is easy to install, with just one library (numpy) required
+and a few others optional.  I had no problems with installing and
+running pyMC on a Linux system, with all of the suggested dependencies,
+using both locally compiled source code and downloadable binaries.
+
+It's desirable that the article be run through a spell checker, though
+there are rather few typos and other minor issues in the text.  Internal
+references in the text are missing, presumably just a matter of running
+the sources through latex once again.
+
+
+Specific comments:
+
+* Sec 3:  The tutorial starts with an example involving a data array too
+large to expect a user to type the data in for testing.  It would be
+helpful to make it clear that the corresponding code is available in the
+examples directory within the distribution.
+
+* Sec. 3.5, imputation of missing data:  The choice of the value -999 as
+a placeholder for non-available values seems too arbitrary and not
+generic enough.  While it works for the particular data set, in general
+it would be desirable to use, e.g., the value nan from numpy, especially
+that the data is already kept in a numpy array.  the code from p. xv
+could then be rewritten as, e.g.:
+
+   x = numpy.array([4, 5, ... numpy.nan, ...])
+   masked_data = numpy.ma.masked_array(x, numpy.isnan(x))
+
+avoiding the problem of -999 being a possibly valid value and the need
+for choosing an arbitrary value that is not valid within the data.
+
+At the end of the section (p. xvi), the code uses disasters_mask, a
+variable that does not seem to have been defined earlier in the tutorial.
+
+* Sec. 3.6:  At the end, the authors say "... which is available on the
+webpage";  it would help the user  to follow if an appropriate link were
+included here.
+
+* Sec. 4.1, p. xx: "Based on informal comparison, the distributions in
+PyMC tend to be approximately an order of magnitude faster than their
+counterparts in SciPy".  It would be interesting to seem some evidence,
+as well as an analysis of why it is (if it is) so.
+
+In the code that follows on that page, the function round() is used.
+Since numpy is an obligatory dependence for pyMC, it would be desirable
+to have numerical computations done with numpy;  specifically,
+numpy.round should be used instead of the base round (if only because
+the base round does not, at least as of python < 2.6, perform the
+tie-to-even rounding specified by the IEEE 754 standard).
+
+* Sec. 4.4, p. xxiv: In the formula, i ranges from 0 to N-1 (not N-2) if
+it is to conform with the subsequent code.
+
+The code for the observed stochastic y (p. xxv) can be simplified if
+numpy arrays are used:
+
+   @observed
+   @stochastic
+   def y(value=1, mu=numpy.array(x), tau=100):
+      return normal_like(value, numpy.sum(x**2), tau)
+
+* Sec. 5.2, p. xxxi: "The variables in DisasterModel..." => "The
+variables in gelman_bioassay..."
+
+* Sec. 6.2: It doesn't seem to be possible to change the backed for a
+model once it has been created.  For large ram models and after involved
+simulation, it might be an unpleasant surprise that it is not possible
+to save the model to the disk without creating it anew with a different
+backend and re-running the simulation.  If it actually is possible to
+change the backed, the text should explain how to do this.
+
+* Sec. 7.1, p. xlvii: as of pyMC 2.0rc2, there is no pymc.geweke_plot
+function, and geweke_plot is available as pymc.Matplot.geweke_plot.
+
+* Sec. 7.3 (and several other places): In the code, @pm.stochastic,
+rather than @stochastic, is used.  pm presumable is an alias to pymc,
+but it has not been appropriately introduced.  It is desirable that
+there bea coherent way to refer to pymc components;  for example, it may
+be stated early in the document that all code assumes 'import pymc',
+'import pymc as pm', or 'from pymc import *' has been executed first.
+
+* Sec A.3, p. lxiv:  There are comments included in the text that
+apparently were not intended to appear in the final version of the
+document (e.g., "Do you ever call that stationary distribution itself
+homogeneous?").
+
+* Sec. B: It should be made clear that normal_like, rnormal, etc. are
+examples of functions provided for a distribution, not functions
+provided by every distribution.
+
