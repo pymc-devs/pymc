@@ -1,4 +1,9 @@
-%!TEX root = guide2.0.tex
+
+This tutorial will guide you through a typical \code{pymc} application.
+Familiarity with Python is assumed, so if you are new to Python, books such as
+\citet{Lutz:2007} or \citet{Langtangen:2009} are the place to start. Tons of
+online documentation can also be found on the
+\href{http://www.python.org/doc/}{Python documentation} page.
 
 \section{An example statistical model}
 Consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
@@ -34,9 +39,23 @@ Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter th
 
 \section{Two types of variables}
 
-At the model-specification stage (before the data are observed), $D$, $s$, $e$, $r$ and $l$ are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is \emph{epistemic}, meaning random variable $x$'s probability distribution $p(x)$ represents our knowledge and uncertainty about $x$'s value. Candidate values of $x$ for which $p(x)$ is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes \code{Stochastic} and \code{Deterministic}.
+At the model-specification stage (before the data are observed), $D$, $s$, $e$,
+$r$ and $l$ are all random variables. Bayesian `random' variables have not
+necessarily arisen from a physical random process. The Bayesian interpretation
+of probability is \emph{epistemic}, meaning random variable $x$'s probability
+distribution $p(x)$ represents our knowledge and uncertainty about $x$'s value
+\citep{jaynes}. Candidate values of $x$ for which $p(x)$ is high are
+relatively more probable, given what we know. Random variables are represented
+in PyMC by the classes \code{Stochastic} and \code{Deterministic}.
 
-The only \code{Deterministic} in the model is $r$. If we knew the values of $r$'s parents ($s$, $l$ and $e$), we could compute the value of $r$ exactly. A \code{Deterministic} like $r$ is defined by a mathematical function that returns its value given values for its parents. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of $r$ are random, $r$ is random also. A more descriptive (though more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
+The only \code{Deterministic} in the model is $r$. If we knew the values of
+$r$'s parents ($s$, $l$ and $e$), we could compute the value of $r$ exactly. A
+\code{Deterministic} like $r$ is defined by a mathematical function that returns
+its value given values for its parents. \code{Deterministic} variables are
+sometimes called the \emph{systemic} part of the model. The nomenclature is a
+bit confusing, because these objects usually represent random variables; since
+the parents of $r$ are random, $r$ is random also. A more descriptive (though
+more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
 
 On the other hand, even if the values of the parents of variables $s$, $D$ (before observing the data), $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \code{Stochastic} class represents these variables. A more descriptive name for these objects might be \code{RandomEvenGivenValuesOfParents}.
 
@@ -239,7 +258,19 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 `Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\cite{gelman}) for \code{iter}  iterations.
 
-After a sufficiently large number of iterations, the current values of $s$, $e$ and $l$ can be considered a sample from the posterior. PyMC assumes that the \code{burn} parameter specifies a `sufficiently large' number of iterations for convergence of the algorithm, so it is up to the user to verify that this is the case (see chapter \ref{chap:modelchecking}). Consecutive values sampled from $s$, $e$ and $l$ are necessarily dependent on the previous sample, since it is a Markov chain. However, MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is often effective to thin the sample by only retaining every $k$th sample, where $k$ is an integer value. This thinning interval is passed to the sampler via the \code{thin} argument.
+As the number of samples tends to infinity, the MCMC distribution of $s$, $e$
+and $l$ converges to the stationary distribution. In other words, their
+values can be considered as random draws from the posterior $p(s,e,l|D)$. 
+PyMC assumes that the \code{burn} parameter specifies a `sufficiently large'
+number of iterations for convergence of the algorithm, so it is up to the user
+to verify
+that this is the case (see chapter \ref{chap:modelchecking}). Consecutive values
+sampled from $s$, $e$ and $l$ are necessarily dependent on the previous sample,
+since it is a Markov chain. However, MCMC often results in strong
+autocorrelation among samples that can result in imprecise posterior inference.
+To circumvent this, it is often effective to thin the sample by only retaining
+every $k$th sample, where $k$ is an integer value. This thinning interval is
+passed to the sampler via the \code{thin} argument.
 
 If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \cite{gelman} for general guidance.
 

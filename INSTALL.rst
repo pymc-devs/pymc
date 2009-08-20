@@ -220,6 +220,6 @@ the `issue tracker`_. Comments and questions are welcome and should be
 addressed to PyMC's `mailing list`_.
 
 
-.. _`issue tracker`: http://code.google.com/p/pymc/issues/list .
+.. _`issue tracker`: http://code.google.com/p/pymc/issues/list
 
 .. _`mailing list`: pymc@googlegroups.com
