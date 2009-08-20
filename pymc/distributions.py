@@ -119,7 +119,7 @@ def new_dist_class(*new_class_args):
 
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [None, parents, None, False, None, True, True, None, False, None, 0]
+            arg_vals = [None, parents, None, False, None, True, True, None, False, None, None]
             if kwds.has_key('isdata'):
                 warnings.warn('"isdata" is deprecated, please use "observed" instead.')
                 kwds['observed'] = kwds['isdata']
@@ -288,7 +288,7 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, observed=False,'
     if not mv:
         docstr += ' size=1,'
-    docstr += ' trace=True, rseed=True, doc=None, debug=False, verbose=0)\n\n'
+    docstr += ' trace=True, rseed=True, doc=None, verbose=None, debug=False)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
@@ -2633,7 +2633,7 @@ def rmod_categor(p,size=1):
 
 class Categorical(Stochastic):
     __doc__ = """
-C = Categorical(name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0)
+C = Categorical(name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None)
 
 Stochastic variable with Categorical distribution.
 Parent is: p
@@ -2654,7 +2654,7 @@ Docstring of categorical_like (case where P is a Dirichlet):
 
     parent_names = ['p', 'minval', 'step']
 
-    def __init__(self, name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=0, **kwds):
+    def __init__(self, name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=None,**kwds):
 
         if value is not None:
             if np.isscalar(value):
@@ -2726,7 +2726,7 @@ def mod_multinom_like(x,n,p):
 class Multinomial(Stochastic):
     """
 M = Multinomial(name, n, p, trace=True, value=None,
-   rseed=False, observed=False, cache_depth=2, plot=None, verbose=0])
+   rseed=False, observed=False, cache_depth=2, plot=None])
 
 A multinomial random variable. Parents are p, minval, step.
 
@@ -2738,7 +2738,7 @@ Otherwise parent p's value should sum to 1.
 
     parent_names = ['n', 'p']
 
-    def __init__(self, name, n, p, trace=True, value=None, rseed=False, observed=False, cache_depth=2, plot=None, verbose=0, **kwds):
+    def __init__(self, name, n, p, trace=True, value=None, rseed=False, observed=False, cache_depth=2, plot=None, verbose=None, **kwds):
 
         if isinstance(p, Dirichlet):
             Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like), doc='A Multinomial random variable', name=name,
