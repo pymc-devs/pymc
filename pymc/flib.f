@@ -2127,7 +2127,7 @@ C accuracy; FPMIN is a number near the smallest representable ﬂoating-point nu
       
       FUNCTION gammq(a,x) 
 cf2py double precision intent(in) :: a,x
-cf2py double precision intent(out) :: gammq
+cf2py double precision intent(out) :: gammaq
 cf2py threadsafe
       DOUBLE PRECISION a,gammq,x 
 C USES gcf,gser 
