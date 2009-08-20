@@ -347,7 +347,14 @@ In other cases we may want to add probability terms to existing models. For exam
 \end{eqnarray*}
 It's possible to express this constraint by adding variables to the model, or by grouping $e$ and $l$ to form a vector-valued variable, but it's uncomfortable to do so.
 
-Arbitrary factors such as $\psi$ and the indicator function $I(|e-l|<1})$ are implemented by objects of class \code{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are often used in cases where there is no natural dependence hierarchy, such as the first example above (which is known as a Markov random field). They are also useful for expressing `soft data' \citep{Christakos:2002p5506} as in the second example above.
+Arbitrary factors such as $\psi$ and the indicator function $I(|e-l|<1)$ are
+implemented by objects of class \code{Potential} (\cite{dawidmarkov} and
+\cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian
+hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these
+potentials. They are often used in cases where there is no natural dependence
+hierarchy, such as the first example above (which is known as a Markov random
+field). They are also useful for expressing `soft data'
+\citep{Christakos:2002p5506} as in the second example above.
 
 
 \bigskip

@@ -172,7 +172,12 @@ MCMC samplers' step methods can be accessed via the \code{\textbf{step_method_di
 
 Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \code{StepMethod} implements a method called \code{step()}, which is called by \code{MCMC}. Step methods with adaptive tuning parameters can optionally implement a method called \code{tune()}, which causes them to assess performance so far and adjust.
 
-The major subclasses of \code{StepMethod} are \code{Metropolis} and \code{Gibbs}. PyMC provides several flavors of the basic Metropolis steps, but the Gibbs steps are not ready for use as of the current release. %However, because it is feasible to write Gibbs step methods for particular applications, the \code{Gibbs} base class will be documented here.
+The major subclasses of \code{StepMethod} are \code{Metropolis},
+\code{AdaptiveMetropolis} and \code{Gibbs}. PyMC provides several flavors of the
+basic Metropolis steps, but the Gibbs steps are not ready for use as of the
+current release. %However, because it is feasible to write Gibbs step methods
+for particular applications, the \code{Gibbs} base class will be documented
+here.
 
 \hypertarget{metropolis}{}
 \subsection{Metropolis step methods} \label{metropolis}
@@ -193,7 +198,8 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
 \code{Metropolis}' \texttt{init} method takes the following arguments:
 \begin{description}
    \item[\code{stochastic}:] The variable to handle.
-   \item[\code{proposal_sd}:] A float or array of floats. This sets the proposal standard deviation if the proposal distribution is normal.
+   \item[\code{proposal_sd}:] A float or array of floats. This sets the
+    default proposal standard deviation if the proposal distribution is normal.
    \item[\code{scale}:] A float, defaulting to 1. If the \code{scale} argument is provided but not \code{proposal_sd}, \code{proposal\_sd} is computed as follows:
    \begin{verbatim}
    if all(self.stochastic.value != 0.):
@@ -203,7 +209,8 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
        self.proposal_sd = ones(shape(self.stochastic.value)) * scale
    \end{verbatim}
    \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise.
-   \item[\code{verbose}:] An integer.
+   \item[\code{verbose}:] An integer controlling the amount of debugging
+    information printed during sampling. 
 \end{description}
 
 Metropolis step methods adjust their initial proposal standard deviations using an attribute called \code{adaptive_scale_factor}. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}.
@@ -212,29 +219,18 @@ By default, tuning will continue throughout the sampling loop, even after the bu
 
 If a Metropolis step method handles an array-valued variable, it proposes all elements independently but simultaneously. That is, it decides whether to accept or reject all elements together but it does not attempt to take the posterior correlation between elements into account. The \code{AdaptiveMetropolis} class (see below), on the other hand, does make correlated proposals.
 
-\subsubsection[The DiscreteMetropolis class]{The
-\code{DiscreteMetropolis} class}
-This class is just like \code{Metropolis}, but specialized to handle
-\code{Stochastic} instances with dtype \code{int}. The jump proposal
-distribution can either be \code{'Normal'}, \code{'Prior'} or \code{'Poisson'}. In the
-normal case, the proposed value is drawn from a normal distribution
-centered at the current value and then rounded to the
-nearest integer.
-
-\subsubsection[The BinaryMetropolis class]{The
-\code{BinaryMetropolis} class}
-This class is specialized to handle \code{Stochastic} instances with dtype \code{bool}.
-
-For array-valued variables, \code{BinaryMetropolis} can be set to propose from the prior by passing in \code{dist="Prior"}. Otherwise, the argument \code{p_jump} of the init method specifies how probable a change is. Like \code{Metropolis}' attribute \code{proposal_sd}, \code{p_jump} is tuned throughout the sampling loop via \code{adaptive_scale_factor}.
-
-For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs sampler, since this requires no additional expense. The \code{p_jump} and \code{adaptive_scale_factor} parameters are not used in this case.
 
 \subsubsection[The AdaptiveMetropolis class]{The
 \code{AdaptiveMetropolis} class}
 \label{subsec:AM}
-The \code{AdaptativeMetropolis} (AM) step method works like a regular Metropolis step method, with the exception that its variables are block-updated using a multivariate jump distribution whose covariance is tuned during sampling. Although the chain is non-Markovian, it has correct ergodic properties (see \cite{Haario:2001lr}).
+The \code{AdaptativeMetropolis} (AM) step method works like a regular Metropolis
+step method, with the exception that its variables are block-updated using a
+multivariate jump distribution whose covariance is tuned during sampling.
+Although the chain is non-Markovian, it has correct ergodic properties (see
+\cite{Haario:2001lr}).
 
-To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an \code{AdaptiveMetropolis} instance, you might do the following:
+To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an
+\code{AdaptiveMetropolis} instance, you might do the following:
 \begin{verbatim}
    M.use_step_method(AdaptiveMetropolis, [x,y,z], \
                       scales={'x':1, 'y':2, 'z':.5}, delay=10000)
@@ -243,13 +239,22 @@ To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an \
 \code{AdaptativeMetropolis}' init method takes the following arguments:
 % cov=None, delay=1000, scales=None, interval=200, greedy=True,verbose=0
 \begin{description}
-   \item[\code{stochastics}:] The stochastic variables to handle. These will be updated jointly.
-   \item[\code{cov} (optional):] An initial covariance matrix. Defaults to the identity matrix, adjusted according to the \code{scales} argument.
-   \item[\code{delay} (optional):] The number of iterations to delay before computing the empirical covariance matrix.
-   \item[\code{scales} (optional):] The initial covariance matrix will be diagonal, and its diagonal elements will be set to \code{scales} times the stochastics' values, squared.
-   \item[\code{interval} (optional):] The number of iterations between updates of the covariance matrix. Defaults to 1000.
-   \item[\code{greedy} (optional):] If \code{True}, only accepted jumps will be counted toward the delay before the covariance is first computed. Defaults to \code{True}.
-   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of the step method's printed output.
+   \item[\code{stochastics}:] The stochastic variables to handle. These will be
+updated jointly.
+   \item[\code{cov} (optional):] An initial covariance matrix. Defaults to the
+identity matrix, adjusted according to the \code{scales} argument.
+   \item[\code{delay} (optional):] The number of iterations to delay before
+computing the empirical covariance matrix.
+   \item[\code{scales} (optional):] The initial covariance matrix will be
+diagonal, and its diagonal elements will be set to \code{scales} times the
+stochastics' values, squared.
+   \item[\code{interval} (optional):] The number of iterations between updates
+of the covariance matrix. Defaults to 1000.
+   \item[\code{greedy} (optional):] If \code{True}, only accepted jumps will be
+counted toward the delay before the covariance is first computed. Defaults to
+\code{True}.
+   \item[\code{verbose}:] An integer from 0 to 3 controlling the verbosity of
+the step method's printed output.
 \end{description}
 
 In this algorithm, jumps are proposed from a multivariate normal
@@ -263,6 +268,33 @@ estimated recursively from the previous value and the last \code{interval}
 samples, instead of computing it each time from the entire trace.}. It is
 this constant adaptation of the proposal distribution that makes the chain
 non-Markovian.
+
+
+\subsubsection[The DiscreteMetropolis class]{The
+\code{DiscreteMetropolis} class}
+This class is just like \code{Metropolis}, but specialized to handle
+\code{Stochastic} instances with dtype \code{int}. The jump proposal
+distribution can either be \code{'Normal'}, \code{'Prior'} or \code{'Poisson'}.
+In the normal case, the proposed value is drawn from a normal distribution
+centered at the current value and then rounded to the
+nearest integer. In the Poisson case, the proposed value is obtained by adding
+or substracting (with equal probability) a random value drawn from a Poisson
+distribution. 
+
+\subsubsection[The BinaryMetropolis class]{The
+\code{BinaryMetropolis} class}
+This class is specialized to handle \code{Stochastic} instances with dtype
+\code{bool}.
+
+For array-valued variables, \code{BinaryMetropolis} can be set to propose from
+the prior by passing in \code{dist="Prior"}. Otherwise, the argument
+\code{p_jump} of the init method specifies how probable a change is. Like
+\code{Metropolis}' attribute \code{proposal_sd}, \code{p_jump} is tuned
+throughout the sampling loop via \code{adaptive_scale_factor}.
+
+For scalar-valued variables, \code{BinaryMetropolis} behaves like a Gibbs
+sampler, since this requires no additional expense. The \code{p_jump} and
+\code{adaptive_scale_factor} parameters are not used in this case.
 
 % ==========================================================
 % = We can uncomment this when we actually release them... =

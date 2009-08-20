@@ -6,7 +6,8 @@ online documentation can also be found on the
 \href{http://www.python.org/doc/}{Python documentation} page.
 
 \section{An example statistical model}
-Consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
+Consider the following dataset, which is a time series of recorded coal mining
+disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
 \end{center}
@@ -59,7 +60,10 @@ more awkward) name for this class would be \code{DeterminedByValuesOfParents}.
 
 On the other hand, even if the values of the parents of variables $s$, $D$ (before observing the data), $e$ or $l$ were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The \code{Stochastic} class represents these variables. A more descriptive name for these objects might be \code{RandomEvenGivenValuesOfParents}.
 
-We can represent model \ref{disastermodel} in a file called \module{DisasterModel.py} as follows. First, we import the PyMC and NumPy namespaces:
+We can represent model \ref{disastermodel} in a file called
+\module{DisasterModel.py} (the actual file can be found in
+\file{pymc/examples/}) as follows. First, we import the PyMC and NumPy
+namespaces:
 \begin{verbatim}
 	from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
 	import numpy as np
@@ -443,7 +447,11 @@ The entire model looks very similar to the original model:
 \end{center}
 \end{figure}
 
-The main limitation of this approach for imputation is performance. Because each element in the data array is modelled by an individual Stochastic, rather than a single Stochastic for the entire array, the number of nodes in the overall model increases from 4 to 113. This significantly slows the rate of sampling, since the model iterates over each node at every iteration.
+The main limitation of this approach for imputation is performance. Because each
+element in the data array is modelled by an individual Stochastic, rather than a
+single Stochastic for the entire array, the number of nodes in the overall model
+increases from 4 to 113. This significantly slows the rate of sampling, due to
+the overhead costs associated with iterations over individual nodes. 
 
 % section missing_data (end)
 
@@ -480,4 +488,6 @@ That was a brief introduction to basic PyMC usage. Many more topics are covered 
    \item Saving traces to the disk, or streaming them to the disk during sampling
    \item Writing your own step methods and fitting algorithms.
 \end{itemize}
-Also, be sure to check out the documentation for the Gaussian process extension, which is available on the webpage.
+Also, be sure to check out the documentation for the Gaussian process extension,
+which is available on PyMC's
+\href{http://code.google.com/p/pymc/downloads/list}{download} page.
