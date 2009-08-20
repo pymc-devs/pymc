@@ -20,17 +20,33 @@ At 82 pages (59 + Appendices), this user guide is a bit on the long side, so whi
 
 p. v, line -2, -5:  more details on where to find the issue tracker would be helpful.
 
+	DH: The pdf contains an inline http link. Clicking on it should open the issue tracker. 
+	There was a typo in the link that is now fixed. 
+
 p. vi, line 1:  this tutorial assumes some familiarity with python, so it would be good to point uninitiated readers towards some online tutorial or introductory book.
+
+	DH: Added references to two books by Lutz and Langtangen, as well as a link to the official python 
+        documentation web page. 
 
 p. vii, line 5:  maybe include a reference for this Bayesian interpretation of probability, e.g. Jaynes, _Probability Theory: the logic of science_.
 
+	DH: Done
+
 p. vii, line 13:  I've also heard "DeterminedByValuesOfParents" called the "Systemic Part" of the model
 
+	DH: Added this terminology in the paragraph. 
+
 p. viii, line -16:  p(D|e,s,l) = p(D|r) is potentially confusing, I would prefer just p(D|e,s,l)
+
+	DH: Don't know about this. I understand why p(D|r) adds some meaning to the sentence. 
 
 p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit
 
 p. xii, line 16: the description beginning "After a sufficiently large number of iterations..." seems imprecise.  I would prefer it to say "As the number of samples tends to infinity, the MCMC distribution converges to the stationary distribution."
+
+	DH: Changed to "As the number of samples tends to infinity, the MCMC distribution of $s$, $e$
+	and $l$ converges to the stationary distribution. In other words, their
+	values can be considered as random draws from the posterior $p(s,e,l|D)$. "
 
 p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results
 
@@ -96,6 +112,8 @@ For an article over 80 pages long the lack of a contents table is
 unacceptable.  (This might be an editorial detail.)  The structure is
 relatively clear, and the overall balance between theoretical and
 practical parts seems appropriate.
+
+	DH: Table of contents added. 
 
 The package is easy to install, with just one library (numpy) required
 and a few others optional.  I had no problems with installing and
