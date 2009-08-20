@@ -35,7 +35,8 @@
 
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{jss}[\filedate\space\fileversion\space jss class by Achim Zeileis]
+\ProvidesClass{jss_mod}[\filedate\space\fileversion\space jss class by Achim
+Zeileis]
 %% options
 \newif\if@article
 \newif\if@codesnippet
