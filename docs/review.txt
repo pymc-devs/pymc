@@ -52,19 +52,38 @@ p. xiv, line 13: you could mention that excluding rows with missing observations
 
 p. xvi, line -6: "iterates over each node at every iteration" seems like awkward phrasing (too many iters)
 
+	DH: Chris, what about: "This significantly slows the rate of sampling, due to
+	the overhead costs associated with iterations over individual nodes."
+
 p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
+
+	DH: I agree, but I'd like the documentation related to the direct instantiation mode to be kept elsewhere. 
+	Maybe in a "Developping PyMC" document. 
 
 p. xxx:  consider merging section 5.1 and 5.6
 
+	DH: Makes sense. Objections?
+
 p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step method
+
+	DH: Wrote "The major subclasses of \code{StepMethod} are \code{Metropolis},
+	\code{AdaptiveMetropolis} and \code{Gibbs}." in the second paragraph of 'Step Methods' section.
 
 p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help.
 
 p. xxxv, line 20:  description of verbose option could be more verbose
 
+	DH: Wrote "An integer controlling the amount of debugging information printed during sampling."
+
 p. xxxv, line -8:  what does poisson jump proposal do?
 
+	DH: Added "In the Poisson case, the proposed value is obtained by adding
+	or substracting (with equal probability) a random value drawn from a Poisson
+	distribution. "
+
 p. xxxvi, line 4: consider moving AdaptiveMetropolis description to before DiscreteMetropolis
+
+	DH: Done
 
 p. xxxvii, line -4: typo, need space between a and random()
 
@@ -133,6 +152,8 @@ large to expect a user to type the data in for testing.  It would be
 helpful to make it clear that the corresponding code is available in the
 examples directory within the distribution.
 
+	DH: Done
+
 * Sec. 3.5, imputation of missing data:  The choice of the value -999 as
 a placeholder for non-available values seems too arbitrary and not
 generic enough.  While it works for the particular data set, in general
@@ -152,6 +173,8 @@ variable that does not seem to have been defined earlier in the tutorial.
 * Sec. 3.6:  At the end, the authors say "... which is available on the
 webpage";  it would help the user  to follow if an appropriate link were
 included here.
+
+	DH: Done
 
 * Sec. 4.1, p. xx: "Based on informal comparison, the distributions in
 PyMC tend to be approximately an order of magnitude faster than their
@@ -186,6 +209,8 @@ to save the model to the disk without creating it anew with a different
 backend and re-running the simulation.  If it actually is possible to
 change the backed, the text should explain how to do this.
 
+	DH: Indeed, it isn't at the moment. 
+
 * Sec. 7.1, p. xlvii: as of pyMC 2.0rc2, there is no pymc.geweke_plot
 function, and geweke_plot is available as pymc.Matplot.geweke_plot.
 
@@ -195,6 +220,8 @@ but it has not been appropriately introduced.  It is desirable that
 there bea coherent way to refer to pymc components;  for example, it may
 be stated early in the document that all code assumes 'import pymc',
 'import pymc as pm', or 'from pymc import *' has been executed first.
+
+	DH: I suggest we use `import pymc` as the default. Thoughts ?
 
 * Sec A.3, p. lxiv:  There are comments included in the text that
 apparently were not intended to appear in the final version of the
