@@ -132,7 +132,7 @@ class StepMethod(object):
             Collection of PyMCObjects
 
           - verbose (optional) : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to none (Default) allows verbosity to be set by sampler.
 
     Externally-accessible attributes:
       stochastics:   The Stochastics over which self has jurisdiction which have observed = False.
@@ -159,7 +159,7 @@ class StepMethod(object):
 
     __metaclass__ = StepMethodMeta
 
-    def __init__(self, variables, verbose=0, tally=False):
+    def __init__(self, variables, verbose=None, tally=False):
         # StepMethod initialization
 
         if not iterable(variables) or isinstance(variables, Node):
@@ -260,7 +260,7 @@ class StepMethod(object):
     def _get_loglike(self):
         # Fetch log-probability (as sum of childrens' log probability)
         sum = logp_of_set(self.children)
-        if self.verbose > 1:
+        if self.verbose>1:
             print '\t' + self._id + ' Current log-likelihood ', sum
         return sum
 
@@ -269,7 +269,7 @@ class StepMethod(object):
 
     def _get_logp_plus_loglike(self):
         sum = logp_of_set(self.markov_blanket)
-        if self.verbose > 1:
+        if self.verbose>1:
             print '\t' + self._id + ' Current log-likelihood plus current log-probability', sum
         return sum
 
@@ -329,17 +329,17 @@ class Metropolis(StepMethod):
             'Prior' or None. If None is provided, a proposal distribution is chosen
             by examining P.value's type.
 
-    - verbose (optional) : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
+    - verbose (optional) : None or integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to none allows verbosity to be turned on by sampler.
 
     :SeeAlso: StepMethod, Sampler.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=0, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=None, tally=True):
         # Metropolis class initialization
 
         # Initialize superclass
-        StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)
+        StepMethod.__init__(self, [stochastic], tally=tally)
 
         # Initialize hidden attributes
         self.adaptive_scale_factor = 1.
@@ -350,7 +350,10 @@ class Metropolis(StepMethod):
 
         # Set public attributes
         self.stochastic = stochastic
-        self.verbose = verbose
+        if verbose is not None:
+            self.verbose = verbose
+        else:
+            self.verbose = stochastic.verbose
 
         # Avoid zeros when setting proposal variance
         if proposal_sd is not None:
@@ -408,7 +411,7 @@ class Metropolis(StepMethod):
 
         # Probability and likelihood for s's current value:
 
-        if self.verbose > 0:
+        if self.verbose>1:
             print
             print self._id + ' getting initial logp.'
 
@@ -417,7 +420,7 @@ class Metropolis(StepMethod):
         else:
             logp = self.logp_plus_loglike
 
-        if self.verbose > 0:
+        if self.verbose>1:
             print self._id + ' proposing.'
 
         # Sample a candidate value
@@ -435,18 +438,18 @@ class Metropolis(StepMethod):
         except ZeroProbability:
 
             # Reject proposal
-            if self.verbose > 0:
+            if self.verbose>1:
                 print self._id + ' rejecting due to ZeroProbability.'
             self.reject()
 
             # Increment rejected count
             self.rejected += 1
 
-            if self.verbose > 1:
+            if self.verbose>1:
                 print self._id + ' returning.'
             return
 
-        if self.verbose > 1:
+        if self.verbose>1:
             print 'logp_p - logp: ', logp_p - logp
 
         HF = self.hastings_factor()
@@ -459,12 +462,12 @@ class Metropolis(StepMethod):
 
             # Increment rejected count
             self.rejected += 1
-            if self.verbose > 0:
+            if self.verbose > 1:
                 print self._id + ' rejecting'
         else:
             # Increment accepted count
             self.accepted += 1
-            if self.verbose > 0:
+            if self.verbose > 1:
                 print self._id + ' accepting'
 
         if self.verbose > 1:
@@ -510,9 +513,12 @@ class Metropolis(StepMethod):
 
         May be overridden in subclasses.
         """
+        
+        if self.verbose is not None:
+            verbose = self.verbose
 
         # Verbose feedback
-        if verbose > 0 or self.verbose > 0:
+        if verbose > 0:
             print '\t%s tuning:' % self._id
 
         # Flag for tuning state
@@ -550,9 +556,7 @@ class Metropolis(StepMethod):
         self.accepted = 0.
 
         # More verbose feedback, if requested
-        # Warning: self.stochastic is not defined above. The following assumes
-        # that the class has created this value, which is a bit fragile. DH
-        if verbose > 0 or self.verbose > 0:
+        if verbose > 0:
             if hasattr(self, 'stochastic'):
                 print '\t\tvalue:', self.stochastic.value
             print '\t\tacceptance rate:', acc_rate
@@ -567,7 +571,7 @@ class Gibbs(Metropolis):
     """
     Base class for the Gibbs step methods
     """
-    def __init__(self, stochastic, verbose=0):
+    def __init__(self, stochastic, verbose=None):
         Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
     # Override Metropolis's competence.
@@ -600,7 +604,7 @@ class DrawFromPrior(StepMethod):
     """
     Handles dataless submodels.
     """
-    def __init__(self, variables, generations, verbose=0):
+    def __init__(self, variables, generations, verbose=None):
         StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
 
@@ -631,7 +635,7 @@ class DiscreteMetropolis(Metropolis):
     Just like Metropolis, but rounds the variable's value.
     Good for discrete stochastics.
     """
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution="Poisson", positive=False, verbose=0, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution="Poisson", positive=False, verbose=None, tally=True):
         # DiscreteMetropolis class initialization
 
         # Initialize superclass
@@ -686,7 +690,7 @@ class BinaryMetropolis(Metropolis):
 
     """
 
-    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=0, tally=True):
+    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=None, tally=True):
         # BinaryMetropolis class initialization
 
         # Initialize superclass
@@ -745,10 +749,10 @@ class BinaryMetropolis(Metropolis):
             # Stochastically set value according to relative
             # probabilities of True and False
             if random() > p_false / (p_true + p_false):
-                if self.verbose > 0:
+                if self.verbose > 1:
                     print "%s setting %s's value to True." % (self._id, self.stochastic)
                 self.stochastic.value = True
-            elif self.verbose > 0:
+            elif self.verbose > 1:
                 print "%s setting %s's value to False." % (self._id, self.stochastic)
 
 
@@ -822,7 +826,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=0, tally=False):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=None, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
@@ -834,7 +838,7 @@ class AdaptiveMetropolis(StepMethod):
             stochastic = [stochastic]
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
-
+        
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
         self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',
@@ -1223,7 +1227,7 @@ class AdaptiveMetropolis(StepMethod):
         return a
 
 
-    def tune(self, verbose):
+    def tune(self, verbose=0):
         """Tuning is done during the entire run, independently from the Sampler
         tuning specifications. """
         return False
@@ -1256,7 +1260,7 @@ class TWalk(StepMethod):
       - tally (optional) : bool
           Flag for recording values for trace (Defaults to True).
     """
-    def __init__(self, stochastic, kernel_probs=[0.0008, 0.4914, 0.4914, 0.0082, 0.0082], walk_theta=0.5, traverse_theta=4.0, verbose=0, tally=True):
+    def __init__(self, stochastic, kernel_probs=[0.0008, 0.4914, 0.4914, 0.0082, 0.0082], walk_theta=0.5, traverse_theta=4.0, verbose=None, tally=True):
 
         # Initialize superclass
         StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)

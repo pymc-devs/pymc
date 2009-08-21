@@ -54,7 +54,7 @@ class AdaptiveMetropolis(StepMethod):
           guessed from the objects value (or trace if available).
 
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=0):
+    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=100, greedy=True,verbose=None):
 
         self.verbose = verbose
 
