@@ -20,6 +20,7 @@ Each Gibbs step method has a fully conjugate version and a nonconjugate version.
 """
 
 from pymc import *
+from pymc.utils import safe_len
 import numpy as np
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
