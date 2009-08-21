@@ -80,7 +80,7 @@ Next, we enter the actual data values into an array:
 	                   3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
 	                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim}
-Next, we create the switchpoint variable $s$:
+Note that you don't have to type in this entire array to follow along; the code is available in the source tree, in \file{pymc/examples/DisasterModel.py}.  Next, we create the switchpoint variable $s$:
 \begin{verbatim}
 	s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')
 \end{verbatim}
@@ -106,7 +106,7 @@ The last step is to define the number of disasters $D$. This is a stochastic var
 
 \subsection{Why are data and unknown variables represented by the same
 object?}
-Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)=p(D|r)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
+Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -339,7 +339,7 @@ For a non-graphical summary of the posterior, simply call \code{M.stats()}.
 \pdfbookmark[1]{Imputation of Missing Data}{missing}
 %\label{subsec:missing_data}
 
-As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in loss of information if an excluded observation contains valid values for other quantities. An alternative is to impute the missing values, based on information in the rest of the model.
+As with most ``textbook examples", the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in loss of information if an excluded observation contains valid values for other quantities, and can bias results. An alternative is to impute the missing values, based on information in the rest of the model.
 
 For example, consider a survey dataset for some wildlife species:
 
@@ -446,6 +446,7 @@ The entire model looks very similar to the original model:
 \label{fig:missing}
 \end{center}
 \end{figure}
+
 
 The main limitation of this approach for imputation is performance. Because each
 element in the data array is modelled by an individual Stochastic, rather than a

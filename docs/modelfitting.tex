@@ -52,7 +52,7 @@ The \code{MAP} class sets all stochastic variables to their maximum \emph{a post
 >>> M = MAP(gelman_bioassay)
 >>> M.fit()
 \end{verbatim}
-This call will cause $M$ to fit the model using Nelder-Mead optimization, which does not require derivatives. The variables in \code{DisasterModel} have now been set to their maximum \emph{a posteriori} values:
+This call will cause $M$ to fit the model using Nelder-Mead optimization, which does not require derivatives. The variables in \code{gelman_bioassay} have now been set to their maximum \emph{a posteriori} values:
 \begin{verbatim}
 >>> M.alpha.value
 array(0.8465892309923545)
@@ -209,16 +209,14 @@ Note that there is no \code{accept()} method; if a proposal is accepted, the var
        self.proposal_sd = ones(shape(self.stochastic.value)) * scale
    \end{verbatim}
    \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise.
-   \item[\code{verbose}:] An integer controlling the amount of debugging
-    information printed during sampling. 
+   \item[\code{verbose}:] An integer. By convention, $0$ indicates minimal output and $2$ indicates maximum verbosity.
 \end{description}
 
-Metropolis step methods adjust their initial proposal standard deviations using an attribute called \code{adaptive_scale_factor}. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}.
+Although the \code{proposal\_sd} attribute is fixed at creation, Metropolis step methods adjust this initial value using an attribute called \code{adaptive_scale_factor}. When \code{tune()} is called, the acceptance ratio of the step method is examined and this scale factor is updated accordingly. If the proposal distribution is normal, proposals will have standard deviation \code{self.proposal\_sd * self.adaptive_scale_factor}.
 
 By default, tuning will continue throughout the sampling loop, even after the burnin period is over. This can be changed via the \texttt{tune\_throughout} argument to \texttt{MCMC.sample}. If an adaptive step method's \texttt{tally} flag is set (the default for \texttt{Metropolis}), a trace of its tuning parameters will be kept. If you allow tuning to continue throughout the sampling loop, it is important to verify that the `Diminishing Tuning' condition of \cite{tuning} is satisfied: the amount of tuning should decrease to zero, or tuning should become very infrequent.
 
 If a Metropolis step method handles an array-valued variable, it proposes all elements independently but simultaneously. That is, it decides whether to accept or reject all elements together but it does not attempt to take the posterior correlation between elements into account. The \code{AdaptiveMetropolis} class (see below), on the other hand, does make correlated proposals.
-
 
 \subsubsection[The AdaptiveMetropolis class]{The
 \code{AdaptiveMetropolis} class}
@@ -268,7 +266,6 @@ estimated recursively from the previous value and the last \code{interval}
 samples, instead of computing it each time from the entire trace.}. It is
 this constant adaptation of the proposal distribution that makes the chain
 non-Markovian.
-
 
 \subsubsection[The DiscreteMetropolis class]{The
 \code{DiscreteMetropolis} class}
@@ -375,7 +372,7 @@ This class serves as a container for probability models and as a base class for 
 
 Models' useful methods are:
 \begin{description}
-    \item[\code{draw_from_prior()}:] Sets all stochastic variables' values to new random values, which would be a sample from the joint distribution if all data and \code{Potential} instances' log-probability functions returned zero. If any stochastic variables lack a\code{random()} method, PyMC will raise an exception.
+    \item[\code{draw_from_prior()}:] Sets all stochastic variables' values to new random values, which would be a sample from the joint distribution if all data and \code{Potential} instances' log-probability functions returned zero. If any stochastic variables lack a \code{random()} method, PyMC will raise an exception.
     \item[\code{seed()}:] Same as \code{draw_from_prior}, but only \code{stochastics} whose \code{rseed} attribute is not \code{None} are changed.
     \item[\code{find_generations():}] Sets the \code{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
 \end{description}

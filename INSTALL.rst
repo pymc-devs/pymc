@@ -204,8 +204,8 @@ installed. The tests are launched from a python shell::
 
 In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn't), please report
-the problems on the `issue tracker`_, specifying the version you are using and
-the environment.
+the problems on the `issue tracker`_ (the issues tab on the Google Code page), 
+specifying the version you are using and the environment.
 
 .. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
 
