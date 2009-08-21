@@ -280,29 +280,19 @@ This situation can be handled naturally in PyMC:
 x_0 = Normal(`x_0', mu=0, tau=1)
 
 # Initialize array of stochastics
-x = [x_0]
+x = np.empty(N,dtype=object)
+x[0] = x_0
 
 # Loop over number of elements in N
 for i in range(1,N):
 
    # Instantiate Normal stochastic, based on value of previous element in x
-   xi = Normal(`x_%i' % i, mu=x[-1], tau=1)
-
-   # Append to x
-   x.append(xi)
+   x[i] = Normal(`x_%i' % i, mu=x[-1], tau=1)
 
 @observed
 @stochastic
 def y(value = 1, mu = x, tau = 100):
-
-    # Initialize sum of mu's
-    mu_sum = 0
-
-    for i in range(N):
-        # Append squared mu
-        mu_sum += mu[i] ** 2
-
-    # Calculate and return log-likelihood
+    mu_sum = np.sum(mu**2)
     return normal_like(value, mu_sum, tau)
 \end{verbatim}
 PyMC automatically wraps list $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i' \% i} labels each \code{Normal} object in the container with the appropriate index $i$; so if \code{i=1}, the name of the corresponding element becomes \code{`x_1'}.
