@@ -21,7 +21,7 @@ At 82 pages (59 + Appendices), this user guide is a bit on the long side, so whi
 p. v, line -2, -5:  more details on where to find the issue tracker would be helpful.
 
 	DH: The pdf contains an inline http link. Clicking on it should open the issue tracker. 
-	There was a typo in the link that is now fixed. 
+	    There was a typo in the link that is now fixed. 
 
 p. vi, line 1:  this tutorial assumes some familiarity with python, so it would be good to point uninitiated readers towards some online tutorial or introductory book.
 
@@ -40,7 +40,9 @@ p. viii, line -16:  p(D|e,s,l) = p(D|r) is potentially confusing, I would prefer
 
 	DH: Don't know about this. I understand why p(D|r) adds some meaning to the sentence. 
 
-p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit [DONE]
+p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit 
+    
+    AP: Done
 
 p. xii, line 16: the description beginning "After a sufficiently large number of iterations..." seems imprecise.  I would prefer it to say "As the number of samples tends to infinity, the MCMC distribution converges to the stationary distribution."
 
@@ -48,7 +50,9 @@ p. xii, line 16: the description beginning "After a sufficiently large number of
 	and $l$ converges to the stationary distribution. In other words, their
 	values can be considered as random draws from the posterior $p(s,e,l|D)$. "
 
-p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results [DONE]
+p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results 
+
+    AP: Done
 
 p. xvi, line -6: "iterates over each node at every iteration" seems like awkward phrasing (too many iters)
 
@@ -63,13 +67,16 @@ p. xxvii: you could consider removing all explanation of "direct" creation modes
 p. xxx:  consider merging section 5.1 and 5.6
 
 	DH: Makes sense. Objections?
+	    AP: Nope
 
 p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step method
 
 	DH: Wrote "The major subclasses of \code{StepMethod} are \code{Metropolis},
 	\code{AdaptiveMetropolis} and \code{Gibbs}." in the second paragraph of 'Step Methods' section.
 
-p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help. [DONE]
+p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help. 
+    
+    AP: Done
 
 p. xxxv, line 20:  description of verbose option could be more verbose
 
@@ -85,11 +92,13 @@ p. xxxvi, line 4: consider moving AdaptiveMetropolis description to before Discr
 
 	DH: Done
 
-p. xxxvii, line -4: typo, need space between a and random() [DONE]
+p. xxxvii, line -4: typo, need space between a and random() 
+    
+    AP: Done
 
 p. xxxviii: consider merging section 5.7 into 5.4
 
-p. xlvii, line 2: typo/awkward phrase, "gives not indication ..."; could say instead "gives evidence of convergence". [DONE] Perhaps it would be more helpful to show a Geweke plot that proves a chain has _not_ converged, however.
+p. xlvii, line 2: typo/awkward phrase, "gives not indication ..."; could say instead "gives evidence of convergence". [AP: Done] Perhaps it would be more helpful to show a Geweke plot that proves a chain has _not_ converged, however.
 
 p. xlvii, line -8: an example use of the raftery_lewis function would be very helpful.
 
@@ -97,7 +106,9 @@ p. xlvii, line -1: it might be beyond the scope of this manual, but an example o
 
 p. lii, line 3: Does this suggest an acceptable fit?  It doesn't look very good to me.
 
-p. lii, line -8: typo 'qPyMC' [DONE]
+p. lii, line -8: typo 'qPyMC' 
+    
+    AP: Done
 
 p. lxiv, lines 9-13: typos/leftover notes
 
@@ -189,8 +200,9 @@ the base round does not, at least as of python < 2.6, perform the
 tie-to-even rounding specified by the IEEE 754 standard).
 
 * Sec. 4.4, p. xxiv: In the formula, i ranges from 0 to N-1 (not N-2) if
-it is to conform with the subsequent code. [NOT DONE: x is indexed by i+1, 
-not i, in the formula.]
+it is to conform with the subsequent code. 
+
+    AP: I don't think this is necessary; x is indexed by i+1,  not i, in the formula.
 
 The code for the observed stochastic y (p. xxv) can be simplified if
 numpy arrays are used:
@@ -200,12 +212,12 @@ numpy arrays are used:
    def y(value=1, mu=numpy.array(x), tau=100):
       return normal_like(value, numpy.sum(x**2), tau)
       
-[DONE]
+    AP: Done
 
 * Sec. 5.2, p. xxxi: "The variables in DisasterModel..." => "The
 variables in gelman_bioassay..."
 
-[DONE]
+    AP: Done
 
 * Sec. 6.2: It doesn't seem to be possible to change the backed for a
 model once it has been created.  For large ram models and after involved
@@ -237,5 +249,5 @@ homogeneous?").
 examples of functions provided for a distribution, not functions
 provided by every distribution.
 
-[DONE]
+    AP: Done
 
