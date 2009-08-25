@@ -192,12 +192,18 @@ PyMC tend to be approximately an order of magnitude faster than their
 counterparts in SciPy".  It would be interesting to seem some evidence,
 as well as an analysis of why it is (if it is) so.
 
+    AP: We would rather not spend much space criticizing SciPy in the paper,
+    but have added a very informal micro-benchmark as a wiki page at
+    http://code.google.com/p/pymc/wiki/Benchmarks.
+
 In the code that follows on that page, the function round() is used.
 Since numpy is an obligatory dependence for pyMC, it would be desirable
 to have numerical computations done with numpy;  specifically,
 numpy.round should be used instead of the base round (if only because
 the base round does not, at least as of python < 2.6, perform the
 tie-to-even rounding specified by the IEEE 754 standard).
+
+    AP: Done
 
 * Sec. 4.4, p. xxiv: In the formula, i ranges from 0 to N-1 (not N-2) if
 it is to conform with the subsequent code. 
