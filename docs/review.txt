@@ -245,6 +245,8 @@ be stated early in the document that all code assumes 'import pymc',
 'import pymc as pm', or 'from pymc import *' has been executed first.
 
 	DH: I suggest we use `import pymc` as the default. Thoughts ?
+	    AP: I prefer `import pymc as pm`, as this has become the standard
+	    on the ML.
 
 * Sec A.3, p. lxiv:  There are comments included in the text that
 apparently were not intended to appear in the final version of the
