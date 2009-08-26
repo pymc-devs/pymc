@@ -30,6 +30,8 @@ Features
 
 * Large suite of well-documented statistical distributions.
 
+* Uses NumPy for numerics wherever possible.
+
 * Gaussian processes.
 
 * Sampling loops can be paused and tuned manually, or saved and restarted later.
