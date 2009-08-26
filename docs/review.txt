@@ -142,6 +142,9 @@ dependent on the accuracy of the underlying arithmetics, and the authors
 do not state clearly to what extent numerical libraries such as numpy
 are used in favour of the base python numerics.
 
+    AP: NumPy is used wherever possible. I added a bullet point to the
+    'features' section.
+
 For an article over 80 pages long the lack of a contents table is
 unacceptable.  (This might be an editorial detail.)  The structure is
 relatively clear, and the overall balance between theoretical and
