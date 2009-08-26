@@ -17,6 +17,8 @@ I think that the PyMC package will provide a valuable tool for statistical model
 
 At 82 pages (59 + Appendices), this user guide is a bit on the long side, so while I recommend that you accept it, I recommend that the authors go through the manuscript again and trim it down as much as possible (especially in the later sections).  The following minor comments include the places where I think the paper could be tightened up, and also a few places where I think that _more_ detail could be helpful as well.
 
+    AP: We have removed the appendix on MCMC theory, opting to cite a standard text instead.
+
 
 p. v, line -2, -5:  more details on where to find the issue tracker would be helpful.
 
@@ -111,6 +113,8 @@ p. lii, line -8: typo 'qPyMC'
     AP: Done
 
 p. lxiv, lines 9-13: typos/leftover notes
+
+    AP: This section has been removed.
 
 There are several figures which are very pixilated, which could be re-rendered more beautifully.  Also, there are many cross-references that came up as '??' in the pdf you sent me.  I'm sure that this will be corrected in the final version
 
@@ -252,6 +256,8 @@ be stated early in the document that all code assumes 'import pymc',
 apparently were not intended to appear in the final version of the
 document (e.g., "Do you ever call that stationary distribution itself
 homogeneous?").
+
+    AP: This section has been removed.
 
 * Sec. B: It should be made clear that normal_like, rnormal, etc. are
 examples of functions provided for a distribution, not functions

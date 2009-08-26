@@ -244,7 +244,7 @@ Whenever a variable is used as a parent for a child variable, PyMC replaces it w
 
 \section{Fitting the model with MCMC}
 
-PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm. See appendix \ref{chap:MCMC} for an introduction to the algorithm itself. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
+PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm \cite{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{verbatim}
    import DisasterModel
    from pymc import MCMC
