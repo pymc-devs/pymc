@@ -116,7 +116,7 @@ Getting started
 
 This user guide provides all the information needed to install PyMC, code
 a Bayesian statistical model, run the sampler, save and analyze the results.
-In addition, the appendix contains a chapter on MCMC theory as well as the list of the
+In addition, it contains the list of the
 available statistical distributions. More `examples`_ of usage as well as
 `tutorials`_  are available from the PyMC web site.
 
