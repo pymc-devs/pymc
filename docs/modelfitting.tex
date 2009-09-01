@@ -41,6 +41,39 @@ M = Model(make_model(3))
     In this case, $M$ will also expose $a$, $b$ and $c$ as attributes.
 \end{itemize}
 
+\hypertarget{model}{}
+\subsection[The Model class]{The \code{Model} class} \label{sec:Model}
+\pdfbookmark[1]{The Model class}{model}
+\code{Model} serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \code{MCMC}. Like any Python class, its properties are inherited by subclasses.
+
+\code{Model}'s init method takes the following arguments:
+\begin{description}
+    \item[\code{input}:] Some collection of PyMC nodes defining a probability model. These may be stored in a list, set, tuple, dictionary, array, module, or any object with a \code{__dict__} attribute.
+    \item[\code{verbose} (optional):] An integer controlling the verbosity of the model's output.
+\end{description}
+
+Models' useful methods are:
+\begin{description}
+    \item[\code{draw_from_prior()}:] Sets all stochastic variables' values to new random values, which would be a sample from the joint distribution if all data and \code{Potential} instances' log-probability functions returned zero. If any stochastic variables lack a \code{random()} method, PyMC will raise an exception.
+    \item[\code{seed()}:] Same as \code{draw_from_prior}, but only \code{stochastics} whose \code{rseed} attribute is not \code{None} are changed.
+    \item[\code{find_generations():}] Sets the \code{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
+\end{description}
+
+The helper function \code{graph} produces graphical representations of models \cite[see]{Jordan:2004p5439}.
+
+Models have the following important attributes:
+\begin{itemize}
+    \item \code{variables}
+    \item \code{stochastics}
+    \item \code{potentials}
+    \item \code{deterministics}
+    \item \code{data_stochastics}
+    \item \code{step_methods}
+    \item \code{value}
+\end{itemize}
+
+In addition, models expose each node they contain as an attribute. For instance, if model \code{M} were produced from model (\ref{disastermodel}) \code{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique name if you want to access them this way.
+
 
 \hypertarget{MAP}{}
 \section{Maximum \emph{a posteriori} estimates} \label{sec:MAP}
@@ -141,8 +174,6 @@ It provides the following additional attributes:
 Carlo: the \code{MCMC} class} \label{sec:mcmc}
 \pdfbookmark[1]{The MCMC class}{mcmc}
 
-\textbf{XXX DESCRIBE WHERE TO GET TUNING PARAMETER TRACES}
-
 The \code{MCMC} class implements PyMC's core business: producing `traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See chapter \ref{chap:tutorial} for an example of basic usage.
 
 \code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in chapter \ref{chap:extending}.
@@ -162,8 +193,33 @@ The \code{MCMC} class implements PyMC's core business: producing `traces' for a 
     \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database.
 \end{description}
 
-
 MCMC samplers' step methods can be accessed via the \code{\textbf{step_method_dict}} attribute. \code{M.step_method_dict[x]} returns a list of the step methods \code{M} will use to handle the stochastic variable \code{x}.
+
+After sampling, the information tallied by a \code{MCMC} instance \code{M}  can be queried via \code{M.db.trace_names}. In addition to the values of variables, tuning information for adaptive step methods is generally tallied. These `traces' can be plotted to verify that tuning has in fact terminated.
+
+You can produce `traces' for arbitrary functions with zero arguments as well. If you issue the command \code{M._funs_to_tally('trace_name') = f} before sampling begins, then each time the model variables' values are tallied \code{f} will be called with no arguments, and the return value will be tallied. After sampling ends you can retrieve the trace as \code{M.trace['trace_name']}
+
+\hypertarget{sampler}{}
+\subsection[The Sampler class]{The \code{Sampler} class} \label{sec:Sampler}
+\pdfbookmark[1]{The Sampler class}{sampler}
+\code{MCMC} is a subclass of a more general class called \code{Sampler}. Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
+\begin{description}
+    \item[\code{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \code{iter} argument controls how many times the sampling loop will be run, and the \code{length} argument controls the initial size of the database that will be used to store the samples.
+    \item[\code{isample(iter, length=None, verbose=0)}:] The same as \code{sample}, but the sampling is done interactively: you can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful:
+    \begin{description}
+        \item[\code{icontinue()}:] Continue interactive sampling.
+        \item[\code{halt()}:] Truncate the database and clean up.
+    \end{description}
+    \item[\code{tally()}:] Write all variables' current values to the database. The actual write operation depends on the specified database backend.
+    %\item[\code{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \code{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values of all the stochastic variables in the model).
+    \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
+    \item[\code{restore\_state()}:] Restores the sampler to the state stored in the database.
+	 \item[\code{stats()}:] Generate summary statistics for all nodes in the model.
+    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database. Note that the \code{trace_index} is different from the current iteration, since not all samples are necessarily saved due to burning and thinning.
+\end{description}
+
+In addition, the sampler attribute \code{deviance} is a deterministic variable valued as the model's deviance at its current state.
+
 
 \hypertarget{step-method}{}
 \section{Step methods} \label{sec:stepmethod}
@@ -358,58 +414,4 @@ An individual step method will be assigned to each element of \code{A} in the la
 Every step method subclass (including user-defined ones) that does not require any \texttt{init} arguments other than the stochastic variable to be handled adds itself to a list called \code{StepMethodRegistry} in the PyMC namespace. If a stochastic variable in an \code{MCMC} object has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable.
 
 To do so, each step method implements a class method called \code{competence(stochastic)}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely perform well for variables like this. The \code{MCMC} object assigns the step method that returns the highest competence value to each of its stochastic variables.
-
-\hypertarget{model}{}
-\section[The Model class]{The \code{Model} class} \label{sec:Model}
-\pdfbookmark[1]{The Model class}{model}
-This class serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \code{MCMC}. Like any Python class, its properties are inherited by subclasses.
-
-\code{Model}'s init method takes the following arguments:
-\begin{description}
-    \item[\code{input}:] Some collection of PyMC nodes defining a probability model. These may be stored in a list, set, tuple, dictionary, array, module, or any object with a \code{__dict__} attribute.
-    \item[\code{verbose} (optional):] An integer controlling the verbosity of the model's output.
-\end{description}
-
-Models' useful methods are:
-\begin{description}
-    \item[\code{draw_from_prior()}:] Sets all stochastic variables' values to new random values, which would be a sample from the joint distribution if all data and \code{Potential} instances' log-probability functions returned zero. If any stochastic variables lack a \code{random()} method, PyMC will raise an exception.
-    \item[\code{seed()}:] Same as \code{draw_from_prior}, but only \code{stochastics} whose \code{rseed} attribute is not \code{None} are changed.
-    \item[\code{find_generations():}] Sets the \code{generations} attribute. This attribute is a list whose elements are sets of stochastic variables. The zeroth set has no extended parents in the model, the first set only has extended parents in the zeroth set, and so on.
-\end{description}
-
-The helper function \code{graph} produces graphical representations of models \cite[see]{Jordan:2004p5439}.
-
-Models have the following important attributes:
-\begin{itemize}
-    \item \code{variables}
-    \item \code{stochastics}
-    \item \code{potentials}
-    \item \code{deterministics}
-    \item \code{data_stochastics}
-    \item \code{step_methods}
-    \item \code{value}
-\end{itemize}
-
-In addition, models expose each node they contain as an attribute. For instance, if model \code{M} were produced from model (\ref{disastermodel}) \code{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique name if you want to access them this way.
-
-\hypertarget{sampler}{}
-\section[The Sampler class]{The \code{Sampler} class} \label{sec:Sampler}
-\pdfbookmark[1]{The Sampler class}{sampler}
-Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see chapter \ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
-\begin{description}
-    \item[\code{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \code{iter} argument controls how many times the sampling loop will be run, and the \code{length} argument controls the initial size of the database that will be used to store the samples.
-    \item[\code{isample(iter, length=None, verbose=0)}:] The same as \code{sample}, but the sampling is done interactively: you can pause sampling at any point and be returned to the Python prompt to inspect progress and adjust fitting parameters. While sampling is paused, the following methods are useful:
-    \begin{description}
-        \item[\code{icontinue()}:] Continue interactive sampling.
-        \item[\code{halt()}:] Truncate the database and clean up.
-    \end{description}
-    \item[\code{tally()}:] Write all variables' current values to the database. The actual write operation depends on the specified database backend.
-    %\item[\code{draw()}:] Not currently used. In future Monte Carlo fitting methods that aren't MCMC, such as importance samplers, the \code{draw()} method will be responsible for drawing approximate samples from the joint distribution (by setting the values of all the stochastic variables in the model).
-    \item[\code{save\_state()}:] Saves the current state of the sampler, including all stochastics, to the database. This allows the sampler to be reconstituted at a later time to resume sampling. This is not supported yet for the RDBMS backends, sqlite and mysql.
-    \item[\code{restore\_state()}:] Restores the sampler to the state stored in the database.
-	 \item[\code{stats()}:] Generate summary statistics for all nodes in the model.
-    \item[\code{remember(trace\_index)}:] Set all variables' values from frame \code{trace\_index} in the database. Note that the \code{trace_index} is different from the current iteration, since not all samples are necessarily saved due to burning and thinning.
-\end{description}
-
-In addition, the sampler attribute \code{deviance} is a deterministic variable valued as the model's deviance at its current state.
 

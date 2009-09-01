@@ -112,6 +112,18 @@ PyMC began development in 2003, as an effort to generalize the process of buildi
 In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development team for PyMC 2.0. This iteration of the software strives for more flexibility, better performance and a better end-user experience than any previous version of PyMC.
 
 
+Relationship to other packages
+==============================
+
+PyMC in one of many general-purpose MCMC packages. The most prominent among them is `WinBUGS`_, which has made MCMC and with it Bayesian statistics accessible to a huge user community. Unlike PyMC, WinBUGS is a stand-alone, self-contained application. This can be an attractive feature for users without much programming experience, but others may find it constraining. A related package is `JAGS`_, which provides a more UNIX-like implementation of the BUGS language. Other packages include `Bassist`_, `Hierarchical Bayes Compiler`_ and a number of `R packages`_ of varying scope.
+
+It would be difficult to meaningfully benchmark PyMC against these other packages because of the unlimited variety in Bayesian probability models and flavors of the MCMC algorithm. However, it is possible to anticipate how it will perform in broad terms. 
+
+PyMC's number-crunching is done using a combination of industry-standard libraries (NumPy and the linear algebra libraries on which it depends) and hand-optimized Fortran routines. For models that are composed of variables valued as large arrays, PyMC will spend most of its time in these fast routines. In that case, it will be at least as fast as packages written entirely in C and significantly faster than WinBUGS. For finer-grained models containing mostly scalar variables, it will spend most of its time in coordinating Python code. In that case, despite our best efforts at optimization, PyMC will be significantly slower than packages written in C and on par with or slower than WinBUGS. However, as fine-grained models are often small and simple, the total time required for sampling is often quite reasonable despite this poorer performance.
+
+
+We have chosen to spend time developing PyMC rather than using an existing package primarily because it allows us to build and efficiently fit any model we like within a full-fledged Python environment. We have emphasized extensibility throughout PyMC's design, so if it doesn't meet your needs out of the box chances are you can make it do so with a relatively small amount of code. See the `testimonials`_ page on the wiki for reasons why other users have chosen PyMC.
+
 
 Getting started
 ===============
@@ -126,5 +138,12 @@ available statistical distributions. More `examples`_ of usage as well as
 
 .. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
 
+.. _ 'WinBUGS': http://www.mrc-bsu.cam.ac.uk/bugs/
 
+.. _ 'Hierarchical Bayes Compiler': http://www.cs.utah.edu/~hal/HBC/
 
+.. _ 'Bassist': http://www.cs.helsinki.fi/research/fdk/bassist/
+
+.. _ 'R': http://cran.r-project.org/web/packages/
+
+.. _ 'testimonials': http://code.google.com/p/pymc/wiki/Testimonials
