@@ -68,8 +68,7 @@ p. xxvii: you could consider removing all explanation of "direct" creation modes
 
 p. xxx:  consider merging section 5.1 and 5.6
 
-	DH: Makes sense. Objections?
-	    AP: Nope
+	AP: Done
 
 p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step method
 
@@ -99,6 +98,8 @@ p. xxxvii, line -4: typo, need space between a and random()
     AP: Done
 
 p. xxxviii: consider merging section 5.7 into 5.4
+
+    AP: Done
 
 p. xlvii, line 2: typo/awkward phrase, "gives not indication ..."; could say instead "gives evidence of convergence". [AP: Done] Perhaps it would be more helpful to show a Geweke plot that proves a chain has _not_ converged, however.
 
@@ -133,6 +134,11 @@ is appropriate, it might benefit from placing pyMC in the context of
 other packages with similar functionality.  In particular, an assessment
 of differences in the design, implementation, and performance would help
 position the package against its competitors.
+
+    AP: We have added a section to the introduction giving a 50,000-foot
+    view of PyMC compared to other packages. We feel it would be difficult
+    to meaningfully benchmark PyMC as a whole, but have invited micro-benchmarks
+    on the wiki page.
 
 The functionality offered by pyMC is impressive and the interface is
 very convenient.  However, no benchmarking and testing is mentioned, and
