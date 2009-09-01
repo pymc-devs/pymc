@@ -138,12 +138,14 @@ available statistical distributions. More `examples`_ of usage as well as
 
 .. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
 
-.. _ 'WinBUGS': http://www.mrc-bsu.cam.ac.uk/bugs/
+.. _`WinBUGS`: http://www.mrc-bsu.cam.ac.uk/bugs/
 
-.. _ 'Hierarchical Bayes Compiler': http://www.cs.utah.edu/~hal/HBC/
+.. _`JAGS`: http://www-ice.iarc.fr/~martyn/software/jags/
 
-.. _ 'Bassist': http://www.cs.helsinki.fi/research/fdk/bassist/
+.. _`Hierarchical Bayes Compiler`: http://www.cs.utah.edu/~hal/HBC/
 
-.. _ 'R': http://cran.r-project.org/web/packages/
+.. _`Bassist`: http://www.cs.helsinki.fi/research/fdk/bassist/
 
-.. _ 'testimonials': http://code.google.com/p/pymc/wiki/Testimonials
+.. _`R packages`: http://cran.r-project.org/web/packages/
+
+.. _`testimonials`: http://code.google.com/p/pymc/wiki/Testimonials
