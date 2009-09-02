@@ -80,7 +80,7 @@ Note that this is a simple Python function preceded by a Python expression calle
 
 To emphasize, the Python function decorated by \texttt{@stochastic} should compute the \emph{log}-density or \emph{log}-probability of the variable. That is why the return value in the example above is $-\log(t_h-t_l+1)$ rather than $1/(t_h-t_l+1)$.
 
-The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7).
+The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7). See \href{http://code.google.com/p/pymc/wiki/Benchmarks}{the wiki page on benchmarks}  There are two reasons: 
 
     The decorator \code{stochastic} can take several arguments:
     \begin{itemize}
@@ -103,7 +103,7 @@ def s(value=1900, t_l=1851, t_h=1962):
             return -log(t_h - t_l + 1)
 
     def random(t_l, t_h):
-        return round( (t_l - t_h) * random() ) + t_l
+        return np.round( (t_l - t_h) * random() ) + t_l
 
     \end{verbatim}
 The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \code{logp} function. The \code{random} function will be used when \code{s.random()} is called. Note that \code{random} doesn't take a \code{value} argument, as it generates values itself. The optional \code{rseed} variable provides a seed for the random number generator. The stochastic's \code{value} argument is optional when a \code{random} method is provided; if no initial value is provided, it will be drawn automatically using the \code{random} method.
@@ -117,7 +117,7 @@ def s_logp(value, t_l, t_h):
         return -log(t_h - t_l + 1)
 
 def s_rand(t_l, t_h):
-    return round( (t_l - t_h) * random() ) + t_l
+    return np.round( (t_l - t_h) * random() ) + t_l
 
 s = Stochastic( logp = s_logp,
                 doc = 'The switchpoint for the rate of disaster occurrence.',
@@ -280,29 +280,19 @@ This situation can be handled naturally in PyMC:
 x_0 = Normal(`x_0', mu=0, tau=1)
 
 # Initialize array of stochastics
-x = [x_0]
+x = np.empty(N,dtype=object)
+x[0] = x_0
 
 # Loop over number of elements in N
 for i in range(1,N):
 
    # Instantiate Normal stochastic, based on value of previous element in x
-   xi = Normal(`x_%i' % i, mu=x[-1], tau=1)
-
-   # Append to x
-   x.append(xi)
+   x[i] = Normal(`x_%i' % i, mu=x[-1], tau=1)
 
 @observed
 @stochastic
 def y(value = 1, mu = x, tau = 100):
-
-    # Initialize sum of mu's
-    mu_sum = 0
-
-    for i in range(N):
-        # Append squared mu
-        mu_sum += mu[i] ** 2
-
-    # Calculate and return log-likelihood
+    mu_sum = np.sum(mu**2)
     return normal_like(value, mu_sum, tau)
 \end{verbatim}
 PyMC automatically wraps list $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i' \% i} labels each \code{Normal} object in the container with the appropriate index $i$; so if \code{i=1}, the name of the corresponding element becomes \code{`x_1'}.
@@ -347,7 +337,14 @@ In other cases we may want to add probability terms to existing models. For exam
 \end{eqnarray*}
 It's possible to express this constraint by adding variables to the model, or by grouping $e$ and $l$ to form a vector-valued variable, but it's uncomfortable to do so.
 
-Arbitrary factors such as $\psi$ and the indicator function $I(|e-l|<1})$ are implemented by objects of class \code{Potential} (\cite{dawidmarkov} and \cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these potentials. They are often used in cases where there is no natural dependence hierarchy, such as the first example above (which is known as a Markov random field). They are also useful for expressing `soft data' \citep{Christakos:2002p5506} as in the second example above.
+Arbitrary factors such as $\psi$ and the indicator function $I(|e-l|<1)$ are
+implemented by objects of class \code{Potential} (\cite{dawidmarkov} and
+\cite{Jordan:2004p5439} call these terms `factor potentials'). Bayesian
+hierarchical notation (cf model (\ref{disastermodel})) doesn't accomodate these
+potentials. They are often used in cases where there is no natural dependence
+hierarchy, such as the first example above (which is known as a Markov random
+field). They are also useful for expressing `soft data'
+\citep{Christakos:2002p5506} as in the second example above.
 
 
 \bigskip

@@ -1,11 +1,8 @@
 ! Copyright (c) Anand Patil, 2007
 
       subroutine ichol_continue      
-     *(n,nnew,sig,nnewpmold,m,diag,piv,reltol,x,ndim,rowfun)
-cf2py intent(hide) nnew
-cf2py intent(hide) n
-cf2py intent(hide) nnewpmold
-cf2py intent(hide) ndim
+     *(n,nnew,sig,m,diag,piv,reltol,x,ndim,rowfun,rl,mold)
+cf2py intent(hide) nnew,n,ndim,rl
 cf2py intent(copy) x
 c
 c m is the total rank of the matrix
@@ -17,13 +14,10 @@ cf2py intent(inplace) sig
 c
 c The pivot vector is are of size nnew
 cf2py intent(in,out) piv
-c
-c The user has to tell it what the rank is so far.
-cf2py intent(in) mold
-        integer nnew, nold, nnewpmold, ptemp, ndim
+        integer nnew, nold, ptemp, ndim,rl,nnewmax
         integer i, n, m, mold, piv(n), p(n), j
         double precision rowvec(n), diag(nnew), x(n,ndim)
-        double precision sig(nnewpmold,n)
+        double precision sig(rl,n)
 c rowfun is the 'get-row' function.
         external rowfun
 
@@ -52,8 +46,8 @@ c rowfun is the 'get-row' function.
         EXTERNAL IDAMAX
 *       IDAMAX(N,DX,INCX)
 
-        mold = nnewpmold - nnew
         nold = n - nnew
+        nnewmax = rl-mold
 
 !       Make diagonal and index vectors
         do i=1,nnew
@@ -72,7 +66,7 @@ c rowfun is the 'get-row' function.
 
 
 !       Main loop
-        do i=1,nnew
+        do i=1,nnewmax
           
           
 !         Find maximum remaining pivot
@@ -135,7 +129,7 @@ c rowfun is the 'get-row' function.
 
 !         Implement Cholesky algorithm.
         CALL DGEMV('T',itot-1,n-itot,negone,sig(1,itot+1),
-     1                  nnew+mold,
+     1                  rl,
      2                  sig(1,itot),
      3                  1,
      4                  one,rowvec(itot+1),1)
@@ -158,21 +152,19 @@ c rowfun is the 'get-row' function.
         enddo        
 
         
-        m = mold + nnew
+        m = rl
         return
         end
 
-      subroutine ichol(n,sig,m,diag,piv,reltol,x,ndim,rowfun)
+      subroutine ichol(n,sig,m,diag,piv,reltol,x,ndim,rowfun,rl)
 
-cf2py intent(hide) n
-cf2py intent(hide) ndim
-cf2py intent(out) m
-cf2py intent(out) sig
-cf2py intent(out) piv
+cf2py intent(hide) n, ndim
+cf2py intent(out) m,sig,piv
 cf2py intent(copy) x
+cf2py intent(in) rl
 
-        integer i, n, p(n), m, piv(n), ptemp, ndim
-        double precision rowvec(n), diag(n), sig(n,n), x(n,ndim)
+        integer i, n, p(n), m, piv(n), ptemp, ndim, rl
+        double precision rowvec(n), diag(n), sig(rl,n), x(n,ndim)
 c rowfun is the get-row function
         external rowfun
         
@@ -209,11 +201,10 @@ c rowfun is the get-row function
         maxdiag = diag(idamax(n,diag,1))
       
         tol = maxdiag * reltol
-        m = n
-
+        m = rl
 
 !       Main loop
-        do i=1,n
+        do i=1,rl
 
 !         Find maximum remaining pivot
             l = idamax(n-i+1,diag(i),1)+i-1
@@ -275,10 +266,11 @@ c rowfun is the get-row function
 
 !         Implement Cholesky algorithm.
         CALL DGEMV('T',i-1,n-i,negone,sig(1,i+1),
-     1                  n,
+     1                  rl,
      2                  sig(1,i),
      3                  1,
      4                  one,rowvec(i+1),1)
+
         endif
 
         if (i.LT.n) then

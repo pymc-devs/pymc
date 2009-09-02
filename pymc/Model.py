@@ -378,7 +378,7 @@ class Sampler(Model):
 
         # Assign Trace instances to tallyable objects.
         self.db.connect_model(self)
-        
+
 
     def pause(self):
         """Pause the sampler. Sampling can be resumed by calling `icontinue`.
@@ -619,7 +619,7 @@ class Sampler(Model):
             return self.db.trace(name.__name__, chain)
         else:
             raise ValueError, 'Name argument must be string or Variable, got %s.'%name
-            
+
     def _get_deviance(self):
         return self._sum_deviance()
     deviance = property(_get_deviance)

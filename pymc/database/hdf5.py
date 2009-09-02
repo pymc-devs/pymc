@@ -216,10 +216,9 @@ class Database(pickle.Database):
 
         self._tables = self._gettables()  # This should be a dict keyed by chain.
         self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
-        self._chains = self._h5file.listNodes("/")  # This should be a dict keyed by chain.
+        self._chains = [gr for gr in self._h5file.listNodes("/") if gr._v_name[:5]=='chain']  # This should be a dict keyed by chain.
         self.chains = len(self._chains)
-        self._default_chain = -1
-
+        
         # LOAD LOGIC
         if self.chains > 0:
             # Create traces from objects stored in Table.
@@ -232,11 +231,13 @@ class Database(pickle.Database):
             # Walk nodes proceed from top to bottom, so we need to invert
             # the list to have the chains in chronological order.
             objects = {}
-            for node in db._h5file.walkNodes("/", classname='VLArray'):
-                    try:
-                        objects[node._v_name].append(node)
-                    except:
-                        objects[node._v_name] = [node,]
+            for chain in self._chains:
+                for node in db._h5file.walkNodes(chain, classname='VLArray'):
+                    if node._v_name != '_state_':
+                        try:
+                            objects[node._v_name].append(node)
+                        except:
+                            objects[node._v_name] = [node,]
 
             # Note that the list vlarrays is in reverse order.
             for k, vlarrays in objects.iteritems():
@@ -283,7 +284,7 @@ class Database(pickle.Database):
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
             names = set(reduce(list.__add__, self.trace_names))
-            for fun, name in model._funs_to_tally.iteritems():
+            for name, fun in model._funs_to_tally.iteritems():
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = fun
                     names.remove(name)
@@ -382,15 +383,15 @@ class Database(pickle.Database):
             except:
                 cls, inst, tb = sys.exc_info()
                 print """
-Error tallying %s, will not try to tally it again this chain. 
-Did you make all the samevariables and step methods tallyable 
+Error tallying %s, will not try to tally it again this chain.
+Did you make all the samevariables and step methods tallyable
 as were tallyable last time you used the database file?
 
 Error:
 
 %s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
                 self.trace_names[chain].remove(name)
-            
+
         self._rows[chain].append()
         self._tables[chain].flush()
         self._rows[chain] = self._tables[chain].row
@@ -402,11 +403,24 @@ Error:
         self._h5file.flush()
 
 
-    def savestate(self, state):
+    def savestate(self, state, chain=-1):
         """Store a dictionnary containing the state of the Model and its
         StepMethods."""
-        self.add_attr('_state_', state, 'Final state of the sampler.')
+        cur_chain = self._chains[chain]
+        if hasattr(cur_chain, '_state_'):
+            cur_chain._state_[0] = state
+        else:
+            s = self._h5file.createVLArray(cur_chain,'_state_',tables.ObjectAtom(),title='The saved state of the sampler',filters=self.filter)
+            s.append(state)
         self._h5file.flush()
+
+    def getstate(self, chain=-1):
+        if len(self._chains)==0:
+            return {}
+        elif hasattr(self._chains[chain],'_state_'):
+            return self._chains[chain]._state_[0]
+        else:
+            return {}
 
     def _model_trace_description(self):
         """Return a description of the table and the ObjectAtoms to be created.
@@ -458,6 +472,7 @@ Error:
         description may not be supported for every date type.
         if array is true, create an Array object.
         """
+
         if not np.isscalar(chain):
             raise TypeError, "chain must be a scalar integer."
 
@@ -473,6 +488,7 @@ Error:
             group = table._g_getparent()
             self._h5file.createArray(group, name, object, description)
             obj = getattr(group, name)
+
         setattr(self, name, obj)
 
 
@@ -502,6 +518,7 @@ def save_sampler(sampler):
     """
     db = sampler.db
     fnode = tables.filenode.newnode(db._h5file, where='/', name='__sampler__')
+    import pickle
     pickle.dump(sampler, fnode)
 
 
@@ -511,6 +528,7 @@ def restore_sampler(fname):
     """
     hf = tables.openFile(fname)
     fnode = hf.root.__sampler__
+    import pickle
     sampler = pickle.load(fnode)
     return sampler
 

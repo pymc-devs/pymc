@@ -7,8 +7,11 @@ import imp
 import pickle
 from isotropic_cov_funs import symmetrize, imul
 from copy import copy
-import sys
+import sys,os
 from pymc import get_threadpool_size, map_noreturn
+import pymc
+mod_search_path = [pymc.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
+
 
 __all__ = ['covariance_wrapper', 'covariance_function_bundle']
 
@@ -41,6 +44,20 @@ def regularize_array(A):
     else:
         return A
 
+def import_nested_module(name):
+    """
+    Useful for importing nested modules such as pymc.gp.cov_funs.isotropic_cov_funs.
+    """
+    tree = name.split('.')
+    root = tree[0]
+    submods = tree[1:]
+    mod = imp.load_module(root, *imp.find_module(root, mod_search_path))
+
+    for name in submods:
+        mod = getattr(mod,name)
+
+    return mod
+
 
 class covariance_wrapper(object):
     """
@@ -66,12 +83,10 @@ class covariance_wrapper(object):
         self.cov_fun_name = cov_fun_name
         self.distance_fun_name = distance_fun_name
 
-        exec('import %s'%cov_fun_module)
-        cov_fun_module = locals()[cov_fun_module]
+        cov_fun_module = import_nested_module(cov_fun_module)
         cov_fun = getattr(cov_fun_module, cov_fun_name)
 
-        exec('import %s'%distance_fun_module)
-        distance_fun_module = locals()[distance_fun_module]
+        distance_fun_module = import_nested_module(distance_fun_module)
         distance_fun = getattr(distance_fun_module, distance_fun_name)
 
         self.cov_fun_module = cov_fun_module
@@ -138,15 +153,19 @@ class covariance_wrapper(object):
             self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
             imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
             # Possibly symmetrize this bit
-            if symm:
-                symmetrize(C, cmin=cmin, cmax=cmax)
+            # FIXME: Intermittent errors apparently originating in symmetrize!
+            # if symm:
+            #     symmetrize(C, cmin=cmin, cmax=cmax)
 
         if n_threads <= 1:
             targ(C,x,y,0,-1,symm)
         else:
             thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
             map_noreturn(targ, thread_args)
-            
+
+        if symm:
+            symmetrize(C)
+
 
         return C
 

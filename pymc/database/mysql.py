@@ -98,8 +98,7 @@ class Database(sqlite.Database):
         self.variables_to_tally = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
         self._user = dbuser
         self._passwd = dbpass
         self._host = dbhost

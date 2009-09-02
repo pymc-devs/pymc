@@ -14,8 +14,6 @@ depencies can greatly improve PyMC's performance and versatility.
 The following describes the required and optional dependencies and takes you
 through the installation process.
 
-
-
 Dependencies
 ============
 
@@ -206,8 +204,8 @@ installed. The tests are launched from a python shell::
 
 In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn't), please report
-the problems on the `issue tracker`_, specifying the version you are using and
-the environment.
+the problems on the `issue tracker`_ (the issues tab on the Google Code page), 
+specifying the version you are using and the environment.
 
 .. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
 
@@ -222,6 +220,6 @@ the `issue tracker`_. Comments and questions are welcome and should be
 addressed to PyMC's `mailing list`_.
 
 
-.. _`issue tracker`: http://code.google.com/p/pymc/issues/list .
+.. _`issue tracker`: http://code.google.com/p/pymc/issues/list
 
 .. _`mailing list`: pymc@googlegroups.com

@@ -231,7 +231,7 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=0):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None):
 
         self.ParentDict = ParentDict
 
@@ -333,7 +333,7 @@ class Deterministic(DeterministicBase):
       Stochastic, Potential, deterministic, MCMC, Lambda,
       LinearCombination, Index
     """
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=0):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None):
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
@@ -483,7 +483,7 @@ class Stochastic(StochasticBase):
                     observed=False,
                     cache_depth=2,
                     plot=None,
-                    verbose = 0,
+                    verbose = None,
                     isdata=None):
 
         self.counter = Counter()
@@ -525,6 +525,8 @@ class Stochastic(StochasticBase):
             new_inst = cls('Stochastic %s: Failed to cast initial value to required dtype.\n\nOriginal error message:\n'%name + inst.message)
             raise cls, new_inst, tb
 
+        # Store the shape of the stochastic value
+        self._shape = np.shape(self._value)
 
         Variable.__init__(  self,
                         doc=doc,
@@ -544,7 +546,7 @@ class Stochastic(StochasticBase):
         # Check initial value
         # Sometimes, the random values assigned to parents will cause a
         # ZeroProbability error at instantiation time. The loop below
-        # will draw random values for the parents until logp behaves. 
+        # will draw random values for the parents until logp behaves.
         tweaked = False
         for i in range(100):
             try:
@@ -559,10 +561,10 @@ class Stochastic(StochasticBase):
                             parent.random()
                         except:
                             raise a,b,c
-                            
+
         if tweaked:
             warnings.warn("The initial values of %s's parents led to a ZeroProbability error. In an attempt to avoid failure, random values for the extendend parents were drawn %d times before a valid log probability was obtained."%(name,  i))
-        
+
         if not isinstance(logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
@@ -625,6 +627,14 @@ class Stochastic(StochasticBase):
 
     value = property(fget=get_value, fset=set_value, doc="Self's current value.")
 
+    def shape():
+        doc = "The shape of the value of self."
+        def fget(self):
+            if self.verbose > 1:
+                print '\t' + self.__name__ + ': shape accessed.'
+            return self._shape
+        return locals()
+    shape = property(**shape())
 
     def revert(self):
         """
@@ -682,6 +692,9 @@ class Stochastic(StochasticBase):
         else:
             raise AttributeError, 'Stochastic '+self.__name__+' does not know how to draw its value, see documentation'
 
+        if self.shape:
+            r = np.reshape(r, self.shape)
+
         # Set Stochastic's value to drawn value
         if not self.observed:
             self.value = r
@@ -704,7 +717,7 @@ class Stochastic(StochasticBase):
     def _set_observed(self, observed):
         raise ValueError, 'Stochastic %s: "observed" flag cannot be changed.'%self.__name__
     observed = property(_get_observed, _set_observed)
-    
+
 
     def _get_coparents(self):
         coparents = set()

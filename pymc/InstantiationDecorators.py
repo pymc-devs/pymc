@@ -12,7 +12,7 @@ from Node import ZeroProbability, ContainerBase, Node
 from Container import Container
 import numpy as np
 
-def _extract(__func__, kwds, keys, classname):
+def _extract(__func__, kwds, keys, classname, probe=True):
     """
     Used by decorators stochastic and deterministic to inspect declarations
     """
@@ -26,25 +26,27 @@ def _extract(__func__, kwds, keys, classname):
     # Instanitate dictionary of parents
     parents = {}
 
-    # Define global tracing function (I assume this is for debugging??)
-    # No, it's to get out the logp and random functions, if they're in there.
-    def probeFunc(frame, event, arg):
-        if event == 'return':
-            locals = frame.f_locals
-            kwds.update(dict((k,locals.get(k)) for k in keys))
-            sys.settrace(None)
-        return probeFunc
+    # This gets used by stochastic to check for long-format logp and random:
+    if probe:
+        # Define global tracing function (I assume this is for debugging??)
+        # No, it's to get out the logp and random functions, if they're in there.
+        def probeFunc(frame, event, arg):
+            if event == 'return':
+                locals = frame.f_locals
+                kwds.update(dict((k,locals.get(k)) for k in keys))
+                sys.settrace(None)
+            return probeFunc
 
-    sys.settrace(probeFunc)
+        sys.settrace(probeFunc)
 
-    # Get the functions logp and random (complete interface).
-    try:
-        __func__()
-    except:
-        if 'logp' in keys:
-            kwds['logp']=__func__
-        else:
-            kwds['eval'] =__func__
+        # Get the functions logp and random (complete interface).
+        try:
+            __func__()
+        except:
+            if 'logp' in keys:
+                kwds['logp']=__func__
+            else:
+                kwds['eval'] =__func__
 
     for key in keys:
         if not kwds.has_key(key):
@@ -160,7 +162,7 @@ def potential(__func__ = None, **kwds):
       Deterministic, deterministic, Stochastic, Potential, stochastic, data, Model
     """
     def instantiate_pot(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Potential')
+        junk, parents = _extract(__func__, kwds, keys, 'Potential', probe=False)
         return Potential(parents=parents, **kwds)
 
     keys = ['logp']
@@ -193,7 +195,7 @@ def deterministic(__func__ = None, **kwds):
       CommonDeterministics
     """
     def instantiate_n(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Deterministic')
+        junk, parents = _extract(__func__, kwds, keys, 'Deterministic', probe=False)
         return Deterministic(parents=parents, **kwds)
 
     keys = ['eval']

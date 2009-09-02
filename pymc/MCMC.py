@@ -64,7 +64,7 @@ class MCMC(Sampler):
               Keywords arguments to be passed to the database instantiation method.
         """
         Sampler.__init__(self, input, db, name, calc_deviance=calc_deviance, **kwds)
-        
+
         self._sm_assigned = False
         self.step_method_dict = {}
         for s in self.stochastics:
@@ -100,7 +100,7 @@ class MCMC(Sampler):
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
-        
+
         if not self._sm_assigned:
 
             # Assign dataless stepper first
@@ -132,7 +132,7 @@ class MCMC(Sampler):
             self.step_methods = set()
             for s in self.stochastics:
                 self.step_methods |= set(self.step_method_dict[s])
-            
+
             for sm in self.step_methods:
                 if sm.tally:
                     for name in sm._tuning_info:
@@ -146,7 +146,7 @@ class MCMC(Sampler):
         sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose)
 
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
-        
+
         :Parameters:
           - iter : int
             Total number of iterations to do
@@ -157,7 +157,7 @@ class MCMC(Sampler):
           - tune_interval : int
             Step methods will be tuned at intervals of this many iterations, default 1000
           - tune_throughout : boolean
-            If true, tuning will continue after the burnin period (True); otherwise tuning 
+            If true, tuning will continue after the burnin period (True); otherwise tuning
             will halt at the end of the burnin period.
           - save_interval : int or None
             If given, the model state will be saved at intervals of this many iterations
@@ -201,8 +201,8 @@ class MCMC(Sampler):
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
-                
-                if i == self._burn: 
+
+                if i == self._burn:
                     if self.verbose>0:
                         print 'Burn-in interval complete'
                     if not self._tune_throughout:
@@ -262,23 +262,28 @@ class MCMC(Sampler):
         tuning_count = 0
 
         for step_method in self.step_methods:
+            
+            verbose = self.verbose
+            if step_method.verbose is not None:
+                verbose = step_method.verbose
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)
-            if self.verbose > 1:
+            if verbose > 1:
                 print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
                 sys.stdout.flush()
 
-        if not tuning_count:
-            # If no step methods needed tuning, increment count
-            self._tuned_count += 1
-        else:
-            # Otherwise re-initialize count
-            self._tuned_count = 0
+        if not self._tune_throughout:
+            if not tuning_count:
+                # If no step methods needed tuning, increment count
+                self._tuned_count += 1
+            else:
+                # Otherwise re-initialize count
+                self._tuned_count = 0
 
-        # 5 consecutive clean intervals removed tuning
-        if self._tuned_count == 5:
-            if self.verbose > 0: print 'Finished tuning'
-            self._tuning = False
+            # 5 consecutive clean intervals removed tuning
+            if self._tuned_count == 5:
+                if self.verbose > 0: print 'Finished tuning'
+                self._tuning = False
 
 
     def get_state(self):

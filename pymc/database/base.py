@@ -48,7 +48,7 @@ done explicitly by the user.
 import pymc
 import types
 import sys, traceback
-
+import copy
 __all__=['Trace', 'Database']
 
 class Trace(object):
@@ -74,6 +74,7 @@ class Trace(object):
         self._getfunc = getfunc
         self.name = name
         self.db = db
+        self._chain = -1
 
     def _initialize(self, chain, length):
         """Prepare for tallying. Create a new chain."""
@@ -81,7 +82,7 @@ class Trace(object):
         # tallied step methods' getfuncs yet.
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
-        
+
 
     def tally(self, chain):
         """Appends the object's value to a chain.
@@ -113,12 +114,12 @@ class Trace(object):
 
     def __getitem__(self, i):
         """Return the trace corresponding to item (or slice) i for the chain
-        defined by self.db._default_chain.
+        defined by self._chain.
         """
         if type(i) == types.SliceType:
-            return self.gettrace(slicing=i, chain=self.db._default_chain)
+            return self.gettrace(slicing=i, chain=self._chain)
         else:
-            return self.gettrace(slicing=slice(i,i), chain=self.db._default_chain)
+            return self.gettrace(slicing=slice(i,i), chain=self._chain)
 
     def _finalize(self, chain):
         """Execute task necessary when tallying is over for this trace."""
@@ -161,8 +162,7 @@ class Database(object):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
     def _initialize(self, funs_to_tally, length=None):
         """Initialize the tallyable objects.
 
@@ -176,7 +176,7 @@ class Database(object):
           The expected length of the chain. Some database may need the argument
           to preallocate memory.
         """
-        
+
         for name, fun in funs_to_tally.iteritems():
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
@@ -186,7 +186,7 @@ class Database(object):
         self.trace_names.append(funs_to_tally.keys())
 
         self.chains += 1
-                
+
     def tally(self, chain=-1):
         """Append the current value of all tallyable object.
 
@@ -203,15 +203,15 @@ class Database(object):
             except:
                 cls, inst, tb = sys.exc_info()
                 print """
-Error tallying %s, will not try to tally it again this chain. 
-Did you make all the samevariables and step methods tallyable 
+Error tallying %s, will not try to tally it again this chain.
+Did you make all the samevariables and step methods tallyable
 as were tallyable last time you used the database file?
 
 Error:
 
 %s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
                 self.trace_names[chain].remove(name)
-            
+
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -252,7 +252,7 @@ Error:
             for name, fun in model._funs_to_tally.iteritems():
                 if not self._traces.has_key(name):
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
-                    
+
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
         chain = range(self.chains)[chain]
@@ -284,7 +284,7 @@ Error:
         StepMethods."""
         return getattr(self, '_state_', {})
 
-    def trace(self, name, chain):
+    def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
 
         :Parameters:
@@ -294,9 +294,10 @@ Error:
           The trace index. Setting `chain=i` will return the trace created by
           the ith call to `sample`.
         """
-        self._default_chain = chain
-        return self._traces[name]
-        
+        trace = copy.copy(self._traces[name])
+        trace._chain = chain
+        return trace
+
 def load(dbname):
     """Return a Database instance from the traces stored on disk.
 

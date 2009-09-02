@@ -81,8 +81,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
         if os.path.exists(self._directory):
             if dbmode=='w':
                 shutil.rmtree(self._directory)
@@ -159,7 +158,7 @@ def load(dirname):
         db._state_ = eval(file.read())
     else:
         db._state_= {}
-        
+
     return db
 
 def funname(file):

@@ -831,6 +831,6 @@ def discrepancy(observed, simulated, expected):
     D_sim = sum([(sqrt(s)-sqrt(e))**2 for s,e in zip(simulated, expected)])
 
     return D_obs, D_sim
-    
-        
-    
+
+
+

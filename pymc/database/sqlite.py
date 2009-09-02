@@ -40,10 +40,10 @@ class Trace(base.Trace):
     def _initialize(self, chain, length):
         """Create an SQL table.
         """
-        
+
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
-        
+
         # If the table already exists, exit now.
         if chain != 0:
             return
@@ -153,8 +153,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
         if os.path.exists(dbname) and dbmode=='w':
             os.remove(dbname)
 
