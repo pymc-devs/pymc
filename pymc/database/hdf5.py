@@ -241,8 +241,9 @@ class Database(pickle.Database):
                             objects[node._v_name] = [node,]
 
             # Note that the list vlarrays is in reverse order.
+            # Hum, this does not seem to be true 
             for k, vlarrays in objects.iteritems():
-                db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays[::-1])
+                db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays)
                 setattr(db, k, db._traces[k])
 
             # Restore table attributes.
