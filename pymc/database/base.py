@@ -48,7 +48,7 @@ done explicitly by the user.
 import pymc
 import types
 import sys, traceback
-
+import copy
 __all__=['Trace', 'Database']
 
 class Trace(object):
@@ -74,6 +74,7 @@ class Trace(object):
         self._getfunc = getfunc
         self.name = name
         self.db = db
+        self._chain = -1
 
     def _initialize(self, chain, length):
         """Prepare for tallying. Create a new chain."""
@@ -113,12 +114,12 @@ class Trace(object):
 
     def __getitem__(self, i):
         """Return the trace corresponding to item (or slice) i for the chain
-        defined by self.db._default_chain.
+        defined by self._chain.
         """
         if type(i) == types.SliceType:
-            return self.gettrace(slicing=i, chain=self.db._default_chain)
+            return self.gettrace(slicing=i, chain=self._chain)
         else:
-            return self.gettrace(slicing=slice(i,i), chain=self.db._default_chain)
+            return self.gettrace(slicing=slice(i,i), chain=self._chain)
 
     def _finalize(self, chain):
         """Execute task necessary when tallying is over for this trace."""
@@ -161,8 +162,7 @@ class Database(object):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
     def _initialize(self, funs_to_tally, length=None):
         """Initialize the tallyable objects.
 
@@ -284,7 +284,7 @@ Error:
         StepMethods."""
         return getattr(self, '_state_', {})
 
-    def trace(self, name, chain):
+    def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
 
         :Parameters:
@@ -294,8 +294,9 @@ Error:
           The trace index. Setting `chain=i` will return the trace created by
           the ith call to `sample`.
         """
-        self._default_chain = chain
-        return self._traces[name]
+        trace = copy.copy(self._traces[name])
+        trace._chain = chain
+        return trace
 
 def load(dbname):
     """Return a Database instance from the traces stored on disk.

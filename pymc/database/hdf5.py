@@ -218,8 +218,7 @@ class Database(pickle.Database):
         self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
         self._chains = [gr for gr in self._h5file.listNodes("/") if gr._v_name[:5]=='chain']  # This should be a dict keyed by chain.
         self.chains = len(self._chains)
-        self._default_chain = -1
-
+        
         # LOAD LOGIC
         if self.chains > 0:
             # Create traces from objects stored in Table.
