@@ -10,8 +10,6 @@ from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase,
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import pdb
-import sys
-import warnings
 
 d_neg_inf = float(-1.7976931348623157e+308)
 
@@ -544,28 +542,7 @@ class Stochastic(StochasticBase):
             self._value.flags['W'] = False
 
         # Check initial value
-        # Sometimes, the random values assigned to parents will cause a
-        # ZeroProbability error at instantiation time. The loop below
-        # will draw random values for the parents until logp behaves.
-        tweaked = False
-        for i in range(100):
-            try:
-                logp = self.logp
-                break
-            except ZeroProbability:
-                tweaked = True
-                a,b,c=sys.exc_info()
-                for parent in self.extended_parents:
-                    if parent.rseed is True and hasattr(parent, 'random'):
-                        try:
-                            parent.random()
-                        except:
-                            raise a,b,c
-
-        if tweaked:
-            warnings.warn("The initial values of %s's parents led to a ZeroProbability error. In an attempt to avoid failure, random values for the extendend parents were drawn %d times before a valid log probability was obtained."%(name,  i))
-
-        if not isinstance(logp, float):
+        if not isinstance(self.logp, float):
             raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
 
