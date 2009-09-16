@@ -89,6 +89,11 @@ class TestRam(TestBase):
         assert_array_equal(self.S.trace('e', chain=1)[0],  self.S.trace('e', chain=1)[:][0])
         assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
 
+        # Test internal state
+        t1 = self.S.trace('e', 0)
+        t2 = self.S.trace('e', 1)
+        assert_equal(t1._chain, 0)
+
         self.S.db.close()
 
 class TestPickle(TestRam):
