@@ -41,8 +41,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        self._default_chain = -1
-
+        
         if os.path.exists(dbname):
             if dbmode=='w':
                 os.remove(dbname)
