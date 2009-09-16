@@ -368,9 +368,9 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             figure(figsize=(10, 6))
 
         # Call trace
-        trace(data, name, datarange=datarange, rows=rows, columns=2, num=num, last=last)
+        trace(data, name, datarange=datarange, rows=rows, columns=2, num=num, last=last, fontmap=fontmap)
         # Call histogram
-        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last)
+        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last, fontmap=fontmap)
 
         if last:
             if not os.path.exists(path):
