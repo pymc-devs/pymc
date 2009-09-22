@@ -194,11 +194,14 @@ avoiding the problem of -999 being a possibly valid value and the need
 for choosing an arbitrary value that is not valid within the data.
 
      DH: Done. NaN were not handled correctly by the Imputation function. Now
-         NaNs are considered missing by default. 
+         NaNs are considered missing by default. This simplifies a bit the 
+         discussion, since we don't need to introduce masked arrays explicitly. 
 
 
 At the end of the section (p. xvi), the code uses disasters_mask, a
 variable that does not seem to have been defined earlier in the tutorial.
+
+    DH: Fixed. 
 
 * Sec. 3.6:  At the end, the authors say "... which is available on the
 webpage";  it would help the user  to follow if an appropriate link were
@@ -255,6 +258,8 @@ change the backed, the text should explain how to do this.
 
 * Sec. 7.1, p. xlvii: as of pyMC 2.0rc2, there is no pymc.geweke_plot
 function, and geweke_plot is available as pymc.Matplot.geweke_plot.
+
+       DH: Updated in the guide. 
 
 * Sec. 7.3 (and several other places): In the code, @pm.stochastic,
 rather than @stochastic, is used.  pm presumable is an alias to pymc,
