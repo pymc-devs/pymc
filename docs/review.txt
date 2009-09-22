@@ -107,6 +107,8 @@ p. xlvii, line -8: an example use of the raftery_lewis function would be very he
 
 p. xlvii, line -1: it might be beyond the scope of this manual, but an example of using CODA with R on pymc output would be very helpful.
 
+    DH: Indeed, it would probably fit better within a cookbook entry on the web site. 
+
 p. lii, line 3: Does this suggest an acceptable fit?  It doesn't look very good to me.
 
 p. lii, line -8: typo 'qPyMC' 
@@ -190,6 +192,10 @@ could then be rewritten as, e.g.:
 
 avoiding the problem of -999 being a possibly valid value and the need
 for choosing an arbitrary value that is not valid within the data.
+
+     DH: Done. NaN were not handled correctly by the Imputation function. Now
+         NaNs are considered missing by default. 
+
 
 At the end of the section (p. xvi), the code uses disasters_mask, a
 variable that does not seem to have been defined earlier in the tutorial.
