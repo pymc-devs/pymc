@@ -120,13 +120,13 @@ To illustrate, consider a model \code{my_model} that is used to instantiate a MC
 It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
 \begin{verbatim}
 	>>> scores = pymc.geweke(S, intervals=20)
-	>>> pymc.geweke_plot(scores)
+	>>> pymc.Maplot.geweke_plot(scores)
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
 	>>> trace = S.alpha.trace()
 	>>> alpha_scores = pymc.geweke(trace, 'alpha', intervals=20)
-	>>> pymc.geweke_plot(alpha_scores)
+	>>> pymc.Matplot.geweke_plot(alpha_scores)
 \end{verbatim}
 
 The second diagnostic provided by PyMC is the \citet{raftery} procedure. This approach estimates the number of iterations required to reach convergence, along with the number of burn-in samples to be discarded and the appropriate thinning interval. A separate estimate of both quantities can be obtained for each variable in a given model.
