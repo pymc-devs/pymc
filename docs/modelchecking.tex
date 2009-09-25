@@ -120,7 +120,7 @@ To illustrate, consider a model \code{my_model} that is used to instantiate a MC
 It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
 \begin{verbatim}
 	>>> scores = pymc.geweke(S, intervals=20)
-	>>> pymc.Maplot.geweke_plot(scores)
+	>>> pymc.Matplot.geweke_plot(scores)
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
