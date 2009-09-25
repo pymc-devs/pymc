@@ -111,6 +111,8 @@ p. xlvii, line -1: it might be beyond the scope of this manual, but an example o
 
 p. lii, line 3: Does this suggest an acceptable fit?  It doesn't look very good to me.
 
+	CF: This is a discrepancy plot, and the cloud of points encompassing the diagonal indicates no evidence of lack of fit. 
+
 p. lii, line -8: typo 'qPyMC' 
     
     AP: Done
