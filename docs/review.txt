@@ -60,11 +60,13 @@ p. xvi, line -6: "iterates over each node at every iteration" seems like awkward
 
 	DH: Chris, what about: "This significantly slows the rate of sampling, due to
 	the overhead costs associated with iterations over individual nodes."
+	CF: Suits me; Done.
 
 p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
 
 	DH: I agree, but I'd like the documentation related to the direct instantiation mode to be kept elsewhere. 
 	Maybe in a "Developping PyMC" document. 
+	CF: I say let the user decide what is preferred.
 
 p. xxx:  consider merging section 5.1 and 5.6
 
@@ -251,6 +253,8 @@ change the backed, the text should explain how to do this.
 
 * Sec. 7.1, p. xlvii: as of pyMC 2.0rc2, there is no pymc.geweke_plot
 function, and geweke_plot is available as pymc.Matplot.geweke_plot.
+
+	CF: Done
 
 * Sec. 7.3 (and several other places): In the code, @pm.stochastic,
 rather than @stochastic, is used.  pm presumable is an alias to pymc,
