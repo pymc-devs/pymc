@@ -379,7 +379,7 @@ x = np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 
 To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{ma.masked_equal} function:
 \begin{verbatim}
->>> masked_data = np.ma.masked_equal(x, value=None)
+>>> masked_data = np.ma.masked_equal(x, value=-999)
 >>> masked_data
 masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
  4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0
@@ -395,7 +395,7 @@ masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
  False False False False False False False False False False False False
  False False False False False False False False False False False False
  False False False],
-      fill_value=?)
+      fill_value=999999)
 
 \end{verbatim}
 
