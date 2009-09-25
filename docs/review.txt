@@ -203,6 +203,8 @@ variable that does not seem to have been defined earlier in the tutorial.
 
     DH: Fixed. 
 
+	CF: Done
+
 * Sec. 3.6:  At the end, the authors say "... which is available on the
 webpage";  it would help the user  to follow if an appropriate link were
 included here.
