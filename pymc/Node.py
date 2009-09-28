@@ -35,7 +35,7 @@ def batchsd(trace, batches=5):
     samples. The trace is divided into batches, and the standard deviation of
     the batch means is calculated.
     """
-    pdb.set_trace()
+    
     if len(np.shape(trace)) > 1:
         
         dims = np.shape(trace)
