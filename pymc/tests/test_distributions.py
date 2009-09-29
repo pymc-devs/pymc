@@ -971,7 +971,7 @@ class test_inverse_wishart(TestCase):
             from scipy.special import gammaln
         except:
             raise nose.SkipTest, "SciPy not installed."
-
+        
         IW_test = rinverse_wishart(100,self.Tau_test)
 
         def slo_inv_wishart(W,n,V):
