@@ -382,6 +382,7 @@ class WishartMvNormal(StandardGibbs):
     def propose(self):
         n = self.N_d
         Tau = self.like_Tau.value + self.like_lin_Tau.value
+        pdb.set_trace()
         if self.conjugate:
             n += self.n.value
             Tau += self.Tau.value
