@@ -523,9 +523,6 @@ class Stochastic(StochasticBase):
             new_inst = cls('Stochastic %s: Failed to cast initial value to required dtype.\n\nOriginal error message:\n'%name + inst.message)
             raise cls, new_inst, tb
 
-        # Store the shape of the stochastic value
-        self._shape = np.shape(self._value)
-
         Variable.__init__(  self,
                         doc=doc,
                         name=name,
@@ -537,6 +534,9 @@ class Stochastic(StochasticBase):
                         verbose=verbose)
 
         # self._logp.force_compute()
+        
+        # Store the shape of the stochastic value
+        self._shape = np.shape(self._value)
 
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
