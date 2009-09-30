@@ -193,12 +193,15 @@ def new_dist_class(*new_class_args):
             if not mv:
                 
                 size = arg_dict_out.pop('size')
+                size = None if size is None else tuple(np.atleast_1d(size))
                 init_val = arg_dict_out['value']
-                init_val_size = None if init_val is None else np.alen(init_val)
-                parents_size = np.max([np.size(value(v)) for v in parents.values()])
+                init_val_size = None if init_val is None else np.shape(init_val)
+                pv = [np.shape(value(v)) for v in parents.values()]
+                biggest_parent = np.argmax([np.prod(v) for v in pv])
+                parents_size = np.shape(pv[biggest_parent])
                 
                 # Scalar parents can support any size.
-                if parents_size == 1:
+                if np.prod(parents_size) <= 1:
                     parents_size = None
 
                 prioritized_sizes = [size, init_val_size, parents_size]
