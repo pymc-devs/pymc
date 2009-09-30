@@ -74,9 +74,9 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # ============================================================================================
 
 
-def bind_size(randfun, size):
+def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        return randfun(size=size, *args, **kwargs)
+        return randfun(size=shape, *args, **kwargs)
     newfun.scalar_version = randfun
     return newfun
 
@@ -192,35 +192,33 @@ def new_dist_class(*new_class_args):
 
             if not mv:
                 
-                size = arg_dict_out.pop('size')
-                size = None if size is None else tuple(np.atleast_1d(size))
+                shape = arg_dict_out.pop('size')
+                shape = None if shape is None else tuple(np.atleast_1d(shape))
+                
                 init_val = arg_dict_out['value']
-                init_val_size = None if init_val is None else np.shape(init_val)
+                init_val_shape = None if init_val is None else np.shape(init_val)
+                
                 pv = [np.shape(value(v)) for v in parents.values()]
                 biggest_parent = np.argmax([np.prod(v) for v in pv])
-                parents_size = np.shape(pv[biggest_parent])
+                parents_shape = np.shape(pv[biggest_parent])
                 
-                # Scalar parents can support any size.
-                if np.prod(parents_size) <= 1:
-                    parents_size = None
+                # Scalar parents can support any shape.
+                if np.prod(parents_shape) <= 1:
+                    parents_shape = None
 
-                prioritized_sizes = [size, init_val_size, parents_size]
-                given_sizes = filter(lambda x: x is not None, prioritized_sizes)
+                prioritized_shapes = [shape, init_val_shape, parents_shape]
+                given_shapes = set(filter(lambda x: x is not None, prioritized_shapes))
 
-                if len(set(given_sizes)) > 1:
-                    raise ValueError, 'Sizes are incompatible: value %s, largest parent %s, size argument %s'%tuple(prioritized_sizes)
+                if len(given_shapes) > 1:
+                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%tuple(prioritized_shapes)
 
-                # If no sizes were given (ie no initial value, no size argument, all parents scalars) then default to 1.
-                bindsize = given_sizes[0] if len(given_sizes)>0 else 1
+                # If no shapes were given (ie no initial value, no shape argument, all parents scalars) then default to scalar.
+                bindshape = given_shapes.pop() if len(given_shapes)>0 else ()
                 
                 if random is not None:
-                    random = bind_size(random, bindsize)
+                    random = bind_size(random, bindshape)
                     test_val = random(**(pymc.DictContainer(parents).value))
-
-                if init_val is not None and random is not None:
-                    if np.size(init_val) != np.size(test_val):
-                        raise AttributeError, \
-                        'init_val size: %d, test_val size: %d'%(np.size(init_val),np.size(test_val))
+                    np.reshape(test_val, bindshape)
 
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
@@ -369,7 +367,7 @@ def randomwrap(func):
             elif s == N:
                 arr = np.asarray(arg)
             else:
-                raise 'Arguments size not allowed.', s
+                raise RuntimeError, 'Arguments size not allowed: %s.' % s
             largs.append(arr)
 
         if mv and N >1 and max(dimension)>1 and nr>1:
