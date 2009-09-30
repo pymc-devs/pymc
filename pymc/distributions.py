@@ -74,13 +74,9 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # ============================================================================================
 
 
-def bind_size(randfun, shape, finalshape=None):
+def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        out = randfun(size=shape, *args, **kwargs)
-        if finalshape is not None:
-            return out.reshape(finalshape)
-        else:
-            return out
+        return randfun(size=shape, *args, **kwargs)
     newfun.scalar_version = randfun
     return newfun
 
@@ -217,14 +213,10 @@ def new_dist_class(*new_class_args):
                     raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%tuple(prioritized_shapes)
 
                 # If no shapes were given (ie no initial value, no shape argument, all parents scalars) then default to scalar.
-                bindshape = given_shapes.pop() if len(given_shapes)>0 else ()
-                if parents_shape is None:
-                    randshape = bindshape
-                else:
-                    randshape = bindshape[np.alen(parents_shape):]
-                
+                bindshape = given_shapes.pop() if len(given_shapes)>0 else None
+                                
                 if random is not None:
-                    random = bind_size(random, np.prod(randshape), bindshape)
+                    random = bind_size(random, bindshape)
                     test_val = random(**(pymc.DictContainer(parents).value))
 
             elif 'size' in kwds.keys():
@@ -337,74 +329,74 @@ def randomwrap(func):
       asarray([[0, 1],
              [0, 1]])
     """
+    return func
 
-
-    # Find the order of the arguments.
-    refargs, varargs, varkw, defaults = inspect.getargspec(func)
-    #vfunc = np.vectorize(self.func)
-    npos = len(refargs)-len(defaults) # Number of pos. arg.
-    nkwds = len(defaults) # Number of kwds args.
-    mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
-
-    def wrapper(*args, **kwds):
-        # First transform keyword arguments into positional arguments.
-        n = len(args)
-        if nkwds > 0:
-            args = list(args)
-            for i,k in enumerate(refargs[n:]):
-                if k in kwds.keys():
-                    args.append(kwds[k])
-                else:
-                    args.append(defaults[n-npos+i])
-
-        r = [];s=[];largs=[];nr = args[-1]
-        length = [np.atleast_1d(a).shape[0] for a in args]
-        dimension = [np.atleast_1d(a).ndim for a in args]
-        N = max(length)
-        if len(set(dimension))>2:
-            raise 'Dimensions do not agree.'
-        # Make sure all elements are iterable and have consistent lengths, ie
-        # 1 or n, but not m and n.
-
-        for arg, s in zip(args, length):
-            t = type(arg)
-            arr = np.empty(N, type)
-            if s == 1:
-                arr.fill(arg)
-            elif s == N:
-                arr = np.asarray(arg)
-            else:
-                raise RuntimeError, 'Arguments size not allowed: %s.' % s
-            largs.append(arr)
-
-        if mv and N >1 and max(dimension)>1 and nr>1:
-            raise 'Multivariate distributions cannot take s>1 and multiple values.'
-
-        if mv:
-            for i, arg in enumerate(largs[:-1]):
-                largs[0] = np.atleast_2d(arg)
-
-        for arg in zip(*largs):
-            r.append(func(*arg))
-
-        size = arg[-1]
-        vec_stochastics = len(r)>1
-        if mv:
-            if nr == 1:
-                return r[0]
-            else:
-                return np.vstack(r)
-        else:
-            if size > 1 and vec_stochastics:
-                return np.atleast_2d(r).transpose()
-            elif vec_stochastics or size > 1:
-                return np.concatenate(r)
-            else: # Scalar case
-                return r[0][0]
-
-    wrapper.__doc__ = func.__doc__
-    wrapper.__name__ = func.__name__
-    return wrapper
+    # # Find the order of the arguments.
+    # refargs, varargs, varkw, defaults = inspect.getargspec(func)
+    # #vfunc = np.vectorize(self.func)
+    # npos = len(refargs)-len(defaults) # Number of pos. arg.
+    # nkwds = len(defaults) # Number of kwds args.
+    # mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
+    # 
+    # def wrapper(*args, **kwds):
+    #     # First transform keyword arguments into positional arguments.
+    #     n = len(args)
+    #     if nkwds > 0:
+    #         args = list(args)
+    #         for i,k in enumerate(refargs[n:]):
+    #             if k in kwds.keys():
+    #                 args.append(kwds[k])
+    #             else:
+    #                 args.append(defaults[n-npos+i])
+    # 
+    #     r = [];s=[];largs=[];nr = args[-1]
+    #     length = [np.atleast_1d(a).shape[0] for a in args]
+    #     dimension = [np.atleast_1d(a).ndim for a in args]
+    #     N = max(length)
+    #     if len(set(dimension))>2:
+    #         raise 'Dimensions do not agree.'
+    #     # Make sure all elements are iterable and have consistent lengths, ie
+    #     # 1 or n, but not m and n.
+    # 
+    #     for arg, s in zip(args, length):
+    #         t = type(arg)
+    #         arr = np.empty(N, type)
+    #         if s == 1:
+    #             arr.fill(arg)
+    #         elif s == N:
+    #             arr = np.asarray(arg)
+    #         else:
+    #             raise RuntimeError, 'Arguments size not allowed: %s.' % s
+    #         largs.append(arr)
+    # 
+    #     if mv and N >1 and max(dimension)>1 and nr>1:
+    #         raise 'Multivariate distributions cannot take s>1 and multiple values.'
+    # 
+    #     if mv:
+    #         for i, arg in enumerate(largs[:-1]):
+    #             largs[0] = np.atleast_2d(arg)
+    # 
+    #     for arg in zip(*largs):
+    #         r.append(func(*arg))
+    # 
+    #     size = arg[-1]
+    #     vec_stochastics = len(r)>1
+    #     if mv:
+    #         if nr == 1:
+    #             return r[0]
+    #         else:
+    #             return np.vstack(r)
+    #     else:
+    #         if size > 1 and vec_stochastics:
+    #             return np.atleast_2d(r).transpose()
+    #         elif vec_stochastics or size > 1:
+    #             return np.concatenate(r)
+    #         else: # Scalar case
+    #             return r[0][0]
+    # 
+    # wrapper.__doc__ = func.__doc__
+    # wrapper.__name__ = func.__name__
+    # return wrapper
 
 def debugwrapper(func, name):
     # Wrapper to debug distributions
