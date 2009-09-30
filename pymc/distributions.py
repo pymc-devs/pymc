@@ -80,6 +80,12 @@ def bind_size(randfun, size):
     newfun.scalar_version = randfun
     return newfun
 
+def value(a):
+    if isinstance(a,pymc.Variable):
+        return a.value
+    else:
+        return a
+
 def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
@@ -185,37 +191,25 @@ def new_dist_class(*new_class_args):
         # 3.4  | n            | n             | n(m) | n (Error)   | 1 (-)
 
             if not mv:
+                
                 size = arg_dict_out.pop('size')
                 init_val = arg_dict_out['value']
-                init_val_size = np.alen(init_val)
-                parents_size = 1
-                for v in parents.values():
-                    try:
-                        parents_size = max(parents_size, np.size(v.value))
-                    except:
-                        parents_size = max(parents_size, np.size(v))
+                init_val_size = None if init_val is None else np.alen(init_val)
+                parents_size = np.max([np.size(value(v)) for v in parents.values()])
+                
+                # Scalar parents can support any size.
+                if parents_size == 1:
+                    parents_size = None
 
-                bindsize = 1
+                prioritized_sizes = [size, init_val_size, parents_size]
+                given_sizes = filter(lambda x: x is not None, prioritized_sizes)
 
-                if np.size(init_val) == 1:
-                    if size is not None:
-                        if parents_size == 1:
-                            bindsize = size                   # Case 1.2 and 2.2
-                        elif parents_size != size:
-                            raise AttributeError,\
-                                "size is incompatible with parents shape."
-                else:
-                    if parents_size == 1:
-                        if size is None or size == np.size(init_val):
-                            bindsize = np.size(init_val)      # Case 3.1 and 3.2
-                        else:
-                            raise AttributeError, \
-                                "size is incompatible with parents shape."
-                    else:
-                        if size is not None and parents_size != size:
-                            raise AttributeError, \
-                                "size is incompatible with parents shape."
+                if len(set(given_sizes)) > 1:
+                    raise ValueError, 'Sizes are incompatible: value %s, largest parent %s, size argument %s'%tuple(prioritized_sizes)
 
+                # If no sizes were given (ie no initial value, no size argument, all parents scalars) then default to 1.
+                bindsize = given_sizes[0] if len(given_sizes)>0 else 1
+                
                 if random is not None:
                     random = bind_size(random, bindsize)
                     test_val = random(**(pymc.DictContainer(parents).value))
