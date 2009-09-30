@@ -2770,13 +2770,8 @@ def Impute(name, dist_class, values, missing=None, **parents):
     masked_values = values
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-<<<<<<< HEAD:pymc/distributions.py
-        mask = np.logical_or(np.array(values) == missing, np.isnan(values))
-        # Generate masked array  
-=======
         mask = np.array([y is missing for y in values])
         # Generate masked array
->>>>>>> Fixed reviewer comment regarding default mask value (changed to None):pymc/distributions.py
         masked_values = np.ma.masked_array(values, mask)
 
     # Initialise list
