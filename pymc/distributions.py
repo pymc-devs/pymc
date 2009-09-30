@@ -74,9 +74,13 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # ============================================================================================
 
 
-def bind_size(randfun, shape):
+def bind_size(randfun, shape, finalshape=None):
     def newfun(*args, **kwargs):
-        return randfun(size=shape, *args, **kwargs)
+        out = randfun(size=shape, *args, **kwargs)
+        if finalshape is not None:
+            return out.reshape(finalshape)
+        else:
+            return out
     newfun.scalar_version = randfun
     return newfun
 
@@ -200,8 +204,8 @@ def new_dist_class(*new_class_args):
                 
                 pv = [np.shape(value(v)) for v in parents.values()]
                 biggest_parent = np.argmax([np.prod(v) for v in pv])
-                parents_shape = np.shape(pv[biggest_parent])
-                
+                parents_shape = pv[biggest_parent]
+                                
                 # Scalar parents can support any shape.
                 if np.prod(parents_shape) <= 1:
                     parents_shape = None
@@ -214,11 +218,14 @@ def new_dist_class(*new_class_args):
 
                 # If no shapes were given (ie no initial value, no shape argument, all parents scalars) then default to scalar.
                 bindshape = given_shapes.pop() if len(given_shapes)>0 else ()
+                if parents_shape is None:
+                    randshape = bindshape
+                else:
+                    randshape = bindshape[np.alen(parents_shape):]
                 
                 if random is not None:
-                    random = bind_size(random, bindshape)
+                    random = bind_size(random, np.prod(randshape), bindshape)
                     test_val = random(**(pymc.DictContainer(parents).value))
-                    np.reshape(test_val, bindshape)
 
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
