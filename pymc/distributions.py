@@ -329,74 +329,77 @@ def randomwrap(func):
       asarray([[0, 1],
              [0, 1]])
     """
-    return func
 
-    # # Find the order of the arguments.
-    # refargs, varargs, varkw, defaults = inspect.getargspec(func)
-    # #vfunc = np.vectorize(self.func)
-    # npos = len(refargs)-len(defaults) # Number of pos. arg.
-    # nkwds = len(defaults) # Number of kwds args.
-    # mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
-    # 
-    # def wrapper(*args, **kwds):
-    #     # First transform keyword arguments into positional arguments.
-    #     n = len(args)
-    #     if nkwds > 0:
-    #         args = list(args)
-    #         for i,k in enumerate(refargs[n:]):
-    #             if k in kwds.keys():
-    #                 args.append(kwds[k])
-    #             else:
-    #                 args.append(defaults[n-npos+i])
-    # 
-    #     r = [];s=[];largs=[];nr = args[-1]
-    #     length = [np.atleast_1d(a).shape[0] for a in args]
-    #     dimension = [np.atleast_1d(a).ndim for a in args]
-    #     N = max(length)
-    #     if len(set(dimension))>2:
-    #         raise 'Dimensions do not agree.'
-    #     # Make sure all elements are iterable and have consistent lengths, ie
-    #     # 1 or n, but not m and n.
-    # 
-    #     for arg, s in zip(args, length):
-    #         t = type(arg)
-    #         arr = np.empty(N, type)
-    #         if s == 1:
-    #             arr.fill(arg)
-    #         elif s == N:
-    #             arr = np.asarray(arg)
-    #         else:
-    #             raise RuntimeError, 'Arguments size not allowed: %s.' % s
-    #         largs.append(arr)
-    # 
-    #     if mv and N >1 and max(dimension)>1 and nr>1:
-    #         raise 'Multivariate distributions cannot take s>1 and multiple values.'
-    # 
-    #     if mv:
-    #         for i, arg in enumerate(largs[:-1]):
-    #             largs[0] = np.atleast_2d(arg)
-    # 
-    #     for arg in zip(*largs):
-    #         r.append(func(*arg))
-    # 
-    #     size = arg[-1]
-    #     vec_stochastics = len(r)>1
-    #     if mv:
-    #         if nr == 1:
-    #             return r[0]
-    #         else:
-    #             return np.vstack(r)
-    #     else:
-    #         if size > 1 and vec_stochastics:
-    #             return np.atleast_2d(r).transpose()
-    #         elif vec_stochastics or size > 1:
-    #             return np.concatenate(r)
-    #         else: # Scalar case
-    #             return r[0][0]
-    # 
-    # wrapper.__doc__ = func.__doc__
-    # wrapper.__name__ = func.__name__
-    # return wrapper
+    # Find the order of the arguments.
+    refargs, varargs, varkw, defaults = inspect.getargspec(func)
+    #vfunc = np.vectorize(self.func)
+    npos = len(refargs)-len(defaults) # Number of pos. arg.
+    nkwds = len(defaults) # Number of kwds args.
+    mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
+    
+    # Use the NumPy random function directly if this is not a multivariate distribution
+    if not mv:
+        return func
+    
+    def wrapper(*args, **kwds):
+        # First transform keyword arguments into positional arguments.
+        n = len(args)
+        if nkwds > 0:
+            args = list(args)
+            for i,k in enumerate(refargs[n:]):
+                if k in kwds.keys():
+                    args.append(kwds[k])
+                else:
+                    args.append(defaults[n-npos+i])
+    
+        r = [];s=[];largs=[];nr = args[-1]
+        length = [np.atleast_1d(a).shape[0] for a in args]
+        dimension = [np.atleast_1d(a).ndim for a in args]
+        N = max(length)
+        if len(set(dimension))>2:
+            raise 'Dimensions do not agree.'
+        # Make sure all elements are iterable and have consistent lengths, ie
+        # 1 or n, but not m and n.
+    
+        for arg, s in zip(args, length):
+            t = type(arg)
+            arr = np.empty(N, type)
+            if s == 1:
+                arr.fill(arg)
+            elif s == N:
+                arr = np.asarray(arg)
+            else:
+                raise RuntimeError, 'Arguments size not allowed: %s.' % s
+            largs.append(arr)
+    
+        if mv and N >1 and max(dimension)>1 and nr>1:
+            raise 'Multivariate distributions cannot take s>1 and multiple values.'
+    
+        if mv:
+            for i, arg in enumerate(largs[:-1]):
+                largs[0] = np.atleast_2d(arg)
+    
+        for arg in zip(*largs):
+            r.append(func(*arg))
+    
+        size = arg[-1]
+        vec_stochastics = len(r)>1
+        if mv:
+            if nr == 1:
+                return r[0]
+            else:
+                return np.vstack(r)
+        else:
+            if size > 1 and vec_stochastics:
+                return np.atleast_2d(r).transpose()
+            elif vec_stochastics or size > 1:
+                return np.concatenate(r)
+            else: # Scalar case
+                return r[0][0]
+    
+    wrapper.__doc__ = func.__doc__
+    wrapper.__name__ = func.__name__
+    return wrapper
 
 def debugwrapper(func, name):
     # Wrapper to debug distributions
@@ -570,7 +573,7 @@ def arlognormal_like(x, a, sigma, rho):
 
 # Bernoulli----------------------------------------------
 @randomwrap
-def rbernoulli(p,size=1):
+def rbernoulli(p,size=None):
     """
     rbernoulli(p,size=1)
 
@@ -616,7 +619,7 @@ def bernoulli_like(x, p):
 
 # Beta----------------------------------------------
 @randomwrap
-def rbeta(alpha, beta, size=1):
+def rbeta(alpha, beta, size=None):
     """
     rbeta(alpha, beta, size=1)
 
@@ -668,7 +671,7 @@ def beta_like(x, alpha, beta):
 
 # Binomial----------------------------------------------
 @randomwrap
-def rbinomial(n, p, size=1):
+def rbinomial(n, p, size=None):
     """
     rbinomial(n,p,size=1)
 
@@ -711,7 +714,7 @@ def binomial_like(x, n, p):
 
 # Beta----------------------------------------------
 @randomwrap
-def rbetabin(alpha, beta, n, size=1):
+def rbetabin(alpha, beta, n, size=None):
     """
     rbetabin(alpha, beta, n, size=1)
 
@@ -762,7 +765,7 @@ def betabin_like(x, alpha, beta, n):
 # is no expected value.
 
 #@randomwrap
-def rcategorical(p, size=1):
+def rcategorical(p, size=None):
     out = flib.rcat(p, np.random.random(size=size))
     if sum(out.shape) == 1:
         return out.squeeze()
@@ -789,7 +792,7 @@ def categorical_like(x, p):
 
 # Cauchy----------------------------------------------
 @randomwrap
-def rcauchy(alpha, beta, size=1):
+def rcauchy(alpha, beta, size=None):
     """
     rcauchy(alpha, beta, size=1)
 
@@ -830,7 +833,7 @@ def cauchy_like(x, alpha, beta):
 
 # Chi square----------------------------------------------
 @randomwrap
-def rchi2(nu, size=1):
+def rchi2(nu, size=None):
     """
     rchi2(nu, size=1)
 
@@ -911,7 +914,7 @@ def rdirichlet(theta, size=1):
 
     Dirichlet random variates.
     """
-    gammas = rgamma(theta,1,size)
+    gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
@@ -952,7 +955,7 @@ def dirichlet_like(x, theta):
 
 # Exponential----------------------------------------------
 @randomwrap
-def rexponential(beta, size=1):
+def rexponential(beta, size=None):
     """
     rexponential(beta)
 
@@ -995,7 +998,7 @@ def exponential_like(x, beta):
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap
-def rexponweib(alpha, k, loc=0, scale=1, size=1):
+def rexponweib(alpha, k, loc=0, scale=1, size=None):
     """
     rexponweib(alpha, k, loc=0, scale=1, size=1)
 
@@ -1037,7 +1040,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
 # Gamma----------------------------------------------
 @randomwrap
-def rgamma(alpha, beta, size=1):
+def rgamma(alpha, beta, size=None):
     """
     rgamma(alpha, beta,size=1)
 
@@ -1083,7 +1086,7 @@ def gamma_like(x, alpha, beta):
 # GEV Generalized Extreme Value ------------------------
 # Modify parameterization -> Hosking (kappa, xi, alpha)
 @randomwrap
-def rgev(xi, mu=0, sigma=1, size=1):
+def rgev(xi, mu=0, sigma=1, size=None):
     """
     rgev(xi, mu=0, sigma=0, size=1)
 
@@ -1124,7 +1127,7 @@ def gev_like(x, xi, mu=0, sigma=1):
 # Geometric----------------------------------------------
 # Changed the return value
 @randomwrap
-def rgeometric(p, size=1):
+def rgeometric(p, size=None):
     """
     rgeometric(p, size=1)
 
@@ -1165,7 +1168,7 @@ def geometric_like(x, p):
 
 # Half Cauchy----------------------------------------------
 @randomwrap
-def rhalf_cauchy(alpha, beta, size=1):
+def rhalf_cauchy(alpha, beta, size=None):
     """
     rhalf_cauchy(alpha, beta, size=1)
 
@@ -1207,7 +1210,7 @@ def half_cauchy_like(x, alpha, beta):
 
 # Half-normal----------------------------------------------
 @randomwrap
-def rhalf_normal(tau, size=1):
+def rhalf_normal(tau, size=None):
     """
     rhalf_normal(tau, size=1)
 
@@ -1244,7 +1247,7 @@ def half_normal_like(x, tau):
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
-def rhypergeometric(n, m, N, size=1):
+def rhypergeometric(n, m, N, size=None):
     """
     rhypergeometric(n, m, N, size=1)
 
@@ -1293,7 +1296,7 @@ def hypergeometric_like(x, n, m, N):
 
 # Inverse gamma----------------------------------------------
 @randomwrap
-def rinverse_gamma(alpha, beta,size=1):
+def rinverse_gamma(alpha, beta,size=None):
     """
     rinverse_gamma(alpha, beta,size=1)
 
@@ -1373,7 +1376,7 @@ def inverse_wishart_like(X, n, Tau):
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
-def rlaplace(mu, tau, size=1):
+def rlaplace(mu, tau, size=None):
     """
     rlaplace(mu, tau)
 
@@ -1424,7 +1427,7 @@ dexponential_like = laplace_like
 
 # Logistic-----------------------------------
 @randomwrap
-def rlogistic(mu, tau, size=1):
+def rlogistic(mu, tau, size=None):
     """
     rlogistic(mu, tau)
 
@@ -1471,7 +1474,7 @@ def logistic_like(x, mu, tau):
 
 # Lognormal----------------------------------------------
 @randomwrap
-def rlognormal(mu, tau,size=1):
+def rlognormal(mu, tau,size=None):
     """
     rlognormal(mu, tau,size=1)
 
@@ -1805,7 +1808,7 @@ def mv_normal_chol_like(x, mu, sig):
 
 # Negative binomial----------------------------------------
 @randomwrap
-def rnegative_binomial(mu, alpha, size=1):
+def rnegative_binomial(mu, alpha, size=None):
     """
     rnegative_binomial(mu, alpha, size=1)
 
@@ -1855,7 +1858,7 @@ def negative_binomial_like(x, mu, alpha):
 
 # Normal---------------------------------------------------
 @randomwrap
-def rnormal(mu, tau,size=1):
+def rnormal(mu, tau,size=None):
     """
     rnormal(mu, tau, size=1)
 
@@ -1899,7 +1902,7 @@ def normal_like(x, mu, tau):
 
 # von Mises--------------------------------------------------
 @randomwrap
-def rvon_mises(mu, kappa, size=1):
+def rvon_mises(mu, kappa, size=None):
     """
     rvon_mises(mu, kappa, size=1)
 
@@ -1940,7 +1943,7 @@ def von_mises_like(x, mu, kappa):
 
 # Poisson--------------------------------------------------
 @randomwrap
-def rpoisson(mu, size=1):
+def rpoisson(mu, size=None):
     """
     rpoisson(mu, size=1)
 
@@ -1990,7 +1993,7 @@ def poisson_like(x,mu):
 
 # Truncated Poisson--------------------------------------------------
 @randomwrap
-def rtruncated_poisson(mu, k, size=1):
+def rtruncated_poisson(mu, k, size=None):
     """
     rtruncpoisson(mu, k, size=1)
 
@@ -2061,7 +2064,7 @@ def truncated_poisson_like(x,mu,k):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a, b, size=1):
+def rtruncated_normal(mu, tau, a, b, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
     Random truncated normal variates.
@@ -2145,7 +2148,7 @@ truncnorm_like = truncated_normal_like
 
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
-def rskew_normal(mu,tau,alpha,size=1):
+def rskew_normal(mu,tau,alpha,size=None):
     """rskew_normal(mu, tau, alpha, size=1)
 
     Skew-normal random variates.
@@ -2189,7 +2192,7 @@ def skew_normal_expval(mu,tau,alpha):
 
 # Student's t-----------------------------------
 @randomwrap
-def rt(nu, size=1):
+def rt(nu, size=None):
     """rt(nu, size=1)
 
     Student's t random variates.
@@ -2225,7 +2228,7 @@ def t_expval(nu):
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap
-def rdiscrete_uniform(lower, upper, size=1):
+def rdiscrete_uniform(lower, upper, size=None):
     """
     rdiscrete_uniform(lower, upper, size=1)
 
@@ -2261,7 +2264,7 @@ def discrete_uniform_like(x,lower, upper):
 
 # Uniform--------------------------------------------------
 @randomwrap
-def runiform(lower, upper, size=1):
+def runiform(lower, upper, size=None):
     """
     runiform(lower, upper, size=1)
 
@@ -2296,7 +2299,7 @@ def uniform_like(x,lower, upper):
 
 # Weibull--------------------------------------------------
 @randomwrap
-def rweibull(alpha, beta,size=1):
+def rweibull(alpha, beta,size=None):
     tmp = -np.log(runiform(0, 1, size))
     return beta * (tmp ** (1. / alpha))
 
@@ -2614,7 +2617,7 @@ def mod_categorical_expval(p):
     return np.sum([p*i for i, p in enumerate(p)])
 
 
-def rmod_categor(p,size=1):
+def rmod_categor(p,size=None):
     """
     rmod_categor(p, size=1)
 
