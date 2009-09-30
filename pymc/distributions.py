@@ -206,18 +206,27 @@ def new_dist_class(*new_class_args):
                 if np.prod(parents_shape) <= 1:
                     parents_shape = None
 
-                prioritized_shapes = [shape, init_val_shape, parents_shape]
-                given_shapes = set(filter(lambda x: x is not None, prioritized_shapes))
+                def shape_error():
+                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape)
 
-                if len(given_shapes) > 1:
-                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%tuple(prioritized_shapes)
-
-                # If no shapes were given (ie no initial value, no shape argument, all parents scalars) then default to scalar.
-                bindshape = given_shapes.pop() if len(given_shapes)>0 else None
+                if init_val_shape is not None and shape is not None and init_val_shape != shape:
+                    shape_error()
+                    
+                given_shape = init_val_shape or shape
+                bindshape = given_shape or parents_shape    
+                
+                # Check consistency of bindshape and parents_shape
+                if parents_shape is not None:
+                    # Uncomment to leave broadcasting completely up to NumPy's random functions
+                    # if bindshape[-np.alen(parents_shape):]!=parents_shape:
+                    # Uncomment to limit broadcasting flexibility to what the Fortran likelihoods can handle.
+                    if bindshape!=parents_shape:
+                        shape_error()
                                 
                 if random is not None:
                     random = bind_size(random, bindshape)
-                    test_val = random(**(pymc.DictContainer(parents).value))
+                    pv = (pymc.DictContainer(parents).value)
+                    test_val = random(**pv)
 
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
