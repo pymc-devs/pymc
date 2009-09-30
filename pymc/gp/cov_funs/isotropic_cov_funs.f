@@ -876,8 +876,8 @@ C ---------- Last line of GAMMA ----------
       END
 
 
-
       SUBROUTINE RKBESL(X,ALPHA,NB,IZE,BK,NCALC)
+cf2py intent (out) bk
 C-------------------------------------------------------------------
 C
 C  This FORTRAN 77 routine calculates modified Bessel functions
