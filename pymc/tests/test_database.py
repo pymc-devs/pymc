@@ -99,6 +99,11 @@ class TestRam(TestBase):
         t1 = self.S.trace('e', 0)
         t2 = self.S.trace('e', 1)
         assert_equal(t1._chain, 0)
+<<<<<<< HEAD:pymc/tests/test_database.py
+=======
+
+        self.S.db.close()
+>>>>>>> 011ae0dc3b5664a83beb4f31a91e0df3d98dbfcc:pymc/tests/test_database.py
 
         self.S.db.close()
         
