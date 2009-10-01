@@ -27,7 +27,8 @@ related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 
-.. math::   :label: disastermodel
+.. math::
+   :label: disastermodel
 
        \begin{array}{ccc}
            (D_t | s, e, l) \sim \textup{Poisson}\left(r_t\right), & r_t=\left\{\begin{array}{lll}
@@ -480,7 +481,8 @@ treating them as unknown model parameters. Values for the missing data
 :math:`\tilde{y}` are estimated naturally, using the posterior predictive
 distribution:
 
-   .. math::
+   
+.. math::
    	p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta
 
 
@@ -572,8 +574,7 @@ The entire model looks very similar to the original model::
 The main limitation of this approach for imputation is performance. Because each
 element in the data array is modelled by an individual Stochastic, rather than a
 single Stochastic for the entire array, the number of nodes in the overall model
-increases from 4 to 113. This significantly slows the rate of sampling, since
-the model iterates over each node at every iteration.
+increases from 4 to 113. This significantly slows the rate of sampling, due to the overhead costs associated with iterations over individual nodes.
 
 .. _fig:missing:
 

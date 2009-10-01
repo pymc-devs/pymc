@@ -34,7 +34,6 @@ from Model import *
 from StepMethods import *
 from MCMC import *
 from NormalApproximation import *
-from diagnostics import *
 
 
 
@@ -48,6 +47,11 @@ import distributions
 import gp
 
 # Optional modules
+try:
+    from diagnostics import *
+except ImportError:
+    pass
+
 try:
     import ScipyDistributions
 except ImportError:

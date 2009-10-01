@@ -2775,7 +2775,7 @@ def Impute(name, dist_class, values, missing=None, **parents):
     masked_values = values
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = np.array(values) == missing
+        mask = np.array([y is missing for y in values])
         # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
 
