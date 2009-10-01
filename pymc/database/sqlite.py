@@ -50,21 +50,17 @@ class Trace(base.Trace):
 
         # Determine size
         try:
-            size = len(self._getfunc())
+            self._size = np.size(self._getfunc())
+            self._shape = np.shape(self._getfunc())
         except TypeError:
-            size = 1
+            self._size = 1
+            self.shape = None
 
-        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
+        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(self._size)]))
         self.db.cur.execute(query)
 
     def tally(self, chain):
         """Adds current value to trace."""
-
-        size = 1
-        try:
-            size = len(self._getfunc())
-        except TypeError:
-            pass
 
         try:
             # I changed str(x) to '%f'%x to solve a bug appearing due to
@@ -73,14 +69,14 @@ class Trace(base.Trace):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in self._getfunc()])
+            valstring = ', '.join(['%f'%x for x in self._getfunc().ravel()])
         except:
             valstring = str(self._getfunc())
 
 
         # Add value to database
         self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
-            (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), chain, valstring))
+            (self.name, ' ,'.join(['v%s' % (x+1) for x in range(self._size)]), chain, valstring))
 
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
@@ -108,7 +104,7 @@ class Trace(base.Trace):
             self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
 
-        trace = np.array(trace)[:,2:]
+        trace = np.array(trace)[:,2:].reshape(-1, *self._shape)
         return squeeze(trace[slicing])
 
 
