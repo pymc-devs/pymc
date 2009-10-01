@@ -102,11 +102,6 @@ class TestRam(TestBase):
 
         self.S.db.close()
         
-    def test_nd(self):
-        M = MCMC([self.NDstoch()], db= self.name)
-        M.sample(10)
-        assert_equal(M.trace('nd')[:].shape, (10,2,2))
-
 class TestPickle(TestRam):
     name = 'pickle'
     @classmethod
@@ -143,6 +138,11 @@ class TestPickle(TestRam):
         S.sample(10)
         sm = S.step_methods.pop()
         assert_equal(sm.accepted+sm.rejected, 75)
+
+    def test_nd(self):
+        M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
+        M.sample(10)
+        assert_equal(M.trace('nd')[:].shape, (10,2,2))
 
 
 class TestTxt(TestPickle):
