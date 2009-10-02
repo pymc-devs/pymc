@@ -9,6 +9,10 @@ For each object, a table is created with the following format:
 
 key (INT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
 
+For multidimensional objects, ndim>1, eg (2,2) the table has the following format:
+
+key (INT), trace (INT),  v1_1 (FLOAT), v1_2 (FLOAT), v2_1 (FLOAT), v2_2 (FLOAT)
+
 The key is autoincremented each time a new row is added to the table.
 trace denotes the chain index, and starts at 0.
 
@@ -21,6 +25,7 @@ Changeset
 Created by Chris Fonnesbeck on 2007-02-01.
 Updated by DH on 2007-04-04.
 DB API changes, October 2008, DH.
+Added support for multidimensional arrays, DH Oct. 2009
 """
 
 # TODO: Add support for integer valued objects.
@@ -44,27 +49,30 @@ class Trace(base.Trace):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
+
+        # Determine size
+        try:
+            self._shape = np.shape(self._getfunc())
+        except TypeError:
+            self._shape = None
+
+        self._vstr = ', '.join(var_str(self._shape))
+
         # If the table already exists, exit now.
         if chain != 0:
             return
 
-        # Determine size
-        try:
-            size = len(self._getfunc())
-        except TypeError:
-            size = 1
+        # Create the variable name strings.
+        vstr = ', '.join(v + ' FLOAT' for v in var_str(self._shape))
 
-        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
+        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
+
         self.db.cur.execute(query)
+
+
 
     def tally(self, chain):
         """Adds current value to trace."""
-
-        size = 1
-        try:
-            size = len(self._getfunc())
-        except TypeError:
-            pass
 
         try:
             # I changed str(x) to '%f'%x to solve a bug appearing due to
@@ -73,14 +81,15 @@ class Trace(base.Trace):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in self._getfunc()])
+            valstring = ', '.join(['%f'%x for x in self._getfunc().ravel()])
         except:
             valstring = str(self._getfunc())
 
 
         # Add value to database
-        self.db.cur.execute("INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
-            (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), chain, valstring))
+        query = "INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
+            (self.name, self._vstr, chain, valstring)
+        self.db.cur.execute(query)
 
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
@@ -109,6 +118,8 @@ class Trace(base.Trace):
             trace = self.db.cur.fetchall()
 
         trace = np.array(trace)[:,2:]
+        if len(self._shape) > 1:
+            trace = trace.reshape(-1, *self._shape)
         return squeeze(trace[slicing])
 
 
@@ -153,7 +164,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        
+
         if os.path.exists(dbname) and dbmode=='w':
             os.remove(dbname)
 
@@ -210,6 +221,7 @@ def load(dbname):
     chains = 0
     for name in tables:
         db._traces[name] = Trace(name=name, db=db)
+        db._traces[name]._shape = get_shape(db.cur, name)
         setattr(db, name, db._traces[name])
         db.cur.execute('SELECT MAX(trace) FROM %s'%name)
         chains = max(chains, db.cur.fetchall()[0][0]+1)
@@ -230,3 +242,28 @@ def get_table_list(cursor):
         WHERE type='table' AND NOT name='sqlite_sequence'
         ORDER BY name""")
     return [row[0] for row in cursor.fetchall()]
+
+def get_shape(cursor, name):
+    """Return the shape of the table ``name``."""
+    cursor.execute('select * from %s'% name)
+    inds = cursor.description[-1][0][1:].split('_')
+    return tuple([int(i) for i in inds])
+
+
+def var_str(shape):
+    """Return a sequence of strings naming the element of the tallyable object.
+
+    :Examples:
+    >>> var_str((5,))
+    ['v1', 'v2', 'v3', 'v4', 'v5']
+
+    >>> var_str((2,2))
+    ['v1_1', 'v1_2', 'v2_1', 'v2_2']
+    """
+
+    if shape in [None, ()]:
+        return ['v1',]
+
+    size = np.prod(shape)
+    indices = (np.indices(shape) + 1).reshape(-1, size)
+    return ['v'+'_'.join(map(str, i)) for i in zip(*indices)]

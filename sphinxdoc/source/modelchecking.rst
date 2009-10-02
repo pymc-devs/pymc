@@ -124,7 +124,8 @@ PyMC currently includes two formal convergence diagnostic methods. The first,
 proposed by [Geweke:1992]_, is a time-series approach that compares the mean
 and variance of segments from the beginning and end of a single chain.
 
-   .. math::
+   
+.. math::
    z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 
    
@@ -211,14 +212,14 @@ sampler. The sampler is then run for a given number of iterations::
 It is easiest simply to pass the entire sampler ``S`` the ``geweke`` function::
 
    >>> scores = pymc.geweke(S, intervals=20)
-   >>> pymc.geweke_plot(scores)
+   >>> pymc.Matplot.geweke_plot(scores)
 
 Alternatively, individual stochastics within ``S`` can be analyzed for
 convergence::
 
    >>> trace = S.alpha.trace()
    >>> alpha_scores = pymc.geweke(trace, 'alpha', intervals=20)
-   >>> pymc.geweke_plot(alpha_scores)
+   >>> pymc.Matplot.geweke_plot(alpha_scores)
 
 The second diagnostic provided by PyMC is the [Raftery:1995]_ procedure. This
 approach estimates the number of iterations required to reach convergence, along
@@ -231,12 +232,14 @@ uses the accuracy of estimation of a user-specified quantile. For example, we
 may want to estimate the quantile :math:`q=0.975` to within :math:`r=0.005` with
 probability :math:`s=0.95`. In other words,
 
-   .. math::
+   
+.. math::
    	Pr(|\hat{q}-q| \le r) = s
 
 From any sample of :math:`\theta`, one can construct a binary chain:
 
-   .. math::
+   
+.. math::
    	Z^{(j)} = I(\theta^{(j)} \le u_q)
 
 where :math:`u_q` is the quantile value and :math:`I` is the indicator function.
@@ -380,7 +383,8 @@ Fortunately, simulating data from the model is a natural component of the
 Bayesian modelling framework. Recall, from the discussion on imputation of
 missing data, the posterior predictive distribution:
 
-   .. math::
+   
+.. math::
    	p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta
    
    
@@ -452,7 +456,8 @@ that quantifies the difference between data (observed or simulated) and the
 expected value, conditional on some model. One such discrepancy measure is the
 Freeman-Tukey statistic [Brooks:2000]_:
 
-   .. math::
+   
+.. math::
 
    	D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2
 
@@ -461,7 +466,8 @@ from simulated data. On average, we expect the difference between them to be
 zero; hence, the Bayesian p-value is simply the proportion of simulated
 discrepancies that are larger than their corresponding observed discrepancies:
 
-   .. math::
+   
+.. math::
    	p = Pr[ D(\text{sim}) > D(\text{obs}) ]
 
 If :math:`p` is very large (e.g. :math:`>0.975`) or very small (e.g.

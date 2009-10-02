@@ -1,4 +1,3 @@
-	
 ==========================
 Referee Report for JSS 438
 ==========================
@@ -22,13 +21,13 @@ At 82 pages (59 + Appendices), this user guide is a bit on the long side, so whi
 
 p. v, line -2, -5:  more details on where to find the issue tracker would be helpful.
 
-	DH: The pdf contains an inline http link. Clicking on it should open the issue tracker. 
-	    There was a typo in the link that is now fixed. 
+	DH: The pdf contains an inline http link. Clicking on it should open the issue tracker.
+	    There was a typo in the link that is now fixed.
 
 p. vi, line 1:  this tutorial assumes some familiarity with python, so it would be good to point uninitiated readers towards some online tutorial or introductory book.
 
-	DH: Added references to two books by Lutz and Langtangen, as well as a link to the official python 
-        documentation web page. 
+	DH: Added references to two books by Lutz and Langtangen, as well as a link to the official python
+        documentation web page.
 
 p. vii, line 5:  maybe include a reference for this Bayesian interpretation of probability, e.g. Jaynes, _Probability Theory: the logic of science_.
 
@@ -36,14 +35,14 @@ p. vii, line 5:  maybe include a reference for this Bayesian interpretation of p
 
 p. vii, line 13:  I've also heard "DeterminedByValuesOfParents" called the "Systemic Part" of the model
 
-	DH: Added this terminology in the paragraph. 
+	DH: Added this terminology in the paragraph.
 
 p. viii, line -16:  p(D|e,s,l) = p(D|r) is potentially confusing, I would prefer just p(D|e,s,l)
 
-	DH: Don't know about this. I understand why p(D|r) adds some meaning to the sentence. 
+	DH: Don't know about this. I understand why p(D|r) adds some meaning to the sentence.
 
-p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit 
-    
+p. ix, figure:  the label on arc l is very hard to read, you should shift it to the right a little bit
+
     AP: Done
 
 p. xii, line 16: the description beginning "After a sufficiently large number of iterations..." seems imprecise.  I would prefer it to say "As the number of samples tends to infinity, the MCMC distribution converges to the stationary distribution."
@@ -52,7 +51,7 @@ p. xii, line 16: the description beginning "After a sufficiently large number of
 	and $l$ converges to the stationary distribution. In other words, their
 	values can be considered as random draws from the posterior $p(s,e,l|D)$. "
 
-p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results 
+p. xiv, line 13: you could mention that excluding rows with missing observations can also lead to biased results
 
     AP: Done
 
@@ -60,11 +59,13 @@ p. xvi, line -6: "iterates over each node at every iteration" seems like awkward
 
 	DH: Chris, what about: "This significantly slows the rate of sampling, due to
 	the overhead costs associated with iterations over individual nodes."
+	CF: Suits me; Done.
 
 p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
 
-	DH: I agree, but I'd like the documentation related to the direct instantiation mode to be kept elsewhere. 
-	Maybe in a "Developping PyMC" document. 
+	DH: I agree, but I'd like the documentation related to the direct instantiation mode to be kept elsewhere.
+	Maybe in a "Developping PyMC" document.
+	CF: I say let the user decide what is preferred.
 
 p. xxx:  consider merging section 5.1 and 5.6
 
@@ -75,8 +76,8 @@ p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step
 	DH: Wrote "The major subclasses of \code{StepMethod} are \code{Metropolis},
 	\code{AdaptiveMetropolis} and \code{Gibbs}." in the second paragraph of 'Step Methods' section.
 
-p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help. 
-    
+p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help.
+
     AP: Done
 
 p. xxxv, line 20:  description of verbose option could be more verbose
@@ -93,8 +94,8 @@ p. xxxvi, line 4: consider moving AdaptiveMetropolis description to before Discr
 
 	DH: Done
 
-p. xxxvii, line -4: typo, need space between a and random() 
-    
+p. xxxvii, line -4: typo, need space between a and random()
+
     AP: Done
 
 p. xxxviii: consider merging section 5.7 into 5.4
@@ -107,12 +108,14 @@ p. xlvii, line -8: an example use of the raftery_lewis function would be very he
 
 p. xlvii, line -1: it might be beyond the scope of this manual, but an example of using CODA with R on pymc output would be very helpful.
 
-    DH: Indeed, it would probably fit better within a cookbook entry on the web site. 
+    DH: Indeed, it would probably fit better within a cookbook entry on the web site.
 
 p. lii, line 3: Does this suggest an acceptable fit?  It doesn't look very good to me.
 
-p. lii, line -8: typo 'qPyMC' 
-    
+	CF: This is a discrepancy plot, and the cloud of points encompassing the diagonal indicates no evidence of lack of fit.
+
+p. lii, line -8: typo 'qPyMC'
+
     AP: Done
 
 p. lxiv, lines 9-13: typos/leftover notes
@@ -158,7 +161,7 @@ unacceptable.  (This might be an editorial detail.)  The structure is
 relatively clear, and the overall balance between theoretical and
 practical parts seems appropriate.
 
-	DH: Table of contents added. 
+	DH: Table of contents added.
 
 The package is easy to install, with just one library (numpy) required
 and a few others optional.  I had no problems with installing and
@@ -194,14 +197,18 @@ avoiding the problem of -999 being a possibly valid value and the need
 for choosing an arbitrary value that is not valid within the data.
 
      DH: Done. NaN were not handled correctly by the Imputation function. Now
-         NaNs are considered missing by default. This simplifies a bit the 
-         discussion, since we don't need to introduce masked arrays explicitly. 
+         NaNs are considered missing by default. This simplifies a bit the
+         discussion, since we don't need to introduce masked arrays explicitly.
 
 
 At the end of the section (p. xvi), the code uses disasters_mask, a
 variable that does not seem to have been defined earlier in the tutorial.
 
-    DH: Fixed. 
+    DH: Fixed.
+
+	CF: Done
+
+	CF: Done
 
 * Sec. 3.6:  At the end, the authors say "... which is available on the
 webpage";  it would help the user  to follow if an appropriate link were
@@ -228,7 +235,7 @@ tie-to-even rounding specified by the IEEE 754 standard).
     AP: Done
 
 * Sec. 4.4, p. xxiv: In the formula, i ranges from 0 to N-1 (not N-2) if
-it is to conform with the subsequent code. 
+it is to conform with the subsequent code.
 
     AP: I don't think this is necessary; x is indexed by i+1,  not i, in the formula.
 
@@ -239,7 +246,7 @@ numpy arrays are used:
    @stochastic
    def y(value=1, mu=numpy.array(x), tau=100):
       return normal_like(value, numpy.sum(x**2), tau)
-      
+
     AP: Done
 
 * Sec. 5.2, p. xxxi: "The variables in DisasterModel..." => "The
@@ -254,12 +261,14 @@ to save the model to the disk without creating it anew with a different
 backend and re-running the simulation.  If it actually is possible to
 change the backed, the text should explain how to do this.
 
-	DH: Indeed, it isn't at the moment. 
+	DH: Indeed, it isn't at the moment.
 
 * Sec. 7.1, p. xlvii: as of pyMC 2.0rc2, there is no pymc.geweke_plot
 function, and geweke_plot is available as pymc.Matplot.geweke_plot.
 
-       DH: Updated in the guide. 
+       DH: Updated in the guide.
+
+	CF: Done
 
 * Sec. 7.3 (and several other places): In the code, @pm.stochastic,
 rather than @stochastic, is used.  pm presumable is an alias to pymc,
@@ -284,4 +293,3 @@ examples of functions provided for a distribution, not functions
 provided by every distribution.
 
     AP: Done
-

@@ -3,9 +3,9 @@ The DisasterMCMC example.
 
 """
 from numpy.testing import *
-from pymc import MCMC
+from pymc import MCMC, database
 from pymc.examples import DisasterModel
-import nose,  warnings
+import nose,  warnings, os
 warnings.simplefilter('ignore', FutureWarning)
 PLOT=True
 try:
@@ -21,11 +21,11 @@ DIR = 'testresults/'
 class test_MCMC(TestCase):
 
     # Instantiate samplers
-    M = MCMC(DisasterModel)
+    M = MCMC(DisasterModel, db='pickle')
 
     # Sample
     M.sample(4000,2000,verbose=0)
-
+    M.db.close()
     def test_instantiation(self):
 
         # Check stochastic arrays
@@ -49,6 +49,14 @@ class test_MCMC(TestCase):
 
     def test_stats(self):
         S = self.M.e.stats()
+        self.M.stats()
+
+    def test_stats_after_reload(self):
+        db = database.pickle.load('MCMC.pickle')
+        M2 = MCMC(DisasterModel, db=db)
+        M2.stats()
+        db.close()
+        os.remove('MCMC.pickle')
 
 
 if __name__ == '__main__':

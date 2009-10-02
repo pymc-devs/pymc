@@ -13,13 +13,13 @@ from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform, 
 from pymc.distributions import Impute
 import numpy as np
 
-# Missing values indicated by NaNs.
+# Missing values indicated by None placeholders
 disasters_array =   np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                    3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                   2, 2, 3, 4, 2, 1, 3, np.nan, 2, 1, 1, 1, 1, 3, 0, 0,
+                   2, 2, 3, 4, 2, 1, 3, None, 2, 1, 1, 1, 1, 3, 0, 0,
                    1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
                    0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                   3, 3, 1, np.nan, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                   3, 3, 1, None, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                    0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 
@@ -42,4 +42,4 @@ def r(s=s, e=e, l=l):
 
 
 # Where the mask is true, the value is taken as missing.
-D = Impute('D', Poisson, disasters_array, mu=r)
+D = Impute('D', Poisson, disasters_array, missing=None, mu=r)
