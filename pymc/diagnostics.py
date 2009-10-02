@@ -33,6 +33,7 @@ def diagnostic(f):
             for variable in pymc_obj._variables_to_tally:
                 data = variable.trace()
                 name = variable.__name__
+                print "\nDiagnostic for %s ..." % name
                 values[name] = f(data, *args, **kwargs)
             return values
         except AttributeError:
@@ -311,7 +312,7 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
 
     if verbose:
 
-        print "========================"
+        print "\n========================"
         print "Raftery-Lewis Diagnostic"
         print "========================"
         print
