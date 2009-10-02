@@ -80,7 +80,7 @@ Note that this is a simple Python function preceded by a Python expression calle
 
 To emphasize, the Python function decorated by \texttt{@stochastic} should compute the \emph{log}-density or \emph{log}-probability of the variable. That is why the return value in the example above is $-\log(t_h-t_l+1)$ rather than $1/(t_h-t_l+1)$.
 
-The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7). See \href{http://code.google.com/p/pymc/wiki/Benchmarks}{the wiki page on benchmarks}  There are two reasons: 
+The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7). See \href{http://code.google.com/p/pymc/wiki/Benchmarks}{the wiki page on benchmarks}  There are two reasons:
 
     The decorator \code{stochastic} can take several arguments:
     \begin{itemize}

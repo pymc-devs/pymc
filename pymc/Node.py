@@ -38,10 +38,11 @@ def batchsd(trace, batches=5):
 
     if len(np.shape(trace)) > 1:
 
-        ttrace = np.transpose(trace)
-        dims = np.shape(ttrace)
+        dims = np.shape(trace)
+        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
+        ttrace = np.transpose([t.ravel() for t in trace])
 
-        return np.array([batchsd(t, batches) for t in np.reshape(ttrace, (dims[0], sum(dims[1:])))])
+        return np.reshape([batchsd(t, batches) for t in ttrace], dims[1:])
 
     else:
         if batches == 1: return np.std(trace)/np.sqrt(len(trace))

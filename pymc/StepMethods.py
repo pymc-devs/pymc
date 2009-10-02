@@ -2,8 +2,9 @@ from __future__ import division
 
 import numpy as np
 from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
 from numpy.linalg.linalg import LinAlgError
+from numpy.linalg import pinv, cholesky
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from numpy.random import poisson as rpoisson
@@ -27,7 +28,9 @@ nonconjugate_Gibbs_competence = 0
 
 class AdaptationError(ValueError): pass
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior', 'TWalk']
+
+__all__=['DiscreteMetropolis', 'Metropolis', 'MatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior', 'TWalk']
+
 
 StepMethodRegistry = []
 
@@ -517,6 +520,9 @@ class Metropolis(StepMethod):
         if self.verbose is not None:
             verbose = self.verbose
 
+        if self.verbose is not None:
+            verbose = self.verbose
+
         # Verbose feedback
         if verbose > 0:
             print '\t%s tuning:' % self._id
@@ -565,6 +571,42 @@ class Metropolis(StepMethod):
 
         return tuning
 
+class MatrixMetropolis(Metropolis):
+    """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
+    def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
+        Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
+
+    @staticmethod
+    def competence(s):
+        """
+        The competence function for MatrixMetropolis
+        """
+        if len(s.shape)==2 and s.shape[0]==s.shape[1]:
+            # Square invertible matrix
+            try:
+                # Try to get inverse
+                pinv(s.value)
+                return 3
+            except LinAlgError:
+                return 0
+        else:
+            return 0
+
+    def propose(self):
+        """
+        Proposals for positive definite matrix using random walk deviations on the Cholesky
+        factor of the current value.
+        """
+
+        # Find Cholesky decomposition
+        cvalue = cholesky(self.stochastic.value)
+        # Locally store size of matrix
+        dims = self.stochastic.shape
+
+        # Add normal deviate to value, preserving lower triangular
+        cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
+        # Square and replace
+        self.stochastic.value = cvalue_new*transpose(cvalue_new)
 
 
 class Gibbs(Metropolis):

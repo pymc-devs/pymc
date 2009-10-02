@@ -267,8 +267,7 @@ def robust_init(stochclass, tries, *args, **kwds):
       Maximum number of times parents will be sampled. 
     *args, **kwds
       Positional and keyword arguments to declare the Stochastic variable.
-      
-      
+
     :Example:
     >>> lower = pymc.Uniform('lower', 0., 2., value=1.5, rseed=True)
     >>> pymc.robust_init(pymc.Uniform, 100, 'data', lower=lower, upper=5, value=[1,2,3,4], observed=True)
@@ -296,6 +295,6 @@ def robust_init(stochclass, tries, *args, **kwds):
                     parent.random()
                 except:
                     raise a,b,c
-    
+                    
     raise a,b,c
 

@@ -15,6 +15,7 @@ Changeset
 ---------
 Nov. 30, 2007: Implemented load function. DH
 Oct. 24, 2008: Implemented savestate. Implemented parallel chain tallying. DH
+Oct. 1, 2009: Added support for multidimensional arrays.
 """
 
 
@@ -23,6 +24,7 @@ import os, datetime, shutil, re
 import numpy as np
 from numpy import array
 import string
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -58,7 +60,7 @@ class Trace(ram.Trace):
         print >> f, '# Variable: %s' % self.name
         print >> f, '# Sample shape: %s' % str(arr.shape)
         print >> f, '# Date: %s' % datetime.datetime.now()
-        np.savetxt(f, arr, delimiter=',')
+        np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
         f.close()
 
 class Database(base.Database):
@@ -81,7 +83,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        
+
         if os.path.exists(self._directory):
             if dbmode=='w':
                 shutil.rmtree(self._directory)
@@ -140,10 +142,12 @@ def load(dirname):
         db.trace_names.append(funnames)
         for file in files:
             name = funname(file)
-            try:
-                data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',')
-            except:
-                data[name] = {chain:np.loadtxt(os.path.join(folder, file), delimiter=',')}
+            if not data.has_key(name):
+                data[name] = {} # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
+            # Read the shape information
+            f = open(os.path.join(folder, file))
+            f.readline(); shape = eval(f.readline()[16:])
+            data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',').reshape(shape)
 
 
     # Create the Traces.

@@ -538,6 +538,9 @@ class Stochastic(StochasticBase):
 
         # self._logp.force_compute()
 
+        # Store the shape of the stochastic value
+        self._shape = np.shape(self._value)
+
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
 

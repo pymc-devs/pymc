@@ -264,7 +264,7 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 As the number of samples tends to infinity, the MCMC distribution of $s$, $e$
 and $l$ converges to the stationary distribution. In other words, their
-values can be considered as random draws from the posterior $p(s,e,l|D)$. 
+values can be considered as random draws from the posterior $p(s,e,l|D)$.
 PyMC assumes that the \code{burn} parameter specifies a `sufficiently large'
 number of iterations for convergence of the algorithm, so it is up to the user
 to verify
@@ -365,19 +365,41 @@ In a Bayesian modelling framework, missing data are accommodated simply by treat
 
 This describes additional data $\tilde{y}$, which may either be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data.
 
-Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of NaNs.
+Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, None.
 
 \begin{verbatim}
 x = np.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-2, 2, 3, 4, 2, 1, 3, np.nan, 2, 1, 1, 1, 1, 3, 0, 0,
+2, 2, 3, 4, 2, 1, 3, None, 2, 1, 1, 1, 1, 3, 0, 0,
 1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
 0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-3, 3, 1, np.nan, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+3, 3, 1, None, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 \end{verbatim}
 
-This array can then be passed to PyMC's own \code{ImputeMissing} function, which replaces the missing values with Stochastic variables of the desired type. For the coal mining disasters problem, recall that disaster events were modelled as Poisson variates:
+To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's \code{ma.masked_equal} function:
+\begin{verbatim}
+>>> masked_data = np.ma.masked_equal(x, value=None)
+>>> masked_data
+masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
+ 4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0
+ 1 0 0 0 2 1 0 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1
+ 0 0 1 0 1],
+ mask = [False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False  True False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False False False False False False False False False  True
+ False False False False False False False False False False False False
+ False False False False False False False False False False False False
+ False False False],
+      fill_value=?)
+
+\end{verbatim}
+
+This masked array, in turn, can then be passed to PyMC's own \code{ImputeMissing} function, which replaces the missing values with Stochastic variables of the desired type. For the coal mining disasters problem, recall that disaster events were modelled as Poisson variates:
 
 \begin{verbatim}
 	>>> D = ImputeMissing('D', Poisson, masked_data, mu=r)
@@ -413,7 +435,8 @@ The entire model looks very similar to the original model:
 	    return out
 
 	# Where the mask is true, the value is taken as missing.
-	D = ImputeMissing('D', Poisson, x, mu=r)
+	masked_data = np.ma.masked_equal(x, value=None)
+	D = ImputeMissing('D', Poisson, masked_data, mu=r)
 \end{verbatim}
 
 \begin{figure}[ht]
@@ -429,7 +452,7 @@ The main limitation of this approach for imputation is performance. Because each
 element in the data array is modelled by an individual Stochastic, rather than a
 single Stochastic for the entire array, the number of nodes in the overall model
 increases from 4 to 113. This significantly slows the rate of sampling, due to
-the overhead costs associated with iterations over individual nodes. 
+the overhead costs associated with iterations over individual nodes.
 
 % section missing_data (end)
 

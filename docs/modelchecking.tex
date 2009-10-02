@@ -120,7 +120,7 @@ To illustrate, consider a model \code{my_model} that is used to instantiate a MC
 It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
 \begin{verbatim}
 	>>> scores = pymc.geweke(S, intervals=20)
-	>>> pymc.Maplot.geweke_plot(scores)
+	>>> pymc.Matplot.geweke_plot(scores)
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
@@ -170,6 +170,34 @@ raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1)
 \end{itemize}
 
 The code for \code{raftery_lewis} is based on the FORTRAN program \emph{gibbsit}, which was written by Steven Lewis.
+
+For example, consider again a sampler \code{S} run for some model \code{my_model}:
+\begin{verbatim}
+	>>> S = pymc.MCMC(my_model)
+	>>> S.sample(10000, burn=5000)
+\end{verbatim}
+One can pass either the entire sampler \code{S} or any stochastic within \code{S} to the \code{raftery_lewis} function, along with suitable arguments. Here, we have chosen $q=0.025$ (the lower limit of the equal-tailed 95\% interval) and error $r=0.01$:
+\begin{verbatim}
+	>>> pymc.raftery_lewis(S, q=0.025, r=0.01)
+\end{verbatim}
+This yields diagnostics as follows for each stochastic of \code{S}, as well as a dictionary containing the diagnostic quantities:
+
+\begin{verbatim}
+	========================
+	Raftery-Lewis Diagnostic
+	========================
+
+	937 iterations required (assuming independence) to achieve 0.01 accuracy
+	with 95 percent probability.
+
+	Thinning factor of 1 required to produce a first-order Markov chain.
+
+	39 iterations to be discarded at the beginning of the simulation (burn-in).
+
+	11380 subsequent iterations required.
+
+	Thinning factor of 11 required to produce an independence chain.
+\end{verbatim}
 
 Additional convergence diagnostics are available in the
 \href{http://lib.stat.cmu.edu/R/CRAN/}{R statistical package}, via the

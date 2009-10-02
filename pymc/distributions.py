@@ -74,11 +74,17 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # ============================================================================================
 
 
-def bind_size(randfun, size):
+def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        return randfun(size=size, *args, **kwargs)
+        return np.reshape(randfun(size=shape, *args, **kwargs),shape)
     newfun.scalar_version = randfun
     return newfun
+
+def value(a):
+    if isinstance(a,pymc.Variable):
+        return a.value
+    else:
+        return a
 
 def new_dist_class(*new_class_args):
     """
@@ -185,45 +191,41 @@ def new_dist_class(*new_class_args):
         # 3.4  | n            | n             | n(m) | n (Error)   | 1 (-)
 
             if not mv:
-                size = arg_dict_out.pop('size')
+
+                shape = arg_dict_out.pop('size')
+                shape = None if shape is None else tuple(np.atleast_1d(shape))
+
                 init_val = arg_dict_out['value']
-                init_val_size = np.alen(init_val)
-                parents_size = 1
-                for v in parents.values():
-                    try:
-                        parents_size = max(parents_size, np.size(v.value))
-                    except:
-                        parents_size = max(parents_size, np.size(v))
+                init_val_shape = None if init_val is None else np.shape(init_val)
 
-                bindsize = 1
+                pv = [np.shape(value(v)) for v in parents.values()]
+                biggest_parent = np.argmax([np.prod(v) for v in pv])
+                parents_shape = pv[biggest_parent]
 
-                if np.size(init_val) == 1:
-                    if size is not None:
-                        if parents_size == 1:
-                            bindsize = size                   # Case 1.2 and 2.2
-                        elif parents_size != size:
-                            raise AttributeError,\
-                                "size is incompatible with parents shape."
-                else:
-                    if parents_size == 1:
-                        if size is None or size == np.size(init_val):
-                            bindsize = np.size(init_val)      # Case 3.1 and 3.2
-                        else:
-                            raise AttributeError, \
-                                "size is incompatible with parents shape."
-                    else:
-                        if size is not None and parents_size != size:
-                            raise AttributeError, \
-                                "size is incompatible with parents shape."
+                # Scalar parents can support any shape.
+                if np.prod(parents_shape) <= 1:
+                    parents_shape = None
+
+                def shape_error():
+                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape)
+
+                if init_val_shape is not None and shape is not None and init_val_shape != shape:
+                    shape_error()
+
+                given_shape = init_val_shape or shape
+                bindshape = given_shape or parents_shape
+
+                # Check consistency of bindshape and parents_shape
+                if parents_shape is not None:
+                    # Uncomment to leave broadcasting completely up to NumPy's random functions
+                    # if bindshape[-np.alen(parents_shape):]!=parents_shape:
+                    # Uncomment to limit broadcasting flexibility to what the Fortran likelihoods can handle.
+                    if bindshape!=parents_shape:
+                        shape_error()
 
                 if random is not None:
-                    random = bind_size(random, bindsize)
-                    test_val = random(**(pymc.DictContainer(parents).value))
+                    random = bind_size(random, bindshape)
 
-                if init_val is not None and random is not None:
-                    if np.size(init_val) != np.size(test_val):
-                        raise AttributeError, \
-                        'init_val size: %d, test_val size: %d'%(np.size(init_val),np.size(test_val))
 
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
@@ -336,13 +338,16 @@ def randomwrap(func):
              [0, 1]])
     """
 
-
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     #vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
     mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
+
+    # Use the NumPy random function directly if this is not a multivariate distribution
+    if not mv:
+        return func
 
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
@@ -372,7 +377,7 @@ def randomwrap(func):
             elif s == N:
                 arr = np.asarray(arg)
             else:
-                raise 'Arguments size not allowed.', s
+                raise RuntimeError, 'Arguments size not allowed: %s.' % s
             largs.append(arr)
 
         if mv and N >1 and max(dimension)>1 and nr>1:
@@ -576,7 +581,7 @@ def arlognormal_like(x, a, sigma, rho):
 
 # Bernoulli----------------------------------------------
 @randomwrap
-def rbernoulli(p,size=1):
+def rbernoulli(p,size=None):
     """
     rbernoulli(p,size=1)
 
@@ -622,7 +627,7 @@ def bernoulli_like(x, p):
 
 # Beta----------------------------------------------
 @randomwrap
-def rbeta(alpha, beta, size=1):
+def rbeta(alpha, beta, size=None):
     """
     rbeta(alpha, beta, size=1)
 
@@ -674,7 +679,7 @@ def beta_like(x, alpha, beta):
 
 # Binomial----------------------------------------------
 @randomwrap
-def rbinomial(n, p, size=1):
+def rbinomial(n, p, size=None):
     """
     rbinomial(n,p,size=1)
 
@@ -717,7 +722,7 @@ def binomial_like(x, n, p):
 
 # Beta----------------------------------------------
 @randomwrap
-def rbetabin(alpha, beta, n, size=1):
+def rbetabin(alpha, beta, n, size=None):
     """
     rbetabin(alpha, beta, n, size=1)
 
@@ -768,7 +773,7 @@ def betabin_like(x, alpha, beta, n):
 # is no expected value.
 
 #@randomwrap
-def rcategorical(p, size=1):
+def rcategorical(p, size=None):
     out = flib.rcat(p, np.random.random(size=size))
     if sum(out.shape) == 1:
         return out.squeeze()
@@ -795,7 +800,7 @@ def categorical_like(x, p):
 
 # Cauchy----------------------------------------------
 @randomwrap
-def rcauchy(alpha, beta, size=1):
+def rcauchy(alpha, beta, size=None):
     """
     rcauchy(alpha, beta, size=1)
 
@@ -836,7 +841,7 @@ def cauchy_like(x, alpha, beta):
 
 # Chi square----------------------------------------------
 @randomwrap
-def rchi2(nu, size=1):
+def rchi2(nu, size=None):
     """
     rchi2(nu, size=1)
 
@@ -917,7 +922,7 @@ def rdirichlet(theta, size=1):
 
     Dirichlet random variates.
     """
-    gammas = rgamma(theta,1,size)
+    gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
@@ -958,7 +963,7 @@ def dirichlet_like(x, theta):
 
 # Exponential----------------------------------------------
 @randomwrap
-def rexponential(beta, size=1):
+def rexponential(beta, size=None):
     """
     rexponential(beta)
 
@@ -1001,7 +1006,7 @@ def exponential_like(x, beta):
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap
-def rexponweib(alpha, k, loc=0, scale=1, size=1):
+def rexponweib(alpha, k, loc=0, scale=1, size=None):
     """
     rexponweib(alpha, k, loc=0, scale=1, size=1)
 
@@ -1043,7 +1048,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
 # Gamma----------------------------------------------
 @randomwrap
-def rgamma(alpha, beta, size=1):
+def rgamma(alpha, beta, size=None):
     """
     rgamma(alpha, beta,size=1)
 
@@ -1089,7 +1094,7 @@ def gamma_like(x, alpha, beta):
 # GEV Generalized Extreme Value ------------------------
 # Modify parameterization -> Hosking (kappa, xi, alpha)
 @randomwrap
-def rgev(xi, mu=0, sigma=1, size=1):
+def rgev(xi, mu=0, sigma=1, size=None):
     """
     rgev(xi, mu=0, sigma=0, size=1)
 
@@ -1130,7 +1135,7 @@ def gev_like(x, xi, mu=0, sigma=1):
 # Geometric----------------------------------------------
 # Changed the return value
 @randomwrap
-def rgeometric(p, size=1):
+def rgeometric(p, size=None):
     """
     rgeometric(p, size=1)
 
@@ -1171,7 +1176,7 @@ def geometric_like(x, p):
 
 # Half Cauchy----------------------------------------------
 @randomwrap
-def rhalf_cauchy(alpha, beta, size=1):
+def rhalf_cauchy(alpha, beta, size=None):
     """
     rhalf_cauchy(alpha, beta, size=1)
 
@@ -1213,7 +1218,7 @@ def half_cauchy_like(x, alpha, beta):
 
 # Half-normal----------------------------------------------
 @randomwrap
-def rhalf_normal(tau, size=1):
+def rhalf_normal(tau, size=None):
     """
     rhalf_normal(tau, size=1)
 
@@ -1250,7 +1255,7 @@ def half_normal_like(x, tau):
     return flib.hnormal(x, tau)
 
 # Hypergeometric----------------------------------------------
-def rhypergeometric(n, m, N, size=1):
+def rhypergeometric(n, m, N, size=None):
     """
     rhypergeometric(n, m, N, size=1)
 
@@ -1299,7 +1304,7 @@ def hypergeometric_like(x, n, m, N):
 
 # Inverse gamma----------------------------------------------
 @randomwrap
-def rinverse_gamma(alpha, beta,size=1):
+def rinverse_gamma(alpha, beta,size=None):
     """
     rinverse_gamma(alpha, beta,size=1)
 
@@ -1379,7 +1384,7 @@ def inverse_wishart_like(X, n, Tau):
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
-def rlaplace(mu, tau, size=1):
+def rlaplace(mu, tau, size=None):
     """
     rlaplace(mu, tau)
 
@@ -1430,7 +1435,7 @@ dexponential_like = laplace_like
 
 # Logistic-----------------------------------
 @randomwrap
-def rlogistic(mu, tau, size=1):
+def rlogistic(mu, tau, size=None):
     """
     rlogistic(mu, tau)
 
@@ -1477,7 +1482,7 @@ def logistic_like(x, mu, tau):
 
 # Lognormal----------------------------------------------
 @randomwrap
-def rlognormal(mu, tau,size=1):
+def rlognormal(mu, tau,size=None):
     """
     rlognormal(mu, tau,size=1)
 
@@ -1811,7 +1816,7 @@ def mv_normal_chol_like(x, mu, sig):
 
 # Negative binomial----------------------------------------
 @randomwrap
-def rnegative_binomial(mu, alpha, size=1):
+def rnegative_binomial(mu, alpha, size=None):
     """
     rnegative_binomial(mu, alpha, size=1)
 
@@ -1861,7 +1866,7 @@ def negative_binomial_like(x, mu, alpha):
 
 # Normal---------------------------------------------------
 @randomwrap
-def rnormal(mu, tau,size=1):
+def rnormal(mu, tau,size=None):
     """
     rnormal(mu, tau, size=1)
 
@@ -1905,7 +1910,7 @@ def normal_like(x, mu, tau):
 
 # von Mises--------------------------------------------------
 @randomwrap
-def rvon_mises(mu, kappa, size=1):
+def rvon_mises(mu, kappa, size=None):
     """
     rvon_mises(mu, kappa, size=1)
 
@@ -1946,7 +1951,7 @@ def von_mises_like(x, mu, kappa):
 
 # Poisson--------------------------------------------------
 @randomwrap
-def rpoisson(mu, size=1):
+def rpoisson(mu, size=None):
     """
     rpoisson(mu, size=1)
 
@@ -1996,7 +2001,7 @@ def poisson_like(x,mu):
 
 # Truncated Poisson--------------------------------------------------
 @randomwrap
-def rtruncated_poisson(mu, k, size=1):
+def rtruncated_poisson(mu, k, size=None):
     """
     rtruncpoisson(mu, k, size=1)
 
@@ -2067,7 +2072,7 @@ def truncated_poisson_like(x,mu,k):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a, b, size=1):
+def rtruncated_normal(mu, tau, a, b, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
     Random truncated normal variates.
@@ -2151,7 +2156,7 @@ truncnorm_like = truncated_normal_like
 
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
-def rskew_normal(mu,tau,alpha,size=1):
+def rskew_normal(mu,tau,alpha,size=None):
     """rskew_normal(mu, tau, alpha, size=1)
 
     Skew-normal random variates.
@@ -2195,7 +2200,7 @@ def skew_normal_expval(mu,tau,alpha):
 
 # Student's t-----------------------------------
 @randomwrap
-def rt(nu, size=1):
+def rt(nu, size=None):
     """rt(nu, size=1)
 
     Student's t random variates.
@@ -2231,7 +2236,7 @@ def t_expval(nu):
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap
-def rdiscrete_uniform(lower, upper, size=1):
+def rdiscrete_uniform(lower, upper, size=None):
     """
     rdiscrete_uniform(lower, upper, size=1)
 
@@ -2267,7 +2272,7 @@ def discrete_uniform_like(x,lower, upper):
 
 # Uniform--------------------------------------------------
 @randomwrap
-def runiform(lower, upper, size=1):
+def runiform(lower, upper, size=None):
     """
     runiform(lower, upper, size=1)
 
@@ -2302,7 +2307,7 @@ def uniform_like(x,lower, upper):
 
 # Weibull--------------------------------------------------
 @randomwrap
-def rweibull(alpha, beta,size=1):
+def rweibull(alpha, beta,size=None):
     tmp = -np.log(runiform(0, 1, size))
     return beta * (tmp ** (1. / alpha))
 
@@ -2620,7 +2625,7 @@ def mod_categorical_expval(p):
     return np.sum([p*i for i, p in enumerate(p)])
 
 
-def rmod_categor(p,size=1):
+def rmod_categor(p,size=None):
     """
     rmod_categor(p, size=1)
 
@@ -2766,7 +2771,7 @@ def Impute(name, dist_class, values, missing=None, **parents):
       - values : numpy.ma.core.MaskedArray or iterable
         A masked array with missing elements (where mask=True, value is assumed missing),
         or an iterable that contains missing elements, identified by 'missing' argument.
-	NaNs are considered missing by default if values is not a masked array. 
+	NaNs are considered missing by default if values is not a masked array.
       - missing (optional): obj
         A placeholder value that indicates missing data values. Only required if 'values'
         is not a masked array already.

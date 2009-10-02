@@ -101,12 +101,13 @@ class test_out_of_bound_initialization(TestCase):
 
     def test_simple(self):
         """We create a variable whose initial value creates a ZeroProbability error in
-        its children, and check that robust_init can randomly sample the variable until 
-        it finds a suitable value. 
+        its children, and check that robust_init can randomly sample the variable until
+        it finds a suitable value.
         """
         lower = pymc.Uniform('lower', 0., 2., value=1.5, rseed=True)
         pymc.robust_init(pymc.Uniform, 100, 'data', lower=lower, upper=5, value=[1, 2, 3, 4], observed=True)
-        
+
+
 
 if __name__ == '__main__':
     #import unittest

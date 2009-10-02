@@ -162,7 +162,7 @@ class Database(object):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        
+
     def _initialize(self, funs_to_tally, length=None):
         """Initialize the tallyable objects.
 

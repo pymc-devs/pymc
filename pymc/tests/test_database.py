@@ -1,11 +1,12 @@
 """ Test database backends """
 
+import os,sys, pdb
 from numpy.testing import TestCase, assert_array_equal, assert_equal
 from pymc.examples import DisasterModel
-import os,sys, pdb
-import numpy as np
 from pymc import MCMC
-import pymc.database
+import pymc, pymc.database
+
+import numpy as np
 import nose
 import warnings
 warnings.simplefilter('ignore', UserWarning)
@@ -42,7 +43,12 @@ class TestBase(TestCase):
         except:
             pass
 
+    def NDstoch(self):
+        nd = pymc.Normal('nd', value=np.ones((2,2,))*.5, mu=np.ones((2,2)), tau=1)
+        return nd
+
 class TestRam(TestBase):
+    name = 'ram'
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel, db='ram')
@@ -97,6 +103,7 @@ class TestRam(TestBase):
         self.S.db.close()
 
 class TestPickle(TestRam):
+    name = 'pickle'
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(DisasterModel,
@@ -132,8 +139,16 @@ class TestPickle(TestRam):
         sm = S.step_methods.pop()
         assert_equal(sm.accepted+sm.rejected, 75)
 
+    def test_nd(self):
+        M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
+        M.sample(10)
+        a = M.trace('nd')[:]
+        assert_equal(a.shape, (10,2,2))
+        db = getattr(pymc.database, self.name).load(os.path.join(testdir, 'ND.'+self.name))
+        assert_equal(db.trace('nd')[:], a)
 
 class TestTxt(TestPickle):
+    name = 'txt'
     @classmethod
     def setUpClass(self):
 
@@ -147,6 +162,7 @@ class TestTxt(TestPickle):
 
 
 class TestSqlite(TestPickle):
+    name = 'sqlite'
     @classmethod
     def setUpClass(self):
         if 'sqlite' not in dir(pymc.database):
@@ -163,33 +179,35 @@ class TestSqlite(TestPickle):
 
     def test_yrestore_state(self):
         raise nose.SkipTest, "Not implemented."
-
-class TestMySQL(TestPickle):
-    @classmethod
-    def setUpClass(self):
-        if 'mysql' not in dir(pymc.database):
-            raise nose.SkipTest
-        self.S = pymc.MCMC(DisasterModel,
-                           db='mysql',
-                           dbname='pymc_test',
-                           dbuser='pymc',
-                           dbpass='bayesian',
-                           dbhost='www.freesql.org',
-                           dbmode='w')
-
-    def load(self):
-        return pymc.database.mysql.load(dbname='pymc_test',
-                                        dbuser='pymc',
-                                        dbpass='bayesian',
-                                        dbhost='www.freesql.org')
-
-    def test_yrestore_state(self):
-        raise nose.SkipTest, "Not implemented."
+"""
+    TODO Create more reliable MySQL backend test
+"""
+# class TestMySQL(TestPickle):
+#     @classmethod
+#     def setUpClass(self):
+#         if 'mysql' not in dir(pymc.database):
+#             raise nose.SkipTest
+#         self.S = pymc.MCMC(DisasterModel,
+#                            db='mysql',
+#                            dbname='pymc_test',
+#                            dbuser='pymc',
+#                            dbpass='bayesian',
+#                            dbhost='www.freesql.org',
+#                            dbmode='w')
+#
+#     def load(self):
+#         return pymc.database.mysql.load(dbname='pymc_test',
+#                                         dbuser='pymc',
+#                                         dbpass='bayesian',
+#                                         dbhost='www.freesql.org')
+#
+#     def test_yrestore_state(self):
+#         raise nose.SkipTest, "Not implemented."
 
 
 
 class TestHDF5(TestPickle):
-
+    name = 'hdf5'
     @classmethod
     def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
@@ -341,12 +359,6 @@ def test_interactive():
 
 
 if __name__ == '__main__':
-    # tester = testHDF5Objects()
-    # tester.setUpClass()
-    # # tester.test_init()
-    # tester.test_simple_sample()
-    # tester.test_xload()
-    # tester.test_yconnect_and_sample()
     C =nose.config.Config(verbosity=3)
     nose.runmodule(config=C)
     try:
