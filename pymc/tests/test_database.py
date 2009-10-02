@@ -99,12 +99,6 @@ class TestRam(TestBase):
         t1 = self.S.trace('e', 0)
         t2 = self.S.trace('e', 1)
         assert_equal(t1._chain, 0)
-<<<<<<< HEAD:pymc/tests/test_database.py
-=======
-
-        self.S.db.close()
->>>>>>> 011ae0dc3b5664a83beb4f31a91e0df3d98dbfcc:pymc/tests/test_database.py
-
         self.S.db.close()
         
 class TestPickle(TestRam):
@@ -147,8 +141,10 @@ class TestPickle(TestRam):
     def test_nd(self):
         M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
         M.sample(10)
-        assert_equal(M.trace('nd')[:].shape, (10,2,2))
-
+        a = M.trace('nd')[:]
+        assert_equal(a.shape, (10,2,2))
+        db = getattr(pymc.database, self.name).load(os.path.join(testdir, 'ND.'+self.name))
+        assert_equal(db.trace('nd')[:], a)
 
 class TestTxt(TestPickle):
     name = 'txt'
