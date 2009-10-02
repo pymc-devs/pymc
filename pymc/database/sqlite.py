@@ -25,6 +25,7 @@ Changeset
 Created by Chris Fonnesbeck on 2007-02-01.
 Updated by DH on 2007-04-04.
 DB API changes, October 2008, DH.
+Added support for multidimensional arrays, DH Oct. 2009
 """
 
 # TODO: Add support for integer valued objects.
