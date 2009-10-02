@@ -271,8 +271,6 @@ function, and geweke_plot is available as pymc.Matplot.geweke_plot.
 
 	CF: Done
 
-	CF: Done
-
 * Sec. 7.3 (and several other places): In the code, @pm.stochastic,
 rather than @stochastic, is used.  pm presumable is an alias to pymc,
 but it has not been appropriately introduced.  It is desirable that
