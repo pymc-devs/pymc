@@ -35,9 +35,9 @@ def batchsd(trace, batches=5):
     samples. The trace is divided into batches, and the standard deviation of
     the batch means is calculated.
     """
-        
+
     if len(np.shape(trace)) > 1:
-        
+
         dims = np.shape(trace)
         #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
         ttrace = np.transpose([t.ravel() for t in trace])
@@ -219,7 +219,7 @@ class Variable(Node):
         """
         from utils import hpd, quantiles
         from numpy import sqrt
-        
+
         try:
             trace = np.squeeze(np.array(self.trace(), float)[start:])
 

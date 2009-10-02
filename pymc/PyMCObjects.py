@@ -355,7 +355,7 @@ class Deterministic(DeterministicBase):
                                     arguments = self.parents,
                                     ultimate_args = self.extended_parents,
                                     cache_depth = self._cache_depth)
-        
+
         self._value.force_compute()
 
     def get_value(self):
@@ -534,7 +534,7 @@ class Stochastic(StochasticBase):
                         verbose=verbose)
 
         # self._logp.force_compute()
-        
+
         # Store the shape of the stochastic value
         self._shape = np.shape(self._value)
 

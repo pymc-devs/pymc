@@ -100,7 +100,7 @@ class TestRam(TestBase):
         t2 = self.S.trace('e', 1)
         assert_equal(t1._chain, 0)
         self.S.db.close()
-        
+
 class TestPickle(TestRam):
     name = 'pickle'
     @classmethod
@@ -193,13 +193,13 @@ class TestSqlite(TestPickle):
 #                            dbpass='bayesian',
 #                            dbhost='www.freesql.org',
 #                            dbmode='w')
-# 
+#
 #     def load(self):
 #         return pymc.database.mysql.load(dbname='pymc_test',
 #                                         dbuser='pymc',
 #                                         dbpass='bayesian',
 #                                         dbhost='www.freesql.org')
-# 
+#
 #     def test_yrestore_state(self):
 #         raise nose.SkipTest, "Not implemented."
 

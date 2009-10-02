@@ -514,7 +514,7 @@ class Metropolis(StepMethod):
 
         May be overridden in subclasses.
         """
-        
+
         if self.verbose is not None:
             verbose = self.verbose
 
@@ -570,7 +570,7 @@ class MatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
     def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
-        
+
     @staticmethod
     def competence(s):
         """
@@ -585,24 +585,24 @@ class MatrixMetropolis(Metropolis):
             except LinAlgError:
                 return 0
         else:
-            return 0    
-    
+            return 0
+
     def propose(self):
         """
         Proposals for positive definite matrix using random walk deviations on the Cholesky
         factor of the current value.
         """
-        
+
         # Find Cholesky decomposition
         cvalue = cholesky(self.stochastic.value)
         # Locally store size of matrix
         dims = self.stochastic.shape
-        
+
         # Add normal deviate to value, preserving lower triangular
         cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
         # Square and replace
         self.stochastic.value = cvalue_new*transpose(cvalue_new)
-            
+
 
 class Gibbs(Metropolis):
     """
@@ -875,7 +875,7 @@ class AdaptiveMetropolis(StepMethod):
             stochastic = [stochastic]
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
-        
+
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
         self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',
