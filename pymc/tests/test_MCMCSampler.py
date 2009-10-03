@@ -50,7 +50,7 @@ class test_MCMC(TestCase):
     def test_stats(self):
         S = self.M.e.stats()
         self.M.stats()
-        
+
     def test_stats_after_reload(self):
         db = database.pickle.load('MCMC.pickle')
         M2 = MCMC(DisasterModel, db=db)

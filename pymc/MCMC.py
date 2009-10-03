@@ -262,7 +262,6 @@ class MCMC(Sampler):
         tuning_count = 0
 
         for step_method in self.step_methods:
-            
             verbose = self.verbose
             if step_method.verbose is not None:
                 verbose = step_method.verbose

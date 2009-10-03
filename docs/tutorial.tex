@@ -264,7 +264,7 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 As the number of samples tends to infinity, the MCMC distribution of $s$, $e$
 and $l$ converges to the stationary distribution. In other words, their
-values can be considered as random draws from the posterior $p(s,e,l|D)$. 
+values can be considered as random draws from the posterior $p(s,e,l|D)$.
 PyMC assumes that the \code{burn} parameter specifies a `sufficiently large'
 number of iterations for convergence of the algorithm, so it is up to the user
 to verify
@@ -452,7 +452,7 @@ The main limitation of this approach for imputation is performance. Because each
 element in the data array is modelled by an individual Stochastic, rather than a
 single Stochastic for the entire array, the number of nodes in the overall model
 increases from 4 to 113. This significantly slows the rate of sampling, due to
-the overhead costs associated with iterations over individual nodes. 
+the overhead costs associated with iterations over individual nodes.
 
 % section missing_data (end)
 

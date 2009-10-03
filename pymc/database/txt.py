@@ -15,7 +15,7 @@ Changeset
 ---------
 Nov. 30, 2007: Implemented load function. DH
 Oct. 24, 2008: Implemented savestate. Implemented parallel chain tallying. DH
-Oct. 1, 2009: Added support for multidimensional arrays. 
+Oct. 1, 2009: Added support for multidimensional arrays.
 """
 
 
@@ -83,7 +83,7 @@ class Database(base.Database):
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
-        
+
         if os.path.exists(self._directory):
             if dbmode=='w':
                 shutil.rmtree(self._directory)
@@ -148,7 +148,7 @@ def load(dirname):
             f = open(os.path.join(folder, file))
             f.readline(); shape = eval(f.readline()[16:])
             data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',').reshape(shape)
-            
+
 
     # Create the Traces.
     for name, values in data.iteritems():

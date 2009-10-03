@@ -218,7 +218,7 @@ class Database(pickle.Database):
         self._rows = len(self._tables) * [None,] # This should be a dict keyed by chain.
         self._chains = [gr for gr in self._h5file.listNodes("/") if gr._v_name[:5]=='chain']  # This should be a dict keyed by chain.
         self.chains = len(self._chains)
-        
+
         # LOAD LOGIC
         if self.chains > 0:
             # Create traces from objects stored in Table.
@@ -240,7 +240,6 @@ class Database(pickle.Database):
                             objects[node._v_name] = [node,]
 
             # Note that the list vlarrays is in reverse order.
-            # Hum, this does not seem to be true 
             for k, vlarrays in objects.iteritems():
                 db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays)
                 setattr(db, k, db._traces[k])

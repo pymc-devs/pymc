@@ -76,7 +76,7 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        return randfun(size=shape, *args, **kwargs)
+        return np.reshape(randfun(size=shape, *args, **kwargs),shape)
     newfun.scalar_version = randfun
     return newfun
 
@@ -191,17 +191,17 @@ def new_dist_class(*new_class_args):
         # 3.4  | n            | n             | n(m) | n (Error)   | 1 (-)
 
             if not mv:
-                
+
                 shape = arg_dict_out.pop('size')
                 shape = None if shape is None else tuple(np.atleast_1d(shape))
-                
+
                 init_val = arg_dict_out['value']
                 init_val_shape = None if init_val is None else np.shape(init_val)
-                
+
                 pv = [np.shape(value(v)) for v in parents.values()]
                 biggest_parent = np.argmax([np.prod(v) for v in pv])
                 parents_shape = pv[biggest_parent]
-                                
+
                 # Scalar parents can support any shape.
                 if np.prod(parents_shape) <= 1:
                     parents_shape = None
@@ -211,10 +211,10 @@ def new_dist_class(*new_class_args):
 
                 if init_val_shape is not None and shape is not None and init_val_shape != shape:
                     shape_error()
-                    
+
                 given_shape = init_val_shape or shape
-                bindshape = given_shape or parents_shape    
-                
+                bindshape = given_shape or parents_shape
+
                 # Check consistency of bindshape and parents_shape
                 if parents_shape is not None:
                     # Uncomment to leave broadcasting completely up to NumPy's random functions
@@ -222,11 +222,10 @@ def new_dist_class(*new_class_args):
                     # Uncomment to limit broadcasting flexibility to what the Fortran likelihoods can handle.
                     if bindshape!=parents_shape:
                         shape_error()
-                                
+
                 if random is not None:
                     random = bind_size(random, bindshape)
-                    pv = (pymc.DictContainer(parents).value)
-                    test_val = random(**pv)
+
 
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
@@ -345,11 +344,11 @@ def randomwrap(func):
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
     mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
-    
+
     # Use the NumPy random function directly if this is not a multivariate distribution
     if not mv:
         return func
-    
+
     def wrapper(*args, **kwds):
         # First transform keyword arguments into positional arguments.
         n = len(args)
@@ -360,7 +359,7 @@ def randomwrap(func):
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-    
+
         r = [];s=[];largs=[];nr = args[-1]
         length = [np.atleast_1d(a).shape[0] for a in args]
         dimension = [np.atleast_1d(a).ndim for a in args]
@@ -369,7 +368,7 @@ def randomwrap(func):
             raise 'Dimensions do not agree.'
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
-    
+
         for arg, s in zip(args, length):
             t = type(arg)
             arr = np.empty(N, type)
@@ -380,17 +379,17 @@ def randomwrap(func):
             else:
                 raise RuntimeError, 'Arguments size not allowed: %s.' % s
             largs.append(arr)
-    
+
         if mv and N >1 and max(dimension)>1 and nr>1:
             raise 'Multivariate distributions cannot take s>1 and multiple values.'
-    
+
         if mv:
             for i, arg in enumerate(largs[:-1]):
                 largs[0] = np.atleast_2d(arg)
-    
+
         for arg in zip(*largs):
             r.append(func(*arg))
-    
+
         size = arg[-1]
         vec_stochastics = len(r)>1
         if mv:
@@ -405,7 +404,7 @@ def randomwrap(func):
                 return np.concatenate(r)
             else: # Scalar case
                 return r[0][0]
-    
+
     wrapper.__doc__ = func.__doc__
     wrapper.__name__ = func.__name__
     return wrapper
@@ -2772,7 +2771,7 @@ def Impute(name, dist_class, values, missing=None, **parents):
       - values : numpy.ma.core.MaskedArray or iterable
         A masked array with missing elements (where mask=True, value is assumed missing),
         or an iterable that contains missing elements, identified by 'missing' argument.
-	NaNs are considered missing by default if values is not a masked array. 
+	NaNs are considered missing by default if values is not a masked array.
       - missing (optional): obj
         A placeholder value that indicates missing data values. Only required if 'values'
         is not a masked array already.
@@ -2782,8 +2781,8 @@ def Impute(name, dist_class, values, missing=None, **parents):
     masked_values = values
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = np.array([y is missing for y in values])
-        # Generate masked array
+        mask = np.logical_or(np.array(values) == missing, np.isnan(values))
+        # Generate masked array  
         masked_values = np.ma.masked_array(values, mask)
 
     # Initialise list
