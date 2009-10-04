@@ -2779,9 +2779,10 @@ def Impute(name, dist_class, values, missing=None, **parents):
         Arbitrary keyword arguments.
     """
     masked_values = values
+    
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = np.logical_or(np.array(values) == missing, np.isnan(values))
+        mask = [v is None or np.isnan(v) for v in values]
         # Generate masked array  
         masked_values = np.ma.masked_array(values, mask)
 
