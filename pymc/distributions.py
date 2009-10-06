@@ -926,7 +926,7 @@ def rdirichlet(theta, size=1):
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
-        return (gammas/gammas.sum())[:-1]
+        return (gammas[0]/gammas[0].sum())[:-1]
     else:
         return 1.
 
