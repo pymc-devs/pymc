@@ -931,7 +931,7 @@ def rdirichlet(theta, size=1):
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
-        return (gammas/gammas.sum())[:-1]
+        return (gammas[0]/gammas[0].sum())[:-1]
     else:
         return 1.
 
@@ -2759,7 +2759,7 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def Impute(name, dist_class, values, missing=None, **parents):
+def Impute(name, dist_class, values, **parents):
     """
     This function accomodates missing elements for the data of simple
     Stochastic distribution subclasses. The masked_values argument is an
@@ -2784,6 +2784,7 @@ def Impute(name, dist_class, values, missing=None, **parents):
         Arbitrary keyword arguments.
     """
     masked_values = values
+    
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
         mask = np.logical_or(np.array(values) == missing, np.isnan(values))

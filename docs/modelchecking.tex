@@ -82,8 +82,8 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \begin{figure}[ht]
 \begin{center}
-\includegraphics[height=3in]{geweke.png}
-\caption{Sample plot of Geweke z-scores for a variable using \textbf{geweke_plot}. The occurrence of the scores well within 2 standard deviations of zero gives does not indicate lack of convergence.}
+\includegraphics[height=6in]{geweke.png}
+\caption{Sample plots of Geweke z-scores for a variable using \textbf{geweke_plot}. The occurrence of the scores well within 2 standard deviations of zero gives does not indicate lack of convergence (top), while deviations exceeding 2 standard deviations suggests that additional samples are required to achieve convergence (bottom).}
 \label{fig:geweke}
 \end{center}
 \end{figure}
@@ -235,7 +235,7 @@ X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\
 \theta)^2] E[(X_{t+k} - \theta)^2]}}
 \end{eqnarray*}
 PyMC includes a function for plotting the autocorrelation function for each
-stochastics in the sampler (Figure \ref{fig:autocorr}). This allows users
+stochastic in the sampler (Figure \ref{fig:autocorr}). This allows users
 to examine the relationship among successive samples within sampled chains.
 Significant autocorrelation suggests that chains require thinning prior to
 use of the posterior statistics for inference.
