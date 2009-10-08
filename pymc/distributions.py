@@ -198,12 +198,17 @@ def new_dist_class(*new_class_args):
                 init_val = arg_dict_out['value']
                 init_val_shape = None if init_val is None else np.shape(init_val)
 
-                pv = [np.shape(value(v)) for v in parents.values()]
-                biggest_parent = np.argmax([np.prod(v) for v in pv])
-                parents_shape = pv[biggest_parent]
-
-                # Scalar parents can support any shape.
-                if np.prod(parents_shape) <= 1:
+                
+                if len(parents) > 0:
+                    pv = [np.shape(value(v)) for v in parents.values()]
+                    biggest_parent = np.argmax([np.prod(v) for v in pv])
+                    parents_shape = pv[biggest_parent]
+                    
+                    # Scalar parents can support any shape.
+                    if np.prod(parents_shape) <= 1:
+                        parents_shape = None
+                    
+                else:
                     parents_shape = None
 
                 def shape_error():
