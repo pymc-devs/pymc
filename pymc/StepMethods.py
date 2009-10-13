@@ -968,7 +968,7 @@ class AdaptiveMetropolis(StepMethod):
                 for s in self.stochastics:
                     this_value = abs(np.ravel(s.value))
                     if not this_value.any():
-                        this_value = [1.]
+                        this_value = np.resize([1.], np.shape(this_value))
                     for elem in this_value:
                         ord_sc.append(elem)
                 # print len(ord_sc), self.dim
