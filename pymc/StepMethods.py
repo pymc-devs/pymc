@@ -516,7 +516,7 @@ class Metropolis(StepMethod):
 
         May be overridden in subclasses.
         """
-        
+
         if self.verbose is not None:
             verbose = self.verbose
 
@@ -880,7 +880,7 @@ class AdaptiveMetropolis(StepMethod):
             stochastic = [stochastic]
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
-        
+
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
         self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',

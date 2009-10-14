@@ -155,7 +155,7 @@ class NearlyFullRankCovariance(Covariance):
         """
         if regularize:
             x=regularize_array(x)
-            
+
         if rank_limit > 0:
             raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
 
