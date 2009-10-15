@@ -202,11 +202,11 @@ def new_dist_class(*new_class_args):
                     pv = [np.shape(value(v)) for v in parents.values()]
                     biggest_parent = np.argmax([np.prod(v) for v in pv])
                     parents_shape = pv[biggest_parent]
-                    
+
                     # Scalar parents can support any shape.
                     if np.prod(parents_shape) <= 1:
                         parents_shape = None
-                    
+
                 else:
                     parents_shape = None
 
