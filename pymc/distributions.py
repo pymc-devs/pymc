@@ -2165,6 +2165,8 @@ def rskew_normal(mu,tau,alpha,size=None):
 
     Skew-normal random variates.
     """
+    if size is None:
+        size =1
     return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
 
 def skew_normal_like(x,mu,tau,alpha):
