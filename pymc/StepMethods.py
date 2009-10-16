@@ -884,10 +884,11 @@ class AdaptiveMetropolis(StepMethod):
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
         self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',
-        '_proposal_deviate', '_trace']
+        '_proposal_deviate', '_trace', 'shrink_if_necessary']
         self._tuning_info = ['C']
 
         self.proposal_sd = None
+        self.shrink_if_necessary=shrink_if_necessary
 
         # Number of successful steps before the empirical covariance is computed
         self.delay = delay
@@ -1040,13 +1041,14 @@ class AdaptiveMetropolis(StepMethod):
 
         # Shrink covariance if acceptance rate is too small
         acc_rate = self.accepted / (self.accepted + self.rejected)
-        if acc_rate < .001:
-            self.C *= .01
-        elif acc_rate < .01:
-            self.C *= .25
-        if self.verbose > 0:
-            if acc_rate < .01:
-                print '\tAcceptance rate was',acc_rate,'shrinking covariance'
+        if self.shrink_if_necessary:
+            if acc_rate < .001:
+                self.C *= .01
+            elif acc_rate < .01:
+                self.C *= .25
+            if self.verbose > 0:
+                if acc_rate < .01:
+                    print '\tAcceptance rate was',acc_rate,'shrinking covariance'
         self.accepted = 0.
         self.rejected = 0.
 
@@ -1064,7 +1066,7 @@ class AdaptiveMetropolis(StepMethod):
         'a smaller variance. For this simulation, each time a similar error \n' + \
         'occurs, proposal_sd will be reduced by a factor .9 to reduce the \n' + \
         'jumps and increase the likelihood of accepted jumps.'
-
+        
         try:
             self.updateproposal_sd()
         except np.linalg.LinAlgError:
