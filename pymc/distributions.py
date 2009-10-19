@@ -198,12 +198,16 @@ def new_dist_class(*new_class_args):
                 init_val = arg_dict_out['value']
                 init_val_shape = None if init_val is None else np.shape(init_val)
 
-                pv = [np.shape(value(v)) for v in parents.values()]
-                biggest_parent = np.argmax([np.prod(v) for v in pv])
-                parents_shape = pv[biggest_parent]
+                if len(parents) > 0:
+                    pv = [np.shape(value(v)) for v in parents.values()]
+                    biggest_parent = np.argmax([np.prod(v) for v in pv])
+                    parents_shape = pv[biggest_parent]
 
-                # Scalar parents can support any shape.
-                if np.prod(parents_shape) <= 1:
+                    # Scalar parents can support any shape.
+                    if np.prod(parents_shape) <= 1:
+                        parents_shape = None
+
+                else:
                     parents_shape = None
 
                 def shape_error():
@@ -2157,10 +2161,12 @@ truncnorm_like = truncated_normal_like
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
 def rskew_normal(mu,tau,alpha,size=None):
-    """rskew_normal(mu, tau, alpha, size=1)
+    """rskew_normal(mu, tau, alpha, size=None)
 
     Skew-normal random variates.
     """
+    if size is None:
+        size = 1
     return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
 
 def skew_normal_like(x,mu,tau,alpha):
@@ -2772,15 +2778,18 @@ def Impute(name, dist_class, values, **parents):
         A masked array with missing elements (where mask=True, value is assumed missing),
         or an iterable that contains missing elements, identified by 'missing' argument.
 	NaNs are considered missing by default if values is not a masked array.
+      - missing (optional): obj
+        A placeholder value that indicates missing data values. Only required if 'values'
+        is not a masked array already.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
     masked_values = values
-    
+
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = [v is None or np.isnan(v) for v in values]
-        # Generate masked array  
+        mask = np.logical_or(np.array(values) == missing, np.isnan(values))
+        # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
 
     # Initialise list

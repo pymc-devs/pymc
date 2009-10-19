@@ -24,7 +24,7 @@ import sys
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
-            'pfunc']
+            'pfunc']+['iter_','complex_','int_','long_','float_','oct_','hex_','len_']
 
 class Lambda(pm.Deterministic):
     """
@@ -634,7 +634,7 @@ for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
     create_bin_method(op ,Variable)
 
 # Unary operators
-for op in ['unicode','neg','pos','abs','invert','index']:
+for op in ['unicode','neg','pos','abs','invert','index'] + ['iter','complex','int','long','float','oct','hex','len']:
     create_uni_method(op, Variable)
 
 # Addition, subtraction, multiplication
@@ -686,6 +686,17 @@ Variable.__call__ = UnboundMethodType(__call__, None, Variable)
 
 
 # These are not working
-nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains']
+nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains','len']
 # These should NOT be implemented because they are in-place updates.
 do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
+
+for f in [iter,complex,int,long,float,oct,hex,len]:
+    methname = '__'+f.__name__+'__'
+    def wrapper(x,m=methname):
+        """A wrapper for the Python builtin %s that will tolerate producing a Deterministic."""%f.__name__
+        try:
+            return getattr(x,m)()
+        except:
+            raise TypeError, 'Failed to call method %s on object of type %s'%(m, x.__class__)
+    wrapper.__name__ = f.__name__
+    locals()[f.__name__+'_']=wrapper
