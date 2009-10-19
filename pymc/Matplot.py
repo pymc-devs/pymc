@@ -375,7 +375,8 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         if last:
             if not os.path.exists(path):
                 os.mkdir(path)
-
+            if not path.endswith('/'):
+                path += '/'
             savefig("%s%s%s.%s" % (path, name, suffix, format))
 
     else:
@@ -440,6 +441,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         if standalone:
             if not os.path.exists(path):
                 os.mkdir(path)
+            if not path.endswith('/'):
+                path += '/'
             # Save to file
             savefig("%s%s%s.%s" % (path, name, suffix, format))
             #close()
@@ -479,6 +482,8 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
     if standalone:
         if not os.path.exists(path):
             os.mkdir(path)
+        if not path.endswith('/'):
+            path += '/'
         # Save to file
         savefig("%s%s%s.%s" % (path, name, suffix, format))
         #close()
@@ -510,6 +515,8 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
@@ -549,6 +556,8 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
@@ -589,6 +598,8 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     # Save to file
     savefig("%s%s%s.%s" % (path, name or 'MCMC', suffix, format))
     #close()
@@ -657,6 +668,8 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
 
             if not os.path.exists(path):
                 os.mkdir(path)
+            if not path.endswith('/'):
+                path += '/'
             if rows>4:
                 # Append plot number to suffix, if there will be more than one
                 suffix += '_%i' % i
@@ -788,6 +801,8 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
         plotname += obj.__name__ + ''
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 
 def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
@@ -829,6 +844,8 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
 
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
 
     if name:
         name += '-'
