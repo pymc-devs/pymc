@@ -16,8 +16,8 @@ from Container import Container
 from InstantiationDecorators import deterministic
 import numpy as np
 import inspect
-from utils import logit, invlogit, safe_len
-from flib import stukel_logit, stukel_invlogit
+from utils import safe_len
+from flib import stukel_logit, stukel_invlogit, logit, invlogit
 from types import UnboundMethodType
 from copy import copy
 import sys
