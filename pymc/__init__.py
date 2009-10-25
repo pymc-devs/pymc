@@ -23,7 +23,7 @@ try:
     import Container_values
     del Container_values
 except ImportError:
-    raise ImportError, 'You seem to be importing PyMC from inside its source tree.\n\t\t Please change to another directory and try again.'
+    raise ImportError, 'You seem to be importing PyMC from inside its source tree. Please change to another directory and try again.'
 from Node import *
 from Container import *
 from PyMCObjects import *
