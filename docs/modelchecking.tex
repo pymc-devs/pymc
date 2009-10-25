@@ -278,6 +278,17 @@ for the labels of the graphic.
 (defaults to 1).
 \end{itemize}
 
+Using any given model \code{my_model} as an example, autocorrelation plots can be obtained simply by passing the sampler for that model to the \code{autocorrelation} function directly:
+\begin{verbatim}
+	>>> S = pymc.MCMC(my_model)
+	>>> S.sample(10000, burn=5000)
+	>>> pymc.Matplot.autocorrelation(S)
+\end{verbatim}
+Alternatively, variables within a model can be plotted individually. For example, a hypothetical variable \code{beta} that was estimated using sampler \code{S} will yield a correlation plot as follows:
+\begin{verbatim}
+	>>> pymc.Matplot.autocorrelation(S.beta)
+\end{verbatim}
+
 % section autocorrelation_plots (end)
 
 \hypertarget{gof}{}
