@@ -73,13 +73,14 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # = User-accessible function to convert a logp and random function to a Stochastic subclass. =
 # ============================================================================================
 
-
+# TODO Document this function
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
         return np.reshape(randfun(size=shape, *args, **kwargs),shape)
     newfun.scalar_version = randfun
     return newfun
 
+# TODO Document this function
 def value(a):
     if isinstance(a,pymc.Variable):
         return a.value
@@ -2023,21 +2024,23 @@ def rtruncated_poisson(mu, k, size=None):
 
     # Empty array to hold random variates
     rvs = np.empty(0, int)
+    
+    total_size = np.prod(size)
 
-    while(len(rvs)<size):
+    while(len(rvs)<total_size):
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.random.poisson(mu+m, size*4)
+        proposals = np.random.poisson(mu+m, total_size*4)
 
         # Acceptance probability
         a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
         a *= proposals > k
 
         # Uniform random variates
-        u = np.random.random(size*4)
+        u = np.random.random(total_size*4)
 
         rvs = np.append(rvs, proposals[u<a])
 
-    return rvs[:size]
+    return np.reshape(rvs[:total_size], size)
 
 
 def truncated_poisson_expval(mu, k):
