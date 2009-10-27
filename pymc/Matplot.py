@@ -1,5 +1,3 @@
-# FIXME: PlotFactory methods plot, geweke_plot, autocorr_plot, gof_plot not working.
-
 """
 Plotting module using matplotlib.
 """
@@ -19,7 +17,7 @@ from pprint import pformat
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones, dtype
-from utils import autocorr
+from utils import autocorr as _autocorr
 import pdb
 from scipy import special
 
@@ -645,7 +643,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
         # New subplot
         subplot(rows, 1, i - (rows*(i/rows)) + 1)
         x = arange(maxlag)
-        y = [autocorr(values, lag=i) for i in x]
+        y = [_autocorr(values, lag=i) for i in x]
 
         bar(x, y)
 
