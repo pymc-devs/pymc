@@ -93,7 +93,7 @@ config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/dis
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="2.0",
+    setup(  version="2.1alpha",
             description="Markov Chain Monte Carlo sampling toolkit.",
             #maintainer="David Huard",
             #maintainer_email="david.huard@gmail.com",
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                 'Programming Language :: Fortran',
                 'Topic :: Scientific/Engineering',
                  ],
-            requires=['NumPy (>=1.2)',],
+            requires=['NumPy (>=1.3)',],
             long_description="""
             Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC),
             is an increasingly relevant approach to statistical estimation. However,
