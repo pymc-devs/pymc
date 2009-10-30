@@ -9,9 +9,12 @@ cf2py threadsafe
       s = x(1)
       
       do i=2,nx
-!           If x(i) swamps the sum so far, ditch the sum so far.
           diff = x(i)-s
-          if (diff.GE.li) then
+!          If sum so far is zero, start from here.
+          if (s.LE.-li) then
+              s = x(i)
+!           If x(i) swamps the sum so far, ditch the sum so far.              
+          else if (diff.GE.li) then
               s = x(i)
           else
               s = s + dlog(1.0D0+dexp(x(i)-s))
