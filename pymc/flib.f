@@ -2,16 +2,17 @@
 cf2py intent(hide) nx
 cf2py intent(out) s
 cf2py threadsafe
-      DOUBLE PRECISION x(nx), s, diff, li
+      DOUBLE PRECISION x(nx), s, diff, li, infinity
       INTEGER nx, i
       PARAMETER (li=709.78271289338397)
+      PARAMETER (infinity = 1.7976931348623157d308)
       
       s = x(1)
       
       do i=2,nx
           diff = x(i)-s
 !          If sum so far is zero, start from here.
-          if (s.LE.-li) then
+          if (s.LE.-infinity) then
               s = x(i)
 !           If x(i) swamps the sum so far, ditch the sum so far.              
           else if (diff.GE.li) then
