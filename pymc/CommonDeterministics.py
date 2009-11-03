@@ -24,7 +24,7 @@ import sys
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
-            'pfunc']+['iter_','complex_','int_','long_','float_','oct_','hex_','len_']
+            'pfunc']#+['iter_','complex_','int_','long_','float_','oct_','hex_']
 
 class Lambda(pm.Deterministic):
     """
@@ -530,6 +530,17 @@ def create_uni_method(op_name, klass):
     new_method.__name__ = '__'+op_name+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
+def create_casting_method(op, klass):
+    """
+    Creates a new univariate special method, such as A.__float__() <=> float(A.value),
+    for target class. The method is called __op_name__.
+    """
+    # This function will become the actual method.
+    def new_method(self, op=op):
+        return op(self.value)
+    # Make the function into a method for klass.
+    new_method.__name__ = '__'+op.__name__+'__'
+    setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
 def create_rl_bin_method(op_name, klass):
     """
@@ -629,13 +640,17 @@ def create_bin_method(op_name, klass):
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
     create_rl_bin_method(op, Variable)
 
-# Binary operators
-for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
-    create_bin_method(op ,Variable)
+# # Binary operators
+# for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
+#     create_bin_method(op ,Variable)
 
 # Unary operators
-for op in ['unicode','neg','pos','abs','invert','index'] + ['iter','complex','int','long','float','oct','hex','len']:
+for op in ['unicode','neg','pos','abs','invert','index']:
     create_uni_method(op, Variable)
+
+# Casting operators
+for op in [iter,complex,int,long,float,oct,hex,len]:
+    create_casting_method(op, Variable)
 
 # Addition, subtraction, multiplication
 # TODO: Uncomment once LinearCombination issues are ironed out.
@@ -686,17 +701,6 @@ Variable.__call__ = UnboundMethodType(__call__, None, Variable)
 
 
 # These are not working
-nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains','len']
+# nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains','len']
 # These should NOT be implemented because they are in-place updates.
 do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
-
-for f in [iter,complex,int,long,float,oct,hex,len]:
-    methname = '__'+f.__name__+'__'
-    def wrapper(x,m=methname):
-        """A wrapper for the Python builtin %s that will tolerate producing a Deterministic."""%f.__name__
-        try:
-            return getattr(x,m)()
-        except:
-            raise TypeError, 'Failed to call method %s on object of type %s'%(m, x.__class__)
-    wrapper.__name__ = f.__name__
-    locals()[f.__name__+'_']=wrapper
