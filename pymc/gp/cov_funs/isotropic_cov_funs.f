@@ -197,19 +197,28 @@ cf2py threadsafe
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION diff_degree, rem
       DOUBLE PRECISION GA, prefac, snu
+      DOUBLE PRECISION far
       INTEGER nx, ny, i, j, fl, N, cmin, cmax
       DOUBLE PRECISION BK(N+1), DGAMMA
       LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
 
 !       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
       if (cmax.EQ.-1) then
           cmax = ny
       end if
       
-
+      if (diff_degree.GE. 0.01) then
+          far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
+      else
+          far = infinity
+      end if
       
       if (diff_degree .GT. 10.0D0) then
-        call gaussian(C,nx,ny,symm)
+        call gaussian(C,nx,ny,cmin,cmax,symm)
         return
       endif
       
@@ -230,10 +239,15 @@ cf2py threadsafe
           C(j,j) = 1.0D0
           do i=1,j-1
             if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=1.0D0
-            else              
-              C(i,j) = C(i,j) * snu
-              CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              C(i,j)=1.0D0  
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
               C(i,j)=prefac*(C(i,j)**diff_degree)*BK(fl+1)
             endif
 !           C(j,i)=C(i,j)
@@ -247,8 +261,14 @@ cf2py threadsafe
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=1.0D0
             else
-              C(i,j) = C(i,j) * snu
-              CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
               C(i,j)=prefac * (C(i,j) ** diff_degree) * BK(fl+1)
             endif
           enddo
