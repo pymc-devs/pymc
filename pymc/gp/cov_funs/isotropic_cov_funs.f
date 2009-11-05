@@ -239,7 +239,8 @@ cf2py threadsafe
           C(j,j) = 1.0D0
           do i=1,j-1
             if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=1.0D0  
+              C(i,j)=1.0D0
+            else  
               ! Asymptotic form for large distances, to avoid numerical problems           
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
