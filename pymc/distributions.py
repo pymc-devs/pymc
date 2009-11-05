@@ -38,7 +38,10 @@ import pdb
 import utils
 import warnings
 
-poiscdf = np.vectorize(lambda a, x: flib.gammq(a,x))
+def poiscdf(a, x):
+    x = np.atleast_1d(x)
+    a = np.resize(a, x.shape)
+    return np.array([flib.gammq(b,y) for b,y in zip(a.ravel(), x.ravel())]).reshape(x.shape)
 
 # Import utility functions
 import inspect, types
@@ -307,13 +310,6 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
 #-------------------------------------------------------------
 # Light decorators
 #-------------------------------------------------------------
-
-def Vectorize(f):
-    """
-    Wrapper to vectorize a scalar function.
-    """
-
-    return np.vectorize(f)
 
 def randomwrap(func):
     """

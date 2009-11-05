@@ -17,12 +17,17 @@ from Node import logp_of_set
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, vectorize, inf, shape, ndim, swapaxes, transpose as tr
+    hsplit, argsort, inf, shape, ndim, swapaxes, transpose as tr
 
 __all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit']
 
-logit = vectorize(lambda x: flib.logit(x))
-invlogit = vectorize(lambda x: flib.invlogit(x))
+def logit(x):
+    x = atleast_1d(x)
+    return flib.logit(x.ravel()).reshape(x.shape)
+
+def invlogit(x):
+    x = atleast_1d(x)
+    return flib.invlogit(x.ravel()).reshape(x.shape)
 
 def check_list(thing, label):
     if thing is not None:
@@ -404,10 +409,10 @@ def normcdf(x):
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
 
-@vectorize
 def invcdf(x):
     """Inverse of normal cumulative density function."""
-    return flib.ppnd16(x,1)
+    x = np.atleast_1d(x)
+    return np.array([flib.ppnd16(y,1) for y in x])
 
 def ar1_gen(rho, mu, sigma, size=1):
     """Create an autoregressive series of order one AR(1) generator.
