@@ -2781,9 +2781,6 @@ def Impute(name, dist_class, values, **parents):
         A masked array with missing elements (where mask=True, value is assumed missing),
         or an iterable that contains missing elements, identified by 'missing' argument.
 	NaNs are considered missing by default if values is not a masked array.
-      - missing (optional): obj
-        A placeholder value that indicates missing data values. Only required if 'values'
-        is not a masked array already.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
@@ -2791,7 +2788,7 @@ def Impute(name, dist_class, values, **parents):
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = np.logical_or(np.array(values) == missing, np.isnan(values))
+        mask = [v is None or np.isnan(v) for v in values]
         # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
 
