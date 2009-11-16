@@ -247,15 +247,15 @@ Whenever a variable is used as a parent for a child variable, PyMC replaces it w
 
 PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm \cite{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \module{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{verbatim}
-   from pymc.examples import DisasterModel
-   from pymc import MCMC
-   M = MCMC(DisasterModel)
+   >>> from pymc.examples import DisasterModel
+   >>> from pymc import MCMC
+   >>> M = MCMC(DisasterModel)
 \end{verbatim}
 In this case \code{M} will expose variables \code{s}, \code{e}, \code{l}, \code{r} and \code{D} as attributes; that is, \code{M.s} will be the same object as \code{DisasterModel.s}.
 
 To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired):
 \begin{verbatim}
-   M.isample(iter=10000, burn=1000, thin=10)
+   >>> M.isample(iter=10000, burn=1000, thin=10)
 \end{verbatim}
 After a few seconds, you should see that sampling has finished normally. The model has been fitted.
 
@@ -416,7 +416,7 @@ This masked array, in turn, can then be passed to PyMC's own \code{Impute} funct
 
 Here $r$ is an array of means for each year of data, allocated according to the location of the switchpoint. Each element in $D$ is a Poisson Stochastic, irrespective of whether the observation was missing or not. The difference is that actual observations are data Stochastics (\code{observed=True}), while the missing values are non-data Stochastics. The latter are considered unknown, rather than fixed, and therefore estimated by the MCMC algorithm, just as unknown model parameters.
 
-We have manually generated the masked array for illustration. The \code{Impute} function will mask arrays automatically, replacing all \code{None} values with Stochastics. Hence, only the original data array needs to be passed.
+In this example, we have manually generated the masked array for illustration. In practice, the \code{Impute} function will mask arrays automatically, replacing all \code{None} values with Stochastics. Hence, only the original data array needs to be passed.
 
 The entire model looks very similar to the original model:
 

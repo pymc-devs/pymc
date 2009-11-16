@@ -31,7 +31,7 @@ def make_model(x):
         return 100-a
 
     @stochastic
-    def c(value=.5, a=a, b=b);
+    def c(value=.5, a=a, b=b):
         return (value-a)**2/b
 
     return locals()
