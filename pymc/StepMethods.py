@@ -652,17 +652,25 @@ class DrawFromPrior(StepMethod):
 
     def step(self):
         jumped = []
-        for generation in self.generations:
-            try:
+        try:
+            for generation in self.generations:
                 for s in generation:
-                    jumped.append(s)
                     s.rand()
-                    s.logp
-            except ZeroProbability:
-                warnings.warn('Stochastic %s: random method returned value with logp=0, rejecting.'%s.__name__)
-                for s in jumped:
-                    s.revert()
-                break
+                    jumped.append(s)
+            self.logp_plus_loglike
+        except ZeroProbability:
+            if self.verbose > 0:
+                forbidden = []
+                for generation in self.generations:
+                    for s in self.stochastics:
+                        try:
+                            s.logp
+                        except ZeroProbability:
+                            forbidden.append(s.__name__)
+                print 'DrawFromPrior jumped stochastics %s to value forbidden by objects %s, rejecting.'%(', '.join(s.__name__ for s in jumped),', '.join(forbidden))
+            warnings.warn('DrawFromPrior jumped to forbidden value')
+            for s in jumped:
+                s.revert()
 
     @classmethod
     def competence(s):
