@@ -651,9 +651,18 @@ class DrawFromPrior(StepMethod):
         self.generations = generations
 
     def step(self):
+        jumped = []
         for generation in self.generations:
-            for s in generation:
-                s.rand()
+            try:
+                for s in generation:
+                    jumped.append(s)
+                    s.rand()
+                    s.logp
+            except ZeroProbability:
+                warnings.warn('Stochastic %s: random method returned value with logp=0, rejecting.'%s.__name__)
+                for s in jumped:
+                    s.revert()
+                break
 
     @classmethod
     def competence(s):
