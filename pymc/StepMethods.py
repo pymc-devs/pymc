@@ -586,7 +586,7 @@ class MatrixMetropolis(Metropolis):
             try:
                 # Try to get inverse
                 pinv(s.value)
-                return 3
+                return 2
             except LinAlgError:
                 return 0
         else:
