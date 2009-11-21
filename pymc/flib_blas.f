@@ -12,6 +12,8 @@ cf2py intent(out) cs
       do j=1,n-1
           do i=j+1,n
               if (X(i,j).NE.X(j,i)) then
+                  print *,'asymmetric at',i,j
+                  print *,X
                   cs = .TRUE.
                   return
               end if
@@ -211,7 +213,7 @@ cf2py threadsafe
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization      
 
 c Check X for symmetry
-      CALL checksymm(X,n,csx)
+      CALL checksymm(X,k,csx)
       if (csx) then
           like = -infinity
           return
@@ -298,7 +300,7 @@ c
 
 c determinants
 c Check X for symmetry
-      CALL checksymm(X,n,csx)
+      CALL checksymm(X,k,csx)
       if (csx) then
           like = -infinity
           return
@@ -380,7 +382,7 @@ cf2py threadsafe
 ! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB) B := alpha*B*op( A )
 
 c Check X and T for symmetry
-      CALL checksymm(X,n,csx)
+      CALL checksymm(X,k,csx)
       if (csx) then
           like = -infinity
           return
