@@ -1380,6 +1380,9 @@ def inverse_wishart_like(X, n, Tau):
       - `n` : [int] Degrees of freedom (n > 0).
       - `Tau` : Symmetric and positive definite matrix.
 
+     :Note:
+       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+
     """
     return flib.blas_inv_wishart(X,n,Tau)
 
@@ -2407,6 +2410,9 @@ def wishart_like(X, n, Tau):
         Degrees of freedom, > 0.
       Tau : matrix
         Symmetric and positive definite
+
+    :Note:
+      Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
     return flib.blas_wishart(X,n,Tau)

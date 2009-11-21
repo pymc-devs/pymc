@@ -12,12 +12,14 @@ from PyMCObjects import Stochastic, Potential, Deterministic
 from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from pymc.decorators import prop
+import distributions
 from copy import copy
 from InstantiationDecorators import deterministic
 import pdb, warnings, sys
 import inspect
 
 __docformat__='reStructuredText'
+
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
@@ -581,14 +583,10 @@ class MatrixMetropolis(Metropolis):
         """
         The competence function for MatrixMetropolis
         """
-        if len(s.shape)==2 and s.shape[0]==s.shape[1]:
-            # Square invertible matrix
-            try:
-                # Try to get inverse
-                pinv(s.value)
-                return 2
-            except LinAlgError:
-                return 0
+        # MatrixMetropolis handles the Wishart family, which are valued as 
+        # _symmetric_ matrices.
+        if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.InverseWishart,distributions.WishartCov]]):
+            return 2
         else:
             return 0
 
