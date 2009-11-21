@@ -591,7 +591,7 @@ class PDMatrixMetropolis(Metropolis):
             return 0
             
     def hastings_factor(self):
-        
+        raise NotImplementedError
 
     def propose(self):
         """
