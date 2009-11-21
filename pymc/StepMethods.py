@@ -31,7 +31,7 @@ nonconjugate_Gibbs_competence = 0
 class AdaptationError(ValueError): pass
 
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'MatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
+__all__=['DiscreteMetropolis', 'Metropolis', 'SymmetricMatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
 
 
 StepMethodRegistry = []
@@ -573,7 +573,7 @@ class Metropolis(StepMethod):
 
         return tuning
 
-class MatrixMetropolis(Metropolis):
+class SymmetricMatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
     def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
