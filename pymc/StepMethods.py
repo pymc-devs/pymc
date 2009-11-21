@@ -31,7 +31,7 @@ nonconjugate_Gibbs_competence = 0
 class AdaptationError(ValueError): pass
 
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'SymmetricMatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
+__all__=['DiscreteMetropolis', 'Metropolis', 'PDMatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
 
 
 StepMethodRegistry = []
@@ -573,7 +573,7 @@ class Metropolis(StepMethod):
 
         return tuning
 
-class SymmetricMatrixMetropolis(Metropolis):
+class PDMatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
     def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
@@ -589,6 +589,9 @@ class SymmetricMatrixMetropolis(Metropolis):
             return 2
         else:
             return 0
+            
+    def hastings_factor(self):
+        
 
     def propose(self):
         """
@@ -599,7 +602,7 @@ class SymmetricMatrixMetropolis(Metropolis):
         # Find Cholesky decomposition
         cvalue = cholesky(self.stochastic.value)
         # Locally store size of matrix
-        dims = self.stochastic.shape
+        dims = cvalue.shape
 
         # Add normal deviate to value, preserving lower triangular
         cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
