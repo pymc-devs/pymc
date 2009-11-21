@@ -12,8 +12,6 @@ cf2py intent(out) cs
       do j=1,n-1
           do i=j+1,n
               if (X(i,j).NE.X(j,i)) then
-                  print *,'asymmetric at',i,j
-                  print *,X
                   cs = .TRUE.
                   return
               end if

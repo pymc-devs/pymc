@@ -1352,8 +1352,9 @@ def rinverse_wishart(n, Tau):
     n is the degrees of freedom.
     Tau is a positive definite scale matrix.
     """
-
-    return rwishart(n, np.asmatrix(Tau).I).I
+    wi = rwishart(n, np.asmatrix(Tau).I).I
+    flib.symmetrize(wi)
+    return wi
 
 def inverse_wishart_expval(n, Tau):
     """
@@ -2374,7 +2375,9 @@ def rwishart(n, Tau):
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
     # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 
@@ -2432,7 +2435,9 @@ def rwishart_cov(n, C):
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 def wishart_cov_expval(n, C):
