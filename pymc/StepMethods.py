@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
@@ -589,25 +589,22 @@ class PDMatrixMetropolis(Metropolis):
             return 2
         else:
             return 0
-            
-    def hastings_factor(self):
-        raise NotImplementedError
 
     def propose(self):
         """
         Proposals for positive definite matrix using random walk deviations on the Cholesky
         factor of the current value.
         """
-
-        # Find Cholesky decomposition
-        cvalue = cholesky(self.stochastic.value)
+        
         # Locally store size of matrix
-        dims = cvalue.shape
+        dims = self.stochastic.value.shape
 
-        # Add normal deviate to value, preserving lower triangular
-        cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
-        # Square and replace
-        self.stochastic.value = cvalue_new*transpose(cvalue_new)
+        # Add normal deviate to value and symmetrize
+        dev =  rnormal(0, self.adaptive_scale_factor * self.proposal_sd, size=dims)
+        symmetrize(dev)
+        
+        # Replace
+        self.stochastic.value = dev + self.stochastic.value
 
 
 class Gibbs(Metropolis):

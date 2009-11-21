@@ -19,8 +19,9 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize']
 
+symmetrize=flib.symmetrize
 
 # =====================================================================
 # = Please don't use numpy.vectorize with these! It will leak memory. =
