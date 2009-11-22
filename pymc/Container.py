@@ -489,6 +489,14 @@ class DictContainer(ContainerBase, dict):
 
     value = property(fget = get_value, doc=value_doc)
 
+def conservative_update(obj, dict):
+    for k in dict.iterkeys():
+        if not hasattr(obj, k):
+            try:
+                setattr(obj, k, dict[k])
+            except:
+                pass
+
 class ObjectContainer(ContainerBase):
     """
     ObjectContainers wrap non-iterable objects.
@@ -529,14 +537,16 @@ class ObjectContainer(ContainerBase):
 
         if isinstance(input, dict):
             input_to_file = input
-            self.__dict__.update(input_to_file)
+            conservative_update(self, input_to_file)
+            # self.__dict__.update(input_to_file)
 
         elif hasattr(input,'__iter__'):
             input_to_file = input
 
         else: # Modules, objects, etc.
             input_to_file = input.__dict__
-            self.__dict__.update(input_to_file)
+            conservative_update(self, input_to_file)
+            # self.__dict__.update(input_to_file)
 
         self._dict_container = DictContainer(self.__dict__)
         file_items(self, input_to_file)
