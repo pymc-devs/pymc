@@ -285,19 +285,22 @@ class Sampler(Model):
         """
         pass
 
-    def stats(self, alpha=0.05, start=0):
+    def stats(self, alpha=0.05, start=0, variable=None):
         """
         Statistical output for variables.
         """
+        if variable is not None:
+            return variable.stats(alpha=alpha, start=start)
 
-        stat_dict = {}
+        else:
+            stat_dict = {}
 
-        # Loop over nodes
-        for variable in self._variables_to_tally:
-            # Plot object
-            stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start)
+            # Loop over nodes
+            for variable in self._variables_to_tally:
+                # Plot object
+                stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start)
 
-        return stat_dict
+            return stat_dict
 
     # Property --- status : the sampler state.
     def status():
