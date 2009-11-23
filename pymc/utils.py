@@ -17,12 +17,26 @@ from Node import logp_of_set
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, vectorize, inf, shape, ndim, swapaxes, transpose as tr
+    hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize']
 
-logit = vectorize(lambda x: flib.logit(x))
-invlogit = vectorize(lambda x: flib.invlogit(x))
+symmetrize=flib.symmetrize
+
+# =====================================================================
+# = Please don't use numpy.vectorize with these! It will leak memory. =
+# =====================================================================
+def logit(theta):
+    return flib.logit(ravel(theta)).reshape(shape(theta))
+
+def invlogit(ltheta):
+    return flib.invlogit(ravel(ltheta)).reshape(shape(ltheta))
+    
+def stukel_invlogit(ltheta,a1,a2):
+    return flib.stukel_invlogit(ravel(ltheta),a1,a2).reshape(shape(ltheta))
+    
+def stukel_logit(theta,a1,a2):
+    return flib.stukel_invlogit(ravel(theta),a1,a2).reshape(shape(theta))
 
 def check_list(thing, label):
     if thing is not None:
@@ -404,10 +418,10 @@ def normcdf(x):
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
 
-@vectorize
 def invcdf(x):
     """Inverse of normal cumulative density function."""
-    return flib.ppnd16(x,1)
+    x = np.atleast_1d(x)
+    return np.array([flib.ppnd16(y,1) for y in x])
 
 def ar1_gen(rho, mu, sigma, size=1):
     """Create an autoregressive series of order one AR(1) generator.

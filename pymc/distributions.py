@@ -38,7 +38,10 @@ import pdb
 import utils
 import warnings
 
-poiscdf = np.vectorize(lambda a, x: flib.gammq(a,x))
+def poiscdf(a, x):
+    x = np.atleast_1d(x)
+    a = np.resize(a, x.shape)
+    return np.array([flib.gammq(b,y) for b,y in zip(a.ravel(), x.ravel())]).reshape(x.shape)
 
 # Import utility functions
 import inspect, types
@@ -307,13 +310,6 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
 #-------------------------------------------------------------
 # Light decorators
 #-------------------------------------------------------------
-
-def Vectorize(f):
-    """
-    Wrapper to vectorize a scalar function.
-    """
-
-    return np.vectorize(f)
 
 def randomwrap(func):
     """
@@ -1356,8 +1352,9 @@ def rinverse_wishart(n, Tau):
     n is the degrees of freedom.
     Tau is a positive definite scale matrix.
     """
-
-    return rwishart(n, np.asmatrix(Tau).I).I
+    wi = rwishart(n, np.asmatrix(Tau).I).I
+    flib.symmetrize(wi)
+    return wi
 
 def inverse_wishart_expval(n, Tau):
     """
@@ -1383,6 +1380,9 @@ def inverse_wishart_like(X, n, Tau):
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
       - `Tau` : Symmetric and positive definite matrix.
+
+     :Note:
+       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
     return flib.blas_inv_wishart(X,n,Tau)
@@ -2025,7 +2025,7 @@ def rtruncated_poisson(mu, k, size=None):
     # Empty array to hold random variates
     rvs = np.empty(0, int)
     
-    total_size = np.prod(size)
+    total_size = np.prod(size or 1)
 
     while(len(rvs)<total_size):
         # Propose values by sampling from untruncated Poisson with mean mu + m
@@ -2375,7 +2375,9 @@ def rwishart(n, Tau):
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
     # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 
@@ -2412,6 +2414,9 @@ def wishart_like(X, n, Tau):
       Tau : matrix
         Symmetric and positive definite
 
+    :Note:
+      Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+
     """
     return flib.blas_wishart(X,n,Tau)
 
@@ -2430,7 +2435,9 @@ def rwishart_cov(n, C):
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 def wishart_cov_expval(n, C):

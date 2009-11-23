@@ -44,7 +44,7 @@ def diagnostic(f):
             data = pymc_obj.trace()
             name = pymc_obj.__name__
             return f(data, *args, **kwargs)
-        except AttributeError:
+        except (AttributeError,ValueError):
             pass
 
         # If others fail, assume that raw data is passed

@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
@@ -12,12 +12,14 @@ from PyMCObjects import Stochastic, Potential, Deterministic
 from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from pymc.decorators import prop
+import distributions
 from copy import copy
 from InstantiationDecorators import deterministic
 import pdb, warnings, sys
 import inspect
 
 __docformat__='reStructuredText'
+
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
@@ -29,7 +31,7 @@ nonconjugate_Gibbs_competence = 0
 class AdaptationError(ValueError): pass
 
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'MatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
+__all__=['DiscreteMetropolis', 'Metropolis', 'PDMatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
 
 
 StepMethodRegistry = []
@@ -571,7 +573,7 @@ class Metropolis(StepMethod):
 
         return tuning
 
-class MatrixMetropolis(Metropolis):
+class PDMatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
     def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
@@ -581,14 +583,10 @@ class MatrixMetropolis(Metropolis):
         """
         The competence function for MatrixMetropolis
         """
-        if len(s.shape)==2 and s.shape[0]==s.shape[1]:
-            # Square invertible matrix
-            try:
-                # Try to get inverse
-                pinv(s.value)
-                return 3
-            except LinAlgError:
-                return 0
+        # MatrixMetropolis handles the Wishart family, which are valued as 
+        # _symmetric_ matrices.
+        if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.InverseWishart,distributions.WishartCov]]):
+            return 2
         else:
             return 0
 
@@ -597,16 +595,16 @@ class MatrixMetropolis(Metropolis):
         Proposals for positive definite matrix using random walk deviations on the Cholesky
         factor of the current value.
         """
-
-        # Find Cholesky decomposition
-        cvalue = cholesky(self.stochastic.value)
+        
         # Locally store size of matrix
-        dims = self.stochastic.shape
+        dims = self.stochastic.value.shape
 
-        # Add normal deviate to value, preserving lower triangular
-        cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
-        # Square and replace
-        self.stochastic.value = cvalue_new*transpose(cvalue_new)
+        # Add normal deviate to value and symmetrize
+        dev =  rnormal(0, self.adaptive_scale_factor * self.proposal_sd, size=dims)
+        symmetrize(dev)
+        
+        # Replace
+        self.stochastic.value = dev + self.stochastic.value
 
 
 class Gibbs(Metropolis):
@@ -651,9 +649,26 @@ class DrawFromPrior(StepMethod):
         self.generations = generations
 
     def step(self):
-        for generation in self.generations:
-            for s in generation:
-                s.rand()
+        jumped = []
+        try:
+            for generation in self.generations:
+                for s in generation:
+                    s.rand()
+                    jumped.append(s)
+            self.logp_plus_loglike
+        except ZeroProbability:
+            if self.verbose > 0:
+                forbidden = []
+                for generation in self.generations:
+                    for s in self.stochastics:
+                        try:
+                            s.logp
+                        except ZeroProbability:
+                            forbidden.append(s.__name__)
+                print 'DrawFromPrior jumped stochastics %s to value forbidden by objects %s, rejecting.'%(', '.join(s.__name__ for s in jumped),', '.join(forbidden))
+            warnings.warn('DrawFromPrior jumped to forbidden value')
+            for s in jumped:
+                s.revert()
 
     @classmethod
     def competence(s):

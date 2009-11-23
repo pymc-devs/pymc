@@ -16,7 +16,7 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones, dtype
+from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs, append, ones, dtype
 from utils import autocorr as _autocorr
 import pdb
 from scipy import special
@@ -384,7 +384,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         datarange = (None, None)
         # Determine common range for plots
         if common_scale:
-            datarange = (min(tdata), max(tdata))
+            datarange = (nmin(tdata), nmax(tdata))
 
         # How many rows?
         _rows = min(4, len(tdata))
@@ -503,12 +503,12 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     ylabel('Z-score for %s' % name, fontsize='x-small')
 
     # Plot lines at +/- 2 sd from zero
-    pyplot((min(x), max(x)), (2, 2), '--')
-    pyplot((min(x), max(x)), (-2, -2), '--')
+    pyplot((nmin(x), nmax(x)), (2, 2), '--')
+    pyplot((nmin(x), nmax(x)), (-2, -2), '--')
 
     # Set plot bound
-    ylim(min(-2.5, min(y)), max(2.5, max(y)))
-    xlim(0, max(x))
+    ylim(min(-2.5, nmin(y)), max(2.5, nmax(y)))
+    xlim(0, nmax(x))
 
     # Save to file
     if not os.path.exists(path):
@@ -533,8 +533,8 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     scatter(x, y)
 
     # Plot x=y line
-    lo = min(ravel(data))
-    hi = max(ravel(data))
+    lo = nmin(ravel(data))
+    hi = nmax(ravel(data))
     datarange = hi-lo
     lo -= 0.1*datarange
     hi += 0.1*datarange

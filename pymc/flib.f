@@ -1,3 +1,28 @@
+      SUBROUTINE symmetrize(C,nx,cmin,cmax)
+
+cf2py intent(inplace) C
+cf2py intent(hide) nx
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py threadsafe
+
+
+      DOUBLE PRECISION C(nx,nx)
+      INTEGER nx, i, j, cmin, cmax
+      
+      if (cmax.EQ.-1) then
+          cmax = nx
+      end if
+
+      do j=cmin,cmax
+          do i=1,j-1
+              C(j,i) = C(i,j)
+          end do
+      end do
+
+      RETURN
+      END
+
       SUBROUTINE logsum(x, nx, s)
 cf2py intent(hide) nx
 cf2py intent(out) s
