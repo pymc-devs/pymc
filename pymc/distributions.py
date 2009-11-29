@@ -2017,7 +2017,7 @@ def rtruncated_poisson(mu, k, size=None):
 
     # Empty array to hold random variates
     rvs = np.empty(0, int)
-    
+
     total_size = np.prod(size or 1)
 
     while(len(rvs)<total_size):

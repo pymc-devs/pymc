@@ -334,7 +334,7 @@ class LinearCombination(pm.Deterministic):
 # TODO: - It should be a subclass of LinearCombination.
 # TODO:   Reason: The Gibbs samplers should be able to recognize it as a linear combination.
 # TODO: - It should be considered an 'ultimate argument' by LazyFunction, so that it is checked for changes rather
-# TODO:   than its parents. 
+# TODO:   than its parents.
 # TODO:   Reason: If parents change at elements that aren't selected, here's no point having all the descendants
 # TODO:   recompute.
 class Index(pm.Deterministic):

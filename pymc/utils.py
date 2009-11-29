@@ -41,10 +41,10 @@ def logit(theta):
 
 def invlogit(ltheta):
     return flib.invlogit(ravel(ltheta)).reshape(shape(ltheta))
-    
+
 def stukel_invlogit(ltheta,a1,a2):
     return flib.stukel_invlogit(ravel(ltheta),a1,a2).reshape(shape(ltheta))
-    
+
 def stukel_logit(theta,a1,a2):
     return flib.stukel_invlogit(ravel(theta),a1,a2).reshape(shape(theta))
 

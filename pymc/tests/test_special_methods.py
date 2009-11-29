@@ -3,9 +3,9 @@ import numpy as np
 import pymc as pm
 from types import UnboundMethodType
 
-x = [pm.MvNormalCov('x0',np.zeros(5),np.eye(5)), 
-    pm.Gamma('x1',4,4,size=3), 
-    pm.Gamma('x2',2,2), 
+x = [pm.MvNormalCov('x0',np.zeros(5),np.eye(5)),
+    pm.Gamma('x1',4,4,size=3),
+    pm.Gamma('x2',2,2),
     pm.Binomial('x3',100,.4),
     pm.Bernoulli('x4',.5),
     pm.gp.GP('x5',pm.gp.Mean(lambda x:0*x), pm.gp.FullRankCovariance(pm.gp.cov_funs.exponential.euclidean, amp=1, scale=1), mesh=np.linspace(-1,1,21))]
@@ -59,7 +59,7 @@ for dnim in rl_bin_methods:
             for y in testvars:
                 assert_equal(getattr(y,'__%s__'%dnim)(3.0).value, getattr(y.value,'__%s__'%dnim)(3.0))
     setattr(test_special_methods, 'test_'+dnim, UnboundMethodType(meth, None, test_special_methods))
-    
+
 
 if __name__ == '__main__':
     import unittest
