@@ -1285,7 +1285,6 @@ def hypergeometric_like(x, n, m, N):
 
     :Parameters:
       - `x` : [int] Number of successes in a sample drawn from a population.
-              :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
       - `n` : [int] Size of sample drawn from the population.
       - `m` : [int] Number of successes in the population.
       - `N` : [int] Total number of units in the population.
@@ -1330,7 +1329,8 @@ def inverse_gamma_like(x, alpha, beta):
       - `beta` : Scale parameter (beta > 0).
 
     .. note::
-       :math:`E(X)=\frac{1}{\beta(\alpha-1)}`  for :math:`\alpha > 1`.
+       :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha > 1`
+       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha > 2`
     """
 
     return flib.igamma(x, alpha, beta)
@@ -1517,6 +1517,7 @@ def lognormal_like(x, mu, tau):
 
     .. note::
        :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
+       :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
     """
 
 
@@ -1689,12 +1690,12 @@ def mv_normal_like(x, mu, tau):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        f(x \mid \pi, T) = \frac{|T|}{(2\pi)}^{1/2} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
     :Parameters:
       - `x`: (n,k)
       - `mu`: (k) Location parameter sequence.
-      - `tau`: (k,k) Positive definite precision matrix.
+      - `Tau`: (k,k) Positive definite precision matrix.
 
     .. seealso:: :func:`mv_normal_chol_like`, :func:`mv_normal_cov_like`
     """
@@ -1732,7 +1733,7 @@ def mv_normal_cov_like(x, mu, C):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
+        f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
 
     x: (n,k)
     mu: (k)
@@ -1794,7 +1795,7 @@ def mv_normal_chol_like(x, mu, sig):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
+        f(x \mid \pi, \sigma) = \frac{1}{(2\pi|\sigma|^2)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
 
     :Parameters:
       x : (n,k)
@@ -1842,7 +1843,7 @@ def negative_binomial_like(x, mu, alpha):
 
     Negative binomial log-likelihood. The negative binomial distribution describes a
     Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
-    parameterization makes this mixture interpretation more convenient to work with.
+    parameterization is based on this mixture interpretation.
 
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
