@@ -47,7 +47,7 @@ for dnim in rl_bin_methods:
         if dnim in ['or','xor','and']:
             testvars = [x[4]]
             for y in testvars:
-                assert_equal(getattr(y,'__%s__'%dnim)(True).value, getattr(y.value,'__%s__'%dnim)(True))            
+                assert_equal(getattr(y,'__%s__'%dnim)(True).value, getattr(y.value,'__%s__'%dnim)(True))
         # These only work for integers and booleans.
         elif dnim in ['lshift','rshift']:
             testvars = x[3:5]

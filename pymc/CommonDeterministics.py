@@ -13,7 +13,7 @@ __docformat__='reStructuredText'
 import PyMCObjects as pm
 from Node import Variable
 from Container import Container
-from InstantiationDecorators import deterministic
+from InstantiationDecorators import deterministic, check_special_methods
 import numpy as np
 import inspect
 from utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value
@@ -493,6 +493,8 @@ def create_uni_method(op_name, klass):
     def new_method(self):
         # This code creates a Deterministic object.
         def eval_fun(self,op=op):
+            if not check_special_methods():
+                raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
             return getattr(self, op)()
         return pm.Deterministic(eval_fun,
                                 'A Deterministic returning the value of %s(%s)'%(op_name, self.__name__),
@@ -511,6 +513,8 @@ def create_casting_method(op, klass):
     """
     # This function will become the actual method.
     def new_method(self, op=op):
+        if not check_special_methods():
+            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
         return op(self.value)
     # Make the function into a method for klass.
     new_method.__name__ = '__'+op.__name__+'__'
@@ -527,6 +531,8 @@ def create_rl_bin_method(op_name, klass):
     for prefix in ['r','']:
         # This function will became the methods.
         def new_method(self, other, prefix=prefix):
+            if not check_special_methods():
+                raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
             # This code will create one of two Deterministic objects.
             if prefix == 'r':
                 # Right version: raises error on failure.
@@ -566,6 +572,8 @@ def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
     """
     # This function will became the methods.
     def new_method(self, other, x_roles=x_roles, y_roles=y_roles):
+        if not check_special_methods():
+            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
         x = []
         y = []
         for xr in x_roles:
@@ -596,6 +604,8 @@ def create_bin_method(op_name, klass):
     """
     # This function will become the method.
     def new_method(self, other):
+        if not check_special_methods():
+            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
         # This code creates a Deterministic object.
         def eval_fun(self, other, op):
             return getattr(self, op)(other)
@@ -642,6 +652,8 @@ for op in ['add', 'mul', 'sub']:
 
 # Create __getitem__ method.
 def __getitem__(self, index):
+    if not check_special_methods():
+        raise NotImplementedError, 'Special method __index__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self)
     # If index is number or number-valued variable, make an Index object
     name = '%s[%s]'%(self.__name__, str(index))
     if np.isscalar(value(index)):
@@ -660,6 +672,8 @@ Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
 
 # Create __call__ method for Variable.
 def __call__(self, *args, **kwargs):
+    if not check_special_methods():
+        raise NotImplementedError, 'Special method __call__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self)
     def eval_fun(self, args=args, kwargs=kwargs):
         return self(*args, **kwargs)
     return pm.Deterministic(eval_fun,

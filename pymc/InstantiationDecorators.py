@@ -3,7 +3,7 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
-__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed', 'robust_init']
+__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed', 'robust_init','disable_special_methods','enable_special_methods','check_special_methods']
 
 import sys, inspect, pdb
 from imp import load_dynamic
@@ -11,6 +11,14 @@ from PyMCObjects import Stochastic, Deterministic, Potential
 from Node import ZeroProbability, ContainerBase, Node, StochasticMeta
 from Container import Container
 import numpy as np
+
+special_methods_available = [True]
+def disable_special_methods(sma=special_methods_available):
+    sma[0]=False
+def enable_special_methods(sma=special_methods_available):
+    sma[0]=True
+def check_special_methods(sma=special_methods_available):
+    return sma[0]
 
 def _extract(__func__, kwds, keys, classname, probe=True):
     """
@@ -40,6 +48,9 @@ def _extract(__func__, kwds, keys, classname, probe=True):
         sys.settrace(probeFunc)
 
         # Get the functions logp and random (complete interface).
+        # Disable special methods to prevent the formation of a hurricane of Deterministics
+        cur_status = check_special_methods()
+        disable_special_methods()
         try:
             __func__()
         except:
@@ -47,6 +58,9 @@ def _extract(__func__, kwds, keys, classname, probe=True):
                 kwds['logp']=__func__
             else:
                 kwds['eval'] =__func__
+        # Reenable special methods.
+        if cur_status:
+            enable_special_methods()
 
     for key in keys:
         if not kwds.has_key(key):
