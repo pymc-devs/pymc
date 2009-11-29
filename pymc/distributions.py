@@ -83,13 +83,6 @@ def bind_size(randfun, shape):
     newfun.scalar_version = randfun
     return newfun
 
-# TODO Document this function
-def value(a):
-    if isinstance(a,pymc.Variable):
-        return a.value
-    else:
-        return a
-
 def new_dist_class(*new_class_args):
     """
     Returns a new class from a distribution.
@@ -203,7 +196,7 @@ def new_dist_class(*new_class_args):
                 init_val_shape = None if init_val is None else np.shape(init_val)
 
                 if len(parents) > 0:
-                    pv = [np.shape(value(v)) for v in parents.values()]
+                    pv = [np.shape(utils.value(v)) for v in parents.values()]
                     biggest_parent = np.argmax([np.prod(v) for v in pv])
                     parents_shape = pv[biggest_parent]
 

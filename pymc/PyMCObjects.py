@@ -483,7 +483,7 @@ class Stochastic(StochasticBase):
                     plot=None,
                     verbose = None,
                     isdata=None):
-
+        
         self.counter = Counter()
         self.ParentDict = ParentDict
 
