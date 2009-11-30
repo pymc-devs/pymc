@@ -28,7 +28,7 @@ Consider the probability model in \file{examples/custom_step.py}:
 mu = pm.Normal('mu',0,.01, value=0)
 tau = pm.Exponential('tau',.01, value=1)
 cutoff = pm.Exponential('cutoff',1, value=1.3)
-D = pm.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
+D = pm.TruncatedNormal('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
 \end{verbatim}
 The stochastic variable \code{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \code{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected.
 

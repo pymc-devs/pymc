@@ -65,11 +65,11 @@ Diagnostic z-scores can be obtained by calling the \code{geweke} function. It ac
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-geweke(x, first=0.1, last=0.5, intervals=20)
+geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
 \begin{itemize}
 
-\item \verb=x=: The object that is or contains the output trace(s).
+\item \verb=pymc_object=: The object that is or contains the output trace(s).
 
 \item \verb=first= (optional): First portion of chain to be used in Geweke diagnostic. Defaults to 0.1 (i.e. first 10\% of chain).
 
@@ -92,12 +92,12 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', \
+geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
                 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
 
-\item \verb=data=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
+\item \verb=scores=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
 
 \item \verb=name= (optional): Name used for output files. For multiple scores, the dictionary keys are used as names.
 
@@ -114,19 +114,19 @@ def geweke_plot(data, name='geweke', format='png', suffix='-diagnostic', \
 
 To illustrate, consider a model \code{my_model} that is used to instantiate a MCMC sampler. The sampler is then run for a given number of iterations:
 \begin{verbatim}
-	>>> S = pymc.MCMC(my_model)
+	>>> S = pm.MCMC(my_model)
 	>>> S.sample(10000, burn=5000)
 \end{verbatim}
 It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
 \begin{verbatim}
-	>>> scores = pymc.geweke(S, intervals=20)
-	>>> pymc.Matplot.geweke_plot(scores)
+	>>> scores = pm.geweke(S, intervals=20)
+	>>> pm.Matplot.geweke_plot(scores)
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
 	>>> trace = S.alpha.trace()
-	>>> alpha_scores = pymc.geweke(trace, 'alpha', intervals=20)
-	>>> pymc.Matplot.geweke_plot(alpha_scores)
+	>>> alpha_scores = pm.geweke(trace, intervals=20)
+	>>> pm.Matplot.geweke_plot(alpha_scores, 'alpha')
 \end{verbatim}
 
 The second diagnostic provided by PyMC is the \citet{raftery} procedure. This approach estimates the number of iterations required to reach convergence, along with the number of burn-in samples to be discarded and the appropriate thinning interval. A separate estimate of both quantities can be obtained for each variable in a given model.
@@ -152,11 +152,11 @@ This diagnostic is best used on a short pilot run of a particular model, and the
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1)
+raftery_lewis(pymc_object, q, r, s=.95, epsilon=.001, verbose=1)
 \end{verbatim}
 \begin{itemize}
 
-	\item \verb=x=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
+	\item \verb=pymc_object=: The object that contains the Geweke scores. Can be a list (one set) or a dictionary (multiple sets).
 
     \item \verb=q=: Desired quantile to be estimated.
 
@@ -173,12 +173,12 @@ The code for \code{raftery_lewis} is based on the FORTRAN program \emph{gibbsit}
 
 For example, consider again a sampler \code{S} run for some model \code{my_model}:
 \begin{verbatim}
-	>>> S = pymc.MCMC(my_model)
+	>>> S = pm.MCMC(my_model)
 	>>> S.sample(10000, burn=5000)
 \end{verbatim}
 One can pass either the entire sampler \code{S} or any stochastic within \code{S} to the \code{raftery_lewis} function, along with suitable arguments. Here, we have chosen $q=0.025$ (the lower limit of the equal-tailed 95\% interval) and error $r=0.01$:
 \begin{verbatim}
-	>>> pymc.raftery_lewis(S, q=0.025, r=0.01)
+	>>> pm.raftery_lewis(S, q=0.025, r=0.01)
 \end{verbatim}
 This yields diagnostics as follows for each stochastic of \code{S}, as well as a dictionary containing the diagnostic quantities:
 
@@ -207,7 +207,7 @@ directly read by CODA.
 
 \subsubsection*{Method Usage}
 \begin{verbatim}
-pymc.utils.coda(pymc_object)
+pm.utils.coda(pymc_object)
 \end{verbatim}
 \begin{itemize}
 
@@ -250,11 +250,11 @@ coal mining disasters example model.}
 \end{figure}
 
 \begin{verbatim}
-autocorrelation(data, name, maxlag=100, format='png', suffix='-acf',
+autocorrelation(pymc_object, name, maxlag=100, format='png', suffix='-acf',
 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
-	\item \verb=data=: The object that is or contains the output
+	\item \verb=pymc_object=: The object that is or contains the output
 trace(s).
 
 	\item \verb=name=: Name used for output files.
@@ -280,13 +280,13 @@ for the labels of the graphic.
 
 Using any given model \code{my_model} as an example, autocorrelation plots can be obtained simply by passing the sampler for that model to the \code{autocorrelation} function directly:
 \begin{verbatim}
-	>>> S = pymc.MCMC(my_model)
+	>>> S = pm.MCMC(my_model)
 	>>> S.sample(10000, burn=5000)
-	>>> pymc.Matplot.autocorrelation(S)
+	>>> pm.Matplot.autocorrelation(S)
 \end{verbatim}
 Alternatively, variables within a model can be plotted individually. For example, a hypothetical variable \code{beta} that was estimated using sampler \code{S} will yield a correlation plot as follows:
 \begin{verbatim}
-	>>> pymc.Matplot.autocorrelation(S.beta)
+	>>> pm.Matplot.autocorrelation(S.beta)
 \end{verbatim}
 
 % section autocorrelation_plots (end)
