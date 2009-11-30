@@ -1,4 +1,4 @@
-PyMC probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
+% PyMC probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
 
 PyMC provides three objects that fit models:
 \begin{itemize}
@@ -7,7 +7,7 @@ PyMC provides three objects that fit models:
     \item \code{NormApprox}, which computes the `normal approximation' \citep{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum \emph{a posteriori} estimate.
 \end{itemize}
 
-All three objects are subclasses of \code{Model}, which is PyMC's base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is PyMC's base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes implement some basic methods that are inherited by the three implemented fitting methods, so they are documented at the end of this chapter. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.
+All three objects are subclasses of \code{Model}, which is PyMC's base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is PyMC's base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes are documented at the end of this chapter. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the Python prompt, check progress, and make adjustments.
 
 \section{Creating models} \label{sec:ModelInstantiation}
 The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
@@ -24,14 +24,14 @@ M = Model(MyModule)
     \item Using a `model factory' function:
     \begin{verbatim}
 def make_model(x):
-    a = Exponential('a',.5,beta=x)
+    a = Exponential('a',beta=x,value=0.5)
 
     @deterministic
     def b(a=a):
         return 100-a
 
     @stochastic
-    def c(value=.5, a=a, b=b):
+    def c(value=0.5, a=a, b=b):
         return (value-a)**2/b
 
     return locals()
@@ -72,7 +72,7 @@ Models have the following important attributes:
     \item \code{value}
 \end{itemize}
 
-In addition, models expose each node they contain as an attribute. For instance, if model \code{M} were produced from model (\ref{disastermodel}) \code{M.s} would return the switchpoint variable. It's a good idea to give each variable a unique name if you want to access them this way.
+In addition, models expose each node they contain as an attribute. For instance, if model \code{M} were produced from model (\ref{disastermodel}) \code{M.s} would return the switchpoint variable.
 
 
 \hypertarget{MAP}{}
@@ -81,7 +81,7 @@ In addition, models expose each node they contain as an attribute. For instance,
 
 The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following
 \begin{verbatim}
->>> import gelman_bioassay
+>>> import from pymc.examples import gelman_bioassay
 >>> M = MAP(gelman_bioassay)
 >>> M.fit()
 \end{verbatim}
@@ -402,7 +402,7 @@ There is currently no way for a stochastic variable to compute individual terms 
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
 \begin{verbatim}
-A = Normal('A', value=zeros(100), mu=0., tau=1.)
+A = Normal('A', value=np.zeros(100), mu=0., tau=1.)
 \end{verbatim}
 do this:
 \begin{verbatim}

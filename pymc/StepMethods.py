@@ -583,7 +583,7 @@ class PDMatrixMetropolis(Metropolis):
         """
         The competence function for MatrixMetropolis
         """
-        # MatrixMetropolis handles the Wishart family, which are valued as 
+        # MatrixMetropolis handles the Wishart family, which are valued as
         # _symmetric_ matrices.
         if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.InverseWishart,distributions.WishartCov]]):
             return 2
@@ -595,14 +595,14 @@ class PDMatrixMetropolis(Metropolis):
         Proposals for positive definite matrix using random walk deviations on the Cholesky
         factor of the current value.
         """
-        
+
         # Locally store size of matrix
         dims = self.stochastic.value.shape
 
         # Add normal deviate to value and symmetrize
         dev =  rnormal(0, self.adaptive_scale_factor * self.proposal_sd, size=dims)
         symmetrize(dev)
-        
+
         # Replace
         self.stochastic.value = dev + self.stochastic.value
 
@@ -1081,7 +1081,7 @@ class AdaptiveMetropolis(StepMethod):
         'a smaller variance. For this simulation, each time a similar error \n' + \
         'occurs, proposal_sd will be reduced by a factor .9 to reduce the \n' + \
         'jumps and increase the likelihood of accepted jumps.'
-        
+
         try:
             self.updateproposal_sd()
         except np.linalg.LinAlgError:
@@ -1290,8 +1290,8 @@ class AdaptiveMetropolis(StepMethod):
         """Tuning is done during the entire run, independently from the Sampler
         tuning specifications. """
         return False
-        
-        
+
+
 class IIDSStepper(StepMethod):
     """
     See written documentation.

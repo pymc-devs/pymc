@@ -19,9 +19,19 @@ from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
     hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
 
 symmetrize=flib.symmetrize
+
+def value(a):
+    """
+    Returns a.value if a is a Variable, or just a otherwise.
+    """
+    if isinstance(a,Variable):
+        return a.value
+    else:
+        return a
+
 
 # =====================================================================
 # = Please don't use numpy.vectorize with these! It will leak memory. =
@@ -31,10 +41,10 @@ def logit(theta):
 
 def invlogit(ltheta):
     return flib.invlogit(ravel(ltheta)).reshape(shape(ltheta))
-    
+
 def stukel_invlogit(ltheta,a1,a2):
     return flib.stukel_invlogit(ravel(ltheta),a1,a2).reshape(shape(ltheta))
-    
+
 def stukel_logit(theta,a1,a2):
     return flib.stukel_invlogit(ravel(theta),a1,a2).reshape(shape(theta))
 

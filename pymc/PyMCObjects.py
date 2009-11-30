@@ -665,7 +665,7 @@ class Stochastic(StochasticBase):
 
         Raises an error if no 'random' argument was passed to __init__.
         """
-        
+
         if self._random:
             # Get current values of parents for use as arguments for _random()
             r = self._random(**self.parents.value)
