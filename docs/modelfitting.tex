@@ -24,14 +24,14 @@ M = Model(MyModule)
     \item Using a `model factory' function:
     \begin{verbatim}
 def make_model(x):
-    a = Exponential('a',.5,beta=x)
+    a = Exponential('a',beta=x,value=0.5)
 
     @deterministic
     def b(a=a):
         return 100-a
 
     @stochastic
-    def c(value=.5, a=a, b=b):
+    def c(value=0.5, a=a, b=b):
         return (value-a)**2/b
 
     return locals()
@@ -81,7 +81,7 @@ In addition, models expose each node they contain as an attribute. For instance,
 
 The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following
 \begin{verbatim}
->>> import gelman_bioassay
+>>> import from pymc.examples import gelman_bioassay
 >>> M = MAP(gelman_bioassay)
 >>> M.fit()
 \end{verbatim}
@@ -402,7 +402,7 @@ There is currently no way for a stochastic variable to compute individual terms 
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
 \begin{verbatim}
-A = Normal('A', value=zeros(100), mu=0., tau=1.)
+A = Normal('A', value=np.zeros(100), mu=0., tau=1.)
 \end{verbatim}
 do this:
 \begin{verbatim}
