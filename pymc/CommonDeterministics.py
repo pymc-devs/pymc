@@ -663,7 +663,7 @@ def __getitem__(self, index):
     def eval_fun(self, index):
         return self[index]
     return pm.Deterministic(eval_fun,
-                            'A Deterministic returning the value of %s[%s]'%('getitem',self.__name__, str(index)),
+                            'A Deterministic returning the value of %s[%s]'%(self.__name__, str(index)),
                             name,
                             {'self':self, 'index':index},
                             trace=False,
