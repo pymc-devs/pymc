@@ -9,6 +9,7 @@ import numpy as np
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
+import sys
 import pdb
 
 d_neg_inf = float(-1.7976931348623157e+308)
