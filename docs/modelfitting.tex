@@ -287,7 +287,7 @@ To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an
 \code{AdaptiveMetropolis} instance, you might do the following:
 \begin{verbatim}
    M.use_step_method(AdaptiveMetropolis, [x,y,z], \
-                      scales={'x':1, 'y':2, 'z':.5}, delay=10000)
+                      scales={x:1, y:2, z:.5}, delay=10000)
 \end{verbatim}
 
 \code{AdaptativeMetropolis}' init method takes the following arguments:
