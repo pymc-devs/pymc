@@ -71,10 +71,24 @@ class TraceObject(base.Trace):
         slicing : slice object
           A slice overriding burn and thin assignement.
         """
+        
         if chain is not None:
-            return np.array(self._vlarrays[chain])
+            vlarrays = [self._vlarrays[chain]]
         else:
-            return np.concatenate(self._vlarrays[:])
+            vlarrays =  self._vlarrays
+            
+        for i, vlarray in enumerate(vlarrays):
+            if slicing is not None:
+                burn, stop, thin = slicing.start, slicing.stop, slicing.step
+            if slicing is None or stop is None:
+                stop = len(vlarray)
+            col = vlarray[burn:stop:thin]
+            if i==0:
+                data = np.asarray(col)
+            else:
+                data = hstack(data, col)
+
+        return data
 
     __call__ = gettrace
 
