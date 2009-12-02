@@ -883,7 +883,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, verbose=None, tally=False):
+    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, verbose=None, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
@@ -919,8 +919,7 @@ class AdaptiveMetropolis(StepMethod):
             self.C = self.cov_from_trace()
         else:
             self.C = cov
-        print self.C
-        
+    
         self.updateproposal_sd()
 
         # Keep track of the internal trace length
@@ -984,7 +983,6 @@ class AdaptiveMetropolis(StepMethod):
             trace = slice(trace, n)
             
         a = self.trace2array(trace)
-        print a
         return np.cov(a, rowvar=0)
 
     def check_type(self):

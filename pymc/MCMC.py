@@ -94,6 +94,23 @@ class MCMC(Sampler):
                 print '\t'+s.__name__
 
         setattr(new_method, '_model', self)
+        self._sm_assigned = False
+
+    def remove_step_method(self, sm):
+        """Remove StepMethod from the step_method_dict.
+        
+        sm can be a StepMethod instance or a sequence of those.
+        """
+        sm = list(sm)
+        for key, value in self.step_method_dict.items():
+            for s in sm:
+                try:
+                    value.remove(s)
+                    if self.verbose > 1:
+                        print 'Removed step method ', s, 'from', key
+                except ValueError:
+                    pass
+        self._sm_assigned = False
 
     def assign_step_methods(self):
         """
