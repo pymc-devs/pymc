@@ -93,9 +93,20 @@ class MCMC(Sampler):
             if self.verbose > 1:
                 print '\t'+s.__name__
         if self._sm_assigned:
-            self.step_methods |= new_method
+            self.step_methods.add(new_method)
 
         setattr(new_method, '_model', self)
+    
+    def remove_step_method(self, step_method):
+        """
+        Removes a step method.
+        """
+        for s in step_method.stochastics:
+            self.step_method_dict[s].remove(step_method)
+        if hasattr(self, "step_methods"):
+            self.step_methods.discard(step_method)
+        self._sm_assigned = False
+        
 
     def assign_step_methods(self):
         """
