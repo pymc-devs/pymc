@@ -86,7 +86,7 @@ class TraceObject(base.Trace):
             if i==0:
                 data = np.asarray(col)
             else:
-                data = hstack(data, col)
+                data = hstack((data, col))
 
         return data
 
