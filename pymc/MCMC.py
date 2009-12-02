@@ -94,7 +94,7 @@ class MCMC(Sampler):
                 print '\t'+s.__name__
         if self._sm_assigned:
             self.step_methods.add(new_method)
-
+            
         setattr(new_method, '_model', self)
     
     def remove_step_method(self, step_method):
