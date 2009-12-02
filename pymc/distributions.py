@@ -38,7 +38,10 @@ import pdb
 import utils
 import warnings
 
-poiscdf = np.vectorize(lambda a, x: flib.gammq(a,x))
+def poiscdf(a, x):
+    x = np.atleast_1d(x)
+    a = np.resize(a, x.shape)
+    return np.array([flib.gammq(b,y) for b,y in zip(a.ravel(), x.ravel())]).reshape(x.shape)
 
 # Import utility functions
 import inspect, types
@@ -73,18 +76,12 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # = User-accessible function to convert a logp and random function to a Stochastic subclass. =
 # ============================================================================================
 
-
+# TODO Document this function
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
         return np.reshape(randfun(size=shape, *args, **kwargs),shape)
     newfun.scalar_version = randfun
     return newfun
-
-def value(a):
-    if isinstance(a,pymc.Variable):
-        return a.value
-    else:
-        return a
 
 def new_dist_class(*new_class_args):
     """
@@ -198,12 +195,16 @@ def new_dist_class(*new_class_args):
                 init_val = arg_dict_out['value']
                 init_val_shape = None if init_val is None else np.shape(init_val)
 
-                pv = [np.shape(value(v)) for v in parents.values()]
-                biggest_parent = np.argmax([np.prod(v) for v in pv])
-                parents_shape = pv[biggest_parent]
+                if len(parents) > 0:
+                    pv = [np.shape(utils.value(v)) for v in parents.values()]
+                    biggest_parent = np.argmax([np.prod(v) for v in pv])
+                    parents_shape = pv[biggest_parent]
 
-                # Scalar parents can support any shape.
-                if np.prod(parents_shape) <= 1:
+                    # Scalar parents can support any shape.
+                    if np.prod(parents_shape) <= 1:
+                        parents_shape = None
+
+                else:
                     parents_shape = None
 
                 def shape_error():
@@ -302,13 +303,6 @@ def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
 #-------------------------------------------------------------
 # Light decorators
 #-------------------------------------------------------------
-
-def Vectorize(f):
-    """
-    Wrapper to vectorize a scalar function.
-    """
-
-    return np.vectorize(f)
 
 def randomwrap(func):
     """
@@ -926,7 +920,7 @@ def rdirichlet(theta, size=1):
     if size > 1 and np.size(theta) > 1:
         return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
     elif np.size(theta)>1:
-        return (gammas/gammas.sum())[:-1]
+        return (gammas[0]/gammas[0].sum())[:-1]
     else:
         return 1.
 
@@ -1291,7 +1285,6 @@ def hypergeometric_like(x, n, m, N):
 
     :Parameters:
       - `x` : [int] Number of successes in a sample drawn from a population.
-              :math:`\max(0, draws-failures) \leq x \leq \min(draws, success)`
       - `n` : [int] Size of sample drawn from the population.
       - `m` : [int] Number of successes in the population.
       - `N` : [int] Total number of units in the population.
@@ -1336,7 +1329,8 @@ def inverse_gamma_like(x, alpha, beta):
       - `beta` : Scale parameter (beta > 0).
 
     .. note::
-       :math:`E(X)=\frac{1}{\beta(\alpha-1)}`  for :math:`\alpha > 1`.
+       :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha > 1`
+       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha > 2`
     """
 
     return flib.igamma(x, alpha, beta)
@@ -1351,8 +1345,9 @@ def rinverse_wishart(n, Tau):
     n is the degrees of freedom.
     Tau is a positive definite scale matrix.
     """
-
-    return rwishart(n, np.asmatrix(Tau).I).I
+    wi = rwishart(n, np.asmatrix(Tau).I).I
+    flib.symmetrize(wi)
+    return wi
 
 def inverse_wishart_expval(n, Tau):
     """
@@ -1378,6 +1373,9 @@ def inverse_wishart_like(X, n, Tau):
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
       - `Tau` : Symmetric and positive definite matrix.
+
+     :Note:
+       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
     return flib.blas_inv_wishart(X,n,Tau)
@@ -1519,6 +1517,7 @@ def lognormal_like(x, mu, tau):
 
     .. note::
        :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
+       :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
     """
 
 
@@ -1691,12 +1690,12 @@ def mv_normal_like(x, mu, tau):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        f(x \mid \pi, T) = \frac{|T|}{(2\pi)}^{1/2} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
     :Parameters:
       - `x`: (n,k)
       - `mu`: (k) Location parameter sequence.
-      - `tau`: (k,k) Positive definite precision matrix.
+      - `Tau`: (k,k) Positive definite precision matrix.
 
     .. seealso:: :func:`mv_normal_chol_like`, :func:`mv_normal_cov_like`
     """
@@ -1734,7 +1733,7 @@ def mv_normal_cov_like(x, mu, C):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
+        f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
 
     x: (n,k)
     mu: (k)
@@ -1796,7 +1795,7 @@ def mv_normal_chol_like(x, mu, sig):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
+        f(x \mid \pi, \sigma) = \frac{1}{(2\pi|\sigma|^2)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
 
     :Parameters:
       x : (n,k)
@@ -1844,7 +1843,7 @@ def negative_binomial_like(x, mu, alpha):
 
     Negative binomial log-likelihood. The negative binomial distribution describes a
     Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
-    parameterization makes this mixture interpretation more convenient to work with.
+    parameterization is based on this mixture interpretation.
 
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
@@ -2020,20 +2019,22 @@ def rtruncated_poisson(mu, k, size=None):
     # Empty array to hold random variates
     rvs = np.empty(0, int)
 
-    while(len(rvs)<size):
+    total_size = np.prod(size or 1)
+
+    while(len(rvs)<total_size):
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.random.poisson(mu+m, size*4)
+        proposals = np.random.poisson(mu+m, total_size*4)
 
         # Acceptance probability
         a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
         a *= proposals > k
 
         # Uniform random variates
-        u = np.random.random(size*4)
+        u = np.random.random(total_size*4)
 
         rvs = np.append(rvs, proposals[u<a])
 
-    return rvs[:size]
+    return np.reshape(rvs[:total_size], size)
 
 
 def truncated_poisson_expval(mu, k):
@@ -2157,10 +2158,12 @@ truncnorm_like = truncated_normal_like
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
 def rskew_normal(mu,tau,alpha,size=None):
-    """rskew_normal(mu, tau, alpha, size=1)
+    """rskew_normal(mu, tau, alpha, size=None)
 
     Skew-normal random variates.
     """
+    if size is None:
+        size = 1
     return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
 
 def skew_normal_like(x,mu,tau,alpha):
@@ -2366,7 +2369,9 @@ def rwishart(n, Tau):
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
     # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 
@@ -2403,6 +2408,9 @@ def wishart_like(X, n, Tau):
       Tau : matrix
         Symmetric and positive definite
 
+    :Note:
+      Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+
     """
     return flib.blas_wishart(X,n,Tau)
 
@@ -2421,7 +2429,9 @@ def rwishart_cov(n, C):
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
     A= flib.expand_triangular(chi_sqs, norms)
     flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    return np.asmatrix(np.dot(A,A.T))
+    w=np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 
 def wishart_cov_expval(n, C):
@@ -2776,11 +2786,11 @@ def Impute(name, dist_class, values, **parents):
         Arbitrary keyword arguments.
     """
     masked_values = values
-    
+
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
         mask = [v is None or np.isnan(v) for v in values]
-        # Generate masked array  
+        # Generate masked array
         masked_values = np.ma.masked_array(values, mask)
 
     # Initialise list

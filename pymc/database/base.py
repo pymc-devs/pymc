@@ -119,7 +119,7 @@ class Trace(object):
         if type(i) == types.SliceType:
             return self.gettrace(slicing=i, chain=self._chain)
         else:
-            return self.gettrace(slicing=slice(i,i), chain=self._chain)
+            return self.gettrace(slicing=slice(i,i+1), chain=self._chain)
 
     def _finalize(self, chain):
         """Execute task necessary when tallying is over for this trace."""

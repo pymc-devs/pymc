@@ -35,7 +35,7 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
     % \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
     % \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
     \item[\code{observed}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
-    \item[\code{dtype}:] A NumPy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
+    \item[\code{dtype}:] A NumPy dtype object (such as \code{np.int}) that specifies the type of the variable's value to fitting methods. If this is \code{None} (default) then no type is enforced.
     % \item[\code{__name__}:] The name of the variable, should be unique.
     %    \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
@@ -71,16 +71,16 @@ def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
         # Invalid values
-        return -numpy.inf
+        return -np.inf
     else:
         # Uniform log-likelihood
-        return -numpy.log(t_h - t_l + 1)
+        return -np.log(t_h - t_l + 1)
 \end{verbatim}
 Note that this is a simple Python function preceded by a Python expression called a \textbf{decorator}, here called \code{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \code{Stochastic} object produced by the \code{@stochastic} decorator will evaluate its log-probability using the function $s$. The \code{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of $s$ (\emph{i.e.} they will populate the \code{parents} dictionary).
 
 To emphasize, the Python function decorated by \texttt{@stochastic} should compute the \emph{log}-density or \emph{log}-probability of the variable. That is why the return value in the example above is $-\log(t_h-t_l+1)$ rather than $1/(t_h-t_l+1)$.
 
-The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7). See \href{http://code.google.com/p/pymc/wiki/Benchmarks}{the wiki page on benchmarks}  There are two reasons:
+The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in PyMC tend to be approximately an order of magnitude faster than their counterparts in SciPy (using version 0.7). See \href{http://code.google.com/p/pymc/wiki/Benchmarks}{the wiki page on benchmarks}.
 
     The decorator \code{stochastic} can take several arguments:
     \begin{itemize}
@@ -100,7 +100,7 @@ def s(value=1900, t_l=1851, t_h=1962):
         if value > t_h or value < t_l:
             return -Inf
         else:
-            return -log(t_h - t_l + 1)
+            return -np.log(t_h - t_l + 1)
 
     def random(t_l, t_h):
         return np.round( (t_l - t_h) * random() ) + t_l
@@ -114,7 +114,7 @@ def s_logp(value, t_l, t_h):
     if value > t_h or value < t_l:
         return -Inf
     else:
-        return -log(t_h - t_l + 1)
+        return -np.log(t_h - t_l + 1)
 
 def s_rand(t_l, t_h):
     return np.round( (t_l - t_h) * random() ) + t_l
@@ -217,9 +217,9 @@ Deterministic variables are less complicated than stochastic variables, and have
       \[
       \sum_i x_i^T y_i.
       \]
-      \item[\code{Index}:] Has three parents $x$, $y$ and \code{index}. $x$ and $y$ must be iterables, \code{index} must be valued as an integer. Index returns the dot product of $x$ and $y$ for the elements specified by \texttt{index}:
+      \item[\code{Index}:] Has two parents $x$ and \code{index}. $x$ must be iterable, \code{index} must be valued as an integer. Index returns 
       \[
-      x[\mathtt{index}]^T y[\mathtt{index}].
+      x[\mathtt{index}].
       \]
       \code{Index} is useful for implementing dynamic models, in which the parent-child connections change.
       \item[\code{Lambda}:] Converts an anonymous function (in Python, called \textbf{lambda functions}) to a \code{Deterministic} instance on a single line.
@@ -227,6 +227,24 @@ Deterministic variables are less complicated than stochastic variables, and have
       \item[\code{Logit}, \code{InvLogit}, \code{StukelLogit}, \code{StukelInvLogit}:] Various common link functions for generalized linear models.
    \end{description}
    It's a good idea to use these classes when feasible, because certain fitting methods (Gibbs step methods in particular) implicitly know how to take them into account.
+
+   \item[Elementary operations on variables] Certain elementary operations on variables create \texttt{Deterministics}. For example:   
+\begin{verbatim}
+
+>>> x = MvNormalCov('x',ones(3),eye(3))
+>>> y = MvNormalCov('y',ones(3),eye(3))
+>>>
+>>> print x+y
+>>> <pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10>
+>>>
+>>> print x[0]
+>>> <pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390>
+>>>
+>>> print x[1]+y[2]
+>>> <pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
+\end{verbatim}
+
+All the objects thus created have \texttt{trace=False} and \texttt{plot=False} by default. This convenient method of generating simple deterministics was inspired by \cite{fbc}.
 
     \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \code{Stochastic}'s decorator interface:
 \begin{verbatim}
@@ -277,7 +295,8 @@ Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want
 
 This situation can be handled naturally in PyMC:
 \begin{verbatim}
-x_0 = Normal(`x_0', mu=0, tau=1)
+N = 10
+x_0 = Normal('x_0', mu=0, tau=1)
 
 # Initialize array of stochastics
 x = np.empty(N,dtype=object)
@@ -287,7 +306,7 @@ x[0] = x_0
 for i in range(1,N):
 
    # Instantiate Normal stochastic, based on value of previous element in x
-   x[i] = Normal(`x_%i' % i, mu=x[-1], tau=1)
+   x[i] = Normal('x_%i' % i, mu=x[-1], tau=1)
 
 @observed
 @stochastic
@@ -451,4 +470,4 @@ Before calling \code{fun}, \code{L} will check the values of \code{arguments.var
 
 Caching is helpful in MCMC, because variables' log-probabilities and values tend to be queried multiple times for the same parental value configuration. The default cache depth of 2 turns out to be most useful in Metropolis-Hastings-type algorithms involving proposed values that may be rejected.
 
-Lazy functions are implemented in C using Pyrex, a language for writing Python extensions.
+Lazy functions are implemented in C using \href{http://www.cosc.canterbury.ac.nz/greg.ewing/python/Pyrex/}{Pyrex} , a language for writing Python extensions.

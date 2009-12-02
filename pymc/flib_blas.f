@@ -1,5 +1,27 @@
 c Author: Anand Patil, anand.prabhakar.patil@gmail.com
 
+      SUBROUTINE checksymm(X,n,cs)
+c Checks symmetry      
+cf2py intent(hide) n
+cf2py intent(out) cs
+      DOUBLE PRECISION X(n,n)
+      INTEGER n,i,j
+      LOGICAL cs
+      
+      cs = .FALSE.
+      do j=1,n-1
+          do i=j+1,n
+              if (X(i,j).NE.X(j,i)) then
+                  cs = .TRUE.
+                  return
+              end if
+          end do
+      end do
+      
+      return 
+      END
+
+
       SUBROUTINE chol_mvnorm(x, mu, sig, n, like, info)
 
 cf2py double precision dimension(n), intent(copy) :: x
@@ -178,6 +200,7 @@ cf2py threadsafe
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
+      LOGICAL csx
       PARAMETER (PI=3.141592653589793238462643d0)      
 
       EXTERNAL DCOPY
@@ -186,6 +209,13 @@ cf2py threadsafe
 ! DSYMM(SIDE,UPLO,M,N,ALPHA,A,LDA,B,LDB,BETA,C,LDC) alpha*A*B + beta*C when side='l'
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization      
+
+c Check X for symmetry
+      CALL checksymm(X,k,csx)
+      if (csx) then
+          like = -infinity
+          return
+      end if
 
 c trace of T*X
 !     bx <- T * X
@@ -256,6 +286,7 @@ cf2py threadsafe
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
+      LOGICAL csx
       PARAMETER (PI=3.141592653589793238462643d0)      
 c
       EXTERNAL DCOPY
@@ -266,6 +297,12 @@ c
 ! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
 
 c determinants
+c Check X for symmetry
+      CALL checksymm(X,k,csx)
+      if (csx) then
+          like = -infinity
+          return
+      end if
       
 c Cholesky factorize sigma, puke if not pos def
 !     V <- cholesky(V)      
@@ -332,6 +369,7 @@ cf2py threadsafe
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
+      LOGICAL csx
       PARAMETER (PI=3.141592653589793238462643d0)      
 
       EXTERNAL DCOPY
@@ -340,6 +378,13 @@ cf2py threadsafe
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization     
       EXTERNAL DTRMM
 ! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB) B := alpha*B*op( A )
+
+c Check X and T for symmetry
+      CALL checksymm(X,k,csx)
+      if (csx) then
+          like = -infinity
+          return
+      end if
 
 c trace of T*X^{-1}
 !     TX <- T

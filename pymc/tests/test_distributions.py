@@ -667,7 +667,7 @@ class test_lognormal(TestCase):
         r = rlognormal(3, .5, 2)
         a = lognormal_like(r, 3, .5)
         b = lognormal_like(r, [3,3], [.5,.5])
-        assert_array_equal(a,b)
+        assert_array_almost_equal(a,b)
 
 class test_multinomial(TestCase):
     def test_random(self):

@@ -1,4 +1,4 @@
-__modules__ = ['bayes','EM','parallel','GibbsStepMethods','NormalSubmodel','NormalModel','DLM','DP']
+__modules__ = ['bayes','EM','parallel','NormalSubmodel','NormalModel','DLM','DP']
 
 for mod in __modules__:
     try:

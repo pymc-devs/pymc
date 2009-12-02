@@ -81,7 +81,7 @@ class Trace(base.Trace):
             # the database into thinking that there are more values than there
             # is.  A better solution would be to use another delimiter than the
             # comma. -DH
-            valstring = ', '.join(['%f'%x for x in self._getfunc().ravel()])
+            valstring = ', '.join(['%f'%x for x in np.ravel(self._getfunc())])
         except:
             valstring = str(self._getfunc())
 
@@ -90,6 +90,7 @@ class Trace(base.Trace):
         query = "INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
             (self.name, self._vstr, chain, valstring)
         self.db.cur.execute(query)
+
 
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
@@ -116,7 +117,6 @@ class Trace(base.Trace):
                 chain = range(self.db.chains)[chain]
             self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
-
         trace = np.array(trace)[:,2:]
         if len(self._shape) > 1:
             trace = trace.reshape(-1, *self._shape)

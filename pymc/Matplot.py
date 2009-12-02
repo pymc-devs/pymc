@@ -1,5 +1,3 @@
-# FIXME: PlotFactory methods plot, geweke_plot, autocorr_plot, gof_plot not working.
-
 """
 Plotting module using matplotlib.
 """
@@ -18,8 +16,8 @@ from pprint import pformat
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d, min, max, abs, append, ones, dtype
-from utils import autocorr
+from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs, append, ones, dtype
+from utils import autocorr as _autocorr
 import pdb
 from scipy import special
 
@@ -375,7 +373,8 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         if last:
             if not os.path.exists(path):
                 os.mkdir(path)
-
+            if not path.endswith('/'):
+                path += '/'
             savefig("%s%s%s.%s" % (path, name, suffix, format))
 
     else:
@@ -385,7 +384,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         datarange = (None, None)
         # Determine common range for plots
         if common_scale:
-            datarange = (min(tdata), max(tdata))
+            datarange = (nmin(tdata), nmax(tdata))
 
         # How many rows?
         _rows = min(4, len(tdata))
@@ -440,6 +439,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         if standalone:
             if not os.path.exists(path):
                 os.mkdir(path)
+            if not path.endswith('/'):
+                path += '/'
             # Save to file
             savefig("%s%s%s.%s" % (path, name, suffix, format))
             #close()
@@ -479,6 +480,8 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
     if standalone:
         if not os.path.exists(path):
             os.mkdir(path)
+        if not path.endswith('/'):
+            path += '/'
         # Save to file
         savefig("%s%s%s.%s" % (path, name, suffix, format))
         #close()
@@ -500,16 +503,18 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     ylabel('Z-score for %s' % name, fontsize='x-small')
 
     # Plot lines at +/- 2 sd from zero
-    pyplot((min(x), max(x)), (2, 2), '--')
-    pyplot((min(x), max(x)), (-2, -2), '--')
+    pyplot((nmin(x), nmax(x)), (2, 2), '--')
+    pyplot((nmin(x), nmax(x)), (-2, -2), '--')
 
     # Set plot bound
-    ylim(min(-2.5, min(y)), max(2.5, max(y)))
-    xlim(0, max(x))
+    ylim(min(-2.5, nmin(y)), max(2.5, nmax(y)))
+    xlim(0, nmax(x))
 
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
@@ -528,8 +533,8 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     scatter(x, y)
 
     # Plot x=y line
-    lo = min(ravel(data))
-    hi = max(ravel(data))
+    lo = nmin(ravel(data))
+    hi = nmax(ravel(data))
     datarange = hi-lo
     lo -= 0.1*datarange
     hi += 0.1*datarange
@@ -549,6 +554,8 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
     # Save to file
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
@@ -589,6 +596,8 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     # Save to file
     savefig("%s%s%s.%s" % (path, name or 'MCMC', suffix, format))
     #close()
@@ -634,7 +643,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
         # New subplot
         subplot(rows, 1, i - (rows*(i/rows)) + 1)
         x = arange(maxlag)
-        y = [autocorr(values, lag=i) for i in x]
+        y = [_autocorr(values, lag=i) for i in x]
 
         bar(x, y)
 
@@ -657,6 +666,8 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
 
             if not os.path.exists(path):
                 os.mkdir(path)
+            if not path.endswith('/'):
+                path += '/'
             if rows>4:
                 # Append plot number to suffix, if there will be more than one
                 suffix += '_%i' % i
@@ -788,6 +799,8 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
         plotname += obj.__name__ + ''
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
     savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 
 def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
@@ -829,6 +842,8 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
 
     if not os.path.exists(path):
         os.mkdir(path)
+    if not path.endswith('/'):
+        path += '/'
 
     if name:
         name += '-'

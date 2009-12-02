@@ -3,7 +3,7 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
-__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed', 'robust_init']
+__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed', 'robust_init','disable_special_methods','enable_special_methods','check_special_methods']
 
 import sys, inspect, pdb
 from imp import load_dynamic
@@ -11,6 +11,14 @@ from PyMCObjects import Stochastic, Deterministic, Potential
 from Node import ZeroProbability, ContainerBase, Node, StochasticMeta
 from Container import Container
 import numpy as np
+
+special_methods_available = [True]
+def disable_special_methods(sma=special_methods_available):
+    sma[0]=False
+def enable_special_methods(sma=special_methods_available):
+    sma[0]=True
+def check_special_methods(sma=special_methods_available):
+    return sma[0]
 
 def _extract(__func__, kwds, keys, classname, probe=True):
     """
@@ -40,6 +48,9 @@ def _extract(__func__, kwds, keys, classname, probe=True):
         sys.settrace(probeFunc)
 
         # Get the functions logp and random (complete interface).
+        # Disable special methods to prevent the formation of a hurricane of Deterministics
+        cur_status = check_special_methods()
+        disable_special_methods()
         try:
             __func__()
         except:
@@ -47,6 +58,9 @@ def _extract(__func__, kwds, keys, classname, probe=True):
                 kwds['logp']=__func__
             else:
                 kwds['eval'] =__func__
+        # Reenable special methods.
+        if cur_status:
+            enable_special_methods()
 
     for key in keys:
         if not kwds.has_key(key):
@@ -250,21 +264,21 @@ def observed(obj=None, **kwds):
 data = observed
 
 def robust_init(stochclass, tries, *args, **kwds):
-    """Robust initialization of a Stochastic. 
-    
-    If the evaluation of the log-probability returns a ZeroProbability 
-    error, due for example to a parent being outside of the support for 
-    this Stochastic, the values of parents are randomly sampled until 
-    a valid log-probability is obtained. 
-    
+    """Robust initialization of a Stochastic.
+
+    If the evaluation of the log-probability returns a ZeroProbability
+    error, due for example to a parent being outside of the support for
+    this Stochastic, the values of parents are randomly sampled until
+    a valid log-probability is obtained.
+
     If the log-probability is still not valid after `tries` attempts, the
     original ZeroProbability error is raised.
-    
+
     :Parameters:
     stochclass : Stochastic, eg. Normal, Uniform, ...
       The Stochastic distribution to instantiate.
     tries : int
-      Maximum number of times parents will be sampled. 
+      Maximum number of times parents will be sampled.
     *args, **kwds
       Positional and keyword arguments to declare the Stochastic variable.
 
@@ -274,17 +288,17 @@ def robust_init(stochclass, tries, *args, **kwds):
     """
     # Find the direct parents
     stochs = [arg for arg in (list(args) + kwds.values()) if getattr(arg, '__metaclass__', None) == StochasticMeta]
-            
+
     # Find the extended parents
-    parents = stochs 
+    parents = stochs
     for s in stochs:
         parents.extend(s.extended_parents)
-    
+
     extended_parents = set(parents)
-    
+
     # Select the parents with a random method.
     random_parents = [p for p in extended_parents if p.rseed is True and hasattr(p, 'random')]
-    
+
     for i in range(tries):
         try:
             return stochclass(*args, **kwds)
@@ -295,6 +309,6 @@ def robust_init(stochclass, tries, *args, **kwds):
                     parent.random()
                 except:
                     raise a,b,c
-                    
+
     raise a,b,c
 

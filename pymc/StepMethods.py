@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
@@ -12,12 +12,14 @@ from PyMCObjects import Stochastic, Potential, Deterministic
 from Container import Container
 from Node import ZeroProbability, Node, Variable, StochasticBase
 from pymc.decorators import prop
+import distributions
 from copy import copy
 from InstantiationDecorators import deterministic
 import pdb, warnings, sys
 import inspect
 
 __docformat__='reStructuredText'
+
 
 # Changeset history
 # 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
@@ -29,7 +31,7 @@ nonconjugate_Gibbs_competence = 0
 class AdaptationError(ValueError): pass
 
 
-__all__=['DiscreteMetropolis', 'Metropolis', 'MatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior', 'TWalk']
+__all__=['DiscreteMetropolis', 'Metropolis', 'PDMatrixMetropolis', 'StepMethod', 'assign_method',  'pick_best_methods', 'StepMethodRegistry', 'NoStepper', 'BinaryMetropolis', 'AdaptiveMetropolis','Gibbs','conjugate_Gibbs_competence', 'nonconjugate_Gibbs_competence', 'DrawFromPrior']
 
 
 StepMethodRegistry = []
@@ -516,7 +518,7 @@ class Metropolis(StepMethod):
 
         May be overridden in subclasses.
         """
-        
+
         if self.verbose is not None:
             verbose = self.verbose
 
@@ -571,7 +573,7 @@ class Metropolis(StepMethod):
 
         return tuning
 
-class MatrixMetropolis(Metropolis):
+class PDMatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
     def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
@@ -581,14 +583,10 @@ class MatrixMetropolis(Metropolis):
         """
         The competence function for MatrixMetropolis
         """
-        if len(s.shape)==2 and s.shape[0]==s.shape[1]:
-            # Square invertible matrix
-            try:
-                # Try to get inverse
-                pinv(s.value)
-                return 3
-            except LinAlgError:
-                return 0
+        # MatrixMetropolis handles the Wishart family, which are valued as
+        # _symmetric_ matrices.
+        if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.InverseWishart,distributions.WishartCov]]):
+            return 2
         else:
             return 0
 
@@ -598,15 +596,15 @@ class MatrixMetropolis(Metropolis):
         factor of the current value.
         """
 
-        # Find Cholesky decomposition
-        cvalue = cholesky(self.stochastic.value)
         # Locally store size of matrix
-        dims = self.stochastic.shape
+        dims = self.stochastic.value.shape
 
-        # Add normal deviate to value, preserving lower triangular
-        cvalue_new = multiply(cvalue + rnormal(0, self.adaptive_scale_factor * self.proposal_sd, dims), tri(dims[0]))
-        # Square and replace
-        self.stochastic.value = cvalue_new*transpose(cvalue_new)
+        # Add normal deviate to value and symmetrize
+        dev =  rnormal(0, self.adaptive_scale_factor * self.proposal_sd, size=dims)
+        symmetrize(dev)
+
+        # Replace
+        self.stochastic.value = dev + self.stochastic.value
 
 
 class Gibbs(Metropolis):
@@ -651,9 +649,26 @@ class DrawFromPrior(StepMethod):
         self.generations = generations
 
     def step(self):
-        for generation in self.generations:
-            for s in generation:
-                s.rand()
+        jumped = []
+        try:
+            for generation in self.generations:
+                for s in generation:
+                    s.rand()
+                    jumped.append(s)
+            self.logp_plus_loglike
+        except ZeroProbability:
+            if self.verbose > 0:
+                forbidden = []
+                for generation in self.generations:
+                    for s in self.stochastics:
+                        try:
+                            s.logp
+                        except ZeroProbability:
+                            forbidden.append(s.__name__)
+                print 'DrawFromPrior jumped stochastics %s to value forbidden by objects %s, rejecting.'%(', '.join(s.__name__ for s in jumped),', '.join(forbidden))
+            warnings.warn('DrawFromPrior jumped to forbidden value')
+            for s in jumped:
+                s.revert()
 
     @classmethod
     def competence(s):
@@ -880,14 +895,15 @@ class AdaptiveMetropolis(StepMethod):
             stochastic = [stochastic]
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
-        
+
         self._id = 'AdaptiveMetropolis_'+'_'.join([p.__name__ for p in self.stochastics])
         # State variables used to restore the state in a latter session.
         self._state += ['accepted', 'rejected', '_trace_count', '_current_iter', 'C', 'proposal_sd',
-        '_proposal_deviate', '_trace']
+        '_proposal_deviate', '_trace', 'shrink_if_necessary']
         self._tuning_info = ['C']
 
         self.proposal_sd = None
+        self.shrink_if_necessary=shrink_if_necessary
 
         # Number of successful steps before the empirical covariance is computed
         self.delay = delay
@@ -970,8 +986,6 @@ class AdaptiveMetropolis(StepMethod):
         a = self.trace2array(trace)
         print a
         return np.cov(a, rowvar=0)
-        
-            
 
     def check_type(self):
         """Make sure each stochastic has a correct type, and identify discrete stochastics."""
@@ -1020,13 +1034,14 @@ class AdaptiveMetropolis(StepMethod):
 
         # Shrink covariance if acceptance rate is too small
         acc_rate = self.accepted / (self.accepted + self.rejected)
-        if acc_rate < .001:
-            self.C *= .01
-        elif acc_rate < .01:
-            self.C *= .25
-        if self.verbose > 0:
-            if acc_rate < .01:
-                print '\tAcceptance rate was',acc_rate,'shrinking covariance'
+        if self.shrink_if_necessary:
+            if acc_rate < .001:
+                self.C *= .01
+            elif acc_rate < .01:
+                self.C *= .25
+            if self.verbose > 0:
+                if acc_rate < .01:
+                    print '\tAcceptance rate was',acc_rate,'shrinking covariance'
         self.accepted = 0.
         self.rejected = 0.
 
@@ -1255,71 +1270,6 @@ class AdaptiveMetropolis(StepMethod):
         tuning specifications. """
         return False
 
-
-class TWalk(StepMethod):
-    """
-    The t-walk is a scale-independent, adaptive MCMC algorithm for arbitrary
-    continuous distributions and correltation structures. The t-walk maintains two
-    independent points in the sample space, and moves are based on proposals that
-    are accepted or rejected with a standard M-H acceptance probability on the
-    product space. The t-walk is strictly non-adaptive on the product space, but
-    displays adaptive behaviour on the original state space. There are four proposal
-    distributions (walk, blow, hop, traverse) that together offer an algorithm that
-    is effective in sampling distributions of arbitrary scale.
-
-    The t-walk was proposed by J.A. Christen an C. Fox (unpublished manuscript).
-
-    :Parameters:
-      - stochastic : Stochastic
-          The variable over which self has jurisdiction.
-      - kernel_probs (optional) : iterable
-          The probabilities of choosing each kernel.
-      - walk_theta (optional) : float
-          Parameter for the walk move.
-      - traverse_theta (optional) : float
-          Paramter for the traverse move.
-      - verbose (optional) : integer
-          Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
-      - tally (optional) : bool
-          Flag for recording values for trace (Defaults to True).
-    """
-    def __init__(self, stochastic, kernel_probs=[0.0008, 0.4914, 0.4914, 0.0082, 0.0082], walk_theta=0.5, traverse_theta=4.0, verbose=None, tally=True):
-
-        # Initialize superclass
-        StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)
-
-    @staticmethod
-    def competence(stochastic):
-        """
-        The competence function for TWalk.
-        """
-        if stochastic.dtype in integer_dtypes:
-            return 0
-        else:
-            return 1
-
-    def walk(self):
-        """Walk proposal kernel"""
-        pass
-
-    def hop(self):
-        """Hop proposal kernel"""
-        pass
-
-    def traverse(self):
-        """Traverse proposal kernel"""
-        pass
-
-    def beta(self, a):
-        """Auxiliary method for traverse proposal"""
-        if (random() < (a-1)/(2*a)):
-            return exp(1/(a+1)*log(random()))
-        else:
-            return exp(1/(1-a)*log(random()))
-
-    def blow(self):
-        """Blow proposal kernel"""
-        pass
 
 class IIDSStepper(StepMethod):
     """
