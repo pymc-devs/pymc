@@ -893,6 +893,11 @@ class AdaptiveMetropolis(StepMethod):
 
         if not np.iterable(stochastic) or isinstance(stochastic, Variable):
             stochastic = [stochastic]
+            # Initialize cov automatically, to support automatic assignment
+            if cov is None:
+                rv = np.ravel(stochastic[0].value).copy()
+                rv[rv==0]=1
+                cov = np.eye(len(rv))*np.abs(rv)*.01
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
 
