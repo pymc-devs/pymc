@@ -92,6 +92,8 @@ class MCMC(Sampler):
             self.step_method_dict[s].append(new_method)
             if self.verbose > 1:
                 print '\t'+s.__name__
+        if self._sm_assigned:
+            self.step_methods |= new_method
 
         setattr(new_method, '_model', self)
 
