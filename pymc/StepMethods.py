@@ -844,21 +844,20 @@ class AdaptiveMetropolis(StepMethod):
           Stochastic objects to be handled by the AM algorith,
 
       - cov : array
-          Initial guess for the covariance matrix C.
+          Initial guess for the covariance matrix C. If it is None, the 
+          covariance will be estimated using the scales dictionary if provided, 
+          the existing trace if available, or the current stochastics value. 
+          It is suggested to provide a sensible guess for the covariance, and 
+          not rely on the automatic assignment from stochastics value. 
 
       - delay : int
           Number of steps before the empirical covariance is computed. If greedy
-          is True, the algorithm waits for delay accepted steps before computing
+          is True, the algorithm waits for delay *accepted* steps before computing
           the covariance.
 
-      - scales : dict
-          Dictionary containing the scale for each stochastic keyed by name.
-          If cov is None, those scales are used to define an initial covariance
-          matrix. If neither cov nor scale is given, the initial covariance is
-          guessed from the objects value (or trace if available).
-
       - interval : int
-          Interval between covariance updates.
+          Interval between covariance updates. Higher dimensional spaces require 
+          more samples to obtain reliable estimates for the covariance updates. 
 
       - greedy : bool
           If True, only the accepted jumps are tallied in the internal trace
@@ -874,16 +873,31 @@ class AdaptiveMetropolis(StepMethod):
               self.C *= .01
           elif acc_rate < .01:
               self.C *= .25
-
+              
+      - scales : dict
+          Dictionary containing the scale for each stochastic keyed by name.
+          If cov is None, those scales are used to define an initial covariance
+          matrix. If neither cov nor scale is given, the initial covariance is
+          guessed from the trace (it if exists) or the objects value, alt
+          
       - verbose : int
           Controls the verbosity level.
 
+
+    :Notes:
+    Use the methods: `cov_from_scales`, `cov_from_trace` and `cov_from_values` for
+    more control on the creation of an initial covariance matrix. A lot of problems
+    can be avoided with a good initial covariance and long enough intervals between
+    covariance updates. That is, do not compensate for a bad covariance guess by 
+    reducing the interval between updates thinking the covariance matrix will
+    converge more rapidly. 
+    
 
     :Reference:
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, verbose=None, tally=False):
+    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, scales=None, verbose=None, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
@@ -893,11 +907,7 @@ class AdaptiveMetropolis(StepMethod):
 
         if not np.iterable(stochastic) or isinstance(stochastic, Variable):
             stochastic = [stochastic]
-            # Initialize cov automatically, to support automatic assignment
-            if cov is None:
-                rv = np.ravel(stochastic[0].value).copy()
-                rv[rv==0]=1
-                cov = np.eye(len(rv))*np.abs(rv)*.01
+
         # Initialize superclass
         StepMethod.__init__(self, stochastic, verbose, tally)
 
@@ -917,13 +927,23 @@ class AdaptiveMetropolis(StepMethod):
         # Flag for tallying only accepted jumps until delay reached
         self.greedy = greedy
 
-        # Call methods to initialize
+        # Initialization methods
         self.check_type()
         self.dimension()
-        if cov is None:
-            self.C = self.cov_from_trace()
-        else:
+        
+        # Set the initial covariance using cov, or the following fallback mechanisms:
+        # 1. If scales is provided, use it. 
+        # 2. If a trace is present, compute the covariance matrix empirically from it. 
+        # 3. Use the stochastics value as a guess of the variance. 
+        if cov is not None:
             self.C = cov
+        elif scales:
+            self.C = self.cov_from_scales(scales)
+        else:
+            try:
+                self.C = self.cov_from_trace()
+            except AttributeError:
+                self.C = self.cov_from_value(100.)
     
         self.updateproposal_sd()
 
@@ -964,6 +984,47 @@ class AdaptiveMetropolis(StepMethod):
         else:
             return 0
 
+                
+    def cov_from_value(self, scaling):
+        """Return a covariance matrix for the jump distribution using 
+        the actual value of the stochastic as a guess of their variance, 
+        divided by the `scaling` argument. 
+        
+        Note that this is likely to return a poor guess. 
+        """
+        rv = []
+        for s in self.stochastics:
+            rv.extend(np.ravel(s.value).copy())
+        
+        # Remove 0 values since this would lead to quite small jumps... 
+        arv = np.array(rv)
+        arv[arv==0] = 1.
+
+        # Create a diagonal covariance matrix using the scaling factor.
+        return np.eye(self.dim)*np.abs(arv)/scaling
+
+
+    def cov_from_scales(self, scales):
+        """Return a covariance matrix built from a dictionary of scales.
+        
+        `scales` is a dictionary keyed by stochastic instances, and the 
+        values refer are the variance of the jump distribution for each 
+        stochastic. If a stochastic is a sequence, the variance must
+        have the same length. 
+        """
+       
+        # Get array of scales
+        ord_sc = []
+        for stochastic in self.stochastics:
+            ord_sc.append(np.ravel(scales[stochastic]))
+        ord_sc = np.concatenate(ord_sc)
+
+        if np.squeeze(ord_sc).shape[0] != self.dim:
+            raise "Improper initial scales, dimension don't match", \
+                (np.squeeze(ord_sc), self.dim)
+        
+        # Scale identity matrix
+        return np.eye(self.dim)*ord_sc
 
     def cov_from_trace(self, trace=slice(None)):
         """Define the jump distribution covariance matrix from the object's 
@@ -981,6 +1042,8 @@ class AdaptiveMetropolis(StepMethod):
         n = set(n)
         if len(n) > 1:
             raise ValueError, 'Traces do not have the same length.'
+        elif n == 0:
+            raise AttributeError, 'Stochastic has no trace to compute covariance.'
         else:
             n = n.pop()
             
