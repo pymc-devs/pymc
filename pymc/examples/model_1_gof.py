@@ -46,8 +46,7 @@ def disasters_sim(early_mean = early_mean,
     return concatenate( (pm.rpoisson(early_mean, size=switchpoint), pm.rpoisson(late_mean, size=n-switchpoint)))
 
 @pm.deterministic
-def D(sim=disasters_sim,
-                early_mean = early_mean,
+def expected_values(early_mean = early_mean,
                 late_mean = late_mean,
                 switchpoint = switchpoint):
     """Discrepancy measure for GOF using the Freeman-Tukey statistic"""
@@ -55,16 +54,17 @@ def D(sim=disasters_sim,
     # Sample size
     n = len(disasters_array)
     # Expected values
-    expected = concatenate((ones(switchpoint)*early_mean, ones(n-switchpoint)*late_mean))
-    # Return discrepancy measures for simulated and observed data
-    return pm.utils.discrepancy(disasters_array, sim, expected)
+    return concatenate((ones(switchpoint)*early_mean, ones(n-switchpoint)*late_mean))
+    
 
 if __name__ == '__main__':
-    vars = [switchpoint, early_mean, late_mean, disasters, disasters_sim, D]
+    vars = [switchpoint, early_mean, late_mean, disasters, disasters_sim, expected_values]
     # Instiatiate model
     M = pm.MCMC(vars)
     # Sample
     M.sample(10000, burn=5000, verbose=2)
+    # Calculate discrepancy function
+    D = pm.diagnostics.discrepancy(disasters_array, disasters_sim, expected_values)
     # Plot GOF graphics
-    pm.Matplot.discrepancy(D.trace(), 'D')
-    pm.Matplot.gof(disasters_sim.trace(), disasters_array, 'disasters')
+    pm.Matplot.discrepancy_plot(D, 'D')
+    pm.Matplot.gof_plot(disasters_sim, disasters_array, 'disasters')
