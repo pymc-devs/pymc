@@ -619,6 +619,14 @@ def create_bin_method(op_name, klass):
     new_method.__name__ = '__'+op_name+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
+def create_nonimplemented_method(op_name, klass):
+    """
+    Creates a new method that raises NotImplementedError.
+    """
+    def new_method(self, *args):
+        raise NotImplementedError, 'Special method %s has not been implemented for PyMC variables.'%op_name
+    new_method.__name__ = '__'+op_name+'__'
+    setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
 # Left/right binary operators
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
@@ -648,6 +656,9 @@ for op in [iter,complex,int,long,float,oct,hex,len]:
 #TODO: Comment once LinearCombination issues are ironed out.
 for op in ['add', 'mul', 'sub']:
     create_rl_bin_method(op, Variable)
+    
+for op in ['iadd','isub','imul','idiv','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior','unicode']:
+    create_nonimplemented_method(op, Variable)
 
 
 # Create __getitem__ method.
@@ -699,4 +710,4 @@ Variable.__call__ = UnboundMethodType(__call__, None, Variable)
 # These are not working
 # nonworking_ops = ['iter','complex','int','long','float','oct','hex','coerce','contains','len']
 # These should NOT be implemented because they are in-place updates.
-do_not_implement_ops = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior','unicode']
+

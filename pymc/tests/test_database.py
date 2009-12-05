@@ -81,7 +81,7 @@ class TestRam(TestBase):
         assert_equal(self.S.e.trace().__class__,  np.ndarray)
 
         # Test __getitem__
-        assert_array_equal(self.S.e.trace(slicing=slice(1,1)), self.S.e.trace[1])
+        assert_equal(self.S.e.trace(slicing=slice(1,2)), self.S.e.trace[1])
 
         # Test __getslice__
         assert_array_equal(self.S.e.trace(thin=2), self.S.e.trace[::2])
