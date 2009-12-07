@@ -561,14 +561,19 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
 
 def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
+    
+    try:
+        simdata = simdata.trace()
+    except:
+        pass
 
     if ndim(trueval)==1 and ndim(simdata==2):
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
-            gof(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
+            gof_plot(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
-
+        
     if verbose>0:
         print 'Plotting', (name or 'MCMC') + suffix
 

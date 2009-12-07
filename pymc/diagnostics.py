@@ -377,6 +377,42 @@ def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
 
     return t_quant * sig / np.sqrt(n)
 
+def discrepancy(observed, simulated, expected):
+    """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
+    a measure of discrepancy between observed and simulated data. This
+    is a convenient method for assessing goodness-of-fit (see Brooks et al. 2000).
+
+    D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
+
+    :Parameters:
+      observed : Iterable of observed values
+      simulated : Iterable of simulated values
+      expected : Iterable of expected values
+
+    :Returns:
+      D_obs : Discrepancy of observed values
+      D_sim : Discrepancy of simulated values
+
+    """
+    try:
+        simulated = simulated.trace()
+    except:
+        pass    
+    try:
+        expected = expected.trace()
+    except:
+        pass
+    
+    D_obs = np.sum([(np.sqrt(observed)-np.sqrt(e))**2 for e in expected], 1)
+    D_sim = np.sum([(np.sqrt(s)-np.sqrt(e))**2 for s,e in zip(simulated, expected)], 1)
+    
+    # Print p-value
+    count = sum(s>o for o,s in zip(D_obs,D_sim))
+    print 'Bayesian p-value: p=%.3f' % (1.*count/len(D_obs))
+
+    return D_obs, D_sim
+
+
 def gelman_rubin(x):
     raise NotImplementedError
 # x contains multiple chains

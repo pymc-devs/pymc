@@ -835,28 +835,5 @@ def find_generations(container, with_data = False):
             children_remaining = False
     return generations
 
-def discrepancy(observed, simulated, expected):
-    """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
-    a measure of discrepancy between observed and simulated data. This
-    is a convenient method for assessing goodness-of-fit (see Brooks et al. 2000).
-
-    D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
-
-    :Parameters:
-      observed : Iterable of observed values
-      simulated : Iterable of simulated values
-      expected : Iterable of expeted values
-
-    :Returns:
-      D_obs : Discrepancy of observed values
-      D_sim : Discrepancy of simulated values
-
-    """
-
-    D_obs = sum([(sqrt(x)-sqrt(e))**2 for x,e in zip(observed, expected)])
-    D_sim = sum([(sqrt(s)-sqrt(e))**2 for s,e in zip(simulated, expected)])
-
-    return D_obs, D_sim
-
 
 
