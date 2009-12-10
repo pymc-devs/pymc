@@ -26,24 +26,24 @@ freely available online.
 * `NumPy`_ (1.2 or newer): The fundamental scientific programming package, it provides a
   multidimensional array type and many useful functions for numerical analysis.
 
-* `Matplotlib`_ (optional): 2D plotting library which produces publication
+* `Matplotlib (optional)`_ : 2D plotting library which produces publication
   quality figures in a variety of image formats and interactive environments
 
-* `pyTables`_ (optional): Package for managing hierarchical datasets and
+* `pyTables (optional)`_ : Package for managing hierarchical datasets and
   designed to efficiently and easily cope with extremely large amounts of data.
   Requires the `HDF5`_ library.
 
-* `pydot`_ (optional): Python interface to Graphviz's Dot language, it allows
+* `pydot (optional)`_ : Python interface to Graphviz's Dot language, it allows
   PyMC to create both directed and non-directed graphical representations of models.
   Requires the `Graphviz`_ library.
 
-* `SciPy`_ (optional): Library of algorithms for mathematics, science
+* `SciPy (optional)`_ : Library of algorithms for mathematics, science
   and engineering.
 
-* `IPython`_ (optional): An enhanced interactive Python shell and an
+* `IPython (optional)`_ : An enhanced interactive Python shell and an
   architecture for interactive parallel computing.
 
-* `nose`_ (optional): A test discovery-based unittest extension (required
+* `nose (optional)`_ : A test discovery-based unittest extension (required
   to run the test suite).
 
 
@@ -65,22 +65,22 @@ tested with PyMC but may work nonetheless.
 
 .. _`NumPy`: http://www.scipy.org/NumPy
 
-.. _`Matplotlib`: http://matplotlib.sourceforge.net/
+.. _`Matplotlib (optional)`: http://matplotlib.sourceforge.net/
 
 .. _`MacPython`: http://www.activestate.com/Products/ActivePython/
 
 .. _`Enthought Python Distribution`:
    http://www.enthought.com/products/epddownload.php
 
-.. _`SciPy`: http://www.scipy.org/
+.. _`SciPy (optional)`: http://www.scipy.org/
 
-.. _`IPython`: http://ipython.scipy.org/
+.. _`IPython (optional)`: http://ipython.scipy.org/
 
-.. _`pyTables`: http://www.pytables.org/moin
+.. _`pyTables (optional)`: http://www.pytables.org/moin
 
 .. _`HDF5`: http://www.hdfgroup.org/HDF5/
 
-.. _`pydot`: http://code.google.com/p/pydot/
+.. _`pydot (optional)`: http://code.google.com/p/pydot/
 
 .. _`Graphviz`: http://www.graphviz.org/
 
@@ -207,7 +207,7 @@ appear. In case this happens (it shouldn't), please report
 the problems on the `issue tracker`_ (the issues tab on the Google Code page), 
 specifying the version you are using and the environment.
 
-.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
+.. _`nose (optional)`: http://somethingaboutorange.com/mrl/projects/nose/
 
 
 
