@@ -104,13 +104,11 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
 
     if not pydot_imported:
         raise ImportError, 'PyDot must be installed to use the graph function.\n PyDot is available from http://dkbza.org/pydot.html'
-
     pydot_nodes = {}
     pydot_subgraphs = {}
     obj_substitute_names = {}
     shown_objects = set([])
     model.dot_object = pydot.Dot()
-
 
     # Data are filled ellipses
     for datum in model.observed_stochastics:
@@ -188,13 +186,14 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
                     const_node_name = key_val.__class__.__name__
 
                 if isinstance(parent_dict[key], Variable):
-
-                    for name in obj_substitute_names[key_val]:
-                        model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=label))
-                elif isinstance(parent_dict[key], ContainerBase):
-                    for var in key_val.variables:
-                        for name in obj_substitute_names[var]:
+                    if parent_dict[key] in model.variables:
+                        for name in obj_substitute_names[key_val]:
                             model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=label))
+                elif isinstance(parent_dict[key], ContainerBase):
+                    if parent_dict[key] in model.containers:                    
+                        for var in key_val.variables:
+                            for name in obj_substitute_names[var]:
+                                model.dot_object.add_edge(pydot.Edge(src=name, dst=node.__name__, label=label))
                     if len(key_val.variables)==0:
                         if consts:
                             model.dot_object.add_node(pydot.Node(name=const_node_name, style='filled'))
