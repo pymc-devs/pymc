@@ -45,7 +45,7 @@ class GaussianProcess(pm.Stochastic):
     logp = property(fget = get_logp, fset = set_logp)
 
 
-class GPEvaluation(pm.MvNormalCov):
+class GPEvaluation(pm.MvNormalChol):
     pass
 
     
@@ -65,6 +65,7 @@ class GPSubmodel(pm.ObjectContainer):
     """
     
     def __init__(self, name, M, C, mesh, init_vals=None, tally_all=False):
+        
         # FIXME: Use S_eval for both logp and observation, meaning get it into f somehow.
         self.M = M
         self.C = C
@@ -72,11 +73,33 @@ class GPSubmodel(pm.ObjectContainer):
         self.name = name
         M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all)
         C_eval = pm.Lambda('%s_C_eval'%name, lambda C=C, mesh=mesh: C(mesh,mesh), trace=tally_all)
-        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, C=C_eval, value=init_vals, trace=True)
+
+        @pm.deterministic(name='%s_S_eval'%name, trace=tally_all)
+        def S_eval(C_eval=C_eval):
+            """
+            Returns the Cholesky factor of C_eval if it is positive definite, or None if not.
+            """
+            try:
+                return np.linalg.cholesky(C_eval)
+            except np.linalg.LinAlgError:
+                return None
+                
+        @pm.potential(name = '%s_fr_check'%name)
+        def fr_check(S_eval=S_eval):
+            """
+            Forbids non-positive-definite C_evals.
+            """
+            if S_eval is None:
+                return -np.inf
+            else:
+                return 0
+        
+        S_eval = pm.Lambda('%s_S_eval'%name, lambda C_eval=C_eval: np.linalg.cholesky(C_eval), trace=tally_all)
+        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True)
         self.f_eval = f_eval
         f = GaussianProcess('%s_f'%name, self, trace=tally_all)
         pm.ObjectContainer.__init__(self, locals())
         
     def getobjects(self):
-        names = ['M_eval','C_eval','f_eval','f']
+        names = ['M_eval','C_eval','S_eval','f_eval','f','fr_check']
         return dict(zip(['%s_%s'%(self.name, name) for name in names], [getattr(self, name) for name in names]))
