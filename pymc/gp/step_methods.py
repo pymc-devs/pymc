@@ -11,101 +11,42 @@ import linalg_utils
 import copy
 import types
 import numpy as np
+from gp_submodel import *
 
 from Realization import Realization
 from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-def gp_logp(x, M, C, mesh, f_eval):
-    raise TypeError, 'GP objects have no logp function'
-    
-def gp_rand(M, C, mesh, f_eval, size=None):
-    return pm.gp.Realization(M, C, mesh, f_eval)
-    
-class GaussianProcess(pm.Stochastic):
-    
-    def __init__(self,
-                name,
-                submodel,
-                doc=None,
-                trace=True,
-                value=None,
-                rseed=False,
-                observed=False,
-                cache_depth=2,
-                plot=None,
-                verbose = None,
-                isdata=None):
+__all__ = ['GPEvaluationMetropolis', 'GPEvaluationGibbs', 'GPEvaluationAM', 'GPParentMetropolis']
+
+class GPEvaluationMetropolis(pm.Metropolis):
+    """
+    Base class.
+    """
+    def __init__(self, submod, *args, **kwargs):        
+
+        self.f_eval = submod.f_eval
+        self.f = submod.f
+        
+        # Initialize superclass
+        pm.StepMethod.__init__(self, [self.f, self.f_eval], *args, **kwargs)
                 
-        self.submodel = self
+        # Remove f from the set that will be used to compute logp_plus_loglike.
+        self.markov_blanket_no_f = copy.copy(self.markov_blanket)
+        self.markov_blanket_no_f.remove(self.f)
         
-        pm.Stochastic.__init__(self,
-                                gp_logp,
-                                doc,
-                                name,
-                                {'M':submodel.M, 'C':submodel.C,'mesh':submodel.mesh, 'f_eval':submodel.f_eval},
-                                gp_rand,
-                                trace,
-                                value,
-                                np.dtype('object'),
-                                rseed,
-                                observed,
-                                cache_depth,
-                                plot,
-                                verbose,
-                                isdata,
-                                False)
+    def get_logp_plus_loglike(self):
+        return pm.logp_of_set(self.markov_blanket_no_f)
+    logp_plus_loglike = property(get_logp_plus_loglike)
         
-        self.rand()
-        
-    def gen_lazy_function(self):
-        pass
-        
-    def get_logp(self):
-        raise TypeError, 'Gaussian process %s has no logp.'%self.__name__
-        
-    def set_logp(self, new_logp):
-        raise TypeError, 'Gaussian process %s has no logp.'%self.__name__
-        
-    logp = property(fget = get_logp, fset = set_logp)
+    def reject(self):
+        self.rejected += 1
+        # Revert the field evaluation and the rest of the field.
+        self.f_eval.revert()
+        self.f.revert()
 
-class GPEvaluation(pm.MvNormalCov):
-    pass
-    
-class GPSubmodel(pm.ObjectContainer):
-    """
-    f = GPSubmodel('f', M, C, mesh, [obs_values, obs_nugget, tally_all])
-
-    A stochastic variable valued as a Realization object.
-
-    :Arguments:
-        - M: A Mean instance or pm.deterministic variable valued as a Mean instance.
-        - C: A Covariance instance or pm.deterministic variable valued as a Covariance instance.
-        - mesh: The mesh on which self's log-probability will be computed. See documentation.
-        - tally_all: By default, only f_eval and f are tallied. Turn this on to tally all.
-
-    :SeeAlso: Realization, GPMetropolis, GPNormal
-    """
-    
-    def __init__(self, name, M, C, mesh, init_vals=None, tally_all=False):
-        # FIXME: Use S_eval for both logp and observation, meaning get it into f somehow.
-        self.M = M
-        self.C = C
-        self.mesh = mesh
-        self.name = name
-        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all)
-        C_eval = pm.Lambda('%s_C_eval'%name, lambda C=C, mesh=mesh: C(mesh,mesh), trace=tally_all)
-        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, C=C_eval, value=init_vals, trace=True)
-        self.f_eval = f_eval
-        f = GaussianProcess('%s_f'%name, self, trace=tally_all)
-        pm.ObjectContainer.__init__(self, locals())
-        
-    def getobjects(self):
-        names = ['M_eval','C_eval','f_eval','f']
-        return dict(zip(['%s_%s'%(self.name, name) for name in names], [getattr(self, name) for name in names]))
-
-class GPEvaluationStepper(pm.Metropolis):
+class GPEvaluationGibbs(GPEvaluationMetropolis):
     """
     Updates a GP evaluation f_eval. Assumes the only children of f_eval
     are as distributed follows:
@@ -118,9 +59,11 @@ class GPEvaluationStepper(pm.Metropolis):
     
     if ti is None.
     """
-    def __init__(self, submod, V, eps_p_f, ti=None, tally=True, verbose=0):    
-        self.f_eval = submod.f_eval
-        self.f = submod.f
+    def __init__(self, submod, V, eps_p_f, ti=None, tally=True, verbose=0):        
+
+        # Initialize superclass
+        GPEvaluationMetropolis.__init__(self, submod, tally=tally)
+        
         self.V = V
         self.C_eval = self.f_eval.parents['C']
         self.M_eval = self.f_eval.parents['mu']
@@ -128,13 +71,12 @@ class GPEvaluationStepper(pm.Metropolis):
 
         M_eval_shape = pm.utils.value(self.M_eval).shape
         C_eval_shape = pm.utils.value(self.C_eval).shape
+        self.ti = ti or np.arange(M_eval_shape[0])
+
+        # Work arrays
         self.scratch1 = np.asmatrix(np.empty(C_eval_shape, order='F'))
         self.scratch2 = np.asmatrix(np.empty(C_eval_shape, order='F'))
         self.scratch3 = np.empty(M_eval_shape)    
-        self.ti = ti or np.arange(M_eval_shape[0])
-
-        # Initialize superclass
-        pm.StepMethod.__init__(self, [self.f, self.f_eval], tally=tally)
 
         # Initialize hidden attributes
         self.accepted = 0.
@@ -142,17 +84,10 @@ class GPEvaluationStepper(pm.Metropolis):
         self._state = ['rejected', 'accepted', 'proposal_distribution']
         self._tuning_info = []
         self.proposal_distribution=None
-        
-        self.markov_blanket_no_f = copy.copy(self.markov_blanket)
-        self.markov_blanket_no_f.remove(self.f)
     
     def tune(self):
         return False
-        
-    def get_logp_plus_loglike(self):
-        return pm.logp_of_set(self.markov_blanket_no_f)
-    logp_plus_loglike = property(get_logp_plus_loglike)
-    
+            
     def propose(self):
 
         fc = pm.gp.fast_matrix_copy
@@ -195,14 +130,19 @@ class GPEvaluationStepper(pm.Metropolis):
         self.f_eval.value = m_step+np.dot(sig_step,np.random.normal(size=sig_step.shape[1])).view(np.ndarray).ravel()
         # Propose the rest of the field from its conditional prior.
         self.f.rand()
-        
-    def reject(self):
-        self.rejected += 1
-        # Revert the field evaluation and the rest of the field.
-        self.f_eval.revert()
-        self.f.revert()
-        
 
+class GPEvaluationAM(pm.AdaptiveMetropolis, GPEvaluationMetropolis):
+    def __init__(self, submod, *args, **kwds):
+        GPEvaluationMetropolis.__init__(self, submod)
+        pm.AdaptiveMetropolis.__init__(self, submod.f_eval, *args, **kwds)
+        
+    def propose(self):
+        pm.AdaptiveMetropolis.propose(self)
+        self.f.rand()
+    
+class GPParentMetropolis(pm.Metropolis):
+    pass
+        
 if __name__ == '__main__':
     import pylab as pl
     M = pm.gp.Mean(lambda x: np.zeros(x.shape[:-1]))
@@ -214,7 +154,8 @@ if __name__ == '__main__':
     plotmesh = np.linspace(-2,2,101)
     f_eval = pm.Lambda('f_eval',lambda f=submod.f, mesh = plotmesh: f(mesh))
     MC = pm.MCMC([submod, V, epf, f_eval])        
-    MC.use_step_method(GPEvaluationStepper, submod, V, epf)
+    # MC.use_step_method(GPEvaluationGibbs, submod, V, epf)
+    MC.use_step_method(GPEvaluationAM, submod)
     sm = MC.step_method_dict[submod.f_eval][0]
     
     # pl.clf()
@@ -223,13 +164,11 @@ if __name__ == '__main__':
     #     pl.plot(plotmesh, submod.f.value(plotmesh))
     # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
 
-    MC.isample(100)
+    MC.isample(1000,500)
     pl.clf()
     for fe in MC.trace('f_eval')[:]:
         pl.plot(plotmesh, fe)
     pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
-
-     
 
 # class GPParentMetropolis(pm.Metropolis):
 # 

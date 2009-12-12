@@ -8,7 +8,8 @@ __modules__ = [ 'GPutils',
                 'NearlyFullRankCovariance',
                 'Realization',
                 'cov_funs',
-                'PyMC_objects']
+                'gp_submodel',
+                'step_methods']
 
 __optmodules__ = ['gpplots']
 
@@ -20,7 +21,8 @@ from FullRankCovariance import *
 from NearlyFullRankCovariance import *
 from Realization import *
 from cov_funs import *
-from PyMC_objects import *
+from gp_submodel import *
+from step_methods import *
 
 try:
     import gpplots
