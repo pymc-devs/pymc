@@ -150,7 +150,8 @@ class GPEvaluationGibbs(pm.Metropolis):
         C_eval_value = pm.utils.value(self.C_eval)
         C_eval_shape = C_eval_value.shape
         
-        # FIXME: Don't Cholesky factor C_eval if there's no nugget, in that case use S_eval directly.
+        # Get the Cholesky factor of C_eval, plus the nugget.
+        # I don't think you can use S_eval for speed, unfortunately.
         in_chol = fc(C_eval_value, self.scratch1)
         for i in xrange(pm.utils.value(C_eval_shape)[0]):
             in_chol[i,i] += pm.utils.value(self.V) / np.alen(self.ti[i])
