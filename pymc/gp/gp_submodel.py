@@ -2,9 +2,7 @@
 
 __docformat__ = 'reStructuredText'
 
-# __all__ = ['GP_array_random', 'GP', 'GPMetropolis', 'GPNormal', 'GPParentMetropolis']
-
-# FIXME: New pickle protocol for Realization. Just pickle the observation mesh and values, and maybe nugget or whatever.
+__all__ = ['GaussianProcess','GPEvaluation','GPSubmodel']
 
 import pymc as pm
 import copy
