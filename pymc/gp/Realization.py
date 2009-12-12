@@ -77,7 +77,17 @@ class StandardRealization(object):
     :SeeAlso: Mean, Covariance, BasisCovariance, observe, GP
     """
 
+    # pickle support
+    def __getstate__(self):
+        return (self.M, self.C, self.x_sofar, self.f_sofar, self.check_repeats, False)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def __init__(self, M, C, init_mesh = None, init_vals = None, check_repeats = True, regularize = True):
+
+        self.M = M
+        self.C = C
 
         # Make internal copies of M and C. Note that subsequent observations of M and C
         # will not affect self.
@@ -151,7 +161,7 @@ class StandardRealization(object):
 
     def draw_vals(self, x):
 
-        # TODO: Optimization opportunity: Don't observe until next set of values are needed.
+        # FIXME: Optimization opportunity: Don't observe until next set of values are needed.
         # Get U straight from C_internal, M straight from M_internal, store them and draw values.
         # Next time values are needed, pass them back into C_internal and M_internal's observe
         # methods to make them faster.

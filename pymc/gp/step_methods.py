@@ -188,7 +188,7 @@ if __name__ == '__main__':
     amp = pm.Exponential('amp',.1,value=1)
     scale = pm.Exponential('scale',.1,value=1)
     diff_degree = pm.Uniform('diff_degree',1,2,value=1.5)
-    M = pm.gp.Mean(lambda x: np.zeros(x.shape[:-1]))
+    M = pm.gp.Mean(pm.gp.zero_fn)
     C = pm.Lambda('C', lambda amp=amp, scale=scale, diff_degree=diff_degree: pm.gp.Covariance(pm.gp.cov_funs.matern.euclidean, amp=amp, scale=scale, diff_degree=diff_degree))
     mesh = np.linspace(-1,1,5)
     submod = GPSubmodel('hello',M,C,mesh)
@@ -209,8 +209,8 @@ if __name__ == '__main__':
     #     pl.plot(plotmesh, submod.f.value(plotmesh))
     # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
 
-    MC.isample(1000,500)
-    pl.clf()
-    for fe in MC.trace('f_eval')[:]:
-        pl.plot(plotmesh, fe)
-    pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
+    # MC.isample(1000,500)
+    # pl.clf()
+    # for fe in MC.trace('f_eval')[:]:
+    #     pl.plot(plotmesh, fe)
+    # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)

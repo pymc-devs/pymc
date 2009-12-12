@@ -7,7 +7,7 @@ from GPutils import regularize_array, trisolve
 from Covariance import Covariance
 from BasisCovariance import BasisCovariance
 
-__all__ = ['Mean']
+__all__ = ['Mean','zero_fn']
 
 class Mean(object):
     """
@@ -120,6 +120,6 @@ class Mean(object):
 
         return M.reshape(orig_shape)
 
-def zero_mean():
-    "Returns a Mean object whose function simply returns zero."
-    return Mean(lambda x:x.shape[:-1])
+def zero_fn(x):
+    "A function mapping any argument to zero."
+    return zeros(x.shape[:-1])
