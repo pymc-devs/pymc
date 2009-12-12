@@ -209,8 +209,8 @@ if __name__ == '__main__':
     #     pl.plot(plotmesh, submod.f.value(plotmesh))
     # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
 
-    # MC.isample(1000,500)
-    # pl.clf()
-    # for fe in MC.trace('f_eval')[:]:
-    #     pl.plot(plotmesh, fe)
-    # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
+    MC.isample(1000,500)
+    pl.clf()
+    for fe in MC.trace('f_eval')[:]:
+        pl.plot(plotmesh, fe)
+    pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
