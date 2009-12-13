@@ -4,7 +4,7 @@ from pymc.gp import *
 def quadfun(x, a, b, c):
     return (a * x ** 2 + b * x + c)
 
-M = Mean(eval_fun = quadfun, a = 1., b = .5, c = 2.)
+M = Mean(quadfun, a = 1., b = .5, c = 2.)
 
 #### - Plot - ####
 if __name__ == '__main__':

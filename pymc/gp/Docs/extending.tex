@@ -1,0 +1,136 @@
+\chapter{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{cha:usercov}
+This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
+
+\bigskip
+Note that you don't need to understand this section; any covariance function that satisfies the calling convention described in section \ref{subsub:cov} will work. The \texttt{cov_funs} module is convenient, but it is admittedly complicated.
+
+\bigskip
+The \class{covariance_function_bundle} class includes versions of each covariance function using several different distance metrics. For example, the Euclidean version of the Mat\`ern covariance function is \texttt{matern.euclidean} and the Gaussian covariance function in geographic coordinates (in radians) is \texttt{gaussian.geo_rad}.
+
+In addition, it has two attributes that are included for extensibility: the \texttt{raw} attribute, which exposes the basic Fortran implementation of each function, and \texttt{add_distance_metric} method, which combines the \texttt{raw} attribute with distance metrics. This section will describe these attributes in more detail.
+
+Class \texttt{covariance_function_bundle}'s init method takes three arguments:
+\begin{description}
+	\item[\texttt{cov_fun_name}] The name of the covariance function.
+	\item[\texttt{cov_fun_module}] The name of the module in which the covariance function can be found. This must be somewhere on your \texttt{PYTHONPATH}.
+	\item[\texttt{extra_cov_params}] A dictionary whose keys are the extra parameters the covariance function takes, and whose values are brief sentences explaining the roles of those parameters. This dictionary will be used to generate the docstring of the bundle.
+\end{description}
+The names of the function and module are used rather than the function object itself in order to allow covariance objects to be pickled. This, in turn, allows covariance-valued stochastic variables to be stored in PyMC's \texttt{pickle} and \texttt{hdf52} database backends.
+
+
+\section{The components of a covariance function bundle}
+
+\section{The actual covariance functions}\label{sub:distances}
+The covariance functions contained in a bundle are named by the distance metric they use. The \texttt{matern} bundle, for instance, contains the following covariance functions:
+\begin{itemize}
+	\item \texttt{matern.euclidean}
+	\item \texttt{matern.geo_rad}
+	\item \texttt{matern.geo_deg}
+	\item \texttt{matern.aniso_geo_rad}
+	\item \texttt{matern.aniso_geo_deg}
+	\item \texttt{matern.paniso_geo_rad}
+	\item \texttt{matern.paniso_geo_deg}
+\end{itemize}
+
+Each covariance function takes at least two arguments, $x$ and $y$, which are two-dimensional arrays in which the first index iterates over separate points and the second iterates over coordinates as in section \ref{sub:geostat}. For the geographic distance functions, the first coordinate is longitude and the second is latitude. Covariance functions also take arguments \texttt{amp} and \texttt{scale}. Finally, they take optional argument \texttt{symm}, which indicates whether $x$ and $y$ the same array.
+
+Some of the covariance functions take extra arguments for the distance metric and/or actual covariance function. For example, \texttt{matern.aniso_geo_rad} takes extra arguments \texttt{inc} and \texttt{ecc} for the distance function and \texttt{diff_degree} for the covariance function.
+
+When \texttt{matern.euclidean}, for example, is called with input locations $x$ and $y$, the following events place:
+\begin{itemize}
+	\item The output matrix is allocated.
+	\item The output matrix is filled with the Euclidean distances between the elements of $x$ and the elements of $y$.
+	\item The output matrix is overwritten with the covariances between the elements of $x$ and the elements of $y$.
+\end{itemize}
+The last two steps will be executed in parallel if environment variable \texttt{OMP_NUM_THREADS} is greater than 1 and the size of the output matrix is sufficiently large.
+
+The easiest way to deal with different coordinate systems or to build in anisotropy and nonstationarity using a deformation approach \cite{sampson} is to write your own distance function and add it to the covariance function by calling the \texttt{add_distance_metric} method. See \ref{sub:add_distance_metric} for information on how to use your distance function with an existing covariance function, or with one of your own devising. See \ref{sub:user_ccs} for the calling conventions required from distance functions.
+
+\section{The \member{raw} attribute}\label{sub:raw}
+The \member{raw} attribute of each bundle is the underlying covariance function. These functions take distance matrices as arguments and overwrite them in-place as covariance matrices. If you write your own raw covariance function, it should conform to the standard described in section \ref{sub:user_ccs}.
+
+The following raw functions are implemented in Fortran in \file{isotropic_cov_funs.f} and wrapped as covariance function bundles in \module{cov_funs}. Here $t$ denotes a single element of a distance matrix, $|x_i-y_j|$. Each function is equal to $1$ when $t=0$.
+\begin{description}
+    \item[\texttt{matern($\nu,t$)}:] The argument \texttt{diff_degree} is written in the following formula as $\nu$ for readability. $K_\nu$ is a modified Bessel function of the third kind of order $\nu$.
+    \begin{eqnarray*}
+        \frac{(2\sqrt{\nu}t)^\nu}{2^{\nu-1}\Gamma(\nu)}K_\nu(2\sqrt{\nu}t)
+    \end{eqnarray*}
+    \item[\texttt{quadratic($\texttt{phi},t$)}:]
+    \begin{eqnarray*}
+        1-\frac{t^2}{1+\phi t^2}
+    \end{eqnarray*}
+    \item[\texttt{gaussian($t$)}:]
+    \begin{eqnarray*}
+        e^{-t^2}
+    \end{eqnarray*}
+    \item[\texttt{pow_exp(\texttt{pow},$t$)}:] The argument \texttt{pow} is written as $p$.
+    \begin{eqnarray*}
+        e^{-|t|^p}
+    \end{eqnarray*}
+    \item[\texttt{sphere(t)}:]
+    \begin{eqnarray}
+        \left\{
+        \begin{array}{ll}
+            1-\frac{3}{2}t+\frac{1}{2}t^3& t\le 1\\
+            0 & t > 1
+        \end{array} \right.
+    \end{eqnarray}
+\end{description}
+
+See \citetitle[http://www.statsnetbase.com/ejournals/books/book_summary/summary.asp?id=1285]{Banerjee et al.} \cite{banerjee} , \citetitle[http://www.leg.ufpr.br/mbgbook/]{Diggle and Ribeiro} \cite{diggle} and \citetitle[http://books.google.com/books?id=5n_XuL2Wx1EC&dq=stein+some+theory+for+kriging&printsec=frontcover&source=web&ots=829kgTWuC6&sig=gFu5_Gg4_eZ4yzFT4BBWamSanBA#PPP1,M1]{Stein} \cite{stein}for more discussion of the properties of these covariance functions. The init method of \texttt{covariance_function_bundle} takes just one argument, a raw covariance function.
+
+\section{The \texttt{add_distance_metric} method and the \texttt{apply_distance} function}\label{sub:add_distance_metric}
+\texttt{apply_distance} takes two arguments, a distance function and a raw covariance function, and returns a covariance function suitable for wrapping in a \class{Covariance} object.
+
+It endows the new function with a docstring that combines the raw covariance function's information with the distance function's information. It's possible to include information about extra parameters in the auto-generated docstring. To wrap a raw covariance function with a distance function called \texttt{my_dist_fun} with extra parameters called \texttt{eta} and \texttt{gamma} you could add explanations to \texttt{my_dist_fun} before calling \texttt{apply_distance}:
+\begin{verbatim}
+my_dist_fun.extra_params = {'eta': 'The eta parameter.',
+                            'gamma': 'The gamma parameter.'}
+\end{verbatim}
+The new parameters will be included in the docstring.
+
+Covariance functions generated by \texttt{apply_distance} take the following arguments:
+\begin{itemize}
+    \item Input arrays $x$ and $y$. These high-level covariance functions are more forgiving than the distance functions; $x$ and $y$ do not actually need to be two-dimensional, the only requirement is that their last index must iterate over coordinates as in section \ref{sub:geostat}. The exception to this rule is if $x$ and $y$ are only one dimensional, in which case they are assumed to have only one coordinate.
+    \item Scaling arguments \texttt{amp} and \texttt{scale}. Parameter \texttt{amp} is the standard deviation of $f(x)$ for arbitrary $x$, regardless of coordinate system, before observation (the prior standard deviation). Parameter \texttt{scale} controls the lengthscale of decay of the correlation, which controls the wiggliness of $f$. It effectively multiplies distances, so that large values yield quick decay and more wiggliness. These scaling arguments are sometimes referred to as the `sill' and `range' parameters.
+    \item Extra arguments for the covariance and/or distance functions.
+\end{itemize}
+
+The \texttt{add_distance_metric} method of \class{covariance_function_bundle} is just a thin wrapper for the function \texttt{apply_distance}, which is in \file{cov_utils.py}. Since \class{covariance_function_bundle} objects already have a raw covariance function, this method only needs a distance function.
+
+
+
+\section{Calling conventions for new covariance and distance functions}
+\label{sub:user_ccs}
+
+User-defined covariance and distance functions should always take the following arguments:
+\begin{description}
+	\item[$C$] A Fortran-contiguous (column major) array of dimension (\texttt{x.shape[0]},\texttt{y.shape[0]}). This should be overwritten in-place.
+	\item[$x$, $y$] Arrays of input locations. These will be regularized: they will be two-dimensional, with the first index iterating over points and the second over coordinates.
+	\item[\texttt{cmin}$=0$, \texttt{cmax}$=-1$] Optional arguments. If non-default values are provided, only the slice \texttt{C[:,cmin:cmax]} of $C$ should be overwritten.
+	\item[\texttt{symm=False}] An optional argument indicating whether $x$ and $y$ are the same array. If \texttt{True}, $C$ will be square and only the upper triangle of $C$ should be overwritten.
+\end{description}
+They can take any other arguments they need, of course.
+
+If parallel computation is desired, covariance and distance functions must release the \citetitle[http://www.python.org/doc/1.5.2/api/threads.html]{global interpreter lock}. That means they have to be written in Fortran or C. \citetitle[http://cens.ioc.ee/projects/f2py2e/]{f2py} extensions can release the global interpreter lock by simply including the statement \texttt{cf2py threadsafe}; other types of extensions should call the Python C-API macros \texttt{Py_BEGIN_ALLOW_THREADS} and \texttt{Py_END_ALLOW_THREADS}.
+
+The high-level covariance functions produced by \texttt{apply_distance} will be more forgiving than these low-level distance and covariance functions; $x$ and $y$ will not actually need to be two-dimensional, the only requirement is that their last index must iterate over coordinates as in section \ref{sub:geostat}. The exception to this rule is if $x$ and $y$ are only one dimensional, in which case they are assumed to have only one coordinate. These high-level functions will regularize $x$ and $y$ before passing them into your distance and covariance functions.
+
+User-supplied covariance functions should be expressed in their simplest forms: their amplitude and input scalings (`sill' and `range', when applicable) should be set to 1. No `nugget' parameter should be used. Numerically singular covariances are helpful when using \texttt{Covariance} objects, because they have low-rank Cholesky factors that can be used for efficient computation. The effect of a nugget can be obtained by adding iid normal variables to realizations. \texttt{FullRankCovariance} objects take a nugget argument regardless of their underlying covariance functions.
+
+Distance functions should be symmetric, meaning the distance from point $x$ to point $y$ is the same as the distance from $y$ to $x$. Since raw covariance functions overwrite distance matrices, the output of an \texttt{apply_distance}-generated covariance function will be symmetric if its distance function is symmetric.
+
+To be a valid covariance function, an \texttt{apply_distance}-generated covariance function $C$ must be positive semidefinite, meaning $C(x,x)$ is a positive semidefinite matrix for any mesh $x$. The formal test for positive semidefiniteness is Bochner's theorem \cite{stein}.%, but you can also just check the eigenvalues of $C(x,x)$ for a variety of meshes $x$.
+
+
+
+\section{Summary}\label{sec:cookbook}
+\begin{description}
+    \item[To use a new functional form:] Write a new raw covariance function and wrap it in a \class{covariance_function_bundle} object.
+    \item[To use a new coordinate system:] Write a new distance function and use the \texttt{add_distance_metric} method of an existing \class{covariance_function_bundle}.
+    \item[To build in anisotropy/ nonstationarity using a deformation approach] like that of Sampson and Guttorp \cite{sampson}, you can either write a new distance function and use \texttt{add_distance_metric} or you can actually implement the deformation before passing in the $x$ and $y$ arguments, possibly using PyMC \class{Deterministics}.
+    \item[To use a new functional form \emph{and} a new distance function:] Wrap the covariance function as a \class{covariance_function_bundle} and apply the \texttt{add_distance_metric} method to the distance function, or just apply \texttt{apply_distance} to both of them at once.
+\end{description}
+
+The easiest way to implement a more advanced extension like that of Paciorek and Schervish \cite{pachische} , is to write a new wrapper like \texttt{apply_distance}. You'll probably still be able to take advantage of the raw covariance functions, but not the distance functions. If you do this and don't mind sharing your work, please email me.
+
