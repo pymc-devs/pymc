@@ -166,7 +166,7 @@ class FullRankCovariance(Covariance):
             out += self.nugget
         return out
 
-    def observe(self, obs_mesh, obs_V, assume_full_rank=True):
+    def observe(self, obs_mesh, obs_V, assume_full_rank=True, output_type='r'):
         """
         Observes self at obs_mesh with variance given by obs_V.
 
@@ -262,4 +262,11 @@ class FullRankCovariance(Covariance):
             self.obs_len = N_old + N_new
 
         self.observed = True
-        return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old]
+        # Output expected by Realization
+        if output_type == 'r':
+            return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old]
+            
+        # Ouptut expected by observe
+        if output_type == 'o':
+            return slice(None, None, None), obs_mesh
+        

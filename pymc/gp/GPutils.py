@@ -264,7 +264,7 @@ def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate
     obs_vals = resize(obs_vals, obs_mesh.shape[0])
 
     # First observe C.
-    relevant_slice, obs_mesh_new, junk = C.observe(obs_mesh, obs_V)
+    relevant_slice, obs_mesh_new = C.observe(obs_mesh, obs_V, output_type='o')
 
     # Then observe M from C.
     M.observe(C, obs_mesh_new, obs_vals.ravel()[relevant_slice])

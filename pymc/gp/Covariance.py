@@ -289,7 +289,7 @@ class Covariance(object):
             return U[:m,argsort(piv)]
 
 
-    def observe(self, obs_mesh, obs_V, assume_full_rank=False):
+    def observe(self, obs_mesh, obs_V, assume_full_rank=False, output_type='r'):
         """
         Observes self at obs_mesh with variance given by obs_V.
 
@@ -439,7 +439,13 @@ class Covariance(object):
             self.obs_len = m_new
 
         self.observed = True
-        return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]]
+        # Output expected by Realization
+        if output_type == 'r':
+            return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]]
+            
+        # Ouptut expected by observe
+        if output_type == 'o':
+            return relevant_slice, obs_mesh_new
 
 
     def __call__(self, x, y=None, observed=True, regularize=True):
