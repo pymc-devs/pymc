@@ -183,7 +183,7 @@ class BasisCovariance(Covariance):
 
 
     # FIXME: assume_full_rank with this one will require thinking.
-    def observe(self, obs_mesh, obs_V, assume_full_rank=False, output_type='r'):
+    def observe(self, obs_mesh, obs_V, output_type='o'):
         __doc__ = Covariance.observe.__doc__
 
         ndim = obs_mesh.shape[1]
@@ -206,6 +206,14 @@ class BasisCovariance(Covariance):
         # of V.
         U, piv, m = ichol_basis(basis=chol_inner, nug=obs_V, reltol=self.relative_precision)
 
+        # Stuff expected by the MCMC objects
+        if output_type=='s':
+            # U_sorted = U[:m,argsort(piv)]
+            # C_eval = dot(U_sorted.T, U_sorted).copy('F')
+            C_eval = self.__call__(obs_mesh, obs_mesh)
+            U_eval = linalg.cholesky(C_eval).T
+            from IPython.Debugger import Pdb
+            Pdb(color_scheme='LightBG').set_trace() 
 
         U = asmatrix(U)
         piv_new = piv[:m]
@@ -228,19 +236,15 @@ class BasisCovariance(Covariance):
         U = asmatrix(U)
         self.coef_U = U[:m,argsort(piv)]
         self.m = m
-
-        # Output expected by Realization
-        if output_type == 'r':
-            return piv_new, obs_mesh_new, None
-            
-        # Ouptut expected by observe
-        if output_type == 'o':
+    
+        if output_type=='o':
             return piv_new, obs_mesh_new
-
-        # Output expected by the GP submodel
+        
         if output_type=='s':
-            # U, C_eval
-            raise NotImplementedError
+            return U_eval, C_eval
+        
+        else:
+            raise ValueError
 
 
     def __call__(self, x, y=None, observed=True, regularize=True):
