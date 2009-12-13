@@ -74,7 +74,7 @@ class SalmonSampler(MCMC):
             M = Mean(lambda x: beta_0+ x*beta_1)
             return M
 
-        SR = GP(self.name + '.SR', M, C, mesh = labundance)
+        SR = GPSubmodel(self.name + '.SR', M, C, mesh = labundance)
 
         frye_tau = Gamma('frye_tau', alpha = 2., beta = 1./(10.*(ry/4.)**2))
 
@@ -88,18 +88,18 @@ class SalmonSampler(MCMC):
 
         @observed
         @stochastic
-        def obs_frye(value=lfrye, SR = SR, mesh=labundance, tau = frye_tau):
+        def obs_frye(value=lfrye, mu = SR.f_eval, mesh=labundance, tau = frye_tau):
             """
             The log of the frye count.
             """
-            return normal_like(value, SR(labundance), tau)
+            return normal_like(value, mu, tau)
 
         in_dict = {}
         for key, value in locals().iteritems():
             if isinstance(value, Node):
                 in_dict[key]=value
         MCMC.__init__(self, in_dict)
-        self.use_step_method(GPNormal, SR, labundance, frye_V, obs_frye)
+        self.use_step_method(GPEvaluationGibbs, SR, labundance, frye_V, obs_frye)
 
 
     def plot_traces(self):
@@ -116,11 +116,11 @@ class SalmonSampler(MCMC):
 
 
     def plot_SR(self):
-        f_trace = self.SR.trace()
+        f_trace = self.SR.f.trace()
         figure()
         subplot(2,1,1)
         hold('on')
-        gpplots.plot_GP_envelopes(self.SR, self.plot_x, transx = log, transy=exp)
+        gpplots.plot_GP_envelopes(self.SR.f, self.plot_x, transx = log, transy=exp)
 
         for i in range(3):
             plot(self.plot_x, exp(f_trace[i](log(self.plot_x))), label='draw %i'%i)
@@ -130,8 +130,8 @@ class SalmonSampler(MCMC):
         axis([self.abundance.min()*.1, self.abundance.max(), 0., self.frye.max()*2.])
 
         midpoint_trace = []
-        for i in range(len(self.SR.trace())):
-            midpoint_trace.append(self.SR.trace()[i](mean(self.abundance)))
+        for i in range(len(f_trace)):
+            midpoint_trace.append(f_trace[i](mean(self.abundance)))
         subplot(2,1,2)
         plot(midpoint_trace)
         title('SR(mean(abundance))')
