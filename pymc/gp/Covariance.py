@@ -261,6 +261,7 @@ class Covariance(object):
                 m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:], mold=m_old)
             else:
                 m = m_old + N_new
+                # FIXME: This is C_eval, get it back to observe.
                 U2 = self.__call__(x,x,observed=True,regularize=False)
                 U2 = cholesky(U2).T
                 U[m_old:,m_old:N_new+m_old] = U2
@@ -340,6 +341,7 @@ class Covariance(object):
             if not assume_full_rank:
                 obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False, rank_limit = self.rank_limit)
             else:
+                # FIXME: This is C_eval.
                 C = self.__call__(obs_mesh,obs_mesh,regularize=False)
                 for i in xrange(C.shape[0]):
                     C[i,i] += obs_V[i]
@@ -449,7 +451,7 @@ class Covariance(object):
             
         # Output expected by the GP submodel
         if output_type=='s':
-            # U, relslice, offdiag            
+            # U, C_eval
             raise NotImplementedError
 
 
