@@ -16,8 +16,11 @@ def gp_logp(x, M, C, mesh, f_eval):
     raise TypeError, 'GP objects have no logp function'
 
 def gp_rand(M, C, mesh, f_eval, size=None):
-    return pm.gp.Realization(M, C, mesh, f_eval)
-
+    # M and C are input pre-observed, so no need to 
+    out = pm.gp.Realization(M, C)
+    out.x_sofar = mesh
+    out.f_sofar = f_eval
+    return out
 
 class GaussianProcess(pm.Stochastic):
     
@@ -27,7 +30,7 @@ class GaussianProcess(pm.Stochastic):
         self.submodel = submodel
         
         pm.Stochastic.__init__(self,gp_logp,doc,name,
-                                {'M':submodel.M, 'C':submodel.C,'mesh':submodel.mesh, 'f_eval':submodel.f_eval},
+                                {'M':submodel.M_obs, 'C':submodel.C_obs,'mesh':submodel.mesh, 'f_eval':submodel.f_eval},
                                 gp_rand,trace,value,np.dtype('object'),rseed,observed,cache_depth,plot,verbose,isdata,False)
         
         self.rand()
@@ -44,8 +47,18 @@ class GaussianProcess(pm.Stochastic):
     logp = property(fget = get_logp, fset = set_logp)
 
 
-class GPEvaluation(pm.MvNormalChol):
-    pass
+
+def gp_eval_logp(x, mu, sig, piv):
+    """
+    Log-probability function for GP evaluations
+    """
+    return pm.mv_normal_chol_like(x[np.argsort(piv)],mu,sig)
+
+def gp_eval_rand(mu,sig,piv):
+    return pm.rmv_normal_chol(mu,sig)[piv]
+    
+GPEvaluation =  pm.stochastic_from_dist('g_p_evaluation', gp_eval_logp, gp_eval_rand, dtype=np.dtype('float'), mv=True)
+
 
     
 class GPSubmodel(pm.ObjectContainer):
@@ -70,31 +83,38 @@ class GPSubmodel(pm.ObjectContainer):
         self.C = C
         self.mesh = mesh
         self.name = name
-        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all)
-        C_eval = pm.Lambda('%s_C_eval'%name, lambda C=C, mesh=mesh: C(mesh,mesh), trace=tally_all)
 
-        @pm.deterministic(name='%s_S_eval'%name, trace=tally_all)
-        def S_eval(C_eval=C_eval):
-            """
-            Returns the Cholesky factor of C_eval if it is positive definite, or None if not.
-            """
+        @pm.deterministic(trace=tally_all, name='%s_covariance_bits'%name)
+        def covariance_bits(C=C,mesh=mesh):
+            C_obs = copy.copy(C)
             try:
-                return np.linalg.cholesky(C_eval)
+                U, relslice, offdiag = C_obs.observe(mesh, np.zeros(mesh.shape[0]), assume_full_rank=True, output_type='s')
+                return U.T.copy('F'), relslice, np.asarray(np.dot(offdiag.T, offdiag), order='F'), C_obs
             except np.linalg.LinAlgError:
                 return None
+
+        S_eval, relslice, offdiag, C_obs = covariance_bits    
+        
+        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all)
                 
         @pm.potential(name = '%s_fr_check'%name)
-        def fr_check(S_eval=S_eval):
+        def fr_check(cb=covariance_bits):
             """
             Forbids non-positive-definite C_evals.
             """
-            if S_eval is None:
+            if cb is None:
                 return -np.inf
             else:
                 return 0
         
-        S_eval = pm.Lambda('%s_S_eval'%name, lambda C_eval=C_eval: np.linalg.cholesky(C_eval), trace=tally_all)
-        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True)
+        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, piv=relslice, value=init_vals, trace=True)
+        
+        @dtrm(trace=tally_all, name='%s_covariance_bits'%name)
+        def M_obs(M=M, f_eval=f_eval, C_obs=C_obs, mesh=mesh, relslice=relslice):
+            M_obs = copy.copy(M)
+            M_obs.observe(C_obs,mesh,relslice)
+            return M_obs
+        
         self.f_eval = f_eval
         f = GaussianProcess('%s_f'%name, self, trace=tally_all)
         pm.ObjectContainer.__init__(self, locals())
