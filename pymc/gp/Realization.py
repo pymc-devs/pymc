@@ -100,6 +100,9 @@ class StandardRealization(object):
 
         self.M_internal = M_internal
         self.C_internal = C_internal
+        
+        self.x_sofar = None
+        self.f_sofar = None
 
     def _init_obs(self):
         # If initial values were specified on a mesh:
@@ -122,12 +125,6 @@ class StandardRealization(object):
             if self.check_repeats:
                 self.x_sofar = self.init_mesh
                 self.f_sofar = self.init_vals
-
-        elif check_repeats:
-
-            # Store init_mesh.
-            self.x_sofar = None
-            self.f_sofar = None
         
         self.need_init_obs = False
         
@@ -156,7 +153,6 @@ class StandardRealization(object):
         if self.check_repeats:
             # use caching_call to save duplicate calls.
             f, self.x_sofar, self.f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
-
         else:
             # Call to self.draw_vals.
             f = self.draw_vals(x)
