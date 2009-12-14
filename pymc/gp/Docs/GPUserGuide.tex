@@ -106,9 +106,20 @@ This package implements Gaussian processes as a set of Python classes that can s
 
 % chapter introduction (end)
 
+\chapter{The basics}\label{cha:basics}
+All the code in the tutorial is in the folder \file{pymc/examples/gp} in the PyMC source tree.
 \include{tutorial1} 
+
+\chapter{Incorporating Gaussian processes in PyMC probability models}\label{cha:PyMC}
+This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
 \include{tutorial2} 
-\include{extending} 
+
+\chapter{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{cha:usercov}
+This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
+\include{extending}
+
+\chapter{Overview of algorithms} \label{cha:numerics} 
+More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation. 
 \include{numerics} 
 
 \nocite{*}
