@@ -101,10 +101,13 @@ class GPEvaluationGibbs(pm.Metropolis):
         self.f_eval = submod.f_eval
         self.f = submod.f
         pm.StepMethod.__init__(self, [self.f, self.f_eval], tally=tally)
-                
-        # Remove f from the set that will be used to compute logp_plus_loglike.
-        self.markov_blanket_no_f = copy.copy(self.markov_blanket)
-        self.markov_blanket_no_f.remove(self.f)
+        
+        self.children_no_data = copy.copy(self.children)
+        if isinstance(eps_p_f, pm.Variable):
+            self.children_no_data.discard(eps_p_f)
+        else:
+            for epf in eps_p_f:
+                self.children_no_data.discard(epf)
         
         self.V = V
         self.C_eval = submod.C_eval
@@ -127,9 +130,18 @@ class GPEvaluationGibbs(pm.Metropolis):
         self._state = ['rejected', 'accepted', 'proposal_distribution']
         self._tuning_info = []
         self.proposal_distribution=None
+    
+    
+    def get_logp(self):
+        return 0.
+    logp = property(get_logp)
+    
+    def get_loglike(self):
+        return pm.utils.logp_of_set(self.children_no_data)
+    loglike = property(get_loglike)
         
     def get_logp_plus_loglike(self):
-        return pm.logp_of_set(self.markov_blanket_no_f)
+        return self.get_loglike()
     logp_plus_loglike = property(get_logp_plus_loglike)
         
     def reject(self):
