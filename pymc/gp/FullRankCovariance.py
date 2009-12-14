@@ -17,7 +17,7 @@ class FullRankCovariance(Covariance):
     """
     C=FullRankCovariance(eval_fun, **params)
 
-    Valued as a GP covariance.
+    A GP covariance.
 
     All linear algebra done with dense BLAS, so attempts to invert/ factorize
     numerically singular covariance matrices will cause errors. On the other
@@ -177,10 +177,13 @@ class FullRankCovariance(Covariance):
 
     def observe(self, obs_mesh, obs_V, output_type='r'):
         """
-        Observes self at obs_mesh with variance given by obs_V.
-
-        Returns an upper-triangular Cholesky factor of self's evaluation on obs_mesh
-        conditional on all previous observations.
+        Observes self on obs_mesh with observation variance obs_V.
+        Output_type controls the information returned:
+        
+        'r' : returns information needed by Realization objects.
+        'o' : returns information needed by function observe.
+        's' : returns information needed by the Gaussian process
+              submodel.
         """
 
         # Number of spatial dimensions.

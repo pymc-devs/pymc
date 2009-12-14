@@ -16,7 +16,7 @@ class Mean(object):
 
 
     :Arguments:
-
+    
         -   `eval_fun`: A function that takes an argument x of shape  (n,ndim), where n is
             any integer and ndim is the dimensionality of  the space, or shape (n). In the
             latter case ndim should be assumed to be 1..
@@ -50,7 +50,7 @@ class Mean(object):
         Values of observation are given by obs_vals.
 
         obs_mesh_new and obs_vals_new should already have
-        been sliced, as Covariance.observe() does.
+        been sliced, as Covariance.observe(..., output_type='o') does.
         """
 
         self.C = C

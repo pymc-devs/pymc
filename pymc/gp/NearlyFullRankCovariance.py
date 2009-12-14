@@ -17,7 +17,7 @@ class NearlyFullRankCovariance(Covariance):
     """
     C=NearlyFullRankCovariance(eval_fun, relative_precision, **params)
 
-    Valued as a GP covariance. Good for situations where self's evaluation
+    A GP covariance. Good for situations where self's evaluation
     on observation locations is nearly full-rank, but not quite. Evaluation
     of the matrix can be parallelized, but Cholesky decompositions are done
     using a serial incomplete algorithm.
@@ -42,12 +42,10 @@ class NearlyFullRankCovariance(Covariance):
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
         """
 
-        U = C.cholesky(x[, observed=True, nugget=None])
-
+        U = C.cholesky(x[, observed=True, nugget=None, rank_limit=0])
 
         {'pivots': piv, 'U': U} = \
         C.cholesky(x, apply_pivot = False[, observed=True, nugget=None])
-
 
         Computes incomplete Cholesky factorization of self(x,x).
 
@@ -69,6 +67,9 @@ class NearlyFullRankCovariance(Covariance):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
+
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+                rank_limit rows.
         """
         if rank_limit > 0:
             raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
@@ -117,11 +118,11 @@ class NearlyFullRankCovariance(Covariance):
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank=False, rank_limit=0):
         """
 
-        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
+        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None,
+                rank_limit=0])
 
 
-        {'pivots': piv, 'U': U} = \
-        C.cholesky(x, x_old, chol_dict_old, apply_pivot = False[, observed=True, nugget=None])
+        Returns {'pivots': piv, 'U': U}
 
 
         Computes incomplete Cholesky factorization of self(z,z). Here z is the
@@ -152,6 +153,9 @@ class NearlyFullRankCovariance(Covariance):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
+                
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+                rank_limit rows.
         """
         if regularize:
             x=regularize_array(x)
