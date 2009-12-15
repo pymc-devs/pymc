@@ -1,12 +1,12 @@
 
-\section{Convergence Diagnostics} % (fold)
+\subsection{Convergence Diagnostics} % (fold)
 %\label{sec:convergence_diagnostics}
 
-Valid inferences from sequences of MCMC samples are based on the assumption that the samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
+Valid inferences from sequences of MCMC samples are based on the assumption that samples are derived from the true posterior distribution of interest. Theory guarantees this condition as the number of iterations approaches infinity. It is important, therefore, to determine the minimum number of samples required to ensure a reasonable approximation to the target posterior density. Unfortunately, no universal threshold exists across all problems, so convergence must be assessed independently each time MCMC estimation is performed. The procedures for verifying convergence are collectively known as convergence diagnostics.
 
-One approach to analyzing convergence is analytical, whereby the variance of the sample at different sections of the chain are compared to that of the limiting distribution. These methods use distance metrics to analyze convergence, or place theoretical bounds on the sample variance, and though they are promising, they are generally difficult to use and are not prominent in the MCMC literature. More common is a statistical approach to assessing convergence. With this approach, rather than considering the properties of the theoretical target distribution, only the statistical properties of the observed chain are analyzed. Reliance on the sample alone restricts such convergence criteria to heuristics; that is, convergence cannot be guaranteed. Although evidence for lack of convergence using statistical convergence diagnostics will correctly imply lack of convergence in the chain, the absence of such evidence will not \emph{guarantee} convergence in the chain. Nevertheless, negative results for one or more criteria will provide some measure of assurance to most users that their sample will provide valid inferences.
+One approach to analyzing convergence is analytical, whereby the variance of the sample at different sections of the chain are compared to that of the limiting distribution. These methods use distance metrics to analyze convergence, or place theoretical bounds on the sample variance, and though they are promising, they are generally difficult to use and are not prominent in the MCMC literature. More common is a statistical approach to assessing convergence. Statistical techniques, rather than considering the properties of the theoretical target distribution, only consider the statistical properties of the observed chain. Reliance on the sample alone restricts such convergence criteria to heuristics, and hence, convergence cannot be guaranteed. Although evidence for lack of convergence using statistical convergence diagnostics will correctly imply lack of convergence in the chain, the absence of such evidence will not \emph{guarantee} convergence in the chain. Nevertheless, negative results for one or more criteria will provide some measure of assurance to users that their sample will provide valid inferences.
 
-For most simple models, convergence will occur quickly, sometimes within a the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor mixing (Figure \ref{fig:mix}). Recall that \emph{mixing} refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated variables.
+For most simple models, convergence will occur quickly, sometimes within the first several hundred iterations, after which all remaining samples of the chain may be used to calculate posterior quantities. For many more complex models, convergence requires a significantly longer burn-in period; sometimes  orders of magnitude more samples are needed. Frequently, lack of convergence will be caused by poor \emph{mixing} (Figure \ref{fig:mix}). Mixing refers to the degree to which the Markov chain explores the support of the posterior distribution. Poor mixing may stem from inappropriate proposals (if one is using the Metropolis-Hastings sampler) or from attempting to estimate models with highly correlated variables.
 
 \begin{figure}[ht]
 \begin{center}
@@ -16,27 +16,9 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 \end{center}
 \end{figure}
 
-\subsection{Informal Methods}
+\subsubsection{Informal Methods}
 
-The most straightforward approach for assessing convergence is based on
-simply plotting and inspecting traces and histograms of the observed MCMC
-sample. If the trace of values for each of the stochastics exhibits asymptotic
-behaviour\footnote{Asymptotic behaviour implies that the variance and the
-mean value of the sample stays relatively constant over some arbitrary
-period.} over the last $m$ iterations, this may be satisfactory evidence
-for convergence. A similar approach involves plotting a histogram for every
-set of $k$ iterations (perhaps 50-100) beyond some burn in threshold $n$;
-if the histograms are not visibly different among the sample intervals,
-this is reasonable evidence for convergence. Note that such diagnostics
-should be carried out for each stochastic estimated by the MCMC algorithm,
-because convergent behaviour by one variable does not imply evidence for
-convergence for other variables in the analysis. An extension of this approach
-can be taken when multiple parallel chains are run, rather than just a
-single, long chain. In this case, the final values of $c$ chains run for
-$n$ iterations are plotted in a histogram; just as above, this is repeated
-every $k$ iterations thereafter, and the histograms of the endpoints are
-plotted again and compared to the previous histogram. This is repeated
-until consecutive histograms are indistinguishable.
+The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the stochastics exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn-in threshold $n$; if the histograms are not visibly different among the sample intervals, this is some evidence for convergence. Note that such diagnostics should be carried out for each stochastic estimated by the MCMC algorithm, because convergent behaviour by one variable does not imply evidence for convergence for other variables in the model. An extension of this approach can be taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
 
 \begin{figure}[h]
 \begin{center}
@@ -50,19 +32,19 @@ Another \emph{ad hoc} method for detecting convergence is to examine the traces 
 
 A principal reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the parameter space (Figure \ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
 
-\subsection{Formal Methods}
+\subsubsection{Formal Methods}
 
 Along with the \emph{ad hoc} techniques described above, a number of more formal methods exist which are prevalent in the literature. These are considered more formal because they are based on existing statistical methods, such as time series analysis.
 
-PyMC currently includes two formal convergence diagnostic methods. The first, proposed by \citet{Geweke:1992gm}, is a time-series approach that compares the mean and variance of segments from the beginning and end of a single chain.
+PyMC currently includes functions for two formal convergence diagnostic procedures. The first, proposed by \citet{Geweke:1992gm}, is a time-series approach that compares the mean and variance of segments from the beginning and end of a single chain.
 \begin{equation}
 z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}
 \end{equation}
 where $a$ is the early interval and $b$ the late interval. If the z-scores (theoretically distributed as standard normal variates) of these two segments are similar, it can provide evidence for convergence. PyMC calculates z-scores of the difference between various initial segments along the chain, and the last 50\% of the remaining chain. If the chain has converged, the majority of points should fall within 2 standard deviations of zero.
 
-Diagnostic z-scores can be obtained by calling the \code{geweke} function. It accepts either (1) a single trace, (2) a dictionary of traces, (3) a Node object, or (4) an entire Model object.
+Diagnostic z-scores can be obtained by calling the \code{geweke} function. It accepts either (1) a single trace, (2) a Node or Stochastic object, or (3) an entire Model object.
 
-\subsubsection{Method Usage}
+\paragraph{Method Usage}
 \begin{verbatim}
 geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
@@ -79,7 +61,7 @@ geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 
 The resulting scores are best interpreted graphically, using the \code{geweke_plot} function. This displays the scores in series, in relation to the 2 standard deviation boundaries around zero. Hence, it is easy to see departures from the standard normal assumption.
 
-\begin{figure}[ht]
+\begin{figure}[h]
 \begin{center}
 \includegraphics[height=6in]{geweke.png}
 \caption{Sample plots of Geweke z-scores for a variable using \textbf{geweke_plot}. The occurrence of the scores well within 2 standard deviations of zero gives does not indicate lack of convergence (top), while deviations exceeding 2 standard deviations suggests that additional samples are required to achieve convergence (bottom).}
@@ -89,7 +71,7 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \code{geweke_plot} takes either a single set of scores, or a dictionary of scores (output by \code{geweke} when an entire Sampler is passed) as its argument:
 
-\subsubsection{Method Usage}
+\paragraph{Method Usage}
 \begin{verbatim}
 geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
                 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
@@ -116,7 +98,7 @@ To illustrate, consider a model \code{my_model} that is used to instantiate a MC
 	>>> S = pm.MCMC(my_model)
 	>>> S.sample(10000, burn=5000)
 \end{verbatim}
-It is easiest simply to pass the entire sampler \code{S} the \code{geweke} function:
+It is easiest simply to pass the entire sampler \code{S} to the \code{geweke} function:
 \begin{verbatim}
 	>>> scores = pm.geweke(S, intervals=20)
 	>>> pm.Matplot.geweke_plot(scores)
@@ -149,7 +131,7 @@ This thinned sample is used to determine number of burn-in samples. This is done
 This diagnostic is best used on a short pilot run of a particular model, and the results used to parameterize a subsequent sample that is to be used for inference.
 
 
-\subsubsection{Method Usage}
+\paragraph{Method Usage}
 \begin{verbatim}
 raftery_lewis(pymc_object, q, r, s=.95, epsilon=.001, verbose=1)
 \end{verbatim}
@@ -204,7 +186,7 @@ Additional convergence diagnostics are available in the
 \code{coda} for exporting model traces in a format that may be
 directly read by CODA.
 
-\subsubsection{Method Usage}
+\paragraph{Method Usage}
 \begin{verbatim}
 pm.utils.coda(pymc_object)
 \end{verbatim}
@@ -213,13 +195,13 @@ pm.utils.coda(pymc_object)
 \item \verb=pymc_object=: The PyMC sampler for which output is desired.
 
 \end{itemize}
-Calling \verb=coda= yields a file containing raw trace values (suffix
-\verb=.out=) and a file containing indices to the trace values (suffix
+Calling \verb=coda= yields two files, one containing raw trace values (suffix
+\verb=.out=) and another containing indices to the trace values (suffix
 \verb=.ind=).
 
 % section convergence_diagnostics (end)
 
-\section{Autocorrelation Plots} % (fold)
+\subsection{Autocorrelation Plots} % (fold)
 %\label{sec:autocorrelation_plots}
 
 Samples from MCMC algorithms are ususally autocorrelated, due partly to the
@@ -275,7 +257,7 @@ for the labels of the graphic.
 (defaults to 1).
 \end{itemize}
 
-Using any given model \code{my_model} as an example, autocorrelation plots can be obtained simply by passing the sampler for that model to the \code{autocorrelation} function directly:
+Using any given model \code{my_model} as an example, autocorrelation plots can be obtained simply by passing the sampler for that model to the \code{autocorrelation} function (within the \code{Matplot} module) directly:
 \begin{verbatim}
 	>>> S = pm.MCMC(my_model)
 	>>> S.sample(10000, burn=5000)
@@ -288,7 +270,7 @@ Alternatively, variables within a model can be plotted individually. For example
 
 % section autocorrelation_plots (end)
 
-\section{Goodness of Fit} % (fold)
+\subsection{Goodness of Fit} % (fold)
 %\label{sec:goodness_of_fit}
 
 Checking for model convergence is only the first step in the evaluation of MCMC model outputs. It is possible for an entirely unsuitable model to converge, so additional steps are needed to ensure that the estimated model adequately fits the data. One intuitive way for evaluating model fit is to compare model predictions with actual observations. In other words, the fitted model can be used to simulate data, and the distribution of the simulated data should resemble the distribution of the actual data.
@@ -332,13 +314,13 @@ The degree to which simulated data correspond to observations can be evaluated i
     \label{fig:gof}
 \end{figure}
 
-The Matplot package in PyMC provides an easy way of producing such plots, via the \code{gof_plot} function. To illustrate, consider a single data point \code{x} and an array of values \code{x_sim} sampled from the posterior predictive distribution. The histogram is generated by calling:
+The Matplot module in PyMC provides an easy way of producing such plots, via the \code{gof_plot} function. To illustrate, consider a single observed data point \code{x} and an array of values \code{x_sim} sampled from the posterior predictive distribution. The histogram is generated by calling:
 
 \begin{verbatim}
 	pm.Matplot.gof_plot(x_sim, x, name='x')
 \end{verbatim}
 
-A second approach for evaluating goodness of fit using samples from the posterior predictive distribution involves the use of a statistical criterion. For example, the Bayesian p-value \citep{Gelman:1996gp} uses a discrepancy measure that quantifies the difference between data (observed or simulated) and the expected value, conditional on some model. One such discrepancy measure is the Freeman-Tukey statistic \citep{Brooks:2000il}:
+A second approach for evaluating goodness of fit using samples from the posterior predictive distribution involves the use of a statistical criterion. For example, the Bayesian p-value \citep{Gelman:1996gp} uses a discrepancy measure that quantifies the difference between data (observed or simulated) $x$ and the expected value $e$, conditional on some model. One such discrepancy measure is the Freeman-Tukey statistic \citep{Brooks:2000il}:
 
 \begin{equation}
 	D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2
@@ -360,13 +342,13 @@ If $p$ is very large (e.g. $>0.975$) or very small (e.g. $<0.025$) this implies 
     \label{fig:deviate}
 \end{figure}
 
-The \code{discrepancy} function in the \code{diagnostics} package can be used to generate discrepancy statistics from arrays of data, simulated values, and expected values:
+The \code{discrepancy} function in the \code{diagnostics} module can be used to generate discrepancy statistics from arrays of data, simulated values, and expected values:
 
 \begin{verbatim}
 	D = pm.diagnostics.discrepancy(observed, simulated, expected)
 \end{verbatim}
 
-A call to this function returns two arrays of discrepancy values, which can be passed to the \code{discrepancy_plot} function in the Matplot module to generate a scatter plot, and if desired, a p-value:
+A call to this function returns two arrays of discrepancy values (one for observed data and one for simulated data), which can be passed to the \code{discrepancy_plot} function in the Matplot module to generate a scatter plot, and if desired, a p-value:
 
 \begin{verbatim}
 	pm.Matplot.discrepancy_plot(D, name='D', report_p=True)
@@ -375,3 +357,4 @@ A call to this function returns two arrays of discrepancy values, which can be p
 Additional optional arguments for \code{discrepancy_plot} are identical to other PyMC plotting functions.
 
 % section goodness_of_fit (end)
+
