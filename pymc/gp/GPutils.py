@@ -2,7 +2,7 @@
 
 __docformat__='reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy', 'point_predict']
+            'fast_matrix_copy', 'point_predict','square_and_sum']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -13,6 +13,7 @@ from numpy.linalg.linalg import LinAlgError
 from linalg_utils import *
 from threading import Thread, Lock
 import sys
+from pymc import thread_partition_array, map_noreturn
 
 try:
     from PyMC2 import ZeroProbability
@@ -85,6 +86,14 @@ def caching_call(f, x, x_sofar, f_sofar):
     f[repeat_to]=f[repeat_from]
 
     return f, x_sofar, f_sofar
+    
+def square_and_sum(a,s):
+    """
+    Writes np.sum(a**2,axis=0) into s
+    """
+    cmin, cmax = thread_partition_array(a)
+    map_noreturn(asqs, [(a,s,cmin[i],cmax[i]) for i in xrange(len(cmax))])
+    return a
 
 class caching_callable(object):
     """

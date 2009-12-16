@@ -65,7 +65,7 @@ class GaussianProcess(pm.Stochastic):
         
     def set_value(self, new_value):
         # If this is a new value pulled off the trace, save it the trouble of observing
-        if np.all(new_value.x_sofar=pm.utils.value(self.parents['mesh'])):
+        if np.all(new_value.x_sofar==pm.utils.value(self.parents['mesh'])):
             if new_value.need_init_obs:
                 new_value.M_internal = copy.copy(pm.utils.value(self.parents['M_obs']))
                 new_value.C_internal = copy.copy(pm.utils.value(self.parents['C_obs']))                
