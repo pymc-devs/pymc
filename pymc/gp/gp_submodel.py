@@ -63,6 +63,15 @@ class GaussianProcess(pm.Stochastic):
     def set_logp(self, new_logp):
         raise TypeError, 'Gaussian process %s has no logp.'%self.__name__
         
+    def set_value(self, new_value):
+        # If this is a new value pulled off the trace, save it the trouble of observing
+        if np.all(new_value.x_sofar=pm.utils.value(self.parents['mesh'])):
+            if new_value.need_init_obs:
+                new_value.M_internal = copy.copy(pm.utils.value(self.parents['M_obs']))
+                new_value.C_internal = copy.copy(pm.utils.value(self.parents['C_obs']))                
+                new_value.need_init_obs = False
+        pm.Stochastic.set_value(self, new_value)
+        
     logp = property(fget = get_logp, fset = set_logp)
 
 
