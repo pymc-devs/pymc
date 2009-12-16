@@ -53,15 +53,15 @@ def moral_graph(model, format='raw', prog='dot', path=None, name=None):
                 model.moral_dot_object.add_edge(pydot.Edge(src=other_s.__name__, dst=s.__name__, arrowhead='none'))
 
     # Draw the graph
+    ext=format
+    if format=='raw':
+        ext='dot'
     if name is None:
         name = model.__name__
-    name = name + '.' + ext
+    name = name + '.' + ext    
     if not path is None:
         model.moral_dot_object.write(path=os.path.join(path,name), format=format, prog=prog)
     else:
-        ext=format
-        if format=='raw':
-            ext='dot'
         model.moral_dot_object.write(path='./'+name, format=format, prog=prog)
 
     return model.moral_dot_object
@@ -261,15 +261,15 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
         model.dot_object.add_subgraph(legend)
 
     # Draw the graph
+    ext=format
+    if format=='raw':
+        ext='dot'
     if name is None:
         name = model.__name__
     name = name + '.' + ext
     if not path == None:
         model.dot_object.write(path=os.path.join(path,name), format=format, prog=prog)
     else:
-        ext=format
-        if format=='raw':
-            ext='dot'
         model.dot_object.write(path='./' + name, format=format, prog=prog)
 
     return model.dot_object
