@@ -1,5 +1,9 @@
 # Copyright (c) Anand Patil, 2007
 
+# Where matrix evaluations can be done in chunks, the chunk size will be
+# kept below this limit.
+chunksize = 1e8
+
 __modules__ = [ 'GPutils',
                 'Mean',
                 'Covariance',
@@ -33,3 +37,4 @@ try:
     import SparseCovariance
 except ImportError:
     pass
+    
