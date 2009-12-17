@@ -131,7 +131,7 @@ class GPSubmodel(pm.ObjectContainer):
             mesh = pm.Lambda('%s_mesh'%name, lambda mesh=mesh: pm.gp.regularize_array(mesh), trace=False)
         else:
             mesh = pm.gp.regularize_array(mesh)
-        name = name
+        self.name = name
         
         @pm.deterministic(trace=tally_all, name='%s_covariance_bits'%name)
         def covariance_bits(C=C,mesh=mesh):
