@@ -2,7 +2,7 @@
 
 __docformat__='reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy', 'point_predict','square_and_sum','joint_eval']
+            'fast_matrix_copy', 'point_predict','square_and_sum','point_eval']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -229,7 +229,7 @@ def plot_envelope(M,C,mesh):
     try:
         from pylab import fill, plot, clf, axis
         x=concatenate((mesh, mesh[::-1]))
-        mean, var = joint_eval(M,C,mesh)
+        mean, var = point_eval(M,C,mesh)
         sig = sqrt(var)
         mean = M(mesh)
         y=concatenate((mean-sig, (mean+sig)[::-1]))
@@ -336,13 +336,13 @@ def point_predict(f, x, size=1, nugget=None):
     return out.reshape((size,)+ orig_shape[:-1]).squeeze()
 
 
-def joint_eval(M, C, x):
+def point_eval(M, C, x):
     """
     Evaluates M(x) and C(x).
     
     Minimizes computation; evaluating M(x) and C(x) separately would
     evaluate the off-diagonal covariance term twice, but callling
-    joint_eval(M,C,x) would only evaluate it once.
+    point_eval(M,C,x) would only evaluate it once.
     
     Also chunks the evaluations if the off-diagonal term.
     """

@@ -575,9 +575,8 @@ class Covariance(object):
         return asmatrix(vstack((M.reg_mat,reg_mat_new)))
         
     def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
-        # Do truly huge covariance evaluations in chunks, because you don't need to keep
-        # the full matrix.
-        Uo_Cxo = Uo_Cxo if Uo_Cxo is not None else trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
+        if Uo_Cxo is None:
+            Uo_Cxo = trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
         M_out += dot(asarray(M.reg_mat).T,asarray(Uo_Cxo)).squeeze()
         return M_out
 

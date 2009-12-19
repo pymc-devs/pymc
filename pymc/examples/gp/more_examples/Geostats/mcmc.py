@@ -52,7 +52,7 @@ for i in xrange(n):
     # Reset all variables to their values at frame i of the trace
     WalkerSampler.remember(0,i)
     # Evaluate the observed mean
-    Msurf_i, Vsurf_i = joint_eval(WalkerSampler.walker_v.M_obs.value, WalkerSampler.walker_v.C_obs.value, dplot)
+    Msurf_i, Vsurf_i = point_eval(WalkerSampler.walker_v.M_obs.value, WalkerSampler.walker_v.C_obs.value, dplot)
     Msurf += Msurf_i/n
     # Evaluate the observed covariance with one argument
     E2surf += (Vsurf_i + Msurf_i**2)/n
