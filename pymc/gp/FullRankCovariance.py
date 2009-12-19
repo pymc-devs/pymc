@@ -164,16 +164,23 @@ class FullRankCovariance(Covariance):
         else:
             return U
 
-    def __call__(self, x, y=None, observed=True, regularize=True):
-        out = Covariance.__call__(self,x,y,observed,regularize)
+    def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
+        out = Covariance.__call__(self,x,y,observed,regularize,return_Uo_Cxo=return_Uo_Cxo)
+
         if self.nugget is None:
             return out
+        
+        if return_Uo_Cxo:
+            out, Uo_Cxo = out
         if x is y:
             for i in xrange(out.shape[0]):
                 out[i,i] += self.nugget
         elif y is None:
             out += self.nugget
-        return out
+        if return_Uo_Cxo:
+            return out, Uo_Cxo
+        else:
+            return out
 
     def observe(self, obs_mesh, obs_V, output_type='r'):
         """

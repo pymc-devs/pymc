@@ -89,7 +89,7 @@ class Mean(object):
             self.dev = hstack((self.dev, dev_new))
         self.observed = True
 
-    def __call__(self, x, observed = True, regularize=True):
+    def __call__(self, x, observed = True, regularize=True, Uo_Cxo=None):
 
         # Record original shape of x and regularize it.
         orig_shape = shape(x)
@@ -108,13 +108,12 @@ class Mean(object):
             if not self.ndim == ndimx:
                 raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."
 
-
         # Evaluate the unobserved mean
         M = self.eval_fun(x,**self.params).squeeze()
 
         # Condition. Basis covariances get special treatment. See documentation for formulas.
         if self.observed and observed:
-            M = self.C._obs_eval(self, M, x)
+            M = self.C._obs_eval(self, M, x, Uo_Cxo)
 
         return M.reshape(orig_shape)
 

@@ -244,7 +244,7 @@ class BasisCovariance(Covariance):
         raise ValueError, 'Output type not recognized.'
 
 
-    def __call__(self, x, y=None, observed=True, regularize=True):
+    def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
 
         # Record the initial shape of x and regularize it.
         orig_shape = shape(x)
@@ -271,8 +271,8 @@ class BasisCovariance(Covariance):
         # Evaluate the Cholesky factor of self's evaluation on x.
         # Will be observed or not depending on which version of coef_U
         # is used.
-        basis_x = self.eval_basis(x, regularize=False)
-        basis_x = coef_U*basis_x
+        basis_x_ = self.eval_basis(x, regularize=False)
+        basis_x = coef_U*basis_x_
 
         # ==========================================================
         # = If only one argument is provided, return the diagonal: =
@@ -280,14 +280,20 @@ class BasisCovariance(Covariance):
         if y is None:
             # Diagonal calls done in Fortran for speed.
             V = basis_diag_call(basis_x)
-            return V.reshape(orig_shape)
+            if return_Uo_Cxo:
+                return V.reshape(orig_shape), basis_x_
+            else:
+                return V.reshape(orig_shape)
 
 
         # ===========================================================
         # = If the same argument is provided twice, save some work: =
         # ===========================================================
         if y is x:
-            return basis_x.T*basis_x
+            if return_Uo_Cxo:
+                return basis_x.T*basis_x, basis_x_
+            else:
+                return basis_x
 
 
         # =========================================
@@ -325,8 +331,8 @@ class BasisCovariance(Covariance):
         M.reg_mat = M.reg_mat + self.Uo_cov.T * asmatrix(trisolve(self.Uo, dev_new, uplo='U', transa='T')).T
         return M.reg_mat
 
-    def _obs_eval(self, M, M_out, x):
-        basis_x = self.eval_basis(x, regularize=False)
+    def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
+        basis_x = Uo_Cxo if Uo_Cxo is not None else self.eval_basis(x, regularize=False)
         M_out += asarray(dot(basis_x.T, M.reg_mat)).squeeze()
         return M_out
 

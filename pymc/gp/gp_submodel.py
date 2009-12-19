@@ -154,7 +154,7 @@ class GPSubmodel(pm.ObjectContainer):
         S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0] if cb else None, doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all)
         C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1] if cb else None, doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all)
         C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2] if cb else None, doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all)
-        
+        # TODO: Use the previously-computed off-diagonal in here.
         M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all, doc="The evaluation %s.M(%s.mesh)"%(name,name))
                 
         @pm.potential(name = '%s_fr_check'%name)
