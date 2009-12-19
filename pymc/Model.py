@@ -604,7 +604,7 @@ class Sampler(Model):
 
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
-                variable.value = variable.trace(chain)[trace_index]
+                variable.value = self.trace(variable.__name__, chain=chain)[trace_index]
 
     def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
