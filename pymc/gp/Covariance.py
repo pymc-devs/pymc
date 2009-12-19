@@ -442,7 +442,7 @@ class Covariance(object):
         self.observed = True
         # Output expected by Realization
         if output_type == 'r':
-            return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]]
+            return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
             
         # Ouptut expected by observe
         if output_type == 'o':
@@ -450,7 +450,7 @@ class Covariance(object):
             
         # Output expected by the GP submodel
         if output_type=='s':
-            return obs_dict_new['U_new'], obs_dict_new['C_eval']
+            return obs_dict_new['U_new'], obs_dict_new['C_eval'], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
 
 
 
