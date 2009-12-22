@@ -905,7 +905,7 @@ def degenerate_like(x, k):
       - `x` : Input value.
       - `k` : Degenerate value.
     """
-    x = np.asarray(x)
+    x = np.atleast_1d(x)
     return sum(np.log([i==k for i in x]))
 
 # Dirichlet----------------------------------------------
