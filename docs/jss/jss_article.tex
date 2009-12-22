@@ -9,7 +9,6 @@
 \usepackage{python}
 \usepackage{epsfig}
 \usepackage{amsmath}
-\usepackage{hyperref}
 \usepackage{boxedminipage}
 
 \author{Anand Patil\\University of Oxford \And
@@ -83,9 +82,10 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 
 \graphicspath{{../figs/}}
 \setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
 \begin{document}
 
-%\maketitle
+\maketitle
 
 % Referees suggested adding a table of contents. Is this compatible with JSS
 % editorial style ?
@@ -95,35 +95,35 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 
 %\linenumbers
 \section[Introduction]{Introduction}
-\label{sec:intro}
+\label{chap:intro}
 \input{README}
 
 \section[Installation]{Installation}
-\label{sec:install}
+\label{chap:install}
 \input{INSTALL}
 
 \section[Tutorial]{Tutorial}
-\label{sec:tutorial}
+\label{chap:tutorial}
 \input{tutorial}
 
 \section[Building Models]{Building models}
-\label{sec:modelbuilding}
+\label{chap:modelbuilding}
 \input{modelbuilding}
 
 \section[Fitting Models]{Fitting models}
-\label{sec:modelfitting}
+\label{chap:modelfitting}
 \input{modelfitting}
 
 \section[Sampling Results]{Saving and managing sampling results}
-\label{sec:database}
+\label{chap:database}
 \input{database}
 
 \section[Model Checking]{Model checking and diagnostics}
-\label{sec:modelchecking}
+\label{chap:modelchecking}
 \input{modelchecking}
 
 \section[Extending PyMC]{Extending PyMC}
-\label{sec:extending}
+\label{chap:extending}
 \input{extending}
 
 \section{Conclusion}
@@ -131,7 +131,7 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 \input{conclusion}
 
 \section[Acknowledgments]{Acknowledgments}
-\label{sec:acknowledge}
+\label{chap:acknowledge}
 The authors would like to thank several users of PyMC who have been particularly helpful during the development of the 2.0 release. In alphabetical order, these are Mike Conroy, Abraham Flaxman, J. Miguel Marin, and Aaron MacNeil.
 
 Anand Patil's work on PyMC has been supported since 2008 by the \href{http://www.map.ox.ac.uk}{Malaria Atlas
@@ -143,9 +143,9 @@ Project}, principally funded by the Wellcome Trust.
 % \input{theory}
 
 \section[Distributions]{Probability distributions}
-\label{sec:distributions}
+\label{chap:distributions}
 \input{distributions-module}
-
+\newpage
 \nocite{Bernardo:1992fk}
 \nocite{r} 
 \nocite{jags} 
