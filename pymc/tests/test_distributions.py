@@ -1006,10 +1006,38 @@ class test_inverse_wishart(TestCase):
 
 class test_Stochastic_generator(TestCase):
     def test_randomwrap(self):
-        B = Bernoulli('x', np.ones(10)*.5, value=np.ones(10))
-        assert_equal(B.value.shape, (10,))
-        B.random()
-        assert_equal(B.value.shape, (10,))
+        for s in ( (1,), (10,), (10,2)):
+            B = Bernoulli('x', np.ones(s)*.5)
+            B.random()
+            assert_equal(B.value.shape, s)
+        
+            N = Normal('x', np.ones(s), 1)
+            N.random()
+            assert_equal(N.value.shape, s)
+            
+            N = Normal('x', np.ones(s), np.ones(s))
+            N.random()
+            assert_equal(N.value.shape, s)
+
+            N = Normal('x', 1, 1)
+            N.random()
+            assert_equal(N.value.shape, ())
+
+
+class test_shape_consistency(TestCase):
+    def test(self):
+        shape = (10, 5)
+        data = np.zeros(shape)
+        mean = pymc.Normal("mean",mu = 0, tau = 1)
+
+        @pymc.deterministic
+        def means (mean = mean):
+            return (np.ones(shape) * mean).ravel()
+
+        #data has shape (10,5) but means returns an array of shape (10 * 5,)
+        assert_raises(ValueError, pymc.Normal, "obs", mu = means, tau = 1, observed =
+True, value = data)
+        
 
 
 if __name__ == '__main__':
