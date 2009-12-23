@@ -182,7 +182,7 @@ class BasisCovariance(Covariance):
             return {'piv': piv_return, 'U': U_return}
 
 
-    def observe(self, obs_mesh, obs_V):
+    def observe(self, obs_mesh, obs_V, output_type='o'):
         __doc__ = Covariance.observe.__doc__
 
         ndim = obs_mesh.shape[1]
@@ -200,12 +200,19 @@ class BasisCovariance(Covariance):
 
         # chol(basis_o.T * coef_cov * basis_o)
         chol_inner = self.coef_U * basis_o
-
-        # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)). Really should do this as low-rank update of covariance
-        # of V.
-        U, piv, m = ichol_basis(basis=chol_inner, nug=obs_V, reltol=self.relative_precision)
-
-
+        
+        if output_type=='s':
+            C_eval = dot(chol_inner.T, chol_inner).copy('F')
+            U_eval = linalg.cholesky(C_eval).T.copy('F')
+            U = U_eval
+            m = U_eval.shape[0]            
+            piv = arange(m)
+        else:
+            # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)). Really should do this as low-rank update of covariance
+            # of V.
+            
+            U, piv, m = ichol_basis(basis=chol_inner, nug=obs_V, reltol=self.relative_precision)
+            
         U = asmatrix(U)
         piv_new = piv[:m]
         self.obs_piv = piv_new
@@ -219,19 +226,25 @@ class BasisCovariance(Covariance):
         # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)).T.I * basis_o.T * coef_cov
         self.Uo_cov = self.Uo_cov * self.coef_cov
 
-        # coef_cov -= coef_cov * basis_o * (basis_o.T * coef_cov * basis_o + diag(obs_V)).I * basis_o.T * coef_cov
-        self.coef_cov -= self.Uo_cov.T * self.Uo_cov
+        # coef_cov = coef_cov - coef_cov * basis_o * (basis_o.T * coef_cov * basis_o + diag(obs_V)).I * basis_o.T * coef_cov
+        self.coef_cov = self.coef_cov - self.Uo_cov.T * self.Uo_cov
 
         # coef_U = chol(coef_cov)
         U, m, piv = ichol_full(c=self.coef_cov, reltol=self.relative_precision)
         U = asmatrix(U)
         self.coef_U = U[:m,argsort(piv)]
         self.m = m
+    
+        if output_type=='o':
+            return piv_new, obs_mesh_new
+        
+        if output_type=='s':
+            return U_eval, C_eval, basis_o
+            
+        raise ValueError, 'Output type not recognized.'
 
-        return piv_new, obs_mesh_new, None
 
-
-    def __call__(self, x, y=None, observed=True, regularize=True):
+    def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
 
         # Record the initial shape of x and regularize it.
         orig_shape = shape(x)
@@ -258,8 +271,8 @@ class BasisCovariance(Covariance):
         # Evaluate the Cholesky factor of self's evaluation on x.
         # Will be observed or not depending on which version of coef_U
         # is used.
-        basis_x = self.eval_basis(x, regularize=False)
-        basis_x = coef_U*basis_x
+        basis_x_ = self.eval_basis(x, regularize=False)
+        basis_x = coef_U*basis_x_
 
         # ==========================================================
         # = If only one argument is provided, return the diagonal: =
@@ -267,14 +280,20 @@ class BasisCovariance(Covariance):
         if y is None:
             # Diagonal calls done in Fortran for speed.
             V = basis_diag_call(basis_x)
-            return V.reshape(orig_shape)
+            if return_Uo_Cxo:
+                return V.reshape(orig_shape), basis_x_
+            else:
+                return V.reshape(orig_shape)
 
 
         # ===========================================================
         # = If the same argument is provided twice, save some work: =
         # ===========================================================
         if y is x:
-            return basis_x.T*basis_x
+            if return_Uo_Cxo:
+                return basis_x.T*basis_x, basis_x_
+            else:
+                return basis_x
 
 
         # =========================================
@@ -309,11 +328,11 @@ class BasisCovariance(Covariance):
     def _obs_reg(self, M, dev_new, m_old):
         # reg_mat = chol(self.basis_o.T * self.coef_cov * self.basis_o + diag(obs_V)).T.I * self.basis_o.T * self.coef_cov *
         # chol(self(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-        M.reg_mat += self.Uo_cov.T * asmatrix(trisolve(self.Uo, dev_new, uplo='U', transa='T')).T
+        M.reg_mat = M.reg_mat + self.Uo_cov.T * asmatrix(trisolve(self.Uo, dev_new, uplo='U', transa='T')).T
         return M.reg_mat
 
-    def _obs_eval(self, M, M_out, x):
-        basis_x = self.eval_basis(x, regularize=False)
+    def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
+        basis_x = Uo_Cxo if Uo_Cxo is not None else self.eval_basis(x, regularize=False)
         M_out += asarray(dot(basis_x.T, M.reg_mat)).squeeze()
         return M_out
 

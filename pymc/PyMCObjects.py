@@ -483,7 +483,8 @@ class Stochastic(StochasticBase):
                     cache_depth=2,
                     plot=None,
                     verbose = None,
-                    isdata=None):
+                    isdata=None, 
+                    check_logp=True):
 
         self.counter = Counter()
         self.ParentDict = ParentDict
@@ -545,9 +546,10 @@ class Stochastic(StochasticBase):
         if isinstance(self._value, ndarray):
             self._value.flags['W'] = False
 
-        # Check initial value
-        if not isinstance(self.logp, float):
-            raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+        if check_logp:
+            # Check initial value
+            if not isinstance(self.logp, float):
+                raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
 
     def gen_lazy_function(self):
@@ -652,7 +654,7 @@ class Stochastic(StochasticBase):
 
         return logp
 
-    def set_logp(self):
+    def set_logp(self, new_logp):
         raise AttributeError, 'Stochastic '+self.__name__+'\'s logp attribute cannot be set'
 
     logp = property(fget = get_logp, fset=set_logp, doc="Log-probability or log-density of self's current value\n given values of parents.")

@@ -1,5 +1,9 @@
 # Copyright (c) Anand Patil, 2007
 
+# Where matrix evaluations can be done in chunks, the chunk size will be
+# kept below this limit.
+chunksize = 1e8
+
 __modules__ = [ 'GPutils',
                 'Mean',
                 'Covariance',
@@ -8,7 +12,8 @@ __modules__ = [ 'GPutils',
                 'NearlyFullRankCovariance',
                 'Realization',
                 'cov_funs',
-                'PyMC_objects']
+                'gp_submodel',
+                'step_methods']
 
 __optmodules__ = ['gpplots']
 
@@ -20,7 +25,8 @@ from FullRankCovariance import *
 from NearlyFullRankCovariance import *
 from Realization import *
 from cov_funs import *
-from PyMC_objects import *
+from gp_submodel import *
+from step_methods import *
 
 try:
     import gpplots
@@ -31,3 +37,4 @@ try:
     import SparseCovariance
 except ImportError:
     pass
+    

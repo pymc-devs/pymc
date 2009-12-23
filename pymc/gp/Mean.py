@@ -4,10 +4,8 @@ __docformat__='reStructuredText'
 
 from numpy import *
 from GPutils import regularize_array, trisolve
-from Covariance import Covariance
-from BasisCovariance import BasisCovariance
 
-__all__ = ['Mean']
+__all__ = ['Mean','zero_fn']
 
 class Mean(object):
     """
@@ -18,7 +16,7 @@ class Mean(object):
 
 
     :Arguments:
-
+    
         -   `eval_fun`: A function that takes an argument x of shape  (n,ndim), where n is
             any integer and ndim is the dimensionality of  the space, or shape (n). In the
             latter case ndim should be assumed to be 1..
@@ -52,7 +50,7 @@ class Mean(object):
         Values of observation are given by obs_vals.
 
         obs_mesh_new and obs_vals_new should already have
-        been sliced, as Covariance.observe() does.
+        been sliced, as Covariance.observe(..., output_type='o') does.
         """
 
         self.C = C
@@ -91,7 +89,7 @@ class Mean(object):
             self.dev = hstack((self.dev, dev_new))
         self.observed = True
 
-    def __call__(self, x, observed = True, regularize=True):
+    def __call__(self, x, observed = True, regularize=True, Uo_Cxo=None):
 
         # Record original shape of x and regularize it.
         orig_shape = shape(x)
@@ -110,16 +108,15 @@ class Mean(object):
             if not self.ndim == ndimx:
                 raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."
 
-
         # Evaluate the unobserved mean
         M = self.eval_fun(x,**self.params).squeeze()
 
         # Condition. Basis covariances get special treatment. See documentation for formulas.
         if self.observed and observed:
-            M = self.C._obs_eval(self, M, x)
+            M = self.C._obs_eval(self, M, x, Uo_Cxo)
 
         return M.reshape(orig_shape)
 
-def zero_mean():
-    "Returns a Mean object whose function simply returns zero."
-    return Mean(lambda x:x.shape[:-1])
+def zero_fn(x):
+    "A function mapping any argument to zero."
+    return zeros(x.shape[:-1])

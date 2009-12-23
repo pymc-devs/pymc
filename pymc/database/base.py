@@ -47,7 +47,7 @@ done explicitly by the user.
 """
 import pymc
 import types
-import sys, traceback
+import sys, traceback, warnings
 import copy
 __all__=['Trace', 'Database']
 
@@ -202,14 +202,14 @@ class Database(object):
                 self._traces[name].tally(chain)
             except:
                 cls, inst, tb = sys.exc_info()
-                print """
+                warnings.warn("""
 Error tallying %s, will not try to tally it again this chain.
 Did you make all the samevariables and step methods tallyable
 as were tallyable last time you used the database file?
 
 Error:
 
-%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
+%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb))))
                 self.trace_names[chain].remove(name)
 
 

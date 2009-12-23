@@ -2,7 +2,7 @@
 
 __docformat__='reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy', 'point_predict']
+            'fast_matrix_copy', 'point_predict','square_and_sum','point_eval']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -13,6 +13,9 @@ from numpy.linalg.linalg import LinAlgError
 from linalg_utils import *
 from threading import Thread, Lock
 import sys
+from pymc import thread_partition_array, map_noreturn
+from pymc.gp import chunksize
+import pymc
 
 try:
     from PyMC2 import ZeroProbability
@@ -85,6 +88,14 @@ def caching_call(f, x, x_sofar, f_sofar):
     f[repeat_to]=f[repeat_from]
 
     return f, x_sofar, f_sofar
+    
+def square_and_sum(a,s):
+    """
+    Writes np.sum(a**2,axis=0) into s
+    """
+    cmin, cmax = thread_partition_array(a)
+    map_noreturn(asqs, [(a,s,cmin[i],cmax[i]) for i in xrange(len(cmax))])
+    return a
 
 class caching_callable(object):
     """
@@ -218,7 +229,8 @@ def plot_envelope(M,C,mesh):
     try:
         from pylab import fill, plot, clf, axis
         x=concatenate((mesh, mesh[::-1]))
-        sig = sqrt(abs(C(mesh)))
+        mean, var = point_eval(M,C,mesh)
+        sig = sqrt(var)
         mean = M(mesh)
         y=concatenate((mean-sig, (mean+sig)[::-1]))
         # clf()
@@ -264,7 +276,7 @@ def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate
     obs_vals = resize(obs_vals, obs_mesh.shape[0])
 
     # First observe C.
-    relevant_slice, obs_mesh_new, junk = C.observe(obs_mesh, obs_V)
+    relevant_slice, obs_mesh_new = C.observe(obs_mesh, obs_V, output_type='o')
 
     # Then observe M from C.
     M.observe(C, obs_mesh_new, obs_vals.ravel()[relevant_slice])
@@ -322,3 +334,42 @@ def point_predict(f, x, size=1, nugget=None):
         V += nugget
     out= random.normal(size=(size, x.shape[0])) * sqrt(V) + mu
     return out.reshape((size,)+ orig_shape[:-1]).squeeze()
+
+
+def point_eval(M, C, x):
+    """
+    Evaluates M(x) and C(x).
+    
+    Minimizes computation; evaluating M(x) and C(x) separately would
+    evaluate the off-diagonal covariance term twice, but callling
+    point_eval(M,C,x) would only evaluate it once.
+    
+    Also chunks the evaluations if the off-diagonal term.
+    """
+    
+    x_ = regularize_array(x)
+    
+    M_out = empty(x_.shape[0])
+    V_out = empty(x_.shape[0])
+    
+    if isinstance(C, pymc.gp.BasisCovariance):
+        y_size = len(C.basis)
+    elif C.obs_mesh is not None:
+        y_size = C.obs_mesh.shape[0]
+    else:
+        y_size = 1
+    
+    n_chunks = ceil(y_size*x_.shape[0]/float(chunksize))
+    bounds = array(linspace(0,x_.shape[0],n_chunks+1),dtype='int')
+    cmin=bounds[:-1]
+    cmax=bounds[1:]
+    for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):           
+        x__ = x_[cmin:cmax] 
+        V_out[cmin:cmax], Uo_Cxo = C(x__, regularize=False, return_Uo_Cxo=True)
+        M_out[cmin:cmax] = M(x__, regularize=False, Uo_Cxo=Uo_Cxo)
+
+    if len(x.shape) > 1:
+        targ_shape = x.shape[:-1]
+    else:
+        targ_shape = x.shape
+    return M_out.reshape(targ_shape), V_out.reshape(targ_shape)

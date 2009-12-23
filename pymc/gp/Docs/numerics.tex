@@ -1,0 +1,353 @@
+\section{Gaussian processes and the multivariate normal distribution}
+
+Gaussian processes generalize the multivariate normal distribution from vectors to functions, like the multivariate normal distribution generalizes the univariate normal distribution from scalars to vectors. The progression is as follows:
+\begin{equation}
+    \begin{array}{ll}
+        y\sim\textup N(\mu,V): & \textup{$y$, $\mu$, $V$ are scalars}\\\\
+        \vec y\sim\textup N(\vec \mu,C): & \textup{$\vec y$ and $\vec \mu$ are vectors, $C$ is a matrix}\\\\
+        f\sim\textup{GP}(M, C): & \textup{$f$ and $M$ are functions of one variable, $C$ is a function of two variables}
+    \end{array}
+\end{equation}
+
+One of the nice things about all Gaussian distributions (parameterized by mean and covariance) is that they're easy to marginalize. For example, each element of a vector with a multivariate normal distribution has a univariate normal distribution:
+\begin{eqnarray*}
+    \vec y\sim\textup N(\vec \mu,C)\\
+    \Rightarrow \vec y_i\sim\textup N(\vec \mu_i,C_{i,i}),
+\end{eqnarray*}
+and any subvector of a vector with a multivariate normal distribution has a multivariate normal distribution:
+\begin{eqnarray*}
+    \vec y\sim\textup N(\vec \mu,C)\\
+    \Rightarrow \vec y_{i_1\ldots i_2}\sim\textup N(\vec \mu_{i_1\ldots i_2},C_{i_1\ldots i_2,i_1\ldots i_2}).
+\end{eqnarray*}
+
+This marginalizability applies to GP's as well. If $\vec x$ is a vector of values,
+\begin{equation}
+    \begin{array}{l}
+        f\sim\textup{GP}(M, C)\\\\
+        \Rightarrow f(\vec x) \sim\textup N(M(\vec x), C(\vec x,\vec x)).
+    \end{array}
+\end{equation}
+In other words, any evaluation of a Gaussian process realization has a multivariate normal distribution. Its mean is the corresponding evaluation of the associated mean function, and its covariance is the corresponding evaluation of the associated covariance function. You can probably start to see why this fact is important for working with GPs on a computer.
+
+\subsection{Observations}
+As mentioned earlier, if $f$ has a GP prior and normally-distributed observations of $f$ are made at a finite set of values, $f$'s posterior is a Gaussian process also:
+\begin{eqnarray*}
+    \left.\begin{array}{l}
+        d_i \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(f(o_i), V_i)\\
+        f \sim \textup{GP}(M,C)
+    \end{array}\right\}\Rightarrow f|d \sim \texttt{GP}(M_o, C_o).
+\end{eqnarray*}
+Denoting by $o$ the array of observation values $[o_0\ldots o_{N-1}]$ and $V$ a matrix with observation variances $[V_0\ldots V_{N-1}]$ on its diagonal, $M_o(x)$ and $C_o(x,y)$ are as follows for arbitrary input vectors $x$ and $y$:
+\begin{eqnarray*}
+    M_o(x) = M(x) + C(x,o)[C(o,o) + V]^{-1}(f(o)-M(o))\\
+    C_o(x,y) = C(x,y) - C(x,o)[C(o,o) + V]^{-1}C(o,y).
+\end{eqnarray*}
+
+\subsection{Low-rank observations}
+
+If $C(o,o)+V$ is singular, some elements of $f(o)$ can be computed from others with no uncertainty. In other words, there exists a partition $[o_*, o_{**}]$ of $o$ and corresponding partition of the data such that $C(o_*,o_*)+V$ is full-rank and
+\begin{eqnarray*}
+    f(o_{**}) = M_{o_*}(o_{**}),
+\end{eqnarray*}
+where $M_{o_*}$ can be computed from the formula above.
+
+In such cases, this package's strategy is to observe $f$ at a subvector $o_*$ of $o$, such that $C(o_*,o_*)+V$ is full-rank but if any elements were added to $o_*$ it would pick up a very small eigenvalue. The function \function{predictive_check} optionally checks the remaining data values $d_{**}$ against $M_{o_*}(o_{**})$, and raises an error if the two aren't equal up to a user-defined threshold.
+
+This threshold is parameter \code{relative_precision} from \texttt{Covariance}'s init method, multiplied by the largest value on the diagonal of $C(o_*,o_*)+V$; intuitively, the maximal variance of $f(o_{**})$ given $f(o_*)$ is a multiple of the maximal variance of $f(o_*)$.
+
+\section{Incomplete Cholesky factorizations}\label{sec:ichol} % (fold)
+
+In addition to numpy's linear algebra support, this package uses some Fortran subroutines wrapped using \citetitle[http://cens.ioc.ee/projects/f2py2e/]{f2py}. They require \citetitle[http://www.netlib.org/blas/]{BLAS} and \citetitle[http://www.netlib.org/lapack/]{LAPACK} libraries (eg, \citetitle[http://math-atlas.sourceforge.net/]{ATLAS}) on your system, and the \file{setup.py} script will attempt to find these. If you don't have optimized BLAS and LAPACK installed, it's a good idea to install them; this package and numpy in general will be much faster. Some operating systems (such as Mac OS X) ship with optimized BLAS and LAPACK libraries included.
+
+The following incomplete Cholesky factorization functions are found in the Fortran files \file{linalg_utils.f} and \file{incomplete_chol.f} :
+\begin{description}
+
+    % \item[\function{dtrsm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRSM}, which solves triangular systems \texttt{$\alpha$a$^{op}$ x = b} in-place (that is, \texttt{b} is overwritten by $x$).
+    % \begin{itemize}
+    %     \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
+    %     \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
+    % \end{itemize}
+    % 
+    % \item[\function{dtrmm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRMM}, which does the triangular matrix multiplication \texttt{$\alpha$a$^{op}$x = b} in-place (that is, \texttt{b} is overwritten by $x$).
+    % \begin{itemize}
+    %     \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
+    %     \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x} is computed. If \texttt{transa='N'}, \texttt{$\alpha$a*x} is computed.
+    % \end{itemize}
+    % 
+    % \item[\function{info = dpotrf_wrap(a)}:] A wrapper for the LAPACK routine \citetitle[http://www.netlib.org/lapack/double/dpotrf.f]{DPOTRF}, which tries to overwrite positive-definite matrix \texttt{a} with an upper-triangular Cholesky factor in-place. If the return value \texttt{info} is positive, \texttt{a} is not positive definite and the algorithm has failed.
+
+    \item[\function{U, m, piv = ichol(diag, reltol, rowfun)}:] An implementation of the incomplete Cholesky decomposition, based on a port of one of the functions in the \citetitle[http://www.kyb.tuebingen.mpg.de/bs/people/seeger/]{chol_incomplete} package by Matthias Seeger.
+
+The arguments are:
+    \begin{description}
+        \item[\texttt{diag}:] The diagonal of an \texttt{n} by \texttt{n} covariance matrix C.
+        \item[\texttt{reltol}:] If the ratio of the \texttt{i}'th pivot to the maximum pivot is found to be less than \texttt{reltol}, the \texttt{i}'th pivot is assumed to be zero.
+        \item[\texttt{rowfun}:] A Python function. The call \function{rowfun(i,p,rowvec)} should perform the update \texttt{rowvec[i,i+1:]=C[i,p[i+1:]]} in-place.
+    \end{description}
+
+The outputs are:
+    \begin{description}
+        \item[M:] The rank of C. Note that M$\le$\texttt{n}.
+        \item[\texttt{piv}:] A length-\texttt{n} vector of pivots.
+        \item[\texttt{U}:] An M-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)] = C}.
+    \end{description}
+
+Because the full matrix $C$ does not need to be computed ahead of time, the algorithm is able to factor $C$ in $O(m^2 n)$ operations \cite{incompchol}. The algorithm is implemented in Fortran, but a Python version would be as follows:
+
+\begin{verbatim}
+
+def swap(vec,i,j):
+    temp = vec[i]
+    vec[i] = vec[j]
+    vec[j] = temp
+
+def ichol(diag, reltol, rowfun):
+
+    piv = arange(n)
+    U = zeros((n,n),dtype=float).view(matrix)
+    rowvec = zeros(n,dtype=float)
+
+    for i in range(n):
+        l = diag[i:].argmax()
+        maxdiag = diag[l]
+
+        if maxdiag < reltol:
+            m=i
+            return U[:m,:], m, piv
+
+        swap(diag,i,l)
+        swap(p,i,l)
+
+        temp = U[:i,i]
+        U[:i,i] = U[:i,l]
+        U[:i,l] = temp
+
+
+        U[i,i] = sqrt(diag[i])
+        rowvec[i:] = C[i,piv[i+1:]]
+
+        if i > 0:
+            rowvec -= U[:i,i].T * U[:i,i+1:]
+
+        U[i,i+1:] = rowvec[i+1:] / U[i,i]
+        diag[i+1:] -= U[i,i+1:].view(ndarray) ** 2
+
+    m=n
+    return U, m, piv
+\end{verbatim}
+
+Function \function{ichol} is wrapped by the \class{Covariance} method \method{cholesky}.
+
+\item[\function{m, piv = ichol_continue(U, diag, reltol, rowfun, piv)}:]
+This function computes the Cholesky factorization of an \texttt{n} by \texttt{n} covariance matrix C from the factor of its upper-left \texttt{n}$_*$ by \texttt{n}$_*$ submatrix C$_*$. Its input arguments are as follows:
+\begin{description}
+    \item[\texttt{U}:] Unlike \function{ichol}, this function overwrites a matrix in-place. Suppose the Cholesky factor of C$_*$, \texttt{U}$_*$, is of rank M$_*$. On input, \texttt{U} must be an \texttt{[m + (n-n$_*$)]}-by-\texttt{n} matrix arranged like this:
+    \begin{eqnarray*}
+        \left[
+        \begin{array}{ccc}
+            \texttt{U}_*\texttt{[:,:m}_*\texttt{]} & \texttt{U}_*\texttt{[:,:m}_*\texttt{].T.I C[:m}_*\texttt{,n}_*\texttt{:]} & \texttt{U}_*\texttt{[:,m}_*\texttt{:]}\\
+            \texttt{0}&\texttt{0}&\texttt{0}
+        \end{array}
+        \right]
+    \end{eqnarray*}
+On exit, \texttt{U} will be an M-by-\texttt{n} upper-triangular matrix that satisfies \texttt{U[:,argsort(piv)].T * U[:,argsort(piv)]=C}.
+    \item[\texttt{piv}:] Denote by \texttt{piv}$_*$ the pivot vector associated with \texttt{U}$_*$ On input, \texttt{piv} must be a length-\texttt{n} vector laid out like this:
+    \begin{eqnarray*}
+        \begin{array}{ccc}
+            [\texttt{piv}_*\texttt{[:m}_*\texttt{]} & \texttt{arange(n-n$_*$)} & \texttt{piv}_*\texttt{[m}_*\texttt{:]}]
+        \end{array}
+    \end{eqnarray*}
+    \item[\texttt{diag}:] The length \texttt{n-n}$_*$ diagonal of \texttt{C[n$_*$:,n$_*$]}.
+    \item[\texttt{rowfun}:] The call \function{rowfun(i,p,rowvec)} should perform the update \texttt{rowvec[i,i+1:]} \texttt{=} \texttt{C[i,p[i+1:]]} in-place.
+\end{description}
+
+    The input parameter \texttt{reltol}, as well as the output parameters \texttt{piv} and M and the updated matrix \texttt{U}, should be interpreted just like their counterparts in \function{ichol}.
+
+    The algorithm is just like the algorithm in ichol, but the index \texttt{i} iterates over \texttt{range(m$_*$,m$_*$+n-n$_*$)} (and the index of \texttt{diag} is downshifted appropriately).
+
+    \function{ichol_continue} is wrapped by the \class{Covariance} method \method{continue_cholesky}, so it should rarely be necessary to call it directly.
+
+    \item[\function{U, m, piv = ichol_full(c, reltol)}:] Just like \texttt{ichol}, but instead of a diagonal and a `get-row' function a full covariance matrix C is required as an input.
+
+    \item[\function{U, m, piv = ichol_full(basis, nug, reltol)}:] Just like \texttt{ichol}, but the following arguments are required:
+    \begin{description}
+        \item[\texttt{basis}:] The evaluation of a basis function on the mesh, multiplied by the Cholesky factor of the coefficients' covariance matrix. This is itself a square root of the covariance matrix, but running it through \texttt{ichol_basis} allows for observations with nonzero variance and essentially pivots for better accuracy even in the zero-variance case.
+        \item[\texttt{nug}:] A vector that will effectively be added to the diagonal of the covariance matrix.
+    \end{description}
+\end{description}
+
+%     \item[\function{x = trisolve(A,b,uplo='U',transa='N',inplace=False)}:] Solves the triangular system \texttt{$\alpha$a$^{op}$ x = b} using \function{dtrsm_wrap} and returns $x$. If \texttt{A} is found to be singular, an error is raised.
+%     \begin{itemize}
+%         \item \texttt{A} is assumed upper-triangular if \code{uplo='U'} and lower-triangular if \code{uplo='L'}.
+%         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
+%         \item If \texttt{inplace=True}, \texttt{b} is overwritten with $x$ in-place and returned. If \texttt{inplace=False}, \texttt{b} is not modified.
+%     \end{itemize}
+% 
+%     \item[\function{b = trimult(A,x,uplo='U',transa='N',inplace=False)}:] Does the triangular multiplication \texttt{$\alpha$a$^{op}$x = b} using \function{dtrmm_wrap} and returns \texttt{b}.
+%     \begin{itemize}
+%         \item \texttt{A} is assumed upper-triangular if \code{uplo='U'} and lower-triangular if \code{uplo='L'}.
+%         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T8x} is computed. If \texttt{transa='N'}, \texttt{$\alpha$a*x} is computed.
+%         \item If \texttt{inplace=True}, $x$ is overwritten with \texttt{b} in-place and returned. If \texttt{inplace=False}, $x$ is not modified.
+%     \end{itemize}
+% \end{description}
+
+    % \item[\function{observe(M, C, obs_mesh, obs_vals, obs_V, lintrans, cross_validate = True)}:] This function calls \texttt{C.observe}, calls \texttt{M.observe} with the output, and then if \texttt{cross_validate=True} calls \texttt{predictive_check}.
+
+%     If the return of \texttt{predictive_check} value is \texttt{False}, the values of some observations can be predicted with negligible uncertainty from the values of others, but they don't match their predicted values; in other words, the data are extremely improbable. A \texttt{ZeroProbability} exception is raised with some helpful suggestions if this is the case.
+%
+%     \item[\function{OK = predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance)} :] Checks the value of M evaluated at \texttt{obs_mesh} sliced at the complement of \texttt{posdef_indices} against the corresponding \texttt{obs_vals}. If any of the differences are greater than \texttt{tolerance}, \texttt{False} is returned. Otherwise \texttt{True} is returned.
+% \end{description}
+% \section{Object internals}\label{sec:internals}
+%
+% The methods of \class{Mean}, \class{Covariance} and \class{Realization} will be described here.
+%
+% \section{Covariance}\label{sec:covarianceInt}
+% \begin{description}
+%
+%     \item[\method{cholesky(x, apply_pivot = True, observed=True)}:] Returns an incomplete Cholesky factor of \texttt{C(x,x)}. The other arguments' meanings are as follows:
+%     \begin{description}
+%         \item[\texttt{apply_pivot}:] If \texttt{True}, the return value is a matrix \texttt{U} such that \texttt{U.T*U = C(x,x)}. If \texttt{False}, the return value is a dictionary. Element \texttt{'pivots'} is a vector of pivots returned by function \function{ichol}, and element \texttt{'U'} is the matrix \texttt{sig} returned by \function{ichol}.
+%         \item[\texttt{observed}:] If \texttt{True}, the matrix \texttt{C(x,x)} is obtained conditional on observations that have been made involving C. If \texttt{False}, the matrix is obtained without regard to those observations.
+%     \end{description}
+%
+%         \item[\method{continue_cholesky(x, x_old, chol_dict_old[, apply_pivot, observed])}:] Returns an incomplete Cholesky factor of \texttt{C(concatenate(x_old,x), concatenate(x_old,x))}. Arguments \texttt{apply_pivot} and \texttt{observed} are the same as for \texttt{cholesky}. \texttt{chol_dict_old} should be the incomplete Cholesky factorization of \texttt{C(x_old, x_old)} in the form of a dictionary such as the one produced by \texttt{C.cholesky}.
+%
+%         This method returns either a matrix or a dictionary depending on the value of \texttt{apply_pivot}. See \texttt{cholesky}.
+%
+%
+%         \item[\method{relevant_slice, obs_mesh_new, U_for_draw = observe(obs_mesh, obs_V=0.)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. This method updates the following attributes of C:
+%         \begin{itemize}
+%             \item \texttt{observed}: This flag is set to \texttt{True}.
+%             \item \texttt{obs_U} and \texttt{obs_piv}: The output of \texttt{self.cholesky(obs_mesh, apply_pivot=False, observed=False)}.
+%             \item \texttt{obs_mesh}: The mesh on which self has been observed, sliced by \texttt{obs_piv[:m]}, where M is the rank of \texttt{obs_U}.
+%             \item \texttt{obs_V}: The variances associated with the observations, sliced as \texttt{obs_mesh} is.
+%             \item \texttt{obs_len}: The length of \texttt{obs_V}.
+%         \end{itemize}
+%
+%         The return values are:
+%         \begin{itemize}
+%             \item \texttt{relevant_slice}: The indices included in the incomplete Cholesky factorization. These correspond to the values of \texttt{obs_mesh} that determine the other values, but not one another.
+%             \item \texttt{obs_mesh_new}: \texttt{obs_mesh} sliced according to \texttt{relevant_slice}.
+%             \item \texttt{U_for_draw}: An upper-triangular Cholesky factor of \texttt{self}'s evaluation on \texttt{obs_mesh} conditional on all previous observations.
+%         \end{itemize}
+%
+%
+%
+%     \item[\method{__call__(x[, y, observed])}:]
+%
+%     \begin{itemize}
+%         \item If only one argument $x$ is provided, \texttt{C(x,x) = V(f(x))} will be returned conditional on any observations that have been made.
+%         \begin{itemize}
+%             \item If C is unobserved or \texttt{observed = False}, its underlying function C is evaluated at each element of $x$. The \texttt{i}'th element of the return value is \texttt{c(x_i,x_i)}.
+%             \item If C is observed and \texttt{observed = True}, its underlying function C is evaluated at each element of $x$. The \texttt{i}'th element of the return value is
+%             \begin{eqnarray*}
+%                 \texttt{c(x_i,x_i) - (U.T.I c(o,x_i)).T (U.T.I c(o,x_i))},
+%             \end{eqnarray*}
+%             where \texttt{o} is \code{self.obs_mesh} and \texttt{U} is \texttt{self.obs_U}, both of which were provided by \function{observe}.
+%             \end{itemize}
+%
+%         \item If two arguments \texttt{(x,y)} are provided, \texttt{C(x,y)} will be returned conditional on any observations that have been made.
+%         \begin{itemize}
+%             \item If C is unobserved, \texttt{c(x,y)} will be returned where C is the underlying function. If $x$ and $y$ are references to the same array, only half the matrix will actually be computed; the other half will be filled in.
+%         \item If C is observed, the return value will be
+%         \begin{eqnarray*}
+%             \texttt{c(x,y) - (U.T.I c(o,x)).T (U.T.I c(o,y))}
+%         \end{eqnarray*}
+%         where again \texttt{o} is \code{self.obs_mesh} and \texttt{U} is \texttt{self.obs_U}.
+%         \end{itemize}
+%
+%     \end{itemize}
+%     \end{description}
+%
+% \section{BasisCovariance}\label{sec:basisCovariance}
+% \class{BasisCovariance} has methods and attributes that act just like those of \texttt{Covariance}, but of course the internal computations are different and tend to be faster.
+%
+% \section{Mean}\label{sec:meanInt}
+% \begin{description}
+%     \item[\method{observe(C, obs_mesh_new, obs_vals_new)}:] All subsequent calls will be made under the assumption that observations of the random field at inputs \texttt{obs_mesh} have been made with variance \texttt{obs_V}. Assumes that \texttt{C(obs_mesh_new, obs_mesh_new)} is positive definite; the \emph{function} \function{observe} slices \texttt{obs_vals} according to \texttt{Covariance.observe}'s output value \texttt{relevant_slice} before passing it to \texttt{Mean.observe}. This method updates the following attributes of M:
+%     \begin{itemize}
+%         \item \texttt{self.C}: The covariance of the random field (which has self as mean) that was observed. Several of $C$'s attributes are used by this method.
+%         \item \texttt{self.obs_U}: \texttt{C.obs_U}.
+%         \item \texttt{self.obs_mesh}: \texttt{C.obs_mesh}.
+%         \item \texttt{obs_V}: \texttt{C.obs_V}.
+%         \item \texttt{obs_len}: \texttt{C.obs_len}.
+%         \item \texttt{self.dev}: \texttt{obs_mesh - self.__call__(obs_mesh, observed=False)}.
+%         \item \texttt{self.reg_vec}: \texttt{self.obs_U[:,:m].T*self.dev}, where M is the rank of \texttt{self.obs_U}.
+%     \end{itemize}
+%
+%     Note that \texttt{Mean.observe} will not cross-validate; if inconsistent observation values are used, it will simply ignore them. You'll need to call \texttt{predictive_check} yourself if you want cross-validation.
+%
+%     \item[\method{__call__(x[, observed])}:]
+%     \begin{itemize}
+%         \item If M has not been observed or \texttt{observed = False}, the return value of \texttt{M(x)} will just be \texttt{m(x)} where M is the underlying mean function.
+%         \item If M has been observed and \texttt{observed = True}, the return value will be
+%         \begin{eqnarray*}
+%             \texttt{c(x,o) U.I r},
+%         \end{eqnarray*}
+%         where \texttt{r} is \code{self.reg_vec}, \texttt{U} is \code{self.obs_U} and C is \code{self.cov_fun}, all of which were provided by \function{observe}.
+%
+%     \end{itemize}
+%
+% \end{description}
+
+% \section{Realization}\label{sec:realInt}
+% A realization f maintains the following attributes:
+% \begin{itemize}
+%     \item \texttt{x_sofar}: The values at which self has already been evaluated.
+%     \item \texttt{f_sofar}: Self's evaluation at \texttt{x_sofar}.
+%     \item \texttt{M_internal}: An observed copy of self's mean.
+%     \item \texttt{C_internal}: An observed copy of self's covariance.
+% \end{itemize}
+%
+% When the evaluation \texttt{f(x)} is requested, the following happen:
+% \begin{enumerate}
+%     \item \texttt{x_sofar} is searched for elements of $x$. If any are found, the corresponding values of f aren't recomputed. Call the remaining elements \texttt{x_new}.
+%     \item \texttt{C_internal} is observed at \texttt{x_new} with \texttt{obs_V=0}.
+%     \item The output value \texttt{U_for_draw} is used to generate a normal random variable \texttt{f_new} with mean \texttt{M_internal(x_new)} and covariance \texttt{C_internal(x_new, x_new)}.
+%     \item \texttt{M_internal} is observed with \texttt{obs_mesh = x_new}, \texttt{obs_vals = f_new}, \texttt{obs_taus = Inf}.
+%     \item \texttt{f_new} is appropriately combined with f's evaluation at previously computed values of $x$ and the result is returned.
+% \end{enumerate}
+%
+% If a realization's covariance is an instance of \texttt{BasisCovariance}, the behavior is different. At instantiation, the realization will draw coefficients for the basis terms; calls to the realization will simply be handled by calling the basis.
+
+% chapter numerics (end)
+
+% \chapter{Wishlist}\label{cha:wishlist}
+% \section{Features}
+% \begin{itemize}
+%     \item Linear transformations.
+%     \begin{itemize}
+%         \item Create new GP's from old GP's via linear transformations. Maybe try to make a \class{LinearOperator} class.
+%         \item Observe linear transformations of evaluations of GP.
+%     \end{itemize}
+%     \item Observations can be dependent (\texttt{obs_V} can be square rather than a diagonal).
+%     \item Specific support for anisotropy.
+%     \item Specific support for spline covariances.
+%     \item Specific support for vector-valued GPs (cokriging).
+% \end{itemize}
+%
+% \section{Optimizations}
+% \begin{itemize}
+%     % \item Markov random field covariances, which take advantage of the sparseness of the covariance for speed.
+%     \item Speed up realization calls with just one value. All the array manipulation really bogs this case down, and this makes dynamical/autoregressive applications slow.
+%     \begin{itemize}
+%         \item There isn't a clear bottleneck, unfortunately. It might be necessary to write all the call methods in f2py or Pyrex.
+%     \end{itemize}
+% \item \function{ichol} and friends:
+% \begin{itemize}
+%     \item Don't allocate full-rank memory up-front.
+%     \item Use a symbolic Cholesky decomposition to save some work.
+%     \item Increase granularity of BLAS calls to take better advantage of threaded libraries.
+%     \item Distributed memory.
+% \end{itemize}
+% \end{itemize}
+%
+% \section{Other}
+% \begin{itemize}
+%     \item Clean up the return values from \class{Covariance.observe}.
+%     \item Try to figure out relative performance of incomplete Cholesky w/low-rank covariances to basis covariances, and relative performance of sparse Cholesky to Markov Random Field covariances.
+% \end{itemize}
+
+% section new_features (end)
+
+% \chapter{Quick reference}\label{cha:reference}

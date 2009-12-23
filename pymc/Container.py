@@ -547,8 +547,12 @@ class ObjectContainer(ContainerBase):
             input_to_file = input.__dict__
             conservative_update(self, input_to_file)
             # self.__dict__.update(input_to_file)
-
-        self._dict_container = DictContainer(self.__dict__)
+        
+        dictpop = copy(self.__dict__)
+        if dictpop.has_key('self'):
+            dictpop.pop('self')
+        
+        self._dict_container = DictContainer(dictpop)
         file_items(self, input_to_file)
 
         self._value = copy(self)

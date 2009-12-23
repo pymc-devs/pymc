@@ -6,7 +6,7 @@ from numpy import *
 
 # Impose observations on the GP
 obs_x = array([-.5,.5])
-V = array([.002,.002])*0
+V = array([.002,.002])
 data = array([3.1, 2.9])
 observe(M=M,
         C=C,
