@@ -4,6 +4,8 @@
 %\usepackage{babel}
 %\usepackage{times}
 %\usepackage[Bjarne]{fncychap}
+
+
 PyMC provides 35 built-in probability distributions. For each distribution, PyMC provides:
 \begin{itemize}
     \item A function that evaluates its log-probability or log-density, for example \code{normal_like()}.
@@ -11,669 +13,604 @@ PyMC provides 35 built-in probability distributions. For each distribution, PyMC
     \item A function that computes the expectation associated with the distribution, for example \code{normal_expval()}.
     \item A \code{Stochastic} subclass generated from the distribution, for example \code{Normal}.
 \end{itemize}
+
 This section describes the likelihood functions of these distributions.
 \index{pymc.distributions (module)}
-
-\newenvironment{paramlist}{
-\begin{list}{}{
-\setlength{\itemsep}{-2pt}
-\setlength{\parsep}{-1pt}
-\setlength{\topsep}{-1pt}}
- }{\end{list}}
-
-
+\hypertarget{module-pymc.distributions}{}
+%\declaremodule[pymc.distributions]{}{pymc.distributions}
 
 \section{Discrete distributions}
+\index{bernoulli\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.bernoulli_like}{}\begin{funcdesc}{bernoulli\_like}{x, p}
+The Bernoulli distribution describes the probability of successes (x=1) and
+failures (x=0).
+\begin{gather}
+\begin{split}f(x \mid p) = p^{x} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Series of successes (1) and failures (0). $x=0,1$
+
+\item {} 
+\emph{p} : Probability of success. $0 < p < 1$.
+
+\end{itemize}
+
+\item[Example] \leavevmode
+\begin{Verbatim}[commandchars=@\[\]]
+@PYGaQ[@textgreater[]@textgreater[]@textgreater[] ]bernoulli@_like(@PYGZlb[]@PYGaw[0],@PYGaw[1],@PYGaw[0],@PYGaw[1]@PYGZrb[], @PYGbe[.]@PYGaw[4])
+@PYGaa[-2.8542325496673584]
+\end{Verbatim}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
+$E(x)= p$
+
+\item {} 
+$Var(x)= p(1-p)$
+
+\end{itemize}
+\end{notice}
+\end{funcdesc}
 \index{binomial\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.binomial_like}{}
-\begin{funcdesc}{binomial\_like}{x, n, p}
+\hypertarget{pymc.distributions.binomial_like}{}\begin{funcdesc}{binomial\_like}{x, n, p}
 Binomial log-likelihood.  The discrete probability distribution of the
 number of successes in a sequence of n independent yes/no experiments,
 each of which yields success with probability p.
 \begin{gather}
 \begin{split}f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : integer
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of successes, \textgreater{} 0.
 
-Number of successes, \textgreater{} 0.
-\end{quote}
+\item {} 
+\emph{n} : {[}int{]} Number of Bernoulli trials, \textgreater{} x.
 
-\item[]  \textbf{n} : integer
-\begin{quote}
+\item {} 
+\emph{p} : Probability of success in each trial, $p \in [0,1]$.
 
-Number of Bernoulli trials, \textgreater{} x.
-\end{quote}
+\end{itemize}
 
-\item[] \textbf{p} : float
-\begin{quote}
+\end{description}\end{quote}
 
-Probability of success in each trial, $p \in [0,1]$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X)=np$
 
-\item {}
+\item {} 
 $Var(X)=np(1-p)$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
+\index{categorical\_like() (in module pymc.distributions)}
 
+\hypertarget{pymc.distributions.categorical_like}{}\begin{funcdesc}{categorical\_like}{x, p}
+Categorical log-likelihood. The most general discrete distribution.
+\begin{gather}
+\begin{split}f(x=i \mid p) = p_i\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}
+for $i \in 0 \ldots k-1$.
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} $x \in 0\ldots k-1$
 
+\item {} 
+\emph{p} : {[}float{]} $p > 0$, $\sum p = 1$
+
+\end{itemize}
+
+\end{description}\end{quote}
+\end{funcdesc}
+\index{discrete\_uniform\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.discrete_uniform_like}{}\begin{funcdesc}{discrete\_uniform\_like}{x, lower, upper}
+Discrete uniform log-likelihood.
+\begin{gather}
+\begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} $lower \leq x \leq upper$
+
+\item {} 
+\emph{lower} : Lower limit.
+
+\item {} 
+\emph{upper} : Upper limit (upper \textgreater{} lower).
+
+\end{itemize}
+
+\end{description}\end{quote}
+\end{funcdesc}
 \index{geometric\_like() (in module pymc.distributions)}
-\hypertarget{pymc.distributions.geometric_like}{}
-\begin{funcdesc}{geometric\_like}{x, p}
+
+\hypertarget{pymc.distributions.geometric_like}{}\begin{funcdesc}{geometric\_like}{x, p}
 Geometric log-likelihood. The probability that the first success in a
 sequence of Bernoulli trials occurs on the x'th trial.
 \begin{gather}
 \begin{split}f(x \mid p) = p(1-p)^{x-1}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : integer
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of trials before first success (x \textgreater{} 0).
 
-Number of trials before first success, \textgreater{} 0.
-\end{quote}
+\item {} 
+\emph{p} : Probability of success on an individual trial, $p \in [0,1]$
 
-\item[] \textbf{p} : float
-\begin{quote}
+\end{itemize}
 
-Probability of success on an individual trial, $p \in [0,1]$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X)=1/p$
 
-\item {}
+\item {} 
 $Var(X)=\frac{1-p}{p^2}$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
-\index{poisson\_like() (in module pymc.distributions)}
+\index{hypergeometric\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.hypergeometric_like}{}
-\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
+\hypertarget{pymc.distributions.hypergeometric_like}{}\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
 Hypergeometric log-likelihood. Discrete probability distribution that
 describes the number of successes in a sequence of draws from a finite
 population without replacement.
 \begin{gather}
-\begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : integer
-\begin{quote}
-Number of successes in a sample drawn from a population.
-$\max(0, draws-failures) \leq x \leq \min(draws, success)$
-\end{quote}
-\item[] \textbf{n} : integer
-\begin{quote}
-Size of sample drawn from the population.
-\end{quote}
-\item[] \textbf{m} : integer
-\begin{quote}
-Number of successes in the population.
-\end{quote}
-\item[] \textbf{N} : integer
-\begin{quote}
-Total number of units in the population.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item $E(X) = \frac{n m}{N}$
+\begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
+
+\item {} 
+\emph{n} : {[}int{]} Size of sample drawn from the population.
+
+\item {} 
+\emph{m} : {[}int{]} Number of successes in the population.
+
+\item {} 
+\emph{N} : {[}int{]} Total number of units in the population.
+
 \end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+$E(X) = \frac{n n}{N}$
+\end{notice}
 \end{funcdesc}
-\index{inverse\_gamma\_like() (in module pymc.distributions)}
+\index{negative\_binomial\_like() (in module pymc.distributions)}
 
+\hypertarget{pymc.distributions.negative_binomial_like}{}\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
+Negative binomial log-likelihood. The negative binomial distribution describes a
+Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
+parameterization is based on this mixture interpretation.
+\begin{gather}
+\begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data (x \textgreater{} 0).
 
-\hypertarget{pymc.distributions.poisson_like}{}
-\begin{funcdesc}{poisson\_like}{x, mu}
+\item {} 
+\emph{mu} : mu \textgreater{} 0
+
+\item {} 
+\emph{alpha} : alpha \textgreater{} 0
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
+$E[x]=\mu$
+
+\item {} 
+In Wikipedia's parameterization,
+$r=\alpha$
+$p=\alpha/(\mu+\alpha)$
+$\mu=r(1-p)/p$
+
+\end{itemize}
+\end{notice}
+\end{funcdesc}
+\index{poisson\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.poisson_like}{}\begin{funcdesc}{poisson\_like}{x, mu}
 Poisson log-likelihood. The Poisson is a discrete probability distribution.
 It is often used to model the number of events occurring in a fixed period of
 time when the times at which events occur are independent. The Poisson
 distribution can be derived as a limiting case of the binomial distribution.
 \begin{gather}
 \begin{split}f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[]\textbf{x} : integer
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} $x \in {0,1,2,...}$
 
-$x \in {0,1,2,...}$
-\end{quote}
+\item {} 
+\emph{mu} : Expected number of occurrences during the given interval, $\mu \geq 0$.
 
-\item[]\textbf{mu} : float
-\begin{quote}
+\end{itemize}
 
-Expected number of occurrences that occur during the given interval,
-$\mu \geq 0$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(x)=\mu$
 
-\item {}
+\item {} 
 $Var(x)=\mu$
 
 \end{itemize}
-\end{funcdesc}
-\index{negative\_binomial\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.negative_binomial_like}{}
-\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
-Negative binomial log-likelihood. The negative binomial distribution describes a
-Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
-parameterization makes this mixture interpretation more convenient to work with.
-\begin{gather}
-\begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[]\textbf{x} : integer
-\begin{quote}
-$x>0$
-\end{quote}
-
-\item[]\textbf{mu} : float
-\begin{quote}
-Expected number of occurrences, $>0$.
-\end{quote}
-
-\item[]\textbf{alpha} : float
-\begin{quote}
-Shape parameter of the gamma distribution of the Poisson rate, $>0$.
-\end{quote}
-\end{paramlist}
-
-\paragraph{Notes}
-\begin{itemize}
-\item {}
-$E(x)=\mu$
-
-\item {}
-In Wikipedia's parameterization, $r=\alpha$, $p=\alpha/(\mu+\alpha)$ and $\mu=r(1-p)/p$.
-\end{itemize}
-
-
-
+\end{notice}
 \end{funcdesc}
 
-\index{categorical\_like() (in module pymc.distributions)}
-\hypertarget{pymc.distributions.categorical_like}{}
-\begin{funcdesc}{categorical\_like}{x, p}
-Categorical log-likelihood. The most general discrete distribution.
-\begin{gather}
-\begin{split}f(x=i \mid p) = p_i\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\begin{gather}
-\begin{split}i \in 0 \ldots k-1\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : integer
-\begin{quote}
-$x \in 0 \ldots k-1$
-\end{quote}
-
-\item[]\textbf{p} : (k) float
-\begin{quote}
-$p > 0$, $\sum p = 1$
-\end{quote}
-\end{paramlist}
-\end{funcdesc}
-\index{discrete\_uniform\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.discrete_uniform_like}{}
-\begin{funcdesc}{discrete\_uniform\_like}{x, lower, upper}
-Discrete uniform log-likelihood.
-\begin{gather}
-\begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : integer
-\begin{quote}
-
-$lower \leq x \leq upper$
-\end{quote}
-
-\item[] \textbf{lower} : float
-\begin{quote}
-
-Lower limit.
-\end{quote}
-
-\item[] \textbf{upper} : float
-\begin{quote}
-
-Upper limit.
-\end{quote}
-\end{paramlist}
-\end{funcdesc}
-
-
-\index{bernoulli\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.bernoulli_like}{}
-\begin{funcdesc}{bernoulli\_like}{x, p}
-Bernoulli log-likelihood. The Bernoulli distribution describes the probability of successes (x=1) and
-failures (x=0).
-\begin{gather}
-\begin{split}f(x \mid p) = p^{x} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : sequence of Booleans
-\begin{quote}
-
-Series of successes (1) and failures (0). $x=0,1$
-\end{quote}
-
-\item[] \textbf{p} : float
-\begin{quote}
-
-Probability of success. $0 < p < 1$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
-$E(x)= p$
-
-\item {}
-$Var(x)= p(1-p)$
-
-\end{itemize}
-
-\end{funcdesc}
 
 \section{Continuous distributions}
-
 \index{beta\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.beta_like}{}
-\begin{funcdesc}{beta\_like}{x, alpha, beta}
-Beta log-likelihood. The conjugate prior for the parameter $p$ of the binomial distribution.
+\hypertarget{pymc.distributions.beta_like}{}\begin{funcdesc}{beta\_like}{x, alpha, beta}
+Beta log-likelihood. The conjugate prior for the parameter :math: \emph{p} of the binomial distribution.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : 0 \textless{} x \textless{} 1
 
-0 \textless{} x \textless{} 1
-\end{quote}
+\item {} 
+\emph{alpha} : alpha \textgreater{} 0
 
-\item[] \textbf{alpha} : float
-\begin{quote}
-$\alpha>0$
-\end{quote}
+\item {} 
+\emph{beta} : beta \textgreater{} 0
 
-\item[] \textbf{beta} : float
-\begin{quote}
-$\beta>0$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{itemize}
+
+\item[Example] \leavevmode
+\begin{Verbatim}[commandchars=@\[\]]
+@PYGaQ[@textgreater[]@textgreater[]@textgreater[] ]beta@_like(@PYGbe[.]@PYGaw[4],@PYGaw[1],@PYGaw[2])
+@PYGaa[0.18232160806655884]
+\end{Verbatim}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X)=\frac{\alpha}{\alpha+\beta}$
 
-\item {}
+\item {} 
 $Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
 
 \end{itemize}
-
+\end{notice}
 \end{funcdesc}
 \index{cauchy\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.cauchy_like}{}
-\begin{funcdesc}{cauchy\_like}{x, alpha, beta}
+\hypertarget{pymc.distributions.cauchy_like}{}\begin{funcdesc}{cauchy\_like}{x, alpha, beta}
 Cauchy log-likelihood. The Cauchy distribution is also known as the
 Lorentz or the Breit-Wigner distribution.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{alpha} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{alpha} : Location parameter.
 
-Location parameter.
-\end{quote}
+\item {} 
+\emph{beta} : Scale parameter \textgreater{} 0.
 
-\item[] \textbf{beta} : float
-\begin{quote}
+\end{itemize}
 
-Scale parameter \textgreater{} 0.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 Mode and median are at alpha.
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{chi2\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.chi2_like}{}
-\begin{funcdesc}{chi2\_like}{x, nu}
-Chi-squared ($\chi^2$) log-likelihood.
+\hypertarget{pymc.distributions.chi2_like}{}\begin{funcdesc}{chi2\_like}{x, nu}
+Chi-squared $\chi^2$ log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : \textgreater{} 0
 
-$x \ge 0$
-\end{quote}
+\item {} 
+\emph{nu} : {[}int{]} Degrees of freedom ( nu \textgreater{} 0 )
 
-\item[] \textbf{nu} : integer
-\begin{quote}
+\end{itemize}
 
-Degrees of freedom ( $nu > 0$)
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X)=\nu$
 
-\item {}
+\item {} 
 $Var(X)=2\nu$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{degenerate\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.degenerate_like}{}
-\begin{funcdesc}{degenerate\_like}{x, k}
-Degenerate log-likelihood, also known as point mass.
+\hypertarget{pymc.distributions.degenerate_like}{}\begin{funcdesc}{degenerate\_like}{x, k}
+Degenerate log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input value.
 
-$x = k$
-\end{quote}
+\item {} 
+\emph{k} : Degenerate value.
 
-\item[] \textbf{k} : float
-\begin{quote}
+\end{itemize}
 
-degenerate value or location of point mass.
-\end{quote}
-\end{paramlist}
+\end{description}\end{quote}
 \end{funcdesc}
 \index{exponential\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.exponential_like}{}
-\begin{funcdesc}{exponential\_like}{x, beta}
-Exponential log-likelihood. The exponential distribution is a special case of the gamma distribution
-with alpha=1. It often describes the time until the first occurrence of an event.
+\hypertarget{pymc.distributions.exponential_like}{}\begin{funcdesc}{exponential\_like}{x, beta}
+Exponential log-likelihood.
+
+The exponential distribution is a special case of the gamma distribution
+with alpha=1. It often describes the time until an event.
 \begin{gather}
 \begin{split}f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : x \textgreater{} 0
 
-$x \ge 0$
-\end{quote}
+\item {} 
+\emph{beta} : Survival parameter (beta \textgreater{} 0).
 
-\item[] \textbf{beta} : float
-\begin{quote}
+\end{itemize}
 
-Survival parameter $\beta > 0$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X) = \beta$
 
-\item {}
+\item {} 
 $Var(X) = \beta^2$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{exponweib\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.exponweib_like}{}
-\begin{funcdesc}{exponweib\_like}{x, alpha, k, loc=0, scale=1}
-Exponentiated Weibull log-likelihood. The exponentiated Weibull distribution is a generalization of the Weibull
+\hypertarget{pymc.distributions.exponweib_like}{}\begin{funcdesc}{exponweib\_like}{x, alpha, k, loc=0, scale=1}
+Exponentiated Weibull log-likelihood.
+
+The exponentiated Weibull distribution is a generalization of the Weibull
 family. Its value lies in being able to model monotone and non-monotone
 failure rates.
 \begin{gather}
 \begin{split}f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
 z & = \frac{x-loc}{scale}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : x \textgreater{} 0
 
-$x>0$
-\end{quote}
+\item {} 
+\emph{alpha} : Shape parameter
 
-\item[] \textbf{alpha} : float
-\begin{quote}
+\item {} 
+\emph{k} : k \textgreater{} 0
 
-Shape parameter
-\end{quote}
+\item {} 
+\emph{loc} : Location parameter
 
-\item[] \textbf{k} : float
-\begin{quote}
+\item {} 
+\emph{scale} : Scale parameter (scale \textgreater{} 0).
 
-$k>0$
-\end{quote}
+\end{itemize}
 
-\item[] \textbf{loc} : float
-\begin{quote}
-
-Location parameter
-\end{quote}
-
-\item[] \textbf{scale} : float
-\begin{quote}
-
-Scale parameter \textgreater{} 0.
-\end{quote}
-\end{paramlist}
+\end{description}\end{quote}
 \end{funcdesc}
 \index{gamma\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.gamma_like}{}
-\begin{funcdesc}{gamma\_like}{x, alpha, beta}
-Gamma log-likelihood. A useful two-parameter distribution for positive variables. It can serve as a conjugate prior for the precision parameter of a normal distribution. When alpha is an integer, it can represent the sum of alpha exponentially distributed random variables, each of which has mean beta.
+\hypertarget{pymc.distributions.gamma_like}{}\begin{funcdesc}{gamma\_like}{x, alpha, beta}
+Gamma log-likelihood.
+
+Represents the sum of alpha exponentially distributed random variables, each
+of which has mean beta.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : math:\emph{x ge 0}
 
-$x \ge 0$
-\end{quote}
+\item {} 
+\emph{alpha} : Shape parameter (alpha \textgreater{} 0).
 
-\item[] \textbf{alpha} : float
-\begin{quote}
+\item {} 
+\emph{beta} : Scale parameter (beta \textgreater{} 0).
 
-Shape parameter $\alpha > 0$.
-\end{quote}
+\end{itemize}
 
-\item[] \textbf{beta} : float
-\begin{quote}
+\end{description}\end{quote}
 
-Scale parameter $\beta > 0$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X) = \frac{\alpha}{\beta}$
 
-\item {}
+\item {} 
 $Var(X) = \frac{\alpha}{\beta^2}$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{half\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.half_normal_like}{}
-\begin{funcdesc}{half\_normal\_like}{x, tau}
-Half-normal log-likelihood, a normal distribution with mean 0 and limited
+\hypertarget{pymc.distributions.half_normal_like}{}\begin{funcdesc}{half\_normal\_like}{x, tau}
+Half-normal log-likelihood, a normal distribution with mean 0 limited
 to the domain $x \in [0, \infty)$.
 \begin{gather}
 \begin{split}f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $x \ge 0$
 
-$x \ge 0$
-\end{quote}
+\item {} 
+\emph{tau} : tau \textgreater{} 0
 
-\item[] \textbf{tau} : float
-\begin{quote}
+\end{itemize}
 
-$\tau > 0$
-\end{quote}
-\end{paramlist}
+\end{description}\end{quote}
 \end{funcdesc}
 \index{hypergeometric\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.inverse_gamma_like}{}
-\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
-Inverse gamma log-likelihood. If $X$ is gamma distributed, $1/X$ is inverse gamma distributed. The inverse gamma is the conjugate prior for the variance of a normal random variable.
+\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
+Hypergeometric log-likelihood. Discrete probability distribution that
+describes the number of successes in a sequence of draws from a finite
+population without replacement.
+\begin{gather}
+\begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
+
+\item {} 
+\emph{n} : {[}int{]} Size of sample drawn from the population.
+
+\item {} 
+\emph{m} : {[}int{]} Number of successes in the population.
+
+\item {} 
+\emph{N} : {[}int{]} Total number of units in the population.
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+$E(X) = \frac{n n}{N}$
+\end{notice}
+\end{funcdesc}
+\index{inverse\_gamma\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.inverse_gamma_like}{}\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
+Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 \begin{gather}
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-\paragraph{Parameters}
-\begin{paramlist}
-\item[] \textbf{x} : float
-\begin{quote}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : x \textgreater{} 0
 
-x \textgreater{} 0
-\end{quote}
+\item {} 
+\emph{alpha} : Shape parameter (alpha \textgreater{} 0).
 
-\item[] \textbf{alpha} : float
-\begin{quote}
+\item {} 
+\emph{beta} : Scale parameter (beta \textgreater{} 0).
 
-Shape parameter, $\alpha > 0$.
-\end{quote}
-
-\item[] \textbf{beta} : float
-\begin{quote}
-
-Scale parameter, $\beta > 0$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item $E(X)=\frac{1}{\beta(\alpha-1)}$  for $\alpha > 1$.
 \end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+$E(X)=\frac{\beta}{\alpha-1}$  for $\alpha > 1$
+$Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}$  for $\alpha > 2$
+\end{notice}
 \end{funcdesc}
 \index{laplace\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.laplace_like}{}
-\begin{funcdesc}{laplace\_like}{x, mu, tau}
-Laplace (double exponential) log-likelihood. The Laplace (or double exponential) distribution describes the
+\hypertarget{pymc.distributions.laplace_like}{}\begin{funcdesc}{laplace\_like}{x, mu, tau}
+Laplace (double exponential) log-likelihood.
+
+The Laplace (or double exponential) distribution describes the
 difference between two independent, identically distributed exponential
 events. It is often used as a heavier-tailed alternative to the normal.
 \begin{gather}
-\begin{split}f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau|x-\mu|}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\begin{split}f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau |x-\mu|}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $-\infty < x < \infty$
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{mu} : Location parameter :math: \emph{-infty \textless{} mu \textless{} infty}
 
-$-\infty < x < \infty$
-\end{quote}
+\item {} 
+\emph{tau} : Scale parameter $\tau > 0$
 
-\item[] \textbf{mu} : float
-\begin{quote}
+\end{itemize}
 
-Location parameter $-\infty < \mu < \infty$
-\end{quote}
+\end{description}\end{quote}
 
-\item[] \textbf{tau} : float
-\begin{quote}
-
-Scale parameter $\tau > 0$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X) = \mu$
 
-\item {}
+\item {} 
 $Var(X) = \frac{2}{\tau^2}$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{logistic\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.logistic_like}{}
-\begin{funcdesc}{logistic\_like}{x, mu, tau}
-Logistic log-likelihood. The logistic distribution is often used as a growth model for populations or markets. It resembles a heavy-tailed normal distribution.
+\hypertarget{pymc.distributions.logistic_like}{}\begin{funcdesc}{logistic\_like}{x, mu, tau}
+Logistic log-likelihood.
+
+The logistic distribution is often used as a growth model; for example,
+populations, markets. Resembles a heavy-tailed normal distribution.
 \begin{gather}
-\begin{split}f(x \mid \mu, \tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\begin{split}f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $-\infty < x < \infty$
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{mu} : Location parameter $-\infty < mu < \infty$
 
-$-\infty < x < \infty$
-\end{quote}
+\item {} 
+\emph{tau} : Scale parameter (tau \textgreater{} 0)
 
-\item[] \textbf{mu} : float
-\begin{quote}
+\end{itemize}
 
-Location parameter $-\infty < \mu < \infty$
-\end{quote}
+\end{description}\end{quote}
 
-\item[] \textbf{tau} : float
-\begin{quote}
-
-Scale parameter $\tau > 0$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X) = \mu$
 
-\item {}
+\item {} 
 $Var(X) = \frac{\pi^2}{3\tau^2}$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{lognormal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.lognormal_like}{}
-\begin{funcdesc}{lognormal\_like}{x, mu, tau}
+\hypertarget{pymc.distributions.lognormal_like}{}\begin{funcdesc}{lognormal\_like}{x, mu, tau}
 Log-normal log-likelihood. Distribution of any random variable whose
 logarithm is normally distributed. A variable might be modeled as
 log-normal if it can be thought of as the multiplicative product of many
@@ -681,247 +618,225 @@ small independent factors.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
 \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : x \textgreater{} 0
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{mu} : Location parameter.
 
-x \textgreater{} 0
-\end{quote}
+\item {} 
+\emph{tau} : Scale parameter (tau \textgreater{} 0).
 
-\item[] \textbf{mu} : float
-\begin{quote}
+\end{itemize}
 
-Location parameter.
-\end{quote}
+\end{description}\end{quote}
 
-\item[] \textbf{tau} : float
-\begin{quote}
-
-Scale parameter, \textgreater{} 0.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-
+\begin{notice}{note}{Note:}
 $E(X)=e^{\mu+\frac{1}{2\tau}}$
+$Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}$
+\end{notice}
 \end{funcdesc}
 \index{normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.normal_like}{}
-\begin{funcdesc}{normal\_like}{x, mu, tau}
-Normal log-likelihood. The sum of many independent random terms, suitably scaled, is approximately normally distributed.
+\hypertarget{pymc.distributions.normal_like}{}\begin{funcdesc}{normal\_like}{x, mu, tau}
+Normal log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data.
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{mu} : Mean of the distribution.
 
-Input data.
-\end{quote}
+\item {} 
+\emph{tau} : Precision of the distribution, which corresponds to $1/\sigma^2$ (tau \textgreater{} 0).
 
-\item[] \textbf{mu} : float
-\begin{quote}
+\end{itemize}
 
-Mean of the distribution.
-\end{quote}
+\end{description}\end{quote}
 
-\item[] \textbf{tau} : float
-\begin{quote}
-
-Precision of the distribution, $\tau>0$ ( corresponds to $1/\sigma^2$ ).
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X) = \mu$
 
-\item {}
+\item {} 
 $Var(X) = 1/\tau$
 
 \end{itemize}
-\end{funcdesc}
-\index{t\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.t_like}{}
-\begin{funcdesc}{t\_like}{x, nu}
-Student's T log-likelihood. Describes a zero-mean normal variable whose precision is gamma distributed. Alternatively, describes the mean of several zero-mean normal random variables divided by their sample standard deviation.
-\begin{gather}
-\begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{x} : float
-\begin{quote}
-
-Input data.
-\end{quote}
-
-\item[] \textbf{nu} : float
-\begin{quote}
-
-Degrees of freedom.
-\end{quote}
-\end{paramlist}
-\end{funcdesc}
-\index{uniform\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.uniform_like}{}
-\begin{funcdesc}{uniform\_like}{x, lower, upper}
-Uniform log-likelihood.
-\begin{gather}
-\begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{x} : float
-\begin{quote}
-
-$lower \leq x \leq upper$
-\end{quote}
-
-\item[] \textbf{lower} : float
-\begin{quote}
-
-Lower limit.
-\end{quote}
-
-\item[] \textbf{upper} : float
-\begin{quote}
-
-Upper limit.
-\end{quote}
-\end{paramlist}
-\end{funcdesc}
-\index{weibull\_like() (in module pymc.distributions)}
-
-\hypertarget{pymc.distributions.weibull_like}{}
-\begin{funcdesc}{weibull\_like}{x, alpha, beta}
-Weibull log-likelihood.
-\begin{gather}
-\begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
-\exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{x} : float
-\begin{quote}
-
-$x \ge 0$
-\end{quote}
-
-\item[] \textbf{alpha} : float
-\begin{quote}
-
-$\alpha>0$
-\end{quote}
-
-\item[] \textbf{beta} : float
-\begin{quote}
-
-$\beta>0$
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
-$E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
-
-\item {}
-$Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
-
-\end{itemize}
+\end{notice}
 \end{funcdesc}
 \index{skew\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.skew_normal_like}{}
-\begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
-Azzalini's skew-normal log-likelihood,
+\hypertarget{pymc.distributions.skew_normal_like}{}\begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
+Azzalini's skew-normal log-likelihood
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
-where $\Phi$ is the normal CDF and $\phi$ is the normal PDF.
+where :math: Phi is the normal CDF and :math: phi is the normal PDF.
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data.
 
-\paragraph{Parameters}\begin{paramlist}
+\item {} 
+\emph{mu} : Mean of the distribution.
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{tau} : Precision of the distribution (\textgreater{} 0).
 
-Input data.
-\end{quote}
-
-\item[] \textbf{mu} : float
-\begin{quote}
-
-Mean of the distribution.
-\end{quote}
-
-\item[] \textbf{tau} : float
-\begin{quote}
-
-Precision of the distribution, \textgreater{} 0.
-\end{quote}
-
-\item[] \textbf{alpha} : float
-\begin{quote}
-
-Shape parameter of the distribution.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {}
-See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
+\item {} 
+\emph{alpha} : Shape parameter of the distribution.
 
 \end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
+\end{notice}
+\end{funcdesc}
+\index{t\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.t_like}{}\begin{funcdesc}{t\_like}{x, nu}
+Student's T log-likelihood. Describes a zero-mean normal variable whose precision is
+gamma distributed. Alternatively, describes the mean of several zero-mean normal
+random variables divided by their sample standard deviation.
+\begin{gather}
+\begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data.
+
+\item {} 
+\emph{nu} : Degrees of freedom.
+
+\end{itemize}
+
+\end{description}\end{quote}
 \end{funcdesc}
 \index{truncnorm\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.truncnorm_like}{}
-\begin{funcdesc}{truncnorm\_like}{x, mu, tau, a, b}
-Truncated normal log-likelihood. Describes a normal variable conditioned to be inside an interval.
+\hypertarget{pymc.distributions.truncnorm_like}{}\begin{funcdesc}{truncnorm\_like}{x, mu, tau, a, b}
+Truncated normal log-likelihood.
 \begin{gather}
 \begin{split}f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
-where $\sigma^2=1/\tau$.
-\paragraph{Parameters}\begin{paramlist}
+where $\sigma^2=1/\tau$, \emph{phi} is the standard normal PDF and \emph{Phi} is the standard normal CDF.
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data.
 
-\item[] \textbf{x} : float
-\begin{quote}
+\item {} 
+\emph{mu} : Mean of the distribution.
 
-Input data.
-\end{quote}
+\item {} 
+\emph{tau} : Precision of the distribution, which corresponds to 1/sigma**2 (tau \textgreater{} 0).
 
-\item[] \textbf{mu} : float
-\begin{quote}
+\item {} 
+\emph{a} : Left bound of the distribution.
 
-Mean of the distribution.
-\end{quote}
+\item {} 
+\emph{b} : Right bound of the distribution.
 
-\item[] \textbf{tau} : float
-\begin{quote}
+\end{itemize}
 
-Precision of the distribution, $\tau>0$ ( corresponds to $1/\sigma^2$ ).
-\end{quote}
+\end{description}\end{quote}
+\end{funcdesc}
+\index{uniform\_like() (in module pymc.distributions)}
 
-\item[] \textbf{a} : float
-\begin{quote}
+\hypertarget{pymc.distributions.uniform_like}{}\begin{funcdesc}{uniform\_like}{x, lower, upper}
+Uniform log-likelihood.
+\begin{gather}
+\begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $lower \leq x \leq upper$
 
-Left bound of the distribution.
-\end{quote}
+\item {} 
+\emph{lower} : Lower limit.
 
-\item[] \textbf{b} : float
-\begin{quote}
+\item {} 
+\emph{upper} : Upper limit (upper \textgreater{} lower).
 
-Right bound of the distribution.
-\end{quote}
-\end{paramlist}
+\end{itemize}
+
+\end{description}\end{quote}
+\end{funcdesc}
+\index{von\_mises\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.von_mises_like}{}\begin{funcdesc}{von\_mises\_like}{x, mu, kappa}
+von Mises log-likelihood.
+\begin{gather}
+\begin{split}f(x \mid \mu, k) = \frac{e^{k \cos(x - \mu)}}{2 \pi I_0(k)}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}
+where \emph{I\_0} is the modified Bessel function of order 0.
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data.
+
+\item {} 
+\emph{mu} : Mean of the distribution.
+
+\item {} 
+\emph{kappa} : Dispersion of the distribution
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
+$E(X) = \mu$
+
+\end{itemize}
+\end{notice}
+\end{funcdesc}
+\index{weibull\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.weibull_like}{}\begin{funcdesc}{weibull\_like}{x, alpha, beta}
+Weibull log-likelihood
+\begin{gather}
+\begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
+\exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $x \ge 0$
+
+\item {} 
+\emph{alpha} : alpha \textgreater{} 0
+
+\item {} 
+\emph{beta} : beta \textgreater{} 0
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
+$E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
+
+\item {} 
+$Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
+
+\end{itemize}
+\end{notice}
 \end{funcdesc}
 
 
 \section{Multivariate discrete distributions}
 \index{multivariate\_hypergeometric\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.multivariate_hypergeometric_like}{}
-\begin{funcdesc}{multivariate\_hypergeometric\_like}{x, m}
+\hypertarget{pymc.distributions.multivariate_hypergeometric_like}{}\begin{funcdesc}{multivariate\_hypergeometric\_like}{x, m}
 The multivariate hypergeometric describes the probability of drawing x{[}i{]}
 elements of the ith category, when the number of items in each category is
 given by m.
@@ -929,25 +844,21 @@ given by m.
 \begin{split}\frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $N = \sum_i m_i$ and $n = \sum_i x_i$.
-\paragraph{Parameters}\begin{paramlist}
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int sequence{]} Number of draws from each category, (x \textless{} m).
 
-\item[] \textbf{x} : integer sequence
-\begin{quote}
+\item {} 
+\emph{m} : {[}int sequence{]} Number of items in each categoy.
 
-Number of draws from each category, $< m$
-\end{quote}
+\end{itemize}
 
-\item[] \textbf{m} : integer sequence
-\begin{quote}
-
-Number of items in each category.
-\end{quote}
-\end{paramlist}
+\end{description}\end{quote}
 \end{funcdesc}
 \index{multinomial\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.multinomial_like}{}
-\begin{funcdesc}{multinomial\_like}{x, n, p}
+\hypertarget{pymc.distributions.multinomial_like}{}\begin{funcdesc}{multinomial\_like}{x, n, p}
 Multinomial log-likelihood. Generalization of the binomial
 distribution, but instead of each trial resulting in ``success'' or
 ``failure'', each one results in exactly one of some fixed finite number k
@@ -955,238 +866,250 @@ of possible outcomes over n independent trials. `x{[}i{]}' indicates the number
 of times outcome number i was observed over the n trials.
 \begin{gather}
 \begin{split}f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{description}
+\item[x] \leavevmode{[}(ns, k) int{]}
+Random variable indicating the number of time outcome i is 
+observed. $\sum_{i=1}^k x_i=n$, $x_i \ge 0$.
 
-\item[] \textbf{x} : (ns, k) integer
-\begin{quote}
-
-Random variable indicating the number of time outcome i is observed,
-$\sum_{i=1}^k x_i=n$, $x_i \ge 0$.
-\end{quote}
-
-\item[] \textbf{n} : integer
-\begin{quote}
-
+\item[n] \leavevmode{[}int{]}
 Number of trials.
-\end{quote}
 
-\item[] \textbf{p} : (k,) float
-\begin{quote}
+\item[p] \leavevmode{[}(k,) {]}
+Probability of each one of the different outcomes.
+$\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$.
 
-Probability of each one of the different outcomes,
-$\sum_{i=1}^k p_i = 1$, $p_i \ge 0$.
-\end{quote}
-\end{paramlist}
-\paragraph{Notes}
-\begin{itemize}
-\item {} A Multinomial's parent $p$ may be Dirichlet, even though its value is length $k-1$.
+\end{description}
 
-\item {}
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}\begin{itemize}
+\item {} 
 $E(X_i)=n p_i$
 
-\item {}
-$var(X_i)=n p_i(1-p_i)$
+\item {} 
+$Var(X_i)=n p_i(1-p_i)$
 
-\item {}
-$cov(X_i,X_j) = -n p_i p_j$
+\item {} 
+$Cov(X_i,X_j) = -n p_i p_j$
 
 \end{itemize}
+\end{notice}
 \end{funcdesc}
 
 
 \section{Multivariate continuous distributions}
 \index{dirichlet\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.dirichlet_like}{}
-\begin{funcdesc}{dirichlet\_like}{x, theta}
-Dirichlet log-likelihood. A convenient distribution for variables that take values on the simplex, it is the conjugate prior for the multinomial distribution's $p$ parameter.
+\hypertarget{pymc.distributions.dirichlet_like}{}\begin{funcdesc}{dirichlet\_like}{x, theta}
+Dirichlet log-likelihood.
+
+This is a multivariate continuous distribution.
 \begin{gather}
-\begin{split}f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{x} : (n,k-1) array
-\begin{quote}
-
-Where \emph{n} is the number of samples and \emph{k} the dimension.
+\begin{split}f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}\\
+\cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} \begin{description}
+\item[\emph{x}] \leavevmode{[}(n, k-1) array {]}
+Array of shape (n, k-1) where \emph{n} is the number of samples 
+and \emph{k} the dimension. 
 $0 < x_i < 1$,  $\sum_{i=1}^{k-1} x_i < 1$
-\end{quote}
 
-\item[] \textbf{theta} : (n,k) or (1,k) float
-\begin{quote}
+\end{description}
 
-$\theta > 0$
-\end{quote}
-\end{paramlist}
+\item {} \begin{description}
+\item[\emph{theta}] \leavevmode{[}array{]}
+An (n,k) or (1,k) array \textgreater{} 0.
+
+\end{description}
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+Only the first \emph{k-1} elements of \emph{x} are expected. Can be used as a parent of Multinomial and Categorical
+nevertheless.
+\end{notice}
 \end{funcdesc}
 \index{inverse\_wishart\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.inverse_wishart_like}{}
-\begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
+\hypertarget{pymc.distributions.inverse_wishart_like}{}\begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
 Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
 prior for the covariance matrix of a multivariate normal distribution.
 \begin{gather}
 \begin{split}f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{paramlist}
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{X} : Symmetric, positive definite matrix.
 
-\item[] \textbf{X} : matrix
-\begin{quote}
+\item {} 
+\emph{n} : {[}int{]} Degrees of freedom (n \textgreater{} 0).
 
-Symmetric, positive definite.
-\end{quote}
+\item {} 
+\emph{Tau} : Symmetric and positive definite matrix.
 
-\item[] \textbf{n} : integer
-\begin{quote}
+\end{itemize}
 
-Degrees of freedom, \textgreater{} 0.
-\end{quote}
+\end{description}\end{quote}
 
-\item[] \textbf{Tau} : matrix
-\begin{quote}
-
-Symmetric and positive definite
-\end{quote}
-\end{paramlist}
+\begin{notice}{note}{Note:}
+Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+\end{notice}
 \end{funcdesc}
 \index{mv\_normal\_like() (in module pymc.distributions)}
 
-\hypertarget{pymc.distributions.mv_normal_like}{}
-\begin{funcdesc}{mv\_normal\_like}{x, mu, tau}
-Multivariate normal log-likelihood parameterized by precision.
+\hypertarget{pymc.distributions.mv_normal_like}{}\begin{funcdesc}{mv\_normal\_like}{x, mu, tau}
+Multivariate normal log-likelihood
 \begin{gather}
-\begin{split}f(x \mid \pi, T) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\begin{split}f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : (n,k)
 
-\item[] \textbf{x} : (n,k) float
+\item {} 
+\emph{mu} : (k) Location parameter sequence.
 
-\item[] \textbf{mu} : (k,) float
+\item {} 
+\emph{Tau} : (k,k) Positive definite precision matrix.
 
-\item[] \textbf{tau} : (k,k) float, positive definite
-\end{paramlist}
+\end{itemize}
 
-\strong{See Also:}
-
-
-\hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like}}
-
-
-\end{funcdesc}
-\index{mv\_normal\_cov\_like() (in module pymc.distributions)}
-
-
-\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
-\hypertarget{pymc.distributions.mv_normal_cov_like}{}
-Multivariate normal log-likelihood parameterized by covariance.
-\begin{gather}
-\begin{split}f(x \mid \pi, C) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}
-
-\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{x} : (n,k) float
-
-\item[] \textbf{mu} : (k,) float
-
-\item[] \textbf{C} : (k,k) float, positive definite
-\end{paramlist}
+\end{description}\end{quote}
 
 
 \strong{See Also:}
 
 
-\hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like}}, \hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like}}
+\hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like()}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like()}}
 
 
 \end{funcdesc}
 \index{mv\_normal\_chol\_like() (in module pymc.distributions)}
 
-
-\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, tau}
-\hypertarget{pymc.distributions.mv_normal_chol_like}{}
-Multivariate normal log-likelihood parameterized by the Cholesky factor of the covariance.
+\hypertarget{pymc.distributions.mv_normal_chol_like}{}\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, sig}
+Multivariate normal log-likelihood.
 \begin{gather}
-\begin{split}f(x \mid \pi, \sigma) = \frac{T^{n/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-\end{gather}\paragraph{Parameters}\begin{paramlist}
+\begin{split}f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : (n,k)
 
-\item[] \textbf{x} : (n,k) float
+\item {} 
+\emph{mu} : (k) Location parameter.
 
-\item[] \textbf{mu} : (k,) float
+\item {} 
+\emph{sigma} : (k,k) Lower triangular matrix.
 
-\item[] \textbf{sigma} : (k,k) float, lower triangular
-\end{paramlist}
+\end{itemize}
+
+\end{description}\end{quote}
+
 
 \strong{See Also:}
 
 
-\hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like}}
+\hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like()}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like()}}
+
+
+\end{funcdesc}
+\index{mv\_normal\_cov\_like() (in module pymc.distributions)}
+
+\hypertarget{pymc.distributions.mv_normal_cov_like}{}\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
+Multivariate normal log-likelihood parameterized by a covariance 
+matrix.
+\begin{gather}
+\begin{split}f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
+\end{gather}\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : (n,k)
+
+\item {} 
+\emph{mu} : (k) Location parameter.
+
+\item {} 
+\emph{C} : (k,k) Positive definite covariance matrix.
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+
+\strong{See Also:}
+
+
+\hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like()}}, \hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like()}}
 
 
 \end{funcdesc}
 \index{wishart\_like() (in module pymc.distributions)}
 
+\hypertarget{pymc.distributions.wishart_like}{}\begin{funcdesc}{wishart\_like}{X, n, Tau}
+Wishart log-likelihood. The Wishart distribution is the probability
+distribution of the maximum-likelihood estimator (MLE) of the precision
+matrix of a multivariate normal distribution. If Tau=1, the distribution
+is identical to the chi-square distribution with n degrees of freedom.
 
-\begin{funcdesc}{wishart\_like}{X, n, Tau}
-\hypertarget{pymc.distributions.wishart_like}{}
-Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $C=T^{-1}$, see
-\hyperlink{pymc.distributions.wishart_cov_like}{\code{wishart\_cov\_like}}.
+For an alternative parameterization based on $C=T{-1}$, see
+\emph{wishart\_cov\_like}.
 \begin{gather}
 \begin{split}f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{X} : matrix
-\begin{quote}
-
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{description}
+\item[X] \leavevmode{[}matrix{]}
 Symmetric, positive definite.
-\end{quote}
 
-\item[] \textbf{n} : integer
-\begin{quote}
-
+\item[n] \leavevmode{[}int{]}
 Degrees of freedom, \textgreater{} 0.
-\end{quote}
 
-\item[] \textbf{Tau} : matrix
-\begin{quote}
-
+\item[Tau] \leavevmode{[}matrix{]}
 Symmetric and positive definite
-\end{quote}
-\end{paramlist}
+
+\end{description}
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+\end{notice}
+
 \end{funcdesc}
 \index{wishart\_cov\_like() (in module pymc.distributions)}
 
+\hypertarget{pymc.distributions.wishart_cov_like}{}\begin{funcdesc}{wishart\_cov\_like}{X, n, C}
+Wishart log-likelihood. The Wishart distribution is the probability
+distribution of the maximum-likelihood estimator (MLE) of the covariance
+matrix of a multivariate normal distribution. If C=1, the distribution
+is identical to the chi-square distribution with n degrees of freedom.
 
-\begin{funcdesc}{wishart\_cov\_like}{X, n, C}
-\hypertarget{pymc.distributions.wishart_cov_like}{}
-Wishart log-likelihood. The conjugate prior for the precision parameter of a multivariate normal distribution. For an alternative parameterization based on $T=C^{-1}$, see
-\hyperlink{pymc.distributions.wishart_like}{\code{wishart\_like}}.
+For an alternative parameterization based on $T=C{-1}$, see
+\emph{wishart\_like}.
 \begin{gather}
 \begin{split}f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}
 where $k$ is the rank of X.
-\paragraph{Parameters}\begin{paramlist}
-
-\item[] \textbf{X} : matrix
-\begin{quote}
-
+\begin{quote}\begin{description}
+\item[Parameters] \leavevmode\begin{description}
+\item[X] \leavevmode{[}matrix{]}
 Symmetric, positive definite.
-\end{quote}
 
-\item[] \textbf{n} : integer
-\begin{quote}
-
+\item[n] \leavevmode{[}int{]}
 Degrees of freedom, \textgreater{} 0.
-\end{quote}
 
-\item[] \textbf{C} : matrix
-\begin{quote}
-
+\item[C] \leavevmode{[}matrix{]}
 Symmetric and positive definite
-\end{quote}
-\end{paramlist}
+
+\end{description}
+
+\end{description}\end{quote}
 \end{funcdesc}
-
-
 

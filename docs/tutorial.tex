@@ -38,6 +38,7 @@ The symbols are defined as:
 \end{description}
 Because we have defined $D$ by its dependence on $s$, $e$ and $l$, the latter three are known as the `parents' of $D$ and $D$ is called their `child'. Similarly, the parents of $s$ are $t_l$ and $t_h$, and $s$ is the child of $t_l$ and $t_h$.
 
+
 \section{Two types of variables}
 
 At the model-specification stage (before the data are observed), $D$, $s$, $e$,
@@ -158,6 +159,30 @@ The following `directed acyclic graph' is a visualization of the parent-child re
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
+
+
+
+\fbox{\parbox{\admonitionwidth}{
+\textbf{\large Objects and names}
+\vspace{2mm}
+As the examples above have shown, pymc objects need to have a name 
+assigned, such as \emph{lower}, \emph{upper} or \emph{e}. These names 
+are used for storage and post-processing:
+\begin{itemize}
+ \item as keys in on-disk databases,
+ \item as node labels in model graphs,
+ \item as axis labels in plots of traces, 
+ \item as table labels in summary statistics. 
+\end{itemize}
+A model instantiated with variables having identical names raises an
+error to avoid name conflicts in the database storing the traces. In
+general however, pymc uses references to the objects themselves, not 
+their names, to identify variables. 
+}}
+\end{sffamily}
+\end{center}
+
+
 
 \section{Variables' values and log-probabilities}
 All PyMC variables have an attribute called \code{value} that stores the current value of that variable. Try examining $D$'s value, and you'll see the initial value we provided for it:

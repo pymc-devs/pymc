@@ -110,7 +110,7 @@ PyMC began development in 2003, as an effort to generalize the process of buildi
 
 In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development team for PyMC 2.0. This iteration of the software strives for more flexibility, better performance and a better end-user experience than any previous version of PyMC.
 
-PyMC 2.1 is due for release in early 2010. This release contains numerous bugfixes and optimizations, as well as a few new features. This user guide is written for version 2.1.
+PyMC 2.1 has been released in early 2010. It contains numerous bugfixes and optimizations, as well as a few new features. This user guide is written for version 2.1.
 
 
 Relationship to other packages

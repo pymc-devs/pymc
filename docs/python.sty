@@ -991,10 +991,12 @@
   \end{tabular}
 }
 
+% Notices / Admonitions
+%
 \newlength{\py@noticelength}
 
 \newcommand{\py@heavybox}{
-  \setlength{\fboxrule}{2pt}
+  \setlength{\fboxrule}{1pt}
   \setlength{\fboxsep}{7pt}
   \setlength{\py@noticelength}{\linewidth}
   \addtolength{\py@noticelength}{-2\fboxsep}
@@ -1009,23 +1011,33 @@
   \fbox{\TheSbox}
 }
 
-% a 'note' is as plain as it gets:
-\newcommand{\py@noticelabel@note}{Note:}
+% Some are quite plain:
 \newcommand{\py@noticestart@note}{}
 \newcommand{\py@noticeend@note}{}
+\newcommand{\py@noticestart@hint}{}
+\newcommand{\py@noticeend@hint}{}
+\newcommand{\py@noticestart@important}{}
+\newcommand{\py@noticeend@important}{}
+\newcommand{\py@noticestart@tip}{}
+\newcommand{\py@noticeend@tip}{}
 
-% a 'warning' gets more visible distinction:
-\newcommand{\py@noticelabel@warning}{Warning:}
+% Others gets more visible distinction:
 \newcommand{\py@noticestart@warning}{\py@heavybox}
 \newcommand{\py@noticeend@warning}{\py@endheavybox}
+\newcommand{\py@noticestart@caution}{\py@heavybox}
+\newcommand{\py@noticeend@caution}{\py@endheavybox}
+\newcommand{\py@noticestart@attention}{\py@heavybox}
+\newcommand{\py@noticeend@attention}{\py@endheavybox}
+\newcommand{\py@noticestart@danger}{\py@heavybox}
+\newcommand{\py@noticeend@danger}{\py@endheavybox}
+\newcommand{\py@noticestart@error}{\py@heavybox}
+\newcommand{\py@noticeend@error}{\py@endheavybox}
 
-\newenvironment{notice}[1][note]{
+\newenvironment{notice}[2]{
   \def\py@noticetype{#1}
   \csname py@noticestart@#1\endcsname
-  \par\strong{\csname py@noticelabel@#1\endcsname}
+  \par\strong{#2}
 }{\csname py@noticeend@\py@noticetype\endcsname}
-\newcommand{\note}[1]{\strong{\py@noticelabel@note} #1}
-\newcommand{\warning}[1]{\strong{\py@noticelabel@warning} #1}
 
 % Deprecation stuff.
 % Should be extended to allow an index / list of deprecated stuff.  But
@@ -1330,3 +1342,67 @@
 
 % Tell TeX about pathological hyphenation cases:
 \hyphenation{Base-HTTP-Re-quest-Hand-ler}
+
+\newcommand\PYGZat{@}
+\newcommand\PYGZlb{[}
+\newcommand\PYGZrb{]}
+\newcommand\PYGaz[1]{\textcolor[rgb]{0.00,0.63,0.00}{#1}}
+\newcommand\PYGax[1]{\textcolor[rgb]{0.84,0.33,0.22}{\textbf{#1}}}
+\newcommand\PYGay[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand\PYGar[1]{\textcolor[rgb]{0.73,0.38,0.84}{#1}}
+\newcommand\PYGas[1]{\textcolor[rgb]{0.25,0.44,0.63}{\textit{#1}}}
+\newcommand\PYGap[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand\PYGaq[1]{\textcolor[rgb]{0.38,0.68,0.84}{#1}}
+\newcommand\PYGav[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand\PYGaw[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGat[1]{\textcolor[rgb]{0.73,0.38,0.84}{#1}}
+\newcommand\PYGau[1]{\textcolor[rgb]{0.32,0.47,0.09}{#1}}
+\newcommand\PYGaj[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand\PYGak[1]{\textcolor[rgb]{0.14,0.33,0.53}{#1}}
+\newcommand\PYGah[1]{\textcolor[rgb]{0.00,0.13,0.44}{\textbf{#1}}}
+\newcommand\PYGai[1]{\textcolor[rgb]{0.73,0.38,0.84}{#1}}
+\newcommand\PYGan[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGao[1]{\textcolor[rgb]{0.25,0.44,0.63}{\textbf{#1}}}
+\newcommand\PYGal[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand\PYGam[1]{\textbf{#1}}
+\newcommand\PYGab[1]{\textit{#1}}
+\newcommand\PYGac[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGaa[1]{\textcolor[rgb]{0.19,0.19,0.19}{#1}}
+\newcommand\PYGaf[1]{\textcolor[rgb]{0.25,0.50,0.56}{\textit{#1}}}
+\newcommand\PYGag[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGad[1]{\textcolor[rgb]{0.00,0.25,0.82}{#1}}
+\newcommand\PYGae[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGaZ[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGbf[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand\PYGaX[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGaY[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand\PYGbc[1]{\textcolor[rgb]{0.78,0.36,0.04}{#1}}
+\newcommand\PYGbb[1]{\textcolor[rgb]{0.00,0.00,0.50}{\textbf{#1}}}
+\newcommand\PYGba[1]{\textcolor[rgb]{0.02,0.16,0.45}{\textbf{#1}}}
+\newcommand\PYGaR[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGaS[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGaP[1]{\textcolor[rgb]{0.05,0.52,0.71}{\textbf{#1}}}
+\newcommand\PYGaQ[1]{\textcolor[rgb]{0.78,0.36,0.04}{\textbf{#1}}}
+\newcommand\PYGaV[1]{\textcolor[rgb]{0.25,0.50,0.56}{\textit{#1}}}
+\newcommand\PYGaW[1]{\textcolor[rgb]{0.05,0.52,0.71}{\textbf{#1}}}
+\newcommand\PYGaT[1]{\textcolor[rgb]{0.73,0.38,0.84}{#1}}
+\newcommand\PYGaU[1]{\textcolor[rgb]{0.13,0.50,0.31}{#1}}
+\newcommand\PYGaJ[1]{\textcolor[rgb]{0.56,0.13,0.00}{#1}}
+\newcommand\PYGaK[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGaH[1]{\textcolor[rgb]{0.50,0.00,0.50}{\textbf{#1}}}
+\newcommand\PYGaI[1]{\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{#1}}
+\newcommand\PYGaN[1]{\textcolor[rgb]{0.73,0.73,0.73}{#1}}
+\newcommand\PYGaO[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand\PYGaL[1]{\textcolor[rgb]{0.02,0.16,0.49}{#1}}
+\newcommand\PYGaM[1]{\colorbox[rgb]{1.00,0.94,0.94}{\textcolor[rgb]{0.25,0.50,0.56}{#1}}}
+\newcommand\PYGaB[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGaC[1]{\textcolor[rgb]{0.33,0.33,0.33}{\textbf{#1}}}
+\newcommand\PYGaA[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand\PYGaF[1]{\textcolor[rgb]{0.63,0.00,0.00}{#1}}
+\newcommand\PYGaG[1]{\textcolor[rgb]{1.00,0.00,0.00}{#1}}
+\newcommand\PYGaD[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand\PYGaE[1]{\textcolor[rgb]{0.25,0.50,0.56}{\textit{#1}}}
+\newcommand\PYGbg[1]{\textcolor[rgb]{0.44,0.63,0.82}{\textit{#1}}}
+\newcommand\PYGbe[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
+\newcommand\PYGbd[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand\PYGbh[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
