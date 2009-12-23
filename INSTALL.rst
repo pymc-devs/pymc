@@ -163,11 +163,11 @@ Mac OS X or Linux
 In a terminal, type::
 
     python setup.py config_fc --fcompiler gnu95 build
-    sudo python setup.py install
+    python setup.py install
 
-The `sudo` command is required to install PyMC into the Python ``site-packages``
-directory if it has restricted privileges. You will be prompted for a password,
-and provided you have superuser privileges, the installation will proceed. The above syntax also assumes that you have gFortran installed and available.
+The above syntax also assumes that you have gFortran installed and available. The 
+`sudo` command may be required to install PyMC into the Python ``site-packages``
+directory if it has restricted privileges.
 
 
 .. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
