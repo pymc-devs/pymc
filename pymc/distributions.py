@@ -945,9 +945,12 @@ def dirichlet_like(x, theta):
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-      - `x` : An (n,k-1) array where `n` is the number of samples and `k` the dimension.
-          :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
-      - `theta` : An (n,k) or (1,k) array > 0.
+      - `x` : (n, k-1) array 
+              Array of shape (n, k-1) where `n` is the number of samples 
+              and `k` the dimension. 
+              :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
+      - `theta` : array
+              An (n,k) or (1,k) array > 0.
       
     .. note::
         Only the first `k-1` elements of `x` are expected. Can be used as a parent of Multinomial and Categorical
@@ -1380,7 +1383,7 @@ def inverse_wishart_like(X, n, Tau):
       - `n` : [int] Degrees of freedom (n > 0).
       - `Tau` : Symmetric and positive definite matrix.
 
-     :Note:
+    .. note::
        Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
@@ -1473,7 +1476,7 @@ def logistic_like(x, mu, tau):
 
     :Parameters:
       - `x` : :math:`-\infty < x < \infty`
-      - `mu` : Location parameter :math: `-\infty < mu < \infty`
+      - `mu` : Location parameter :math:`-\infty < mu < \infty`
       - `tau` : Scale parameter (tau > 0)
 
     .. note::
@@ -1572,16 +1575,19 @@ def multinomial_like(x, n, p):
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
     :Parameters:
-      - `x` : [(ns, k) int] Random variable indicating the number of time outcome i is observed,
-              :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
-      - `n` : [int] Number of trials.
-      - `p` : (k,) Probability of each one of the different outcomes,
-              :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+      x : (ns, k) int
+          Random variable indicating the number of time outcome i is 
+          observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
+      n : int
+          Number of trials.
+      p : (k,) 
+          Probability of each one of the different outcomes.
+          :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
 
     .. note::
        - :math:`E(X_i)=n p_i`
-       - :math:`var(X_i)=n p_i(1-p_i)`
-       - :math:`cov(X_i,X_j) = -n p_i p_j`
+       - :math:`Var(X_i)=n p_i(1-p_i)`
+       - :math:`Cov(X_i,X_j) = -n p_i p_j`
 
     """
 
@@ -1699,9 +1705,9 @@ def mv_normal_like(x, mu, tau):
         f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
     :Parameters:
-      - `x`: (n,k)
-      - `mu`: (k) Location parameter sequence.
-      - `Tau`: (k,k) Positive definite precision matrix.
+      - `x` : (n,k)
+      - `mu` : (k) Location parameter sequence.
+      - `Tau` : (k,k) Positive definite precision matrix.
 
     .. seealso:: :func:`mv_normal_chol_like`, :func:`mv_normal_cov_like`
     """
@@ -1736,15 +1742,16 @@ def mv_normal_cov_like(x, mu, C):
     R"""
     mv_normal_cov_like(x, mu, C)
 
-    Multivariate normal log-likelihood
+    Multivariate normal log-likelihood parameterized by a covariance 
+    matrix.
 
     .. math::
         f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}
 
-    x: (n,k)
-    mu: (k)
-    C: (k,k)
-    C positive definite
+    :Parameters:
+      - `x` : (n,k)
+      - `mu` : (k) Location parameter.
+      - `C` : (k,k) Positive definite covariance matrix. 
 
     .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_chol_like`
     """
@@ -1798,16 +1805,15 @@ def mv_normal_chol_like(x, mu, sig):
     R"""
     mv_normal_like(x, mu, tau)
 
-    Multivariate normal log-likelihood
+    Multivariate normal log-likelihood.
 
     .. math::
         f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
 
     :Parameters:
-      x : (n,k)
-      mu : (k)
-      sigma : (k,k)
-      sigma lower triangular
+      - `x` : (n,k)
+      - `mu` : (k) Location parameter.
+      - `sigma` : (k,k) Lower triangular matrix.
 
     .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_cov_like`
       """
@@ -1860,11 +1866,11 @@ def negative_binomial_like(x, mu, alpha):
       - `alpha` : alpha > 0
 
     .. note::
-      - :math: E[x]=\mu
+      - :math:`E[x]=\mu`
       - In Wikipedia's parameterization,
-        :math: r=\alpha
-        :math: p=\alpha/(\mu+\alpha)
-        :math: \mu=r(1-p)/p
+        :math:`r=\alpha`
+        :math:`p=\alpha/(\mu+\alpha)`
+        :math:`\mu=r(1-p)/p`
 
     """
     return flib.negbin2(x, mu, alpha)
@@ -1899,7 +1905,7 @@ def normal_like(x, mu, tau):
     :Parameters:
       - `x` : Input data.
       - `mu` : Mean of the distribution.
-      - `tau` : Precision of the distribution, which corresponds to 1/sigma**2 (tau > 0).
+      - `tau` : Precision of the distribution, which corresponds to :math:`1/\sigma^2` (tau > 0).
 
     .. note::
        - :math:`E(X) = \mu`
@@ -1990,8 +1996,7 @@ def poisson_like(x,mu):
 
     :Parameters:
       - `x` : [int] :math:`x \in {0,1,2,...}`
-      - `mu` : Expected number of occurrences during the given interval,
-               :math:`\mu \geq 0`.
+      - `mu` : Expected number of occurrences during the given interval, :math:`\mu \geq 0`.
 
     .. note::
        - :math:`E(x)=\mu`
@@ -2183,17 +2188,13 @@ def skew_normal_like(x,mu,tau,alpha):
     where :math: \Phi is the normal CDF and :math: \phi is the normal PDF.
 
     :Parameters:
-      x : float
-        Input data.
-      mu : float
-        Mean of the distribution.
-      tau : float
-        Precision of the distribution, > 0.
-      alpha : float
-        Shape parameter of the distribution.
+      - `x` : Input data.
+      - `mu` : Mean of the distribution.
+      - `tau` : Precision of the distribution (> 0).
+      - `alpha` : Shape parameter of the distribution.
 
     .. note::
-      - See http://azzalini.stat.unipd.it/SN/
+      See http://azzalini.stat.unipd.it/SN/
     """
     mu = np.asarray(mu)
     tau = np.asarray(tau)
@@ -2227,10 +2228,8 @@ def t_like(x, nu):
         f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
 
     :Parameters:
-      x : float
-        Input data.
-      nu : float
-        Degrees of freedom.
+      - `x` : Input data.
+      - `nu` : Degrees of freedom.
 
     """
     nu = np.asarray(nu)
@@ -2414,7 +2413,7 @@ def wishart_like(X, n, Tau):
       Tau : matrix
         Symmetric and positive definite
 
-    :Note:
+    .. note::
       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
