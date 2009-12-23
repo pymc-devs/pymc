@@ -2,7 +2,7 @@
 Installation Instructions
 *************************
 
-:Date: Oct 14, 2008
+:Date: Dec 23, 2009
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
@@ -146,16 +146,16 @@ type::
     python setup.py install
 
 This will build the C and Fortran extension and copy the libraries and python
-modules in the C:/Python25/Lib/site-packages/pymc directory.
+modules in the C:/Python26/Lib/site-packages/pymc directory.
 
 
 .. _`MinGW`: http://www.mingw.org/
 
 .. _`MSYS`: http://www.mingw.org/wiki/MSYS
 
-.. _`Automated MinGW Installer`: http://sourceforge.net/project/showfiles.php?group_id=2435
+.. _`Automated MinGW Installer`: http://sourceforge.net/projects/mingw/files/
 
-.. _`MSYS-1.0.exe`: http://downloads.sourceforge.net/mingw/MSYS-1.0.10.exe
+.. _`MSYS-1.0.exe`: http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
 
 
 Mac OS X or Linux
