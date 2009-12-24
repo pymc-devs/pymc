@@ -396,14 +396,14 @@ class Database(pickle.Database):
                 self._traces[name].tally(chain)
             except:
                 cls, inst, tb = sys.exc_info()
-                print """
+                warnings.warn("""
 Error tallying %s, will not try to tally it again this chain.
 Did you make all the samevariables and step methods tallyable
 as were tallyable last time you used the database file?
 
 Error:
 
-%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb)))
+%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb))))
                 self.trace_names[chain].remove(name)
 
         self._rows[chain].append()

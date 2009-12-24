@@ -51,7 +51,7 @@ class TestAM(TestCase):
         S.sample(2000)
         m = S.trace('mean')[:]
         S.remove_step_method(S.step_method_dict[mean][0])
-        S.use_step_method(pymc.AdaptiveMetropolis, mean, delay=200, verbose=3)
+        S.use_step_method(pymc.AdaptiveMetropolis, mean, delay=200, verbose=0)
         S.sample(10)
         AM = S.step_method_dict[mean][0]
         assert_almost_equal(AM.C , np.cov(m.T))

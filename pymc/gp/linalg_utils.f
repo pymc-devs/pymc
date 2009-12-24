@@ -315,25 +315,34 @@ cf2py threadsafe
 
 
 c
-! 
-!       SUBROUTINE dpotrs_wrap(chol_fac, b, info, n, m, uplo)
-! 
-! cf2py double precision dimension(n,n), intent(in) :: chol_fac
-! cf2py integer depend(chol_fac), intent(hide)::n=shape(chol_fac,0)
-! cf2py integer depend(b), intent(hide)::m=shape(b,1)
-! cf2py optional character intent(in):: uplo='U'
-! cf2py integer intent(out)::info
-! cf2py double precision intent(inplace), dimension(n,m)::b
-! 
-!       DOUBLE PRECISION chol_fac(n,n), b(n,m)
-!       INTEGER n, info,m
-!       
-!       CHARACTER uplo
-! 
-!       EXTERNAL DPOTRS
-! ! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
-! 
-!       call DPOTRS(uplo,n,m,chol_fac,n,b,s,info)
-!       
-!       return
-!       END
+      SUBROUTINE asqs(C,S,nx,ny,cmin,cmax)
+
+cf2py intent(in) C
+cf2py intent(inplace) S
+cf2py integer intent(in), optional :: cmin = 0
+cf2py integer intent(in), optional :: cmax = -1
+cf2py intent(hide) nx,ny
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny), cn, S(ny)
+      INTEGER nx, ny, i, j, cmin, cmax
+
+      EXTERNAL DSCAL
+
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+
+
+        do j=cmin+1,cmax
+            S(j) = 0.0D0
+            do i=1,nx
+                cn = C(i,j)
+                S(j) = S(j) + cn * cn
+            end do
+ !          CALL DSCAL(nx,a,C(1,j),1)
+        enddo
+
+
+      RETURN
+      END

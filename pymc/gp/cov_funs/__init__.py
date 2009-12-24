@@ -17,5 +17,5 @@ extra_parameters = {'gaussian': {'': ''},
 
 
 for name in extra_parameters.iterkeys():
-    locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name])
+    locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name], ampsq_is_diag=True)
 

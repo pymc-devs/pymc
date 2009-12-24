@@ -474,5 +474,8 @@ Zeileis]
 \newcommand{\COV}{\mathsf{COV}}
 \newcommand{\Prob}{\mathsf{P}}
 \endinput
+
+
+
 %%
 %% End of file `jss.cls'.

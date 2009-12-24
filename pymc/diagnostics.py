@@ -4,7 +4,6 @@
 __all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy']
 
 import numpy as np
-import scipy as sp
 import pymc
 from copy import copy
 import pdb
@@ -33,7 +32,8 @@ def diagnostic(f):
             for variable in pymc_obj._variables_to_tally:
                 data = variable.trace()
                 name = variable.__name__
-                print "\nDiagnostic for %s ..." % name
+                if kwargs.get('verbose'):
+                    print "\nDiagnostic for %s ..." % name
                 values[name] = f(data, *args, **kwargs)
             return values
         except AttributeError:
@@ -92,8 +92,12 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
     stats : dict
       Return a dictionary containing tuples with the chi-square statistic and
       associated p-value for each data stochastic.
+      
+    Notes
+    -----
+    This function requires SciPy. 
     """
-
+    import scipy as sp
     # Set verbosity for models to zero
     sampler.verbose = 0
 

@@ -648,6 +648,20 @@ class DrawFromPrior(StepMethod):
         StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
 
+        # Some variables (eg GP) may not have logp attributes, so don't try to
+        # evaluate their logps.
+        self.variables_with_logp = set([])
+        for s in self.markov_blanket:
+            try:
+                s.logp
+                self.variables_with_logp.add(s)
+            except:
+                pass
+    
+    def get_logp_plus_loglike(self):
+        return logp_of_set(self.variables_with_logp)
+    logp_plus_loglike = property(get_logp_plus_loglike)
+
     def step(self):
         jumped = []
         try:
