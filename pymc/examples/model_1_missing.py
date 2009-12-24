@@ -42,4 +42,4 @@ def r(s=s, e=e, l=l):
 
 
 # Where the mask is true, the value is taken as missing.
-D = Impute('D', Poisson, disasters_array, missing=None, mu=r)
+D = Impute('D', Poisson, disasters_array, mu=r)
