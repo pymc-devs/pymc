@@ -57,16 +57,13 @@ p. xiv, line 13: you could mention that excluding rows with missing observations
 
 p. xvi, line -6: "iterates over each node at every iteration" seems like awkward phrasing (too many iters)
 
-	DH: Chris, what about: "This significantly slows the rate of sampling, due to
+	DH: "This significantly slows the rate of sampling, due to
 	the overhead costs associated with iterations over individual nodes."
-	CF: Suits me; Done.
 
 p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
 
-	DH: I agree, but I'd like the documentation related to the direct instantiation mode to be kept elsewhere.
-	Maybe in a "Developping PyMC" document.
-	CF: I say let the user decide what is preferred.
-
+	DH: The suggestion was thought over, but the developpers preferred having this option propertly documented. 
+	
 p. xxx:  consider merging section 5.1 and 5.6
 
 	AP: Done
@@ -78,7 +75,7 @@ p. xxxiv, line -7:  this is a good place also to mention AdaptiveMetropolis step
 
 p. xxxv, line 11:  I'm confused about what is tuned automatically.  Is scale? Is proposal_sd? Is it something else?  More or different words could help.
 
-    AP: Done
+    AP: Clarified.
 
 p. xxxv, line 20:  description of verbose option could be more verbose
 
@@ -104,7 +101,11 @@ p. xxxviii: consider merging section 5.7 into 5.4
 
 p. xlvii, line 2: typo/awkward phrase, "gives not indication ..."; could say instead "gives evidence of convergence". [AP: Done] Perhaps it would be more helpful to show a Geweke plot that proves a chain has _not_ converged, however.
 
+   DH: Indeed, a figure showing both convergence and non convergence is now present.
+
 p. xlvii, line -8: an example use of the raftery_lewis function would be very helpful.
+
+   CF: Done.
 
 p. xlvii, line -1: it might be beyond the scope of this manual, but an example of using CODA with R on pymc output would be very helpful.
 
@@ -124,6 +125,7 @@ p. lxiv, lines 9-13: typos/leftover notes
 
 There are several figures which are very pixilated, which could be re-rendered more beautifully.  Also, there are many cross-references that came up as '??' in the pdf you sent me.  I'm sure that this will be corrected in the final version
 
+   DH: Some figures were redrawn. Thanks for pointing this out. 
 
 
 --------
@@ -206,9 +208,6 @@ variable that does not seem to have been defined earlier in the tutorial.
 
     DH: Fixed.
 
-	CF: Done
-
-	CF: Done
 
 * Sec. 3.6:  At the end, the authors say "... which is available on the
 webpage";  it would help the user  to follow if an appropriate link were
