@@ -201,20 +201,19 @@ class BasisCovariance(Covariance):
 
         # chol(basis_o.T * coef_cov * basis_o)
         chol_inner = self.coef_U * basis_o
-
-        # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)). Really should do this as low-rank update of covariance
-        # of V.
-        U, piv, m = ichol_basis(basis=chol_inner, nug=obs_V, reltol=self.relative_precision)
-
-        # Stuff expected by the MCMC objects
+        
         if output_type=='s':
-            # U_sorted = U[:m,argsort(piv)]
-            # C_eval = dot(U_sorted.T, U_sorted).copy('F')
-            C_eval = self.__call__(obs_mesh, obs_mesh)
-            U_eval = linalg.cholesky(C_eval).T
-            from IPython.Debugger import Pdb
-            Pdb(color_scheme='LightBG').set_trace() 
-
+            C_eval = dot(chol_inner.T, chol_inner).copy('F')
+            U_eval = linalg.cholesky(C_eval).T.copy('F')
+            U = U_eval
+            m = U_eval.shape[0]            
+            piv = arange(m)
+        else:
+            # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)). Really should do this as low-rank update of covariance
+            # of V.
+            
+            U, piv, m = ichol_basis(basis=chol_inner, nug=obs_V, reltol=self.relative_precision)
+            
         U = asmatrix(U)
         piv_new = piv[:m]
         self.obs_piv = piv_new
@@ -228,8 +227,8 @@ class BasisCovariance(Covariance):
         # chol(basis_o.T * coef_cov * basis_o + diag(obs_V)).T.I * basis_o.T * coef_cov
         self.Uo_cov = self.Uo_cov * self.coef_cov
 
-        # coef_cov -= coef_cov * basis_o * (basis_o.T * coef_cov * basis_o + diag(obs_V)).I * basis_o.T * coef_cov
-        self.coef_cov -= self.Uo_cov.T * self.Uo_cov
+        # coef_cov = coef_cov - coef_cov * basis_o * (basis_o.T * coef_cov * basis_o + diag(obs_V)).I * basis_o.T * coef_cov
+        self.coef_cov = self.coef_cov - self.Uo_cov.T * self.Uo_cov
 
         # coef_U = chol(coef_cov)
         U, m, piv = ichol_full(c=self.coef_cov, reltol=self.relative_precision)
@@ -242,9 +241,8 @@ class BasisCovariance(Covariance):
         
         if output_type=='s':
             return U_eval, C_eval
-        
-        else:
-            raise ValueError
+            
+        raise ValueError, 'Output type not recognized.'
 
 
     def __call__(self, x, y=None, observed=True, regularize=True):
@@ -325,7 +323,7 @@ class BasisCovariance(Covariance):
     def _obs_reg(self, M, dev_new, m_old):
         # reg_mat = chol(self.basis_o.T * self.coef_cov * self.basis_o + diag(obs_V)).T.I * self.basis_o.T * self.coef_cov *
         # chol(self(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-        M.reg_mat += self.Uo_cov.T * asmatrix(trisolve(self.Uo, dev_new, uplo='U', transa='T')).T
+        M.reg_mat = M.reg_mat + self.Uo_cov.T * asmatrix(trisolve(self.Uo, dev_new, uplo='U', transa='T')).T
         return M.reg_mat
 
     def _obs_eval(self, M, M_out, x):

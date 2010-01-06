@@ -16,7 +16,7 @@ def gp_logp(x, M, C, mesh, f_eval, M_obs, C_obs):
     raise TypeError, 'GP objects have no logp function'
 
 def gp_rand(M, C, mesh, f_eval, M_obs, C_obs, size=None):
-    # M and C are input pre-observed, so no need to 
+    # M and C are input pre-observed, so no need to
     out = pm.gp.Realization(M_obs, C_obs)
     out.x_sofar = mesh
     out.f_sofar = f_eval
@@ -99,6 +99,7 @@ class GPSubmodel(pm.ObjectContainer):
             else:
                 return 0
         fr_check=fr_check
+        
         f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True, observed=obs_on_mesh)
         
         @pm.deterministic(trace=tally_all, name='%s_covariance_bits'%name)
@@ -109,10 +110,8 @@ class GPSubmodel(pm.ObjectContainer):
             M_obs = copy.copy(M)
             M_obs.observe(C_obs,mesh,f_eval)
             return M_obs
-        M_obs = M_obs
-        f_eval = f_eval
+            
         self.mesh = mesh
-        
         self.M = M
         self.C = C
         self.M_obs = M_obs
