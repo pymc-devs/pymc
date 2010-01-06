@@ -118,7 +118,7 @@ class GPSubmodel(pm.ObjectContainer):
         self.M_obs = M_obs
         self.C_obs = C_obs
         self.f_eval = f_eval
-        f = GaussianProcess('%s_f'%name, self, trace=tally_all)
+        f = GaussianProcess('%s_f'%name, self)
         f.rand()
         l = locals()
         lk = filter(lambda k:isinstance(l[k],pm.Node), l.keys())
