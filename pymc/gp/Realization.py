@@ -46,9 +46,6 @@ def Realization(M, C, *args, **kwargs):
     else:
         return StandardRealization(M, C, *args, **kwargs)
 
-
-# TODO: Make subclass FullRankRealization which takes the evaluation of its covariance
-# on its input mesh as an argument. This can be passed in by GPNormal.
 class StandardRealization(object):
     """
     f = Realization(M, C[, init_mesh, init_vals, check_repeats = True, regularize = True])
@@ -95,42 +92,52 @@ class StandardRealization(object):
         C_internal = copy.copy(C)
         M_internal.C = C_internal
 
-        # If initial values were specified on a mesh:
-        if init_mesh is not None:
+        self.init_mesh = init_mesh
+        self.init_vals = init_vals
+        self.check_repeats = check_repeats
+        self.regularize = regularize
+        self.need_init_obs = True
 
-            if regularize:
-                init_mesh = regularize_array(init_mesh)
-                init_vals = init_vals.ravel()
+        self.M_internal = M_internal
+        self.C_internal = C_internal
+
+    def _init_obs(self):
+        # If initial values were specified on a mesh:
+        if self.init_mesh is not None:
+
+            if self.regularize:
+                self.init_mesh = regularize_array(self.init_mesh)
+                self.init_vals = self.init_vals.ravel()
 
             # Observe internal M and C with self's value on init_mesh.
-            observe(M_internal,
-                    C_internal,
-                    obs_mesh=init_mesh,
-                    obs_vals=init_vals,
-                    obs_V=zeros(len(init_vals),dtype=float),
+            observe(self.M_internal,
+                    self.C_internal,
+                    obs_mesh=self.init_mesh,
+                    obs_vals=self.init_vals,
+                    obs_V=zeros(len(self.init_vals),dtype=float),
                     lintrans=None,
                     cross_validate = False)
 
             # Store init_mesh.
-            if check_repeats:
-                self.x_sofar = init_mesh
-                self.f_sofar = init_vals
+            if self.check_repeats:
+                self.x_sofar = self.init_mesh
+                self.f_sofar = self.init_vals
 
         elif check_repeats:
 
             # Store init_mesh.
             self.x_sofar = None
             self.f_sofar = None
-
-        self.check_repeats = check_repeats
-        self.M_internal = M_internal
-        self.C_internal = C_internal
+        
+        self.need_init_obs = False
+        
 
     def __call__(self, x, regularize=True):
-
         # TODO: check repeats for basis covariances too.
-
-        # TODO: Do the timing trick down through this method to see where the bottleneck is.
+        
+        # If initial values were passed in, observe on them.
+        if self.need_init_obs:
+            self._init_obs()
 
         # Record original shape of x and regularize it.
         orig_shape = shape(x)
@@ -160,11 +167,6 @@ class StandardRealization(object):
             return f
 
     def draw_vals(self, x):
-
-        # FIXME: Optimization opportunity: Don't observe until next set of values are needed.
-        # Get U straight from C_internal, M straight from M_internal, store them and draw values.
-        # Next time values are needed, pass them back into C_internal and M_internal's observe
-        # methods to make them faster.
 
         # First observe the internal covariance on x.
         relevant_slice, obs_mesh_new, U = self.C_internal.observe(x, zeros(x.shape[0]))
@@ -213,8 +215,7 @@ class BasisRealization(StandardRealization):
 
         StandardRealization.__init__(self, M, C, init_mesh, init_vals, False, regularize)
         self.coef_vals = asarray(dot(self.C_internal.coef_U.T,normal(size=self.C_internal.m)))
-
-
+        
     def draw_vals(self, x):
 
         # If C is a BasisCovariance, just evaluate the basis over x, multiply by self's
