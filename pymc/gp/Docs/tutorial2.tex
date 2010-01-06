@@ -1,6 +1,85 @@
 \chapter{Incorporating Gaussian processes in larger probability models with PyMC}\label{cha:PyMC}
-
 This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
+
+\section{Gaussian process submodels}
+
+\subsection{The \texttt{GaussianProcess} class} 
+
+\section{Step methods}
+Some general ideas
+\subsection{The \texttt{GPEvaluationGibbs} class} 
+\subsection{Step methods that handle parents of Gaussian processes}
+\subsubsection{Choosing a mesh}  
+
+
+
+\section{Example: A simple extension of nonparametric regression}\label{sub:BasicMCMC}
+The files \file{examples/gp/PyMCModel.py} and \file{examples/gp/MCMC.py} show Gaussian process submodels and the step methods listed above in action. The probability model created by \file{PyMCModel.py} is illustrated as a directed acyclic graph in figure \ref{fig:unobservedModel}. If you comment the last line, $f_eval$ will be handled by a default \class{GPParentAdaptiveMetropolis} instance. If you leave it uncommented, $f$ will be handled by a \class{GPEvaluationGibbs} instance.
+
+The main script \file{examples/gp/MCMC.py} is mostly devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput} for both the \class{GPEvaluationMetropolis} and \class{GPParentAdaptiveMetropolis} step methods.
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/unobservedModel.pdf, width=10cm}
+    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \textsf{`examples/gp/PyMCModel.py'} . Ellipses represent \class{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \class{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \class{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \class{C} considers \class{C_amp} to be its `\class{amp}' parameter.}
+    \label{fig:unobservedModel}
+\end{figure}
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/gibbsSamples.pdf,width=10cm}
+        \epsfig{file=figs/metroSamples.pdf,width=10cm}
+    \caption{The output of {\sffamily `examples/gp/MCMC.py'} using the \class{GPEvaluationGibbs} (top) and \class{GPParentAdaptiveMetropolis} (bottom) step methods. Note that the Metropolis samples take several iterations to `burn in' to their dense support, whereas the Gibbs samples jump there more or less immediately.
+    \label{fig:MCMCOutput}
+\end{figure}
+
+\section{Example: Munch, Kottas and Mangel's stock-recruitment study}\label{sub:MMKMCMC}
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/MKMsalmon.pdf, width=10cm}
+    \caption{A PyMC-generated directed acyclic graph representation of the probability model in (\ref{eqn:MMKModel}), which is implemented in file \textsf{`examples/gp/more_examples/MKMSalmon/salmon_sampler.py'}. A very similar probability model was used by Munch, Kottas and Mangel to infer stock-recruitment functions for three salmonid species. The label `\texttt{pink.SR}' indicates that this particular model corresponds to the pink salmon (\emph{Onchorhynchus gorbuscha}) data. Note that two coordinate transformations are implemented using PyMC deterministic variables. This technique can help lazy programmers avoid transforming priors by hand, and in less trivial cases it can save computation by caching the transformed parameters.}
+    \label{fig:MMKsalmonmodel}
+\end{figure}
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/pinkfpost.pdf, width=10cm}
+    \caption{The posterior of the stock-recruitment function for pink salmon (\emph{Onchorhynchus gorbuscha}). The data are shown as heavy black dots. The centered 95\%, 50\% and 25\% posterior probability intervals are shown as shaded regions. Three draws from the posterior are plotted.}
+    \label{fig:pinkfpost}
+\end{figure}
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/pinkbeta0post.pdf, width=5cm}
+        \epsfig{file=figs/pinkbeta1post.pdf, width=5cm}
+        \epsfig{file=figs/pinkamppost.pdf, width=5cm}
+        \epsfig{file=figs/pinkdiffdegreepost.pdf, width=5cm}
+        \epsfig{file=figs/pinkscalepost.pdf, width=5cm}
+        \epsfig{file=figs/pinkVpost.pdf, width=5cm}
+    \caption{The marginal posterior distributions of the mean and covariance parameters of the stock-recruitment function for pink salmon (\emph{Onchorhynchus gorbuscha}).}
+    \label{fig:pinkparams}
+\end{figure}
+
+We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we'll use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, C is its covariance and M is its mean.
+\begin{equation}
+    \label{eqn:MMKModel}
+    \begin{array}{ll}
+        \texttt{frye}[i] \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(exp(\mathtt{SR}(\log(\mathtt{abundance}[i]))), V),& i=1\ldots n\\
+        \texttt{SR}\sim \textup{GP}(M,C)& \\
+        M:x\rightarrow \beta_0+\beta_1 \log(x)&\\
+        C:x,y\rightarrow \texttt{matern.euclidean}(x,y;\ \texttt{diff_degree},\texttt{amp},\texttt{scale})&\\
+        V,\ \beta_0,\ \beta_1,\ \texttt{diff_degree},\ \texttt{amp},\ \texttt{scale} \sim \texttt{priors}.&
+    \end{array}
+\end{equation}
+The `priors' can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose based on what seems reasonable to me) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \class{MCMC} subclass called \class{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
+
+Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option.
+
+The probability model \class{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
+
+
+\chapter{Old stuff} 
 
 \section{The \class{GP} class}
 \class{GP} is a subclass of the PyMC \class{Stochastic} class whose value attribute is a \class{Realization} instance. Its init method takes the following arguments:
@@ -95,71 +174,6 @@ In this case, a \texttt{GP} instance $f$ can be handled by the Gibbs step method
 
 \class{GPNormal} doesn't care about $f$'s mesh, because it never has to evaluate $f$'s log-probability. However, a good choice of mesh is important because it will used by the \class{GPParentMetropolis} instances that handle $f$'s mean and covariance parameters.
 
-\section{Example: A simple extension of nonparametric regression}\label{sub:BasicMCMC}
-The files \file{examples/PyMCModel.py} and \file{examples/MCMC.py} show \class{GP} and the three step methods listed above in action. The probability model created by \file{examples/PyMCModel.py} is illustrated as a directed acyclic graph in figure \ref{fig:unobservedModel}. If you comment the last line, $f$ will be handled by a default \class{GPMetropolis} instance. If you leave it uncommented, $f$ will be handled by the \class{GPNormal} instance \texttt{S}.
-
-The main script \file{examples/MCMC.py} is mostly devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput} for both the \class{GPMetropolis} and \class{GPNormal} step methods. Both files are a bit long, so I won't quote them here.
-% \verbatiminput{../../examples/gp/PyMCModel.py}
-
-\begin{figure}
-    \centering
-        \epsfig{file=figs/unobservedModel.pdf, width=10cm}
-    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \textsf{`examples/PyMCModel.py'} . Ellipses represent \class{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \class{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \class{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \class{C} considers \class{C_amp} to be its `\class{amp}' parameter.}
-    \label{fig:unobservedModel}
-\end{figure}
-
-\begin{figure}
-    \centering
-        \epsfig{file=figs/gibbsSamples.pdf,width=10cm}
-        \epsfig{file=figs/metroSamples.pdf,width=10cm}
-    \caption{The output of {\sffamily `examples/MCMC.py'} using the \class{GPNormal} (top) and \class{GPMetropolis} (bottom) step methods. Note that the Metropolis samples take several iterations to `burn in' to their dense support, whereas the Gibbs samples jump there more or less immediately. Both the Metropolis and Gibbs samples' jumping distribution is modulated by the value of the prior parameters, which are updated by \class{GPParentMetropolis} step methods.}
-    \label{fig:MCMCOutput}
-\end{figure}
-
-\section{Example: Munch, Kottas and Mangel's stock-recruitment study}\label{sub:MMKMCMC}
-
-\begin{figure}
-    \centering
-        \epsfig{file=figs/MKMsalmon.pdf, width=10cm}
-    \caption{A PyMC-generated directed acyclic graph representation of the probability model in (\ref{eqn:MMKModel}), which is implemented in file \textsf{`examples/more_examples/MKMSalmon/salmon_sampler.py'}. A very similar probability model was used by Munch, Kottas and Mangel to infer stock-recruitment functions for three salmonid species. The label `\texttt{pink.SR}' indicates that this particular model corresponds to the pink salmon (\emph{Onchorhynchus gorbuscha}) data. Note that two coordinate transformations are implemented using PyMC deterministic variables. This technique can help lazy programmers avoid transforming priors by hand, and in less trivial cases it can save computation by caching the transformed parameters.}
-    \label{fig:MMKsalmonmodel}
-\end{figure}
-
-\begin{figure}
-    \centering
-        \epsfig{file=figs/pinkfpost.pdf, width=10cm}
-    \caption{The posterior of the stock-recruitment function for pink salmon (\emph{Onchorhynchus gorbuscha}). The data are shown as heavy black dots. The centered 95\%, 50\% and 25\% posterior probability intervals are shown as shaded regions. Three draws from the posterior are plotted.}
-    \label{fig:pinkfpost}
-\end{figure}
-
-\begin{figure}
-    \centering
-        \epsfig{file=figs/pinkbeta0post.pdf, width=5cm}
-        \epsfig{file=figs/pinkbeta1post.pdf, width=5cm}
-        \epsfig{file=figs/pinkamppost.pdf, width=5cm}
-        \epsfig{file=figs/pinkdiffdegreepost.pdf, width=5cm}
-        \epsfig{file=figs/pinkscalepost.pdf, width=5cm}
-        \epsfig{file=figs/pinkVpost.pdf, width=5cm}
-    \caption{The marginal posterior distributions of the mean and covariance parameters of the stock-recruitment function for pink salmon (\emph{Onchorhynchus gorbuscha}).}
-    \label{fig:pinkparams}
-\end{figure}
-
-We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we'll use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, C is its covariance and M is its mean.
-\begin{equation}
-    \label{eqn:MMKModel}
-    \begin{array}{ll}
-        \texttt{frye}[i] \stackrel{\tiny{\textup{ind}}}{\sim} \textup{N}(exp(\mathtt{SR}(\log(\mathtt{abundance}[i]))), V),& i=1\ldots n\\
-        \texttt{SR}\sim \textup{GP}(M,C)& \\
-        M:x\rightarrow \beta_0+\beta_1 \log(x)&\\
-        C:x,y\rightarrow \texttt{matern.euclidean}(x,y;\ \texttt{diff_degree},\texttt{amp},\texttt{scale})&\\
-        V,\ \beta_0,\ \beta_1,\ \texttt{diff_degree},\ \texttt{amp},\ \texttt{scale} \sim \texttt{priors}.&
-    \end{array}
-\end{equation}
-The `priors' can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose based on what seems reasonable to me) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \class{Sampler} subclass called \class{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
-
-Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option.
-
-The probability model \class{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
 
 % \section{Example: Ellner, Seifu and Smith's blowfly study}\label{sub:ESSMCMC}
 %
