@@ -182,7 +182,8 @@ class BasisCovariance(Covariance):
             return {'piv': piv_return, 'U': U_return}
 
 
-    def observe(self, obs_mesh, obs_V, output_type='r'):
+    # FIXME: assume_full_rank with this one will require thinking.
+    def observe(self, obs_mesh, obs_V, assume_full_rank=False, output_type='r'):
         __doc__ = Covariance.observe.__doc__
 
         ndim = obs_mesh.shape[1]
@@ -238,7 +239,7 @@ class BasisCovariance(Covariance):
 
         # Output expected by the GP submodel
         if output_type=='s':
-            # U, relslice, offdiag            
+            # U, C_eval
             raise NotImplementedError
 
 

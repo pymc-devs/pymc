@@ -83,8 +83,8 @@ class FullRankCovariance(Covariance):
         # Number of points in x.
         N_new = x.shape[0]
 
+        # FIXME: This is C_eval, get it back to observe.
         U=self.__call__(x, x, regularize = False, observed = observed)
-        # print nugget, U
 
         if nugget is not None:
             for i in xrange(N_new):
@@ -146,6 +146,7 @@ class FullRankCovariance(Covariance):
         trisolve(U_old,offdiag,uplo='U',transa='T', inplace=True)
         U[:N_old, N_old:] = offdiag
 
+        # FIXME: This is C_eval, get it back to observe.
         U_new -= offdiag.T*offdiag
 
         info = dpotrf_wrap(U_new)
@@ -272,6 +273,6 @@ class FullRankCovariance(Covariance):
             
         # Output expected by the GP submodel
         if output_type=='s':
-            # U, relslice, offdiag            
+            # U, C_eval
             raise NotImplementedError
         
