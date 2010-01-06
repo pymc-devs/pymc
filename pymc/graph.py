@@ -1,5 +1,5 @@
 from pymc import *
-
+import os
 __all__ = ['graph', 'moral_graph']
 
 try:
@@ -8,11 +8,11 @@ try:
 except:
     pydot_imported = False
 
-def moral_graph(model, format='raw', prog='dot', path=None):
+def moral_graph(model, format='raw', prog='dot', path=None, name=None):
     """
     moral_graph(model,format='raw', prog='dot', path=None)
 
-    Draws the moral graph for this model and writes it to path.
+    Draws the moral graph for this model and writes it to path with filename name.
     Returns the pydot 'dot' object for further user manipulation.
 
     GraphViz and PyDot must be installed to use this function.
@@ -53,30 +53,34 @@ def moral_graph(model, format='raw', prog='dot', path=None):
                 model.moral_dot_object.add_edge(pydot.Edge(src=other_s.__name__, dst=s.__name__, arrowhead='none'))
 
     # Draw the graph
-    if not path == None:
-        model.moral_dot_object.write(path=path, format=format, prog=prog)
+    if name is None:
+        name = model.__name__
+    name = name + '.' + ext
+    if not path is None:
+        model.moral_dot_object.write(path=os.path.join(path,name), format=format, prog=prog)
     else:
         ext=format
         if format=='raw':
             ext='dot'
-        model.moral_dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
+        model.moral_dot_object.write(path='./'+name, format=format, prog=prog)
 
     return model.moral_dot_object
 
 
-def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False,
+def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, legend=False,
         collapse_deterministics = False, collapse_potentials = False, label_edges=True):
     """
     graph(  model,
             format='raw',
             prog='dot',
             path=None,
+            name=None,
             consts=False,
             legend=True,
             collapse_deterministics = False,
             collapse_potentials = False)
 
-    Draws the graph for this model and writes it to path.
+    Draws the graph for this model and writes it to path with filename name.
     Returns the pydot 'dot' object for further user manipulation.
 
     GraphViz and PyDot must be installed to use this function.
@@ -257,13 +261,16 @@ def graph(model, format='raw', prog='dot', path=None, consts=False, legend=False
         model.dot_object.add_subgraph(legend)
 
     # Draw the graph
+    if name is None:
+        name = model.__name__
+    name = name + '.' + ext
     if not path == None:
-        model.dot_object.write(path=path, format=format, prog=prog)
+        model.dot_object.write(path=os.path.join(path,name), format=format, prog=prog)
     else:
         ext=format
         if format=='raw':
             ext='dot'
-        model.dot_object.write(path='./' + model.__name__ + '.' + ext, format=format, prog=prog)
+        model.dot_object.write(path='./' + name, format=format, prog=prog)
 
     return model.dot_object
 
