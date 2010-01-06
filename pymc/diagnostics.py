@@ -33,7 +33,8 @@ def diagnostic(f):
             for variable in pymc_obj._variables_to_tally:
                 data = variable.trace()
                 name = variable.__name__
-                print "\nDiagnostic for %s ..." % name
+                if kwargs.get('verbose'):
+                    print "\nDiagnostic for %s ..." % name
                 values[name] = f(data, *args, **kwargs)
             return values
         except AttributeError:
