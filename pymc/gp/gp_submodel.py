@@ -4,7 +4,7 @@ __docformat__ = 'reStructuredText'
 
 # __all__ = ['GP_array_random', 'GP', 'GPMetropolis', 'GPNormal', 'GPParentMetropolis']
 
-# FIXME: New pickle protocol for Realization. Just pickle the observation mesh and values, and maybe nugget or whatever. Be sure to delay the linear algebra until the last possible minute!
+# FIXME: New pickle protocol for Realization. Just pickle the observation mesh and values, and maybe nugget or whatever.
 
 import pymc as pm
 import copy
