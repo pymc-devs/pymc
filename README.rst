@@ -16,8 +16,7 @@ Purpose
 
 PyMC is a python module that implements Bayesian statistical models and
 fitting algorithms, including Markov chain Monte Carlo.
-Its flexibility makes it applicable to a large suite of problems as well as
-easily extensible. Along with core sampling functionality, PyMC includes
+Its flexibility and extensibility makes it applicable to a large suite of problems. Along with core sampling functionality, PyMC includes
 methods for summarizing output, plotting, goodness-of-fit and convergence
 diagnostics.
 
@@ -25,14 +24,14 @@ diagnostics.
 Features
 ========
 
-* Fits Bayesian statistical models you create with Markov chain Monte Carlo and
+* Fits Bayesian statistical models with Markov chain Monte Carlo and
   other algorithms.
 
-* Large suite of well-documented statistical distributions.
+* Includes a large suite of well-documented statistical distributions.
 
 * Uses NumPy for numerics wherever possible.
 
-* Gaussian processes.
+* Includes a module for modeling Gaussian processes.
 
 * Sampling loops can be paused and tuned manually, or saved and restarted later.
 
@@ -41,7 +40,7 @@ Features
 * Traces can be saved to the disk as plain text, Python pickles, SQLite or MySQL
   database, or hdf5 archives.
 
-* Convergence diagnostics.
+* Several convergence diagnostics are available.
 
 * Extensible: easily incorporates custom step methods and unusual probability
   distributions.
@@ -50,8 +49,8 @@ Features
   with the full power of Python.
 
 
-What's new in 2.0
-=================
+What's new in version 2
+=======================
 
 * New flexible object model and syntax (not backward-compatible).
 
@@ -92,7 +91,7 @@ First, define your model in a file, say mymodel.py (with comments, of course!)::
    d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]),
                      \observed=True)
 
-Save this file, then from a python shell (or another filein the same directory), call::
+Save this file, then from a python shell (or another file in the same directory), call::
 
 	import pymc
 	import mymodel
@@ -101,7 +100,7 @@ Save this file, then from a python shell (or another filein the same directory),
 	S.sample(iter=10000, burn=5000, thin=2)
 	pymc.Matplot.plot(S)
 
-This will generate 10000 posterior samples, thinned by a factor of 2, with the first half discarded as burn-in. The sample is stored in a Python serialization (pickle) database.
+This example will generate 10000 posterior samples, thinned by a factor of 2, with the first half discarded as burn-in. The sample is stored in a Python serialization (pickle) database.
 
 
 History
@@ -128,10 +127,9 @@ We have chosen to spend time developing PyMC rather than using an existing packa
 Getting started
 ===============
 
-This user guide provides all the information needed to install PyMC, code
-a Bayesian statistical model, run the sampler, save and analyze the results.
-In addition, it contains the list of the
-available statistical distributions. More `examples`_ of usage as well as
+This guide provides all the information needed to install PyMC, code
+a Bayesian statistical model, run the sampler, save and visualize the results.
+In addition, it contains a list of the statistical distributions currently available. More `examples`_ of usage as well as
 `tutorials`_  are available from the PyMC web site.
 
 .. _`examples`: http://code.google.com/p/pymc/
