@@ -14,7 +14,7 @@ def plot_GP_envelopes(f, x, HPD = [.25, .5, .95], transx = None, transy = None):
 
     :Arguments:
 
-        -   `f`: A realization-valued stochastic.
+        -   `f`: A GaussianProcess object.
 
         -   `x`: The mesh on which to plot the envelopes.
 

@@ -16,8 +16,7 @@ class Covariance(object):
     """
     C=Covariance(eval_fun, relative_precision, **params)
 
-
-    Valued as a GP covariance.
+    A GP covariance.
 
     :Arguments:
 
@@ -57,7 +56,7 @@ class Covariance(object):
     def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
         """
 
-        U = C.cholesky(x[, observed=True, nugget=None])
+        U = C.cholesky(x[, observed=True, nugget=None, rank_limit=00])
 
 
         {'pivots': piv, 'U': U} = \
@@ -66,7 +65,6 @@ class Covariance(object):
 
         Computes incomplete Cholesky factorization of self(x,x), without
         actually evaluating the matrix first.
-
 
         :Arguments:
 
@@ -85,6 +83,9 @@ class Covariance(object):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
+
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+                rank_limit rows.
         """
 
         if regularize:
@@ -148,17 +149,17 @@ class Covariance(object):
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False, rank_limit=0):
         """
 
-        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None])
+        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None, 
+            rank_limit=0])
 
 
-        {'pivots': piv, 'U': U} = \
-        C.cholesky(x, x_old, chol_dict_old, apply_pivot = False[, observed=True, nugget=None])
+        returns {'pivots': piv, 'U': U}
 
 
         Computes incomplete Cholesky factorization of self(z,z), without
         actually evaluating the matrix first. Here z is the concatenation of x
         and x_old. Assumes the Cholesky factorization of self(x_old, x_old) has
-        already been computed.
+        already been computed. 
 
 
         :Arguments:
@@ -184,6 +185,9 @@ class Covariance(object):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
+                
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+                rank_limit rows.
         """
 
         if regularize:
@@ -294,7 +298,13 @@ class Covariance(object):
 
     def observe(self, obs_mesh, obs_V, output_type='r'):
         """
-        FIXME: docstring
+        Observes self on obs_mesh with observation variance obs_V.
+        Output_type controls the information returned:
+        
+        'r' : returns information needed by Realization objects.
+        'o' : returns information needed by function observe.
+        's' : returns information needed by the Gaussian process
+              submodel.
         """
 
         # print 'C.observe called'
