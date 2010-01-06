@@ -165,10 +165,10 @@ class StandardRealization(object):
     def draw_vals(self, x):
 
         # First observe the internal covariance on x.
-        relevant_slice, obs_mesh_new, U = self.C_internal.observe(x, zeros(x.shape[0]), output_type='r')
+        relevant_slice, obs_mesh_new, U, Uo_Cxo = self.C_internal.observe(x, zeros(x.shape[0]), output_type='r')
 
         # Then evaluate self's mean on x.
-        M = self.M_internal(x, regularize=False)
+        M = self.M_internal(x, regularize=False, Uo_Cxo=Uo_Cxo)
 
         # Then draw new values for self(x).
         q = dot(U.T , normal(size = U.shape[0]))
@@ -223,6 +223,6 @@ class BasisRealization(StandardRealization):
         # a vector addition.
 
         basis_x = self.C_internal.eval_basis(x)
-        f = (self.M_internal(x, regularize=False) + dot(self.coef_vals, basis_x))
+        f = (self.M_internal(x, regularize=False, Uo_Cxo=basis_x) + dot(self.coef_vals, basis_x))
 
         return f

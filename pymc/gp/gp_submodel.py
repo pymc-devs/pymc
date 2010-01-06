@@ -138,24 +138,25 @@ class GPSubmodel(pm.ObjectContainer):
             """
             Both the realization 'f' and the on-mesh evaluation 'f_eval' need the 
             Cholesky factor of the covariance evaluation. The Gibbs step method 
-            also needs the full covariance evaluation. 
+            also needs the full covariance evaluation. The mean needs a certain other
+            function of the full covariance evaluation.
             
-            Both these things can be got as byproducts of Covariance.observe. Keeping the
+            All these things can be got as byproducts of Covariance.observe. Keeping the
             observed covariance and using it as the parent of f means the computations only
             get done once.
             """
             C_obs = copy.copy(C)
             try:
-                U, C_eval = C_obs.observe(mesh, np.zeros(mesh.shape[0]), output_type='s')
-                return U.T.copy('F'), C_eval, C_obs
+                U, C_eval, Uo_Cxo = C_obs.observe(mesh, np.zeros(mesh.shape[0]), output_type='s')
+                return U.T.copy('F'), C_eval, C_obs, Uo_Cxo
             except np.linalg.LinAlgError:
                 return None
 
         S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0] if cb else None, doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all)
         C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1] if cb else None, doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all)
         C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2] if cb else None, doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all)
-        # TODO: Use the previously-computed off-diagonal in here.
-        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all, doc="The evaluation %s.M(%s.mesh)"%(name,name))
+        Uo_Cxo = pm.Lambda('%s_Uo_Cxo'%name, lambda cb=covariance_bits: cb[3] if cb else None, doc="A byproduct of observation of %s.C that can be used by %s.M"%(name,name), trace=tally_all)
+        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh, Uo_Cxo=Uo_Cxo: M(mesh, Uo_Cxo=Uo_Cxo), trace=tally_all, doc="The evaluation %s.M(%s.mesh)"%(name,name))
                 
         @pm.potential(name = '%s_fr_check'%name)
         def fr_check(S_eval=S_eval):

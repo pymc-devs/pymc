@@ -29,7 +29,7 @@ import model
 WalkerSampler = MCMC(model, db='hdf5')
 WalkerSampler.use_step_method(GPEvaluationGibbs, walker_v, V, d)
 # WalkerSampler.isample(50000,10000,100)
-WalkerSampler.isample(50,0,1)
+WalkerSampler.isample(500,100,10)
 
 n = len(WalkerSampler.trace('V')[:])
 
@@ -92,7 +92,7 @@ dplot = dstack(meshgrid(yplot,xplot))
 indices = random_integers(n,size=2)
 for j,i in enumerate(indices):
     # Reset all variables to their values at frame i of the trace
-    WalkerSampler.remember(i)
+    WalkerSampler.remember(0,i)
     # Evaluate the Gaussian process realisation
     R = WalkerSampler.walker_v.f.value(dplot)
 

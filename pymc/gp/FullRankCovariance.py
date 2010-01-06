@@ -294,7 +294,7 @@ class FullRankCovariance(Covariance):
         self.observed = True
         # Output expected by Realization
         if output_type == 'r':
-            return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old]
+            return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old], self.full_Uo[:N_old, N_old:N_new+N_old]
             
         # Ouptut expected by observe
         if output_type == 'o':
@@ -302,5 +302,5 @@ class FullRankCovariance(Covariance):
             
         # Output expected by the GP submodel
         if output_type=='s':
-            return U_new, C_eval
+            return U_new, C_eval, self.full_Uo[:N_old, N_old:N_new+N_old]
         

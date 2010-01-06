@@ -239,7 +239,7 @@ class BasisCovariance(Covariance):
             return piv_new, obs_mesh_new
         
         if output_type=='s':
-            return U_eval, C_eval
+            return U_eval, C_eval, basis_o
             
         raise ValueError, 'Output type not recognized.'
 
