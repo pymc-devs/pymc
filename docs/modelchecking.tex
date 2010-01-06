@@ -365,10 +365,10 @@ If $p$ is very large (e.g. $>0.975$) or very small (e.g. $<0.025$) this implies 
     \label{fig:deviate}
 \end{figure}
 
-The \code{discrepancy} function in the \code{utils} package can be used to generate discrepancy statistics from arrays of data, simulated values, and expected values:
+The \code{discrepancy} function in the \code{diagnostics} package can be used to generate discrepancy statistics from arrays of data, simulated values, and expected values:
 
 \begin{verbatim}
-	D = pm.utils.discrepancy(observed, simulated, expected)
+	D = pm.diagnostics.discrepancy(observed, simulated, expected)
 \end{verbatim}
 
 A call to this function returns two arrays of discrepancy values, which can be passed to the \code{discrepancy_plot} function in the Matplot module to generate a scatter plot, and if desired, a p-value:
