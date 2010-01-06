@@ -327,11 +327,11 @@ class MCMC(Sampler):
             for sm in self.step_methods:
                 sm.__dict__.update(sm_state.get(sm._id, {}))
 
-    def dic(self):
+    def _calc_dic(self):
         """Calculates deviance information Criterion"""
 
         # Find mean deviance
-        mean_deviance = np.mean(self.deviance.trace(), axis=0)
+        mean_deviance = np.mean(self.db.trace('deviance')(), axis=0)
 
         # Set values of all parameters to their mean
         for stochastic in self.stochastics:
@@ -342,10 +342,12 @@ class MCMC(Sampler):
             # Set current value to mean
             stochastic.value = mean_value
 
-        deviance_at_mean = self._calc_deviance()
         # Return twice deviance minus deviance at means
-        return 2*mean_deviance - deviance_at_mean
+        return 2*mean_deviance - self.deviance
 
-
+    # Make dic a property
+    def _get_dic(self):
+        return self._calc_dic()
+    dic = property(_get_dic)
 
 
