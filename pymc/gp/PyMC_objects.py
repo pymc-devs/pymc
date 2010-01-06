@@ -99,7 +99,6 @@ class GPSubmodel(pm.ObjectContainer):
         f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, C=C_eval, value=init_vals, trace=True)
         self.f_eval = f_eval
         f = GaussianProcess('%s_f'%name, self, trace=tally_all)
-        f_eval.fullfield = f
         pm.ObjectContainer.__init__(self, locals())
         
     def getobjects(self):
@@ -119,42 +118,56 @@ class GPEvaluationStepper(pm.Metropolis):
     
     if ti is None.
     """
-    def __init__(self, f_eval, V, eps_p_f, ti=None):    
-        self.f_eval = f_eval
+    def __init__(self, submod, V, eps_p_f, ti=None, tally=True, verbose=0):    
+        self.f_eval = submod.f_eval
+        self.f = submod.f
         self.V = V
         self.C_eval = self.f_eval.parents['C']
         self.M_eval = self.f_eval.parents['mu']
         self.eps_p_f = eps_p_f
-        self.incomp_jump = incomp_jump
 
-        M_eval_shape = pm.value(self.M_eval).shape
-        C_eval_shape = pm.value(self.C_eval).shape
+        M_eval_shape = pm.utils.value(self.M_eval).shape
+        C_eval_shape = pm.utils.value(self.C_eval).shape
         self.scratch1 = np.asmatrix(np.empty(C_eval_shape, order='F'))
         self.scratch2 = np.asmatrix(np.empty(C_eval_shape, order='F'))
         self.scratch3 = np.empty(M_eval_shape)    
-        self.ti = np.arange(M_eval_shape[0]) or ti 
+        self.ti = ti or np.arange(M_eval_shape[0])
 
-        pm.Metropolis.__init__(self,f_eval)
+        # Initialize superclass
+        pm.StepMethod.__init__(self, [self.f, self.f_eval], tally=tally)
+
+        # Initialize hidden attributes
+        self.accepted = 0.
+        self.rejected = 0.
+        self._state = ['rejected', 'accepted', 'proposal_distribution']
+        self._tuning_info = []
+        self.proposal_distribution=None
         
-        # Remove the GP from the Markov blanket, so it's not accounted for by
-        # logp_plus_loglike.
-        self.markov_blanket.remove(f_eval)
-
+        self.markov_blanket_no_f = copy.copy(self.markov_blanket)
+        self.markov_blanket_no_f.remove(self.f)
+    
+    def tune(self):
+        return False
+        
+    def get_logp_plus_loglike(self):
+        return pm.logp_of_set(self.markov_blanket_no_f)
+    logp_plus_loglike = property(get_logp_plus_loglike)
+    
     def propose(self):
 
         fc = pm.gp.fast_matrix_copy
 
-        eps_p_f = pm.value(self.eps_p_f)
-        f = pm.value(self.f_eval)
+        eps_p_f = pm.utils.value(self.eps_p_f)
+        f = pm.utils.value(self.f_eval)
         for i in xrange(len(self.scratch3)):
             self.scratch3[i] = np.sum(eps_p_f[self.ti[i]] - f[i])
 
         # Compute Cholesky factor of covariance of eps_p_f, C(x,x) + V
-        C_eval_value = np.value(self.C_eval)
+        C_eval_value = pm.utils.value(self.C_eval)
         C_eval_shape = C_eval_value.shape
         in_chol = fc(C_eval_value, self.scratch1)
-        for i in xrange(pm.value(C_eval_shape)[0]):
-            in_chol[i,i] += pm.value(self.V) / len(self.ti[i])
+        for i in xrange(pm.utils.value(C_eval_shape)[0]):
+            in_chol[i,i] += pm.utils.value(self.V) / np.alen(self.ti[i])
         info = pm.gp.linalg_utils.dpotrf_wrap(in_chol)
         if info > 0:
             raise np.linalg.LinAlgError
@@ -170,7 +183,7 @@ class GPEvaluationStepper(pm.Metropolis):
         # Compute mean of f conditional on eps_p_f.
         for i in xrange(len(self.scratch3)):
             self.scratch3[i] = np.mean(eps_p_f[self.ti[i]])
-        m_step = pm.value(self.M_eval) + np.dot(offdiag.T, pm.gp.trisolve(in_chol,(self.scratch3 - self.M_eval.value),uplo='U',transa='T')).view(np.ndarray).ravel()
+        m_step = pm.utils.value(self.M_eval) + np.dot(offdiag.T, pm.gp.trisolve(in_chol,(self.scratch3 - self.M_eval.value),uplo='U',transa='T')).view(np.ndarray).ravel()
 
         sig_step = C_step
         info = pm.gp.linalg_utils.dpotrf_wrap(C_step.T)
@@ -181,21 +194,42 @@ class GPEvaluationStepper(pm.Metropolis):
         # Update value of f.
         self.f_eval.value = m_step+np.dot(sig_step,np.random.normal(size=sig_step.shape[1])).view(np.ndarray).ravel()
         # Propose the rest of the field from its conditional prior.
-        self.f_eval.fullfield.rand()
+        self.f.rand()
         
     def reject(self):
         self.rejected += 1
         # Revert the field evaluation and the rest of the field.
         self.f_eval.revert()
-        self.f_eval.fullfield.revert()
+        self.f.revert()
         
 
 if __name__ == '__main__':
-     M = pm.gp.Mean(lambda x: np.zeros(x.shape[:-1]))
-     C = pm.gp.Covariance(pm.gp.cov_funs.matern.euclidean, amp=1, scale=1, diff_degree=1)
-     mesh = np.linspace(-1,1,101)
-     submod = GPSubmodel('hello',M,C,mesh)
-     MC = pm.MCMC([submod])         
+    import pylab as pl
+    M = pm.gp.Mean(lambda x: np.zeros(x.shape[:-1]))
+    C = pm.gp.Covariance(pm.gp.cov_funs.matern.euclidean, amp=1, scale=1, diff_degree=1)
+    mesh = np.linspace(-1,1,5)
+    submod = GPSubmodel('hello',M,C,mesh)
+    V = .01
+    epf = pm.Normal('epf', submod.f_eval, 1./V, value=np.random.normal(size=len(submod.f_eval.value)), observed=True)
+    plotmesh = np.linspace(-2,2,101)
+    f_eval = pm.Lambda('f_eval',lambda f=submod.f, mesh = plotmesh: f(mesh))
+    MC = pm.MCMC([submod, V, epf, f_eval])        
+    MC.use_step_method(GPEvaluationStepper, submod, V, epf)
+    sm = MC.step_method_dict[submod.f_eval][0]
+    
+    # pl.clf()
+    # for i in xrange(100):
+    #     submod.f.rand()
+    #     pl.plot(plotmesh, submod.f.value(plotmesh))
+    # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
+
+    MC.isample(100)
+    pl.clf()
+    for fe in MC.trace('f_eval')[:]:
+        pl.plot(plotmesh, fe)
+    pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
+
+     
 
 # class GPParentMetropolis(pm.Metropolis):
 # 
