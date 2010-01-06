@@ -197,11 +197,11 @@ def new_dist_class(*new_class_args):
 
                 if len(parents) > 0:
                     pv = [np.shape(utils.value(v)) for v in parents.values()]
-                    biggest_parent = np.argmax([np.prod(v) for v in pv])
+                    biggest_parent = np.argmax([(np.prod(v) if v else 0) for v in pv])
                     parents_shape = pv[biggest_parent]
 
                     # Scalar parents can support any shape.
-                    if np.prod(parents_shape) <= 1:
+                    if np.prod(parents_shape) < 1:
                         parents_shape = None
 
                 else:
@@ -221,7 +221,7 @@ def new_dist_class(*new_class_args):
                     # Uncomment to leave broadcasting completely up to NumPy's random functions
                     # if bindshape[-np.alen(parents_shape):]!=parents_shape:
                     # Uncomment to limit broadcasting flexibility to what the Fortran likelihoods can handle.
-                    if bindshape!=parents_shape:
+                    if bindshape<parents_shape:
                         shape_error()
 
                 if random is not None:
