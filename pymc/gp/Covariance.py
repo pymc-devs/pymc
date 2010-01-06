@@ -334,7 +334,8 @@ class Covariance(object):
                 info = dpotrf_wrap(U)
                 if info>0:
                     raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." %info
-                obs_dict = {'U': U,'pivots': arange(U.shape[0])}
+                obs_dict = {'U': U,'pivots': arange(U.shape[0]),'U_new':U,'C_eval':C_eval}
+            obs_dict_new = obs_dict
 
             # Rank of self(obs_mesh, obs_mesh)
             m_new = obs_dict['U'].shape[0]

@@ -8,7 +8,7 @@ x = [pm.MvNormalCov('x0',np.zeros(5),np.eye(5)),
     pm.Gamma('x2',2,2),
     pm.Binomial('x3',100,.4),
     pm.Bernoulli('x4',.5),
-    pm.gp.GP('x5',pm.gp.Mean(lambda x:0*x), pm.gp.FullRankCovariance(pm.gp.cov_funs.exponential.euclidean, amp=1, scale=1), mesh=np.linspace(-1,1,21))]
+    pm.gp.GaussianProcess('x5',pm.gp.Mean(lambda x:0*x), pm.gp.FullRankCovariance(pm.gp.cov_funs.exponential.euclidean, amp=1, scale=1), mesh=np.linspace(-1,1,21))]
 
 do_not_implement_methods = ['iadd','isub','imul','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior']
 uni_methods = ['neg','pos','abs','invert','index']
