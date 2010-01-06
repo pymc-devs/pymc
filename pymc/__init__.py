@@ -35,8 +35,6 @@ from StepMethods import *
 from MCMC import *
 from NormalApproximation import *
 
-
-
 from tests import test
 
 # Utilities modules
