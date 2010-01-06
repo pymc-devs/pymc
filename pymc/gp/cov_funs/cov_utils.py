@@ -152,10 +152,6 @@ class covariance_wrapper(object):
             # Compute covariance for this bit
             self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
             imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
-            # Possibly symmetrize this bit
-            # FIXME: Intermittent errors apparently originating in symmetrize!
-            # if symm:
-            #     symmetrize(C, cmin=cmin, cmax=cmax)
 
         if n_threads <= 1:
             targ(C,x,y,0,-1,symm)
