@@ -262,7 +262,6 @@ class FullRankCovariance(Covariance):
                                             U_old = self.full_Uo,
                                             observed = False,
                                             nugget = obs_V)
-                
 
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
             self.full_Uo = U
