@@ -446,6 +446,12 @@ class Covariance(object):
         # Ouptut expected by observe
         if output_type == 'o':
             return relevant_slice, obs_mesh_new
+            
+        # Output expected by the GP submodel
+        if output_type=='s':
+            # U, relslice, offdiag            
+            raise NotImplementedError
+
 
 
     def __call__(self, x, y=None, observed=True, regularize=True):

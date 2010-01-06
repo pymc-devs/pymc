@@ -269,4 +269,9 @@ class FullRankCovariance(Covariance):
         # Ouptut expected by observe
         if output_type == 'o':
             return slice(None, None, None), obs_mesh
+            
+        # Output expected by the GP submodel
+        if output_type=='s':
+            # U, relslice, offdiag            
+            raise NotImplementedError
         
