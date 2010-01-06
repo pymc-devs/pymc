@@ -1,6 +1,11 @@
 \chapter{Incorporating Gaussian processes in PyMC probability models}\label{cha:PyMC}
 This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
 
+
+
+
+
+
 \section{Gaussian process submodels}
 
 This package represents a Gaussian process $f\sim \textup{GP}(M,C)$ as a \texttt{GaussianProcess} object which, as you might expect, is a PyMC \texttt{stochastic} whose value is a \texttt{Realization} object. It is not feasible to endow a full \texttt{GaussianProcess} with a \texttt{logp} attribute, so \texttt{GaussianProcess} objects cannot be handled by PyMC's standard MCMC machinery.
@@ -9,50 +14,51 @@ However, the evaluation $f(x_*)$ on a mesh $x_*$ is a simple multivariate normal
 
 Pairs of $f$ and $f(x_*)$ variables are created by \texttt{GPSubmodel} objects, which are containers for PyMC variables. \texttt{GaussianProcess} objects can only be incorporated in PyMC probability models via \texttt{GPSubmodel} objects.
 
+
+
+
+
+
 \section{Example: nonparametric regression with unknown mean and covariance parameters}\label{sub:BasicMCMC}
 
 A GP submodel is created in \file{examples/gp/PyMCmodel.py} with the following call:
 \begin{verbatim}
-    submod = gp.GPSubmodel('submod',M,C,fmesh)
+    sm = gp.GPSubmodel('sm',M,C,fmesh)
 \end{verbatim}
-The structure of \texttt{submod} is illustrated in figure \ref{fig:gpsub}.
-\begin{figure}
-    \begin{center}
-        % FIXME: Make this figure.
-        \caption{The structure of a Gaussian process submodel. \texttt{MORE}}
-        \label{fig:gpsub}  
-    \end{center}
-\end{figure}  
-There are two stochastic variables in the submodel: \texttt{submod.f} and \texttt{submod.f_eval}. The first is the actual Gaussian process $f$: a stochastic variable valued as a \texttt{Realization} object. The second is $f(x_*)$, where $x_*$ is the input argument \texttt{fmesh}.
+There are two stochastic variables in the submodel: \texttt{smf} and \texttt{smf_eval}. The first is the actual Gaussian process $f$: a stochastic variable valued as a \texttt{Realization} object. The second is $f(x_*)$, where $x_*$ is the input argument \texttt{fmesh}.
 
 Once the GP submodel is created, we can create other variables that depend on $f$ and $f(x_*)$. In \file{PyMCmodel.py}, the observation $d$ depends on $f(x_*)$: 
 \begin{verbatim}
-    d = pymc.Normal('d',mu=submod.f_eval, tau=1./V, value=init_val, observed=True)
+    d = pymc.Normal('d',mu=smf_eval, tau=1./V, value=init_val, observed=True)
 \end{verbatim}
+The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the dependency relationships between the variables in a GP submodel.
 
 The file \file{examples/gp/MCMC.py} fits the probability model created in \file{PyMCmodel.py} using MCMC. The `business part' of the file is very simple:
 \begin{verbatim}
     GPSampler = MCMC(PyMCmodel)
-    GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, GPSampler.V, GPSampler.d)
     GPSampler.isample(iter=5000,burn=1000,thin=100)
 \end{verbatim}
-Most of the code in the file is devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput} for both the \texttt{GPEvaluationMetropolis} and \texttt{GPParentAdaptiveMetropolis} step methods. Note that after the MCMC run \texttt{GPSampler.trace('submod.f')[:]} yields a sequence of \texttt{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend (see PyMC's user guide).
+Most of the code in the file is devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput}. Note that after the MCMC run \texttt{GPSampler.trace('sm_f')[:]} yields a sequence of \texttt{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend (see PyMC's user guide).
 
 \begin{figure}
     \centering
-    % FIXME: Re-render this graph.
-        \epsfig{file=figs/unobservedModel.pdf, width=10cm}
-    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \sffamily{`examples/gp/PyMCModel.py'} . Ellipses represent \texttt{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \texttt{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \texttt{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Arrows point from parent to child, and arrow labels show the name assigned to the parent by the child. For instance, \texttt{C} considers \texttt{C\_amp} to be its `\texttt{amp}' parameter.}
+        \epsfig{file=figs/unobservedModel.pdf, width=15cm}
+    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \sffamily{`examples/gp/PyMCModel.py'}. Ellipses represent \texttt{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \texttt{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \texttt{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Rectangles represent potentials Arrows point from parent to child. The submodel contains the Gaussian process \texttt{sm\_f} and its evaluation \texttt{sm\_f\_eval} on input array \texttt{sm\_mesh}. It also contains the mean \texttt{sm\_M\_eval} of \texttt{sm\_f\_eval} and the lower-triangular Cholesky factor \texttt{sm\_S\_eval} of its covariance matrix, and a potential \texttt{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \texttt{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
     \label{fig:unobservedModel}
 \end{figure}
 
 \begin{figure}
     \centering
         \epsfig{file=figs/gibbsSamples.pdf,width=10cm}
-        \epsfig{file=figs/metroSamples.pdf,width=10cm}
-    \caption{The output of \sffamily{`examples/gp/MCMC.py'} using the \texttt{GPEvaluationGibbs} (top) and \texttt{GPParentAdaptiveMetropolis} (bottom) step methods. Note that the Metropolis samples take several iterations to `burn in' to their dense support, whereas the Gibbs samples jump there more or less immediately.}
+        % \epsfig{file=figs/metroSamples.pdf,width=10cm}
+    \caption{The output of \sffamily{`examples/gp/MCMC.py'}. The left-hand panel shows all the samples generated for the Gaussian process $f$, and the right-hand panel shows the trace of $f(0)$.}
     \label{fig:MCMCOutput}
 \end{figure}
+
+
+
+
+
 
 \section{Step methods}
 \label{sec:step-methods} 
@@ -113,15 +119,78 @@ The initialization arguments are the Gaussian process submodel that contains $f$
 
 \texttt{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \texttt{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \texttt{AdaptiveMetropolis}.
 
-\section{In-depth example: Munch, Kottas and Mangel's stock-recruitment study}\label{sub:MMKMCMC}
 
+
+
+
+\section{Geostatistical example}\label{sub:geostat}
 \begin{figure}
     \centering
-    % FIXME: Re-render this graph
-        \epsfig{file=figs/MKMsalmon.pdf, width=10cm}
-    \caption{A PyMC-generated directed acyclic graph representation of the probability model in (\ref{eqn:MMKModel}), which is implemented in file \sffamily{`examples/gp/more_examples/MKMSalmon/salmon_sampler.py'}. A very similar probability model was used by Munch, Kottas and Mangel to infer stock-recruitment functions for three salmonid species. The label `\texttt{pink.SR}' indicates that this particular model corresponds to the pink salmon (\emph{Onchorhynchus gorbuscha}) data. Note that two coordinate transformations are implemented using PyMC deterministic variables. This technique can help lazy programmers avoid transforming priors by hand, and in less trivial cases it can save computation by caching the transformed parameters.}
-    \label{fig:MMKsalmonmodel}
+        \epsfig{file=figs/elevmean.pdf, width=8cm}
+        \epsfig{file=figs/elevvar.pdf, width=8cm}
+    \caption{The posterior mean and variance surfaces for the $v$ variable of the Walker lake example. The posterior variance is relatively small in the neighborhood of observations, but large in regions where no observations were made.}
+    \label{fig:walker}
 \end{figure}
+\begin{figure}
+    \centering
+        \epsfig{file=figs/elevdraw0.pdf, width=8cm}
+        \epsfig{file=figs/elevdraw1.pdf, width=8cm}
+    \caption{Two realizations from the posterior distribution of the $v$ surface for the Walker Lake example. Elevation is measured in meters.}
+    \label{fig:walkerreal}
+\end{figure}
+Bayesian geostatistics is demonstrated in the folder \file{examples/gp/more_examples/Geostatistics}. File \file{getdata.py} downloads the Walker Lake dataset of Isaaks and Srivastava \cite{isaaks} from the internet and manipulates the $x$ and $y$ coordinates into the array format described in section \ref{sec:highdim}. File \file{model.py} contains the geostatistical model specification, which is
+
+\begin{eqnarray*}
+    d|f \sim \textup{Normal}(f(x),V)\\
+    f|M,C \sim \textup{GP}(M,C) \\
+    M:x\rightarrow m\\
+    C:x,y,\mathtt{amp},\mathtt{scale},\mathtt{diff\_degree}\rightarrow \mathtt{matern.euclidean}(x,y;\mathtt{amp},\mathtt{scale},\mathtt{diff\_degree})\\
+    p(m)\propto 1\\
+    \mathtt{amp}\sim \textup{Exponential}(7e-5) \\
+    \mathtt{scale}\sim \textup{Exponential}(4e-3) \\
+    \mathtt{diff\_degree}\sim \textup{Uniform}(.5,2)\\ 
+    V\sim \textup{Exponential}(5e-9)\\
+\end{eqnarray*}
+
+File \file{mcmc.py} fits the model and produces output maps.  The output of \file{mcmc.py} is shown in figures \ref{fig:walker} and \ref{fig:walkerreal}. Figure \ref{fig:walker} shows the posterior mean and variance of the $v$ variable of the dataset, which is a function of elevation (see Isaaks and Srivastava \cite{isaaks}, appendix A). The mean and variance surfaces are generated conveniently from the trace as follows:
+\begin{verbatim}
+    Msurf = zeros(dplot.shape[:2])
+    E2surf = zeros(dplot.shape[:2])
+    for i in xrange(n):
+        WalkerSampler.remember(i)
+        Msurf_i = WalkerSampler.walker_v.M_obs.value(dplot)
+        Msurf += Msurf_i / n
+        E2surf += (WalkerSampler.walker_v.C_obs.value(dplot) + Msurf_i**2) / n
+\end{verbatim}
+The call \texttt{WalkerSampler.remember(i)} resets all the variables in the model to their values at frame $i$ of the MCMC trace. The surfaces $E[v]$ (\texttt{Msurf}) and $E[v^2]$ (\texttt{E2surf}) are easily accumulated by stepping through the trace using \texttt{remember} and evaluating the \texttt{M_obs} and \texttt{C_obs} attributes of the Gaussian process submodel on input array \texttt{dplot}. The standard deviation surface is generated using the standard formula:
+\begin{verbatim}
+    Vsurf = E2surf - Msurf**2
+    SDsurf = sqrt(Vsurf)
+\end{verbatim}
+
+Figure \ref{fig:walkerreal} shows two realizations from the posterior predictive distribution of the $v$ surface. They are much rougher than their mean surface, and also much more expensive to compute. However, they are equally convenient to evaluate:
+\begin{verbatim}
+    indices = random_integers(n,size=2)
+    for j,i in enumerate(indices):
+        WalkerSampler.remember(i)
+        R = WalkerSampler.walker_v.f.value(dplot)
+\end{verbatim}
+Again, \texttt{remember} is used to reset the model to a randomly-selected frame of the trace, and the Gaussian process $f$ is evaluated on \texttt{dplot} in that frame.
+
+
+
+
+
+
+\section{Biological example: Munch, Kottas and Mangel's stock-recruitment study}\label{sub:MMKMCMC}
+
+% \begin{figure}
+%     \centering
+%     % FIXME: Re-render this graph
+%         \epsfig{file=figs/MKMsalmon.pdf, width=10cm}
+%     \caption{A PyMC-generated directed acyclic graph representation of the probability model in (\ref{eqn:MMKModel}), which is implemented in file \sffamily{`examples/gp/more_examples/MKMSalmon/salmon_sampler.py'}. A very similar probability model was used by Munch, Kottas and Mangel to infer stock-recruitment functions for three salmonid species. The label `\texttt{pink.SR}' indicates that this particular model corresponds to the pink salmon (\emph{Onchorhynchus gorbuscha}) data. Note that two coordinate transformations are implemented using PyMC deterministic variables. This technique can help lazy programmers avoid transforming priors by hand, and in less trivial cases it can save computation by caching the transformed parameters.}
+%     \label{fig:MMKsalmonmodel}
+% \end{figure}
 
 \begin{figure}
     \centering
@@ -157,7 +226,9 @@ The `priors' can be found by reading their paper (except the prior on \texttt{di
 
 Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option.
 
-The probability model \texttt{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
+% The probability model \texttt{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. 
+
+Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
 
 
 

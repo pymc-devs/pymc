@@ -412,29 +412,6 @@ If you've built NumPy against multithreaded linear algebra libraries, all the li
 On a quad-core system, evaluating a covariance function on large input vectors when \texttt{OMP_NUM_THREADS} is equal to 4 will use all the cores. Note that there's no point setting \texttt{OMP_TUM_THREADS} to 5 on a quad-core system, because only four cores are available.
 
 
-\subsection{A geostatistical example}\label{sub:geostat}
-\begin{figure}
-    \centering
-        \epsfig{file=figs/elevmean.pdf, width=8cm}
-        \epsfig{file=figs/elevvar.pdf, width=8cm}
-    \caption{The posterior mean and variance surfaces for the elevation example. Elevation is measured in meters. Computing these surfaces is also called `\citetitle[http://en.wikipedia.org/wiki/Kriging]{simple kriging}.' The posterior variance is small in the neighborhood of observations, but large in regions where no observations were made. Note that this posterior distribution is conditional on a relatively sparse dataset, which notably misses some of the highest points in Europe.}
-    \label{fig:elev}
-\end{figure}
-\begin{figure}
-    \centering
-        \epsfig{file=figs/elevdraw0.pdf, width=8cm}
-        \epsfig{file=figs/elevdraw1.pdf, width=8cm}
-    \caption{Two realizations from the posterior distribution of elevation. Elevation is measured in meters.}
-    \label{fig:elevreal}
-\end{figure}
-Higher-dimensional usage is demonstrated in the folder \file{examples/gp/more_examples/Elevation}. File \file{getdata.py} extracts latitude, longitude and elevation data from the csv file in that folder and manipulates them into the array format described in section \ref{sec:highdim}. The data are from the Carbon Dioxide Information Analysis Center's \citetitle[http://cdiac.ornl.gov/epubs/ndp/ndp026d/ndp026d.html]{Cloud Climatology for Land Stations Worldwide, 1971-1996}. File \file{makemap.py} interfaces with \citetitle[www.matplotlib.org]{matplotlib}'s \texttt{basemap} toolkit, which draws maps. File \file{regression.py} actually implements the regression.
-% \verbatiminput{../../examples/gp/more_examples/Elevation/regression.py}
-
-The output of \file{regression.py} is shown in figures \ref{fig:elev} and \ref{fig:elevreal}. Figure \ref{fig:elev} shows the posterior mean and variance of the elevation. Finding these surfaces is also known as `\citetitle[http://en.wikipedia.org/wiki/Kriging]{simple kriging}.' Note that it's not possible to visualize the full covariance matrix, because it's now a function of four variables. The surface in figure \ref{fig:elev} is equivalent to the diagonal of the surface in figure \ref{fig:obs}.
-
-Figure \ref{fig:elevreal} shows two realizations from the posterior distribution of the elevation surface. They are much rougher than their mean surface. Evaluating realizations is much more expensive than evaluating the observed mean or evaluating the observed covariance with one argument.
-
-
 \section{Basis covariances}\label{sec:basis}
 
 \begin{figure}[htbp]

@@ -118,7 +118,10 @@ class GPSubmodel(pm.ObjectContainer):
     
     def __init__(self, name, M, C, mesh, init_vals=None, obs_on_mesh=False, tally_all=False):
         
-        mesh = pm.Lambda('%s_mesh'%name, lambda mesh=mesh: pm.gp.regularize_array(mesh), trace=False)
+        if isinstance(mesh, pm.Variable):
+            mesh = pm.Lambda('%s_mesh'%name, lambda mesh=mesh: pm.gp.regularize_array(mesh), trace=False)
+        else:
+            mesh = pm.gp.regularize_array(mesh)
         name = name
         
         @pm.deterministic(trace=tally_all, name='%s_covariance_bits'%name)
@@ -139,27 +142,27 @@ class GPSubmodel(pm.ObjectContainer):
             except np.linalg.LinAlgError:
                 return None
 
-        S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0], doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all)
-        C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1], doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all)
-        C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2], doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all)
+        S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0] if cb else None, doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all)
+        C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1] if cb else None, doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all)
+        C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2] if cb else None, doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all)
         
         M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all, doc="The evaluation %s.M(%s.mesh)"%(name,name))
                 
         @pm.potential(name = '%s_fr_check'%name)
-        def fr_check(cb=covariance_bits):
+        def fr_check(S_eval=S_eval):
             """
             Forbids non-positive-definite C_evals.
             """
-            if cb is None:
+            if S_eval is None:
                 return -np.inf
             else:
                 return 0
         fr_check=fr_check
         
         f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True, observed=obs_on_mesh, 
-            doc="The evaluation %s.f(%s.mesh). This is a multivariate normal variable with mean %s.M_eval and covariance %M.C_eval."%(name,name,name,name))
+            doc="The evaluation %s.f(%s.mesh).\nThis is a multivariate normal variable with mean %s.M_eval and covariance %s.C_eval."%(name,name,name,name))
         
-        @pm.deterministic(trace=tally_all, name='%s_covariance_bits'%name)
+        @pm.deterministic(trace=tally_all, name='%s_M_obs'%name)
         def M_obs(M=M, f_eval=f_eval, C_obs=C_obs, mesh=mesh):
             """
             Creates an observed mean object to match %sC_obs.

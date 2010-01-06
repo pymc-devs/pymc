@@ -7,9 +7,9 @@ x = linspace(-1,1,400)
 
 GPSampler = MCMC(PyMCmodel)
 # Uncomment this to use the GPNormal step method instead of the default GPMetropolis
-GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, GPSampler.V, GPSampler.d)
+# GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, GPSampler.V, GPSampler.d)
 
-GPSampler.isample(iter=5000,burn=1000,thin=100)
+GPSampler.isample(iter=10000,burn=5000,thin=100)
 
 # Uncomment this for a medium run.
 # GPSampler.isample(iter=500,burn=0,thin=10)
@@ -19,14 +19,14 @@ GPSampler.isample(iter=5000,burn=1000,thin=100)
 
 if __name__ == '__main__':
 
-    N_samps = len(GPSampler.submod.f.trace())
+    N_samps = len(GPSampler.sm.f.trace())
 
     close('all')
 
     mid_traces = []
     subplot(1,2,1)
     for i in range(0,N_samps):
-        f=GPSampler.submod.f.trace()[i](x)
+        f=GPSampler.sm.f.trace()[i](x)
         plot(x,f)
         mid_traces.append(f[len(f)/2])
         plot(fmesh,GPSampler.d.value,'k.',markersize=16)
