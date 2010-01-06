@@ -1052,7 +1052,7 @@ class AdaptiveMetropolis(StepMethod):
         """
         n = []
         for s in self.stochastics:
-            n.append(s.trace.length)
+            n.append(s.trace.length())
         n = set(n)
         if len(n) > 1:
             raise ValueError, 'Traces do not have the same length.'
