@@ -941,12 +941,18 @@ def dirichlet_like(x, theta):
     This is a multivariate continuous distribution.
 
     .. math::
-        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)} \prod_{i=1}^k x_i^{\theta_i - 1}
+        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}\\
+        \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
       - `x` : An (n,k-1) array where `n` is the number of samples and `k` the dimension.
           :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
       - `theta` : An (n,k) or (1,k) array > 0.
+      
+    .. note::
+        Only the first `k-1` elements of `x` are expected. Can be used as a parent of Multinomial and Categorical
+        nevertheless.
+      
 
     """
     x = np.atleast_2d(x)
@@ -1234,7 +1240,7 @@ def half_normal_like(x, tau):
     R"""
     half_normal_like(x, tau)
 
-    Half-normal log-likelihood, a normal distribution with mean 0 and limited
+    Half-normal log-likelihood, a normal distribution with mean 0 limited
     to the domain :math:`x \in [0, \infty)`.
 
     .. math::
@@ -1690,7 +1696,7 @@ def mv_normal_like(x, mu, tau):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, T) = \frac{|T|}{(2\pi)}^{1/2} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+        f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
     :Parameters:
       - `x`: (n,k)
@@ -1795,7 +1801,7 @@ def mv_normal_chol_like(x, mu, sig):
     Multivariate normal log-likelihood
 
     .. math::
-        f(x \mid \pi, \sigma) = \frac{1}{(2\pi|\sigma|^2)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
+        f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}
 
     :Parameters:
       x : (n,k)
@@ -2118,7 +2124,7 @@ def truncated_normal_like(x, mu, tau, a, b):
     .. math::
         f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},
 
-    where :math:`\sigma^2=1/\tau`.
+    where :math:`\sigma^2=1/\tau`, `\phi` is the standard normal PDF and `\Phi` is the standard normal CDF.
 
     :Parameters:
       - `x` : Input data.
