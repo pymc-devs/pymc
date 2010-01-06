@@ -230,10 +230,10 @@ hdf5
 The ``hdf5`` backend uses `pyTables`_ to save data in binary HDF5 format.
 The ``hdf5`` database is fast and can store huge traces, far larger than the
 available RAM. Data can be compressed and decompressed on the fly to
-reduce the memory footprint.
+reduce the disk footprint.
 Another feature of this backend is that it can store arbitrary objects.
-Whereas the other backends are limited to numerical values, ``hdf5`` can
-tally any object that can be pickled, opening the door for powerful and
+Whereas most of the other backends are limited to numerical values, ``hdf5`` 
+can tally any object that can be pickled, opening the door for powerful and
 exotic applications (see ``pymc.gp``).
 
 The internal structure of an HDF5 file storing both numerical values and
