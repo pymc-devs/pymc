@@ -84,6 +84,8 @@ tested with PyMC but may work nonetheless.
 
 .. _`Graphviz`: http://www.graphviz.org/
 
+.. _`nose (optional)`: http://somethingaboutorange.com/mrl/projects/nose/
+
 
 Installation using EasyInstall
 ==============================
@@ -207,7 +209,7 @@ appear. In case this happens (it shouldn't), please report
 the problems on the `issue tracker`_ (the issues tab on the Google Code page), 
 specifying the version you are using and the environment.
 
-.. _`nose (optional)`: http://somethingaboutorange.com/mrl/projects/nose/
+.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
 
 
 
