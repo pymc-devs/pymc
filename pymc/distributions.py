@@ -2769,7 +2769,7 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def Impute(name, dist_class, values, **parents):
+def Impute(name, dist_class, imputable, **parents):
     """
     This function accomodates missing elements for the data of simple
     Stochastic distribution subclasses. The masked_values argument is an
@@ -2783,10 +2783,9 @@ def Impute(name, dist_class, values, **parents):
         Name of the data stochastic
       - dist_class : Stochastic
         Stochastic subclass such as Poisson, Normal, etc.
-      - values : numpy.ma.core.MaskedArray or iterable
+      - imputable : numpy.ma.core.MaskedArray or iterable
         A masked array with missing elements (where mask=True, value is assumed missing),
-        or an iterable that contains missing elements, identified by 'missing' argument.
-	NaNs are considered missing by default if values is not a masked array.
+        or any iterable that contains None elements that will be imputed.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
