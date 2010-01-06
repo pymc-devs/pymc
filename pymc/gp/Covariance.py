@@ -9,7 +9,6 @@ from numpy.linalg import cholesky, LinAlgError
 from GPutils import regularize_array, trisolve, square_and_sum
 from linalg_utils import diag_call, dpotrf_wrap
 from incomplete_chol import ichol, ichol_continue
-from pymc.gp import chunksize
 
 class Covariance(object):
 
@@ -455,7 +454,7 @@ class Covariance(object):
 
 
 
-    def __call__(self, x, y=None, observed=True, regularize=True):
+    def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
 
         if y is x:
             symm=True
@@ -473,6 +472,8 @@ class Covariance(object):
         ndimx = x.shape[-1]
         lenx = x.shape[0]
 
+        if return_Uo_Cxo:
+            Uo_Cxo = None
 
         # Safety
         if self.ndim is not None:
@@ -503,20 +504,15 @@ class Covariance(object):
                     V[i] = self.eval_fun(this_x, this_x, **self.params)
             if self.observed and observed:
                 sqpart = empty(lenx,dtype=float)
-
-                # Do huge evaluations in chunks, because you don't need to keep the full matrix.
-                # FIXME: You're double-evaluating, the mean needs to use the same matrix.
-                n_chunks = ceil(self.obs_mesh.shape[0]*x.shape[0]/float(chunksize))
-                bounds = array(linspace(0,x.shape[0],n_chunks+1),dtype='int')
-                cmin=bounds[:-1]
-                cmax=bounds[1:]
-                for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):            
-                    Cxo = self.eval_fun(self.obs_mesh, x[cmin:cmax], **self.params)
-                    Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
-                    square_and_sum(Uo_Cxo, sqpart[cmin:cmax])
+                Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
+                Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
+                square_and_sum(Uo_Cxo, sqpart)
                 V -= sqpart
-                
-            return V.reshape(orig_shape)
+
+            if return_Uo_Cxo:    
+                return V.reshape(orig_shape), Uo_Cxo
+            else:
+                return V.reshape(orig_shape)
 
         else:
 
@@ -530,7 +526,11 @@ class Covariance(object):
                     Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
                     Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
                     C -= Uo_Cxo.T * Uo_Cxo
-                return C
+
+                if return_Uo_Cxo:
+                    return C, Uo_Cxo
+                else:
+                    return C
 
 
             # ======================================
@@ -573,25 +573,12 @@ class Covariance(object):
         trisolve(self.Uo[m_old:,m_old:].T, reg_mat_new, 'L', inplace=True)
         reg_mat_new += asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
         return asmatrix(vstack((M.reg_mat,reg_mat_new)))
-
-    def _obs_eval_helper(self, M, M_out, x, cmin, cmax):
-        Cxo = self(M.obs_mesh, x[cmin:cmax], observed = False)
-        Cxo_Uo_inv = trisolve(M.Uo, Cxo, uplo='U', transa='T')
-        M_out[cmin:cmax] += dot(asarray(M.reg_mat).T,asarray(Cxo_Uo_inv)).squeeze()
         
-    def _obs_eval(self, M, M_out, x):
+    def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
         # Do truly huge covariance evaluations in chunks, because you don't need to keep
         # the full matrix.
-        # FIXME: You're double-evaluating here. Use the evaluation from the covariance somehow.
-        n_chunks = ceil(M.obs_mesh.shape[0]*x.shape[0]/float(chunksize))
-        if n_chunks > 1:
-            bounds = array(linspace(0,x.shape[0],n_chunks+1),dtype='int')
-            cmin=bounds[:-1]
-            cmax=bounds[1:]
-            for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):            
-                self._obs_eval_helper(M, M_out, x, cmin, cmax)
-        else:
-            self._obs_eval_helper(M, M_out, x, 0, 1)
+        Uo_Cxo = Uo_Cxo if Uo_Cxo is not None else trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
+        M_out += dot(asarray(M.reg_mat).T,asarray(Uo_Cxo)).squeeze()
         return M_out
 
     def _mean_under_new(self, M, obs_mesh_new):

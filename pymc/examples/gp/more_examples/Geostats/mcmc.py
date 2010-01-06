@@ -28,7 +28,8 @@ import model
 # you should thin the trace more.
 WalkerSampler = MCMC(model, db='hdf5')
 WalkerSampler.use_step_method(GPEvaluationGibbs, walker_v, V, d)
-WalkerSampler.isample(50000,10000,100)
+# WalkerSampler.isample(50000,10000,100)
+WalkerSampler.isample(50,0,1)
 
 n = len(WalkerSampler.trace('V')[:])
 
@@ -49,12 +50,12 @@ E2surf = zeros(dplot.shape[:2])
 # Get E[v] and E[v**2] over the entire posterior
 for i in xrange(n):
     # Reset all variables to their values at frame i of the trace
-    WalkerSampler.remember(i)
+    WalkerSampler.remember(0,i)
     # Evaluate the observed mean
-    Msurf_i = WalkerSampler.walker_v.M_obs.value(dplot)/n
-    Msurf += Msurf_i
+    Msurf_i, Vsurf_i = joint_eval(WalkerSampler.walker_v.M_obs.value, WalkerSampler.walker_v.C_obs.value, dplot)
+    Msurf += Msurf_i/n
     # Evaluate the observed covariance with one argument
-    E2surf += (WalkerSampler.walker_v.C_obs.value(dplot) + Msurf_i**2)/n
+    E2surf += (Vsurf_i + Msurf_i**2)/n
 
 # Get the posterior variance and standard deviation
 Vsurf = E2surf - Msurf**2

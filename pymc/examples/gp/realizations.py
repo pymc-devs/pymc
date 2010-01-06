@@ -16,7 +16,7 @@ if __name__ == '__main__':
     x=arange(-1.,1.,.01)
     clf()
 
-    plot_envelope(M, C, mesh=x)
+    plot_envelope(M, C, x)
 
     for f in f_list:
         plot(x, f(x))
