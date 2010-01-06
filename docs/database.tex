@@ -1,0 +1,352 @@
+
+
+In the examples seen so far, traces are simply held in memory and discarded once
+the Python session ends. PyMC provides the means to store these traces on disk,
+load them back and add additional samples. Internally, this is implemented in
+what we call \emph{database backends}. Each one of these backends is simply made
+of two classes: \texttt{Database} and \texttt{Trace} which all present a similar
+interface to users.
+At the moment, PyMC counts seven such backends: \texttt{ram}, \texttt{no{\_}trace},
+\texttt{pickle}, \texttt{txt}, \texttt{sqlite}, \texttt{mysql} and \texttt{hdf5}.
+In the following, we present the common interface to those backends and a
+description of each individual backend.
+
+
+%___________________________________________________________________________
+
+\hypertarget{accessing-sampled-data}{}
+\section{Accessing Sampled Data}
+\label{accessing-sampled-data}
+
+To recommended way to access data from an MCMC run, irrespective of the
+database backend, is to use the \texttt{trace(name, chain=-1)} method:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M~=~MCMC(DisasterModel)~\\
+>{}>{}>~M.sample(10)~\\
+>{}>{}>~M.trace('e'){[}:{]}~\\
+array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~\\
+~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489{]})
+}\end{quote}
+
+\texttt{M.trace('e')} returns the \texttt{Trace} instance associated with the tallyable
+object \titlereference{e}:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M.trace('e')~\\
+<pymc.database.ram.Trace~object~at~0x7fa4877a8b50>
+}\end{quote}
+
+This \texttt{Trace} object from the \texttt{ram} backend has a \texttt{{\_}{\_}getitem{\_}{\_}} method
+that is used to access the trace, just as with any other NumPy array.
+By default, \texttt{trace} returns the samples from
+the last chain (chain=-1), which in this case is equivalent to \texttt{chain=0}. To
+return the samples from all the chains, use \texttt{chain=None}:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M.sample(5)~\\
+>{}>{}>~M.trace('e',~chain=None){[}:{]}~\\
+array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~\\
+~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489,~\\
+~~~~~~~~3.14499489,~~3.14499489,~~3.14499489,~~2.94672454,~~3.10767686{]})
+}\end{quote}
+
+
+%___________________________________________________________________________
+
+\hypertarget{saving-data-to-disk}{}
+\section{Saving Data to Disk}
+\label{saving-data-to-disk}
+
+By default, the database backend selected by the \texttt{MCMC} sampler is the \texttt{ram}
+backend, which simply holds the data in RAM memory. Now, we will create a
+sampler that, instead, will write data to a pickle file:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M~=~MCMC(DisasterModel,~db='pickle',~dbname='Disaster.pickle')~\\
+>{}>{}>~M.db~\\
+<pymc.database.pickle.Database~object~at~0x7fa486623d90>~\\
+~\\
+>{}>{}>~M.sample(10)~\\
+>{}>{}>~M.db.commit()
+}\end{quote}
+
+Note that in this particular case, no data is written to disk before the call
+to \texttt{db.commit}. The \texttt{commit} call creates a file named \titlereference{Disaster.pickle}
+that contains the trace of each tallyable object as well as the final state of
+the sampler. This means that a user that forgets to call the \texttt{commit}
+method runs the risk of losing his data. Some backends write the data to disk
+continuously, so that not calling \texttt{commit} is less of an issue.
+
+In general, however, it is recommended to always call the \texttt{db.close} method
+before closing the session. The \texttt{close} method first calls \texttt{commit}, and
+goes further in making sure that the database is in a safe state. Once \texttt{close}
+has been called, further call to \texttt{sample} will likely fail, at least
+for some backends.
+\begin{center}\begin{sffamily}
+\fbox{\parbox{\admonitionwidth}{
+\textbf{\large Warning}
+\vspace{2mm}
+
+Always call the \texttt{close} method before closing the session to avoid running
+the risk of losing your data.
+}}
+\end{sffamily}
+\end{center}
+
+
+%___________________________________________________________________________
+
+\hypertarget{loading-back-a-database}{}
+\section{Loading Back a Database}
+\label{loading-back-a-database}
+
+To load a file created in a previous session, use the \texttt{load} function
+from the backend that created the database:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~db~=~pymc.database.pickle.load('Disaster.pickle')~\\
+>{}>{}>~len(db.trace('e'){[}:{]})~\\
+10
+}\end{quote}
+
+The \texttt{db} object also has a \texttt{trace} method identical to that of \texttt{Sampler}.
+You can hence inspect the results of a model, even when you don't have the model
+around.
+
+To add samples to this file, we need to create an MCMC instance. This time,
+instead of setting \texttt{db='pickle'}, we will pass the existing \texttt{Database}
+instance:
+\begin{quote}{\ttfamily \raggedright \noindent
+>{}>{}>~M~=~MCMC(DisasterModel,~db=db)~\\
+>{}>{}>~M.sample(5)~\\
+>{}>{}>~len(M.trace('e',~chain=None){[}:{]})~\\
+15~\\
+>{}>{}>~M.db.close()
+}\end{quote}
+
+
+%___________________________________________________________________________
+
+\hypertarget{backends-description}{}
+\section{Backends Description}
+\label{backends-description}
+
+
+%___________________________________________________________________________
+
+\hypertarget{ram}{}
+\subsection{ram}
+\label{ram}
+
+Used by default, this backend simply holds a copy in memory, with no output
+written to disk. This is useful for short runs or testing. For long runs
+generating large amount of data, using this backend may fill the available
+memory, forcing the OS to store data in the cache, slowing down all running
+applications on your computer.
+
+
+%___________________________________________________________________________
+
+\hypertarget{no-trace}{}
+\subsection{no{\_}trace}
+\label{no-trace}
+
+This backend simply does not store the trace. This may be useful for testing
+purposes.
+
+
+%___________________________________________________________________________
+
+\hypertarget{txt}{}
+\subsection{txt}
+\label{txt}
+
+With the \texttt{txt} backend, the data is written to disk in ASCII files.
+More precisely, the \texttt{dbname} argument is used to create a top directory
+into which chain directories, called \texttt{Chain{\_}<{\#}>}, are going to be created each
+time \texttt{sample} is called:
+\begin{quote}{\ttfamily \raggedright \noindent
+dbname/~\\
+~~Chain{\_}0/~\\
+~~~~<object0~name>.txt~\\
+~~~~<object1~name>.txt~\\
+~~~~...~\\
+~~Chain{\_}1/~\\
+~~~~<object0~name>.txt~\\
+~~~~<object1~name>.txt~\\
+~~~~...~\\
+~~...
+}\end{quote}
+
+In each one of these chain directories, files named \texttt{<variable name>.txt}
+are created, storing the values of the variable as rows of text:
+\begin{quote}{\ttfamily \raggedright \noindent
+{\#}~Variable:~e~\\
+{\#}~Sample~shape:~(5,)~\\
+{\#}~Date:~2008-11-18~17:19:13.554188~\\
+3.033672373807017486e+00~\\
+3.033672373807017486e+00~\\
+...
+}\end{quote}
+
+Although this backend makes it easy to load the data using another application,
+for large datasets files tend to be embarassingly large and slow to load
+into memory.
+
+
+%___________________________________________________________________________
+
+\hypertarget{pickle}{}
+\subsection{pickle}
+\label{pickle}
+
+The \texttt{pickle} database relies on the \texttt{cPickle} module to save the
+traces. Use of this backend is appropriate for small scale,
+short-lived projects. For longer term or larger projects, the \texttt{pickle}
+backend should be avoided since generated files might be unreadable
+across different Python versions. The \titlereference{pickled} file is a simple dump of a
+dictionary containing the NumPy arrays storing the traces, as well as
+the state of the \texttt{Sampler}'s step methods.
+
+
+%___________________________________________________________________________
+
+\hypertarget{sqlite}{}
+\subsection{sqlite}
+\label{sqlite}
+
+The \texttt{sqlite} backend is based on the python module \href{http://www.sqlite.org}{sqlite3} (
+a Python 2.5 built-in ) . It opens an SQL database named \texttt{dbname},
+and creates one table per tallyable objects. The rows of this table
+store a key, the chain index and the values of the objects as:
+\begin{quote}{\ttfamily \raggedright \noindent
+key~(INT),~trace~(INT),~~v1~(FLOAT),~v2~(FLOAT),~v3~(FLOAT)~...
+}\end{quote}
+
+The key is autoincremented each time a new row is added to the table.
+\begin{center}\begin{sffamily}
+\fbox{\parbox{\admonitionwidth}{
+\textbf{\large Warning}
+\vspace{2mm}
+
+Note that the state of the sampler is not saved by
+the \texttt{sqlite} backend.
+}}
+\end{sffamily}
+\end{center}
+
+
+%___________________________________________________________________________
+
+\hypertarget{mysql}{}
+\subsection{mysql}
+\label{mysql}
+
+The \texttt{mysql} backend depends on the \href{http://www.mysql.com/downloads/}{MySQL} library and its python wrapper
+\href{http://sourceforge.net/projects/mysql-python}{MySQLdb}. Like the \texttt{sqlite} backend, it creates an SQL database containing
+one table per tallyable object. The main difference of \texttt{mysql} compared to
+\texttt{sqlite} is that it can connect to a remote database, provided the url and
+port of the host server is given, along with a valid user name and password.
+These parameters are passed when the \texttt{Sampler} is instantiated:
+\begin{itemize}
+\item {} 
+\texttt{dbname} (\titlereference{string}) The name of the database file.
+
+\item {} 
+\texttt{dbuser} (\titlereference{string}) The database user name.
+
+\item {} 
+\texttt{dbpass} (\titlereference{string}) The user password for this database.
+
+\item {} 
+\texttt{dbhost} (\titlereference{string}) The location of the database host.
+
+\item {} 
+\texttt{dbport} (\titlereference{int})    The port number to use to reach the database host.
+
+\item {} 
+\texttt{dbmode} {\{}\texttt{a}, \texttt{w}{\}} File mode.  Use \texttt{a} to append values, and \texttt{w}
+to overwrite an existing database.
+
+\end{itemize}
+\begin{center}\begin{sffamily}
+\fbox{\parbox{\admonitionwidth}{
+\textbf{\large Warning}
+\vspace{2mm}
+
+Note that the state of the sampler is not saved by
+the \texttt{mysql} backend.
+}}
+\end{sffamily}
+\end{center}
+
+
+%___________________________________________________________________________
+
+\hypertarget{hdf5}{}
+\subsection{hdf5}
+\label{hdf5}
+
+The \texttt{hdf5} backend uses \href{http://www.pytables.org/moin}{pyTables} to save data in binary HDF5 format.
+The \texttt{hdf5} database is fast and can store huge traces, far larger than the
+available RAM. This data can be compressed and decompressed on the fly to
+reduce the memory footprint.
+Another feature of this backends is that it can store arbitrary objects.
+Whereas the other backends are limited to numerical values, \texttt{hdf5} can
+tally any object that can be pickled, opening the door for powerful and
+exotic applications (see \texttt{pymc.gp}).
+
+The internal structure of an HDF5 file storing both numerical values and
+arbitrary objects is as follows:
+\begin{quote}{\ttfamily \raggedright \noindent
+/~(root)~\\
+~~/chain0/~(Group)~'Chain~{\#}0'~\\
+~~~~/chain0/PyMCSamples~(Table(N,))~'PyMC~Samples'~\\
+~~~~/chain0/group0~(Group)~'Group~storing~objects.'~\\
+~~~~~~/chain0/group0/<object0~name>~(VLArray(N,))~'<object0~name>~samples.'~\\
+~~~~~~/chain0/group0/<object1~name>~(VLArray(N,))~'<object1~name>~samples.'~\\
+~~~~~~...~\\
+~~/chain1/~(Group)~'Chain~{\#}1'~\\
+~~~~...
+}\end{quote}
+
+All standard numerical values are stored in a \texttt{Table}, while \texttt{objects}
+are stored in individual \texttt{VLArrays}.
+
+The \texttt{hdf5} Database takes the following parameters:
+\begin{itemize}
+\item {} 
+\texttt{dbname} (\titlereference{string}) Name of the hdf5 file.
+
+\item {} 
+\texttt{dbmode} {\{}\texttt{a}, \texttt{w}, \texttt{r}{\}} File mode: \texttt{a}: append, \texttt{w}: overwrite,
+\texttt{r}: read-only.
+
+\item {} 
+\texttt{dbcomplevel} : (\titlereference{int} (0-9)) Compression level, 0: no compression.
+
+\item {} 
+\texttt{dbcomplib} (\titlereference{string}) Compression library (\texttt{zlib}, \texttt{bzip2}, \texttt{lzo})
+
+\end{itemize}
+
+According the the \href{http://www.pytables.org/moin}{pyTables} manual, \titlereference{zlib} has a fast decompression,
+relatively slow compression, and a good compression ratio.
+\titlereference{LZO} has a fast compression, but a low compression ratio.
+\titlereference{bzip2} has an excellent compression ratio but requires more CPU. Note that
+some of these compression algorithms require additional software to work (see
+the \href{http://www.pytables.org/moin}{pyTables} manual).
+
+
+%___________________________________________________________________________
+
+\hypertarget{writing-a-new-backend}{}
+\section{Writing a New Backend}
+\label{writing-a-new-backend}
+
+It is relatively easy to write a new backend for \texttt{PyMC}. The first step is to
+look at the \texttt{database.base} module, which defines barebone \texttt{Database}
+and \texttt{Trace} classes. This module contains documentation on the methods that
+should be defined to get a working backend.
+
+Testing your new backend should be trivial, since the \texttt{test{\_}database}
+module contains a generic test class that can easily be subclassed to check
+that the basic features required of all backends are implemented and working
+properly.
+
