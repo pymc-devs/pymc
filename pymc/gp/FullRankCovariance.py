@@ -83,7 +83,6 @@ class FullRankCovariance(Covariance):
         # Number of points in x.
         N_new = x.shape[0]
 
-        # FIXME: This is C_eval, get it back to observe.
         U=self.__call__(x, x, regularize = False, observed = observed)
         if return_eval_also:
             C_eval = U.copy('F')

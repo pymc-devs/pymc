@@ -6,8 +6,6 @@ import matplotlib.pyplot as pl
 
 from numpy.random import normal
 
-
-
 x = np.arange(-1.,1.,.1)
 
 # Prior parameters of C
@@ -34,14 +32,13 @@ def linfun(x, a, b, c):
 def M(eval_fun = linfun, a=a, b=b, c=c):
     return gp.Mean(eval_fun, a=a, b=b, c=c)
 
-# The GP itself
+# The GP submodel
 fmesh = np.linspace(-np.pi/3.3,np.pi/3.3,4)
 submod = gp.GPSubmodel('submod',M,C,fmesh)
 
-
 # Observation precision
-# V = Gamma('V', alpha=3., beta=3./.002, value=.002)
 V = .0001
 
 # The data d is just array-valued. It's normally distributed about GP.f(obs_x).
-d = pm.Normal('d',mu=submod.f_eval, tau=1./V, value=np.random.normal(size=len(fmesh)), observed=True)
+init_val = np.random.normal(size=len(fmesh))
+d = pm.Normal('d',mu=submod.f_eval, tau=1./V, value=init_val, observed=True)

@@ -1,3 +1,5 @@
+# FIXME: Make sure this still works.
+
 from pymc import *
 from pymc.gp import *
 from pymc.gp.cov_funs import matern

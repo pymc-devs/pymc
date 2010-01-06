@@ -182,7 +182,6 @@ class BasisCovariance(Covariance):
             return {'piv': piv_return, 'U': U_return}
 
 
-    # FIXME: assume_full_rank with this one will require thinking.
     def observe(self, obs_mesh, obs_V, output_type='o'):
         __doc__ = Covariance.observe.__doc__
 
