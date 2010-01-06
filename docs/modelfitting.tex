@@ -402,7 +402,7 @@ There is currently no way for a stochastic variable to compute individual terms 
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
 \begin{verbatim}
-A = Normal('A', value=np.zeros(100), mu=0., tau=1.)
+A = Normal('A', value=numpy.zeros(100), mu=0., tau=1.)
 \end{verbatim}
 do this:
 \begin{verbatim}

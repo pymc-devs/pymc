@@ -25,10 +25,10 @@ The \code{StepMethod} class is meant to be subclassed. There are an enormous num
 \subsection{Example: an asymmetric Metropolis step} \label{user-gen}
 Consider the probability model in \file{examples/custom_step.py}:
 \begin{verbatim}
-mu = pm.Normal('mu',0,.01, value=0)
-tau = pm.Exponential('tau',.01, value=1)
-cutoff = pm.Exponential('cutoff',1, value=1.3)
-D = pm.TruncatedNormal('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
+mu = pymc.Normal('mu',0,.01, value=0)
+tau = pymc.Exponential('tau',.01, value=1)
+cutoff = pymc.Exponential('cutoff',1, value=1.3)
+D = pymc.TruncatedNormal('D',mu,tau,-numpy.inf,cutoff,value=data,observed=True)
 \end{verbatim}
 The stochastic variable \code{cutoff} cannot be smaller than the largest element of $D$, otherwise $D$'s density would be zero. The standard \code{Metropolis} step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected.
 
@@ -39,17 +39,17 @@ Suppose we want to handle \code{cutoff} with a smarter step method that doesn't 
 \end{eqnarray*}
 We can implement this Metropolis-Hastings algorithm with the following step method class:
 \begin{verbatim}
-class TruncatedMetropolis(pm.Metropolis):
+class TruncatedMetropolis(pymc.Metropolis):
     def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
         self.low_bound = low_bound
         self.up_bound = up_bound
-        pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
+        pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
     # Propose method written by hacking Metropolis.propose()
     def propose(self):
         tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
         self.stochastic.value = \
-        pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
     # Hastings factor method accounts for asymmetric proposal distribution
     def hastings_factor(self):
@@ -57,8 +57,8 @@ class TruncatedMetropolis(pm.Metropolis):
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 
-        lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-        lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
+        lp_for = pymc.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+        lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
 
         if self.verbose > 1:
             print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
@@ -72,9 +72,9 @@ The \code{hastings_factor} method adjusts for the asymmetric proposal distributi
 \medskip
 Having created our custom step method, we need to tell MCMC instances to use it to handle the variable \code{cutoff}. This is done in \file{custom_step.py} with the following line:
 \begin{verbatim}
-M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
+M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), numpy.inf)
 \end{verbatim}
-This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), np.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}.
+This call causes $M$ to pass the arguments \code{cutoff, D.value.max(), numpy.inf} to a \code{TruncatedMetropolis} object's \code{init} method, and use the object to handle \code{cutoff}.
 
 \medskip
 It's often convenient to get a handle to a custom step method instance directly for debugging purposes. \code{M.step_method_dict[cutoff]} returns a list of all the step methods $M$ will use to handle \code{cutoff}:
@@ -105,7 +105,7 @@ All step methods must implement the following methods:
    \end{description}
    For example, if you write a step method that can handle \code{MyStochasticSubclass} well, the competence method might look like this:
 \begin{verbatim}
-class MyStepMethod(pm.StepMethod):
+class MyStepMethod(pymc.StepMethod):
    def __init__(self, stochastic, *args, **kwargs):
       ...
 
