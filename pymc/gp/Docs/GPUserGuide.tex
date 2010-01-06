@@ -91,11 +91,7 @@
 
 \tableofcontents
 
-\chapter{Introduction}\label{cha:introduction} % (fold)
-
-Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown because they can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra.
-
-This package implements Gaussian processes as a set of Python classes that can support many types of usage, from intuitive exploration to embedding in larger probability models and fitting with MCMC.
+% \chapter{Introduction}\label{cha:introduction} % (fold)
 
 % \section{Prerequisites}\label{sec:prerequisites}
 % \begin{itemize}
@@ -107,6 +103,10 @@ This package implements Gaussian processes as a set of Python classes that can s
 % chapter introduction (end)
 
 \chapter{The basics}\label{cha:basics}
+Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown because they can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra.
+
+This package implements Gaussian processes as a set of Python classes that can support many types of usage, from intuitive exploration to embedding in larger probability models and fitting with MCMC.
+
 All the code in the tutorial is in the folder \file{pymc/examples/gp} in the PyMC source tree.
 \include{tutorial1} 
 
