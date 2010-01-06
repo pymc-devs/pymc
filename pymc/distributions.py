@@ -941,16 +941,16 @@ def dirichlet_like(x, theta):
     This is a multivariate continuous distribution.
 
     .. math::
-        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}\\
+        f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-      - `x` : (n, k-1) array 
-              Array of shape (n, k-1) where `n` is the number of samples 
-              and `k` the dimension. 
-              :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
-      - `theta` : array
-              An (n,k) or (1,k) array > 0.
+      x : (n, k-1) array 
+        Array of shape (n, k-1) where `n` is the number of samples 
+        and `k` the dimension. 
+        :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
+      theta : array
+        An (n,k) or (1,k) array > 0.
       
     .. note::
         Only the first `k-1` elements of `x` are expected. Can be used as a parent of Multinomial and Categorical
