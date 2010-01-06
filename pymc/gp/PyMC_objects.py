@@ -4,9 +4,7 @@ __docformat__ = 'reStructuredText'
 
 # __all__ = ['GP_array_random', 'GP', 'GPMetropolis', 'GPNormal', 'GPParentMetropolis']
 
-# FIXME: You need some way of tallying Realizations without actually pickling any matrices. 
-# FIXME: Might be something as simple as new a pickle protocol: just pickle the mean and covariance,
-# FIXME: and recompute the matrices when you pull the thing out of the trace.
+# FIXME: New pickle protocol for Realization. Just pickle the observation mesh and values, and maybe nugget or whatever. Be sure to delay the linear algebra until the last possible minute!
 
 import pymc as pm
 import linalg_utils
@@ -19,11 +17,11 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-def gp_logp(x, M, C, mesh, mesh_eval):
+def gp_logp(x, M, C, mesh, f_eval):
     raise TypeError, 'GP objects have no logp function'
     
-def gp_rand(M, C, mesh, mesh_eval, size=None):
-    return pm.gp.Realization(M, C, mesh, mesh_eval)
+def gp_rand(M, C, mesh, f_eval, size=None):
+    return pm.gp.Realization(M, C, mesh, f_eval)
     
 class GaussianProcess(pm.Stochastic):
     
@@ -33,7 +31,6 @@ class GaussianProcess(pm.Stochastic):
                 doc=None,
                 trace=True,
                 value=None,
-                dtype=None,
                 rseed=False,
                 observed=False,
                 cache_depth=2,
@@ -47,11 +44,11 @@ class GaussianProcess(pm.Stochastic):
                                 gp_logp,
                                 doc,
                                 name,
-                                {'M':submodel.M, 'C':submodel.C,'mesh':submodel.mesh, 'mesh_eval':submodel.mesh_eval},
+                                {'M':submodel.M, 'C':submodel.C,'mesh':submodel.mesh, 'f_eval':submodel.f_eval},
                                 gp_rand,
                                 trace,
                                 value,
-                                dtype,
+                                np.dtype('object'),
                                 rseed,
                                 observed,
                                 cache_depth,
@@ -59,10 +56,8 @@ class GaussianProcess(pm.Stochastic):
                                 verbose,
                                 isdata,
                                 False)
-
-    def revert(self):
-        self._value = self.last_value
-        self.recorded_parents = self.last_recorded_parents
+        
+        self.rand()
         
     def gen_lazy_function(self):
         pass
@@ -78,14 +73,7 @@ class GaussianProcess(pm.Stochastic):
 class GPEvaluation(pm.MvNormalCov):
     pass
     
-class GPEvaluationStepper(pm.StepMethod):
-    # Don't automatically assign, it's too much magic.
-    @classmethod
-    def competence(s):
-        return 0
-    
 class GPSubmodel(pm.ObjectContainer):
-    
     """
     f = GPSubmodel('f', M, C, mesh, [obs_values, obs_nugget, tally_all])
 
@@ -102,18 +90,112 @@ class GPSubmodel(pm.ObjectContainer):
     
     def __init__(self, name, M, C, mesh, init_vals=None, tally_all=False):
         # FIXME: Use S_eval for both logp and observation, meaning get it into f somehow.
+        self.M = M
+        self.C = C
+        self.mesh = mesh
+        self.name = name
         M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh: M(mesh), trace=tally_all)
         C_eval = pm.Lambda('%s_C_eval'%name, lambda C=C, mesh=mesh: C(mesh,mesh), trace=tally_all)
         f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, C=C_eval, value=init_vals, trace=True)
-        f = GaussianProcess('%s_f'%name, submodel, trace=tally_all)
+        self.f_eval = f_eval
+        f = GaussianProcess('%s_f'%name, self, trace=tally_all)
+        f_eval.fullfield = f
         pm.ObjectContainer.__init__(self, locals())
         
+    def getobjects(self):
+        names = ['M_eval','C_eval','f_eval','f']
+        return dict(zip(['%s_%s'%(self.name, name) for name in names], [getattr(self, name) for name in names]))
+
+class GPEvaluationStepper(pm.Metropolis):
+    """
+    Updates a GP evaluation f_eval. Assumes the only children of f_eval
+    are as distributed follows:
+    
+    eps_p_f ~ Normal(f_eval[ti], 1./V)
+    
+    or
+    
+    eps_p_f ~ Normal(f_eval, 1./V)
+    
+    if ti is None.
+    """
+    def __init__(self, f_eval, V, eps_p_f, ti=None):    
+        self.f_eval = f_eval
+        self.V = V
+        self.C_eval = self.f_eval.parents['C']
+        self.M_eval = self.f_eval.parents['mu']
+        self.eps_p_f = eps_p_f
+        self.incomp_jump = incomp_jump
+
+        M_eval_shape = pm.value(self.M_eval).shape
+        C_eval_shape = pm.value(self.C_eval).shape
+        self.scratch1 = np.asmatrix(np.empty(C_eval_shape, order='F'))
+        self.scratch2 = np.asmatrix(np.empty(C_eval_shape, order='F'))
+        self.scratch3 = np.empty(M_eval_shape)    
+        self.ti = np.arange(M_eval_shape[0]) or ti 
+
+        pm.Metropolis.__init__(self,f_eval)
+        
+        # Remove the GP from the Markov blanket, so it's not accounted for by
+        # logp_plus_loglike.
+        self.markov_blanket.remove(f_eval)
+
+    def propose(self):
+
+        fc = pm.gp.fast_matrix_copy
+
+        eps_p_f = pm.value(self.eps_p_f)
+        f = pm.value(self.f_eval)
+        for i in xrange(len(self.scratch3)):
+            self.scratch3[i] = np.sum(eps_p_f[self.ti[i]] - f[i])
+
+        # Compute Cholesky factor of covariance of eps_p_f, C(x,x) + V
+        C_eval_value = np.value(self.C_eval)
+        C_eval_shape = C_eval_value.shape
+        in_chol = fc(C_eval_value, self.scratch1)
+        for i in xrange(pm.value(C_eval_shape)[0]):
+            in_chol[i,i] += pm.value(self.V) / len(self.ti[i])
+        info = pm.gp.linalg_utils.dpotrf_wrap(in_chol)
+        if info > 0:
+            raise np.linalg.LinAlgError
+
+        # Compute covariance of f conditional on eps_p_f.
+        offdiag = fc(C_eval_value, self.scratch2)
+        offdiag = pm.gp.trisolve(in_chol, offdiag, uplo='U', transa='T', inplace=True)
+
+        C_step = offdiag.T * offdiag
+        C_step *= -1
+        C_step += C_eval_value
+
+        # Compute mean of f conditional on eps_p_f.
+        for i in xrange(len(self.scratch3)):
+            self.scratch3[i] = np.mean(eps_p_f[self.ti[i]])
+        m_step = pm.value(self.M_eval) + np.dot(offdiag.T, pm.gp.trisolve(in_chol,(self.scratch3 - self.M_eval.value),uplo='U',transa='T')).view(np.ndarray).ravel()
+
+        sig_step = C_step
+        info = pm.gp.linalg_utils.dpotrf_wrap(C_step.T)
+        if info > 0:
+            warnings.warn('Full conditional covariance was not positive definite.')
+            return
+
+        # Update value of f.
+        self.f_eval.value = m_step+np.dot(sig_step,np.random.normal(size=sig_step.shape[1])).view(np.ndarray).ravel()
+        # Propose the rest of the field from its conditional prior.
+        self.f_eval.fullfield.rand()
+        
+    def reject(self):
+        self.rejected += 1
+        # Revert the field evaluation and the rest of the field.
+        self.f_eval.revert()
+        self.f_eval.fullfield.revert()
+        
+
 if __name__ == '__main__':
      M = pm.gp.Mean(lambda x: np.zeros(x.shape[:-1]))
      C = pm.gp.Covariance(pm.gp.cov_funs.matern.euclidean, amp=1, scale=1, diff_degree=1)
      mesh = np.linspace(-1,1,101)
      submod = GPSubmodel('hello',M,C,mesh)
-     MC = pm.Model([submod])
+     MC = pm.MCMC([submod])         
 
 # class GPParentMetropolis(pm.Metropolis):
 # 
@@ -465,113 +547,3 @@ if __name__ == '__main__':
 #             print self._id + ' returning.'
 # 
 # 
-# 
-# class GPNormal(pm.Gibbs):
-#     """
-#     S = GPNormal(f, obs_mesh, obs_V, obs_vals)
-# 
-# 
-#     Causes GP f and its mesh_eval attribute
-#     to take a pm.Gibbs step. Applies to f in the following submodel:
-# 
-# 
-#     obs_vals ~ N(f(obs_mesh)+offset, obs_V)
-#     f ~ GP(M,C)
-# 
-# 
-#     :SeeAlso: GPMetropolis, GPParentMetropolis
-#     """
-# 
-#     def __init__(self, f, obs_mesh, obs_V, obs_vals, offset=None, same_mesh=False):
-# 
-#         if not isinstance(f, GP):
-#             raise ValueError, 'GPNormal can only handle GPs, cannot handle '+f.__name__
-# 
-#         pm.StepMethod.__init__(self, variables=[f])
-#         self.f = f
-#         self._id = 'GPNormal_'+self.f.__name__
-#         self.same_mesh = same_mesh
-#         if self.same_mesh:
-#             obs_mesh = self.f.mesh
-# 
-#         @pm.deterministic
-#         def obs_mesh(obs_mesh=obs_mesh):
-#             return regularize_array(obs_mesh)
-# 
-#         @pm.deterministic
-#         def obs_V(obs_V=obs_V, obs_mesh = obs_mesh):
-#             return np.resize(obs_V, obs_mesh.shape[0])
-# 
-#         @pm.deterministic
-#         def obs_vals(obs_vals=obs_vals):
-#             return obs_vals
-# 
-#         # M_local and C_local's values are copies of f's M and C parents,
-#         # observed according to obs_mesh and obs_V.
-#         @pm.deterministic
-#         def C_local(C = f.parents['C'], obs_mesh = obs_mesh, obs_V = obs_V):
-#             """
-#             The covariance, observed according to the children,
-#             with supporting information.
-#             """
-#             C_local = copy.copy(C)
-#             relevant_slice, obs_vals_new, junk = C_local.observe(obs_mesh, obs_V)
-#             return (C_local, relevant_slice, obs_vals_new)
-# 
-#         @pm.deterministic
-#         def M_local(C_local = C_local, obs_vals = obs_vals, M = f.parents['M'], offset=offset):
-#             """
-#             The mean function, observed according to the children.
-#             """
-#             relevant_slice = C_local[1]
-#             obs_mesh_new = C_local[2]
-# 
-#             obs_vals = obs_vals.ravel()[relevant_slice]
-#             if offset is not None:
-#                 obs_vals = obs_vals - offset.ravel()[relevant_slice]
-# 
-#             M_local = copy.copy(M)
-#             M_local.observe(C_local[0], obs_mesh_new, obs_vals)
-#             return M_local
-# 
-#         if self.same_mesh:
-#             @pm.deterministic
-#             def U_mesh(C=C_local, mesh=self.f.mesh):
-#                 return C[0].cholesky(mesh)
-# 
-#             @pm.deterministic
-#             def M_mesh(M=M_local, mesh=self.f.mesh):
-#                 return M(mesh)
-# 
-#             self.U_mesh = U_mesh
-#             self.M_mesh = M_mesh
-# 
-#         self.obs_mesh = obs_mesh
-#         self.obs_vals = obs_vals
-#         self.obs_V = obs_V
-#         self.M_local = M_local
-#         self.C_local = C_local
-# 
-#     def step(self):
-#         """
-#         Samples self.f's value from its conditional distribution.
-#         """
-#         try:
-#             if not self.same_mesh:
-#                 self.f.value = Realization(self.M_local.value, self.C_local.value[0])
-#             else:
-#                 # Generate values for self's value on the mesh.
-#                 new_mesh_value = GP_array_random(M=self.M_mesh.value, U=self.U_mesh.value)
-# 
-#                 # Generate self's value using those values.
-#                 C = self.f.C_and_U_mesh.value[1]
-#                 M_obs = copy.copy(self.f.parents.value['M'])
-#                 M_obs.observe(C, self.f.mesh, new_mesh_value)
-# 
-#                 self.f.value = Realization(M_obs, C, regularize=False)
-#                 self.f.value.x_sofar = self.f.mesh
-#                 self.f.value.f_sofar = new_mesh_value
-# 
-#         except np.linalg.LinAlgError:
-#             print 'Covariance was numerically singular when stepping f, trying again.'
-#             self.step()
