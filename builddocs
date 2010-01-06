@@ -14,7 +14,7 @@ cd docs
 #cat distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
 #sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
 
-python rst2latex.py ../README.rst --use-latex-toc | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e  '\\end\{document\}' -o README.tex
+python rst2latex.py ../README.rst --use-latex-toc  | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e  '\\end\{document\}' -o README.tex
 python rst2latex.py ../INSTALL.rst --use-latex-toc | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex
 python rst2latex.py ../pymc/database/README.txt --use-latex-toc | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
 
