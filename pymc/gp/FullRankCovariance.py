@@ -61,7 +61,7 @@ class FullRankCovariance(Covariance):
         # self.diag_cov_fun = diag_cov_fun
 
 
-    def cholesky(self, x, observed=True, nugget=None):
+    def cholesky(self, x, observed=True, nugget=None, return_eval_also=False):
         """
 
         U = C.cholesky(x[, observed=True, nugget=None])
@@ -85,6 +85,8 @@ class FullRankCovariance(Covariance):
 
         # FIXME: This is C_eval, get it back to observe.
         U=self.__call__(x, x, regularize = False, observed = observed)
+        if return_eval_also:
+            C_eval = U.copy('F')
 
         if nugget is not None:
             for i in xrange(N_new):
@@ -96,9 +98,12 @@ class FullRankCovariance(Covariance):
         if info>0:
             raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
 
-        return U
+        if return_eval_also:
+            return U, C_eval
+        else:
+            return U
 
-    def continue_cholesky(self, x, x_old, U_old, observed=True, nugget=None):
+    def continue_cholesky(self, x, x_old, U_old, observed=True, nugget=None, return_eval_also=False):
         """
 
         U = C.continue_cholesky(x, x_old, U_old[, observed=True, nugget=None])
@@ -146,15 +151,19 @@ class FullRankCovariance(Covariance):
         trisolve(U_old,offdiag,uplo='U',transa='T', inplace=True)
         U[:N_old, N_old:] = offdiag
 
-        # FIXME: This is C_eval, get it back to observe.
         U_new -= offdiag.T*offdiag
+        if return_eval_also:
+            C_eval = U_new.copy('F')
 
         info = dpotrf_wrap(U_new)
         if info>0:
             raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
 
         U[N_old:,N_old:] = U_new
-        return U
+        if return_eval_also:
+            return U, U_new, C_eval
+        else:
+            return U
 
     def __call__(self, x, y=None, observed=True, regularize=True):
         out = Covariance.__call__(self,x,y,observed,regularize)
@@ -167,7 +176,7 @@ class FullRankCovariance(Covariance):
             out += self.nugget
         return out
 
-    def observe(self, obs_mesh, obs_V, assume_full_rank=True, output_type='r'):
+    def observe(self, obs_mesh, obs_V, output_type='r'):
         """
         Observes self at obs_mesh with variance given by obs_V.
 
@@ -200,7 +209,11 @@ class FullRankCovariance(Covariance):
             N_old = 0
             N_new = obs_mesh.shape[0]
 
-            U = self.cholesky(obs_mesh, nugget = obs_V, observed=False)
+            if output_type=='s':
+                U, C_eval = self.cholesky(obs_mesh, nugget=obs_V, observed=False, return_eval_also=True)
+                U_new = U
+            else:
+                U = self.cholesky(obs_mesh, nugget = obs_V, observed=False)
 
             # Upper-triangular Cholesky factor of self(obs_mesh, obs_mesh)
             self.full_Uo = U
@@ -237,14 +250,24 @@ class FullRankCovariance(Covariance):
             N_new = obs_mesh.shape[0]
 
             # Call to self.continue_cholesky.
-            U_new = self.continue_cholesky( x=obs_mesh,
+            if output_type=='s':
+                U, U_new, C_eval = self.continue_cholesky( x=obs_mesh,
+                                                        x_old = self.full_obs_mesh,
+                                                        U_old = self.full_Uo,
+                                                        observed = False,
+                                                        nugget = obs_V,
+                                                        return_eval_also=True)
+                
+            else:
+                U = self.continue_cholesky( x=obs_mesh,
                                             x_old = self.full_obs_mesh,
                                             U_old = self.full_Uo,
                                             observed = False,
                                             nugget = obs_V)
+                
 
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
-            self.full_Uo = U_new
+            self.full_Uo = U
 
             # Square upper-triangular Cholesky factor of self(obs_mesh_*, obs_mesh_*). See documentation.
             self.Uo=self.full_Uo
@@ -273,6 +296,5 @@ class FullRankCovariance(Covariance):
             
         # Output expected by the GP submodel
         if output_type=='s':
-            # U, C_eval
-            raise NotImplementedError
+            return U_new, C_eval
         
