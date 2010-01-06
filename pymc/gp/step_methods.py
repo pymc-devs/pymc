@@ -140,7 +140,7 @@ class GPEvaluationGibbs(pm.Metropolis):
         self.f_eval.revert()
         self.f.revert()
     
-    def tune(self):
+    def tune(self, verbose=0):
         return False
             
     def propose(self):
