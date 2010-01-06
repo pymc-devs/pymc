@@ -6,10 +6,9 @@ __all__ = ['Covariance']
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+from GPutils import regularize_array, trisolve, square_and_sum
 from linalg_utils import diag_call, dpotrf_wrap
 from incomplete_chol import ichol, ichol_continue
-
 
 class Covariance(object):
 
@@ -493,23 +492,20 @@ class Covariance(object):
         # ==========================================================
         # = If only one argument is provided, return the diagonal. =
         # ==========================================================
-        # See documentation.
         if y is None:
-
-            # V = diag_call(x=x, cov_fun = self.diag_cov_fun)
-            # =============================================================================
-            # = Come up with a better solution, the diagonal is not necessarily constant. =
-            # =============================================================================
-            V=empty(lenx,dtype=float)
-            # V.fill(self.params['amp']**2)
-            for i in xrange(lenx):
-                this_x = x[i].reshape((1,-1))
-                V[i] = self.eval_fun(this_x, this_x,**self.params)
+            # Special fast-path for functions that have an 'amp' parameter
+            if hasattr(self.eval_fun, 'diag_call'):
+                V = self.eval_fun.diag_call(x, **self.params)
+            # Otherwise, evaluate the diagonal in a loop.
+            else:
+                V=empty(lenx,dtype=float)
+                for i in xrange(lenx):
+                    this_x = x[i].reshape((1,-1))
+                    V[i] = self.eval_fun(this_x, this_x, **self.params)
             if self.observed and observed:
-                for i in range(lenx):
-                    this_Uo_Cxo = Uo_Cxo[:,i]
-                    V[i] -= this_Uo_Cxo.T*this_Uo_Cxo
-
+                sqpart = empty(lenx,dtype=float)
+                square_and_sum(Uo_Cxo, sqpart)
+                V -= sqpart
             return V.reshape(orig_shape)
 
         else:

@@ -17,7 +17,6 @@ from GPutils import observe, regularize_array
 
 __all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis']
 
-
 def wrap_metropolis_for_gp_parents(metro_class):
     """
     Wraps Metropolis step methods so they can handle extended parents of

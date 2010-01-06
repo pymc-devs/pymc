@@ -43,13 +43,12 @@ __all__ = [
     '__PyMCThreadPool__',
     '__PyMCExcInfo__',
     '__PyMCLock__',
-    'map_noreturn'
+    'map_noreturn',
+    'thread_partition_array'
 ]
 
-__author__ = "Christopher Arndt"
-__version__ = "1.2.4"
-__revision__ = "$Revision: 281 $"
-__date__ = "$Date: 2008-05-04 17:41:41 +0200 (So, 04 Mai 2008) $"
+__author__ = "Christopher Arndt and Anand Patil"
+__version__ = "1.2.4, modified"
 __license__ = 'MIT license'
 
 
@@ -59,6 +58,7 @@ import threading
 import Queue
 import traceback
 import os
+import numpy as np
 
 # exceptions
 class NoResultsPending(Exception):
@@ -369,6 +369,19 @@ def set_threadpool_size(n):
 
 def get_threadpool_size():
     return len(__PyMCThreadPool__.workers)
+    
+def thread_partition_array(x):
+    "Partition work arrays for multithreaded addition and multiplication"
+    n_threads = int(os.environ['OMP_NUM_THREADS'])
+    if len(x.shape)>1:
+        maxind = x.shape[1]
+    else:
+        maxind = x.shape[0]
+    bounds = np.array(np.linspace(0, maxind, n_threads+1),dtype='int')
+    cmin = bounds[:-1]
+    cmax = bounds[1:]
+    return cmin,cmax
+
 
 __PyMCLock__ = threading.Lock()
 __PyMCExcInfo__ = [None]

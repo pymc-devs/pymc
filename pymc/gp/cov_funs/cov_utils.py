@@ -165,7 +165,9 @@ class covariance_wrapper(object):
 
         return C
 
-
+class covariance_wrapper_with_diag(covariance_wrapper):
+    def diag_call(self, x, amp=1., scale=1., *args, **kwds):
+        return amp**2*np.ones(x.shape[0])
 
 # Common verbiage in the covariance functions' docstrings
 covariance_wrapperdoc = ["(x,y",""", amp=1., scale=1.)
@@ -232,11 +234,12 @@ class covariance_function_bundle(object):
           the output matrix will be symmetric.
     """
 
-    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params):
+    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, ampsq_is_diag=False):
 
         self.cov_fun_name = cov_fun_name
         self.cov_fun_module = cov_fun_module
         self.extra_cov_params = extra_cov_params
+        self.ampsq_is_diag = ampsq_is_diag
 
         self.add_distance_metric('euclidean','wrapped_distances')
         self.add_distance_metric('geo_rad','wrapped_distances')
@@ -274,8 +277,11 @@ class covariance_function_bundle(object):
             - `apply_distance()`
         """
 
-        new_fun = covariance_wrapper(self.cov_fun_name, self.cov_fun_module, self.extra_cov_params,
-                distance_fun_name, distance_fun_module)
+        if self.ampsq_is_diag:
+            kls = covariance_wrapper_with_diag
+        else:
+            kls = covariance_wrapper
+        new_fun = kls(self.cov_fun_name, self.cov_fun_module, self.extra_cov_params, distance_fun_name, distance_fun_module)
         # try:
         setattr(self, distance_fun_name, new_fun)
         # except:
