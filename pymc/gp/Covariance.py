@@ -577,7 +577,7 @@ class Covariance(object):
     def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
         if Uo_Cxo is None:
             Uo_Cxo = trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
-        M_out += dot(asarray(M.reg_mat).T,asarray(Uo_Cxo)).squeeze()
+        M_out += dot(asarray(M.reg_mat).squeeze(),asarray(Uo_Cxo)).squeeze()
         return M_out
 
     def _mean_under_new(self, M, obs_mesh_new):
