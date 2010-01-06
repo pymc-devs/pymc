@@ -49,7 +49,7 @@ data = np.array([-1.6464815 , -0.86463278,  0.80656378,  0.67664181, -0.34312965
 mu = pm.Normal('mu',0,.01, value=0)
 tau = pm.Exponential('tau',.01, value=1)
 cutoff = pm.Exponential('cutoff',1, value=1.3)
-D = pm.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
+D = pm.TruncatedNormal('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
 
 M = pm.MCMC([mu,tau,cutoff,D])
 
