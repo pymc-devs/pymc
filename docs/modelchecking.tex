@@ -1,5 +1,4 @@
-\hypertarget{convergence}{}
-\pdfbookmark[0]{Convergence Diagnostics}{convergence}
+
 \section{Convergence Diagnostics} % (fold)
 %\label{sec:convergence_diagnostics}
 
@@ -63,7 +62,7 @@ where $a$ is the early interval and $b$ the late interval. If the z-scores (theo
 
 Diagnostic z-scores can be obtained by calling the \code{geweke} function. It accepts either (1) a single trace, (2) a dictionary of traces, (3) a Node object, or (4) an entire Model object.
 
-\subsubsection*{Method Usage}
+\subsubsection{Method Usage}
 \begin{verbatim}
 geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
@@ -90,7 +89,7 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \code{geweke_plot} takes either a single set of scores, or a dictionary of scores (output by \code{geweke} when an entire Sampler is passed) as its argument:
 
-\subsubsection*{Method Usage}
+\subsubsection{Method Usage}
 \begin{verbatim}
 geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
                 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
@@ -150,7 +149,7 @@ This thinned sample is used to determine number of burn-in samples. This is done
 This diagnostic is best used on a short pilot run of a particular model, and the results used to parameterize a subsequent sample that is to be used for inference.
 
 
-\subsubsection*{Method Usage}
+\subsubsection{Method Usage}
 \begin{verbatim}
 raftery_lewis(pymc_object, q, r, s=.95, epsilon=.001, verbose=1)
 \end{verbatim}
@@ -205,7 +204,7 @@ Additional convergence diagnostics are available in the
 \code{coda} for exporting model traces in a format that may be
 directly read by CODA.
 
-\subsubsection*{Method Usage}
+\subsubsection{Method Usage}
 \begin{verbatim}
 pm.utils.coda(pymc_object)
 \end{verbatim}
@@ -220,8 +219,6 @@ Calling \verb=coda= yields a file containing raw trace values (suffix
 
 % section convergence_diagnostics (end)
 
-\hypertarget{autocorrelation}{}
-\pdfbookmark[0]{Autocorrelation Plots}{autocorrelation}
 \section{Autocorrelation Plots} % (fold)
 %\label{sec:autocorrelation_plots}
 
@@ -291,8 +288,6 @@ Alternatively, variables within a model can be plotted individually. For example
 
 % section autocorrelation_plots (end)
 
-\hypertarget{gof}{}
-\pdfbookmark[0]{Goodness of Fit}{gof}
 \section{Goodness of Fit} % (fold)
 %\label{sec:goodness_of_fit}
 
