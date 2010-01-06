@@ -35,17 +35,30 @@ def mean(value=np.array([0., 0.])):
     return 0.
 
 obs = pymc.MvNormalCov('obs', mean, C, value=r, observed=True)
+class TestAM(TestCase):
+    
+    def test_convergence(self):
+        S = pymc.MCMC([mean, obs])
+        S.use_step_method(pymc.AdaptiveMetropolis,  mean, delay=200)
+        
+        S.sample(6000, burn=1000)
+        Cs = np.cov(S.trace('mean')[:].T)
+        assert_array_almost_equal(Cs,  C/N, 2)
 
-# def test_AM():
-S = pymc.MCMC([mean, obs])
-S.use_step_method(pymc.AdaptiveMetropolis,  mean, delay=200)
-S.sample(1000)
-S.sample(5000)
-Cs = np.cov(S.trace('mean')[:].T)
-assert_array_almost_equal(Cs,  C/N, 2)
+    def test_cov_from_trace(self):
+        S = pymc.MCMC([mean, obs])
+        S.use_step_method(pymc.Metropolis,  mean)
+        S.sample(2000)
+        m = S.trace('mean')[:]
+        S.remove_step_method(S.step_method_dict[mean][0])
+        S.use_step_method(pymc.AdaptiveMetropolis, mean, delay=200, verbose=3)
+        S.sample(10)
+        AM = S.step_method_dict[mean][0]
+        assert_almost_equal(AM.C , np.cov(m.T))
+        
+        
 
-
-# if __name__ == '__main__':
-#     import nose
-#     nose.runmodule()
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
 
