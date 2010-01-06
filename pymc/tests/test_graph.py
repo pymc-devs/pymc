@@ -1,66 +1,31 @@
-from pymc import *
+import pymc as pm
 from numpy.testing import *
-from pymc.graph import *
+import os
+import numpy as np
 import nose
 DIR = 'testresults'
 
 def mymodel():
-
-    @stochastic
-    def A(value=0):
-        return 0.
-
-    @deterministic
-    def B(mom = 3, dad=A):
-        return 0.
-
-    @stochastic
-    def C(value=0, mom = A, dad = B):
-        return 0.
-
-    F = []
-
-    @stochastic
-    def x_0(value=0, mod = C):
-        return 0.
-    F.append(x_0)
-    last_x = x_0
-
-    for i in range(1,3):
-        @stochastic
-        def x(value=0, last = last_x, mod = C):
-            return 0.
-        x.__name__ = r'x_%i' % i
-        last_x = x
-
-        F.append(x)
-
-        del x
-
-    @deterministic
-    def q(pop = A):
-        return (0)
-    F.append(q)
-
-    F.append(5)
-
-    F = Container(F)
-
-    del q
-    del x_0
-
-
-    @data
-    @stochastic
-    def D(value=0, mom = C, dad = F):
-        return 0.
-
-    @potential
-    def P(mom = F[0], dad = A):
-        return 0.
-
-    return locals()
-
+    mu=pm.Normal('mu',0,1)
+    N= [pm.Normal('N_%i'%i,mu,1) for i in xrange(10)]
+    z = pm.Lambda('z',lambda n=N: np.sum(n))
+    @pm.potential
+    def y(z=z):
+        return -z**2
+    return mu,N,z,y
+    
+def powerset(seq):
+    """
+    Returns all the subsets of this set. This is a generator.
+    """
+    if len(seq) <= 1:
+        yield seq
+        yield []
+    else:
+        for item in powerset(seq[1:]):
+            yield [seq[0]]+item
+            yield item
+    
 class test_graph(TestCase):
     @classmethod
     def setUpClass(self):
@@ -74,28 +39,27 @@ class test_graph(TestCase):
     def tearDownClass(self):
         os.chdir('..')
 
-    def test_raw(self):
+    def test_graph(self):
         try:
             import pydot
         except ImportError:
             raise nose.SkipTest
-        A = Model(mymodel())
-        graph(A, path='full.dot', format='raw', prog='dot', consts = True)
-        graph(A, path='deterministic.dot', format='raw', prog='dot', collapse_deterministics=True, consts = True)
-        graph(A, path='pot.dot', format='raw', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='deterministic_pot.dot', format='raw', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
-        moral_graph(A, path='moral.dot', format='raw', prog='dot')
-    def test_pdf(self):
+        mu,N,z,y = mymodel()
+        for mods in [[mu], [mu,N], [mu,N,z], [mu,N,z,y]]:
+            for args in powerset([('collapse_deterministics', True), ('collapse_potentials', True), ('label_edges', False), ('legend', True), ('consts', True)]):
+                M = pm.Model(mods)
+                pm.graph.graph(M, **dict(args))
+                
+    def test_moral(self):
         try:
             import pydot
         except ImportError:
             raise nose.SkipTest
-        A = Model(mymodel())
-        graph(A, path='full.pdf', format='pdf', prog='dot', consts = True)
-        graph(A, path='deterministic.pdf', format='pdf', prog='dot', collapse_deterministics=True, consts = True)
-        graph(A, path='pot.pdf', format='pdf', prog='dot', collapse_potentials=True, consts = True)
-        graph(A, path='deterministic_pot.pdf', format='pdf', prog='dot', collapse_deterministics=True, collapse_potentials=True, consts = True)
-        moral_graph(A, path='moral.pdf', format='pdf', prog='dot')
+        mu,N,z,y = mymodel()
+        for mods in [[mu], [mu,N], [mu,N,z], [mu,N,z,y]]:
+            M = pm.Model(mods)
+            pm.graph.moral_graph(M)
+
 
 
 
