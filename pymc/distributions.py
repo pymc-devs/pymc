@@ -2789,13 +2789,13 @@ def Impute(name, dist_class, imputable, **parents):
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
-    masked_values = values
+    masked_values = imputable
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = [v is None or np.isnan(v) for v in values]
+        mask = [v is None or np.isnan(v) for v in masked_values]
         # Generate masked array
-        masked_values = np.ma.masked_array(values, mask)
+        masked_values = np.ma.masked_array(masked_values, mask)
 
     # Initialise list
     vars = []
