@@ -14,6 +14,8 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
+__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis']
+
 def wrap_metropolis_for_gp_parents(metro_class):
     """
     Wraps Metropolis step methods so they can handle extended parents of
@@ -68,12 +70,15 @@ Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metr
             
     return wrapper
 
+# Wrap all registered Metropolis step methods to use GP parents
 new_sm_dict = {}
 filtered_registry = filter(lambda x: issubclass(x, pm.Metropolis), pm.StepMethodRegistry)
 for sm in filtered_registry:
     wrapped_method = wrap_metropolis_for_gp_parents(sm)
-    new_sm_dict[sm.__name__] = sm
+    new_sm_dict[wrapped_method.__name__] = wrapped_method
 GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropolis)
+__all__ += new_sm_dict.keys()
+locals().update(new_sm_dict)
 
 class GPEvaluationGibbs(pm.Metropolis):
     """
@@ -182,35 +187,3 @@ class GPEvaluationGibbs(pm.Metropolis):
         self.f_eval.value = m_step+np.dot(sig_step,np.random.normal(size=sig_step.shape[1])).view(np.ndarray).ravel()
         # Propose the rest of the field from its conditional prior.
         self.f.rand()            
-        
-if __name__ == '__main__':
-    import pylab as pl
-    amp = pm.Exponential('amp',.1,value=1)
-    scale = pm.Exponential('scale',.1,value=1)
-    diff_degree = pm.Uniform('diff_degree',1,2,value=1.5)
-    M = pm.gp.Mean(pm.gp.zero_fn)
-    C = pm.Lambda('C', lambda amp=amp, scale=scale, diff_degree=diff_degree: pm.gp.Covariance(pm.gp.cov_funs.matern.euclidean, amp=amp, scale=scale, diff_degree=diff_degree))
-    mesh = np.linspace(-1,1,5)
-    submod = GPSubmodel('hello',M,C,mesh)
-    V = .01
-    epf = pm.Normal('epf', submod.f_eval, 1./V, value=np.random.normal(size=len(submod.f_eval.value)), observed=True)
-    plotmesh = np.linspace(-2,2,101)
-    f_eval = pm.Lambda('f_eval',lambda f=submod.f, mesh = plotmesh: f(mesh))
-
-    MC = pm.MCMC([submod, amp, scale, diff_degree, V, epf, f_eval])        
-    MC.use_step_method(GPEvaluationGibbs, submod, V, epf)
-    MC.assign_step_methods()
-    sma=MC.step_method_dict[amp][0]
-    sm = MC.step_method_dict[submod.f_eval][0]
-    
-    # pl.clf()
-    # for i in xrange(100):
-    #     submod.f.rand()
-    #     pl.plot(plotmesh, submod.f.value(plotmesh))
-    # pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
-
-    MC.isample(1000,500)
-    pl.clf()
-    for fe in MC.trace('f_eval')[:]:
-        pl.plot(plotmesh, fe)
-    pl.plot(submod.mesh, epf.value, 'k.', markersize=10)
