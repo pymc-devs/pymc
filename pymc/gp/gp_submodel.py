@@ -18,6 +18,7 @@ def gp_logp(x, M, C, mesh, f_eval):
 def gp_rand(M, C, mesh, f_eval, size=None):
     return pm.gp.Realization(M, C, mesh, f_eval)
 
+
 class GaussianProcess(pm.Stochastic):
     
     def __init__(self,name,submodel,doc=None,trace=True,value=None,rseed=False,

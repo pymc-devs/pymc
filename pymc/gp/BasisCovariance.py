@@ -182,7 +182,7 @@ class BasisCovariance(Covariance):
             return {'piv': piv_return, 'U': U_return}
 
 
-    def observe(self, obs_mesh, obs_V):
+    def observe(self, obs_mesh, obs_V, output_type='r'):
         __doc__ = Covariance.observe.__doc__
 
         ndim = obs_mesh.shape[1]
@@ -228,7 +228,15 @@ class BasisCovariance(Covariance):
         self.coef_U = U[:m,argsort(piv)]
         self.m = m
 
-        return piv_new, obs_mesh_new, None
+        # Output expected by Realization
+        if output_type == 'r':
+            return piv_new, obs_mesh_new, None
+            
+        # Ouptut expected by observe
+        if output_type == 'o':
+            return piv_new, obs_mesh_new
+
+        
 
 
     def __call__(self, x, y=None, observed=True, regularize=True):

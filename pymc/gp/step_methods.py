@@ -16,6 +16,7 @@ from GPutils import observe, regularize_array
 
 __all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis']
 
+
 def wrap_metropolis_for_gp_parents(metro_class):
     """
     Wraps Metropolis step methods so they can handle extended parents of
@@ -70,7 +71,8 @@ Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metr
             
     return wrapper
 
-# Wrap all registered Metropolis step methods to use GP parents
+
+# Wrap all registered Metropolis step methods to use GP parents.
 new_sm_dict = {}
 filtered_registry = filter(lambda x: issubclass(x, pm.Metropolis), pm.StepMethodRegistry)
 for sm in filtered_registry:
@@ -79,6 +81,7 @@ for sm in filtered_registry:
 GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropolis)
 __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
+
 
 class GPEvaluationGibbs(pm.Metropolis):
     """
