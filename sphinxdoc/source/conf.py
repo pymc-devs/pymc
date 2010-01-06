@@ -186,3 +186,8 @@ latex_logo = 'figs/icon_small.png'
 
 # If false, no module index is generated.
 #latex_use_modindex = True
+
+def setup(app):
+    from sphinx.ext.autodoc import cut_lines
+    app.connect('autodoc-process-docstring', cut_lines(1, what=['function']))
+
