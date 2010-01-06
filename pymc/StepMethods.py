@@ -883,7 +883,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, scales=None, interval=200, greedy=True, shrink_if_necessary=False, verbose=None, tally=False):
+    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, verbose=None, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
@@ -915,7 +915,12 @@ class AdaptiveMetropolis(StepMethod):
         # Call methods to initialize
         self.check_type()
         self.dimension()
-        self.set_cov(cov, scales)
+        
+        if cov is None:
+            self.C = self.cov_from_trace()
+        else:
+            self.C = cov
+    
         self.updateproposal_sd()
 
         # Keep track of the internal trace length
@@ -975,24 +980,14 @@ class AdaptiveMetropolis(StepMethod):
             # Scale identity matrix
             self.C = np.eye(self.dim)*ord_sc
         else:
-            try:
-                a = self.trace2array(-trace, -1)
-                nz = a[:, 0]!=0
-                self.C = np.cov(a[nz, :], rowvar=0)
-            except:
-                ord_sc = []
-                for s in self.stochastics:
-                    this_value = abs(np.ravel(s.value))
-                    if not this_value.any():
-                        this_value = np.resize([1.], np.shape(this_value))
-                    for elem in this_value:
-                        ord_sc.append(elem)
-                # print len(ord_sc), self.dim
-                for i in xrange(len(ord_sc)):
-                    if ord_sc[i] == 0:
-                        ord_sc[i] = 1
-                self.C = np.eye(self.dim)*ord_sc/scaling
 
+            n = n.pop()
+            
+        if type(trace) is not slice:
+            trace = slice(trace, n)
+            
+        a = self.trace2array(trace)
+        return np.cov(a, rowvar=0)
 
     def check_type(self):
         """Make sure each stochastic has a correct type, and identify discrete stochastics."""

@@ -106,7 +106,6 @@ class MCMC(Sampler):
         if hasattr(self, "step_methods"):
             self.step_methods.discard(step_method)
         self._sm_assigned = False
-        
 
     def assign_step_methods(self):
         """
