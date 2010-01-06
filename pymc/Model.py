@@ -592,7 +592,7 @@ class Sampler(Model):
                 #traceback.print_exc()
 
 
-    def remember(self, trace_index = None):
+    def remember(self, chain=-1, trace_index = None):
         """
         remember(trace_index = randint(trace length to date))
 
@@ -604,7 +604,7 @@ class Sampler(Model):
 
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
-                variable.value = variable.trace()[trace_index]
+                variable.value = variable.trace(chain)[trace_index]
 
     def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
