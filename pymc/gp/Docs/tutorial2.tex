@@ -221,7 +221,7 @@ We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-r
         V,\ \beta_0,\ \beta_1,\ \texttt{diff_degree},\ \texttt{amp},\ \texttt{scale} \sim \texttt{priors}.&
     \end{array}
 \end{equation}
-The `priors' can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose based on what seems reasonable to me) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \texttt{MCMC} subclass called \texttt{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
+The priors can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \texttt{MCMC} subclass called \texttt{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
 
 Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option.
 

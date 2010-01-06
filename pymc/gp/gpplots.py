@@ -49,9 +49,11 @@ def plot_GP_envelopes(f, x, HPD = [.25, .5, .95], transx = None, transy = None):
         # Plot envelopes
         HPD = np.sort(HPD)
         sorted_func_stack = np.sort(func_stacks,0)
-        for i in range(len(HPD)-1,0,-1):
-            env = centered_envelope(sorted_func_stack, HPD[i])
-            env.display(x, alpha=1.-HPD[i],new=False)
+        for m in HPD[::-1]:
+            env = centered_envelope(sorted_func_stack, m)
+            # from IPython.Debugger import Pdb
+            # Pdb(color_scheme='LightBG').set_trace()
+            env.display(x, alpha=1.-m*.5,new=False)
         centered_envelope(sorted_func_stack, 0.).display(x, alpha=1., new=False)
     except ImportError:
         print 'Plotter could not be imported; plotting disabled'

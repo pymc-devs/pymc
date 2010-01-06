@@ -30,7 +30,7 @@ class SalmonSampler(MCMC):
         lfrye = log(frye)
         labundance = log(abundance)
 
-        rx = abundance.max() - abundance.min()
+        rx = labundance.max() - labundance.min()
         ry = lfrye.max() - lfrye.min()
 
 
@@ -51,14 +51,11 @@ class SalmonSampler(MCMC):
         def amp(invtausq=invtausq):
             """
             Prior amplitude of f.
-            Similar to Munch, Mangel and Kottas' \\tau parameter,
-            but remember that we're not log-transforming the
-            x axis.
             """
             return 1./sqrt(invtausq)
 
-        scale = InverseGamma('scale' , alpha=2., beta=1./(6. / rx))
-        diff_degree = Uniform('diff_degree', .1, 3)
+        scale = InverseGamma('scale' , alpha=2., beta=1./(6. / rx), value=3)
+        diff_degree = Uniform('diff_degree', .1, 3, value=1.5)
 
         @deterministic
         def C(diff_degree=diff_degree, amp=amp, scale=scale):
@@ -96,12 +93,9 @@ class SalmonSampler(MCMC):
             """
             return normal_like(value, mu, tau)
 
-        in_dict = {}
-        for key, value in locals().iteritems():
-            if isinstance(value, Node):
-                in_dict[key]=value
-        MCMC.__init__(self, in_dict)
-        self.use_step_method(GPEvaluationGibbs, SR, labundance, frye_V, obs_frye)
+        MCMC.__init__(self, locals())
+        
+        self.use_step_method(GPEvaluationGibbs, SR, frye_V, obs_frye)
 
 
     def plot_traces(self):
@@ -120,7 +114,7 @@ class SalmonSampler(MCMC):
     def plot_SR(self):
         f_trace = self.SR.f.trace()
         figure()
-        subplot(2,1,1)
+        # subplot(2,1,1)
         hold('on')
         gpplots.plot_GP_envelopes(self.SR.f, self.plot_x, transx = log, transy=exp)
 
@@ -128,12 +122,12 @@ class SalmonSampler(MCMC):
             plot(self.plot_x, exp(f_trace[i](log(self.plot_x))), label='draw %i'%i)
 
         plot(self.abundance, self.frye, 'k.', label='data', markersize=8)
-        legend(loc=0)
+        # legend(loc=0)
         axis([self.abundance.min()*.1, self.abundance.max(), 0., self.frye.max()*2.])
 
-        midpoint_trace = []
-        for i in range(len(f_trace)):
-            midpoint_trace.append(f_trace[i](mean(self.abundance)))
-        subplot(2,1,2)
-        plot(midpoint_trace)
-        title('SR(mean(abundance))')
+        # midpoint_trace = []
+        # for i in range(len(f_trace)):
+        #     midpoint_trace.append(f_trace[i](mean(self.abundance)))
+        # subplot(2,1,2)
+        # plot(midpoint_trace)
+        # title('SR(mean(abundance))')
