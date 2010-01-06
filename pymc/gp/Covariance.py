@@ -327,7 +327,6 @@ class Covariance(object):
             if output_type != 's':
                 obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False, rank_limit = self.rank_limit)
             else:
-                # FIXME: This is C_eval.
                 C_eval = self.__call__(obs_mesh,obs_mesh,regularize=False)
                 U = C_eval.copy('F')
                 for i in xrange(U.shape[0]):

@@ -165,7 +165,7 @@ class StandardRealization(object):
     def draw_vals(self, x):
 
         # First observe the internal covariance on x.
-        relevant_slice, obs_mesh_new, U = self.C_internal.observe(x, zeros(x.shape[0]))
+        relevant_slice, obs_mesh_new, U = self.C_internal.observe(x, zeros(x.shape[0]), output_type='r')
 
         # Then evaluate self's mean on x.
         M = self.M_internal(x, regularize=False)

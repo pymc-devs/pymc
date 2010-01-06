@@ -220,7 +220,10 @@ class NearlyFullRankCovariance(Covariance):
 
         if not apply_pivot:
             # Useful for self.observe. U is upper triangular.
-            return {'pivots': piv, 'U': U}
+            if assume_full_rank:
+                return {'pivots':piv,'U':U,'C_eval':C_new,'U_new':U_new}
+            else:
+                return {'pivots': piv, 'U': U}
 
         else:
             # Useful for the user. U.T * U = C(x,x).

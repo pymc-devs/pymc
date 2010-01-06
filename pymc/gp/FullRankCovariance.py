@@ -184,8 +184,6 @@ class FullRankCovariance(Covariance):
         conditional on all previous observations.
         """
 
-        # print 'C.observe called'
-
         # Number of spatial dimensions.
         ndim = obs_mesh.shape[1]
 
