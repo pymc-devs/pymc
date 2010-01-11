@@ -27,7 +27,22 @@ DB API changes, October 2008, DH.
 
 from numpy import zeros, shape, squeeze, transpose
 import base, pickle, ram, pymc, sqlite
-import MySQLdb, pdb
+import pdb
+# Try importing pymysql
+dbmod = None
+try:
+    import pymysql
+    dbmod = pymysql
+except ImportError:
+    pass
+
+if dbmod is None:
+    try:
+        import MySQLdb
+        dbmod = MySQLdb
+    except ImportError:
+        pass
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -37,34 +52,26 @@ class Trace(sqlite.Trace):
     def _initialize(self, chain, length):
         """Initialize the trace. Create a table.
         """
+        if self._getfunc is None:
+            self._getfunc = self.db.model._funs_to_tally[self.name]
+
+
+        # Determine size
+        try:
+            self._shape = shape(self._getfunc())
+        except TypeError:
+            self._shape = None
+
+        self._vstr = ', '.join(sqlite.var_str(self._shape))
+
         # If the table already exists, exit now.
         if chain != 0:
             return
 
-        # Determine size
-        try:
-            size = len(self._getfunc())
-        except TypeError:
-            size = 1
+        # Create the variable name strings.
+        vstr = ', '.join(v + ' FLOAT' for v in sqlite.var_str(self._shape))
 
-        query = "create table %s (recid INTEGER PRIMARY KEY AUTO_INCREMENT, trace int(5), %s FLOAT)" % (self.name, ' FLOAT, '.join(['v%s' % (x+1) for x in range(size)]))
-        self.db.cur.execute(query)
-
-    def tally(self, chain):
-        """Adds current value to trace."""
-        size = 1
-        try:
-            size = len(self._getfunc())
-        except TypeError:
-            pass
-
-        try:
-            valstring = ', '.join(['%f'%x for x in self._getfunc()])
-        except:
-            valstring = str(self._getfunc())
-
-        # Add value to database
-        query = "INSERT INTO %s (trace, %s) values (%s, %s)" % (self.name, ' ,'.join(['v%s' % (x+1) for x in range(size)]), chain, valstring)
+        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT, trace  int(5), %s )" % (self.name, vstr)
 
         self.db.cur.execute(query)
 
@@ -106,7 +113,7 @@ class Database(sqlite.Database):
         self.mode = dbmode
 
         # Connect to database
-        self.DB = MySQLdb.connect(user=self._user, passwd=self._passwd, host=self._host, port=self._port)
+        self.DB = dbmod.connect(user=self._user, passwd=self._passwd, host=self._host, port=self._port)
         self.cur = self.DB.cursor()
 
         # Try and create database with model name
@@ -145,7 +152,7 @@ def load(dbname='', dbuser='', dbpass='', dbhost='localhost', dbport=3306):
     Return a Database instance.
     """
     db = Database(dbname=dbname, dbuser=dbuser, dbpass=dbpass, dbhost=dbhost, dbport=dbport, dbmode='a')
-    db.DB = MySQLdb.connect(db=dbname, user=dbuser, passwd=dbpass, host=dbhost, port=dbport)
+    db.DB = dbmod.connect(db=dbname, user=dbuser, passwd=dbpass, host=dbhost, port=dbport)
     db.cur = db.DB.cursor()
 
     # Get the name of the objects
