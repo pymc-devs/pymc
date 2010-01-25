@@ -184,6 +184,9 @@ class Variable(Node):
     :SeeAlso:
       Stochastic, Deterministic, Potential, Node
     """
+    
+    __array_priority__ = 10
+    
     def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=None):
 
         self.dtype=dtype
