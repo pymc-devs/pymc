@@ -95,14 +95,14 @@ for i in range(1000):
     # If jump was accepted:
     if acc:
         # C's value should be at the head of C's cache
-        assert(L.get_cached_counts()[1,cur_frame] == C.counter.get_count())
+        assert_equal(L.get_cached_counts()[1,cur_frame], C.counter.get_count())
         assert(L.cached_values[cur_frame] is C.logp)
 
     # If jump was rejected:
     else:
 
         # B's value should be at the back of C's cache.
-        assert(L.get_cached_counts()[1,1-cur_frame] == C.counter.get_count())
+        assert_equal(L.get_cached_counts()[1,1-cur_frame] == C.counter.get_count())
         assert(L.cached_values[1-cur_frame] is C.logp)
 
     # assert(L.ultimate_args.value[1] is C.value)
