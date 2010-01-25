@@ -220,12 +220,15 @@ class Database(pickle.Database):
         if kwds.has_key('complib'):
             warnings.warn('complib has been replaced with dbcomplib.', DeprecationWarning)
             dbcomplib = kwds.get('complib')
-
-
+        
+        db_exists = os.path.exists(self.dbname)
         self._h5file = tables.openFile(self.dbname, self.mode)
 
-        self.filter = getattr(self._h5file, 'filters', \
-                              tables.Filters(complevel=dbcomplevel, complib=dbcomplib))
+        default_filter = tables.Filters(complevel=dbcomplevel, complib=dbcomplib)
+        if self.mode =='r' or (self.mode=='a' and db_exists):
+            self.filter = getattr(self._h5file, 'filters', default_filter)
+        else:
+            self.filter = default_filter
 
 
         self._tables = self._gettables()  # This should be a dict keyed by chain.
