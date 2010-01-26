@@ -63,7 +63,7 @@ cf2py threadsafe
 
       do i=2,nx
 !           If x(i) swamps the sum so far, ditch the sum so far.
-          diff = REALPART(x(i)-s)
+          diff = DBLE(x(i)-s)
           if (diff.GE.li) then
               s = x(i)
           else
