@@ -246,7 +246,6 @@ cdef class LazyFunction:
         if match_index<0:
             self.cache(value)
         else:
-            print 'Matching and caching'
             self.cached_values[match_index]=value
 
     def force_compute(self):
