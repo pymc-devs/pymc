@@ -6,84 +6,121 @@
 %  Created by Chris Fonnesbeck on 2006-05-03.
 %  Copyright (c) 2006 . All rights reserved.
 %
-\documentclass[]{manual}
+\documentclass[article]{jss}
+
+%% almost as usual
+\author{Anand Patil}
+\title{A Gaussian process module for \pkg{PyMC}}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Anand Patil} %% comma-separated
+\Plaintitle{A Gaussian process module for PyMC} %% without formatting
+% \Shorttitle{GP's For PyMC} %% a short title (if necessary)
+
+%% an abstract and keywords
+\Abstract{
+  This article introduces a package adding Gaussian process functionality to the Bayesian analysis package \pkg{PyMC}. Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown. They can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra. This package implements Gaussian processes as a set of \proglang{Python} classes that can support many types of usage, from intuitive exploration to embedding them in larger probability models and fitting with MCMC.
+}
+\Keywords{gassian process, bayesian, \proglang{Python}}
+\Plainkeywords{gaussian process, bayesian, Python} %% without formatting
+%% at least one keyword must be supplied
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Anand Patil\\
+  Department of Zoology\\
+  University of Oxford\\
+  Oxford, OX1 3PS, UK\\
+  E-mail: \email{anand.patil@zoo.ox.ac.uk}
+}
 
 % Use utf-8 encoding for foreign characters
 %\usepackage[utf8]{inputenc}
 
-% Setup for fullpage use
-\usepackage{fullpage}
-\usepackage{amsmath}
+% % Setup for fullpage use
+% \usepackage{fullpage}
+% \usepackage{amsmath}
 \usepackage{epsfig}
 \usepackage{upquote} 
-
-% \usepackage{pdfsync}
-
-% Flexible citation syntax
-\usepackage{natbib}
-% Uncomment some of the following if you use the features
-%
-
-% Multipart figures
-%\usepackage{subfigure}
-
-% More symbols
-\usepackage{amsmath}
-\usepackage{amssymb}
-% \usepackage{latexsym}
-
-% Package for including code in the document
-\usepackage{listings}
-
-% Surround parts of graphics with box
-%\usepackage{boxedminipage}
-
-% This is now the recommended way for checking for PDFLaTeX:
-\usepackage{ifpdf}
-
-% Enable hyperlinks
-% \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
-
-% \ifpdf
-% \usepackage[pdftex]{graphicx}
-% \else
-% \usepackage{graphicx}
-% \fi
-
-%%% EPYDOC STUFF %%%
+\usepackage{verbatim} 
+% 
+% % \usepackage{pdfsync}
+% 
+% % Flexible citation syntax
+% \usepackage{natbib}
+% % Uncomment some of the following if you use the features
+% %
+% 
+% % Multipart figures
+% %\usepackage{subfigure}
+% 
+% % More symbols
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% % \usepackage{latexsym}
+% 
+% % Package for including code in the document
+% \usepackage{listings}
+% 
+% % Surround parts of graphics with box
+% %\usepackage{boxedminipage}
+% 
+% % This is now the recommended way for checking for PDFLaTeX:
+% \usepackage{ifpdf}
+% 
+% % Enable hyperlinks
+% % \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+% 
+% % \ifpdf
+% % \usepackage[pdftex]{graphicx}
+% % \else
+% % \usepackage{graphicx}
+% % \fi
+% 
+% %%% EPYDOC STUFF %%%
 \usepackage{underscore}
-\usepackage[english]{babel}
-% \usepackage{alltt, parskip, boxedminipage}
-\usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
-\usepackage{fullpage}
-\usepackage[usenames]{color}
-% \usepackage{ifthen}
-\usepackage{ae}
-\usepackage{aeguill}
-\usepackage{shortvrb}
-\usepackage{ucs}
-\usepackage{tabularx}
-\usepackage{color}
-\definecolor{Red}{rgb}{0.5,0,0}
-\definecolor{Blue}{rgb}{0,0,0.5}
-\usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=Red,citecolor=Blue,urlcolor=Red]{hyperref}
-
-\input{epydocheader}
-%%% END OF EPYDOC STUFF %%%
-
-
-\title{PyMC Gaussian process module \\User's guide}
-\author{ Anand Patil }
-\pdfoutput=1
-% \date
-
-
-%%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
-\newcommand{\titlereference}[1]{\textsl{#1}}
-\newlength{\locallinewidth}
-\setlength{\locallinewidth}{7in}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage[english]{babel}
+% % \usepackage{alltt, parskip, boxedminipage}
+% \usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
+% \usepackage{fullpage}
+% \usepackage[usenames]{color}
+% % \usepackage{ifthen}
+% \usepackage{ae}
+% \usepackage{aeguill}
+% \usepackage{shortvrb}
+% \usepackage{ucs}
+% \usepackage{tabularx}
+% \usepackage{color}
+% \definecolor{Red}{rgb}{0.5,0,0}
+% \definecolor{Blue}{rgb}{0,0,0.5}
+% \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=Red,citecolor=Blue,urlcolor=Red]{hyperref}
+% 
+% \input{epydocheader}
+% %%% END OF EPYDOC STUFF %%%
+% 
+% 
+% \title{PyMC Gaussian process module \\User's guide}
+% \author{ Anand Patil }
+% \pdfoutput=1
+% % \date
+% 
+% 
+% %%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
+% \newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
+% \newcommand{\titlereference}[1]{\textsl{#1}}
+% \newlength{\locallinewidth}
+% \setlength{\locallinewidth}{7in}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
 
@@ -102,28 +139,31 @@
 
 % chapter introduction (end)
 
-\chapter{The basics}\label{cha:basics}
-Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown. They can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra.
+% \chapter{The basics}\label{cha:basics}
 
-This package implements Gaussian processes as a set of Python classes that can support many types of usage, from intuitive exploration to embedding them in larger probability models and fitting them with MCMC.
 
-All the code in the tutorial is in the folder \file{pymc/examples/gp} in the PyMC source tree.
 \include{tutorial1} 
 
-\chapter{Incorporating Gaussian processes in PyMC probability models}\label{cha:PyMC}
-This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
+% \chapter{Incorporating Gaussian processes in PyMC probability models}\label{cha:PyMC}
+% This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
 \include{tutorial2} 
 
-\chapter{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{cha:usercov}
-This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
-\include{extending}
+% \chapter{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{cha:usercov}
+% This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
+% \include{extending}
+% 
+% \chapter{Overview of algorithms} \label{cha:numerics} 
+% More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation. 
+% \include{numerics} 
 
-\chapter{Overview of algorithms} \label{cha:numerics} 
-More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation. 
-\include{numerics} 
+\section{Conclusion}
 
-\nocite{*}
-\bibliographystyle{plain}
+The package documentation \textbf{link} contains more tutorial material. It also documents how to extend the package's functionality and 
+
+\textbf{Add conclusion}
+
+% \nocite{*}
+% \bibliographystyle{plain}v
 \bibliography{gp}
 
 \end{document}
