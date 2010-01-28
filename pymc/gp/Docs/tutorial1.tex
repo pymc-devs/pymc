@@ -421,7 +421,7 @@ On a quad-core system, evaluating a covariance function on large input vectors w
     \label{fig:basiscov}
 \end{figure}
 
-It's possible to create random functions from linear combinations of finite sets of basis functions $\{e\}$ with random coefficients $\{c\}$:
+It is possible to create random functions from linear combinations of finite sets of basis functions $\{e\}$ with random coefficients $\{c\}$:
 \begin{eqnarray*}
     f(x) = M(x) + \sum_{i_0=0}^{n_0-1}\ldots \sum_{i_{N-1}=0}^{n_{N-1}-1} c_{i_1\ldots i_{N-1}} e_{i_1\ldots i_{N-1}}(x), &
     \{c\}\sim \textup{some distribution}.
@@ -452,7 +452,7 @@ The arguments are:
             \item Of the same shape as \texttt{basis}. In this case the coefficients are assumed independent, and \texttt{cov[i[0],...,i[N-1]]} (an $N$-dimensional index) simply gives the prior variance of the corresponding coefficient.
             \item Of shape \texttt{basis.shape * 2}, using Python's convention for tuple multiplication. In this case \texttt{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} (a $2N$-dimensional index) gives the covariance of $c_{i_0\ldots i_{N-1}}$ and $c_{j_1\ldots j_{N-1}}$.
         \end{itemize}
-        Internally, the basis array is ravelled and this covariance tensor is reshaped into a matrix; I have made the input convention this way because it seems easier to keep track of which covariance value corresponds to which coefficients. The covariance tensor must be symmetric (\texttt{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} $=$ \texttt{cov[j[0],...,j[N-1], i[0],...,i[N-1]]}), and positive semidefinite when reshaped to a matrix.
+        Internally, the basis array is ravelled and this covariance tensor is reshaped into a matrix. The input convention is this way in order to make it easier to keep track of which covariance value corresponds to which coefficients. The covariance tensor must be symmetric (\texttt{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} $=$ \texttt{cov[j[0],...,j[N-1], i[0],...,i[N-1]]}), and positive semidefinite when reshaped to a matrix.
     \item[\texttt{basis_params}:] Any extra parameters required by the basis functions.
 \end{description}
 
