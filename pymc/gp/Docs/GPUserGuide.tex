@@ -38,6 +38,7 @@
 %% in the following format:
 \Address{
   Anand Patil\\
+  Malaria Atlas Project\\
   Department of Zoology\\
   University of Oxford\\
   Oxford, OX1 3PS, UK\\
@@ -158,9 +159,13 @@
 
 \section{Conclusion}
 
-The package documentation \textbf{link} contains more tutorial material. It also documents how to extend the package's functionality and 
+This package is built around the \code{Realization} object, which represents random mathematical functions as random \proglang{Python} functions. This is arguably the most natural and intuitive representation possible within the \proglang{Python} programming language, which itself is widely regarded as unusually human-friendly.
 
-\textbf{Add conclusion}
+Strenuous efforts at optimization have resulted in good performance for `standard' Gaussian process-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. 
+
+However, there are use cases for which this package's object model prevents it from achieving performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \texttt{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy}) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \texttt{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unacceptable level of program complexity.
+
+More tutorial material, as well as documentation of a few additional features and the incomplete Cholesky decomposition algorithms, can be found in the \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{package documentation}.
 
 % \nocite{*}
 % \bibliographystyle{plain}v

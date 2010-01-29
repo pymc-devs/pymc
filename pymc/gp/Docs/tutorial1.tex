@@ -5,20 +5,15 @@ Gaussian processes are probability distributions for mathematical functions. The
 \begin{equation}
     f\sim\textup{GP}(M,C).
 \end{equation}
-Gaussian processes have two parameters, which are analogous to the parameters of the normal distribution:
-\begin{itemize}
-    \item $M$ is the mean function, $M(x)=\E(f(x))$
-    \item $C$ is the covariance function, $C(x,y)=\COV(f(x),f(y))$. Among other things, $C$ regulates:
-    \begin{itemize}
-        \item the amount by which $f$ may deviate from $M$ at any input value $x$,
-        \item the roughnesss of $f$,
-        \item the typical lengthscale of changes in $f$.
-    \end{itemize}
-\end{itemize}
+The two parameters of the distribution are analogous to the parameters of the normal distribution. $M$ is the mean function, $M(x)=\E(f(x))$. $C$ is the covariance function, $C(x,y)=\COV(f(x),f(y))$. Among other things, $C$ regulates the amount by which $f$ may deviate from $M$ at any input value $x$, the roughnesss of $f$ and the typical lengthscale of changes in $f$.
 
-As with any probability distribution, random values can be drawn from a Gaussian process. However, these values (called `realizations') are actually mathematical functions rather than the usual numbers or vectors. This package represents these random values as \code{Realization} objects, which behave like \proglang{Python} functions with a few extra features.
+As with any probability distribution, random values can be drawn from a Gaussian process. However, these values (called `realizations') are actually mathematical functions rather than the usual numbers or vectors. This package represents these random values as \code{Realization} objects which, in accordance with intuition, behave like \proglang{Python} functions with a few extra features.
 
-All the code in the tutorial is in the folder \code{pymc/examples/gp} in the \pkg{PyMC} source tree. \textbf{Link to main docs, explain package. Say it starts intuitive, provides fast path also. Cite the PyMC paper and say that familiarity with it is assumed.}
+Gaussian processes, represented by \pkg{PyMC} stochastic variables \citep{pymc} valued as \code{Realization} objects, can be embedded in larger probability models. These models can be fit using Markov chain Monte Carlo \cite{gamerman}, after which the `dynamic trace' for each Gaussian process consists of a list, array or on-disk database containing \code{Realization} objects sampled from the target distribution. This intuitive object model simplifies and expedites construction and fitting of probability models, as well as predictive simulation.
+
+To improve performance, all of this package's numerical computations are done in C or Fortran extensions, some of which are provided by the \pkg{NumPy} package \citep{numpybook}. Covariance function evaluations are multithreaded for sufficiently large matrices.
+
+All examples can be found in the folder \code{pymc/examples/gp} in the \pkg{PyMC} source tree. 
 
 \section{Creating a Gaussian process}\label{sub:inst}
 
@@ -33,7 +28,7 @@ This section demonstrates creation of a covariance function, a mean function, an
     \label{fig:mean}
 \end{figure}
 
-The first component we will create is a mean function, represented by class \code{Mean}. The mean function of a univariate GP can be interpreted as a prior guess for the GP, so it is also a univariate function. The \code{Mean} class is a wrapper for an ordinary \proglang{Python} function. We will use the parabolic function
+The mean function of a univariate Gaussian process can be interpreted as a prior guess for the GP, so it is also a univariate function. Mean functions are represented by class \code{Mean}, which is a wrapper for an ordinary \proglang{Python} function. We will use the parabolic function
 \begin{equation}
     M(x) = ax^2 + bx + c.
 \end{equation}
@@ -65,7 +60,7 @@ The last part of the code plots $M(x)$ on $-1<x<1$, and its output is shown in f
     \label{fig:cov}
 \end{figure}
 
-GP covariance functions are represented by the class \code{Covariance}, which like \code{Mean} is essentially a wrapper for ordinary \proglang{Python} functions. In this example we will use the popular Mat\`ern covariance function \citep{banerjee}, which is provided in module \code{cov_funs}. In addition to the two arguments $x$ and $y$, this function takes three parameters: \code{amp} controls the amount by which realizations may deviate from their mean, \code{diff_degree} controls the roughness of realizations (the degree of differentiability), and \code{scale} controls the lengthscale over which realizations change.
+Gaussian process covariance functions are represented by the class \code{Covariance}, which like \code{Mean} is essentially a wrapper for ordinary \proglang{Python} functions. The example in \code{pymc/examples/gp/cov.py} uses the popular Mat\`ern covariance function \citep{banerjee}, which is provided in module \code{cov_funs}. In addition to the two arguments $x$ and $y$, the Mat\`ern covariance function takes three parameters: \code{amp} controls the amount by which realizations may deviate from their mean, \code{diff_degree} controls the roughness of realizations (the degree of differentiability), and \code{scale} controls the lengthscale over which realizations change.
 
 The user is free to write functions to wrap in \code{Covariance} objects. See \href{http://code.google.com/p/pymc}{the package documentation} for more information.
 
@@ -98,15 +93,15 @@ The first argument to \code{Covariance}'s init method is the \proglang{Python} f
          [C(x_0,x_0)& \ldots& C(x_{N_x-1},x_{N_x-1})] = \textup{diag}(C(x,x)),
     \end{eqnarray*}
     but is computed much faster than diag$(C(x,x))$ would be.
-The extra arguments \code{diff_degree, amp} and \code{scale} will be passed to \code{matern.euclidean} by $C$ every time is called.
+The extra arguments \code{diff_degree, amp} and \code{scale}, which are required by \code{matern.euclidean}, will be passed to \code{matern.euclidean} by $C$ every time is called.
  
 The output of \code{examples/cov.py} is shown in figure \ref{fig:cov}.
 
 \subsubsection{Cholesky algorithms}
 
-The numerical `heavy lifting' done by this package is primarily handled by \code{Covariance} object and its subclasses. \texttt{Covariance} itself bases all its computations on the incomplete Cholesky decomposition algorithm used by the \pkg{chol_incomplete} package for Matlab \citep{seeger}. \code{Covariance} computes rows of covariance matrices as they are needed, so if the function it wraps tends to produce covariance matrices with only a few large eigenvalues it can compute the Cholesky decomposition in less than $O(n^2)$ arithmetic operations \citep{predictivechol}.
+The numerical `heavy lifting' done by this package is primarily handled by \code{Covariance} and its subclasses. \texttt{Covariance} itself bases all its computations on the incomplete Cholesky decomposition algorithm used by the \proglang{Matlap} package \pkg{chol_incomplete} \citep{seeger}. \code{Covariance} computes rows of covariance matrices as they are needed, so if the function it wraps tends to produce covariance matrices with only a few large eigenvalues it can compute the Cholesky decomposition in less than $O(n^2)$ arithmetic operations \citep{predictivechol}.
 
-\code{Covariance} calls back to \proglang{Python} from \proglang{Fortran} every time it needs a new row. If the function it wraps tends to produce full-rank covariance matrices (for which all rows are required), this is inefficient. \code{FullRankCovariance} is a drop-in replacement for \code{Covariance} that is much faster, but fails if it attempts to factor a matrix that is not full rank. \code{NearlyFullRankCovariance} provides a compromise between the two: it computes covariance matrices in full, then factors them using the robust algorithm of \pkg{chol_incomplete}.
+\code{Covariance} calls back to \proglang{Python} from \proglang{Fortran} every time it needs a new row. If the function it wraps tends to produce full-rank covariance matrices (for which all rows are required), this is inefficient. \code{FullRankCovariance} is a drop-in replacement for \code{Covariance} that is much faster, but fails (with a helpful error message) if it attempts to factor a matrix that is not full rank. \code{NearlyFullRankCovariance} provides a compromise between the two: it computes covariance matrices in full in \proglang{Fortran}, then factors them using the robust algorithm of \pkg{chol_incomplete}.
 
 \subsection{Drawing realizations}\label{subsub:realizations}
 \begin{figure}
@@ -155,7 +150,7 @@ The probability model that represents this situation is as follows:
         f \sim \textup{GP}(M,C)\\
     \end{array}\right\}\Rightarrow f|\textup{data} \sim \textup{GP}(M_o, C_o).
 \end{equation}
-This package provides a function called \code{observe} that imposes normally-distributed observations on Gaussian process distributions. This function converts $f$'s prior to its posterior by transforming $M$ and $C$ in equation \ref{regprior} to $M_o$ and $C_o$:
+Function \code{observe} imposes normally-distributed observations on Gaussian process distributions. This function converts $f$'s prior to its posterior by transforming $M$ and $C$ in equation \ref{regprior} to $M_o$ and $C_o$:
 
 The code in \code{pymc/examples/gp/observation.py} imposes the observations
 \begin{eqnarray*}
@@ -229,9 +224,11 @@ The examples so far, starting with \code{examples/cov.py}, have used the covaria
 Instances of \code{covariance_function_bundle} have three attributes, \code{euclidean}, \code{geo_deg} and \code{geo_rad}, which correspond to standard coordinate systems:
 \begin{itemize}
     \item \code{euclidean}: $n$-dimensional Euclidean coordinates.
-    \item \code{geo_deg}: Geographic coordinates (longitude, latitude) in degrees, with radius 1.
-    \item \code{geo_rad}: Geographic coordinates (longitude, latitude) in radians, with radius 1.
+    \item \code{geo_deg}: Geographic coordinates (longitude, latitude) in degrees, with unit radius.
+    \item \code{geo_rad}: Geographic coordinates (longitude, latitude) in radians, with unit radius.
 \end{itemize}
+
+See \href{http://code.google.com/p/pymc}{the package documentation} for information regarding creation and extension of covariance function bundles.
 
 \section{Basis covariances}\label{sec:basis}
 
@@ -273,7 +270,7 @@ The arguments are:
             \item Of the same shape as \code{basis}. In this case the coefficients are assumed independent, and \code{cov[i[0],...,i[N-1]]} (an $N$-dimensional index) simply gives the prior variance of the corresponding coefficient.
             \item Of shape \code{basis.shape * 2}, using \proglang{Python}'s convention for tuple multiplication. In this case \code{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} (a $2N$-dimensional index) gives the covariance of $c_{i_0\ldots i_{N-1}}$ and $c_{j_1\ldots j_{N-1}}$.
         \end{itemize}
-        Internally, the basis array is ravelled and this covariance tensor is reshaped into a matrix. The input convention is this way in order to make it easier to keep track of which covariance value corresponds to which coefficients. The covariance tensor must be symmetric (\code{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} $=$ \code{cov[j[0],...,j[N-1], i[0],...,i[N-1]]}), and positive semidefinite when reshaped to a matrix.
+        Internally, the basis array is ravelled and this covariance tensor is reshaped into a matrix. This input convention makes it easier to keep track of which covariance value corresponds to which coefficients. The covariance tensor must be symmetric (\code{cov[i[0],...,i[N-1], j[0],...,j[N-1]]} $=$ \code{cov[j[0],...,j[N-1], i[0],...,i[N-1]]}), and positive semidefinite when reshaped to a matrix.
     \item[\code{basis_params}:] Any extra parameters required by the basis functions.
 \end{description}
 

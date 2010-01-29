@@ -7,11 +7,11 @@
 
 \section{Gaussian process submodels}
 
-This package represents a Gaussian process $f\sim \textup{GP}(M,C)$ as a \code{GaussianProcess} object which, as you might expect, is a \pkg{PyMC} \code{stochastic} \citep{pymc} whose value is a \code{Realization} object. It is not feasible to endow a full \code{GaussianProcess} with a \code{logp} attribute, so \code{GaussianProcess} objects cannot be handled by \pkg{PyMC}'s standard MCMC machinery \citep{pymc}.
+Gaussian process $f\sim \textup{GP}(M,C)$ can be represented as a \code{GaussianProcess} object, which is a \pkg{PyMC} \code{stochastic} \citep{pymc} whose value is a \code{Realization} object, and embedded in larger probability models. Because $f$ is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it. \code{GaussianProcess} objects therefore have no \code{logp} attribute \citep{pymc}, and \code{GaussianProcess} objects cannot be handled by \pkg{PyMC}'s standard MCMC machinery.
 
-However, the evaluation $f(x_*)$ on a mesh $x_*$ is a simple multivariate normal random variable, which can be handled by the standard machinery. If $f(x_*)$ is incorporated in the model as a variable, a minor extension to the standard machinery (implemented by this package) makes it possible to handle $f$ itself as well.
+However, the evaluation $f(x_*)$ on a mesh $x_*$ is a simple multivariate normal random variable, which has a \code{logp} attribute and can be handled by the standard machinery. If $f(x_*)$ is incorporated in the model as a variable, a minor extension to the standard machinery (implemented by this package) makes it possible to handle $f$ itself as well.
 
-Pairs of $f$ and $f(x_*)$ variables are housed in container objects of class \code{GPSubmodel}. \code{GaussianProcess} objects can only be incorporated in \pkg{PyMC} probability models in \code{GPSubmodel} objects.
+Pairs of $f$ and $f(x_*)$ variables are housed in container objects of class \code{GPSubmodel}.
 
 
 
@@ -20,7 +20,7 @@ Pairs of $f$ and $f(x_*)$ variables are housed in container objects of class \co
 
 \subsection{Example: nonparametric regression with unknown mean and covariance parameters}\label{sub:BasicMCMC}
 
-A GP submodel is created in \code{pymc/examples/gp/\pkg{PyMC}model.py} with the following call:
+A Gaussian process submodel is created in \code{pymc/examples/gp/\pkg{PyMC}model.py} with the following call:
 \begin{CodeChunk}
 \begin{CodeInput}
 sm = gp.GPSubmodel('sm',M,C,fmesh)
@@ -28,14 +28,14 @@ sm = gp.GPSubmodel('sm',M,C,fmesh)
 \end{CodeChunk}
 There are two stochastic variables in the submodel: \code{sm.f} and \code{sm.f_eval}. The first is the actual Gaussian process $f$: a stochastic variable valued as a \code{Realization} object. The second is $f(x_*)$, where $x_*$ is the input argument \code{fmesh}.
 
-Once the GP submodel is created, we can create other variables that depend on $f$ and $f(x_*)$. In \code{\pkg{PyMC}model.py}, the observation $d$ depends on $f(x_*)$: 
+Once the Gaussian process submodel has been created, other variables can be created that depend on $f$ and $f(x_*)$. In \code{\pkg{PyMC}model.py}, the observation $d$ depends on $f(x_*)$: 
 \begin{CodeChunk}
 \begin{CodeInput}
 d = pymc.Normal('d',mu=sm.f_eval, tau=1./V, value=init_val, observed=True)
 \end{CodeInput}
 \end{CodeChunk}
 
-The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the dependency relationships between the variables in a GP submodel.
+The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the conditional independence relationships between the variables in a GP submodel.
 
 The file \code{pymc/examples/gp/MCMC.py} fits the probability model created in \code{\pkg{PyMC}model.py} using MCMC. The `business part' of the file is very simple:
 \begin{CodeChunk}
@@ -44,7 +44,7 @@ GPSampler = MCMC(PyMCmodel)
 GPSampler.isample(iter=5000,burn=1000,thin=100)    
 \end{CodeInput}
 \end{CodeChunk}
-Most of the code in the file is devoted to plotting, and its output is shown in figure \ref{fig:MCMCOutput}. Note that after the MCMC run \code{GPSampler.trace('sm_f')[:]} yields a sequence of \code{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend, see \cite{pymc}.
+The file's output is shown in figure \ref{fig:MCMCOutput}. Note that after the MCMC run \code{GPSampler.trace('sm_f')[:]} yields a sequence of \code{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend via \pkg{PyTables} \citep{tables}, see \cite{pymc}.
 
 \begin{figure}
     \centering
@@ -92,16 +92,16 @@ In other words, if we propose $f$ from its prior distribution conditional on $f(
 
 By choosing the same proposal distribution for $\tilde f$ as above, we again avoid having to compute the intractable terms. In other words, every time a value is proposed for a \code{GP}'s parent, a value must be proposed for the \code{GP}  conditional on its value's evaluation on its mesh, and the prior probability of the \code{GP}'s children must be included in the acceptance ratio.
 
-\bigskip
+\smallskip
 To summarize, any Metropolis-Hastings step method can handle the parents of $f$, as well as $f(x_*)$, if it proposes values for $f$ jointly with its target variable as outlined above. 
 
-This minor alteration can be done using the function \code{wrap_metropolis_for_gp_parents}, which takes a subclass of \code{Metropolis} as an argument and returns a new step method class with altered \code{propose} and \code{reject} methods. The function automatically produces modified versions of all Metropolis step methods in \pkg{PyMC}'s step method registry (\code{Metropolis}, \code{AdaptiveMetropolis}, etc.) \citep{pymc}. The modified step methods are automatically assigned to parents of Gaussian processes.
+This minor alteration in jumping strategy is implemented by the function \code{wrap_metropolis_for_gp_parents}, which takes a subclass of \code{Metropolis} as an argument and returns a new step method class with altered \code{propose} and \code{reject} methods. The function automatically produces modified versions of all Metropolis step methods in \pkg{PyMC}'s step method registry (\code{Metropolis}, \code{AdaptiveMetropolis}, etc.) \citep{pymc}. The modified step methods are automatically assigned to parents of Gaussian processes.
 
 \subsection{Choosing a mesh} 
 
 The mesh points $x_*$ are the points where Metropolis-Hastings step methods can `grab' the value of $f$ to moderate the variance of its proposal distribution. If $x_*$ is an empty array, $f$'s value will be proposed from its prior, and rejection rates are likely to be quite large. If $x_*$ is too dense, on the other hand, computation of the log-probability of $f(x_*)$ will be expensive, as it scales as the cube of the number of points in the mesh.This continuum is illustrated in figure \ref{fig:meshpropose}. Finding the happy medium requires some experimentation.
 
-Another important point to bear in mind is that if $f$'s children depend on its value only via its evaluation on the mesh, the likelihood terms $p(K|f_p)$ and $p(K|f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(x_*))$ then the proposed value of $f$ will have no bearing on the acceptance probability of the proposed value of $f(x_*)$ or of the parents $P$. This is the situation in \code{\pkg{PyMC}Model.py}. Such a mesh choice will generally improve the acceptance rate.
+If $f$'s children depend on its value only via its evaluation on the mesh, the likelihood terms $p(K|f_p)$ and $p(K|f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(x_*))$ then the proposed value of $f$ will have no bearing on the acceptance probability of the proposed value of $f(x_*)$ or of the parents $P$. This is the situation in \code{\pkg{PyMC}Model.py}. Such a mesh choice will generally improve the acceptance rate.
 
 \begin{figure}
     \centering
@@ -126,7 +126,7 @@ GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, \
 \end{CodeChunk}
 The initialization arguments are the Gaussian process submodel that contains $f$, the observation variance of $f$'s children, and the children, in this case the vector-valued normal variable $d$. 
 
-\code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \code{AdaptiveMetropolis}.
+\code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \code{AdaptiveMetropolis} \citep{pymc}.
 
 
 
