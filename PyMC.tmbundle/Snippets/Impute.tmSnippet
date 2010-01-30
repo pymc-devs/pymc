@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>content</key>
-	<string>${1:name} = Impute('$1', ${2:dist_class}, ${3:value}, missing=${4:-999})$0</string>
+	<string>${1:name} = Impute('$1', ${2:dist_class}, ${3:value})$0</string>
 	<key>name</key>
 	<string>Data stochastic with imputed values</string>
 	<key>scope</key>

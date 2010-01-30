@@ -42,7 +42,7 @@ Most of the code in the file is devoted to plotting, and its output is shown in 
 \begin{figure}
     \centering
         \epsfig{file=figs/unobservedModel.pdf, width=15cm}
-    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \sffamily{`examples/gp/PyMCModel.py'}. Ellipses represent \texttt{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \texttt{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \texttt{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Rectangles represent potentials Arrows point from parent to child. The submodel contains the Gaussian process \texttt{sm\_f} and its evaluation \texttt{sm\_f\_eval} on input array \texttt{sm\_mesh}. It also contains the mean \texttt{sm\_M\_eval} of \texttt{sm\_f\_eval} and the lower-triangular Cholesky factor \texttt{sm\_S\_eval} of its covariance matrix, and a potential \texttt{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \texttt{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
+    \caption{The PyMC-generated directed acyclic graph representation of the extended nonparametric regression model created by \sffamily{`examples/gp/PyMCModel.py'}. Ellipses represent \texttt{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \texttt{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \texttt{Stochastic} objects with the \member{isdata} flag set to \member{True} (data). Rectangles represent potentials. Arrows point from parent to child. The submodel contains the Gaussian process \texttt{sm\_f} and its evaluation \texttt{sm\_f\_eval} on input array \texttt{sm\_mesh}. It also contains the mean \texttt{sm\_M\_eval} of \texttt{sm\_f\_eval} and the lower-triangular Cholesky factor \texttt{sm\_S\_eval} of its covariance matrix, and a potential \texttt{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \texttt{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
     \label{fig:unobservedModel}
 \end{figure}
 
@@ -81,7 +81,7 @@ but all other terms are fine. We can make the problem terms cancel by choosing o
 \begin{eqnarray*}
     q(f_p|f(x_*),f,P_p) = p(f_p|f(x_*), P).
 \end{eqnarray*}
-In other words, if we propose $f$ from its prior distribution conditional on $f(x_*)$ and its parents whenever we propose $f(x_*)$, we don't have to worry about computing the intractable terms. This argument can be made more rigorous by replacing $f$ with its evaluation at all points where we will ever want to know it.
+In other words, if we propose $f$ from its prior distribution conditional on $f(x_*)$ and its parents whenever we propose $f(x_*)$, we don't have to worry about computing the intractable terms. This argument can be made more rigorous by replacing $f$ with its evaluation at all the points at which we would ever want to know it.
 
 By choosing the same proposal distribution for $\tilde f$ as above, we again avoid having to compute the intractable terms. In other words, every time a value is proposed for a \texttt{GP}'s parent, a value must be proposed for the \texttt{GP}  conditional on its value's evaluation on its mesh, and the prior probability of the \texttt{GP}'s children must be included in the acceptance ratio.
 
@@ -101,7 +101,7 @@ Another important point to bear in mind is that if $f$'s children depend on its 
         \epsfig{file=figs/nomeshpropose.pdf,width=9cm}
         \epsfig{file=figs/lightmeshpropose.pdf,width=9cm}
         \epsfig{file=figs/densemeshpropose.pdf,width=9cm}
-    \caption{Several possible proposals of $f$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions' envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is being proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $f$, but computing the log-probability will be more expensive.}
+    \caption{Several possible proposals of $f$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions' envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $f$, but computing the log-probability will be more expensive.}
     \label{fig:meshpropose}
 \end{figure}
 
@@ -210,7 +210,7 @@ Again, \texttt{remember} is used to reset the model to a randomly-selected frame
     \label{fig:pinkparams}
 \end{figure}
 
-We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we'll use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, C is its covariance and M is its mean.
+We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-recruitment results. The full probability we will use follows. It is like Munch, Kottas and Mangel's probability model, but we will use a Mat\`ern covariance function. Here \texttt{SR} is the stock-recruitment function, C is its covariance and M is its mean.
 \begin{equation}
     \label{eqn:MMKModel}
     \begin{array}{ll}
@@ -223,11 +223,11 @@ We now have the tools to duplicate Munch, Kottas and Mangel's \cite{mmk} stock-r
 \end{equation}
 The priors can be found by reading their paper (except the prior on \texttt{diff_degree}, which I chose) or by reading the file \file{examples/more_examples/MMKSalmon/salmon_sampler.py}. This file contains a PyMC \texttt{MCMC} subclass called \texttt{SalmonSampler}, which reads in the data, creates a probability model incorporating the data, and provides some plotting methods.
 
-Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero isn't an option.
+Note that this model differs from the model in section \ref{sub:MMKregression} in that we're putting a Gaussian process prior on the stock-recruitment function in log-log space, so conditioning its value at zero is not an option.
 
 % The probability model \texttt{SalmonSampler} creates is visualized as a directed acyclic graph in figure \ref{fig:MMKsalmonmodel}. 
 
-Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and I've used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
+Munch, Kottas and Mangel specify priors for $\texttt{amp}^{-2}$ and $V^{-1}$, and we have used PyMC deterministic variables to conveniently implement the transformations rather than changing variables manually. The posterior distribution of \texttt{SR} for the pink salmon (\emph{Onchorhynchus gorbuscha}) is shown in figure \ref{fig:pinkfpost}, and the posterior of the mean and covariance parameters for the same species are shown in figure \ref{fig:pinkparams}.
 
 
 

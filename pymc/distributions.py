@@ -1916,7 +1916,7 @@ def normal_like(x, mu, tau):
     #     constrain(tau, lower=0)
     # except ZeroProbability:
     #     return -np.Inf
-
+    
     return flib.normal(x, mu, tau)
 
 # von Mises--------------------------------------------------
@@ -2019,10 +2019,14 @@ def rtruncated_poisson(mu, k, size=None):
     using rejection sampling.
     """
 
-    k=k-1
-
     # Calculate m
-    m = max(0, np.floor(k+1-mu))
+    try:
+        k=k-1
+        m = max(0, np.floor(k+1-mu))
+    except TypeError, ValueError:
+        # More than one mu
+        k=np.array(k)-1
+        return np.transpose(np.array([rtruncated_poisson(x, i, size) for x,i in zip(mu, np.resize(k, np.size(mu)))]))
 
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
@@ -2033,8 +2037,9 @@ def rtruncated_poisson(mu, k, size=None):
     total_size = np.prod(size or 1)
 
     while(len(rvs)<total_size):
+
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.random.poisson(mu+m, total_size*4)
+        proposals = np.squeeze(np.random.poisson(mu+m, (total_size*4, np.size(m))))
 
         # Acceptance probability
         a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
@@ -2168,14 +2173,14 @@ truncnorm_like = truncated_normal_like
 
 # Azzalini's skew-normal-----------------------------------
 @randomwrap
-def rskew_normal(mu,tau,alpha,size=None):
+def rskew_normal(mu,tau,alpha,size=()):
     """rskew_normal(mu, tau, alpha, size=None)
 
     Skew-normal random variates.
     """
-    if size is None:
-        size = 1
-    return flib.rskewnorm(size,mu,tau,alpha,np.random.normal(size=2*size))
+    size_ = size or (1,)
+    len_ = np.prod(size_)
+    return flib.rskewnorm(len_,mu,tau,alpha,np.random.normal(size=2*len_)).reshape(size)
 
 def skew_normal_like(x,mu,tau,alpha):
     R"""skew_normal_like(x, mu, tau, alpha)
@@ -2769,7 +2774,7 @@ Otherwise parent p's value should sum to 1.
                 parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
                 observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def Impute(name, dist_class, values, **parents):
+def Impute(name, dist_class, imputable, **parents):
     """
     This function accomodates missing elements for the data of simple
     Stochastic distribution subclasses. The masked_values argument is an
@@ -2783,20 +2788,22 @@ def Impute(name, dist_class, values, **parents):
         Name of the data stochastic
       - dist_class : Stochastic
         Stochastic subclass such as Poisson, Normal, etc.
-      - values : numpy.ma.core.MaskedArray or iterable
+      - imputable : numpy.ma.core.MaskedArray or iterable
         A masked array with missing elements (where mask=True, value is assumed missing),
-        or an iterable that contains missing elements, identified by 'missing' argument.
-	NaNs are considered missing by default if values is not a masked array.
+        or any iterable that contains None elements that will be imputed.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
-    masked_values = values
+    
+    dims = np.shape(imputable)
+    masked_values = np.ravel(imputable)
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        mask = [v is None or np.isnan(v) for v in values]
+        
+        mask = [v is None or np.isnan(v) for v in masked_values]
         # Generate masked array
-        masked_values = np.ma.masked_array(values, mask)
+        masked_values = np.ma.masked_array(masked_values, mask)
 
     # Initialise list
     vars = []
@@ -2811,11 +2818,13 @@ def Impute(name, dist_class, values, **parents):
 
             try:
                 # If parent is a PyMCObject
-                size = np.size(parent.value)
+                shape = np.shape(parent.value)
             except AttributeError:
-                size = np.size(parent)
+                shape = np.shape(parent)
 
-            if size == len(masked_values):
+            if shape == dims:
+                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=np.ravel(parent), i=i: p[i])
+            elif shape == np.shape(masked_values):
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
@@ -2826,7 +2835,7 @@ def Impute(name, dist_class, values, **parents):
         else:
             # Observed values
             vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
-    return vars
+    return np.reshape(vars, dims)
 
 ImputeMissing = Impute
 
