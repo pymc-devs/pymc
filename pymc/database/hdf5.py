@@ -57,6 +57,27 @@ class TraceObject(base.Trace):
         #     print self._vlarrays, chain
         #     raise AttributeError
 
+
+    def __getitem__(self, index):
+        """Mimic NumPy indexing for arrays."""
+        chain = self._chain
+        
+        if chain is not None:
+            vlarrays = [self._vlarrays[chain]]
+        else:
+            vlarrays =  self._vlarrays
+
+        out = []
+        for i, vlarray in enumerate(vlarrays):
+            out.append(vlarray[index])
+            
+        if np.isscalar(chain):
+            return out[0]
+        else:
+            return np.hstack(data)
+            
+
+
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
@@ -114,6 +135,25 @@ class Trace(base.Trace):
     def tally(self, chain):
         """Adds current value to trace"""
         self.db._rows[chain][self.name] = self._getfunc()
+
+    def __getitem__(self, index):
+        """Mimic NumPy indexing for arrays."""
+        chain = self._chain
+        
+        if chain is not None:
+            tables = [self.db._gettables()[chain],]
+        else:
+            tables = self.db._gettables()
+
+        out = []
+        for table in tables:
+            out.append(table.col(self.name))
+            
+        if np.isscalar(chain):
+            return out[0][index]
+        else:
+            return np.hstack(out)[index]
+
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
