@@ -35,7 +35,7 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
     % \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
     % \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
     \item[\code{observed}:] A flag (boolean) indicating whether the variable's value has been observed (is fixed).
-    \item[\code{dtype}:] A NumPy dtype object (such as \code{np.int}) that specifies the type of the variable's value. The variable's value is always cast to this type. If this is \code{None} (default) then no type is enforced.
+    \item[\code{dtype}:] A NumPy dtype object (such as \code{numpy.int}) that specifies the type of the variable's value. The variable's value is always cast to this type. If this is \code{None} (default) then no type is enforced.
     % \item[\code{__name__}:] The name of the variable, should be unique.
     %    \item[\code{__doc__}:] The docstring of the variable.
 \end{description}
@@ -72,10 +72,10 @@ def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
         # Invalid values
-        return -np.inf
+        return -numpy.inf
     else:
         # Uniform log-likelihood
-        return -np.log(t_h - t_l + 1)
+        return -numpy.log(t_h - t_l + 1)
 \end{verbatim}
 Note that this is a simple Python function preceded by a Python expression called a \href{http://docs.python.org/glossary.html#term-decorator}{decorator}, here called \code{@stochastic}. Generally, decorators enhance functions with additional properties or functionality. The \code{Stochastic} object produced by the \code{@stochastic} decorator will evaluate its log-probability using the function $s$. The \code{value} argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of $s$ (\emph{i.e.} they will populate the \code{parents} dictionary).
 
@@ -93,12 +93,12 @@ def s(value=1900, t_l=1851, t_h=1962):
 
     def logp(value, t_l, t_h):
         if value > t_h or value < t_l:
-            return -np.inf
+            return -numpy.inf
         else:
-            return -np.log(t_h - t_l + 1)
+            return -numpy.log(t_h - t_l + 1)
 
     def random(t_l, t_h):
-        return np.round( (t_l - t_h) * random() ) + t_l
+        return numpy.round( (t_l - t_h) * random() ) + t_l
 
     \end{verbatim}
 The stochastic variable again gets its name, docstring and parents from function $s$, but in this case it will evaluate its log-probability using the \code{logp} function. The \code{random} function will be used when \code{s.random()} is called. Note that \code{random} doesn't take a \code{value} argument, as it generates values itself.
@@ -107,12 +107,12 @@ The stochastic variable again gets its name, docstring and parents from function
 \begin{verbatim}
 def s_logp(value, t_l, t_h):
     if value > t_h or value < t_l:
-        return -np.inf
+        return -numpy.inf
     else:
-        return -np.log(t_h - t_l + 1)
+        return -numpy.log(t_h - t_l + 1)
 
 def s_rand(t_l, t_h):
-    return np.round( (t_l - t_h) * random() ) + t_l
+    return numpy.round( (t_l - t_h) * random() ) + t_l
 
 s = pm.Stochastic( logp = s_logp,
                 doc = 'The switchpoint for the rate of disaster occurrence.',
@@ -225,8 +225,8 @@ There are several ways to create deterministic variables:
 
    \item[Elementary operations on variables] Certain elementary operations on variables create deterministic variables. For example:   
 \begin{verbatim}
->>> x = pm.MvNormalCov('x',np.ones(3),np.eye(3))
->>> y = pm.MvNormalCov('y',np.ones(3),np.eye(3))
+>>> x = pm.MvNormalCov('x',numpy.ones(3),numpy.eye(3))
+>>> y = pm.MvNormalCov('y',numpy.ones(3),numpy.eye(3))
 >>>
 >>> print x+y
 <pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10>
@@ -245,7 +245,7 @@ All the objects thus created have \texttt{trace=False} and \texttt{plot=False} b
 @pm.deterministic
 def r(switchpoint = s, early_rate = e, late_rate = l):
     """The rate of disaster occurrence."""
-    value = np.zeros(len(D))
+    value = numpy.zeros(len(D))
     value[:switchpoint] = early_rate
     value[switchpoint:] = late_rate
     return value
@@ -255,7 +255,7 @@ Notice that rather than returning the log-probability, as is the case for \code{
     \item[Direct] \texttt{Deterministic} can also be instantiated directly:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
-    value = np.zeros(len(D))
+    value = numpy.zeros(len(D))
     value[:switchpoint] = early_rate
     value[switchpoint:] = late_rate
     return value
@@ -290,19 +290,19 @@ N = 10
 x_0 = pm.Normal('x_0', mu=0, tau=1)
 
 # Initialize array of stochastics
-x = np.empty(N,dtype=object)
+x = numpy.empty(N,dtype=object)
 x[0] = x_0
 
 # Loop over number of elements in N
 for i in range(1,N):
 
    # Create Normal stochastic, whose mean is the previous element in x
-   x[i] = pm.Normal('x_%i' % i, mu=x[-1], tau=1)
+   x[i] = pm.Normal('x_%i' % i, mu=x[i-1], tau=1)
 
 @pm.observed
 @pm.stochastic
 def y(value = 1, mu = x, tau = 100):
-    return pm.normal_like(value, np.sum(mu**2), tau)
+    return pm.normal_like(value, numpy.sum(mu**2), tau)
 \end{verbatim}
 PyMC automatically wraps array $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i'\%i} labels each \code{Normal} object in the container with the appropriate index $i$; so if \code{i=1}, the name of the corresponding element becomes \code{`x_1'}.
 
@@ -394,13 +394,13 @@ There are two ways to create potentials:
 @pm.potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
-    return -(xlo - xhi)**2
+    return -(x_lo - x_hi)**2
 \end{verbatim}
 The function supplied should return the potential's current \emph{log}-probability or \emph{log}-density as a Numpy \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
-    return -(xlo - xhi)**2
+    return -(x_lo - x_hi)**2
 
 psi_i = pm.Potential(  logp = psi_i_logp,
                     name = 'psi_i',
