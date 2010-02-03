@@ -68,8 +68,6 @@ cdef class LazyFunction:
     ultimate_args:  A list of stochastics. These should be the extended parents
                     of all variables in 'arguments'.
 
-    ultimate_args:
-
     cache_depth:    The number of prior computations to 'memoize' in
                     order to skip unnecessary computations.
 
