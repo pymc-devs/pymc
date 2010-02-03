@@ -67,6 +67,8 @@ cdef class LazyFunction:
                 Deterministic, or Container, that argument's 'value' attribute
                 will be substituted for it when passed to fun.
 
+    ultimate_args:
+
     cache_depth:    The number of prior computations to 'memoize' in
                     order to skip unnecessary computations.
 

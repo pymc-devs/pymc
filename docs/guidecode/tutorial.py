@@ -1,6 +1,6 @@
-"""tutorial.tex"""
+# Code from tutorial.tex
 
-"""DisasterModel.py"""
+"""This is just a copy of examples/DisasterModel.py"""
 from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
 import numpy as np
 
