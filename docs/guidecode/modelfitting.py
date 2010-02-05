@@ -72,8 +72,12 @@ N.trace('beta')[::10]
 
 
 ### SETUP ###
-M = pm.MCMC(gelman_bioassay) 
+x = pm.Normal('x', 0,1)
+y = pm.Normal('y', 3,.2)
+z = pm.Normal('z', x, y, value=[-1,2,4], observed=True)
+M = pm.MCMC([x,y,z])
 ###
+
 M.use_step_method(pm.Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
 
 
@@ -87,16 +91,14 @@ M.use_step_method(pm.Metropolis, x, proposal_sd=1., proposal_distribution='Norma
 
 
 
-### SETUP ###
-#create variables x, y, z
 M.use_step_method(pm.AdaptiveMetropolis, [x,y,z], \
                       scales={x:1, y:2, z:.5}, delay=10000)
 
 
 
-A = Normal('A', value=numpy.zeros(100), mu=0., tau=1.)
+A = pm.Normal('A', value=numpy.zeros(100), mu=0., tau=1.)
 
 
 
-A = [Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in xrange(100)]
+A = [pm.Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in xrange(100)]
 
