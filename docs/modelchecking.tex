@@ -46,7 +46,7 @@ Diagnostic z-scores can be obtained by calling the \code{geweke} function. It ac
 
 \paragraph{Method Usage}
 \begin{verbatim}
-geweke(pymc_object, first=0.1, last=0.5, intervals=20)
+pm.geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
 \begin{itemize}
 
@@ -73,7 +73,7 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \paragraph{Method Usage}
 \begin{verbatim}
-geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
+pm.Matplot.geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
                 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
@@ -291,7 +291,7 @@ Here, $\tilde{y}$ represents some hypothetical new data that would be expected, 
 	                late_mean = late_mean,
 	                switchpoint = switchpoint):
 	    """Annual occurences of coal mining disasters."""
-	    return pm.poisson_like(value[:switchpoint],early_mean) +
+	    return pm.poisson_like(value[:switchpoint],early_mean) + \
 	 pm.poisson_like(value[switchpoint:],late_mean)
 \end{verbatim}
 This is a mixture of Poisson processes, one with a higher early mean and another with a lower late mean. Here is the corresponding sample from the posterior predictive distribution:
