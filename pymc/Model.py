@@ -12,6 +12,7 @@ __all__ = ['Model', 'Sampler']
 """ Summary"""
 
 from numpy import zeros, floor
+from numpy.random import randint
 from pymc import database
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import Container, ObjectContainer
@@ -594,13 +595,13 @@ class Sampler(Model):
 
     def remember(self, chain=-1, trace_index = None):
         """
-        remember(trace_index = randint(trace length to date))
+        remember(chain=-1, trace_index = randint(trace length to date))
 
         Sets the value of all tracing variables to a value recorded in
         their traces.
         """
         if trace_index is None:
-            trace_index = randint(self.cur_trace_index)
+            trace_index = randint(self._cur_trace_index)
 
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
