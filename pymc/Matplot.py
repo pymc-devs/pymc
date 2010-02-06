@@ -319,6 +319,8 @@ def plotwrapper(f):
                 data = pymc_obj[i][start:]
                 if args:
                     i = '%s_%s' % (args[0], i)
+                elif kwargs.has_key('name'):
+                    i = '%s_%s' % (kwargs.pop('name'), i)
                 f(data, i, *args, **kwargs)
             return
         # If others fail, assume that raw data is passed
