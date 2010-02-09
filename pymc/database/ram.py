@@ -125,6 +125,16 @@ class Trace(base.Trace):
         else:
             return concatenate(self._trace.values())[slicing]
 
+    def __getitem__(self, index):
+        chain = self._chain
+        if chain is None:
+            return concatenate(self._trace.values())[index]
+        else:
+            if chain < 0:
+                chain = range(self.db.chains)[chain]
+            return self._trace[chain][index]
+
+
     __call__ = gettrace
 
 

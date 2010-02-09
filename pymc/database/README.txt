@@ -19,8 +19,9 @@ Accessing Sampled Data
 
 The recommended way to access data from an MCMC run, irrespective of the
 database backend, is to use the ``trace`` method::
-
-  >>> M = MCMC(DisasterModel)
+  
+  >>> from pymc.examples import DisasterModel
+  >>> M = pm.MCMC(DisasterModel)
   >>> M.sample(10)
   >>> M.trace('e')[:]
   array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
@@ -52,7 +53,7 @@ By default, the database backend selected by the ``MCMC`` sampler is the ``ram``
 backend, which simply holds the data in RAM. Now, we create a
 sampler that, instead, writes data to a pickle file::
 
-  >>> M = MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle')
+  >>> M = pm.MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle')
   >>> M.db
   <pymc.database.pickle.Database object at 0x7fa486623d90>
 

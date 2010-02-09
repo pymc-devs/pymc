@@ -100,6 +100,14 @@ class TestRam(TestBase):
         t2 = self.S.trace('e', 1)
         assert_equal(t1._chain, 0)
 
+
+        # Test remember
+        s1 = np.shape(self.S.e.value)
+        self.S.remember(0,0)
+        s2 = np.shape(self.S.e.value)
+        assert_equal(s1, s2)
+
+
         self.S.db.close()
 
 class TestPickle(TestRam):
