@@ -73,7 +73,7 @@ The resulting scores are best interpreted graphically, using the \code{geweke_pl
 
 \paragraph{Method Usage}
 \begin{verbatim}
-pm.Matplot.geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
+geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic', \
                 path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
 \end{verbatim}
 \begin{itemize}
@@ -105,7 +105,7 @@ It is easiest simply to pass the entire sampler \code{S} to the \code{geweke} fu
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
-	>>> trace = S.alpha.trace()
+	>>> trace = S.trace('alpha')[:]
 	>>> alpha_scores = pm.geweke(trace, intervals=20)
 	>>> pm.Matplot.geweke_plot(alpha_scores, 'alpha')
 \end{verbatim}
@@ -301,8 +301,8 @@ This is a mixture of Poisson processes, one with a higher early mean and another
 	                late_mean = late_mean,
 	                switchpoint = switchpoint):
 	    """Coal mining disasters sampled from the posterior predictive distribution"""
-	    return concatenate( (pm.rpoisson(early_mean, size=switchpoint),
-	 pm.rpoisson(late_mean, size=n-switchpoint)))
+	    return numpy.concatenate( (pm.rpoisson(early_mean, size=switchpoint),
+	 pm.rpoisson(late_mean, size=len(disasters_array)-switchpoint)))
 \end{verbatim}
 Notice that \code{@pm.stochastic} has been replaced with \code{@pm.deterministic} and \code{pm.poisson_like} with \code{pm.rpoisson}. The simulated values from each of the Poisson processes are concatenated together before returning them.
 
