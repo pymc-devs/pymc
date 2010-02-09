@@ -46,7 +46,7 @@ Diagnostic z-scores can be obtained by calling the \code{geweke} function. It ac
 
 \paragraph{Method Usage}
 \begin{verbatim}
-geweke(pymc_object, first=0.1, last=0.5, intervals=20)
+pm.geweke(pymc_object, first=0.1, last=0.5, intervals=20)
 \end{verbatim}
 \begin{itemize}
 
@@ -105,7 +105,7 @@ It is easiest simply to pass the entire sampler \code{S} to the \code{geweke} fu
 \end{verbatim}
 Alternatively, individual stochastics within \code{S} can be analyzed for convergence:
 \begin{verbatim}
-	>>> trace = S.alpha.trace()
+	>>> trace = S.trace('alpha')[:]
 	>>> alpha_scores = pm.geweke(trace, intervals=20)
 	>>> pm.Matplot.geweke_plot(alpha_scores, 'alpha')
 \end{verbatim}
@@ -291,7 +291,7 @@ Here, $\tilde{y}$ represents some hypothetical new data that would be expected, 
 	                late_mean = late_mean,
 	                switchpoint = switchpoint):
 	    """Annual occurences of coal mining disasters."""
-	    return pm.poisson_like(value[:switchpoint],early_mean) +
+	    return pm.poisson_like(value[:switchpoint],early_mean) + \
 	 pm.poisson_like(value[switchpoint:],late_mean)
 \end{verbatim}
 This is a mixture of Poisson processes, one with a higher early mean and another with a lower late mean. Here is the corresponding sample from the posterior predictive distribution:
@@ -301,8 +301,8 @@ This is a mixture of Poisson processes, one with a higher early mean and another
 	                late_mean = late_mean,
 	                switchpoint = switchpoint):
 	    """Coal mining disasters sampled from the posterior predictive distribution"""
-	    return concatenate( (pm.rpoisson(early_mean, size=switchpoint),
-	 pm.rpoisson(late_mean, size=n-switchpoint)))
+	    return numpy.concatenate( (pm.rpoisson(early_mean, size=switchpoint),
+	 pm.rpoisson(late_mean, size=len(disasters_array)-switchpoint)))
 \end{verbatim}
 Notice that \code{@pm.stochastic} has been replaced with \code{@pm.deterministic} and \code{pm.poisson_like} with \code{pm.rpoisson}. The simulated values from each of the Poisson processes are concatenated together before returning them.
 
