@@ -788,7 +788,7 @@ def categorical_like(x, p):
       - `x` : [int] :math:`x \in 0\ldots k-1`
       - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
     """
-
+    p = np.atleast_2d(p)
     return flib.categorical(x, p)
 
 
