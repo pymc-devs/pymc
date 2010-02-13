@@ -565,15 +565,16 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     """Plots histogram of replicated data, indicating the location of the observed data"""
     
     try:
-        simdata = simdata.trace()
-    except:
+        if ndim(simdata)==1:
+            simdata = simdata.trace()
+    except ValueError:
         pass
 
     if ndim(trueval)==1 and ndim(simdata==2):
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
-            gof_plot(simdata[i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
+            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
         
     if verbose>0:
@@ -610,7 +611,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     #close()
 
 @plotwrapper
-def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, num=1, verbose=1):
     """
     Generate bar plot of a series, usually autocorrelation
     or autocovariance.
@@ -632,25 +633,19 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
             Specifies location for saving plots (defaults to local directory).
     """
 
-    # If there is just one data series, wrap it in a list
+    # If there is only one data array, go ahead and plot it ...
     if rank(data)==1:
-        data = [data]
 
-    # Number of plots per page
-    rows = min(len(data), 4)
-
-    for i,values in enumerate(data):
         if verbose>0:
             print 'Plotting', name+suffix
 
-        if not i % rows:
-             # Generate new figure
+        # If new plot, generate new frame
+        if new:
             figure(figsize=(10, 6))
 
-        # New subplot
-        subplot(rows, 1, i - (rows*(i/rows)) + 1)
+        subplot(rows, 1, num)
         x = arange(maxlag)
-        y = [_autocorr(values, lag=i) for i in x]
+        y = [_autocorr(data, lag=i) for i in x]
 
         bar(x, y)
 
@@ -665,9 +660,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
         tlabels = gca().get_xticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
 
-        # Save to file
-        if not (i+1) % rows or i == len(values)-1:
-
+        if last:
             # Label X-axis on last subplot
             xlabel('Lag', fontsize='x-small')
 
@@ -679,7 +672,25 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
                 # Append plot number to suffix, if there will be more than one
                 suffix += '_%i' % i
             savefig("%s%s%s.%s" % (path, name, suffix, format))
-            #close()
+
+    else:
+        # ... otherwise plot recursively
+        tdata = swapaxes(data, 0, 1)
+
+        # How many rows?
+        _rows = min(4, len(tdata))
+
+        for i in range(len(tdata)):
+
+            # New plot or adding to existing?
+            _new = not i % _rows
+            # Current subplot number
+            _num = i % _rows + 1
+            # Final subplot of current figure?
+            _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
+
+            autocorrelation(tdata[i], name+'_'+str(i), maxlag=maxlag, format=format, suffix=suffix, path=path, fontmap=fontmap, new=_new, last=_last, rows=_rows, num=_num, verbose=verbose)
+    
 
 # TODO: make sure pair_posterior works.
 def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
