@@ -302,6 +302,15 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
+            
+        try:
+            # Then try Trace type
+            data = pymc_obj()[:]
+            name = pymc_obj.name
+            f(data, name, *args, **kwargs)
+            return
+        except (AttributeError, TypeError):
+            pass
 
         try:
             # Then try Node type
