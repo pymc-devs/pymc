@@ -7,9 +7,9 @@ import numpy
 # ===========================
 
 # Simple dose-response model
-n = 5*numpy.ones(4,dtype=int)
-dose=numpy.array([-.86,-.3,-.05,.73])
-x=numpy.array([0,1,3,5], dtype=float)
+n = [5]*4
+dose = [-.86,-.3,-.05,.73]
+x = [0,1,3,5]
 
 alpha = pm.Normal('alpha', mu=0.0, tau=0.01)
 beta = pm.Normal('beta', mu=0.0, tau=0.01)
@@ -76,7 +76,10 @@ pm.Matplot.autocorrelation(beta)
 # ===================
 
 # Simulate deaths, using posterior predictive distribution
-deaths_sim = pm.Binomial('deaths_sim', n=n, p=theta, value=x)
+@pm.deterministic
+def deaths_sim(n=n, p=theta):
+    """deaths_sim = rbinomial(n, p)"""
+    return pm.rbinomial(n, p)
 
 # Expected number of deaths, based on theta
 expected_deaths = pm.Lambda('expected_deaths', lambda theta=theta: theta*n)
@@ -87,11 +90,13 @@ my_model = [alpha, beta, theta, deaths, deaths_sim, expected_deaths]
 S = pm.MCMC(my_model)
 S.sample(1000)
 
-x_sim = deaths_sim.trace()
+x_sim = deaths_sim
+x_exp = expected_deaths
 
 # Create GOF plot
 pm.Matplot.gof_plot(x_sim, x, name='x')
 
 # Calculate and plot discrepancies
-D = pm.diagnostics.discrepancy(x, x_sim, expected_deaths)
+D = pm.diagnostics.discrepancy(x, x_sim, x_exp)
 pm.Matplot.discrepancy_plot(D, name='D', report_p=True)
+
