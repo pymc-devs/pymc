@@ -49,7 +49,9 @@ def diagnostic(f):
 
         # If others fail, assume that raw data is passed
         return f(pymc_obj, *args, **kwargs)
-
+    
+    wrapper.__doc__ = f.__doc__
+    wrapper.__name__ = f.__name__
     return wrapper
 
 
