@@ -346,8 +346,8 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
     Generates summary plots for nodes of a given PyMC object.
 
     :Arguments:
-        data: array or list
-            A trace from an MCMC sample.
+        data: PyMC object, trace or array
+            A trace from an MCMC sample or a PyMC object with one or more traces.
 
         name: string
             The name of the object.
@@ -624,15 +624,17 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 @plotwrapper
 def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, num=1, verbose=1):
     """
-    Generate bar plot of a series, usually autocorrelation
-    or autocovariance.
+    Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
 
     :Arguments:
-        data: array or list
-            A trace from an MCMC sample.
+        data: PyMC object, trace or array
+            A trace from an MCMC sample or a PyMC object with one or more traces.
 
         name: string
             The name of the object.
+            
+        maxlag (optional): int
+            The largest discrete value for the autocorrelation to be calculated (defaults to 100).
 
         format (optional): string
             Graphic output format (defaults to png).
@@ -642,6 +644,13 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
 
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
+            
+        fontmap (optional): dict
+            Font mapping for plot labels; most users should not specify this.
+            
+        verbose (optional): int
+            Level of output verbosity.
+            
     """
 
     # If there is only one data array, go ahead and plot it ...
