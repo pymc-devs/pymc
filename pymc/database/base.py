@@ -106,7 +106,7 @@ class Trace(object):
           - chain (int): The index of the chain to fetch. If None, return all chains.
           - slicing: A slice, overriding burn and thin assignement.
         """
-        raise AttributeError, self.name + " has no trace"
+        warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
 
 
     # By convention, the __call__ method is assigned to gettrace.

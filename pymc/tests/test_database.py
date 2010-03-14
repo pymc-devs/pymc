@@ -56,35 +56,33 @@ class TestRam(TestBase):
 
     def test_simple_sample(self):
 
-
         self.S.sample(50,25,5)
 
+        assert_array_equal(self.S.trace('e')[:].shape, (5,))
+        assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
+        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (5,))
 
-        assert_array_equal(self.S.e.trace().shape, (5,))
-        assert_array_equal(self.S.e.trace(chain=0).shape, (5,))
-        assert_array_equal(self.S.e.trace(chain=None).shape, (5,))
-
-        assert_equal(self.S.e.trace.length(), 5)
-        assert_equal(self.S.e.trace.length(chain=0), 5)
-        assert_equal(self.S.e.trace.length(chain=None), 5)
+        assert_equal(self.S.trace('e').length(), 5)
+        assert_equal(self.S.trace('e').length(chain=0), 5)
+        assert_equal(self.S.trace('e').length(chain=None), 5)
 
         self.S.sample(10,0,1)
 
-        assert_array_equal(self.S.e.trace().shape, (10,))
-        assert_array_equal(self.S.e.trace(chain=1).shape, (10,))
-        assert_array_equal(self.S.e.trace(chain=None).shape, (15,))
+        assert_array_equal(self.S.trace('e')[:].shape, (10,))
+        assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
 
-        assert_equal(self.S.e.trace.length(), 10)
-        assert_equal(self.S.e.trace.length(chain=1), 10)
-        assert_equal(self.S.e.trace.length(chain=None), 15)
+        assert_equal(self.S.trace('e').length(), 10)
+        assert_equal(self.S.trace('e').length(chain=1), 10)
+        assert_equal(self.S.trace('e').length(chain=None), 15)
 
-        assert_equal(self.S.e.trace().__class__,  np.ndarray)
+        assert_equal(self.S.trace('e')[:].__class__,  np.ndarray)
 
         # Test __getitem__
-        assert_equal(self.S.e.trace(slicing=slice(1,2)), self.S.e.trace[1])
+        assert_equal(self.S.trace('e').gettrace(slicing=slice(1,2)), self.S.e.trace[1])
 
         # Test __getslice__
-        assert_array_equal(self.S.e.trace(thin=2), self.S.e.trace[::2])
+        assert_array_equal(self.S.trace('e').gettrace(thin=2), self.S.e.trace[::2])
 
         # Test Sampler trace method
         assert_array_equal(self.S.trace('e')[:].shape, (10,))
@@ -125,10 +123,10 @@ class TestPickle(TestRam):
 
     def test_xload(self):
         db = self.load()
-        assert_array_equal(db.e(chain=0).shape, (5,))
-        assert_array_equal(db.e(chain=1).shape, (10,))
-        assert_array_equal(db.e(chain=-1).shape, (10,))
-        assert_array_equal(db.e(chain=None).shape, (15,))
+        assert_array_equal(db.trace('e', chain=0)[:].shape, (5,))
+        assert_array_equal(db.trace('e', chain=1)[:].shape, (10,))
+        assert_array_equal(db.trace('e', chain=-1)[:].shape, (10,))
+        assert_array_equal(db.trace('e', chain=None)[:].shape, (15,))
         db.close()
 
     def test_yconnect_and_sample(self):
@@ -136,8 +134,8 @@ class TestPickle(TestRam):
         S = pymc.MCMC(DisasterModel, db=db)
         S.use_step_method(pymc.Metropolis, S.e, tally=True)
         S.sample(5)
-        assert_array_equal(db.e(chain=-1).shape, (5,))
-        assert_array_equal(db.e(chain=None).shape, (20,))
+        assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
+        assert_array_equal(db.trace('e', chain=None)[:].shape, (20,))
         db.close()
 
     def test_yrestore_state(self):
@@ -269,7 +267,7 @@ class TestHDF5(TestPickle):
                                          dbcomplevel=5)
         S = MCMC(DisasterModel, db=db)
         S.sample(45,10,1)
-        assert_array_equal(S.e.trace().shape, (35,))
+        assert_array_equal(S.trace('e')[:].shape, (35,))
         S.db.close()
         db.close()
         del S
@@ -293,25 +291,25 @@ class testHDF5Objects(TestCase):
     def test_simple_sample(self):
         self.S.sample(50, 25, 5)
 
-        assert_array_equal(self.S.B.trace().shape, (5,))
-        assert_array_equal(self.S.K.trace().shape, (5,))
-        assert_array_equal(self.S.K.trace(chain=0).shape, (5,))
-        assert_array_equal(self.S.K.trace(chain=None).shape, (5,))
+        assert_array_equal(self.S.trace('B')[:].shape, (5,))
+        assert_array_equal(self.S.trace('K')[:].shape, (5,))
+        assert_array_equal(self.S.trace('K', chain=0)[:].shape, (5,))
+        assert_array_equal(self.S.trace('K', chain=None)[:].shape, (5,))
 
-        assert_equal(self.S.K.trace.length(), 5)
-        assert_equal(self.S.K.trace.length(chain=0), 5)
-        assert_equal(self.S.K.trace.length(chain=None), 5)
+        assert_equal(self.S.trace('K').length(), 5)
+        assert_equal(self.S.trace('K').length(chain=0), 5)
+        assert_equal(self.S.trace('K').length(chain=None), 5)
 
 
         self.S.sample(10)
 
-        assert_array_equal(self.S.K.trace().shape, (10,))
-        assert_array_equal(self.S.K.trace(chain=1).shape, (10,))
-        assert_array_equal(self.S.K.trace(chain=None).shape, (15,))
+        assert_array_equal(self.S.trace('K')[:].shape, (10,))
+        assert_array_equal(self.S.trace('K', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('K', chain=None)[:].shape, (15,))
 
-        assert_equal(self.S.K.trace.length(), 10)
-        assert_equal(self.S.K.trace.length(chain=1), 10)
-        assert_equal(self.S.K.trace.length(chain=None), 15)
+        assert_equal(self.S.trace('K').length(), 10)
+        assert_equal(self.S.trace('K').length(chain=1), 10)
+        assert_equal(self.S.trace('K').length(chain=None), 15)
 
         self.S.db.close()
 
@@ -367,6 +365,8 @@ def test_interactive():
 
 
 if __name__ == '__main__':
+    
+    warnings.simplefilter('ignore', DeprecationWarning)
     C =nose.config.Config(verbosity=3)
     nose.runmodule(config=C)
     try:

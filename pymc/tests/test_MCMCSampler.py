@@ -6,7 +6,7 @@ from numpy.testing import *
 from pymc import MCMC, database
 from pymc.examples import DisasterModel
 import nose,  warnings, os
-warnings.simplefilter('ignore', FutureWarning)
+
 PLOT=True
 try:
     from pymc.Matplot import plot, autocorrelation
