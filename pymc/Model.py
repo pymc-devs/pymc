@@ -377,7 +377,7 @@ class Sampler(Model):
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
-        else:   # What is this for? DH. If it's a user defined backend, it doesn't initialize a Database.
+        else:   # What is this for? DH. 
             self.db = db.Database(**self._db_args)
 
         # Assign Trace instances to tallyable objects.
