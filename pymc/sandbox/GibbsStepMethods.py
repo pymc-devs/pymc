@@ -324,13 +324,12 @@ class DirichletMultinomial(StandardGibbs):
 
 
     def propose(self):
-
         theta = self.like_theta.value
         if self.conjugate:
             theta = theta + self.theta.value
         else:
             theta += 1.
-        self.stochastic.value = np.random.dirichlet(theta)
+        self.stochastic.value = rdirichlet(theta)
 
 
 

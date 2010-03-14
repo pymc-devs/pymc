@@ -2567,45 +2567,103 @@ c
 !       END
 !       
       
-      SUBROUTINE categorical(x,p,n,k,like)
+!       SUBROUTINE categorical(x,p,n,k,like)
+! 
+! c Categorical log-likelihood function
+! c Need to return -Infs when appropriate
+! 
+! cf2py integer dimension(n),intent(in) :: x
+! cf2py double precision dimension(k-1),intent(in) :: p
+! cf2py integer intent(hide),depend(x) :: n=len(x)
+! cf2py integer intent(hide),depend(p) :: k=len(p)+1
+! cf2py double precision intent(out) :: like
+! cf2py threadsafe
+!             
+!       DOUBLE PRECISION p(k),val,like
+!       INTEGER x(n)
+!       INTEGER n,k,i,j
+!       DOUBLE PRECISION infinity, sump
+!       PARAMETER (infinity = 1.7976931348623157d308)
+! 
+!       like = 0.0
+!       sump = 0.0
+!       do j=1,k-1
+!           sump = sump + p(j)
+!       end do
+! c loop over number of elements in x      
+!       do i=1,n
+! c elements should not be larger than the largest index
+!         if ((x(i).GT.(k-1)).OR.(x(i).LT.0)) then
+!           like = -infinity
+!           RETURN
+!         endif
+! c increment log-likelihood      
+!         if (x(i).eq.(k-1)) then
+! c likelihood of the kth element
+!           like = like + dlog(1.0D0-sump)
+!         else
+!           like = like + dlog(p(x(i)+1))
+!         endif
+!       enddo
+!       return
+!       END
+      
+      
+      
+c
+      SUBROUTINE categorical(x,p,nx,np,k,like)
 
-c Categorical log-likelihood function
-c Need to return -Infs when appropriate
+c Multinomial log-likelihood function     
+c Updated 12/02/2007 DH. N-D still buggy.
+c Fixed 22/11/2007 CF
 
-cf2py integer dimension(n),intent(in) :: x
-cf2py double precision dimension(k-1),intent(in) :: p
-cf2py integer intent(hide),depend(x) :: n=len(x)
-cf2py integer intent(hide),depend(p) :: k=len(p)+1
-cf2py double precision intent(out) :: like
+cf2py intent(in) p
+cf2py intent(hide) np,nx,k
+cf2py intent(out) like      
 cf2py threadsafe
-            
-      DOUBLE PRECISION p(k),val,like
-      INTEGER x(n)
-      INTEGER n,k,i,j
-      DOUBLE PRECISION infinity, sump
+
+      DOUBLE PRECISION like, factln, infinity, sump
+      DOUBLE PRECISION p(np,k), p_tmp(k)
+      INTEGER i,j,n_tmp
+      INTEGER x(nx)
       PARAMETER (infinity = 1.7976931348623157d308)
 
-      like = 0.0
+
       sump = 0.0
-      do j=1,k-1
-          sump = sump + p(j)
-      end do
-c loop over number of elements in x      
-      do i=1,n
-c elements should not be larger than the largest index
-        if ((x(i).GT.(k-1)).OR.(x(i).LT.0)) then
-          like = -infinity
-          RETURN
-        endif
-c increment log-likelihood      
-        if (x(i).eq.(k-1)) then
-c likelihood of the kth element
-          like = like + dlog(1.0D0-sump)
-        else
-          like = like + dlog(p(x(i)+1))
-        endif
+      do i=1,k
+            p_tmp(i) = p(1,i)
+            sump = sump + p_tmp(i)
       enddo
-      return
+
+      like = 0.0
+      do j=1,nx
+        if (np .NE. 1) then
+              sump = 0.0
+              do i=1,k
+                    p_tmp(i) = p(j,i)
+                    sump = sump + p_tmp(i)
+              enddo
+!               print *,p_tmp
+        endif
+        
+!         Protect against zero p[x]
+        if (p_tmp(x(j)+1).LE.0.0D0) then
+            like = -infinity
+            RETURN
+        end if
+        like = like + dlog(p_tmp(x(j)+1))
+
+c This is to account for the kth term that is not passed!
+c The kth term does get passed... we can check for consistency.
+c But roundoff error ofter triggers a false alarm.
+
+         if ((sump .GT. 1.000001) .OR. (sump .LT. 0.999999)) then
+             like=-infinity
+             return
+         endif
+
+      enddo
+      RETURN
       END
               
 
