@@ -290,7 +290,7 @@ def plotwrapper(f):
             for variable in pymc_obj._variables_to_tally:
                 # Plot object
                 if variable._plot!=False:
-                    data = variable.trace()[start:]
+                    data = pymc_obj.trace(variable.__name__)[start:]
                     if size(data[-1])>=10 and variable._plot!=True:
                         continue
                     elif variable.dtype is dtype('object'):
@@ -315,7 +315,7 @@ def plotwrapper(f):
         try:
             # Then try Node type
             if pymc_obj._plot!=False:
-                data = pymc_obj.trace()[start:]
+                data = pymc_obj.trace()[start:]  # This is deprecated. DH
                 name = pymc_obj.__name__
                 f(data, name, *args, **kwargs)
             return
