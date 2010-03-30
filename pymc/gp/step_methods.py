@@ -109,7 +109,7 @@ class GPEvaluationGibbs(pm.Metropolis):
         else:
             for epf in eps_p_f:
                 self.children_no_data.discard(epf)
-            self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=Falsels)
+            self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=False)
         
         self.V = V
         self.C_eval = submod.C_eval
