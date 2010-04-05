@@ -104,7 +104,6 @@ Error message: """%(method.__name__, stochastic.__name__, method.__name__)
     return out
 
 
-
 class StepMethodMeta(type):
     """
     Automatically registers new step methods if they can be automatically assigned:
@@ -1065,6 +1064,7 @@ class AdaptiveMetropolis(StepMethod):
             trace = slice(trace, n)
             
         a = self.trace2array(trace)
+        
         return np.cov(a, rowvar=0)
 
     def check_type(self):
@@ -1334,6 +1334,8 @@ class AdaptiveMetropolis(StepMethod):
         chain = []
         for stochastic in self.stochastics:
             tr = stochastic.trace.gettrace(slicing=sl)
+            if tr is None:
+                raise AttributeError
             chain.append(tr)
         return np.hstack(chain)
 
