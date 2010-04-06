@@ -26,7 +26,7 @@ from numpy import exp, log, array, sqrt
 from numpy.linalg import cholesky
 import os, pdb, warnings, nose
 from unittest import TestCase
-warnings.simplefilter('ignore', DeprecationWarning)
+
 PLOT=True
 DIR = 'testresults'
 if PLOT is True:
@@ -1041,5 +1041,6 @@ True, value = data)
 
 
 if __name__ == '__main__':
+    warnings.simplefilter('ignore', DeprecationWarning)
     import nose
     nose.runmodule()

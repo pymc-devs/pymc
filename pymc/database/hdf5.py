@@ -66,18 +66,15 @@ class TraceObject(base.Trace):
             vlarrays = [self._vlarrays[chain]]
         else:
             vlarrays =  self._vlarrays
-
-        out = []
+        
         for i, vlarray in enumerate(vlarrays):
-            out.append(vlarray[index])
-            
-        if np.isscalar(chain):
-            return out[0]
-        else:
-            return np.hstack(data)
-            
-
-
+            if i==0:
+                out = np.asarray(vlarray[index])
+            else:
+                out = np.hstack((out, vlarray[index]))
+        
+        return out
+        
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
