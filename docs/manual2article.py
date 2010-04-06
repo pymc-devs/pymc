@@ -14,6 +14,7 @@ def manual2article(text):
     text = re.sub(" chapter", " section",text)
     for code_alias in ['module','texttt','function','file','class']:
         text = re.sub(r"\\%s{"%code_alias, "\code{", text)
+    text = re.sub(r'^T',r'\\top',text)
     #text = re.sub(r"\\hypertarget\{.*", r"", text)
     text = re.sub(r"\\pdfbookmark.*", r"", text)
     for pkgname in ['PyMC','NumPy','SciPy','PyTables','Matplotlib','Pylab','Pyrex']:
