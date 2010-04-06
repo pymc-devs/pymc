@@ -129,20 +129,26 @@ class TestPickle(TestRam):
         db.close()
 
     def test_yconnect_and_sample(self):
-        db = self.load()
-        S = pymc.MCMC(DisasterModel, db=db)
-        S.use_step_method(pymc.Metropolis, S.e, tally=True)
-        S.sample(5)
-        assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
-        assert_array_equal(db.trace('e', chain=None)[:].shape, (20,))
-        db.close()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')        
+            db = self.load()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')            
+            S = pymc.MCMC(DisasterModel, db=db)
+            S.use_step_method(pymc.Metropolis, S.e, tally=True)
+            S.sample(5)
+            assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
+            assert_array_equal(db.trace('e', chain=None)[:].shape, (20,))
+            db.close()
 
     def test_yrestore_state(self):
-        db = self.load()
-        S = pymc.MCMC(DisasterModel, db=db)
-        S.sample(10)
-        sm = S.step_methods.pop()
-        assert_equal(sm.accepted+sm.rejected, 75)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            db = self.load()
+            S = pymc.MCMC(DisasterModel, db=db)
+            S.sample(10)
+            sm = S.step_methods.pop()
+            assert_equal(sm.accepted+sm.rejected, 75)
 
     def test_nd(self):
         M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
@@ -261,15 +267,17 @@ class TestHDF5(TestPickle):
         del db
 
     def test_zcompression(self):
-        db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
-                                         dbmode='w',
-                                         dbcomplevel=5)
-        S = MCMC(DisasterModel, db=db)
-        S.sample(45,10,1)
-        assert_array_equal(S.trace('e')[:].shape, (35,))
-        S.db.close()
-        db.close()
-        del S
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
+                                             dbmode='w',
+                                             dbcomplevel=5)                                 
+            S = MCMC(DisasterModel, db=db)
+            S.sample(45,10,1)
+            assert_array_equal(S.trace('e')[:].shape, (35,))
+            S.db.close()
+            db.close()
+            del S
 
 
 
@@ -366,8 +374,7 @@ def test_interactive():
 if __name__ == '__main__':
     
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore', DeprecationWarning)
-        warnings.simplefilter('ignore', UserWarning)
+        warnings.simplefilter('ignore')
         C =nose.config.Config(verbosity=3)
         nose.runmodule(config=C)
         try:

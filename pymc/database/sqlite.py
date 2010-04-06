@@ -103,7 +103,7 @@ class Trace(base.Trace):
             chains. By default, the last chain is returned.
           - slicing: A slice, overriding burn and thin assignement.
         """
-        warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
+        # warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
         if not slicing:
             slicing = slice(burn, None, thin)
 
