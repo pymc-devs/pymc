@@ -15,10 +15,7 @@ observe(M=M,
         obs_vals = data)
 
 # Generate realizations
-f_list=[]
-for i in range(3):
-    f = Realization(M, C)
-    f_list.append(f)
+f_list=[Realization(M, C) for i in range(3)]
 
 x=arange(-1.,1.,.01)
 

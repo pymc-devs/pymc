@@ -15,5 +15,6 @@ def test_square():
 
 
 if __name__ == '__main__':
-    warnings.simplefilter('ignore',  FutureWarning)
-    nose.runmodule()
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore',  FutureWarning)
+        nose.runmodule()

@@ -48,7 +48,8 @@ class test_raftery_lewis(TestCase):
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 
 if __name__ == "__main__":
-    warnings.simplefilter('ignore', FutureWarning)
-    import nose
-    C =nose.config.Config(verbosity=1)
-    nose.runmodule(config=C)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', FutureWarning)
+        import nose
+        C =nose.config.Config(verbosity=1)
+        nose.runmodule(config=C)
