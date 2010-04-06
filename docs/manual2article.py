@@ -3,12 +3,21 @@
 import re
 
 def manual2article(text):
-    text = re.sub(r"\\subsubsection\*?", r"\\paragraph", text)
-    text = re.sub(r"\\subsection\*?", r"\\subsubsection", text)
+    text = re.sub(r"\\subsubsection\*?", r"\\paragraph\*", text)
+    text = re.sub(r"\\subsection\*?", r"\\subsubsection\*", text)
     text = re.sub(r"\\section\*?", r"\\subsection", text)
+    text = re.sub("section ","Section~",text)
+    text = re.sub("Section ","Section~",text)
     text = re.sub(r"\\chapter", r"\\section", text)
+    text = re.sub("chapter ","Section~",text)    
+    text = re.sub("Chapter ","Section~",text)
+    text = re.sub(" chapter", " section",text)
     #text = re.sub(r"\\hypertarget\{.*", r"", text)
     text = re.sub(r"\\pdfbookmark.*", r"", text)
+    for pkgname in ['PyMC','NumPy','SciPy','PyTables','Matplotlib','Pylab','Pyrex']:
+        text = re.sub(pkgname, r'\\pkg{%s}'%pkgname,text)
+    for proglang in ['Python','Fortran']:
+        text = re.sub(proglang, r'\\proglang{%s}'%proglang, text)
     return text
 
 if __name__ == '__main__':
