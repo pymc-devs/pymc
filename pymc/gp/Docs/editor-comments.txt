@@ -39,8 +39,11 @@ of software before sending the document for another review.
 <<<<<<<
 
 Apologies, the alpha release contained a broken version of the Gaussian process
-functionality. The beta release at http://pypi.python.org/pypi/pymc/2.1beta can
-run all of the examples.
+functionality. The attached tarball can run all of the examples except a new 
+example that I have just added (see below). It corresponds to <github link>.
+
+If/when this manuscript passes review, I will tag the corresponding reference 
+release on GitHub, so that the URL becomes more readable.
 
 This manuscript does not document all of the package's functionality, because the
 full documentation is quite long and would presumably take months to review. I have
@@ -75,29 +78,28 @@ go along with this).
 
 I seem to have under-egged the pudding. The package is centered on an object (GP) which 
 _is_ a Gaussian process, in the sense that a PyMC or WinBugs 'normal' node _is_ a 
-normally distributed random variable. That means any probability model involving 
+normally distributed random variable. That means just about any probability model involving 
 (scalar-valued) Gaussian processes can be implemented using the package. It is not limited
-to normally-distributed observations (as is BACCO) or even to the standard GLM family. I do
+to normally-distributed observations (as BACCO seems to be) or even to the standard GLM family. I do
 not know of any other Gaussian process package that can make this claim.
 
 I wanted to avoid over-selling the flexibility of the package because, although it can
-create and start to fit any model involving GP's, it (understandably) cannot guarantee
-good performance in all cases.
+create and start to fit a huge model space, it (obviously) cannot guarantee good performance 
+in all cases.
 
 I have added some text to the conclusion describing the scope of the package. I have avoided
 mentioning BACCO by name, because I do not feel it is necessary to criticize another
 package in order to point out the advantages of mine.
 
 I have also replaced the standard geostatistics example in Chapter 9 with an example from my 
-recent work, which is far outside the model space supported by BACCO but still on the
+recent work, which is far outside the model space supported by BACCO but still on my
 package's algorithmic 'fast path'. I feel that this example gives a good feel for the
 package's practical capabilities.
 
 However, the new example involves data that my group will not release until our paper 
-describing it goes into press. I have included the sensitive data in the attached tarball, 
-but I cannot post it on the internet yet. I would ask you to embargo publication of this
-manuscript until the other goes into press, and to ask reviewers to promise not to
-redistribute the contents of the tarball.
+describing it goes into press. Accordingly, I have simulated a dataset using the posterior
+predictive distribution derived from the true dataset, and incorporated that in the attached
+tarball.
 
 >>>>>>>
 
@@ -116,6 +118,14 @@ The BACCO equivalent is much klunkier.  But this
 niceness does not alone justify inclusion in JSS, unless coupled with
 a detailed discussion of why the approach used in pymc particularly
 elegant (or fast, or bugfree, or ...)
+
+<<<<<<<<
+
+I feel that, in software, niceness is both elegant and worthy of publication. A good example would
+be WinBUGS; it didn't do anything that people couldn't already do with hand-written C code, but it
+added a huge dollop of niceness, and it was clearly a publishable contribution.
+
+>>>>>>>>
 
 I found Figure 7 incomprehensible.  Rectangles were defined twice,
 differently. 
