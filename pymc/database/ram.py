@@ -116,7 +116,6 @@ class Trace(base.Trace):
           - chain (int): The index of the chain to fetch. If None, return all chains.
           - slicing: A slice, overriding burn and thin assignement.
         """
-        warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
         if slicing is None:
             slicing = slice(burn, None, thin)
         if chain is not None:

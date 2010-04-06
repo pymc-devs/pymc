@@ -24,6 +24,8 @@ from pymc.database import base, pickle
 from copy import copy
 import tables
 import os, warnings, sys, traceback
+import warnings
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -343,7 +345,7 @@ class Database(pickle.Database):
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
-                print "Some objects from the database have not been assigned a getfunc", names
+                warnings.warn("Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names))
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:
