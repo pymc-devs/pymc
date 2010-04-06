@@ -90,38 +90,6 @@
 % 
 % %%% EPYDOC STUFF %%%
 \usepackage{underscore}
-% \usepackage[english]{babel}
-% % \usepackage{alltt, parskip, boxedminipage}
-% \usepackage{makeidx, multirow, longtable, amssymb}% tocbibind}
-% \usepackage{fullpage}
-% \usepackage[usenames]{color}
-% % \usepackage{ifthen}
-% \usepackage{ae}
-% \usepackage{aeguill}
-% \usepackage{shortvrb}
-% \usepackage{ucs}
-% \usepackage{tabularx}
-% \usepackage{color}
-% \definecolor{Red}{rgb}{0.5,0,0}
-% \definecolor{Blue}{rgb}{0,0,0.5}
-% \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=Red,citecolor=Blue,urlcolor=Red]{hyperref}
-% 
-% \input{epydocheader}
-% %%% END OF EPYDOC STUFF %%%
-% 
-% 
-% \title{PyMC Gaussian process module \\User's guide}
-% \author{ Anand Patil }
-% \pdfoutput=1
-% % \date
-% 
-% 
-% %%%%%%%%%%%%%%% Commands from rst2latex %%%%%%%%%%%%%%%%%%%%%%%%
-% \newcommand{\rubric}[1]{\subsection*{~\hfill {\it #1} \hfill ~}}
-% \newcommand{\titlereference}[1]{\textsl{#1}}
-% \newlength{\locallinewidth}
-% \setlength{\locallinewidth}{7in}
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
 
@@ -129,41 +97,20 @@
 
 \tableofcontents
 
-% \chapter{Introduction}\label{cha:introduction} % (fold)
-
-% \section{Prerequisites}\label{sec:prerequisites}
-% \begin{itemize}
-%     \item Familiarity with \citetitle[www.python.org]{Python}. Several online tutorials can be found by clicking around the Python website, including \citetitle[www.ibiblio.org/obp/thinkCSpy/]{How to think like a computer scientist: Learning with Python} by Downey, Elkner and Meyers. More experienced programmers may prefer \citetitle[docs.python.org/tut/]{another tutorial} by Python's author. Python is generally regarded as having unusually good documentation for open-source software, and it is also considered one of the easiest general-purpose programming languages to learn.
-%     \item Familiarity with Numerical Python, or \citetitle[www.scipy.org/numpy]{NumPy}. This package provides array and matrix objects and associated functions that are much faster than their equivalents in pure Python, and also more convenient for scientific and numerical work. If you're familiar with a matrix language such as Matlab or R, learning numpy shouldn't be too difficult. However, there are a few differences that can function as `gotchas' early on. Although numpy itself is available free of charge, its documentation costs \$40 and is available from \citetitle[www.scipy.org/Documentation]{the Scientific Python website}.
-%     \item A conceptual understanding of Bayesian statistics. Some familiarity with the normal distribution would help. Gelman et al. \cite{gelman} and Berry \cite{berry} are good general references, as is \citetitle[http://www.ams.ucsc.edu/~draper/draper-BHM-2005.pdf]{Draper's book}. For a colorful online tutorial on the logical aspects of Bayesian statistics, see \citetitle[http://www.yudkowsky.net/bayes/bayes.html]{An Intuitive Explanation of Bayesian Reasoning}.
-% \end{itemize}
-
-% chapter introduction (end)
-
-% \chapter{The basics}\label{cha:basics}
-
-
 \include{tutorial1} 
 
-% \chapter{Incorporating Gaussian processes in PyMC probability models}\label{cha:PyMC}
-% This chapter will show you how to build and fit statistical models that go beyond simple nonparametric regression.
 \include{tutorial2} 
 
-% \chapter{Extending the covariance functions: Writing your own, using alternate coordinate systems, building in anisotropy and nonstationarity}\label{cha:usercov}
-% This section will give you a brief tour of the \module{cov_funs} module and point out plugs where you can add functionality that isn't included in this package.
-% \include{extending}
-% 
-% \chapter{Overview of algorithms} \label{cha:numerics} 
-% More detail on these algorithms, as well as the internal workings of the mean, covariance and realization objects and the observe function, are given in the algorithm documentation. 
-% \include{numerics} 
 
 \section{Conclusion}
 
 This package is built around the \code{Realization} object, which represents random mathematical functions as random \proglang{Python} functions. This is arguably the most natural and intuitive representation possible within the \proglang{Python} programming language, which itself is widely regarded as unusually human-friendly.
 
-Strenuous efforts at optimization have resulted in good performance for `standard' Gaussian process-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. 
+This package inherits the flexibility of PyMC, described in section \ref{sec:gp-sub}, in that the descendants of a Gaussian process can depend on it via any Python function. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GP} objects are function-valued random variables, this package supports construction of an enormous variety of probability models that involve scalar-valued Gaussian processes. The Duffy negativity example in section \ref{sub:geostat} exhibits a probability model whose nonstandard likelihood function involves transformations of two Gaussian processes. In keeping with the extensible spirit of PyMC, the package accomodates user-specified covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
 
-However, there are use cases for which this package's object model prevents it from achieving performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \texttt{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy}) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \texttt{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unacceptable level of program complexity.
+Strenuous efforts at optimization have resulted in good performance for `standard' Gaussian process-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \code{NumPy}, which can be configured to make use of optimized, multithreaded BLAS and LAPACK \textbf{cite} implementations. 
+
+However, there are use cases for which this package's flexible object model prevents it from achieving performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \texttt{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy} and the toy example above) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \texttt{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unacceptable level of program complexity.
 
 More tutorial material, as well as documentation of a few additional features and the incomplete Cholesky decomposition algorithms, can be found in the \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{package documentation}.
 

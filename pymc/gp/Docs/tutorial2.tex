@@ -1,26 +1,47 @@
-
-
-
-
-
-
-
 \section{Gaussian process submodels}
+\label{sec:gp-sub} 
 
-Gaussian process $f\sim \textup{GP}(M,C)$ can be represented as a \code{GaussianProcess} object, which is a \pkg{PyMC} \code{stochastic} \citep{pymc} whose value is a \code{Realization} object, and embedded in larger probability models. Because $f$ is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it. \code{GaussianProcess} objects therefore have no \code{logp} attribute \citep{pymc}, and \code{GaussianProcess} objects cannot be handled by \pkg{PyMC}'s standard MCMC machinery.
+\pkg{PyMC} \citep{pymc} represents random variables as objects of class \code{Stochastic}. For example, the following code produces a normally-distributed random variable, labelled \code{'a'}, with mean zero and precision one:
+\begin{CodeChunk}
+\begin{CodeInput}
+a = pymc.Normal('a',0,1)
+\end{CodeInput}
+\end{CodeChunk}
+The current value of variable \code{a} can be queried and updated as follows:
+\begin{CodeChunk}
+\begin{CodeInput}
+print a.value
+a.value = 0.5
+\end{CodeInput}
+\end{CodeChunk}
+The logarithm of \code{a}'s probability density function, evaluated at its current value, can be obtained via \code{a.logp}. PyMC has a large library of optimized log-probability density/mass functions, and readily incorporates new functions created by users.
 
-However, the evaluation $f(x_*)$ on a mesh $x_*$ is a simple multivariate normal random variable, which has a \code{logp} attribute and can be handled by the standard machinery. If $f(x_*)$ is incorporated in the model as a variable, a minor extension to the standard machinery (implemented by this package) makes it possible to handle $f$ itself as well.
+PyMC variables can serve as parents of other variables; for example, the following code produces a normally-distributed variable labelled \code{'b'} whose mean is \code{a}:
+\begin{CodeChunk}
+\begin{CodeInput}
+b = pymc.Normal('b',a,1)    
+\end{CodeInput}
+\end{CodeChunk}
+
+Any Python function can be used to transform random variables via objects of class \code{Deterministic}. For example, the following code produces a variable labelled \code{'c'} whose value is the square of \code{b} 's value:
+\begin{CodeChunk}
+\begin{CodeInput}
+@pymc.deterministic
+def c(b=b):
+    return b**2
+\end{CodeInput}
+\end{CodeChunk}
+Deterministic variables can be used as parents of other variables, stochastic or deterministic. 
+
+Because it allows any \proglang{Python} function to be used as a log-probability density/mass function or variable transformation, PyMC supports a very large model space. This package enlarges that model space to include Gaussian processes via the \code{GaussianProcess} object, which is a random variable whose value is a \code{Realization} object.
+
+Because a Gaussian process is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it. \code{GaussianProcess} objects therefore have no \code{logp} attribute, and \code{GaussianProcess} objects cannot be handled by \pkg{PyMC}'s standard MCMC machinery. However, the evaluation $f(x_*)$ of Gaussian process $f$ on mesh $x_*$ is a simple multivariate normal random variable, which has a \code{logp} attribute and can be handled by the standard machinery. If $f(x_*)$ is incorporated in the model as a variable, a minor extension to the standard machinery (implemented by this package) makes it possible to handle $f$ itself as well.
 
 Pairs of $f$ and $f(x_*)$ variables are housed in container objects of class \code{GPSubmodel}.
 
-
-
-
-
-
 \subsection{Example: nonparametric regression with unknown mean and covariance parameters}\label{sub:BasicMCMC}
 
-A Gaussian process submodel is created in \code{pymc/examples/gp/\pkg{PyMC}model.py} with the following call:
+A Gaussian process submodel is created in \code{pymc/examples/gp/PyMCmodel.py} with the following call:
 \begin{CodeChunk}
 \begin{CodeInput}
 sm = gp.GPSubmodel('sm',M,C,fmesh)
@@ -35,7 +56,7 @@ d = pymc.Normal('d',mu=sm.f_eval, tau=1./V, value=init_val, observed=True)
 \end{CodeInput}
 \end{CodeChunk}
 
-The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the conditional independence relationships between the variables in a GP submodel.
+% The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the conditional independence relationships between the variables in a GP submodel.
 
 The file \code{pymc/examples/gp/MCMC.py} fits the probability model created in \code{\pkg{PyMC}model.py} using MCMC. The `business part' of the file is very simple:
 \begin{CodeChunk}
@@ -46,12 +67,12 @@ GPSampler.isample(iter=5000,burn=1000,thin=100)
 \end{CodeChunk}
 The file's output is shown in figure \ref{fig:MCMCOutput}. Note that after the MCMC run \code{GPSampler.trace('sm_f')[:]} yields a sequence of \code{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend via \pkg{PyTables} \citep{tables}, see \cite{pymc}.
 
-\begin{figure}
-    \centering
-        \epsfig{file=figs/unobservedModel.pdf, width=15cm}
-    \caption{The \pkg{PyMC}-generated directed acyclic graph representation of the extended nonparametric regression model created by \code{pymc/examples/gp/PyMCModel.py}. Ellipses represent \code{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \code{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \code{Stochastic} objects with the \code{isdata} flag set to \code{True} (data). Rectangles represent potentials. Arrows point from parent to child. The submodel contains the Gaussian process \code{sm\_f} and its evaluation \code{sm\_f\_eval} on input array \code{sm\_mesh}. It also contains the mean \code{sm\_M\_eval} of \code{sm\_f\_eval} and the lower-triangular Cholesky factor \code{sm\_S\_eval} of its covariance matrix, and a potential \code{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \code{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
-    \label{fig:unobservedModel}
-\end{figure}
+% \begin{figure}
+%     \centering
+%         \epsfig{file=figs/unobservedModel.pdf, width=15cm}
+%     \caption{The \pkg{PyMC}-generated directed acyclic graph representation of the extended nonparametric regression model created by \code{pymc/examples/gp/PyMCModel.py}. Ellipses represent \code{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \code{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \code{Stochastic} objects with the \code{isdata} flag set to \code{True} (data). Rectangles represent potentials. Arrows point from parent to child. The submodel contains the Gaussian process \code{sm\_f} and its evaluation \code{sm\_f\_eval} on input array \code{sm\_mesh}. It also contains the mean \code{sm\_M\_eval} of \code{sm\_f\_eval} and the lower-triangular Cholesky factor \code{sm\_S\_eval} of its covariance matrix, and a potential \code{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \code{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
+%     \label{fig:unobservedModel}
+% \end{figure}
 
 \begin{figure}
     \centering
@@ -60,14 +81,10 @@ The file's output is shown in figure \ref{fig:MCMCOutput}. Note that after the M
     \caption{The output of \code{pymc/examples/gp/MCMC.py}. The left-hand panel shows all the samples generated for the Gaussian process $f$, and the right-hand panel shows the trace of $f(0)$.}
     \label{fig:MCMCOutput}
 \end{figure}
-
-
-
-
-
+ 
 
 \section{Step methods}
-% \label{sec:step-methods} 
+\label{sec:step-methods} 
 Since $f$ has no \code{logp} attribute, the Metropolis-Hastings family of step methods \citep{pymc} cannot be used to update $f$, $f(x_*)$ or any of their mean or covariance parameters. This package uses a relatively simple work-around that will be described here. Throughout this section, the parents of $f$ are denoted $P$ and the children $K$.
 
 
