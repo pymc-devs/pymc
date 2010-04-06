@@ -38,17 +38,11 @@ of software before sending the document for another review.
 
 <<<<<<<
 
-Apologies, the alpha release contained a broken version of the Gaussian process
-functionality. The attached tarball can run all of the examples except a new 
-example that I have just added (see below). It corresponds to <github link>.
+Apologies, the alpha release contained a broken version of the Gaussian process functionality. The attached tarball can run all of the examples except a new example that I have just added (see below). It corresponds to <github link>.
 
-If/when this manuscript passes review, I will tag the corresponding reference 
-release on GitHub, so that the URL becomes more readable.
+If/when this manuscript passes review, I will tag the corresponding reference release on GitHub, so that the URL becomes more readable.
 
-This manuscript does not document all of the package's functionality, because the
-full documentation is quite long and would presumably take months to review. I have
-acccordingly retained some pointers to more extensive documentation at 
-code.google.com/p/pymc, but not code.
+This manuscript does not document all of the package's functionality, because the full documentation is quite long and would presumably take months to review. I have acccordingly retained some pointers to more extensive documentation at code.google.com/p/pymc, but not code.
 
 >>>>>>>
 
@@ -76,30 +70,15 @@ go along with this).
 
 <<<<<<<
 
-I seem to have under-egged the pudding. The package is centered on an object (GP) which 
-_is_ a Gaussian process, in the sense that a PyMC or WinBugs 'normal' node _is_ a 
-normally distributed random variable. That means just about any probability model involving 
-(scalar-valued) Gaussian processes can be implemented using the package. It is not limited
-to normally-distributed observations (as BACCO seems to be) or even to the standard GLM family. I do
-not know of any other Gaussian process package that can make this claim.
+On re-reading the manuscript, I can see that I seriously under-egged the pudding. I have added some I have added some 'why should we care' text to the introduction and conclusion. I have avoided mentioning BACCO by name, because I do not feel it is necessary to criticize another package in order to point out the advantages of mine.
 
-I wanted to avoid over-selling the flexibility of the package because, although it can
-create and start to fit a huge model space, it (obviously) cannot guarantee good performance 
-in all cases.
+The package is centered on an object (GP) which _is_ a Gaussian process, in the sense that a PyMC or WinBugs 'normal' node _is_ a normally distributed random variable. That means just about any probability model involving (scalar-valued) Gaussian processes can be implemented using the package. It is not limited to normally-distributed observations (as BACCO seems to be) or even to the standard GLM family. I do not know of any other Gaussian process package that can make this claim.
 
-I have added some text to the conclusion describing the scope of the package. I have avoided
-mentioning BACCO by name, because I do not feel it is necessary to criticize another
-package in order to point out the advantages of mine.
+I wanted to avoid over-selling the flexibility of the package because, although it can create and start to fit a huge model space, it (forgivably) cannot guarantee good performance in all cases. In this version, I have simply tried to make that limitation explicit.
 
-I have also replaced the standard geostatistics example in Chapter 9 with an example from my 
-recent work, which is far outside the model space supported by BACCO but still on my
-package's algorithmic 'fast path'. I feel that this example gives a good feel for the
-package's practical capabilities.
+I have also replaced the standard geostatistics example in Chapter 9 with a more interesting example from my recent work, which is far outside the model space supported by BACCO but still on my package's algorithmic 'fast path'. I feel that this example gives a good feel for the package's practical capabilities.
 
-However, the new example involves data that my group will not release until our paper 
-describing it goes into press. Accordingly, I have simulated a dataset using the posterior
-predictive distribution derived from the true dataset, and incorporated that in the attached
-tarball.
+The new example involves data that I am not at liberty to release. Accordingly, I have simulated a dataset using the posterior predictive distribution derived from the actual dataset.
 
 >>>>>>>
 
@@ -121,9 +100,7 @@ elegant (or fast, or bugfree, or ...)
 
 <<<<<<<<
 
-I feel that, in software, niceness is both elegant and worthy of publication. A good example would
-be WinBUGS; it didn't do anything that people couldn't already do with hand-written C code, but it
-added a huge dollop of niceness, and it was clearly a publishable contribution.
+I would argue that in software niceness is very important. A good example would be WinBUGS; it didn't do anything that people couldn't already do with hand-written C code, but it was a publishable contribution precisely because it was so much nicer than any existing tool. Because of its niceness, it has had a much bigger impact on the field of Bayesian analysis than most actual methodological advances.
 
 >>>>>>>>
 
@@ -132,8 +109,7 @@ differently.
 
 >>>>>>>
 
-Such detailed information is more at home in a user guide than in a manuscript like this. 
-I have removed figure 7.
+Such detailed information is more at home in a user guide than in a manuscript like this, so I have removed figure 7.
 
 <<<<<<<
 
@@ -143,8 +119,7 @@ section 6.1 refers me to gp/observation.py blindly;
 
 >>>>>>>
 
-gp/observation.py is the example file that produced figure 4; I have replaced the reference with
-a reference directly to figure 4.
+gp/observation.py is the example file that produced figure 4; I have replaced the reference with a reference directly to figure 4. Throughout the manuscript, I have tried to give more background for PyMC-specific concepts.
 
 <<<<<<<
 
@@ -168,7 +143,6 @@ should be bigger.
 
 >>>>>>>
 
-As mentioned above, this chapter has been replaced with a more unusual example. More scientific
-context is provided.
+As mentioned above, this chapter has been replaced with a more unusual example. More scientific context is provided.
 
 <<<<<<<
