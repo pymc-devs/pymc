@@ -218,7 +218,7 @@ There are several ways to create deterministic variables:
       \]
       \code{Index} is useful for implementing dynamic models, in which the parent-child connections change.
       \item[\code{Lambda}:] Converts an anonymous function (in Python, called \textbf{lambda functions}) to a \code{Deterministic} instance on a single line.
-      \item[\code{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k^{th}$ element is determined by the others. \code{CompletedDirichlet} appends the $k^{th}$ element to the value of its parent $D$.
+      \item[\code{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k-$th element is determined by the others. \code{CompletedDirichlet} appends the $k-$th element to the value of its parent $D$.
       \item[\code{Logit}, \code{InvLogit}, \code{StukelLogit}, \code{StukelInvLogit}:] Two common link functions for generalized linear models and their inverses.
    \end{description}
    It's a good idea to use these classes when feasible in order to give hints to step methods.

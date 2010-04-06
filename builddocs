@@ -41,7 +41,10 @@ python manual2article.py conclusion.tex > jss/conclusion.tex
 python manual2article.py theory.tex > jss/theory.tex
 python manual2article.py distributions-module.tex >  jss/distributions-module.tex
 
+# Merge all tex files
+
 cd jss
+python mergetex.py jss_article.tex
 mkdir pdf
 pdflatex -output-directory=pdf -interaction batchmode jss_article
 bibtex pdf/jss_article
