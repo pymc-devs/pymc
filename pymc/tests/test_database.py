@@ -9,7 +9,6 @@ import pymc, pymc.database
 import numpy as np
 import nose
 import warnings
-warnings.simplefilter('ignore', UserWarning)
 
 # TestCase = object
 
@@ -366,10 +365,12 @@ def test_interactive():
 
 if __name__ == '__main__':
     
-    warnings.simplefilter('ignore', DeprecationWarning)
-    C =nose.config.Config(verbosity=3)
-    nose.runmodule(config=C)
-    try:
-        S.db.close()
-    except:
-        pass
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', DeprecationWarning)
+        warnings.simplefilter('ignore', UserWarning)
+        C =nose.config.Config(verbosity=3)
+        nose.runmodule(config=C)
+        try:
+            S.db.close()
+        except:
+            pass

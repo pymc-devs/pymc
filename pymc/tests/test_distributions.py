@@ -1041,6 +1041,7 @@ True, value = data)
 
 
 if __name__ == '__main__':
-    warnings.simplefilter('ignore', DeprecationWarning)
-    import nose
-    nose.runmodule()
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', DeprecationWarning)
+        import nose
+        nose.runmodule()
