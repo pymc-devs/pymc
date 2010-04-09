@@ -12,4 +12,4 @@ for m in matches:
     basename = re.sub(r'}','',basename)
     text = text.replace(m, file(basename+'.tex').read())
     basename, ext = os.path.splitext(fname)
-    file(basename+'_menged'+ext,'w').write(text)
+    file(basename+'_merged'+ext,'w').write(text)
