@@ -28,7 +28,8 @@ cp pdf/UserGuide.pdf .
 
 
 # JSS
-cp pymc.bib jss/
+# Some special formatting in the JSS manual.
+# cp pymc.bib jss/
 python manual2article.py README.tex > jss/README.tex
 python manual2article.py INSTALL.tex > jss/INSTALL.tex
 python manual2article.py tutorial.tex > jss/tutorial.tex
