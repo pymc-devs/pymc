@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, os
 
 fname=sys.argv[1]
 
@@ -11,4 +11,5 @@ for m in matches:
     basename = re.sub(r'\\input{','',m)
     basename = re.sub(r'}','',basename)
     text = text.replace(m, file(basename+'.tex').read())
-    file(fname,'w').write(text)
+    basename, ext = os.path.splitext(fname)
+    file(basename+'_menged'+ext,'w').write(text)
