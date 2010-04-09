@@ -60,7 +60,9 @@ def manual2article(text):
     text = text.replace(r'\href{pymc@googlegroups.com}{mailing list}', r'mailing list at \href{pymc@googlegroups.com}')
     text = text.replace(r'\href{http://code.google.com/p/pymc/w/list}{wiki page}', r'wiki page at \href{http://code.google.com/p/pymc/w/list}')
     text = text.replace(r'\href{http://www.map.ox.ac.uk}{Malaria Atlas Project}', r'Malaria Atlas Project')
-    text = text.replace('{R}','{r}')
+    text = text.replace(r'{R}',r'{r}')
+    text = text.replace(r'(\cite{dawidmarkov,Jordan:2004p5439})', r'\citep{dawidmarkov,Jordan:2004p5439}')
+    text = text.replace(r'\cite{',r'\citet{')
 
     return text
 
