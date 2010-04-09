@@ -15,8 +15,25 @@ def manual2article(text):
     for code_alias in ['module','texttt','function','file','class']:
         text = re.sub(r"\\%s{"%code_alias, "\code{", text)
     text = re.sub(r'^T',r'\\top',text)
-    text = re.sub(r'\\begin{verbatim}',r'\\begin{CodeInput}\n\\begin{CodeChunk}',text)
-    text = re.sub(r'\\end{verbatim}',r'\\end{CodeChunk}\n\\end{CodeInput}',text)
+    
+    # Dedent all code blocks
+    re.DOTALL=True
+    codeblock = re.compile(r'\\begin{verbatim}[^&]*\\end{verbatim}')
+    codeblocks = codeblock.findall(text)
+    for match in codeblocks:
+        if match.count(r'\\begin')>0:
+            continue
+        text = text.replace(match, match.replace('\n\t','\nTAB').replace('\n    ','\nTAB').replace('\n   ','\nTAB').replace('TAB',''))
+    
+    # Destroy all boxes
+    boxblock = re.compile(r'\\fbox{[^#]*}')
+    boxblocks = boxblock.findall(text)
+    for match in boxblocks:
+        text = text.replace(match, '')
+    
+    # Convert verbatim blocks to CodeInput blocks
+    text = re.sub(r'\\begin{verbatim}',r'\\begin{CodeInput}',text)
+    text = re.sub(r'\\end{verbatim}',r'\\end{CodeInput}',text)
     
     #text = re.sub(r"\\hypertarget\{.*", r"", text)
     text = re.sub(r"\\pdfbookmark.*", r"", text)
