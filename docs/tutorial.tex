@@ -6,11 +6,17 @@ online documentation can also be found on the
 \href{http://www.python.org/doc/}{Python documentation} page.
 
 \section{An example statistical model}
-Consider the following dataset, which is a time series of recorded coal mining
-disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
+Consider the following dataset (Figure~\ref{fig:disasters_ts}), which is a 
+time series of recorded coal mining disasters in the UK from 1851 to 1962 
+\citep{Jarrett:1979fr}.
+\begin{figure}[h!]
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
+\caction{Recorded coal mining disasters in the UK. }
+\label{fig:disasters_ts}
 \end{center}
+\end{figure}
+
 Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
@@ -156,10 +162,16 @@ We are using $r$ as a distributional parameter of $D$ (\emph{i.e.} $r$ is $D$'s 
 \end{verbatim}
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
-The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details.
+The following `directed acyclic graph' (Figure~\ref{fig:acyclic_graph}) is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details.
+\begin{figure}[h!]
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=5cm}
+   \caption{Directed acyclic graph of the relationships in the coal mining disaster model example.}
+   \label{fig:acyclic_graph}
 \end{center}
+
+\end{figure}
+
 
 
 \begin{center}

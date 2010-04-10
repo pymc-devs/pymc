@@ -132,11 +132,7 @@ Notice that the log-probability and random variate functions are specified exter
 
 \end{description}
 
-\begin{center}
-\begin{boxedminipage}{.9\textwidth}
 \subsection{Don't update stochastic variables' values in-place}
-
-
 \code{Stochastic} objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
 \begin{verbatim}
     A.value = new_value
@@ -149,8 +145,6 @@ The following are in-place updates and should \emph{never} be used:
 \end{itemize}
 
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several scalar-valued variables stored in an array or list.
-\end{boxedminipage}
-\end{center}
 
 
 \section{Data} \label{data}
@@ -419,8 +413,11 @@ psi_i = pm.Potential(  logp = psi_i_logp,
 The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
+\begin{figure}[h!]
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=6cm}
+    \caption{Graphical representation of the coal mining disaster model example.}
+    \label{fig:graph_disaster}
 \end{center}
 $D$ is shaded because it is flagged as data.
 
@@ -431,13 +428,20 @@ $D$ is shaded because it is flagged as data.
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
 The symbol for factor potentials is a rectangle, as in the following model.
+\begin{figure}
 \begin{center}
     \epsfig{file=PotExample.pdf, width=10cm}
+    \caption{TODO}\label{TODO}
 \end{center}
+\end{figure}
 Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
+\begin{figure}
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
+    \caption{TODO}
+    \label{TODO}
 \end{center}
+\end{figure}
 Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
