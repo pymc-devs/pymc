@@ -8,9 +8,11 @@ online documentation can also be found on the
 \section{An example statistical model}
 Consider the following dataset, which is a time series of recorded coal mining
 disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
+\begin{figure}[h!]
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
 \end{center}
+\end{figure}
 Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
@@ -157,9 +159,11 @@ We are using $r$ as a distributional parameter of $D$ (\emph{i.e.} $r$ is $D$'s 
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
 The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details.
+\begin{figure}[h!]
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=5cm}
 \end{center}
+\end{figure}
 
 
 \begin{center}
@@ -340,9 +344,11 @@ You can examine the marginal posterior of any variable by plotting a histogram o
    >>> show()
 \end{verbatim}
 You should see something like this:
+\begin{figure}[h!]
 \begin{center}
    \epsfig{file=ltrace.pdf, width=10cm}
 \end{center}
+\end{figure}
 PyMC has its own plotting functionality, via the optional
 \module{matplotlib} module as noted in the installation notes. The
 \module{Matplot} module includes a \code{plot} function that takes the
@@ -352,9 +358,12 @@ model (or a single parameter) as an argument:
    >>> plot(M)
 \end{verbatim}
 For each variable in the model, \code{plot} generates a composite figure, such as this one for the switchpoint in the disasters model:
+\begin{figure}[h!]
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
 \end{center}
+\end{figure}
+
 The left-hand pane of this figure shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see \cite*{gelman}), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call \code{M.stats()}.

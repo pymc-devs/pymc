@@ -419,9 +419,11 @@ psi_i = pm.Potential(  logp = psi_i_logp,
 The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
+\begin{figure}[h!]
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=6cm}
 \end{center}
+\end{figure}
 $D$ is shaded because it is flagged as data.
 
 % Note that if a deterministic variable has more than one child, its parents each inherit all of its children when it is made implicit:
@@ -431,13 +433,17 @@ $D$ is shaded because it is flagged as data.
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
 The symbol for factor potentials is a rectangle, as in the following model.
+\begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExample.pdf, width=10cm}
 \end{center}
+\end{figure}
 Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
+\begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
 \end{center}
+\end{figure}
 Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
