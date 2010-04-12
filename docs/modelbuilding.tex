@@ -422,6 +422,7 @@ The symbol for stochastic variables is an ellipse. Parent-child relationships ar
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=6cm}
+    \caption{Graphical representation of the coal mining disaster model example.}
 \end{center}
 \end{figure}
 $D$ is shaded because it is flagged as data.
@@ -436,12 +437,14 @@ The symbol for factor potentials is a rectangle, as in the following model.
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExample.pdf, width=10cm}
+    \caption{TODO}
 \end{center}
 \end{figure}
 Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
+    \caption{TODO}
 \end{center}
 \end{figure}
 Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
