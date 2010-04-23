@@ -437,14 +437,15 @@ The symbol for factor potentials is a rectangle, as in the following model.
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExample.pdf, width=10cm}
-    \caption{TODO}
+    \caption{Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.}
+    \label{fig:dgm}
 \end{center}
 \end{figure}
 Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
-    \caption{TODO}
+    \caption{The undirected version of the graphical model of figure \ref{fig:dgm}.}
 \end{center}
 \end{figure}
 Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.

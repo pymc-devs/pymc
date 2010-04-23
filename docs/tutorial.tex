@@ -167,12 +167,6 @@ The following `directed acyclic graph' is a visualization of the parent-child re
 \end{center}
 \end{figure}
 
-
-\begin{center}
-\begin{sffamily}
-\fbox{\parbox{\admonitionwidth}{
-\textbf{\large Objects and names}
-\vspace{2mm}
 As the examples above have shown, pymc objects need to have a name 
 assigned, such as \emph{lower}, \emph{upper} or \emph{e}. These names 
 are used for storage and post-processing:
@@ -186,9 +180,6 @@ A model instantiated with variables having identical names raises an
 error to avoid name conflicts in the database storing the traces. In
 general however, pymc uses references to the objects themselves, not 
 their names, to identify variables. 
-}}
-\end{sffamily}
-\end{center}
 
 
 
@@ -349,7 +340,7 @@ You should see something like this:
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=ltrace.pdf, width=10cm}
-   \caption{TODO}
+   \caption{Histogram of the marginal posterior probability of parameter $l$.}
 \end{center}
 \end{figure}
 PyMC has its own plotting functionality, via the optional
@@ -364,7 +355,7 @@ For each variable in the model, \code{plot} generates a composite figure, such a
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
-   \caption{TODO}
+   \caption{Temporal series and histogram of the samples drawn for $s$. }
 \end{center}
 \end{figure}
 
