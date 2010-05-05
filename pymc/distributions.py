@@ -79,7 +79,10 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # TODO Document this function
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        return np.reshape(randfun(size=shape, *args, **kwargs),shape)
+        try:
+            return np.reshape(randfun(size=shape, *args, **kwargs),shape)
+        except ValueError:
+            return randfun(size=shape, *args, **kwargs)
     newfun.scalar_version = randfun
     return newfun
 
