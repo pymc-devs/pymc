@@ -1,6 +1,20 @@
 __author__ = 'Christopher Fonnesbeck, fonnesbeck@gmail.com'
 
-from pymc.StepMethods import *
+from pymc.StepMethods import StepMethod
+import numpy as np
+from pymc.utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
+from numpy.linalg.linalg import LinAlgError
+from numpy.linalg import pinv, cholesky
+from numpy.random import randint, random
+from numpy.random import normal as rnormal
+from numpy.random import poisson as rpoisson
+from pymc.PyMCObjects import Stochastic, Potential, Deterministic
+from pymc.Container import Container
+from pymc.Node import ZeroProbability, Node, Variable, StochasticBase
+from pymc.decorators import prop
+from copy import copy
+import pdb, warnings, sys
 
 class TWalk(StepMethod):
     """
@@ -71,7 +85,7 @@ class TWalk(StepMethod):
             self._len = len(self.stochastic.value.ravel())
         else:
             self._len = 1
-            
+        
         # Make second point from copy of stochastic
         self.stochastic_prime = copy(self.stochastic)
         self.stochastic_prime.__name__ = self.stochastic.__name__ + ' prime'
@@ -93,16 +107,16 @@ class TWalk(StepMethod):
         self._support = support
         
         self._state = ['accepted', 'rejected', 'p']
-
+    
     def _get_logp_plus_loglike(self):
         
         # Calculate log-likelihood plus current log-probability for both x and xprime
-        sum = [logp_of_set(self.markov_blanket), logp_of_set(list([self.stochastic.prime])+list(self.children))]
+        sum = [logp_of_set(self.markov_blanket), logp_of_set(list([self.stochastic_prime])+list(self.children))]
         
         if self.verbose>1:
             print '\t' + self._id + ' Current log-likelihood plus current log-probability', sum
         return sum
-
+    
     # Make get property for retrieving log-probability
     logp_plus_loglike = property(fget = _get_logp_plus_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
     
@@ -133,11 +147,11 @@ class TWalk(StepMethod):
         if self._prime:
             
             self.stochastic_prime.value[phi] = xp + (xp - x)*z
-            
+        
         else:
             
             self.stochastic.value[phi] = x + (x - xp)*z
-            
+        
         # Set proposal adjustment factor
         self.hastings_factor = 0.0
     
@@ -154,18 +168,18 @@ class TWalk(StepMethod):
             beta = exp(1/(theta + 1)*log(random()))
         else:
             beta = exp(1/(1 - theta)*log(random()))
-            
+        
         x = self.stochastic.value[phi]
         xp = self.stochastic_prime.value[phi]
         
         if self._prime:
             
             self.stochastic_prime.value[phi] = x + beta*(x - xp)
-            
+        
         else:
             
             self.stochastic.value[phi] = xp + beta*(xp - x)
-            
+        
         # Set proposal adjustment factor
         self.hastings_factor = (sum(phi) - 2)*log(beta)
     
@@ -179,15 +193,15 @@ class TWalk(StepMethod):
         x = x_all[phi]
         xp_all = copy(self.stochastic_prime.value)
         xp = xp_all[phi]
-		
-		if self._prime:
-		    
-		    sigma = max(phi*abs(x - xp))
+        
+        if self._prime:
+            
+            sigma = max(phi*abs(x - xp))
             
             self.stochastic_prime.value[phi] = xp + sigma*rnormal()
             
             self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
-            
+        
         else:
             
             sigma = max(phi*abs(xp - x))
@@ -195,16 +209,16 @@ class TWalk(StepMethod):
             self.stochastic.value[phi] = x + sigma*rnormal()
             
             self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
-
+    
     
     def _g(self, h, x, xp, s):
-        """Proposal for blow and hop moves"""
+        """Density function for blow and hop moves"""
         
         nphi = sum(self.phi)
         
         return (nphi/2.0)*log(2*pi) + nphi*log(s) + 0.5*sum((h - xp)**2)/(s**2)
-
-
+    
+    
     def hop(self):
         """Hop proposal kernel"""
         
@@ -215,15 +229,15 @@ class TWalk(StepMethod):
         x = x_all[phi]
         xp_all = copy(self.stochastic_prime.value)
         xp = xp_all[phi]
-		
-		if self._prime:
-		    
-		    sigma = max(phi*abs(x - xp))/3.0
+        
+        if self._prime:
+            
+            sigma = max(phi*abs(x - xp))/3.0
             
             self.stochastic_prime.value[phi] = x + sigma*rnormal()
             
             self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
-            
+        
         else:
             
             sigma = max(phi*abs(xp - x))/3.0
@@ -231,7 +245,7 @@ class TWalk(StepMethod):
             self.stochastic.value[phi] = xp + sigma*rnormal()
             
             self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
-            
+    
     
     def reject(self):
         """Sets current s value to the last accepted value"""
@@ -245,9 +259,9 @@ class TWalk(StepMethod):
         kernel = self.kernels[self.current_kernel]
         
         # Parameters to move
-		self.phi = (random(self._len) < self.p)
-		
-		# Use x or xprime as pivot
+        self.phi = (random(self._len) < self.p)
+        
+        # Use x or xprime as pivot
         self._prime = (random() < 0.5)
         
         # Propose new value
@@ -266,19 +280,19 @@ class TWalk(StepMethod):
             self.propose()
             # Check that proposed value lies in support
             valid_proposal = self._support(self.stochastic.value)
-            
+        
         # Proposed log-probability
         logp_p = self.logp_plus_loglike
         
         if self.verbose>1:
             print 'logp_p - logp: ', logp_p[self._prime] - logp[self._prime]
-
+        
         # Evaluate acceptance ratio
         if log(random()) > logp_p[self._prime] - logp[self._prime] + self.hastings_factor:
-
+            
             # Revert s if fail
             self.reject()
-
+            
             # Increment rejected count
             self.rejected[self.current_kernel] += 1
             if self.verbose > 1:
@@ -288,6 +302,6 @@ class TWalk(StepMethod):
             self.accepted[self.current_kernel] += 1
             if self.verbose > 1:
                 print self._id + ' accepting'
-                
+        
         if self.verbose > 1:
             print self._id + ' returning.'
