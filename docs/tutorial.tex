@@ -372,6 +372,7 @@ As with most ``textbook examples", the models we have examined so far assume tha
 
 For example, consider a survey dataset for some wildlife species:
 
+\begin{table}
 \begin{center}
 \begin{tabular}{cccc}
 \hline
@@ -383,6 +384,7 @@ Count & Site & Observer & Temperature\\
 \hline
 \end{tabular}
 \end{center}
+\end{table}
 
 Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates.
 
