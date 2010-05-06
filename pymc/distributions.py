@@ -82,6 +82,7 @@ def bind_size(randfun, shape):
         try:
             return np.reshape(randfun(size=shape, *args, **kwargs),shape)
         except ValueError:
+            # Account for non-array return values
             return randfun(size=shape, *args, **kwargs)
     newfun.scalar_version = randfun
     return newfun

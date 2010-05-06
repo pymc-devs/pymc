@@ -100,13 +100,45 @@ class TWalk(StepMethod):
         # Proposal adjustment factor for current iteration
         self.hastings_factor = 0.0
         
-        # Probability of selecting any parameter
-        self.p = (n1 - (n1 - 1) * exp(-la * (self._len-1))) / self._len
+        # Set n1 to min(k, n1)
+        self.n1 = (self._len<n1)*self._len or n1
+        self.la = la
+        
+        # Set probability of selecting any parameter
+        self._calc_p()
         
         # Support function
         self._support = support
         
         self._state = ['accepted', 'rejected', 'p']
+        
+        
+    def _calc_p(self):
+        """Calculate probability of parameter selection for updating"""
+        try:
+            self.p = (self.n1 - (self.n1 - 1) * exp(-self.la * (self._len-1))) / self._len
+        except AttributeError:
+            self.p = None
+        
+    def n1():
+        doc = "Mean number of parameters to be selected for updating"
+        def fget(self):
+            return self._n1
+        def fset(self, value):
+            self._n1 = value
+            self._calc_p()
+        return locals()
+    n1 = property(**n1())
+        
+    def la():
+        doc = "Parameter for dermining probability of parameter selection for updating"
+        def fget(self):
+            return self._la
+        def fset(self, value):
+            self._la = value
+            self._calc_p()
+        return locals()
+    la = property(**la())
     
     def _get_logp_plus_loglike(self):
         

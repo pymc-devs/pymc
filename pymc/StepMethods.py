@@ -629,7 +629,7 @@ class Gibbs(Metropolis):
             except ZeroProbability:
                 self.reject()
 
-            if log(np.random.random()) > logp_p - logp:
+            if log(random()) > logp_p - logp:
                 self.reject()
 
     def tune(self, *args, **kwargs):
