@@ -3,8 +3,8 @@
 import re
 
 def manual2article(text):
-    text = re.sub(r"\\subsubsection\*?", r"\\paragraph\*", text)
-    text = re.sub(r"\\subsection\*?", r"\\subsubsection\*", text)
+    text = re.sub(r"\\subsubsection\*?", r"\\paragraph", text)
+    text = re.sub(r"\\subsection\*?", r"\\subsubsection", text)
     text = re.sub(r"\\section\*?", r"\\subsection", text)
     text = re.sub("section ","Section~",text)
     text = re.sub("Section ","Section~",text)
@@ -22,14 +22,14 @@ def manual2article(text):
     
     # Dedent all code blocks
     re.DOTALL=True
-    codeblock = re.compile(r'\\begin{verbatim}[^&]*\\end{verbatim}')
+    codeblock = re.compile(r'\\begin{verbatim}[^&]*?\\end{verbatim}')
     codeblocks = codeblock.findall(text)
     for match in codeblocks:
         if match.count(r'\\begin')>0:
             continue
         text = text.replace(match, match.replace('\n\t','\nTAB').replace('\n    ','\nTAB').replace('\n   ','\nTAB').replace('TAB',''))
     
-    # Destroy all boxes
+    # Destroy all boxes - This seems to remove more than expected. 
     boxblock = re.compile(r'\\fbox{[^#]*}')
     boxblocks = boxblock.findall(text)
     for match in boxblocks:
@@ -45,7 +45,7 @@ def manual2article(text):
     for pkgname in ['PyMC','NumPy','SciPy','PyTables','Matplotlib','Pylab','Pyrex']:
         text = re.sub(pkgname, r'\\pkg{%s}'%pkgname,text)
     for proglang in ['Python','Fortran']:
-        text = re.sub(proglang, r'\\proglang{%s}'%proglang, text)
+        text = re.sub(' ' + proglang, r' \\proglang{%s}'%proglang, text)
         
         
     # Convert hyperlinks to citations, or make them explicit, or remove them.

@@ -162,17 +162,11 @@ Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{
 The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section \ref{graphical} for more details.
 \begin{figure}[h!]
 \begin{center}
-   \epsfig{file=DisasterModel2.pdf, width=5cm}
+   \epsfig{file=DisasterModel2.pdf, width=10cm}
    \caption{Directed acyclic graph of the relationships in the coal mining disaster model example.}
 \end{center}
 \end{figure}
 
-
-\begin{center}
-\begin{sffamily}
-\fbox{\parbox{\admonitionwidth}{
-\textbf{\large Objects and names}
-\vspace{2mm}
 As the examples above have shown, pymc objects need to have a name 
 assigned, such as \emph{lower}, \emph{upper} or \emph{e}. These names 
 are used for storage and post-processing:
@@ -186,9 +180,6 @@ A model instantiated with variables having identical names raises an
 error to avoid name conflicts in the database storing the traces. In
 general however, pymc uses references to the objects themselves, not 
 their names, to identify variables. 
-}}
-\end{sffamily}
-\end{center}
 
 
 
@@ -348,8 +339,8 @@ You can examine the marginal posterior of any variable by plotting a histogram o
 You should see something like this:
 \begin{figure}[h!]
 \begin{center}
-   \epsfig{file=ltrace.pdf, width=10cm}
-   \caption{TODO}
+   \epsfig{file=ltrace.pdf, width=15cm}
+   \caption{Histogram of the marginal posterior probability of parameter $l$.}
 \end{center}
 \end{figure}
 PyMC has its own plotting functionality, via the optional
@@ -364,7 +355,7 @@ For each variable in the model, \code{plot} generates a composite figure, such a
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
-   \caption{TODO}
+   \caption{Temporal series and histogram of the samples drawn for $s$. }
 \end{center}
 \end{figure}
 
@@ -381,6 +372,7 @@ As with most ``textbook examples", the models we have examined so far assume tha
 
 For example, consider a survey dataset for some wildlife species:
 
+\begin{table}
 \begin{center}
 \begin{tabular}{cccc}
 \hline
@@ -392,6 +384,7 @@ Count & Site & Observer & Temperature\\
 \hline
 \end{tabular}
 \end{center}
+\end{table}
 
 Each row contains the number of individuals seen during the survey, along with three covariates: the site on which the survey was conducted, the observer that collected the data, and the temperature during the survey. If we are interested in modelling, say, population size as a function of the count and the associated covariates, it is difficult to accommodate the second observation because the temperature is missing (perhaps the thermometer was broken that day). Ignoring this observation will allow us to fit the model, but it wastes information that is contained in the other covariates.
 
@@ -481,7 +474,7 @@ The entire model looks very similar to the original model:
 
 \begin{figure}[ht]
 \begin{center}
-\includegraphics[height=3in]{missing.pdf}
+\includegraphics[width=15cm]{missing.pdf}
 \caption{Trace and posterior distribution of the second missing data point in the example.}
 \label{fig:missing}
 \end{center}

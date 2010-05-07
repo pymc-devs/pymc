@@ -4,7 +4,7 @@ fname=sys.argv[1]
 
 text = file(fname).read()
 
-pattern = re.compile(r'\\input{.*}')
+pattern = re.compile(r'^\\input{.*?}', re.MULTILINE)
 matches = pattern.findall(text)
 
 for m in matches:
