@@ -1272,7 +1272,7 @@ class AdaptiveMetropolis(StepMethod):
             logp_p = self.logp_plus_loglike
             if self.verbose > 2:
                 print 'Current value: ', self.stoch2array()
-                print 'Current likelihood: ', logp
+                print 'Current likelihood: ', logp_p
 
             if np.log(random()) < logp_p - logp:
                 accept = True

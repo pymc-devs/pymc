@@ -673,7 +673,7 @@ cf2py threadsafe
 
 c Student's t log-likelihood function    
 
-cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(n),intent(in) :: x
 cf2py double precision dimension(nnu),intent(in) :: nu
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
@@ -682,7 +682,7 @@ cf2py threadsafe
 
       IMPLICIT NONE
       INTEGER n, i, nnu
-      INTEGER x(n)
+      DOUBLE PRECISION x(n)
       DOUBLE PRECISION nu(nnu), like, infinity, nut
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION gammln
