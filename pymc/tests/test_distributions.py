@@ -17,6 +17,7 @@ For each distribution:
 # FIXME no tests for categorical, discrete_uniform, negative_binomial, uniform.
 
 #from decorators import *
+from __future__ import with_statement
 from pymc.distributions import *
 import unittest
 from numpy.testing import *

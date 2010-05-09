@@ -6,11 +6,15 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 from copy import copy
 from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN, asanyarray
 import numpy as np
+from numpy import shape, size, ravel, zeros, ones, reshape, newaxis, broadcast, ndim, expand_dims 
 from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
 import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import sys
 import pdb
+
+from numpy import single, float_, longfloat
+float_dtypes = [float, single, float_, longfloat]
 
 d_neg_inf = float(-1.7976931348623157e+308)
 
@@ -230,12 +234,13 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, grad_logps = {}):
 
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
+        self._grad_logps = grad_logps
 
         self.errmsg = "Potential %s forbids its parents' current values"%name
 
@@ -290,7 +295,38 @@ class Potential(PotentialBase):
         raise AttributeError, 'Potential '+self.__name__+'\'s log-probability cannot be set.'
 
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
+    
+    def grad_logp(self, calculation_set):
+        gradient = 0
+        if self in calculation_set:
+            
+            if not (variable.dtype in float_dtypes):
+                return zeros(shape(variable.value))
 
+            p = params(self.parents)
+            
+            for parameter, value in self.parents.iteritems():
+
+                if value is variable:
+                    try :
+                        grad_func = self._grad_logps[parameter]
+                    except KeyError:
+                        raise ValueError(str(self) + " has no gradient function for parameter " + parameter)
+                    
+                    gradient = gradient + grad_func( x = self.value, **p)
+        
+        #_grad_logp can return either raveled or non-raveled values, but they should be consistent
+        return np.reshape(gradient, np.shape(variable.value)) #np.reshape(gradient, np.shape(variable.value))
+
+def params(parameters):
+    p ={}
+    for parameter, value in parameters.iteritems():
+        
+        if isinstance(value, Variable):
+            p[parameter] = value.value 
+        else: 
+            p[parameter] = value
+    return p
 
 class Deterministic(DeterministicBase):
     """
@@ -322,7 +358,15 @@ class Deterministic(DeterministicBase):
         A flag indicating whether this variable is to be plotted.
       verbose (optional) : integer
         Level of output verbosity: 0=none, 1=low, 2=medium, 3=high
-
+      jacobian (optional) : function(parameter, **same args as function)
+        function which calculates the analytical jacobian for the deterministic with respect to some parameter
+      jacobian_format (optional) : dict <string, string>
+        formats of the jacobians returned by the jacobian function for each parameter:
+            'full' : the function returns the full jacobian 
+            'broadcast_operation' : the function returns the jacobian for an operation where the argument arrays are broadcast to eachother
+            'accumulation_operation' : the function returns the jacobian for an operation where the number of dimensions is reduced
+        the default is 'full'
+        
     :Attributes:
       value : any object
         Returns the variable's value given its parents' values. Skips
@@ -332,11 +376,15 @@ class Deterministic(DeterministicBase):
       Stochastic, Potential, deterministic, MCMC, Lambda,
       LinearCombination, Index
     """
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None):
+    __array_priority__ =1000
+
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians = None, jacobian_formats = {}):
         self.ParentDict = ParentDict
 
+        
         # This function gets used to evaluate self's value.
         self._eval_fun = eval
+        self._jacobians = jacobians
 
         Variable.__init__(  self,
                         doc=doc,
@@ -349,6 +397,9 @@ class Deterministic(DeterministicBase):
                         verbose=verbose)
 
         # self._value.force_compute()
+        
+        self._jacobian_formats = jacobian_formats    
+             
 
     def gen_lazy_function(self):
 
@@ -368,11 +419,89 @@ class Deterministic(DeterministicBase):
         if self.verbose > 1:
             print '\t' + self.__name__ + ': Returning value ',_value
         return _value
+    
+    
 
     def set_value(self,value):
         raise AttributeError, 'Deterministic '+self.__name__+'\'s value cannot be set.'
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
+
+    def grad_logp(self, variable, calculation_set = None):
+        """
+        gets the logp gradient of this deterministic with respect to variable
+        """
+        if self.verbose > 0:
+            print '\t' + self.__name__ + ': grad_logp accessed.'
+
+        if not (variable.dtype in float_dtypes and self.dtype in float_dtypes):
+                return zeros(shape(variable.value))
+            
+        gradient = 0
+       
+        # loop through all the parameters and add up all the gradients of log p with respect to the approrpiate variable
+        for child in self.children:
+            gradient = gradient + child.grad_logp(self, calculation_set)
+            
+
+        p = params(self.parents) 
+        totalGradient = 0
+        for parameter, value in self.parents.iteritems():
+            if value is variable:
+
+                try :
+                    jacobian_func = self._jacobians[parameter]
+                except KeyError:
+                    raise ValueError(str(self) + " has no jacobian function for parameter " + parameter)
+                
+                jacobian = jacobian_func(**p)
+                
+                
+                mapping = self._jacobian_formats.get(parameter, 'full')
+
+                    
+                totalGradient += self._format_mapping[mapping](self, variable, jacobian, gradient)
+
+        return np.reshape(totalGradient, shape(variable.value))
+        
+    
+    def full_jacobian(self, variable, jacobian, gradient):
+        return dot(np.transpose(jacobian), np.ravel(gradient)[:,np.newaxis])
+    
+    def transformation_operation_jacobian(self, variable, jacobian, gradient):
+        return jacobian * gradient
+    
+    _bog_history = {}
+    def broadcast_operation_jacobian(self, variable, jacobian, gradient):
+        
+        tgradient = jacobian * gradient
+        try :
+            axes, lx = self._bog_history[id(variable)]
+        except KeyError: 
+            sshape = array(shape(self.value))
+            vshape = zeros(sshape.size)
+            vshape[0:ndim(variable.value)] += array(shape(variable.value))
+            axes = np.where(sshape != vshape)
+            lx = size(axes)
+            
+            self._bog_history[id(variable)] = (axes, lx )
+            
+        if lx > 0:
+            return np.apply_over_axes(np.sum, tgradient, axes)   
+            
+        else:
+            return tgradient
+
+    def accumulation_operation_jacobian(self, variable, jacobian, gradient):   
+        for i in range(ndim(jacobian)):
+            if i >= ndim(gradient) or shape(gradient)[i] != shape(variable.value)[i]:
+                expand_dims(gradient, i)
+        return gradient * jacobian
+        
+    _format_mapping = {'full' : full_jacobian,
+                       'transformation_operation' : transformation_operation_jacobian,
+                       'broadcast_operation' : broadcast_operation_jacobian,
+                       'accumulation_operation' : accumulation_operation_jacobian}
 
 class Stochastic(StochasticBase):
 
@@ -468,6 +597,7 @@ class Stochastic(StochasticBase):
 
     :SeeAlso: Deterministic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
+    __array_priority__ =1000
 
     def __init__(   self,
                     logp,
@@ -483,8 +613,9 @@ class Stochastic(StochasticBase):
                     cache_depth=2,
                     plot=None,
                     verbose = None,
-                    isdata=None, 
-                    check_logp=True):
+                    isdata=None,
+                    check_logp=True,
+                    grad_logps = {}):
 
         self.counter = Counter()
         self.ParentDict = ParentDict
@@ -501,6 +632,9 @@ class Stochastic(StochasticBase):
 
         # This function will be used to evaluate self's log probability.
         self._logp_fun = logp
+        
+        #This function will be used to evaluate self's gradient of log probability.
+        self._grad_logps = grad_logps
 
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random
@@ -547,9 +681,9 @@ class Stochastic(StochasticBase):
             self._value.flags['W'] = False
 
         if check_logp:
-            # Check initial value
-            if not isinstance(self.logp, float):
-                raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
+             #Check initial value
+             if not isinstance(self.logp, float):
+                 raise ValueError, "Stochastic " + self.__name__ + "'s initial log-probability is %s, should be a float." %self.logp.__repr__()
 
 
     def gen_lazy_function(self):
@@ -578,7 +712,7 @@ class Stochastic(StochasticBase):
                                     ultimate_args = self.extended_parents | set([self]),
                                     cache_depth = self._cache_depth)
         self._logp.force_compute()
-
+        
     def get_value(self):
         # Define value attribute
         if self.verbose > 1:
@@ -659,7 +793,56 @@ class Stochastic(StochasticBase):
 
     logp = property(fget = get_logp, fset=set_logp, doc="Log-probability or log-density of self's current value\n given values of parents.")
 
+    def gradient(self, calculation_set = None):
+        gradient = 0
+        try :
+            self.logp
+            gradient = self.grad_logp(self, calculation_set)
 
+
+            for child in self.children:
+                gradient = gradient + child.grad_logp(self, calculation_set)
+                
+        except ZeroProbability:
+            # probably a better way to test whether this is in a valid region but this will do for now
+            gradient = 0
+            
+        return gradient
+        
+    
+    def grad_logp(self, variable, calculation_set):
+        gradient = 0
+        
+        if (calculation_set is None) or (self in calculation_set):
+            
+            if not (variable.dtype in float_dtypes):
+                return zeros(shape(variable.value))
+
+            p = params(self.parents)
+
+            if variable is self:
+                try :
+                    gradient_func = self._grad_logps['x']
+                except KeyError:
+                    raise ValueError(str(self) + " has no gradient function for 'x'")
+                
+                gradient = gradient_func( x = self.value,  **p)
+            else:
+                for parameter, value in self.parents.iteritems():
+    
+                    if value is variable:
+                        try :
+                            gradient_func = self._grad_logps[parameter]
+                        except KeyError:
+                            raise ValueError(str(self) + " has no gradient function for parameter " + parameter)
+
+                        gradient = gradient + gradient_func( x = self.value, **p)
+        
+            #_grad_logp can return either raveled or non-raveled values, but they should be consistent
+            return np.reshape(gradient, np.shape(variable.value)) #np.reshape(gradient, np.shape(variable.value))
+        else: 
+            return 0
+        
     # Sample self's value conditional on parents.
     def random(self):
         """

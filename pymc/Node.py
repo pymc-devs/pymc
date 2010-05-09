@@ -28,7 +28,18 @@ def logp_of_set(s):
     else:
         raise exc[0], exc[1], exc[2]
 
-
+def grad_logp_of_set(variable_set, calculation_set = None):
+     
+    grad_logp = {}
+    for var in variable_set:   
+        gradient = var.gradient(calculation_set)
+        
+        grad_logp[var] = gradient
+                    
+    return grad_logp
+    
+    
+    
 def batchsd(trace, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent

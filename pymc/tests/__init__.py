@@ -1,6 +1,7 @@
 # Changeset
 # 19/03/2007 -DH- Commented modules import. They are now imported by testsuite.
 # 15/10/2008 -DH- Testing is now done through nose.
+from __future__ import with_statement
 import warnings
 # warnings.simplefilter('default', ImportWarning)
 try:

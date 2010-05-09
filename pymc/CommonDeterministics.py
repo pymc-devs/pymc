@@ -15,11 +15,13 @@ from Node import Variable
 from Container import Container
 from InstantiationDecorators import deterministic, check_special_methods
 import numpy as np
-import inspect
+from numpy import sum, shape,size, ravel, sign, zeros, ones, broadcast, newaxis
+import inspect, types
 from utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value
 from types import UnboundMethodType
 from copy import copy
 import sys
+import operator, __builtin__
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
@@ -317,7 +319,7 @@ class LinearCombination(pm.Deterministic):
                 stochastic_elem = x[i]
                 self.sides[stochastic_elem].append('L')
                 this_coef = Lambda('%s_coef'%stochastic_elem, lambda c=y[i]: np.asarray(c))
-                self.coefs[stochastic_elem].append(this_coef)
+                self.coefs[stochastic_elem].append(this_coef) 
 
             if isinstance(y[i], pm.Stochastic):
 
@@ -484,25 +486,37 @@ Deterministic-generating wrapper for %s. Original docstring:
 # = Add special methods to variables to support FBC syntax =
 # ==========================================================
 
-def create_uni_method(op_name, klass):
+def create_uni_method(op_name, klass, jacobians = None):
     """
     Creates a new univariate special method, such as A.__neg__() <=> -A,
     for target class. The method is called __op_name__.
     """
     # This function will become the actual method.
+    op_modules = [operator, __builtin__]
+    op_names = [ op_name, op_name + '_']
+
+    op_function_base = get_op_function(op_modules, op_names)
+    #many such functions do not take keyword arguments, so we need to wrap them 
+    def op_function(self):
+        return op_function_base(self)
+        
+    
     def new_method(self):
         # This code creates a Deterministic object.
-        def eval_fun(self,op=op):
-            if not check_special_methods():
-                raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
-            return getattr(self, op)()
-        return pm.Deterministic(eval_fun,
+        if not check_special_methods():
+            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+            
+        jacobian_formats = {'self' : 'transformation_operation'}
+        return pm.Deterministic(op_function,
                                 'A Deterministic returning the value of %s(%s)'%(op_name, self.__name__),
                                 '('+op_name+'_'+self.__name__+')',
-                                {'self':self, 'op': '__'+op_name+'__'},
+                                parents = {'self':self},
                                 trace=False,
-                                plot=False)
-    # Make the function into a method for klass.
+                                plot=False, 
+                                jacobians=jacobians,
+                                jacobian_formats = jacobian_formats)
+    # Make the function into a method for klass. 
+    
     new_method.__name__ = '__'+op_name+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
@@ -520,7 +534,17 @@ def create_casting_method(op, klass):
     new_method.__name__ = '__'+op.__name__+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
-def create_rl_bin_method(op_name, klass):
+def get_op_function(op_modules, op_names):
+    for module in op_modules:
+        for name in op_names:
+            if hasattr(module,name):
+                return getattr(module,name)
+    
+    raise NameError(op_names + " not found in any " + str(op_modules))
+        
+                
+
+def create_rl_bin_method(op_name, klass,  jacobians = {}):
     """
     Creates a new binary special method with left and right versions, such as
         A.__mul__(B) <=> A*B,
@@ -530,34 +554,34 @@ def create_rl_bin_method(op_name, klass):
     # Make left and right versions.
     for prefix in ['r','']:
         # This function will became the methods.
+        op_modules = [operator, __builtin__]
+        op_names = [ op_name, op_name + '_']
+
+        op_function_base = get_op_function(op_modules, op_names)
+        #many such functions do not take keyword arguments, so we need to wrap them 
+        def op_function(a, b):
+            return op_function_base(a, b)
+            
         def new_method(self, other, prefix=prefix):
             if not check_special_methods():
                 raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
             # This code will create one of two Deterministic objects.
             if prefix == 'r':
-                # Right version: raises error on failure.
-                parents = {'self':self, 'other':other, 'op':'__r' + op_name + '__'}
-                def eval_fun(self,other,op):
-                    out = getattr(self, op)(other)
-                    if out is NotImplemented:
-                        # the rt version has failed, meainng the lft version has failed as well.
-                        raise TypeError, "unsupported operand type(s) for %s: '%s' and '%s'"%(op.replace('_',''), self.__class__.__name__, other.__class__.__name__)
-                    return out
+                parents = {'a':other, 'b':self}
+                
             else:
-                # Left version: tries right version on failure.
-                parents = {'self':self, 'other':other, 'op':'__' + op_name + '__', 'rt_op': '__r'+op_name+'__'}
-                def eval_fun(self, other, op, rt_op):
-                    out = getattr(self, op)(other)
-                    if out is NotImplemented:
-                        # if try the rt version.
-                        out = getattr(other, rt_op)(self)
-                    return out
-            return pm.Deterministic(eval_fun,
+                parents = {'a':self, 'b':other}
+            jacobian_formats = {'a' : 'broadcast_operation',
+                               'b' : 'broadcast_operation'}
+                
+            return pm.Deterministic(op_function,
                                     'A Deterministic returning the value of %s(%s,%s)'%(prefix+op_name,self.__name__, str(other)),
                                     '('+'_'.join([self.__name__,prefix+op_name,str(other)])+')',
                                     parents,
                                     trace=False,
-                                    plot=False)
+                                    plot=False,
+                                    jacobians = jacobians,
+                                    jacobian_formats = jacobian_formats)
         # Convert the functions into methods for klass.
         new_method.__name__ = '__'+prefix+op_name+'__'
         setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
@@ -628,17 +652,50 @@ def create_nonimplemented_method(op_name, klass):
     new_method.__name__ = '__'+op_name+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
+def op_to_jacobians(op, module):
+    if type(module) is types.ModuleType:
+        module = copy(module.__dict__)
+    elif type(module) is dict:
+        module = copy(module)
+    else:
+        raise AttributeError
+
+    name = op + "_jacobians"
+    try:
+       jacobians = module[name]
+    except:
+        jacobians = {} 
+        
+    return jacobians
+
 # Left/right binary operators
+
+    
+truediv_jacobians = {'a' : lambda a, b: ones(shape(a))/b,
+                    'b' : lambda a, b: - a / b**2  }
+
+div_jacobians = truediv_jacobians        
+    
+pow_jacobians = {'a' : lambda a, b: b * a**(b - 1.0),
+                'b' : lambda a, b: np.log(a) * a**b}  
+
+
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
-    create_rl_bin_method(op, Variable)
+    create_rl_bin_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
 # # Binary operators
 # for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
 #     create_bin_method(op ,Variable)
 
 # Unary operators
+neg_jacobians = {'self' : lambda self: -ones(shape(self))}
+
+pos_jacobians = {'self' : lambda self: np.ones(shape(self))}
+
+abs_jacobians = {'self' : lambda self: np.sign(self)}
+
 for op in ['neg','pos','abs','invert','index']:
-    create_uni_method(op, Variable)
+    create_uni_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
 # Casting operators
 for op in [iter,complex,int,long,float,oct,hex,len]:
@@ -654,8 +711,18 @@ for op in [iter,complex,int,long,float,oct,hex,len]:
 # create_rl_lin_comb_method('rmul', Variable, ['self'],['other'])
 
 #TODO: Comment once LinearCombination issues are ironed out.
+
+add_jacobians = {'a' : lambda a, b:  ones(broadcast(a,b).shape),
+                 'b' : lambda a, b:  ones(broadcast(a,b).shape)}
+
+mul_jacobians = {'a' : lambda a, b: ones(shape(a)) * b,
+                 'b' : lambda a, b: ones(shape(b)) * a}
+
+sub_jacobians = {'a' : lambda a, b:  ones(broadcast(a,b).shape),
+                 'b' : lambda a, b: -ones(broadcast(a,b).shape)}
+
 for op in ['add', 'mul', 'sub']:
-    create_rl_bin_method(op, Variable)
+    create_rl_bin_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
     
 for op in ['iadd','isub','imul','idiv','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior','unicode']:
     create_nonimplemented_method(op, Variable)
