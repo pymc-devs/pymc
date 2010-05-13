@@ -3535,7 +3535,7 @@ cf2py threadsafe
         if (not_scalar_mu) mu_tmp = mu(i)
         if (not_scalar_a) a_tmp = alpha(i)
 
-        grad= -a_tmp/(a_tmp+mu_tmp)+x(i)/mu_tmp-x(i)/(mu_tmp+x(i))
+        grad= x(i)/mu_tmp - (x(i) + a_tmp)/(mu_tmp + a_tmp)
         
         if (not_scalar_mu) then 
         	gradlike(i) = grad
@@ -3595,9 +3595,10 @@ cf2py threadsafe
         if (not_scalar_mu) mu_tmp = mu(i)
         if (not_scalar_a) a_tmp = alpha(i)
 
-        grad= psi(x(i) + a_tmp)-psi(a_tmp)+dlog(a_tmp)+1.0 
-     +  - dlog(a_tmp + mu_tmp) - a_tmp/(a_tmp + mu_tmp)        
-        
+		grad=psi(x(i)+a_tmp)-psi(a_tmp)+dlog(a_tmp)+1.0 
+     +  - dlog(a_tmp+mu_tmp)-a_tmp/(a_tmp+mu_tmp)         
+     +  - x(i)/(mu_tmp+a_tmp) 
+     
         if (not_scalar_a) then 
         	gradlike(i) = grad	
         else

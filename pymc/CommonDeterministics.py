@@ -17,7 +17,7 @@ from InstantiationDecorators import deterministic, check_special_methods
 import numpy as np
 from numpy import sum, shape,size, ravel, sign, zeros, ones, broadcast, newaxis
 import inspect, types
-from utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value
+from utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value, find_element
 from types import UnboundMethodType
 from copy import copy
 import sys
@@ -495,7 +495,7 @@ def create_uni_method(op_name, klass, jacobians = None):
     op_modules = [operator, __builtin__]
     op_names = [ op_name, op_name + '_']
 
-    op_function_base = get_op_function(op_modules, op_names)
+    op_function_base = find_element( op_names,op_modules, error_on_fail = True)
     #many such functions do not take keyword arguments, so we need to wrap them 
     def op_function(self):
         return op_function_base(self)
@@ -534,13 +534,7 @@ def create_casting_method(op, klass):
     new_method.__name__ = '__'+op.__name__+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
-def get_op_function(op_modules, op_names):
-    for module in op_modules:
-        for name in op_names:
-            if hasattr(module,name):
-                return getattr(module,name)
-    
-    raise NameError(op_names + " not found in any " + str(op_modules))
+
         
                 
 
@@ -557,7 +551,7 @@ def create_rl_bin_method(op_name, klass,  jacobians = {}):
         op_modules = [operator, __builtin__]
         op_names = [ op_name, op_name + '_']
 
-        op_function_base = get_op_function(op_modules, op_names)
+        op_function_base = find_element( op_names, op_modules, error_on_fail = True)
         #many such functions do not take keyword arguments, so we need to wrap them 
         def op_function(a, b):
             return op_function_base(a, b)

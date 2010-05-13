@@ -13,6 +13,7 @@ import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
 from Node import logp_of_set, grad_logp_of_set
+import types
 
 from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
     pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
@@ -836,4 +837,35 @@ def find_generations(container, with_data = False):
     return generations
 
 
+#deterministic related utilities
 
+def find_element(names, modules, error_on_fail):
+    element = None
+    found = False
+    
+    if type(names) is str:
+        names = [names]
+        
+    if type(modules) is dict or type(modules) is types.ModuleType:
+        modules = [modules]
+         
+    for module in modules:
+        
+        if type(module) is types.ModuleType:
+            module = copy(module.__dict__)
+        elif type(module) is dict:
+            module = copy(module)
+        else:
+            raise AttributeError
+        
+        for name in names:
+            try:
+                function = module[name]
+                found = True
+            except KeyError:
+                pass
+            
+    if not found and error_on_fail:
+        raise NameError("no function or variable " + str(names) + " in " + str(modules))
+        
+    return function

@@ -29,17 +29,21 @@ from Container import *
 from PyMCObjects import *
 from InstantiationDecorators import *
 from CommonDeterministics import *
+from NumpyDeterministics import *
 from distributions import *
 from Model import *
 from StepMethods import *
 from MCMC import *
 from NormalApproximation import *
 
+
+
 from tests import test
 
 # Utilities modules
 import utils
 import CommonDeterministics
+import NumpyDeterministics
 from CircularStochastic import *
 import distributions
 import gp

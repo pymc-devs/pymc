@@ -218,8 +218,8 @@ class test_gradients(TestCase):
         u = Uniform('u', lower = a, upper = b)
         self.check_gradients(u)
         
-        #negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
-        #self.check_gradients(negative_binomial)
+        negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
+        self.check_gradients(negative_binomial)
         
         #exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
         #self.check_gradients(exponweib)
