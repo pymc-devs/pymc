@@ -1,5 +1,5 @@
-from pymc import *
 from numpy import *
+from pymc import *
 from numpy.testing import *
 import nose
 import sys
@@ -23,8 +23,7 @@ class test_gradients(TestCase):
             
             if isinstance(pvalue, Variable): 
                 
-                grad = random.normal(.5, .1, size = shape(pvalue.value))
-                
+                grad = random.normal(.5, .1, size = shape(deterministic.value))
                 a_partial_grad = self.get_analytic_partial_gradient(deterministic, parameter, pvalue, grad)
                 
                 n_partial_grad = self.get_numeric_partial_gradient(deterministic, pvalue, grad)
@@ -48,7 +47,8 @@ class test_gradients(TestCase):
         
                 
     def get_numeric_partial_gradient(self, deterministic, pvalue, grad ):
-        pg = deterministic._format_mapping['full'](deterministic, pvalue, self.get_numeric_jacobian(deterministic, pvalue), grad)
+        j = self.get_numeric_jacobian(deterministic, pvalue)
+        pg = deterministic._format_mapping['full'](deterministic, pvalue,j , grad)
         return reshape(pg, shape(pvalue.value))
     
     def get_numeric_jacobian(self, deterministic, pvalue ): 
@@ -78,6 +78,7 @@ class test_gradients(TestCase):
         shape = (3, 10)
         a = Normal('a', mu = zeros(shape), tau = ones(shape))
         b = Normal('b', mu = zeros(shape), tau = ones(shape))
+
         
         addition = a + b 
         self.check_jacobians(addition)
@@ -103,6 +104,75 @@ class test_gradients(TestCase):
         
         absing = abs(a)
         self.check_jacobians(absing)
+        
+    def test_numpy_deterministics_jacobians(self):
+        
+        shape = (2, 3)
+        a = Normal('a', mu = zeros(shape), tau = ones(shape)*5)
+        b = Normal('b', mu = zeros(shape), tau = ones(shape))
+        c = Uniform('c', lower = ones(shape) * .1, upper = ones(shape) * 10)
+        d = Uniform('d', lower = ones(shape) * -1.0, upper = ones(shape) * 1.0)
+        e = Normal('e', mu = zeros(shape), tau = ones(shape))
+        
+        summing = sum(a, axis = 0)
+        self.check_jacobians(summing)
+        
+        summing2 = sum(a)
+        self.check_jacobians(summing2)
+        
+        absing = abs(a)
+        self.check_jacobians(absing)
+        
+        exping = exp(a)
+        self.check_jacobians(exping)
+        
+        logging = log(c)
+        self.check_jacobians(logging)
+        
+        sqrting = sqrt(c)
+        self.check_jacobians(sqrting)
+        
+        sining = sin(a)
+        self.check_jacobians(sining)
+        
+        cosing = cos(a)
+        self.check_jacobians(cosing)
+        
+        taning = tan(a)
+        self.check_jacobians(taning)
+        
+        arcsining = arcsin(d)
+        self.check_jacobians(arcsining)
+        
+        arcosing = arccos(d)
+        self.check_jacobians(arcosing)
+        
+        arctaning = arctan(d)
+        self.check_jacobians(arctaning)
+        
+        sinhing = sinh(a)
+        self.check_jacobians(sinhing)
+        
+        coshing = cosh(a)
+        self.check_jacobians(coshing)
+        
+        tanhing = tanh(a)
+        self.check_jacobians(tanhing)
+        
+        arcsinhing = arcsinh(a)
+        self.check_jacobians(arcsinhing)
+        
+        arccoshing = arccosh(a)
+        self.check_jacobians(arccoshing)
+        
+        arctanhing = arctanh(a)
+        self.check_jacobians(arctanhing)
+         
+        arctan2ing = arctan2(b, e)
+        self.check_jacobians(arctan2ing)
+         
+        hypoting = hypot(b, e)
+        self.check_jacobians(hypoting)
         
 
     def check_gradients(self, stochastic):

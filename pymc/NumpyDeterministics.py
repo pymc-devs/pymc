@@ -9,8 +9,6 @@ from numpy import sum, ones, zeros, ravel, shape, size, newaxis
 from utils import find_element
 import inspect
 
-__all__ = ['sum']#+['iter_','complex_','int_','long_','float_','oct_','hex_']
-
 #accumulations 
 _accumulation_deterministics = ['sum']#['sum', 'prod']
 
@@ -22,7 +20,8 @@ _hyp_trig = ['sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh']
 _transformation_deterministics = _generic + _trig + _hyp_trig
 _misc_funcs1 = ['arctan2', 'hypot']
 
-    
+__all__ = _accumulation_deterministics + _transformation_deterministics + _misc_funcs1
+
 def deterministic_from_funcs(name, eval, jacobians=None, jacobian_formats=None, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
@@ -43,7 +42,7 @@ def deterministic_from_funcs(name, eval, jacobians=None, jacobian_formats=None, 
     """
 
     (args, varargs, varkw, defaults) = inspect.getargspec(eval)
-    parent_names = args[1:]
+    parent_names = args[0:]
     try:
         parents_default = dict(zip(args[-len(defaults):], defaults))
     except TypeError: # No parents at all.
@@ -88,8 +87,8 @@ def new_deterministic_class(*new_class_args):
             parents=parents_default
 
             # Figure out what argument names are needed.
-            arg_keys = [ 'parents', 'value', 'observed',  'trace', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [ parents, None, False, False, True, None, False, None, None]
+            arg_keys = [ 'parents',  'trace', 'doc', 'debug', 'plot', 'verbose']
+            arg_vals = [ parents,  False, True, None, False, None, None]
 
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed =  parent_names + arg_keys[2:]
@@ -131,12 +130,12 @@ def new_deterministic_class(*new_class_args):
                 pass
             else:
                 parent_strs = []
-                for val in parents.values():
-                    parent_strs.append(str(val))
+                for key in parents.keys():
+                    parent_strs.append(str(key))
                     
-                instance_name = name + '('.join(parent_strs)+')'
+                instance_name = name + '('+','.join(parent_strs)+')'
                 
-                mp.Deterministic.__init__(self, name = instance_name, eval=eval, jacobians = jacobians, jacobian_formats = jacobian_formats, dtype=dtype, **arg_dict_out)
+                pm.Deterministic.__init__(self, name = instance_name, eval=eval, jacobians = jacobians, jacobian_formats = jacobian_formats, dtype=dtype, **arg_dict_out)
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
@@ -158,7 +157,7 @@ sum_jacobians = {'a' : sum_jacobian_a}
 abs_jacobians = {'x' : lambda x : np.sign(x) }
 exp_jacobians = {'x' : lambda x : np.exp(x)  }
 log_jacobians = {'x' : lambda x : 1.0/x      }
-sqrt_jacobians = {'x': lambda x : .5* x **-.5}
+sqrt_jacobians = {'x': lambda x : .5    * x **-.5}
 hypot_jacobians = {'x1' : lambda x1, x2 : (x1**2 + x2**2)**-.5 * x1,
                    'x2' : lambda x1, x2 : (x1**2 + x2**2)**-.5 * x2}
 
@@ -182,34 +181,44 @@ arccosh_jacobians = {'x' : lambda x : (x+1)**-.5*(x-1.0)**-.5}
 arctanh_jacobians = {'x' : lambda x : 1.0/(1-x**2) }
 
 
-for function_name in _accumulation_deterministics:
-    function = find_element(function_name, np, error_on_fail = True)
-    
+def wrap_function_accum(function):
     def wrapped_function(a, axis = None):
         return function(a, axis)
     wrapped_function.__doc__ = function.__doc__
+    
+    return wrapped_function
+
+for function_name in _accumulation_deterministics:
+    wrapped_function = wrap_function_accum(find_element(function_name, np, error_on_fail = True))
     
     jacobians = find_element(function_name + "_jacobians", locals(), error_on_fail = True)
     
     locals()[function_name] = deterministic_from_funcs(function_name, wrapped_function, jacobians, jacobian_formats = {'a' : 'accumulation_operation'})
 
-for function_name in _transformation_deterministics:
-    function = find_element(function_name, np, error_on_fail = True)
-    
+
+def wrapped_function_trans(function):
     def wrapped_function(x):
         return function(x)
     wrapped_function.__doc__ = function.__doc__
     
-    jacobians = find_element(function_name + "_jacobians", locals(), error_on_fail = True)
-    
-    locals()[function_name] = deterministic_from_funcs(function_name, wrapped_function, jacobians, jacobian_formats = {'x' : 'transformation_operation'})    
+    return wrapped_function
 
-for function_name in _misc_funcs1:
-    function = find_element(function_name, np, error_on_fail = True)
+for function_name in _transformation_deterministics:
+    wrapped_function = wrapped_function_trans(find_element(function_name, np, error_on_fail = True))
     
+    jacobians = find_element(function_name + "_jacobians", locals(), error_on_fail = True)
+    locals()[function_name] = deterministic_from_funcs(function_name, wrapped_function, jacobians, jacobian_formats = {'x' : 'transformation_operation'}) 
+    
+
+def wrap_function_misc1(function):
     def wrapped_function(x1, x2):
         return function(x1, x2)
     wrapped_function.__doc__ = function.__doc__
+    
+    return wrapped_function
+
+for function_name in _misc_funcs1:
+    wrapped_function = wrap_function_misc1(find_element(function_name, np, error_on_fail = True))
     
     jacobians = find_element(function_name + "_jacobians", locals(), error_on_fail = True)
     
