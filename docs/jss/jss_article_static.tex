@@ -319,7 +319,7 @@ into the unpacked directory and follow the platform specific instructions.
 
 %___________________________________________________________________________
 
-\subsubsection{Windows}
+\subsection{Windows}
   \label{windows}%
 
 
@@ -344,7 +344,7 @@ modules in the \code{C:/Python26/Lib/site-packages/pymc} directory.
 
 %___________________________________________________________________________
 
-\subsubsection{Mac OS X or Linux}
+\subsection{Mac OS X or Linux}
   \label{mac-os-x-or-linux}%
 
 
@@ -1045,9 +1045,7 @@ Notice that the log-probability and random variate functions are specified exter
 
 \end{description}
 
-\begin{center}
-\begin{boxedminipage}{.9\textwidth}
-\subsubsection{Don't update stochastic variables' values in-place}
+\subsection{Don't update stochastic variables' values in-place}
 
 
 \code{Stochastic} objects' values should not be updated in-place. This confuses \pkg{PyMC}'s caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
@@ -1062,8 +1060,6 @@ The following are in-place updates and should \emph{never} be used:
 \end{itemize}
 
 This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several scalar-valued variables stored in an array or list.
-\end{boxedminipage}
-\end{center}
 
 
 \subsection{Data} \label{data}
@@ -1071,7 +1067,7 @@ This restriction becomes onerous if a step method proposes values for the elemen
 
 Data are represented by \code{Stochastic} objects whose \code{observed} attribute is set to \code{True}. Although the data are modelled with statistical distributions, their values should be treated as immutable~(since they have been observed). If a stochastic variable's \code{observed} flag is \code{True}, its value cannot be changed, and it won't be sampled by the fitting method.
 
-\subsubsection{Declaring stochastic variables to be data}
+\subsection{Declaring stochastic variables to be data}
 
 In each interface, an optional keyword argument \code{observed} can be set to \code{True}. In the decorator interface, this argument is added to the \code{@stochastic} decorator:
 
@@ -1299,7 +1295,7 @@ where the value of $\gamma$ is large if $S$'s value is plausible (based on our e
 It's important to understand that $\gamma$ is not a variable, so it does not have a value. That means, among other things, there will be no $\gamma$ column in MCMC traces.
 
 
-\subsubsection[Creation of Potentials]{Creation of \code{Potentials}}
+\subsection[Creation of Potentials]{Creation of \code{Potentials}}
 There are two ways to create potentials:
 \begin{description}
     \item[Decorator] A potential can be created via a decorator in a way very similar to \code{Deterministic}'s decorator interface:
@@ -1386,52 +1382,52 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 
 
 
-% \section[Fitting Models]{Fitting models}
-% \label{chap:modelfitting}
-% % \pkg{PyMC} probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
-% 
-% \pkg{PyMC} provides three objects that fit models:
-% \begin{itemize}
-%     \item \code{MCMC}, which coordinates Markov chain Monte Carlo algorithms. The actual work of updating stochastic variables conditional on the rest of the model is done by \code{StepMethod} objects, which are described in this section.
-%     \item \code{MAP}, which computes maximum \emph{a posteriori} estimates.
-%     \item \code{NormApprox}, which computes the `normal approximation' \citep{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum \emph{a posteriori} estimate.
-% \end{itemize}
-% 
-% All three objects are subclasses of \code{Model}, which is \pkg{PyMC}'s base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is \pkg{PyMC}'s base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes are documented at the end of this section. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the \proglang{Python} prompt, check progress, and make adjustments.
-% 
-% \subsection{Creating models} \label{sec:ModelInstantiation}
-% The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
-% \begin{itemize}
-%     \item \code{M = Model(set([a,b,c]))}
-%     \item \code{M = Model(\{`a': a, `d': [b,c]\})} In this case, $M$ will expose $a$ and $d$ as attributes: \code{M.a} will be $a$, and \code{M.d} will be \code{[b,c]}.
-%     \item \code{M = Model([[a,b],c])}
-%     \item If file \code{MyModule} contains the definitions of \code{a}, \code{b} and \code{c}:
-%    \begin{CodeInput}
-% import MyModule
-% M = Model(MyModule)
-% \end{CodeInput}
-%     In this case, $M$ will expose $a$, $b$ and $c$ as attributes.
-%     \item Using a `model factory' function:
-%     \begin{CodeInput}
-% def make_model(x):
-% a = pm.Exponential('a',beta=x,value=0.5)
-% 
-% @pm.deterministic
-% def b(a=a):
-%     return 100-a
-% 
-% @pm.stochastic
-% def c(value=0.5, a=a, b=b):
-%     return (value-a)**2/b
-% 
-% return locals()
-% 
-% M = pm.Model(make_model(3))
-% \end{CodeInput}
-%     In this case, $M$ will also expose $a$, $b$ and $c$ as attributes.
-% \end{itemize}
-% 
-% \subsubsection[The Model class]{The \code{Model} class} \label{sec:Model}
+\section[Fitting Models]{Fitting models}
+\label{chap:modelfitting}
+% \pkg{PyMC} probability models are linked collections of nodes. These nodes are only informed by the values of their parents. \code{Deterministic} instances can compute their values given their parents' values, \code{Stochastic} instances can compute their log-probabilities or draw new values, and \code{Potential} instances can compute their log-probabilities. Fitting probability models requires larger-scale coordination and communication.
+
+\pkg{PyMC} provides three objects that fit models:
+\begin{itemize}
+    \item \code{MCMC}, which coordinates Markov chain Monte Carlo algorithms. The actual work of updating stochastic variables conditional on the rest of the model is done by \code{StepMethod} objects, which are described in this section.
+    \item \code{MAP}, which computes maximum \emph{a posteriori} estimates.
+    \item \code{NormApprox}, which computes the `normal approximation' \citep{gelman}: the joint distribution of all stochastic variables in a model is approximated as normal using local information at the maximum \emph{a posteriori} estimate.
+\end{itemize}
+
+All three objects are subclasses of \code{Model}, which is \pkg{PyMC}'s base class for fitting methods. \code{MCMC} and \code{NormApprox}, both of which can produce samples from the posterior, are subclasses of \code{Sampler}, which is \pkg{PyMC}'s base class for Monte Carlo fitting methods. \code{Sampler} provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes are documented at the end of this section. %Sampling loops can optionally be run interactively, meaning the user can pause sampling at any time, return to the \proglang{Python} prompt, check progress, and make adjustments.
+
+\subsection{Creating models} \label{sec:ModelInstantiation}
+The first argument to any fitting method's \code{init} method, including that of \code{MCMC}, is called \code{input}. The \code{input} argument can be just about anything; once you have defined the nodes that make up your model, you shouldn't even have to think about how to wrap them in a \code{Model} instance. Some examples of model instantiation using nodes \code{a}, \code{b} and \code{c} follow:
+\begin{itemize}
+    \item \code{M = Model(set([a,b,c]))}
+    \item \code{M = Model(\{`a': a, `d': [b,c]\})} In this case, $M$ will expose $a$ and $d$ as attributes: \code{M.a} will be $a$, and \code{M.d} will be \code{[b,c]}.
+    \item \code{M = Model([[a,b],c])}
+    \item If file \code{MyModule} contains the definitions of \code{a}, \code{b} and \code{c}:
+   \begin{CodeInput}
+import MyModule
+M = Model(MyModule)
+\end{CodeInput}
+    In this case, $M$ will expose $a$, $b$ and $c$ as attributes.
+    \item Using a `model factory' function:
+    \begin{CodeInput}
+def make_model(x):
+a = pm.Exponential('a',beta=x,value=0.5)
+
+@pm.deterministic
+def b(a=a):
+    return 100-a
+
+@pm.stochastic
+def c(value=0.5, a=a, b=b):
+    return (value-a)**2/b
+
+return locals()
+
+M = pm.Model(make_model(3))
+\end{CodeInput}
+    In this case, $M$ will also expose $a$, $b$ and $c$ as attributes.
+\end{itemize}
+
+% \subsection[The Model class]{The \code{Model} class} \label{sec:Model}
 % \code{Model} serves as a container for probability models and as a base class for the classes responsible for model fitting, such as \code{MCMC}.
 % 
 % \code{Model}'s init method takes the following arguments:
@@ -1581,7 +1577,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % You can produce `traces' for arbitrary functions with zero arguments as well. If you issue the command \code{M._funs_to_tally['trace_name'] = f} before sampling begins, then each time the model variables' values are tallied \code{f} will be called with no arguments, and the return value will be tallied. After sampling ends you can retrieve the trace as \code{M.trace['trace_name']}
 % 
-% \subsubsection[The Sampler class]{The \code{Sampler} class} \label{sec:Sampler}
+% \subsection[The Sampler class]{The \code{Sampler} class} \label{sec:Sampler}
 % \code{MCMC} is a subclass of a more general class called \code{Sampler}. Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: \code{Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)}. The \code{input} argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the \code{db} argument indicates which database backend should be used to store the samples (see Section~\ref{chap:database}), \code{reinit\_model} is a boolean flag that indicates whether the model should be re-initialised before running, and \code{calc\_deviance} is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
 % \begin{description}
 %     \item[\code{sample(iter, length=None, verbose=0)}:] Samples from the joint distribution. The \code{iter} argument controls how many times the sampling loop will be run, and the \code{length} argument controls the initial size of the database that will be used to store the samples.
@@ -1613,7 +1609,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % for particular applications, the \code{Gibbs} base class will be documented
 % here.
 % 
-% \subsubsection{Metropolis step methods} \label{metropolis}
+% \subsection{Metropolis step methods} \label{metropolis}
 % 
 % \code{Metropolis} and subclasses implement Metropolis-Hastings steps. To tell an \code{MCMC} object $M$ to handle a variable $x$ with a Metropolis step method, you might do the following:
 % \begin{CodeInput}
@@ -1731,7 +1727,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % % = We can uncomment this when we actually release them... =
 % % ==========================================================
 % % \hypertarget{gibbs}{}
-% % \subsubsection{Gibbs step methods} \label{gibbs}
+% % \subsection{Gibbs step methods} \label{gibbs}
 % % 
 % %
 % % Conjugate submodels (see \citet{gelman}) can be handled by Gibbs step methods rather than the default Metropolis methods. Gibbs step methods are Metropolis methods whose acceptance rate is always 1. They can be convenient because they relieve the user from having to worry about tuning the acceptance rate, but they can be computationally expensive. When variables are highly dependent on one another, better mixing can often be obtained by using \code{AdaptiveMetropolis} even when Gibbs step methods are available.
@@ -1774,7 +1770,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % % \end{itemize}
 % %
 % 
-% \subsubsection{Granularity of step methods: one-at-a-time vs. block updating}
+% \subsection{Granularity of step methods: one-at-a-time vs. block updating}
 % \label{subsec:granularity}
 % There is currently no way for a stochastic variable to compute individual terms of its log-probability; it is computed all together. This means that updating the elements of a array-valued variable individually would be inefficient, so all existing step methods update array-valued variables together, in a block update.
 % 
@@ -1788,7 +1784,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % \end{CodeInput}
 % An individual step method will be assigned to each element of \code{A} in the latter case, and the elements will be updated individually. Note that \code{A} can be broken up into larger blocks if desired.
 % 
-% \subsubsection{Automatic assignment of step methods}
+% \subsection{Automatic assignment of step methods}
 % Every step method subclass (including user-defined ones) that does not require any \code{init} arguments other than the stochastic variable to be handled adds itself to a list called \code{StepMethodRegistry} in the \pkg{PyMC} namespace. If a stochastic variable in an \code{MCMC} object has not been explicitly assigned a step method, each class in \code{StepMethodRegistry} is allowed to examine the variable.
 % 
 % To do so, each step method implements a class method called \code{competence}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely be the best available step method for variables like this. The \code{MCMC} object assigns the step method that returns the highest competence value to each of its stochastic variables.
@@ -1924,7 +1920,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{ram%
+% \subsection{ram%
 %   \label{ram}%
 % }
 % 
@@ -1937,7 +1933,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{no\_trace%
+% \subsection{no\_trace%
 %   \label{no-trace}%
 % }
 % 
@@ -1947,7 +1943,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{txt%
+% \subsection{txt%
 %   \label{txt}%
 % }
 % 
@@ -1991,7 +1987,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{pickle%
+% \subsection{pickle%
 %   \label{pickle}%
 % }
 % 
@@ -2006,7 +2002,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{sqlite%
+% \subsection{sqlite%
 %   \label{sqlite}%
 % }
 % 
@@ -2028,7 +2024,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{mysql%
+% \subsection{mysql%
 %   \label{mysql}%
 % }
 % 
@@ -2061,7 +2057,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % %___________________________________________________________________________
 % 
-% \subsubsection{hdf5%
+% \subsection{hdf5%
 %   \label{hdf5}%
 % }
 % 
@@ -2155,7 +2151,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % \end{center}
 % \end{figure}
 % 
-% \subsubsection{Informal Methods}
+% \subsection{Informal Methods}
 % 
 % The most straightforward approach for assessing convergence is based on simply plotting and inspecting traces and histograms of the observed MCMC sample. If the trace of values for each of the stochastics exhibits asymptotic behaviour\footnote{Asymptotic behaviour implies that the variance and the mean value of the sample stays relatively constant over some arbitrary period.} over the last $m$ iterations, this may be satisfactory evidence for convergence. A similar approach involves plotting a histogram for every set of $k$ iterations (perhaps 50-100) beyond some burn-in threshold $n$; if the histograms are not visibly different among the sample intervals, this is some evidence for convergence. Note that such diagnostics should be carried out for each stochastic estimated by the MCMC algorithm, because convergent behaviour by one variable does not imply evidence for convergence for other variables in the model. An extension of this approach can be taken when multiple parallel chains are run, rather than just a single, long chain. In this case, the final values of $c$ chains run for $n$ iterations are plotted in a histogram; just as above, this is repeated every $k$ iterations thereafter, and the histograms of the endpoints are plotted again and compared to the previous histogram. This is repeated until consecutive histograms are indistinguishable.
 % 
@@ -2171,7 +2167,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % A principal reason that evidence from informal techniques cannot guarantee convergence is a phenomenon called metastability. Chains may appear to have converged to the true equilibrium value, displaying excellent qualities by any of the methods described above. However, after some period of stability around this value, the chain may suddenly move to another region of the parameter space (Figure~\ref{fig:metas}). This period of metastability can sometimes be very long, and therefore escape detection by these convergence diagnostics. Unfortunately, there is no statistical technique available for detecting metastability.
 % 
-% \subsubsection{Formal Methods}
+% \subsection{Formal Methods}
 % 
 % Along with the \emph{ad hoc} techniques described above, a number of more formal methods exist which are prevalent in the literature. These are considered more formal because they are based on existing statistical methods, such as time series analysis.
 % 
@@ -2342,7 +2338,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % % Section~convergence_diagnostics (end)
 % 
-% \subsubsection{Autocorrelation Plots} % (fold)
+% \subsection{Autocorrelation Plots} % (fold)
 % %\label{sec:autocorrelation_plots}
 % 
 % Samples from MCMC algorithms are ususally autocorrelated, due partly to the
@@ -2532,7 +2528,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % The \code{StepMethod} class is meant to be subclassed. There are an enormous number of MCMC step methods in the literature, whereas \pkg{PyMC} provides only about half a dozen. Most user-defined step methods will be either Metropolis-Hastings or Gibbs step methods, and these should subclass \code{Metropolis} or \code{Gibbs} respectively. More unusual step methods should subclass \code{StepMethod} directly.
 % 
 % 
-% \subsubsection{Example: an asymmetric Metropolis step} \label{user-gen}
+% \subsection{Example: an asymmetric Metropolis step} \label{user-gen}
 % Consider the probability model in \code{examples/custom_step.py}:
 % \begin{CodeInput}
 % mu = pymc.Normal('mu',0,.01, value=0)
@@ -2601,7 +2597,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % \end{CodeInput}
 % 
 % 
-% \subsubsection{General step methods} \label{user-gen}
+% \subsection{General step methods} \label{user-gen}
 % 
 % 
 % All step methods must implement the following methods:
@@ -2650,7 +2646,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % 
 % 
 % 
-% \subsubsection{Metropolis-Hastings step methods} \label{user-metro}
+% \subsection{Metropolis-Hastings step methods} \label{user-metro}
 % 
 % A Metropolis-Hastings step method only needs to implement the following methods, which are called by \code{Metropolis.step()}:
 % \begin{description}
@@ -2669,7 +2665,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % Metropolis-Hastings step methods should log the number of jumps they have accepted and rejected using attributes called \code{accepted} and \code{rejected}.
 % 
 % 
-% \subsubsection{Gibbs step methods} \label{user-gibbs}
+% \subsection{Gibbs step methods} \label{user-gibbs}
 % 
 % 
 % Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children.
@@ -2700,7 +2696,7 @@ Lazy functions are implemented in C using \pkg{Pyrex} \citep{pyrex}, a language 
 % \pkg{PyMC} provides a convenient platform for non-MCMC fitting algorithms in addition to MCMC. All fitting algorithms should be implemented by subclasses of \code{Model}. There are virtually no restrictions on fitting algorithms, but many of \code{Model}'s behaviors may be useful. See Section~\ref{chap:modelfitting}.
 % 
 % 
-% \subsubsection{Monte Carlo fitting algorithms} \label{custom-MC}
+% \subsection{Monte Carlo fitting algorithms} \label{custom-MC}
 % 
 % 
 % Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms should be implemented by subclasses of \code{Sampler} to take advantage of the interactive sampling feature and database backends. Subclasses using the standard \code{sample()} and \code{isample()} methods must define one of two methods:
