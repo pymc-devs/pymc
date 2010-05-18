@@ -2681,7 +2681,7 @@ We welcome new contributors at all levels. If you would like to contribute new c
 \label{chap:acknowledge}
 The authors would like to thank several users of \pkg{PyMC} who have been particularly helpful during the development of the 2.0 release. In alphabetical order, these are Mike Conroy, Abraham Flaxman, J. Miguel Marin, Aaron MacNeil, Nick Matsakis, John Salvatier and Andrew Straw.
 
-Anand Patil's work on \pkg{PyMC} has been supported since 2008 by the \href{http://www.map.ox.ac.uk}{Malaria Atlas Project}, principally funded by the Wellcome Trust.
+Anand Patil's work on \pkg{PyMC} has been supported since 2008 by the Malaria Atlas Project, principally funded by the Wellcome Trust.
 
 David Huard's early work on \pkg{PyMC} was supported by a scholarship from the Natural Sciences and Engineering Research Council of Canada. 
 \newpage
@@ -2792,86 +2792,87 @@ for $i \in 0 \ldots k-1$.
 
 \end{description}
 
-% \index{discrete\_uniform\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.discrete_uniform_like}{}\begin{funcdesc}{discrete\_uniform\_like}{x, lower, upper}
-% Discrete uniform log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int{]} $lower \leq x \leq upper$
-% 
-% \item {} 
-% \emph{lower} : Lower limit.
-% 
-% \item {} 
-% \emph{upper} : Upper limit (upper \textgreater{} lower).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{geometric\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.geometric_like}{}\begin{funcdesc}{geometric\_like}{x, p}
-% Geometric log-likelihood. The probability that the first success in a
-% sequence of Bernoulli trials occurs on the x'th trial.
-% \begin{gather}
-% \begin{split}f(x \mid p) = p(1-p)^{x-1}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int{]} Number of trials before first success (x \textgreater{} 0).
-% 
-% \item {} 
-% \emph{p} : Probability of success on an individual trial, $p \in [0,1]$
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X)=1/p$
-% 
-% \item {} 
-% $Var(X)=\frac{1-p}{p^2}$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{hypergeometric\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.hypergeometric_like}{}\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
-% Hypergeometric log-likelihood. Discrete probability distribution that
-% describes the number of successes in a sequence of draws from a finite
-% population without replacement.
-% \begin{gather}
-% \begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
-% 
-% \item {} 
-% \emph{n} : {[}int{]} Size of sample drawn from the population.
-% 
-% \item {} 
-% \emph{m} : {[}int{]} Number of successes in the population.
-% 
-% \item {} 
-% \emph{N} : {[}int{]} Total number of units in the population.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% $E(X) = \frac{n n}{N}$
-% \end{notice}
-% \end{funcdesc}
+
+\subsection[discrete uniform]{\code{discrete_uniform_like(x, lower, upper)}}
+
+Discrete uniform log-likelihood.
+\begin{eqnarray*}
+f(x \mid lower, upper) = \frac{1}{upper-lower}    
+\end{eqnarray*}
+
+\begin{description} 
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} $lower \leq x \leq upper$
+
+\item {} 
+\emph{lower} : Lower limit.
+
+\item {} 
+\emph{upper} : Upper limit (upper \textgreater{} lower).
+
+\end{itemize}
+
+\end{description}
+
+\subsection[geometric]{\code{geometric_like(x, p)}} 
+
+Geometric log-likelihood. The probability that the first success in a
+sequence of Bernoulli trials occurs on the $x$'th trial.
+\begin{eqnarray*}
+f(x \mid p) = p(1-p)^{x-1}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of trials before first success (x \textgreater{} 0).
+
+\item {} 
+\emph{p} : Probability of success on an individual trial, $p \in [0,1]$
+
+\end{itemize}
+
+\item[Notes] \leavevmode\begin{itemize}
+\item {} 
+$E(X)=1/p$
+
+\item {} 
+$Var(X)=\frac{1-p}{p^2}$
+\end{itemize}
+
+\end{description}
+
+\subsection[hypergeometric]{\code{hypergeometric_like(x, n, m, N)}} 
+
+Hypergeometric log-likelihood. Discrete probability distribution that
+describes the number of successes in a sequence of draws from a finite
+population without replacement.
+\begin{eqnarray*}
+f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
+\end{eqnarray*}
+\begin{description}    
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
+
+\item {} 
+\emph{n} : {[}int{]} Size of sample drawn from the population.
+
+\item {} 
+\emph{m} : {[}int{]} Number of successes in the population.
+
+\item {} 
+\emph{N} : {[}int{]} Total number of units in the population.
+
+\end{itemize}
+
+\item[Notes] \leavevmode\begin{itemize}
+\item $E(X) = \frac{n n}{N}$
+\end{itemize}
+
+\end{description}
+
+
 % \index{negative\_binomial\_like() (in module pymc.distributions)}
 % 
 % \hypertarget{pymc.distributions.negative_binomial_like}{}\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
