@@ -1742,345 +1742,330 @@ Every step method subclass (including user-defined ones) that does not require a
 
 To do so, each step method implements a class method called \code{competence}, whose only argument is a single stochastic variable. These methods return values from 0 to 3; 0 meaning the step method cannot safely handle the variable and 3 meaning it will most likely be the best available step method for variables like this. The \code{MCMC} object assigns the step method that returns the highest competence value to each of its stochastic variables.
 
-% \section[Sampling Results]{Saving and managing sampling results}
-% \label{chap:database}
-% 
-% 
-% \subsection{Accessing Sampled Data%
-%   \label{accessing-sampled-data}%
-% }
-% 
-% The recommended way to access data from an MCMC run, irrespective of the
-% database backend, is to use the \code{trace} method:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~from~pymc.examples~import~DisasterModel\\
-% >{}>{}>~M~=~pm.MCMC(DisasterModel)\\
-% >{}>{}>~M.sample(10)\\
-% >{}>{}>~M.trace('e'){[}:{]}\\
-% array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,\\
-% ~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489{]})
-% }
-% \end{quote}
-% 
-% \code{M.trace('e')} returns a copy of the \code{Trace} instance belonging to
-% the tallyable object \DUroletitlereference{e}:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~M.trace('e')\\
-% <pymc.database.ram.Trace~object~at~0x7fa4877a8b50>
-% }
-% \end{quote}
-% 
-% Samples from the trace are obtained using the slice notation \code{{[}{]}},
-% similarly to \pkg{NumPy} arrays. By default, \code{trace} returns the samples from
-% the last chain. To return samples from all the chains, set
-% \code{chain=None}:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~M.sample(5)\\
-% >{}>{}>~M.trace('e',~chain=None){[}:{]}\\
-% array({[}~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,~~2.28320992,\\
-% ~~~~~~~~2.36982455,~~2.36982455,~~3.1669422~,~~3.1669422~,~~3.14499489,\\
-% ~~~~~~~~3.14499489,~~3.14499489,~~3.14499489,~~2.94672454,~~3.10767686{]})
-% }
-% \end{quote}
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{Saving Data to Disk%
-%   \label{saving-data-to-disk}%
-% }
-% 
-% By default, the database backend selected by the \code{MCMC} sampler is the \code{ram}
-% backend, which simply holds the data in RAM. Now, we create a
-% sampler that, instead, writes data to a pickle file:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~M~=~pm.MCMC(DisasterModel,~db='pickle',~dbname='Disaster.pickle')\\
-% >{}>{}>~M.db\\
-% <pymc.database.pickle.Database~object~at~0x7fa486623d90>\\
-% ~\\
-% >{}>{}>~M.sample(10)\\
-% >{}>{}>~M.db.close()
-% }
-% \end{quote}
-% 
-% Note that in this particular case, no data is written to disk before the call
-% to \code{db.close}. The \code{close} method will flush data to disk and
-% prepare the database for a potential session exit. Closing a \proglang{Python} session
-% without calling \code{close} beforehand is likely to corrupt the database,
-% making the data irretrievable. To simply flush data to disk without
-% closing the database, use the \code{commit} method.
-% 
-% Some backends not only have the ability to store the traces, but also
-% the state of the step methods at the end of sampling. This is particularly
-% useful when long warm-up periods are needed to tune the jump parameters.
-% When the database is loaded in a new session, the step methods query
-% the database to fetch the state they were in at the end of the last trace.
-% 
-% \DUadmonition[warning]{
-% \DUtitle[warning]{Warning}
-% 
-% Check that you \code{close} the database before closing the \proglang{Python} session.
-% }
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{Loading Back a Database%
-%   \label{loading-back-a-database}%
-% }
-% 
-% To load a file created in a previous session, use the \code{load} function
-% from the appropriate backend:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~db~=~pymc.database.pickle.load('Disaster.pickle')\\
-% >{}>{}>~len(db.trace('e'){[}:{]})\\
-% 10
-% }
-% \end{quote}
-% 
-% The \code{db} object also has a \code{trace} method identical to that of \code{Sampler}.
-% You can hence inspect the results of a model, even if you don't have the model
-% around.
-% 
-% To add a new trace to this file, we need to create an MCMC instance. This time,
-% instead of setting \code{db='pickle'}, we will pass the existing \code{Database}
-% instance and sample as usual. A new trace will be appended to the first:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% >{}>{}>~M~=~MCMC(DisasterModel,~db=db)\\
-% >{}>{}>~M.sample(5)\\
-% >{}>{}>~len(M.trace('e',~chain=None){[}:{]})\\
-% 15\\
-% >{}>{}>~M.db.close()
-% }
-% \end{quote}
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{Backends Description%
-%   \label{backends-description}%
-% }
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{ram%
-%   \label{ram}%
-% }
-% 
-% Used by default, this backend simply holds a copy in memory, with no output
-% written to disk. This is useful for short runs or testing. For long runs
-% generating large amount of data, using this backend may fill the available
-% memory, forcing the OS to store data in the cache, slowing down all other
-% applications.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{no\_trace%
-%   \label{no-trace}%
-% }
-% 
-% This backend simply does not store the trace. This may be useful for testing
-% purposes.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{txt%
-%   \label{txt}%
-% }
-% 
-% With the \code{txt} backend, the data is written to disk in ASCII files.
-% More precisely, the \code{dbname} argument is used to create a top directory
-% into which chain directories, called \code{Chain\_<\#>}, are created each
-% time \code{sample} is called:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% dbname/\\
-% ~~Chain\_0/\\
-% ~~~~<object0~name>.txt\\
-% ~~~~<object1~name>.txt\\
-% ~~~~...\\
-% ~~Chain\_1/\\
-% ~~~~<object0~name>.txt\\
-% ~~~~<object1~name>.txt\\
-% ~~~~...\\
-% ~~...
-% }
-% \end{quote}
-% 
-% In each one of these chain directories, files named \code{<variable name>.txt}
-% are created, storing the values of the variable as rows of text:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% \#~Variable:~e\\
-% \#~Sample~shape:~(5,)\\
-% \#~Date:~2008-11-18~17:19:13.554188\\
-% 3.033672373807017486e+00\\
-% 3.033672373807017486e+00\\
-% ...
-% }
-% \end{quote}
-% 
-% While the \code{txt} backend makes it easy to load data using other
-% applications and programming languages, it is not optimized for speed nor
-% memory efficiency. If you plan on generating and handling large datasets,
-% read on for better options.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{pickle%
-%   \label{pickle}%
-% }
-% 
-% The \code{pickle} database relies on the \code{cPickle} module to save the
-% traces. Use of this backend is appropriate for small scale,
-% short-lived projects. For longer term or larger projects, the \code{pickle}
-% backend should be avoided since the files it creates might be unreadable
-% across different \proglang{Python} versions. The \DUroletitlereference{pickled} file is a simple dump of a
-% dictionary containing the \pkg{NumPy} arrays storing the traces, as well as
-% the state of the \code{Sampler}'s step methods.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{sqlite%
-%   \label{sqlite}%
-% }
-% 
-% The \code{sqlite} backend is based on the python module \href{http://www.sqlite.org}{sqlite3}
-% (a \proglang{Python} 2.5 built-in) . It opens an SQL database named \code{dbname},
-% and creates one table~per tallyable objects. The rows of this table
-% store a key, the chain index and the values of the objects:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% key~(INT),~trace~(INT),~~v1~(FLOAT),~v2~(FLOAT),~v3~(FLOAT)~...
-% }
-% \end{quote}
-% 
-% The key is autoincremented each time a new row is added to the table,
-% that is, each time \code{tally} is called by the sampler. Note that the
-% \code{savestate} feature is not implemented, that is, the state of the step
-% methods is not stored internally in the database.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{mysql%
-%   \label{mysql}%
-% }
-% 
-% The \code{mysql} backend depends on the \href{http://www.mysql.com/downloads/}{MySQL} library and its python wrapper
-% \href{http://sourceforge.net/projects/mysql-python}{MySQLdb}. Like the \code{sqlite} backend, it creates an SQL database containing
-% one table~per tallyable object. The main difference with
-% \code{sqlite} is that it can connect to a remote database, provided the url and
-% port of the host server is given, along with a valid user name and password.
-% These parameters are passed when the \code{Sampler} is instantiated:
-% %
-% \begin{itemize}
-% 
-% \item \code{dbname} (\DUroletitlereference{string}) The name of the database file.
-% 
-% \item \code{dbuser} (\DUroletitlereference{string}) The database user name.
-% 
-% \item \code{dbpass} (\DUroletitlereference{string}) The user password for this database.
-% 
-% \item \code{dbhost} (\DUroletitlereference{string}) The location of the database host.
-% 
-% \item \code{dbport} (\DUroletitlereference{int})    The port number to use to reach the database host.
-% 
-% \item \code{dbmode} \{\code{a}, \code{w}\} File mode.  Use \code{a} to append values, and \code{w}
-% to overwrite an existing database.
-% 
-% \end{itemize}
-% 
-% The \code{savestate} feature is not implemented in the \code{mysql} backend.
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{hdf5%
-%   \label{hdf5}%
-% }
-% 
-% The \code{hdf5} backend uses \href{http://www.pytables.org/moin}{\pkg{pyTables}} to save data in binary HDF5 format.
-% The \code{hdf5} database is fast and can store huge traces, far larger than the
-% available RAM. Data can be compressed and decompressed on the fly to
-% reduce the disk footprint.
-% Another feature of this backend is that it can store arbitrary objects.
-% Whereas most of the other backends are limited to numerical values, \code{hdf5}
-% can tally any object that can be pickled, opening the door for powerful and
-% exotic applications (see \code{pymc.gp}).
-% 
-% The internal structure of an HDF5 file storing both numerical values and
-% arbitrary objects is as follows:
-% %
-% \begin{quote}{\ttfamily \raggedright \noindent
-% /~(root)\\
-% ~~/chain0/~(Group)~'Chain~\#0'\\
-% ~~~~/chain0/\pkg{PyMC}Samples~(Table(N,))~'\pkg{PyMC}~Samples'\\
-% ~~~~/chain0/group0~(Group)~'Group~storing~objects.'\\
-% ~~~~~~/chain0/group0/<object0~name>~(VLArray(N,))~'<object0~name>~samples.'\\
-% ~~~~~~/chain0/group0/<object1~name>~(VLArray(N,))~'<object1~name>~samples.'\\
-% ~~~~~~...\\
-% ~~/chain1/~(Group)~'Chain~\#1'\\
-% ~~~~...
-% }
-% \end{quote}
-% 
-% All standard numerical values are stored in a \code{Table}, while \code{objects}
-% are stored in individual \code{VLArrays}.
-% 
-% The \code{hdf5} Database takes the following parameters:
-% %
-% \begin{itemize}
-% 
-% \item \code{dbname} (\DUroletitlereference{string}) Name of the hdf5 file.
-% 
-% \item \code{dbmode} \{\code{a}, \code{w}, \code{r}\} File mode: \code{a}: append, \code{w}: overwrite,
-% \code{r}: read-only.
-% 
-% \item \code{dbcomplevel} : (\DUroletitlereference{int} (0-9)) Compression level, 0: no compression.
-% 
-% \item \code{dbcomplib} (\DUroletitlereference{string}) Compression library (\code{zlib}, \code{bzip2}, \code{lzo})
-% 
-% \end{itemize}
-% 
-% According the the \href{http://www.pytables.org/moin}{\pkg{pyTables}} manual, \DUroletitlereference{zlib} has a fast decompression,
-% relatively slow compression, and a good compression ratio;
-% \DUroletitlereference{LZO} has a fast compression, but a low compression ratio;
-% and \DUroletitlereference{bzip2} has an excellent compression ratio but requires more CPU. Note that
-% some of these compression algorithms require additional software to work (see
-% the \href{http://www.pytables.org/moin}{\pkg{pyTables}} manual).
-% 
-% 
-% %___________________________________________________________________________
-% 
-% \subsection{Writing a New Backend%
-%   \label{writing-a-new-backend}%
-% }
-% 
-% It is relatively easy to write a new backend for \code{\pkg{PyMC}}. The first step is to
-% look at the \code{database.base} module, which defines barebone \code{Database}
-% and \code{Trace} classes. This module contains documentation on the methods that
-% should be defined to get a working backend.
-% 
-% Testing your new backend should be fairly straightforward, since the
-% \code{test\_database} module contains a generic test class that can easily
-% be subclassed to check that the basic features required of all backends
-% are implemented and working properly.
-% 
-% 
-% 
-% 
+\section[Sampling Results]{Saving and managing sampling results}
+\label{chap:database}
+
+
+\subsection{Accessing Sampled Data}
+  \label{accessing-sampled-data}%
+
+
+The recommended way to access data from an MCMC run, irrespective of the
+database backend, is to use the \code{trace} method:
+%
+\begin{CodeInput}
+>>> from pymc.examples import DisasterModel
+>>> M = pm.MCMC(DisasterModel)
+>>> M.sample(10)
+>>> M.trace('e')[:]
+array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])    
+\end{CodeInput}
+
+\code{M.trace('e')} returns a copy of the \code{Trace} instance belonging to
+the tallyable object $e$:
+\begin{CodeInput}
+>>> M.trace('e')
+<pymc.database.ram.Trace object at 0x7fa4877a8b50>
+\end{CodeInput}
+
+Samples from the trace are obtained using the slice notation \code{{[}{]}},
+similarly to \pkg{NumPy} arrays. By default, \code{trace} returns the samples from
+the last chain. To return samples from all the chains, set
+\code{chain=None}:
+%
+
+\begin{CodeInput}
+>>> M.sample(5)
+>>> M.trace('e', chain=None)[:]
+array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,
+        3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])    
+\end{CodeInput}
+
+
+
+
+%___________________________________________________________________________
+
+\subsection{Saving Data to Disk}
+  \label{saving-data-to-disk}%
+
+
+By default, the database backend selected by the \code{MCMC} sampler is the \code{ram}
+backend, which simply holds the data in RAM. Now, we create a
+sampler that, instead, writes data to a pickle file:
+%
+\begin{CodeInput}
+>>> M = pm.MCMC(DisasterModel, db='pickle', dbname='Disaster.pickle')
+>>> M.db
+<pymc.database.pickle.Database object at 0x7fa486623d90>
+
+>>> M.sample(10)
+>>> M.db.close()    
+\end{CodeInput}
+
+Note that in this particular case, no data is written to disk before the call
+to \code{db.close}. The \code{close} method will flush data to disk and
+prepare the database for a potential session exit. Closing a \proglang{Python} session
+without calling \code{close} beforehand is likely to corrupt the database,
+making the data irretrievable. To simply flush data to disk without
+closing the database, use the \code{commit} method.
+
+Some backends not only have the ability to store the traces, but also
+the state of the step methods at the end of sampling. This is particularly
+useful when long warm-up periods are needed to tune the jump parameters.
+When the database is loaded in a new session, the step methods query
+the database to fetch the state they were in at the end of the last trace.
+
+Check that you \code{close} the database before closing the \proglang{Python} session.
+
+
+%___________________________________________________________________________
+
+\subsection{Loading Back a Database}
+  \label{loading-back-a-database}%
+
+
+To load a file created in a previous session, use the \code{load} function
+from the appropriate backend:
+%
+\begin{CodeInput}
+>>> db = pymc.database.pickle.load('Disaster.pickle')
+>>> len(db.trace('e')[:])
+10    
+\end{CodeInput}
+
+The \code{db} object also has a \code{trace} method identical to that of \code{Sampler}.
+You can hence inspect the results of a model, even if you don't have the model
+around.
+
+To add a new trace to this file, we need to create an MCMC instance. This time,
+instead of setting \code{db='pickle'}, we will pass the existing \code{Database}
+instance and sample as usual. A new trace will be appended to the first:
+
+\begin{CodeInput}
+>>> M = MCMC(DisasterModel, db=db)
+>>> M.sample(5)
+>>> len(M.trace('e', chain=None)[:])
+15
+>>> M.db.close()    
+\end{CodeInput}
+
+
+
+
+%___________________________________________________________________________
+
+\subsection[ram]{The \code{ram} backend}
+  \label{ram}%
+
+
+Used by default, this backend simply holds a copy in memory, with no output
+written to disk. This is useful for short runs or testing. For long runs
+generating large amount of data, using this backend may fill the available
+memory, forcing the OS to store data in the cache, slowing down all other
+applications.
+
+
+%___________________________________________________________________________
+
+\subsection[no_trace]{The \code{no_trace} backend}
+  \label{no-trace}%
+
+
+This backend simply does not store the trace. This may be useful for testing
+purposes.
+
+
+%___________________________________________________________________________
+
+\subsection[txt]{The \code{txt} backend}
+  \label{txt}%
+
+
+With the \code{txt} backend, the data is written to disk in ASCII files.
+More precisely, the \code{dbname} argument is used to create a top directory
+into which chain directories, called \code{Chain\_<\#>}, are created each
+time \code{sample} is called:
+%
+
+\begin{CodeInput}
+dbname/
+  Chain_0/
+    <object0 name>.txt
+    <object1 name>.txt
+    ...
+  Chain_1/
+    <object0 name>.txt
+    <object1 name>.txt
+    ...
+  ...    
+\end{CodeInput}
+
+In each one of these chain directories, files named \code{<variable name>.txt}
+are created, storing the values of the variable as rows of text:
+%
+
+\begin{CodeInput}
+# Variable: e
+# Sample shape: (5,)
+# Date: 2008-11-18 17:19:13.554188
+3.033672373807017486e+00
+3.033672373807017486e+00
+...    
+\end{CodeInput}
+
+While the \code{txt} backend makes it easy to load data using other
+applications and programming languages, it is not optimized for speed nor
+memory efficiency. If you plan on generating and handling large datasets,
+read on for better options.
+
+
+%___________________________________________________________________________
+
+\subsection[pickle]{The \code{pickle} backend}
+  \label{pickle}%
+
+
+The \code{pickle} database relies on the \code{cPickle} module to save the
+traces. Use of this backend is appropriate for small scale,
+short-lived projects. For longer term or larger projects, the \code{pickle}
+backend should be avoided since the files it creates might be unreadable
+across different \proglang{Python} versions. The pickled file is a simple dump of a
+dictionary containing the \pkg{NumPy} arrays storing the traces, as well as
+the state of the \code{Sampler}'s step methods.
+
+
+%___________________________________________________________________________
+
+\subsection[sqlite]{The \code{sqlite} backend}
+  \label{sqlite}%
+
+
+The \code{sqlite} backend is based on the python module \code{sqlite3} 
+(a \proglang{Python} 2.5 built-in) . It opens an SQL database named \code{dbname},
+and creates one table~per tallyable objects. The rows of this table
+store a key, the chain index and the values of the objects:
+%
+\begin{CodeInput}
+key (INT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...    
+\end{CodeInput}
+
+The key is autoincremented each time a new row is added to the table,
+that is, each time \code{tally} is called by the sampler. Note that the
+\code{savestate} feature is not implemented, that is, the state of the step
+methods is not stored internally in the database.
+
+
+%___________________________________________________________________________
+
+\subsection[mysql]{The \code{mysql} backend}
+  \label{mysql}%
+
+
+The \code{mysql} backend depends on the \pkg{MySQL} library and its python wrapper
+\pkg{MySQLdb} \citep{mysqldb}. Like the \code{sqlite} backend, it creates an \proglang{SQL} database containing
+one table per tallyable object. The main difference with
+\code{sqlite} is that it can connect to a remote database, provided the url and
+port of the host server is given, along with a valid user name and password.
+These parameters are passed when the \code{Sampler} is instantiated:
+%
+\begin{itemize}
+
+\item \code{dbname} The name of the database file.
+                    
+\item \code{dbuser} The database user name.
+                    
+\item \code{dbpass} The user password for this database.
+                    
+\item \code{dbhost} The location of the database host.
+                    
+\item \code{dbport} The port number to use to reach the database host.
+
+\item \code{dbmode} File mode.  Use \code{a} to append values, and \code{w}
+to overwrite an existing database.
+
+\end{itemize}
+
+The \code{savestate} feature is not implemented in the \code{mysql} backend.
+
+
+%___________________________________________________________________________
+
+\subsection[hdf5]{The \code{hdf5} backend}
+  \label{hdf5}%
+
+
+The \code{hdf5} backend uses \pkg{pyTables} to save data in binary HDF5 format.
+The \code{hdf5} database is fast and can store huge traces, far larger than the
+available RAM. Data can be compressed and decompressed on the fly to
+reduce the disk footprint.
+Another feature of this backend is that it can store arbitrary objects.
+Whereas most of the other backends are limited to numerical values, \code{hdf5}
+can tally any object that can be pickled, opening the door for powerful and
+exotic applications (see \code{pymc.gp}).
+
+The internal structure of an HDF5 file storing both numerical values and
+arbitrary objects is as follows:
+%
+\begin{CodeInput}
+/ (root)
+  /chain0/ (Group) 'Chain #0'
+    /chain0/PyMCSamples (Table(N,)) 'PyMC Samples'
+    /chain0/group0 (Group) 'Group storing objects.'
+      /chain0/group0/<object0 name> (VLArray(N,)) '<object0 name> samples.'
+      /chain0/group0/<object1 name> (VLArray(N,)) '<object1 name> samples.'
+      ...
+  /chain1/ (Group) 'Chain \#1'
+    ...    
+\end{CodeInput}
+
+All standard numerical values are stored in a \code{Table}, while \code{objects}
+are stored in individual \code{VLArrays}.
+
+The \code{hdf5} Database takes the following parameters:
+%
+\begin{itemize}
+
+\item \code{dbname} Name of the \pkg{hdf5} file.
+
+\item \code{dbmode} File mode: \code{a}: append, \code{w}: overwrite,
+\code{r}: read-only.
+
+\item \code{dbcomplevel} : Compression level, 0: no compression, 9: maximal compression.
+
+\item \code{dbcomplib} Compression library (\pkg{zlib}, \pkg{bzip2}, \pkg{LZO})
+
+\end{itemize}
+
+According the the \pkg{pyTables} manual, \pkg{zlib} \cite{zlib} has a fast decompression,
+relatively slow compression, and a good compression ratio;
+\pkg{LZO} \cite{lzo}  has a fast compression, but a low compression ratio;
+and \pkg{bzip2} \cite{bzip2}  has an excellent compression ratio but requires more CPU. Note that
+some of these compression algorithms require additional software to work (see
+the \pkg{pyTables} manual).
+
+
+%___________________________________________________________________________
+
+\subsection{Writing a New Backend}
+  \label{writing-a-new-backend}%
+
+
+It is relatively easy to write a new backend for \code{\pkg{PyMC}}. The first step is to
+look at the \\\code{database.base} module, which defines barebone \code{Database}
+and \code{Trace} classes. This module contains documentation on the methods that
+should be defined to get a working backend.
+
+Testing your new backend should be fairly straightforward, since the
+\code{test\_database} module contains a generic test class that can easily
+be subclassed to check that the basic features required of all backends
+are implemented and working properly.
+
+
+
+
 \section[Model Checking]{Model checking and diagnostics}
 \label{chap:modelchecking}
 
