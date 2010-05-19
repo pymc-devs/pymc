@@ -957,13 +957,13 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
 There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
 
 \begin{description}
-    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see Section~\ref{chap:distributions}) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see Sections~\ref{chap:discrete-distributions}) and \ref{chap:continuous-distributions} can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
 \begin{CodeInput}
 import pymc as pm
 s = pm.DiscreteUniform('s', 1851, 1962, value=1900)
 \end{CodeInput}
 
-    In addition to the classes in Section~\ref{chap:distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if \pkg{SciPy} is installed. These distributions are in the submodule \code{pymc.\pkg{SciPy}Distributions}.
+    In addition to the classes in Sections~\ref{chap:discrete-distributions}) and \ref{chap:continuous-distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if \pkg{SciPy} is installed. These distributions are in the submodule \code{pymc.\pkg{SciPy}Distributions}.
 
     Users can call the class factory \code{stochastic_from_dist} to produce \code{Stochastic} subclasses of their own from probability distributions not included with \pkg{PyMC}.%  These classes' init methods take the following arguments:
     % \begin{description}
@@ -2687,8 +2687,8 @@ David Huard's early work on \pkg{PyMC} was supported by a scholarship from the N
 \newpage
 \appendix
 
-\section[Distributions]{Probability distributions}
-\label{chap:distributions}
+% \section[Distributions]{Probability distributions}
+
 
 
 \pkg{PyMC} provides 35 built-in probability distributions. For each distribution, \pkg{PyMC} provides:
@@ -2702,6 +2702,7 @@ David Huard's early work on \pkg{PyMC} was supported by a scholarship from the N
 This Section~describes the likelihood functions of these distributions.
 
 \section{Discrete distributions}
+\label{chap:discrete-distributions} 
 
 \subsection[bernoulli]{\code{bernoulli_like(x, p)}}
      
@@ -2873,185 +2874,194 @@ f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
 \end{description}
 
 
-% \index{negative\_binomial\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.negative_binomial_like}{}\begin{funcdesc}{negative\_binomial\_like}{x, mu, alpha}
-% Negative binomial log-likelihood. The negative binomial distribution describes a
-% Poisson random variable whose rate parameter is gamma distributed. \pkg{PyMC}'s chosen
-% parameterization is based on this mixture interpretation.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data (x \textgreater{} 0).
-% 
-% \item {} 
-% \emph{mu} : mu \textgreater{} 0
-% 
-% \item {} 
-% \emph{alpha} : alpha \textgreater{} 0
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E[x]=\mu$
-% 
-% \item {} 
-% In Wikipedia's parameterization,
-% $r=\alpha$
-% $p=\alpha/(\mu+\alpha)$
-% $\mu=r(1-p)/p$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{poisson\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.poisson_like}{}\begin{funcdesc}{poisson\_like}{x, mu}
-% Poisson log-likelihood. The Poisson is a discrete probability distribution.
-% It is often used to model the number of events occurring in a fixed period of
-% time when the times at which events occur are independent. The Poisson
-% distribution can be derived as a limiting case of the binomial distribution.
-% \begin{gather}
-% \begin{split}f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int{]} $x \in {0,1,2,...}$
-% 
-% \item {} 
-% \emph{mu} : Expected number of occurrences during the given interval, $\mu \geq 0$.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(x)=\mu$
-% 
-% \item {} 
-% $Var(x)=\mu$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% 
-% 
-% \subsection{Continuous distributions}
-% \index{beta\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.beta_like}{}\begin{funcdesc}{beta\_like}{x, alpha, beta}
-% Beta log-likelihood. The conjugate prior for the parameter :math: \emph{p} of the binomial distribution.
-% \begin{gather}
-% \begin{split}f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : 0 \textless{} x \textless{} 1
-% 
-% \item {} 
-% \emph{alpha} : alpha \textgreater{} 0
-% 
-% \item {} 
-% \emph{beta} : beta \textgreater{} 0
-% 
-% \end{itemize}
-% 
-% \item[Example] \leavevmode
-% \begin{Verbatim}[commandchars=@\[\]]
-% @PYGaQ[@textgreater[]@textgreater[]@textgreater[] ]beta@_like(@PYGbe[.]@PYGaw[4],@PYGaw[1],@PYGaw[2])
-% @PYGaa[0.18232160806655884]
-% \end{Verbatim}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X)=\frac{\alpha}{\alpha+\beta}$
-% 
-% \item {} 
-% $Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{cauchy\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.cauchy_like}{}\begin{funcdesc}{cauchy\_like}{x, alpha, beta}
-% Cauchy log-likelihood. The Cauchy distribution is also known as the
-% Lorentz or the Breit-Wigner distribution.
-% \begin{gather}
-% \begin{split}f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{alpha} : Location parameter.
-% 
-% \item {} 
-% \emph{beta} : Scale parameter \textgreater{} 0.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% Mode and median are at alpha.
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{chi2\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.chi2_like}{}\begin{funcdesc}{chi2\_like}{x, nu}
-% Chi-squared $\chi^2$ log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : \textgreater{} 0
-% 
-% \item {} 
-% \emph{nu} : {[}int{]} Degrees of freedom ( nu \textgreater{} 0 )
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X)=\nu$
-% 
-% \item {} 
-% $Var(X)=2\nu$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{degenerate\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.degenerate_like}{}\begin{funcdesc}{degenerate\_like}{x, k}
-% Degenerate log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input value.
-% 
-% \item {} 
-% \emph{k} : Degenerate value.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
+\subsection[negative binomial]{\code{negative_binomial_like(x, mu, alpha)}}
+
+Negative binomial log-likelihood. The negative binomial distribution describes a
+Poisson random variable whose rate parameter is gamma distributed. \pkg{PyMC}'s chosen
+parameterization is based on this mixture interpretation.
+
+\begin{eqnarray*}
+f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input data (x \textgreater{} 0).
+
+\item {} 
+\emph{mu} : mu \textgreater{} 0
+
+\item {} 
+\emph{alpha} : alpha \textgreater{} 0
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E[x]=\mu$
+
+\item {} 
+In Wikipedia's parameterization,
+$r=\alpha$
+$p=\alpha/(\mu+\alpha)$
+$\mu=r(1-p)/p$
+
+\end{itemize}
+
+
+\end{description}
+
+\subsection[poisson]{\code{poisson_like(x, mu)}}
+
+Poisson log-likelihood. The Poisson is a discrete probability distribution.
+It is often used to model the number of events occurring in a fixed period of
+time when the times at which events occur are independent. The Poisson
+distribution can be derived as a limiting case of the binomial distribution.
+
+\begin{eqnarray*}
+    f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int{]} $x \in {0,1,2,...}$
+
+\item {} 
+\emph{mu} : Expected number of occurrences during the given interval, $\mu \geq 0$.
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(x)=\mu$
+
+\item {} 
+$\VAR(x)=\mu$
+
+\end{itemize}
+
+\end{description}
+
+
+
+\section{Continuous distributions}
+\label{chap:continuous-distributions} 
+
+
+\subsection[beta]{\code{beta_like(x, alpha, beta)} }
+
+Beta log-likelihood. The conjugate prior for the parameter \emph{p} of the binomial distribution.
+
+\begin{eqnarray*}
+    f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : 0 \textless{} x \textless{} 1
+
+\item {} 
+\emph{alpha} : alpha \textgreater{} 0
+
+\item {} 
+\emph{beta} : beta \textgreater{} 0
+
+\end{itemize}
+
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X)=\frac{\alpha}{\alpha+\beta}$
+
+\item {} 
+$\VAR(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[cauchy]{\code{cauchy_like(x, alpha, beta)}}
+
+
+Cauchy log-likelihood. The Cauchy distribution is also known as the
+Lorentz or the Breit-Wigner distribution.
+
+\begin{eqnarray*}
+f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{alpha} : Location parameter.
+
+\item {} 
+\emph{beta} : Scale parameter \textgreater{} 0.
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+Mode and median are at alpha.
+
+\end{itemize}
+
+\end{description}
+
+\subsection[chi2]{\code{chi2_like(x, nu)} }
+
+$\chi^2$ log-likelihood.
+\begin{eqnarray*}
+    f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : \textgreater{} 0
+
+\item {} 
+\emph{nu} : {[}int{]} Degrees of freedom ( \emph{nu} \textgreater{} 0 )
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X)=\nu$
+
+\item {} 
+$\VAR(X)=2\nu$
+
+\end{itemize}
+
+
+\end{description}
+
+\subsection[degenerate]{\code{degenerate_like(x, k)}}
+
+Degenerate log-likelihood.
+
+\begin{eqnarray*}
+f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Input value.
+
+\item {} 
+\emph{k} : Degenerate value.
+
+\end{itemize}
+
+\end{description}
+
+
 % \index{exponential\_like() (in module pymc.distributions)}
 % 
 % \hypertarget{pymc.distributions.exponential_like}{}\begin{funcdesc}{exponential\_like}{x, beta}
