@@ -24,6 +24,9 @@ diagnostics.
 Features
 ========
 
+PyMC provides functionalities to make Bayesian analysis as painless as 
+possible. Here is a short list of some of its features:
+
 * Fits Bayesian statistical models with Markov chain Monte Carlo and
   other algorithms.
 
@@ -51,6 +54,11 @@ Features
 
 What's new in version 2
 =======================
+
+This second version of PyMC benefits from a major rewrite effort. 
+Substantial improvements in code extensibility, user interface as well
+as in raw performance have been achieved. Most notably, the PyMC 2 series
+provides: 
 
 * New flexible object model and syntax (not backward-compatible).
 
@@ -88,8 +96,8 @@ First, define your model in a file, say mymodel.py (with comments, of course!)::
        return pymc.invlogit(a+b*x)
 
    # Binomial likelihood for data
-   d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]),
-                     \observed=True)
+   d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]),\
+                     observed=True)
 
 Save this file, then from a python shell (or another file in the same directory), call::
 

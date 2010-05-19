@@ -34,7 +34,7 @@ import numpy as np
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
 import base, pickle, ram, pymc
-import pdb,os
+import pdb,os, warnings
 from pymc.database import base
 
 __all__ = ['Trace', 'Database', 'load']
@@ -103,7 +103,7 @@ class Trace(base.Trace):
             chains. By default, the last chain is returned.
           - slicing: A slice, overriding burn and thin assignement.
         """
-
+        # warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
         if not slicing:
             slicing = slice(burn, None, thin)
 
@@ -121,6 +121,27 @@ class Trace(base.Trace):
         if len(self._shape) > 1:
             trace = trace.reshape(-1, *self._shape)
         return squeeze(trace[slicing])
+
+    def __getitem__(self, index):
+        chain = self._chain
+        
+        if chain is None:
+            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            trace = self.db.cur.fetchall()
+        else:
+            # Deal with negative chains (starting from the end)
+            if chain < 0:
+                chain = range(self.db.chains)[chain]
+            self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
+            trace = self.db.cur.fetchall()
+            
+        trace = np.array(trace)[:,2:]
+        if len(self._shape) > 1:
+            trace = trace.reshape(-1, *self._shape)
+        else:
+            trace = np.squeeze(trace)
+        
+        return trace[index]
 
 
     __call__ = gettrace

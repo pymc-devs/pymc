@@ -24,19 +24,19 @@ M = Model(MyModule)
     \item Using a `model factory' function:
     \begin{verbatim}
 def make_model(x):
-    a = Exponential('a',beta=x,value=0.5)
+    a = pm.Exponential('a',beta=x,value=0.5)
 
-    @deterministic
+    @pm.deterministic
     def b(a=a):
         return 100-a
 
-    @stochastic
+    @pm.stochastic
     def c(value=0.5, a=a, b=b):
         return (value-a)**2/b
 
     return locals()
 
-M = Model(make_model(3))
+M = pm.Model(make_model(3))
     \end{verbatim}
     In this case, $M$ will also expose $a$, $b$ and $c$ as attributes.
 \end{itemize}
@@ -77,8 +77,8 @@ In addition, models expose each node they contain as an attribute. For instance,
 
 The \code{MAP} class sets all stochastic variables to their maximum \emph{a posteriori} values using functions in SciPy's \code{optimize} package. SciPy must be installed to use it. \code{MAP} can only handle variables whose dtype is \code{float}, so it will not work on model \ref{disastermodel}. To fit the model in \file{examples/gelman_bioassay.py} using \code{MAP}, do the following
 \begin{verbatim}
->>> import from pymc.examples import gelman_bioassay
->>> M = MAP(gelman_bioassay)
+>>> from pymc.examples import gelman_bioassay
+>>> M = pm.MAP(gelman_bioassay)
 >>> M.fit()
 \end{verbatim}
 This call will cause $M$ to fit the model using Nelder-Mead optimization, which does not require derivatives. The variables in \code{gelman_bioassay} have now been set to their maximum \emph{a posteriori} values:
@@ -120,7 +120,7 @@ One use of the \code{MAP} class is finding reasonable initial states for MCMC ch
 
 The \code{NormApprox} class extends the \code{MAP} class by approximating the posterior covariance of the model using the Fisher information matrix, or the Hessian of the joint log probability at the maximum. To fit the model in \file{examples/gelman_bioassay.py} using \code{NormApprox}, do:
 \begin{verbatim}
->>> N = NormApprox(gelman_bioassay)
+>>> N = pm.NormApprox(gelman_bioassay)
 >>> N.fit()
 \end{verbatim}
 The approximate joint posterior mean and covariance of the variables are available via the attributes \code{mu} and \code{C}:
@@ -227,7 +227,7 @@ here.
 
 \code{Metropolis} and subclasses implement Metropolis-Hastings steps. To tell an \code{MCMC} object $M$ to handle a variable $x$ with a Metropolis step method, you might do the following:
 \begin{verbatim}
-M.use_step_method(Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
+M.use_step_method(pm.Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
 \end{verbatim}
 
 \code{Metropolis} itself handles float-valued variables, and subclasses \code{DiscreteMetropolis} and \code{BinaryMetropolis} handle integer- and boolean-valued variables, respectively. Subclasses of \code{Metropolis} must implement the following methods:
@@ -272,7 +272,7 @@ Although the chain is non-Markovian, it has correct ergodic properties (see
 To tell an \code{MCMC} object $M$ to handle variables $x$, $y$ and $z$ with an
 \code{AdaptiveMetropolis} instance, you might do the following:
 \begin{verbatim}
-   M.use_step_method(AdaptiveMetropolis, [x,y,z], \
+   M.use_step_method(pm.AdaptiveMetropolis, [x,y,z], \
                       scales={x:1, y:2, z:.5}, delay=10000)
 \end{verbatim}
 
@@ -390,11 +390,11 @@ There is currently no way for a stochastic variable to compute individual terms 
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this:
 \begin{verbatim}
-A = Normal('A', value=numpy.zeros(100), mu=0., tau=1.)
+A = pm.Normal('A', value=numpy.zeros(100), mu=0., tau=1.)
 \end{verbatim}
 do this:
 \begin{verbatim}
-A = [Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in xrange(100)]
+A = [pm.Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in range(100)]
 \end{verbatim}
 An individual step method will be assigned to each element of \code{A} in the latter case, and the elements will be updated individually. Note that \code{A} can be broken up into larger blocks if desired.
 

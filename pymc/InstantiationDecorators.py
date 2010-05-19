@@ -36,6 +36,8 @@ def _extract(__func__, kwds, keys, classname, probe=True):
 
     # This gets used by stochastic to check for long-format logp and random:
     if probe:
+        cur_status = check_special_methods()
+        disable_special_methods()
         # Define global tracing function (I assume this is for debugging??)
         # No, it's to get out the logp and random functions, if they're in there.
         def probeFunc(frame, event, arg):
@@ -49,8 +51,6 @@ def _extract(__func__, kwds, keys, classname, probe=True):
 
         # Get the functions logp and random (complete interface).
         # Disable special methods to prevent the formation of a hurricane of Deterministics
-        cur_status = check_special_methods()
-        disable_special_methods()
         try:
             __func__()
         except:

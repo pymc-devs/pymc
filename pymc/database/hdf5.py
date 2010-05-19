@@ -24,6 +24,8 @@ from pymc.database import base, pickle
 from copy import copy
 import tables
 import os, warnings, sys, traceback
+import warnings
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -57,6 +59,24 @@ class TraceObject(base.Trace):
         #     print self._vlarrays, chain
         #     raise AttributeError
 
+
+    def __getitem__(self, index):
+        """Mimic NumPy indexing for arrays."""
+        chain = self._chain
+        
+        if chain is not None:
+            vlarrays = [self._vlarrays[chain]]
+        else:
+            vlarrays =  self._vlarrays
+        
+        for i, vlarray in enumerate(vlarrays):
+            if i==0:
+                out = np.asarray(vlarray[index])
+            else:
+                out = np.hstack((out, vlarray[index]))
+        
+        return out
+        
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
@@ -114,6 +134,25 @@ class Trace(base.Trace):
     def tally(self, chain):
         """Adds current value to trace"""
         self.db._rows[chain][self.name] = self._getfunc()
+
+    def __getitem__(self, index):
+        """Mimic NumPy indexing for arrays."""
+        chain = self._chain
+        
+        if chain is not None:
+            tables = [self.db._gettables()[chain],]
+        else:
+            tables = self.db._gettables()
+
+        out = []
+        for table in tables:
+            out.append(table.col(self.name))
+            
+        if np.isscalar(chain):
+            return out[0][index]
+        else:
+            return np.hstack(out)[index]
+
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
@@ -306,7 +345,7 @@ class Database(pickle.Database):
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
-                print "Some objects from the database have not been assigned a getfunc", names
+                warnings.warn("Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names))
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:

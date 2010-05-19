@@ -15,6 +15,7 @@ We would need to catch MemoryError exceptions though.
 import pymc
 from numpy import zeros,shape,concatenate, ndarray,dtype
 import base
+import warnings
 import numpy as np
 
 __all__ = ['Trace', 'Database']
@@ -115,7 +116,6 @@ class Trace(base.Trace):
           - chain (int): The index of the chain to fetch. If None, return all chains.
           - slicing: A slice, overriding burn and thin assignement.
         """
-
         if slicing is None:
             slicing = slice(burn, None, thin)
         if chain is not None:
@@ -124,6 +124,17 @@ class Trace(base.Trace):
             return self._trace[chain][slicing]
         else:
             return concatenate(self._trace.values())[slicing]
+
+
+    def __getitem__(self, index):
+        chain = self._chain
+        if chain is None:
+            return concatenate(self._trace.values())[index]
+        else:
+            if chain < 0:
+                chain = range(self.db.chains)[chain]
+            return self._trace[chain][index]
+
 
     __call__ = gettrace
 

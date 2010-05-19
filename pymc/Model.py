@@ -12,6 +12,7 @@ __all__ = ['Model', 'Sampler']
 """ Summary"""
 
 from numpy import zeros, floor
+from numpy.random import randint
 from pymc import database
 from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from Container import Container, ObjectContainer
@@ -376,7 +377,7 @@ class Sampler(Model):
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
-        else:   # What is this for? DH. If it's a user defined backend, it doesn't initialize a Database.
+        else:   # What is this for? DH. 
             self.db = db.Database(**self._db_args)
 
         # Assign Trace instances to tallyable objects.
@@ -586,21 +587,20 @@ class Sampler(Model):
             try:
                 sm.value = stoch_state[sm.__name__]
             except:
-                warnings.warn(\
-    'Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__), exceptions.UserWarning)
+                warnings.warn('Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__))
                 #print 'Error message:'
                 #traceback.print_exc()
 
 
     def remember(self, chain=-1, trace_index = None):
         """
-        remember(trace_index = randint(trace length to date))
+        remember(chain=-1, trace_index = randint(trace length to date))
 
         Sets the value of all tracing variables to a value recorded in
         their traces.
         """
         if trace_index is None:
-            trace_index = randint(self.cur_trace_index)
+            trace_index = randint(self._cur_trace_index)
 
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):

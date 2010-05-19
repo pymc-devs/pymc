@@ -26,7 +26,7 @@ from numpy import exp, log, array, sqrt
 from numpy.linalg import cholesky
 import os, pdb, warnings, nose
 from unittest import TestCase
-warnings.simplefilter('ignore', DeprecationWarning)
+
 PLOT=True
 DIR = 'testresults'
 if PLOT is True:
@@ -380,8 +380,8 @@ class test_betabin(TestCase):
 
 class test_categorical(TestCase):
     def test_consistency(self):
-        parameters={'p':[0.5,0.3]}
-        hist, like, figdata = discrete_consistency(rcategorical, flib.categorical, \
+        parameters={'p':[0.5,0.3,.2]}
+        hist, like, figdata = discrete_consistency(rcategorical, categorical_like, \
             parameters, nrandom=2000)
         assert_array_almost_equal(hist, like, 1)
         if PLOT:
@@ -1041,5 +1041,7 @@ True, value = data)
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', DeprecationWarning)
+        import nose
+        nose.runmodule()

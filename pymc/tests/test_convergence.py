@@ -11,7 +11,7 @@ import numpy as np
 import pymc
 import pymc.examples.weibull_fit as model
 import os,  warnings
-warnings.simplefilter('ignore', FutureWarning)
+
 
 S = pymc.MCMC(model, 'ram')
 S.sample(10000, 2000)
@@ -48,6 +48,8 @@ class test_raftery_lewis(TestCase):
         assert(0.8 < (float(nprec)/kmind) / nmin < 1.2)
 
 if __name__ == "__main__":
-    import nose
-    C =nose.config.Config(verbosity=1)
-    nose.runmodule(config=C)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', FutureWarning)
+        import nose
+        C =nose.config.Config(verbosity=1)
+        nose.runmodule(config=C)

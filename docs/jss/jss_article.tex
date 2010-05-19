@@ -6,14 +6,15 @@
 %
 \documentclass[]{jss_mod}
 
-\usepackage{python}
+% \usepackage{python}
+\usepackage{underscore} 
 \usepackage{epsfig}
 \usepackage{amsmath}
 \usepackage{boxedminipage}
 
 \author{Anand Patil\\University of Oxford \And
         David Huard\\McGill University  \And
-		Christopher Fonnesbeck\\University of Otago}
+		Christopher J. Fonnesbeck\\Vanderbilt University}
 
 \title{\pkg{PyMC} : Bayesian Stochastic Modelling in \proglang{Python}}
 
@@ -31,11 +32,12 @@
   Montr\'eal, Canada \\
   E-mail: \email{david.huard@gmail.com}\\
   \\
-  Christopher Fonnesbeck\\
-  Mathematics and Statistics Department\\
-  University of Otago\\
-  Dunedin, New Zealand\\
-  E-mail: \email{fonnesbeck@maths.otago.ac.nz}\\
+  Christopher J. Fonnesbeck\\
+  Department of Biostatistics\\
+  School of Medicine\\
+  Vanderbilt University\\
+  Nashville, TN, USA\\
+  E-mail: \email{fonnesbeck@gmail.com}\\
 }
 
 
@@ -46,7 +48,7 @@
 \Shorttitle{PyMC 2} %% a short title (if necessary)
 
 \Abstract{
-This user guide describes a Python package, PyMC, that allows users to
+This user guide describes a \proglang{Python} package, \pkg{PyMC}, that allows users to
 efficiently code a probabilistic model and draw samples from its
 posterior distribution using Markov-Chain Monte Carlo techniques.
 }
@@ -89,7 +91,7 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 
 % Referees suggested adding a table of contents. Is this compatible with JSS
 % editorial style ?
-\tableofcontents
+% \tableofcontents
 \cleardoublepage
 \pagenumbering{arabic}
 
@@ -122,7 +124,7 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 \label{chap:modelchecking}
 \input{modelchecking}
 
-\section[Extending PyMC]{Extending PyMC}
+\section[Extending PyMC]{Extending \pkg{PyMC}}
 \label{chap:extending}
 \input{extending}
 \clearpage
@@ -133,12 +135,11 @@ posterior distribution using Markov-Chain Monte Carlo techniques.
 
 \section[Acknowledgments]{Acknowledgments}
 \label{chap:acknowledge}
-The authors would like to thank several users of PyMC who have been particularly helpful during the development of the 2.0 release. In alphabetical order, these are Mike Conroy, Abraham Flaxman, J. Miguel Marin, and Aaron MacNeil.
+The authors would like to thank several users of \pkg{PyMC} who have been particularly helpful during the development of the 2.0 release. In alphabetical order, these are Mike Conroy, Abraham Flaxman, J. Miguel Marin, Aaron MacNeil, Nick Matsakis, John Salvatier and Andrew Straw.
 
-Anand Patil's work on PyMC has been supported since 2008 by the \href{http://www.map.ox.ac.uk}{Malaria Atlas
-Project}, principally funded by the Wellcome Trust.
+Anand Patil's work on \pkg{PyMC} has been supported since 2008 by the \href{http://www.map.ox.ac.uk}{Malaria Atlas Project}, principally funded by the Wellcome Trust.
 
-David Huard's early work on PyMC was supported by a scholarship from the Natural Sciences and Engineering Research Council of Canada. 
+David Huard's early work on \pkg{PyMC} was supported by a scholarship from the Natural Sciences and Engineering Research Council of Canada. 
 \newpage
 \appendix
 % \section[MCMC]{Markov chain Monte Carlo}
@@ -150,11 +151,11 @@ David Huard's early work on PyMC was supported by a scholarship from the Natural
 \input{distributions-module}
 \newpage
 
-\nocite{Bernardo:1992fk}
-\nocite{r} 
-\nocite{jags} 
-\nocite{winbugs}
-\nocite{hbc} 
+% \nocite{Bernardo:1992fk}
+% \nocite{r} 
+% \nocite{jags} 
+% \nocite{winbugs}
+% \nocite{hbc} 
 \bibliography{pymc}
 
 \end{document}

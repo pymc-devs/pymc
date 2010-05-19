@@ -49,7 +49,9 @@ def diagnostic(f):
 
         # If others fail, assume that raw data is passed
         return f(pymc_obj, *args, **kwargs)
-
+    
+    wrapper.__doc__ = f.__doc__
+    wrapper.__name__ = f.__name__
     return wrapper
 
 
@@ -383,15 +385,15 @@ def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
 
 def discrepancy(observed, simulated, expected):
     """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
-    a measure of discrepancy between observed and simulated data. This
+    a measure of discrepancy between observed and r replicates of simulated data. This
     is a convenient method for assessing goodness-of-fit (see Brooks et al. 2000).
 
     D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
 
     :Parameters:
-      observed : Iterable of observed values
-      simulated : Iterable of simulated values
-      expected : Iterable of expected values
+      observed : Iterable of observed values (length n)
+      simulated : Iterable of simulated values (length rxn)
+      expected : Iterable of expected values (length rxn)
 
     :Returns:
       D_obs : Discrepancy of observed values
@@ -399,13 +401,13 @@ def discrepancy(observed, simulated, expected):
 
     """
     try:
-        simulated = simulated.trace()
-    except:
-        pass    
+        simulated = simulated.astype(float)
+    except AttributeError:
+        simulated = simulated.trace().astype(float)
     try:
-        expected = expected.trace()
-    except:
-        pass
+        expected = expected.astype(float)
+    except AttributeError:
+        expected = expected.trace().astype(float)
     
     D_obs = np.sum([(np.sqrt(observed)-np.sqrt(e))**2 for e in expected], 1)
     D_sim = np.sum([(np.sqrt(s)-np.sqrt(e))**2 for s,e in zip(simulated, expected)], 1)

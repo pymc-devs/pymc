@@ -57,8 +57,10 @@ class TruncatedMetropolis(pymc.Metropolis):
         cur_val = self.stochastic.value
         last_val = self.stochastic.last_value
 
-        lp_for = pymc.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-        lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
+        lp_for = pymc.truncnorm_like(cur_val, last_val, tau, \
+            self.low_bound, self.up_bound)
+        lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, \
+            self.low_bound, self.up_bound)
 
         if self.verbose > 1:
             print self._id + ': Hastings factor %f'%(lp_bak - lp_for)

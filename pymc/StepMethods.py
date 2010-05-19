@@ -104,7 +104,6 @@ Error message: """%(method.__name__, stochastic.__name__, method.__name__)
     return out
 
 
-
 class StepMethodMeta(type):
     """
     Automatically registers new step methods if they can be automatically assigned:
@@ -630,7 +629,7 @@ class Gibbs(Metropolis):
             except ZeroProbability:
                 self.reject()
 
-            if log(np.random.random()) > logp_p - logp:
+            if log(random()) > logp_p - logp:
                 self.reject()
 
     def tune(self, *args, **kwargs):
@@ -1065,6 +1064,7 @@ class AdaptiveMetropolis(StepMethod):
             trace = slice(trace, n)
             
         a = self.trace2array(trace)
+        
         return np.cov(a, rowvar=0)
 
     def check_type(self):
@@ -1272,7 +1272,7 @@ class AdaptiveMetropolis(StepMethod):
             logp_p = self.logp_plus_loglike
             if self.verbose > 2:
                 print 'Current value: ', self.stoch2array()
-                print 'Current likelihood: ', logp
+                print 'Current likelihood: ', logp_p
 
             if np.log(random()) < logp_p - logp:
                 accept = True
@@ -1334,6 +1334,8 @@ class AdaptiveMetropolis(StepMethod):
         chain = []
         for stochastic in self.stochastics:
             tr = stochastic.trace.gettrace(slicing=sl)
+            if tr is None:
+                raise AttributeError
             chain.append(tr)
         return np.hstack(chain)
 

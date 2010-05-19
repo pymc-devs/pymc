@@ -14,9 +14,9 @@ cd docs
 #cat distributions-module.tex | ./extract.py -s '\\subsection\{Functions\}' -o distributions-module.text
 #sed -i -e 's/0\.5\\fboxrule/1pt/g' distributions-module.tex
 
-python rst2latex.py ../README.rst --use-latex-toc  | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e  '\\end\{document\}' -o README.tex
-python rst2latex.py ../INSTALL.rst --use-latex-toc | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o INSTALL.tex
-python rst2latex.py ../pymc/database/README.txt --use-latex-toc | ./extract.py -s '\\setlength\{\\locallinewidth\}\{\\linewidth\}' -e '\\end\{document\}' -o database.tex
+python rst2latex.py ../README.rst --use-latex-toc --no-section-numbering | ./extract.py -s '%___________________________________________________________________________' -e  '\\end\{document\}' -o README.tex
+python rst2latex.py ../INSTALL.rst --use-latex-toc --no-section-numbering | ./extract.py -s '%___________________________________________________________________________' -e '\\end\{document\}' -o INSTALL.tex
+python rst2latex.py ../pymc/database/README.txt --use-latex-toc --no-section-numbering | ./extract.py -s '%___________________________________________________________________________' -e '\\end\{document\}' -o database.tex
 
 mkdir pdf
 # User Guide
@@ -28,7 +28,8 @@ cp pdf/UserGuide.pdf .
 
 
 # JSS
-cp pymc.bib jss/
+# Some special formatting in the JSS manual.
+# cp pymc.bib jss/
 python manual2article.py README.tex > jss/README.tex
 python manual2article.py INSTALL.tex > jss/INSTALL.tex
 python manual2article.py tutorial.tex > jss/tutorial.tex
@@ -41,12 +42,15 @@ python manual2article.py conclusion.tex > jss/conclusion.tex
 python manual2article.py theory.tex > jss/theory.tex
 python manual2article.py distributions-module.tex >  jss/distributions-module.tex
 
+# Merge all tex files
+
 cd jss
+python mergetex.py jss_article.tex
 mkdir pdf
-pdflatex -output-directory=pdf -interaction batchmode jss_article
-bibtex pdf/jss_article
-pdflatex -output-directory=pdf -interaction batchmode jss_article
-pdflatex -output-directory=pdf -interaction batchmode jss_article
-cp pdf/jss_article.pdf .
+pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
+bibtex pdf/jss_article_merged
+pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
+pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
+cp pdf/jss_article_merged.pdf .
 
 cd ../../

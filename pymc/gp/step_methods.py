@@ -105,15 +105,17 @@ class GPEvaluationGibbs(pm.Metropolis):
         self.children_no_data = copy.copy(self.children)
         if isinstance(eps_p_f, pm.Variable):
             self.children_no_data.discard(eps_p_f)
+            self.eps_p_f = eps_p_f
         else:
             for epf in eps_p_f:
                 self.children_no_data.discard(epf)
+            self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=False)
         
         self.V = V
         self.C_eval = submod.C_eval
         self.M_eval = submod.M_eval
         self.S_eval = submod.S_eval
-        self.eps_p_f = eps_p_f
+        
 
         M_eval_shape = pm.utils.value(self.M_eval).shape
         C_eval_shape = pm.utils.value(self.C_eval).shape

@@ -46,7 +46,8 @@ There are three main ways to create stochastic variables, called the \textbf{aut
 \begin{description}
     \item[Automatic] Stochastic variables with standard distributions provided by PyMC (see chapter \ref{chap:distributions}) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
 \begin{verbatim}
-    s = DiscreteUniform('s', 1851, 1962, value=1900)
+    import pymc as pm
+    s = pm.DiscreteUniform('s', 1851, 1962, value=1900)
 \end{verbatim}
 
     In addition to the classes in chapter \ref{chap:distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if SciPy is installed. These distributions are in the submodule \code{pymc.SciPyDistributions}.
@@ -66,7 +67,7 @@ There are three main ways to create stochastic variables, called the \textbf{aut
 
     \item[Decorator] Uniformly-distributed discrete stochastic variable $s$ in (\ref{disastermodel}) could alternatively be created from a function that computes its log-probability as follows:
 \begin{verbatim}
-@stochastic(dtype=int)
+@pm.stochastic(dtype=int)
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
     if value > t_h or value < t_l:
@@ -86,13 +87,13 @@ The \code{value} and parents of stochastic variables may be any objects, provide
 
     The decorator interface has a slightly more complex implementation which allows you to specify a \code{random} method for sampling the stochastic variable's value conditional on its parents.
     \begin{verbatim}
-@stochastic(dtype=int)
+@pm.stochastic(dtype=int)
 def s(value=1900, t_l=1851, t_h=1962):
     """The switchpoint for the rate of disaster occurrence."""
 
     def logp(value, t_l, t_h):
         if value > t_h or value < t_l:
-            return -Inf
+            return -numpy.inf
         else:
             return -numpy.log(t_h - t_l + 1)
 
@@ -106,14 +107,14 @@ The stochastic variable again gets its name, docstring and parents from function
 \begin{verbatim}
 def s_logp(value, t_l, t_h):
     if value > t_h or value < t_l:
-        return -Inf
+        return -numpy.inf
     else:
         return -numpy.log(t_h - t_l + 1)
 
 def s_rand(t_l, t_h):
     return numpy.round( (t_l - t_h) * random() ) + t_l
 
-s = Stochastic( logp = s_logp,
+s = pm.Stochastic( logp = s_logp,
                 doc = 'The switchpoint for the rate of disaster occurrence.',
                 name = 's',
                 parents = {'t_l': 1851, 't_h': 1962},
@@ -162,13 +163,13 @@ Data are represented by \code{Stochastic} objects whose \code{observed} attribut
 In each interface, an optional keyword argument \code{observed} can be set to \code{True}. In the decorator interface, this argument is added to the \code{@stochastic} decorator:
 
 \begin{verbatim}
-@stochastic(observed=True)
+@pm.stochastic(observed=True)
 \end{verbatim}
 
 In the other interfaces, the \code{observed=True} argument is added to the initialization arguments:
 
 \begin{verbatim}
-	x = Binomial('x', n=n, p=p, observed=True)
+	x = pm.Binomial('x', value=7, n=10, p=.8, observed=True)
 \end{verbatim}
 
 Alternatively, in the decorator interface only, a \code{Stochastic} object's \code{observed} flag can be set to true by stacking an \code{@observed} decorator on top of the \code{@stochastic} decorator:
@@ -217,35 +218,34 @@ There are several ways to create deterministic variables:
       \]
       \code{Index} is useful for implementing dynamic models, in which the parent-child connections change.
       \item[\code{Lambda}:] Converts an anonymous function (in Python, called \textbf{lambda functions}) to a \code{Deterministic} instance on a single line.
-      \item[\code{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k^{th}$ element is determined by the others. \code{CompletedDirichlet} appends the $k^{th}$ element to the value of its parent $D$.
+      \item[\code{CompletedDirichlet}:] PyMC represents Dirichlet variables of length $k$ by the first $k-1$ elements; since they must sum to 1, the $k-$th element is determined by the others. \code{CompletedDirichlet} appends the $k-$th element to the value of its parent $D$.
       \item[\code{Logit}, \code{InvLogit}, \code{StukelLogit}, \code{StukelInvLogit}:] Two common link functions for generalized linear models and their inverses.
    \end{description}
    It's a good idea to use these classes when feasible in order to give hints to step methods.
 
    \item[Elementary operations on variables] Certain elementary operations on variables create deterministic variables. For example:   
 \begin{verbatim}
-
->>> x = MvNormalCov('x',ones(3),eye(3))
->>> y = MvNormalCov('y',ones(3),eye(3))
+>>> x = pm.MvNormalCov('x',numpy.ones(3),numpy.eye(3))
+>>> y = pm.MvNormalCov('y',numpy.ones(3),numpy.eye(3))
 >>>
 >>> print x+y
->>> <pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10>
+<pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10>
 >>>
 >>> print x[0]
->>> <pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390>
+<pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390>
 >>>
 >>> print x[1]+y[2]
->>> <pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
+<pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
 \end{verbatim}
 
 All the objects thus created have \texttt{trace=False} and \texttt{plot=False} by default. This convenient method of generating simple deterministics was inspired by \cite{fbc}.
 
     \item[Decorator] A deterministic variable can be created via a decorator in a way very similar to \code{Stochastic}'s decorator interface:
 \begin{verbatim}
-@deterministic
+@pm.deterministic
 def r(switchpoint = s, early_rate = e, late_rate = l):
     """The rate of disaster occurrence."""
-    value = zeros(N)
+    value = numpy.zeros(len(D))
     value[:switchpoint] = early_rate
     value[switchpoint:] = late_rate
     return value
@@ -255,14 +255,14 @@ Notice that rather than returning the log-probability, as is the case for \code{
     \item[Direct] \texttt{Deterministic} can also be instantiated directly:
 \begin{verbatim}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
-    value = zeros(N)
+    value = numpy.zeros(len(D))
     value[:switchpoint] = early_rate
     value[switchpoint:] = late_rate
     return value
 
-r = Deterministic(  eval = r_eval,
+r = pm.Deterministic(  eval = r_eval,
                     name = 'r',
-                    parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l}),
+                    parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l},
                     doc = 'The rate of disaster occurrence.',
                     trace = True,
                     verbose = 0,
@@ -287,7 +287,7 @@ Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want
 This situation can be handled naturally in PyMC:
 \begin{verbatim}
 N = 10
-x_0 = Normal('x_0', mu=0, tau=1)
+x_0 = pm.Normal('x_0', mu=0, tau=1)
 
 # Initialize array of stochastics
 x = numpy.empty(N,dtype=object)
@@ -297,12 +297,12 @@ x[0] = x_0
 for i in range(1,N):
 
    # Create Normal stochastic, whose mean is the previous element in x
-   x[i] = Normal('x_%i' % i, mu=x[-1], tau=1)
+   x[i] = pm.Normal('x_%i' % i, mu=x[i-1], tau=1)
 
-@observed
-@stochastic
+@pm.observed
+@pm.stochastic
 def y(value = 1, mu = x, tau = 100):
-    return normal_like(value, numpy.sum(mu**2), tau)
+    return pm.normal_like(value, numpy.sum(mu**2), tau)
 \end{verbatim}
 PyMC automatically wraps array $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i'\%i} labels each \code{Normal} object in the container with the appropriate index $i$; so if \code{i=1}, the name of the corresponding element becomes \code{`x_1'}.
 
@@ -357,7 +357,7 @@ field). They are also useful for expressing `soft data'
 
 
 \bigskip
-Potentials have one important attribute, \code{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other attribute of interest is \code{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \code{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \code{children} attribute.
+Potentials have one important attribute, \code{\bfseries logp}, the log of their current probability or probability density value given the values of their parents. The only other attribute of interest is \code{parents}, a dictionary containing the potential's parents. Potentials have no methods. They have no \code{trace} attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no \code{children} attribute.google map
 
 \subsection{An example of soft data}
 The role of potentials can be confusing, so we will provide another example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
@@ -391,18 +391,18 @@ There are two ways to create potentials:
 \begin{description}
     \item[Decorator] A potential can be created via a decorator in a way very similar to \code{Deterministic}'s decorator interface:
 \begin{verbatim}
-@potential
+@pm.potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
     """A pair potential"""
-    return -(xlo - xhi)**2
+    return -(x_lo - x_hi)**2
 \end{verbatim}
 The function supplied should return the potential's current \emph{log}-probability or \emph{log}-density as a Numpy \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{verbatim}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
-    return -(xlo - xhi)**2
+    return -(x_lo - x_hi)**2
 
-psi_i = Potential(  logp = psi_i_logp,
+psi_i = pm.Potential(  logp = psi_i_logp,
                     name = 'psi_i',
                     parents = {'xlo': x[i], 'xhi': x[i+1]},
                     doc = 'A pair potential',
@@ -419,9 +419,12 @@ psi_i = Potential(  logp = psi_i_logp,
 The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Chapter \ref{chap:modelfitting}) instances using GraphViz via the Python package PyDot. See \cite{dawidmarkov} and \cite{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
+\begin{figure}[h!]
 \begin{center}
-    \epsfig{file=DisasterModel2.pdf, width=6cm}
+    \epsfig{file=DisasterModel2.pdf, width=7cm}
+    \caption{Graphical representation of the coal mining disaster model example.}
 \end{center}
+\end{figure}
 $D$ is shaded because it is flagged as data.
 
 % Note that if a deterministic variable has more than one child, its parents each inherit all of its children when it is made implicit:
@@ -431,13 +434,20 @@ $D$ is shaded because it is flagged as data.
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
 The symbol for factor potentials is a rectangle, as in the following model.
+\begin{figure}[h!]
 \begin{center}
-    \epsfig{file=PotExample.pdf, width=10cm}
+    \epsfig{file=PotExample.pdf, width=12cm}
+    \caption{Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.}
+    \label{fig:dgm}
 \end{center}
+\end{figure}
 Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
+\begin{figure}[h!]
 \begin{center}
-    \epsfig{file=PotExampleCollapsed.pdf, width=5cm}
+    \epsfig{file=PotExampleCollapsed.pdf, width=10cm}
+    \caption{The undirected version of the graphical model of figure \ref{fig:dgm}.}
 \end{center}
+\end{figure}
 Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
@@ -448,7 +458,7 @@ This section gives an overview of how PyMC computes log-probabilities. This is a
 
 The \code{logp} attributes of stochastic variables and potentials and the \code{value} attributes of deterministic variables are wrappers for instances of class \code{LazyFunction}. Lazy functions are wrappers for ordinary Python functions. A lazy function \code{L} could be created from a function \code{fun} as follows:
 \begin{verbatim}
-L = LazyFunction(fun, arguments)
+L = pm.LazyFunction(fun, arguments)
 \end{verbatim}
 The argument \code{arguments} is a dictionary container; \code{fun} must accept keyword arguments only. When \code{L}'s \code{get()} method is called, the return value is the same as the call
 \begin{verbatim}

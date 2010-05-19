@@ -79,7 +79,11 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 # TODO Document this function
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
-        return np.reshape(randfun(size=shape, *args, **kwargs),shape)
+        try:
+            return np.reshape(randfun(size=shape, *args, **kwargs),shape)
+        except ValueError:
+            # Account for non-array return values
+            return randfun(size=shape, *args, **kwargs)
     newfun.scalar_version = randfun
     return newfun
 
@@ -788,7 +792,7 @@ def categorical_like(x, p):
       - `x` : [int] :math:`x \in 0\ldots k-1`
       - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
     """
-
+    p = np.atleast_2d(p)
     return flib.categorical(x, p)
 
 
@@ -1916,7 +1920,7 @@ def normal_like(x, mu, tau):
     #     constrain(tau, lower=0)
     # except ZeroProbability:
     #     return -np.Inf
-
+    
     return flib.normal(x, mu, tau)
 
 # von Mises--------------------------------------------------
@@ -2019,10 +2023,14 @@ def rtruncated_poisson(mu, k, size=None):
     using rejection sampling.
     """
 
-    k=k-1
-
     # Calculate m
-    m = max(0, np.floor(k+1-mu))
+    try:
+        k=k-1
+        m = max(0, np.floor(k+1-mu))
+    except TypeError, ValueError:
+        # More than one mu
+        k=np.array(k)-1
+        return np.transpose(np.array([rtruncated_poisson(x, i, size) for x,i in zip(mu, np.resize(k, np.size(mu)))]))
 
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
@@ -2033,8 +2041,9 @@ def rtruncated_poisson(mu, k, size=None):
     total_size = np.prod(size or 1)
 
     while(len(rvs)<total_size):
+
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.random.poisson(mu+m, total_size*4)
+        proposals = np.squeeze(np.random.poisson(mu+m, (total_size*4, np.size(m))))
 
         # Acceptance probability
         a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
@@ -2789,10 +2798,13 @@ def Impute(name, dist_class, imputable, **parents):
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
-    masked_values = imputable
+    
+    dims = np.shape(imputable)
+    masked_values = np.ravel(imputable)
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
+        
         mask = [v is None or np.isnan(v) for v in masked_values]
         # Generate masked array
         masked_values = np.ma.masked_array(masked_values, mask)
@@ -2810,11 +2822,13 @@ def Impute(name, dist_class, imputable, **parents):
 
             try:
                 # If parent is a PyMCObject
-                size = np.size(parent.value)
+                shape = np.shape(parent.value)
             except AttributeError:
-                size = np.size(parent)
+                shape = np.shape(parent)
 
-            if size == len(masked_values):
+            if shape == dims:
+                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=np.ravel(parent), i=i: p[i])
+            elif shape == np.shape(masked_values):
                 these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
             else:
                 these_parents[key] = parent
@@ -2825,7 +2839,7 @@ def Impute(name, dist_class, imputable, **parents):
         else:
             # Observed values
             vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
-    return vars
+    return np.reshape(vars, dims)
 
 ImputeMissing = Impute
 

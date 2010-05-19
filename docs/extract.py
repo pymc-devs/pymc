@@ -9,7 +9,7 @@ def fextract(text, start=None, end=None):
     if type(text) is list:
         text = ''.join(text)
     if start is not None:
-        text = re.split(start, text)[1]
+        text = re.split(start, text, 1)[1]
     if end is not None:
         text =  re.split(end, text)[0]
     return text
