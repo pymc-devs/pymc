@@ -957,13 +957,13 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
 There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
 
 \begin{description}
-    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see Sections~\ref{chap:discrete-distributions}) and \ref{chap:continuous-distributions} can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see the appendix can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
 \begin{CodeInput}
 import pymc as pm
 s = pm.DiscreteUniform('s', 1851, 1962, value=1900)
 \end{CodeInput}
 
-    In addition to the classes in Sections~\ref{chap:discrete-distributions}) and \ref{chap:continuous-distributions}, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if \pkg{SciPy} is installed. These distributions are in the submodule \code{pymc.\pkg{SciPy}Distributions}.
+    In addition to the classes in the appendix, \code{scipy.stats.distributions}' random variable classes are wrapped as \code{Stochastic} subclasses if \pkg{SciPy} is installed. These distributions are in the submodule \code{pymc.\pkg{SciPy}Distributions}.
 
     Users can call the class factory \code{stochastic_from_dist} to produce \code{Stochastic} subclasses of their own from probability distributions not included with \pkg{PyMC}.%  These classes' init methods take the following arguments:
     % \begin{description}
@@ -3473,105 +3473,111 @@ $\E(X) = \mu$
 
 \end{description}
 
-% \index{weibull\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.weibull_like}{}\begin{funcdesc}{weibull\_like}{x, alpha, beta}
-% Weibull log-likelihood
-% \begin{gather}
-% \begin{split}f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
-% \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : $x \ge 0$
-% 
-% \item {} 
-% \emph{alpha} : alpha \textgreater{} 0
-% 
-% \item {} 
-% \emph{beta} : beta \textgreater{} 0
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
-% 
-% \item {} 
-% $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% 
-% 
-% \subsection{Multivariate discrete distributions}
-% \index{multivariate\_hypergeometric\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.multivariate_hypergeometric_like}{}\begin{funcdesc}{multivariate\_hypergeometric\_like}{x, m}
-% The multivariate hypergeometric describes the probability of drawing x{[}i{]}
-% elements of the ith category, when the number of items in each category is
-% given by m.
-% \begin{gather}
-% \begin{split}\frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where $N = \sum_i m_i$ and $n = \sum_i x_i$.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int sequence{]} Number of draws from each category, (x \textless{} m).
-% 
-% \item {} 
-% \emph{m} : {[}int sequence{]} Number of items in each categoy.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{multinomial\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.multinomial_like}{}\begin{funcdesc}{multinomial\_like}{x, n, p}
-% Multinomial log-likelihood. Generalization of the binomial
-% distribution, but instead of each trial resulting in ``success'' or
-% ``failure'', each one results in exactly one of some fixed finite number k
-% of possible outcomes over n independent trials. `x{[}i{]}' indicates the number
-% of times outcome number i was observed over the n trials.
-% \begin{gather}
-% \begin{split}f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{description}
-% \item[x] \leavevmode{[}(ns, k) int{]}
-% Random variable indicating the number of time outcome i is 
-% observed. $\sum_{i=1}^k x_i=n$, $x_i \ge 0$.
-% 
-% \item[n] \leavevmode{[}int{]}
-% Number of trials.
-% 
-% \item[p] \leavevmode{[}(k,) {]}
-% Probability of each one of the different outcomes.
-% $\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$.
-% 
-% \end{description}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X_i)=n p_i$
-% 
-% \item {} 
-% $Var(X_i)=n p_i(1-p_i)$
-% 
-% \item {} 
-% $Cov(X_i,X_j) = -n p_i p_j$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% 
-% 
+\subsection[Weibull]{\code{weibull_like(x, alpha, beta)} }
+
+
+Weibull log-likelihood
+\begin{eqnarray*}
+    f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
+    \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $\ge 0$
+
+\item {} 
+\emph{alpha} : \textgreater{} 0
+
+\item {} 
+\emph{beta} : \textgreater{} 0
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
+
+\item {} 
+$\VAR(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
+
+\end{itemize}
+
+\end{description}
+
+
+\section{Multivariate discrete distributions}
+\subsection[multivariate hypergeometric]{\code{multivariate_hypergeometric_like(x, mu, m)} }
+
+
+The multivariate hypergeometric describes the probability of drawing $x_i$
+elements of the $i$th category, when the number of items in each category is
+given by $m$.
+\begin{eqnarray*}
+\frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}    
+\end{eqnarray*}
+
+where $N = \sum_i m_i$ and $n = \sum_i x_i$.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : {[}int sequence{]} Number of draws from each category, $x$ \textless{} $m$
+
+\item {} 
+\emph{m} : {[}int sequence{]} Number of items in each category
+
+\end{itemize}
+
+\end{description}
+
+\subsection[multinomial]{\code{multinomial_like(x, n, p)} }
+
+Multinomial log-likelihood. Generalization of the binomial
+distribution, but instead of each trial resulting in ``success'' or
+``failure'', each one results in exactly one of some fixed finite number $k$
+of possible outcomes over n independent trials. $x_i$ indicates the number
+of times outcome number $i$ was observed over the $n$ trials.
+
+\begin{eqnarray*}
+f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}    
+\end{eqnarray*}
+    
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item{} 
+
+\emph{x} : {[}(n, k) int{]} Random variable indicating the number of time outcome $i$ is 
+observed, $\sum_{i=1}^k x_i=n$, $x_i \ge 0$
+
+\item{} 
+\emph{n} : {[}int{]}
+Number of trials
+
+\item {}
+\emph{p} : {[}(k) {]} Probability of each one of the different outcomes,
+$\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$
+
+
+
+\end{itemize}
+
+\item[Notes]\begin{itemize}
+\item {} 
+$\E(X_i)=n p_i$
+
+\item {} 
+$\VAR(X_i)=n p_i(1-p_i)$
+
+\item {} 
+$\COV(X_i,X_j) = -n p_i p_j$
+
+\end{itemize}
+
+\end{description}
+
+
+
+
 % \subsection{Multivariate continuous distributions}
 % \index{dirichlet\_like() (in module pymc.distributions)}
 % 
