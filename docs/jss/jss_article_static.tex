@@ -3546,7 +3546,7 @@ f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 \item[Parameters] \leavevmode\begin{itemize}
 \item{} 
 
-\emph{x} : {[}(n, k) int{]} Random variable indicating the number of time outcome $i$ is 
+\emph{x} : {[}$(k)$ int{]} Random variable indicating the number of time outcome $i$ is 
 observed, $\sum_{i=1}^k x_i=n$, $x_i \ge 0$
 
 \item{} 
@@ -3554,14 +3554,14 @@ observed, $\sum_{i=1}^k x_i=n$, $x_i \ge 0$
 Number of trials
 
 \item {}
-\emph{p} : {[}(k) {]} Probability of each one of the different outcomes,
-$\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$
+\emph{p} : {[}$(k)$ {]} Probability of each one of the different outcomes,
+$\sum_{i=1}^k p_i = 1$, $p_i \ge 0$
 
 
 
 \end{itemize}
 
-\item[Notes]\begin{itemize}
+\item[Notes]\leavevmode\begin{itemize}
 \item {} 
 $\E(X_i)=n p_i$
 
@@ -3578,221 +3578,198 @@ $\COV(X_i,X_j) = -n p_i p_j$
 
 
 
-% \subsection{Multivariate continuous distributions}
-% \index{dirichlet\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.dirichlet_like}{}\begin{funcdesc}{dirichlet\_like}{x, theta}
-% Dirichlet log-likelihood.
-% 
-% This is a multivariate continuous distribution.
-% \begin{gather}
-% \begin{split}f(\mathbf{x}) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}\cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{description}
-% \item[x] \leavevmode{[}(n, k-1) array {]}
-% Array of shape (n, k-1) where \emph{n} is the number of samples 
-% and \emph{k} the dimension. 
-% $0 < x_i < 1$,  $\sum_{i=1}^{k-1} x_i < 1$
-% \item[theta] \leavevmode{[}array{]}
-% An (n,k) or (1,k) array \textgreater{} 0.
-% 
-% \end{description}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% Only the first \emph{k-1} elements of \emph{x} are expected. Can be used as a parent of Multinomial and Categorical
-% nevertheless.
-% \end{notice}
-% \end{funcdesc}
-% \index{inverse\_wishart\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.inverse_wishart_like}{}\begin{funcdesc}{inverse\_wishart\_like}{X, n, Tau}
-% Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
-% prior for the covariance matrix of a multivariate normal distribution.
-% \begin{gather}
-% \begin{split}f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where $k$ is the rank of X.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{X} : Symmetric, positive definite matrix.
-% 
-% \item {} 
-% \emph{n} : {[}int{]} Degrees of freedom (n \textgreater{} 0).
-% 
-% \item {} 
-% \emph{Tau} : Symmetric and positive definite matrix.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
-% \end{notice}
-% \end{funcdesc}
-% \index{mv\_normal\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.mv_normal_like}{}\begin{funcdesc}{mv\_normal\_like}{x, mu, tau}
-% Multivariate normal log-likelihood
-% \begin{gather}
-% \begin{split}f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : (n,k)
-% 
-% \item {} 
-% \emph{mu} : (k) Location parameter sequence.
-% 
-% \item {} 
-% \emph{Tau} : (k,k) Positive definite precision matrix.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% 
-% \strong{See Also:}
-% 
-% 
-% \hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like()}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like()}}
-% 
-% 
-% \end{funcdesc}
-% \index{mv\_normal\_chol\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.mv_normal_chol_like}{}\begin{funcdesc}{mv\_normal\_chol\_like}{x, mu, sig}
-% Multivariate normal log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : (n,k)
-% 
-% \item {} 
-% \emph{mu} : (k) Location parameter.
-% 
-% \item {} 
-% \emph{sigma} : (k,k) Lower triangular matrix.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% 
-% \strong{See Also:}
-% 
-% 
-% \hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like()}}, \hyperlink{pymc.distributions.mv_normal_cov_like}{\code{mv\_normal\_cov\_like()}}
-% 
-% 
-% \end{funcdesc}
-% \index{mv\_normal\_cov\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.mv_normal_cov_like}{}\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
-% Multivariate normal log-likelihood parameterized by a covariance 
-% matrix.
-% \begin{gather}
-% \begin{split}f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : (n,k)
-% 
-% \item {} 
-% \emph{mu} : (k) Location parameter.
-% 
-% \item {} 
-% \emph{C} : (k,k) Positive definite covariance matrix.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% 
-% \strong{See Also:}
-% 
-% 
-% \hyperlink{pymc.distributions.mv_normal_like}{\code{mv\_normal\_like()}}, \hyperlink{pymc.distributions.mv_normal_chol_like}{\code{mv\_normal\_chol\_like()}}
-% 
-% 
-% \end{funcdesc}
-% \index{wishart\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.wishart_like}{}\begin{funcdesc}{wishart\_like}{X, n, Tau}
-% Wishart log-likelihood. The Wishart distribution is the probability
-% distribution of the maximum-likelihood estimator (MLE) of the precision
-% matrix of a multivariate normal distribution. If Tau=1, the distribution
-% is identical to the chi-square distribution with n degrees of freedom.
-% 
-% For an alternative parameterization based on $C=T{-1}$, see
-% \emph{wishart\_cov\_like}.
-% \begin{gather}
-% \begin{split}f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where $k$ is the rank of X.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{description}
-% \item[X] \leavevmode{[}matrix{]}
-% Symmetric, positive definite.
-% 
-% \item[n] \leavevmode{[}int{]}
-% Degrees of freedom, \textgreater{} 0.
-% 
-% \item[Tau] \leavevmode{[}matrix{]}
-% Symmetric and positive definite
-% 
-% \end{description}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
-% \end{notice}
-% \end{funcdesc}
-% \index{wishart\_cov\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.wishart_cov_like}{}\begin{funcdesc}{wishart\_cov\_like}{X, n, C}
-% Wishart log-likelihood. The Wishart distribution is the probability
-% distribution of the maximum-likelihood estimator (MLE) of the covariance
-% matrix of a multivariate normal distribution. If C=1, the distribution
-% is identical to the chi-square distribution with n degrees of freedom.
-% 
-% For an alternative parameterization based on $T=C{-1}$, see
-% \emph{wishart\_like}.
-% \begin{gather}
-% \begin{split}f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where $k$ is the rank of X.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{description}
-% \item[X] \leavevmode{[}matrix{]}
-% Symmetric, positive definite.
-% 
-% \item[n] \leavevmode{[}int{]}
-% Degrees of freedom, \textgreater{} 0.
-% 
-% \item[C] \leavevmode{[}matrix{]}
-% Symmetric and positive definite
-% 
-% \end{description}
-% 
-% \end{description}
-% \end{funcdesc}
-% \normalsize
-% 
-% 
-% \newpage
-% 
+\section{Multivariate continuous distributions}
+\subsection[Dirichlet]{\code{dirichlet_like(x, theta)} }
+
+
+Dirichlet log-likelihood.
+
+This is a multivariate continuous distribution.
+\begin{eqnarray*}
+f(x) = \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}\prod_{i=1}^{k-1} x_i^{\theta_i - 1}\cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^{\theta_k}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item{}
+\emph{x} : {[}$(k-1)$ {]}, $0 < x_i < 1$,  $\sum_{i=1}^{k-1} x_i < 1$
+\item{}
+$\theta$ : \leavevmode{[}$(k)$ {]}, $\theta_i> 0$
+
+\end{itemize}
+
+\item[Notes]\leavevmode \begin{itemize}
+    \item {}
+    Only the first \emph{k-1} elements of \emph{x} are expected. Can be used as a parent of Multinomial and Categorical
+    nevertheless.    
+\end{itemize}
+
+\end{description}
+
+
+\subsection[inverse Wishart]{\code{inverse_wishart_like(x, n, Tau)} }
+
+Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
+prior for the covariance matrix of a multivariate normal distribution.
+\begin{eqnarray*}
+f(x \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid x \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(Tx^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}    
+\end{eqnarray*}
+
+where $k$ is the rank of $x$.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : Symmetric, positive definite matrix
+
+\item {} 
+\emph{n} : {[}int{]} Degrees of freedom, \textgreater{} 0
+
+\item {} 
+\emph{Tau} : Symmetric and positive definite matrix
+
+\end{itemize}
+
+\item[Notes]\leavevmode
+\begin{itemize}
+    \item {}
+    Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+\end{itemize}
+
+\end{description}
+
+
+\subsection[multivariate normal]{\code{mv_normal_like(x, mu, Tau)}}
+
+Multivariate normal log-likelihood
+\begin{eqnarray*}
+f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : [$(k)$] Location parameter sequence
+
+\item {} 
+\emph{Tau} : [$(k,k)$] Positive definite precision matrix
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[multivariate normal, Cholesky parameterization]{\code{mv_normal_chol_like(x, mu, sigma)} }
+
+Multivariate normal log-likelihood.
+\begin{eqnarray*}
+f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : [$(k)$]
+
+\item {} 
+\emph{mu} : [$(k)$] Location parameter
+
+\item {} 
+\emph{sigma} : [$(k,k)$] Lower triangular Cholesky factor of covariance matrix
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[multivariate normal, covariance parameterization]{\code{mv_normal_cov_like(x, mu, C)} }
+
+Multivariate normal log-likelihood parameterized by a covariance matrix.
+\begin{eqnarray*}
+f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : [$(k)$]
+
+\item {} 
+\emph{mu} : [$(k)$] Location parameter
+
+\item {} 
+\emph{C} : [$(k,k)$] Positive definite covariance matrix
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[Wishart]{\code{wishart_like(x, n, Tau)} }
+
+Wishart log-likelihood. The Wishart distribution is the probability
+distribution of the maximum-likelihood estimator (MLE) of the precision
+matrix of a multivariate normal distribution.
+
+For an alternative parameterization based on $C=T^{-1}$, see
+\code{wishart\_cov\_like}.
+\begin{eqnarray*}
+f(x \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(Tx) \right\}    
+\end{eqnarray*}
+where $k$ is the rank of $x$.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : [$(k,k)$] Positive definite
+
+\item{} 
+\emph{n} : [int] Degrees of freedom, \textgreater{} 0
+
+\item{}
+\emph{Tau} : [$(k,k)$] Positive definite
+
+\end{itemize}
+
+\item[Notes]\leavevmode
+\begin{itemize}
+    \item {}
+    Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+\end{itemize}
+
+\end{description}
+
+
+
+\subsection[Wishart, covariance parameterization]{\code{wishart_cov_like(x, n, C)} }
+
+Wishart log-likelihood. The Wishart distribution is the probability
+distribution of the maximum-likelihood estimator (MLE) of the covariance
+matrix of a multivariate normal distribution.
+
+For an alternative parameterization based on $T=C^{-1}$, see
+\code{wishart\_like}.
+\begin{eqnarray*}
+f(X \mid n, C) = {\mid C^{-1} \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(C^{-1}X) \right\}    
+\end{eqnarray*}
+where $k$ is the rank of $x$.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item{}
+\emph{x} : [$(k,k)$] Positive definite
+
+\item{}
+\emph{n} : [int] Degrees of freedom, \textgreater{} 0
+
+\item{}
+\emph{C} : [$(k,k)$] Positive definite
+
+\end{itemize}
+
+\end{description}
+\normalsize
+
+
+\newpage
+
 \nocite{Bernardo:1992fk}
-% % \nocite{r} 
-% % \nocite{jags} 
-% % \nocite{winbugs}
-% % \nocite{hbc} 
 \bibliography{pymc}
 
 \end{document}
