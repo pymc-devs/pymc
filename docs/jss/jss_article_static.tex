@@ -2720,7 +2720,7 @@ failures $(x=0)$.
 \emph{x} : Series of successes (1) and failures (0). $x=0,1$
 
 \item {} 
-\emph{p} : Probability of success. $0 < p < 1$.
+\emph{p} : Probability of success, $p \in [0,1]$.
 \end{itemize}
 \item[Notes] \ 
 \begin{itemize}
@@ -2810,7 +2810,7 @@ f(x \mid lower, upper) = \frac{1}{upper-lower}
 \emph{lower} : Lower limit.
 
 \item {} 
-\emph{upper} : Upper limit (upper \textgreater{} lower).
+\emph{upper} : Upper limit (\emph{upper} \textgreater{} \emph{lower}).
 
 \end{itemize}
 
@@ -2826,7 +2826,7 @@ f(x \mid p) = p(1-p)^{x-1}
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
 \item {} 
-\emph{x} : {[}int{]} Number of trials before first success (x \textgreater{} 0).
+\emph{x} : {[}int{]} Number of trials before first success, \textgreater{} 0.
 
 \item {} 
 \emph{p} : Probability of success on an individual trial, $p \in [0,1]$
@@ -2887,13 +2887,13 @@ f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
 \item {} 
-\emph{x} : Input data (x \textgreater{} 0).
+\emph{x} : Input data, \textgreater{} 0.
 
 \item {} 
-\emph{mu} : mu \textgreater{} 0
+\emph{mu} : \textgreater{} 0
 
 \item {} 
-\emph{alpha} : alpha \textgreater{} 0
+\emph{alpha} : \textgreater{} 0
 
 \end{itemize}
 
@@ -2912,7 +2912,7 @@ $\mu=r(1-p)/p$
 
 \end{description}
 
-\subsection[poisson]{\code{poisson_like(x, mu)}}
+\subsection[Poisson]{\code{poisson_like(x, mu)}}
 
 Poisson log-likelihood. The Poisson is a discrete probability distribution.
 It is often used to model the number of events occurring in a fixed period of
@@ -2929,7 +2929,7 @@ distribution can be derived as a limiting case of the binomial distribution.
 \emph{x} : {[}int{]} $x \in {0,1,2,...}$
 
 \item {} 
-\emph{mu} : Expected number of occurrences during the given interval, $\mu \geq 0$.
+\emph{mu} : Expected number of occurrences during the given interval, $\geq 0$.
 
 \end{itemize}
 
@@ -2961,13 +2961,13 @@ Beta log-likelihood. The conjugate prior for the parameter \emph{p} of the binom
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
 \item {} 
-\emph{x} : 0 \textless{} x \textless{} 1
+\emph{x} : 0 \textless{} \emph{x} \textless{} 1
 
 \item {} 
-\emph{alpha} : alpha \textgreater{} 0
+\emph{alpha} : \textgreater{} 0
 
 \item {} 
-\emph{beta} : beta \textgreater{} 0
+\emph{beta} : \textgreater{} 0
 
 \end{itemize}
 
@@ -2984,7 +2984,7 @@ $\VAR(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
 \end{description}
 
 
-\subsection[cauchy]{\code{cauchy_like(x, alpha, beta)}}
+\subsection[Cauchy]{\code{cauchy_like(x, alpha, beta)}}
 
 
 Cauchy log-likelihood. The Cauchy distribution is also known as the
@@ -3000,7 +3000,7 @@ f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 \emph{alpha} : Location parameter.
 
 \item {} 
-\emph{beta} : Scale parameter \textgreater{} 0.
+\emph{beta} : Scale parameter, \textgreater{} 0.
 
 \end{itemize}
 
@@ -3025,7 +3025,7 @@ $\chi^2$ log-likelihood.
 \emph{x} : \textgreater{} 0
 
 \item {} 
-\emph{nu} : {[}int{]} Degrees of freedom ( \emph{nu} \textgreater{} 0 )
+\emph{nu} : {[}int{]} Degrees of freedom, \textgreater{} 0
 
 \end{itemize}
 
@@ -3062,438 +3062,417 @@ f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne 
 \end{description}
 
 
-% \index{exponential\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.exponential_like}{}\begin{funcdesc}{exponential\_like}{x, beta}
-% Exponential log-likelihood.
-% 
-% The exponential distribution is a special case of the gamma distribution
-% with alpha=1. It often describes the time until an event.
-% \begin{gather}
-% \begin{split}f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : x \textgreater{} 0
-% 
-% \item {} 
-% \emph{beta} : Survival parameter (beta \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \beta$
-% 
-% \item {} 
-% $Var(X) = \beta^2$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{exponweib\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.exponweib_like}{}\begin{funcdesc}{exponweib\_like}{x, alpha, k, loc=0, scale=1}
-% Exponentiated Weibull log-likelihood.
-% 
-% The exponentiated Weibull distribution is a generalization of the Weibull
-% family. Its value lies in being able to model monotone and non-monotone
-% failure rates.
-% \begin{gather}
-% \begin{split}f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
-% z & = \frac{x-loc}{scale}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : x \textgreater{} 0
-% 
-% \item {} 
-% \emph{alpha} : Shape parameter
-% 
-% \item {} 
-% \emph{k} : k \textgreater{} 0
-% 
-% \item {} 
-% \emph{loc} : Location parameter
-% 
-% \item {} 
-% \emph{scale} : Scale parameter (scale \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{gamma\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.gamma_like}{}\begin{funcdesc}{gamma\_like}{x, alpha, beta}
-% Gamma log-likelihood.
-% 
-% Represents the sum of alpha exponentially distributed random variables, each
-% of which has mean beta.
-% \begin{gather}
-% \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : math:\emph{x ge 0}
-% 
-% \item {} 
-% \emph{alpha} : Shape parameter (alpha \textgreater{} 0).
-% 
-% \item {} 
-% \emph{beta} : Scale parameter (beta \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \frac{\alpha}{\beta}$
-% 
-% \item {} 
-% $Var(X) = \frac{\alpha}{\beta^2}$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{half\_normal\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.half_normal_like}{}\begin{funcdesc}{half\_normal\_like}{x, tau}
-% Half-normal log-likelihood, a normal distribution with mean 0 limited
-% to the domain $x \in [0, \infty)$.
-% \begin{gather}
-% \begin{split}f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : $x \ge 0$
-% 
-% \item {} 
-% \emph{tau} : tau \textgreater{} 0
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{hypergeometric\_like() (in module pymc.distributions)}
-% 
-% \begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
-% Hypergeometric log-likelihood. Discrete probability distribution that
-% describes the number of successes in a sequence of draws from a finite
-% population without replacement.
-% \begin{gather}
-% \begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
-% 
-% \item {} 
-% \emph{n} : {[}int{]} Size of sample drawn from the population.
-% 
-% \item {} 
-% \emph{m} : {[}int{]} Number of successes in the population.
-% 
-% \item {} 
-% \emph{N} : {[}int{]} Total number of units in the population.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% $E(X) = \frac{n n}{N}$
-% \end{notice}
-% \end{funcdesc}
-% \index{inverse\_gamma\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.inverse_gamma_like}{}\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
-% Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
-% \begin{gather}
-% \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : x \textgreater{} 0
-% 
-% \item {} 
-% \emph{alpha} : Shape parameter (alpha \textgreater{} 0).
-% 
-% \item {} 
-% \emph{beta} : Scale parameter (beta \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% $E(X)=\frac{\beta}{\alpha-1}$  for $\alpha > 1$
-% $Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}$  for $\alpha > 2$
-% \end{notice}
-% \end{funcdesc}
-% \index{laplace\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.laplace_like}{}\begin{funcdesc}{laplace\_like}{x, mu, tau}
-% Laplace (double exponential) log-likelihood.
-% 
-% The Laplace (or double exponential) distribution describes the
-% difference between two independent, identically distributed exponential
-% events. It is often used as a heavier-tailed alternative to the normal.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau |x-\mu|}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : $-\infty < x < \infty$
-% 
-% \item {} 
-% \emph{mu} : Location parameter :math: \emph{-infty \textless{} mu \textless{} infty}
-% 
-% \item {} 
-% \emph{tau} : Scale parameter $\tau > 0$
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \mu$
-% 
-% \item {} 
-% $Var(X) = \frac{2}{\tau^2}$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{logistic\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.logistic_like}{}\begin{funcdesc}{logistic\_like}{x, mu, tau}
-% Logistic log-likelihood.
-% 
-% The logistic distribution is often used as a growth model; for example,
-% populations, markets. Resembles a heavy-tailed normal distribution.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : $-\infty < x < \infty$
-% 
-% \item {} 
-% \emph{mu} : Location parameter $-\infty < mu < \infty$
-% 
-% \item {} 
-% \emph{tau} : Scale parameter (tau \textgreater{} 0)
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \mu$
-% 
-% \item {} 
-% $Var(X) = \frac{\pi^2}{3\tau^2}$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{lognormal\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.lognormal_like}{}\begin{funcdesc}{lognormal\_like}{x, mu, tau}
-% Log-normal log-likelihood. Distribution of any random variable whose
-% logarithm is normally distributed. A variable might be modeled as
-% log-normal if it can be thought of as the multiplicative product of many
-% small independent factors.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
-% \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : x \textgreater{} 0
-% 
-% \item {} 
-% \emph{mu} : Location parameter.
-% 
-% \item {} 
-% \emph{tau} : Scale parameter (tau \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% $E(X)=e^{\mu+\frac{1}{2\tau}}$
-% $Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}$
-% \end{notice}
-% \end{funcdesc}
-% \index{normal\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.normal_like}{}\begin{funcdesc}{normal\_like}{x, mu, tau}
-% Normal log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data.
-% 
-% \item {} 
-% \emph{mu} : Mean of the distribution.
-% 
-% \item {} 
-% \emph{tau} : Precision of the distribution, which corresponds to $1/\sigma^2$ (tau \textgreater{} 0).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \mu$
-% 
-% \item {} 
-% $Var(X) = 1/\tau$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
-% \index{skew\_normal\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.skew_normal_like}{}\begin{funcdesc}{skew\_normal\_like}{x, mu, tau, alpha}
-% Azzalini's skew-normal log-likelihood
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where :math: Phi is the normal CDF and :math: phi is the normal PDF.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data.
-% 
-% \item {} 
-% \emph{mu} : Mean of the distribution.
-% 
-% \item {} 
-% \emph{tau} : Precision of the distribution (\textgreater{} 0).
-% 
-% \item {} 
-% \emph{alpha} : Shape parameter of the distribution.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}
-% See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
-% \end{notice}
-% \end{funcdesc}
-% \index{t\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.t_like}{}\begin{funcdesc}{t\_like}{x, nu}
-% Student's T log-likelihood. Describes a zero-mean normal variable whose precision is
-% gamma distributed. Alternatively, describes the mean of several zero-mean normal
-% random variables divided by their sample standard deviation.
-% \begin{gather}
-% \begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data.
-% 
-% \item {} 
-% \emph{nu} : Degrees of freedom.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{truncnorm\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.truncnorm_like}{}\begin{funcdesc}{truncnorm\_like}{x, mu, tau, a, b}
-% Truncated normal log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})},\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where $\sigma^2=1/\tau$, \emph{phi} is the standard normal PDF and \emph{Phi} is the standard normal CDF.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data.
-% 
-% \item {} 
-% \emph{mu} : Mean of the distribution.
-% 
-% \item {} 
-% \emph{tau} : Precision of the distribution, which corresponds to 1/sigma**2 (tau \textgreater{} 0).
-% 
-% \item {} 
-% \emph{a} : Left bound of the distribution.
-% 
-% \item {} 
-% \emph{b} : Right bound of the distribution.
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{uniform\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.uniform_like}{}\begin{funcdesc}{uniform\_like}{x, lower, upper}
-% Uniform log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}\begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : $lower \leq x \leq upper$
-% 
-% \item {} 
-% \emph{lower} : Lower limit.
-% 
-% \item {} 
-% \emph{upper} : Upper limit (upper \textgreater{} lower).
-% 
-% \end{itemize}
-% 
-% \end{description}
-% \end{funcdesc}
-% \index{von\_mises\_like() (in module pymc.distributions)}
-% 
-% \hypertarget{pymc.distributions.von_mises_like}{}\begin{funcdesc}{von\_mises\_like}{x, mu, kappa}
-% von Mises log-likelihood.
-% \begin{gather}
-% \begin{split}f(x \mid \mu, k) = \frac{e^{k \cos(x - \mu)}}{2 \pi I_0(k)}\end{split}\notag\\\begin{split}\end{split}\notag
-% \end{gather}
-% where \emph{I\_0} is the modified Bessel function of order 0.
-% \begin{description}
-% \item[Parameters] \leavevmode\begin{itemize}
-% \item {} 
-% \emph{x} : Input data.
-% 
-% \item {} 
-% \emph{mu} : Mean of the distribution.
-% 
-% \item {} 
-% \emph{kappa} : Dispersion of the distribution
-% 
-% \end{itemize}
-% 
-% \end{description}
-% 
-% \begin{notice}{note}{Note:}\begin{itemize}
-% \item {} 
-% $E(X) = \mu$
-% 
-% \end{itemize}
-% \end{notice}
-% \end{funcdesc}
+\subsection[exponential]{\code{exponential_like(x, beta)} }
+
+Exponential log-likelihood.
+
+The exponential distribution is a special case of the gamma distribution
+with $\alpha=1$. It often describes the time until an event.
+\begin{eqnarray*}
+f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : \textgreater{} 0
+
+\item {} 
+\emph{beta} : Survival parameter, \textgreater{} 0.
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X) = \beta$
+
+\item {} 
+$\VAR(X) = \beta^2$
+
+\end{itemize}
+
+\end{description}
+
+\subsection[exponentiated Weibull]{\code{exponweib(x, alpha, k, loc, scale)} }
+
+Exponentiated Weibull log-likelihood.
+
+The exponentiated Weibull distribution is a generalization of the Weibull
+family. Its value lies in being able to model monotone and non-monotone
+failure rates.
+\begin{eqnarray*}
+    f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
+    z & = \frac{x-loc}{scale}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : \textgreater{} 0
+
+\item {} 
+\emph{alpha} : Shape parameter
+
+\item {} 
+\emph{k} : \textgreater{} 0
+
+\item {} 
+\emph{loc} : Location parameter
+
+\item {} 
+\emph{scale} : Scale parameter, \textgreater{} 0.
+
+\end{itemize}
+
+\end{description}
+
+\subsection[gamma]{\code{gamma_like(x, alpha, beta)} }
+
+Gamma log-likelihood.
+
+Represents the sum of alpha exponentially distributed random variables, each
+of which has mean beta.
+\begin{eqnarray*}
+f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $\ge 0$
+
+\item {} 
+\emph{alpha} : Shape parameter, \textgreater{} 0.
+
+\item {} 
+\emph{beta} : Scale parameter, \textgreater{} 0.
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X) = \frac{\alpha}{\beta}$
+
+\item {} 
+$\VAR(X) = \frac{\alpha}{\beta^2}$
+
+\end{itemize}
+
+\end{description}
+
+\subsection[half normal]{\code{half_normal_like(x, tau)} }
+
+Half-normal log-likelihood, a normal distribution with mean 0 limited
+to the domain $[0, \infty)$.
+\begin{eqnarray*}
+f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}    
+\end{eqnarray*}
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $\ge 0$
+
+\item {} 
+\emph{tau} : \textgreater{} 0
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[inverse gamma]{\code{inverse_gamma_like(x, alpha, beta)} }
+
+Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
+
+\begin{eqnarray*}
+f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : \textgreater{} 0
+
+\item {} 
+\emph{alpha} : Shape parameter, \textgreater{} 0.
+
+\item {} 
+\emph{beta} : Scale parameter, \textgreater{} 0.
+
+\end{itemize}
+
+\item[Notes]\leavevmode \begin{itemize} 
+\item {}
+$\E(X)=\frac{\beta}{\alpha-1}$  for $\alpha > 1$
+
+\item {}
+$\VAR(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}$  for $\alpha > 2$
+\end{itemize} 
+
+
+\end{description}
+
+
+
+\subsection[Laplace]{\code{laplace_like(x, mu, tau)} }
+Laplace (double exponential) log-likelihood.
+
+The Laplace (or double exponential) distribution describes the
+difference between two independent, identically distributed exponential
+events. It is often used as a heavier-tailed alternative to the normal.
+
+\begin{eqnarray*}
+f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau |x-\mu|}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter, $> 0$
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X) = \mu$
+
+\item {} 
+$\VAR(X) = \frac{2}{\tau^2}$
+
+\end{itemize}
+
+
+\end{description}
+
+
+\subsection[logistic]{\code{logistic_like(x, mu, tau)}}
+
+Logistic log-likelihood.
+
+The logistic distribution is often used as a growth model; for example,
+populations, markets. Resembles a heavy-tailed normal distribution.
+\begin{eqnarray*}
+f(x \mid \mu, \tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter, \textgreater{} 0
+
+\end{itemize}
+
+\item[Notes]\begin{itemize}
+\item {} 
+$\E(X) = \mu$
+
+\item {} 
+$\VAR(X) = \frac{\pi^2}{3\tau^2}$
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[lognormal]{\code{lognormal_like(x, mu, tau)}}
+
+Log-normal log-likelihood. Distribution of any random variable whose
+logarithm is normally distributed. A variable might be modeled as
+log-normal if it can be thought of as the multiplicative product of many
+small independent factors.
+
+\begin{eqnarray*}
+    f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
+    \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter, \textgreater{} 0
+
+\end{itemize}
+
+\item[Notes] \leavevmode\begin{itemize}
+    \item {}
+    $\E(X)=e^{\mu+\frac{1}{2\tau}}$
+    
+    \item {}
+    $\VAR(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}$
+\end{itemize}
+
+\end{description}
+
+
+\subsection[normal]{\code{normal_like(x, mu, tau)}}
+
+Normal log-likelihood.
+\begin{eqnarray*}
+    f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter, \textgreater{} 0.
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X) = \mu$
+
+\item {} 
+$\VAR(X) = 1/\tau$
+
+\end{itemize}
+
+\end{description}
+
+
+\subsection[skew normal]{\code{skew_normal_like(x, mu, tau, alpha)} }
+
+Azzalini's skew-normal log-likelihood
+\begin{eqnarray*}
+f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)    
+\end{eqnarray*}
+
+where $\Phi$ is the normal CDF and $\phi$ is the normal PDF.
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter, \textgreater{} 0
+
+\item {} 
+\emph{alpha} : Shape parameter
+
+\end{itemize}
+
+\item[Notes]\leavevmode
+\begin{itemize}
+    \item {}
+    See \href{http://azzalini.stat.unipd.it/SN/}{http://azzalini.stat.unipd.it/SN/}
+\end{itemize}
+
+\end{description}
+
+\subsection[Student's T]{\code{t_like(x, nu)} }
+
+Student's T log-likelihood. Describes a zero-mean normal variable whose precision is
+gamma distributed. Alternatively, describes the mean of several zero-mean normal
+random variables divided by their sample standard deviation.
+
+\begin{eqnarray*}
+f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{nu} : Degrees of freedom
+
+\end{itemize}
+
+\end{description}
+
+\subsection[truncated normal]{\code{truncnorm_like(x, mu, tau, a, b)} }
+
+Truncated normal log-likelihood.
+\begin{eqnarray*}
+f(x \mid \mu, \tau, a, b) = \frac{\phi(\frac{x-\mu}{\sigma})} {\Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})}    
+\end{eqnarray*}
+
+where $\sigma^2=1/\tau$, $\phi$ is the standard normal PDF and $\Phi$ is the standard normal CDF.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{tau} : Precision parameter
+
+\item {} 
+\emph{a} : Lower limit
+
+\item {} 
+\emph{b} : Upper limit
+
+\end{itemize}
+
+\end{description}
+
+\subsection[uniform]{\code{uniform_like(x, lower, upper)} }
+
+
+Uniform log-likelihood.
+\begin{eqnarray*}
+f(x \mid lower, upper) = \frac{1}{upper-lower}    
+\end{eqnarray*}
+
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+\item {} 
+\emph{x} : $lower \leq x \leq upper$
+
+\item {} 
+\emph{lower} : Lower limit
+
+\item {} 
+\emph{upper} : Upper limit, (\emph{upper} \textgreater{} \emph{lower})
+
+\end{itemize}
+
+\end{description}
+
+\subsection[von Mises]{\code{von_mises_like(x, mu, kappa)} }
+
+von Mises log-likelihood.
+\begin{eqnarray*}
+f(x \mid \mu, k) = \frac{e^{k \cos(x - \mu)}}{2 \pi I_0(k)}    
+\end{eqnarray*}
+where $I_0$ is the modified Bessel function of order 0.
+\begin{description}
+\item[Parameters] \leavevmode\begin{itemize}
+
+\item {} 
+\emph{mu} : Location parameter
+
+\item {} 
+\emph{kappa} : Dispersion parameter
+
+\end{itemize}
+
+\item[Notes]\leavevmode\begin{itemize}
+\item {} 
+$\E(X) = \mu$
+
+\end{itemize}
+
+
+\end{description}
+
 % \index{weibull\_like() (in module pymc.distributions)}
 % 
 % \hypertarget{pymc.distributions.weibull_like}{}\begin{funcdesc}{weibull\_like}{x, alpha, beta}
