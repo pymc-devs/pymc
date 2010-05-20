@@ -138,7 +138,7 @@ distributions.
 \subsection{Usage}
   \label{usage}
 
-First, define your model in a file, say mymodel.py (with comments, of course!):
+First, define your model in a file, say mymodel.py:
 %
 \begin{CodeInput}
 # Import relevant modules
@@ -198,7 +198,7 @@ In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development 
   \label{relationship-to-other-packages}%
 
 
-\pkg{PyMC} in one of many general-purpose MCMC packages. The most prominent among them is \pkg{WinBUGS} \citep{winbugs}, which has made MCMC and with it Bayesian statistics accessible to a huge user community. Unlike \pkg{PyMC}, \pkg{WinBUGS} is a stand-alone, self-contained application. This can be an attractive feature for users without much programming experience, but others may find it constraining. A related package is \pkg{JAGS} \citep{jags}, which provides a more UNIX-like implementation of the BUGS language. Other packages include \pkg{Hierarchical Bayes Compiler} \citep{hbc} and a number of \proglang{R} \citep{r}  packages of varying scope.
+\pkg{PyMC} in one of many general-purpose MCMC packages. The most prominent among them is \pkg{WinBUGS} \citep{winbugs}, which has made MCMC and with it Bayesian statistics accessible to a huge user community. Unlike \pkg{PyMC}, \pkg{WinBUGS} is a stand-alone, self-contained application. This can be an attractive feature for users without much programming experience, but others may find it constraining. A related package is \pkg{JAGS} \citep{jags}, which provides a more UNIX-like implementation of the BUGS language. Other packages include \pkg{Hierarchical Bayes Compiler} \citep{hbc} and a number of \proglang{R} \citep{r}  packages, for example \pkg{MCMCglmm} \citep{mcmcglmm} and \pkg{MCMCpack} \citep{mcmcpack}.
 
 It would be difficult to meaningfully benchmark \pkg{PyMC} against these other packages because of the unlimited variety in Bayesian probability models and flavors of the MCMC algorithm. However, it is possible to anticipate how it will perform in broad terms.
 
