@@ -49,12 +49,6 @@ def make_gp_submodel(suffix, mesh, africa_val=None, with_africa_covariate=False)
     
     # The nugget variance. Lower-bounded to preserve mixing.
     V = pm.Exponential('V_%s'%suffix, 1, value=1.)
-    @pm.potential
-    def V_bound(V=V):
-        if V<.1:
-            return -np.inf
-        else:
-            return 0
     
     # Create the covariance & its evaluation at the data locations.
     @pm.deterministic(trace=True,name='C_%s'%suffix)

@@ -78,7 +78,7 @@ I wanted to avoid over-selling the flexibility of the package because, although 
 
 I have also replaced the standard geostatistics example in Chapter 9 with a more interesting example from my recent work, which is far outside the model space supported by BACCO but still on my package's algorithmic 'fast path'. I feel that this example gives a good feel for the package's practical capabilities.
 
-The new example involves data that I am not at liberty to release. Accordingly, I have simulated a dataset using the posterior predictive distribution derived from the actual dataset.
+The new example involves data that I am not at liberty to release. Accordingly, I have simulated a dataset using the posterior predictive distribution derived from the actual dataset. In addition, I would ask that publication of this paper be embargoed until the paper referenced (Howes et al.) is accepted.
 
 >>>>>>>
 
@@ -143,6 +143,6 @@ should be bigger.
 
 >>>>>>>
 
-As mentioned above, this chapter has been replaced with a more unusual example. More scientific context is provided.
+As mentioned above, this chapter has been replaced with a more interesting example. More scientific context is provided.
 
 <<<<<<<

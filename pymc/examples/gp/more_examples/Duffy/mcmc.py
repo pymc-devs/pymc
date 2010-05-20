@@ -75,6 +75,8 @@ for i in xrange(n):
 Vsurf = E2surf - Msurf**2
 SDsurf = sqrt(Vsurf)
 
+Msurf = ma.masked_array(Msurf, mask=covariate_raster.root.mask[:])
+SDsurf = ma.masked_array(SDsurf, mask=covariate_raster.root.mask[:])
 
 
 # Plot mean and standard deviation surfaces
