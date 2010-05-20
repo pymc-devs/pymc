@@ -1,0 +1,142 @@
+%!TEX TS-program = pdflatex
+%!TEX TS-program = skim
+%
+%  PyMC User's Guide
+%
+%  Created by Chris Fonnesbeck on 2006-05-03.
+%  Copyright (c) 2006 . All rights reserved.
+%
+\documentclass[article]{jss}
+
+%% almost as usual
+\author{Anand Patil}
+\title{A Gaussian process module for \pkg{PyMC}}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Anand Patil} %% comma-separated
+\Plaintitle{A Gaussian process module for PyMC} %% without formatting
+% \Shorttitle{GP's For PyMC} %% a short title (if necessary)
+
+%% an abstract and keywords
+\Abstract{
+  This article introduces a package adding Gaussian process functionality to the Bayesian analysis package \pkg{PyMC}. Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown. They can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra. This package implements Gaussian processes as a set of \proglang{Python} classes that can support many types of usage, from intuitive exploration to embedding them in larger probability models and fitting with MCMC.
+}
+\Keywords{gassian process, bayesian, \proglang{Python}}
+\Plainkeywords{gaussian process, bayesian, Python} %% without formatting
+%% at least one keyword must be supplied
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Anand Patil\\
+  Malaria Atlas Project\\
+  Department of Zoology\\
+  University of Oxford\\
+  Oxford, OX1 3PS, UK\\
+  E-mail: \email{anand.patil@zoo.ox.ac.uk}
+}
+
+% Use utf-8 encoding for foreign characters
+%\usepackage[utf8]{inputenc}
+
+% % Setup for fullpage use
+% \usepackage{fullpage}
+% \usepackage{amsmath}
+\usepackage{epsfig}
+\usepackage{upquote} 
+\usepackage{verbatim} 
+% 
+% % \usepackage{pdfsync}
+% 
+% % Flexible citation syntax
+% \usepackage{natbib}
+% % Uncomment some of the following if you use the features
+% %
+% 
+% % Multipart figures
+% %\usepackage{subfigure}
+% 
+% % More symbols
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% % \usepackage{latexsym}
+% 
+% % Package for including code in the document
+% \usepackage{listings}
+% 
+% % Surround parts of graphics with box
+% %\usepackage{boxedminipage}
+% 
+% % This is now the recommended way for checking for PDFLaTeX:
+% \usepackage{ifpdf}
+% 
+% % Enable hyperlinks
+% % \usepackage[pdfpagemode=FullScreen,colorlinks=true,linkcolor=red]{hyperref}
+% 
+% % \ifpdf
+% % \usepackage[pdftex]{graphicx}
+% % \else
+% % \usepackage{graphicx}
+% % \fi
+% 
+% %%% EPYDOC STUFF %%%
+\usepackage{underscore}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+
+\section{Introduction}\label{sec:firstlook}
+
+Gaussian processes are probability distributions for functions. The statement `random function $f$ has a Gaussian process distribution with mean $M$ and covariance $C$' is usually written as follows:
+\begin{equation}
+    f\sim\textup{GP}(M,C).
+\end{equation}
+The two parameters of the distribution are analogous to the parameters of the normal distribution. $M$ is the mean function, $M(x)=\E(f(x))$. $C$ is the covariance function, $C(x,y)=\COV(f(x),f(y))$. Among other things, $C$ regulates the amount by which $f$ may deviate from $M$ at any input value $x$, the roughnesss of $f$ and the typical lengthscale of changes in $f$.
+
+As with any probability distribution, random values can be drawn from a Gaussian process. However, these values (called `realizations') are actually functions rather than the usual numbers or vectors. This package represents these random values as \code{Realization} objects which, in accordance with intuition, behave like \proglang{Python} functions with a few extra features.
+
+Gaussian processes are represented by \code{GaussianProcess} objects. These are \pkg{PyMC} stochastic variables \citep{pymc} (analogous to \pkg{WinBugs}' stochastic nodes \citep{bugs}) valued as \code{Realization} objects. These models can be fit using Markov chain Monte Carlo \cite{gamerman}, after which the `dynamic trace' for each \code{GaussianProcess} consists of a sequence of \code{Realization} objects sampled from the target distribution. 
+
+This intuitive object model simplifies and expedites construction and fitting of probability models, as well as predictive simulation. It also makes available an enormous model space, which extends far beyond the standard linear model and generalized linear model families. The \code{GaussianProcess} object `is' a Gaussian process in the sense that a \pkg{PyMC} \code{Normal} variable `is' a normal random variable; as is the case for a \code{Normal}, a \code{GaussianProcess}'s descendants' dependencies on it can be defined using the full expressive power of \proglang{Python}.
+
+This package's model-fitting functionality is generic enough to support, in theory, any model that can be defined using \code{GaussianProcess}s and the standard variable classes in \pkg{PyMC}. It is known to perform well for standard situations such as Bayesian geostatistics (see chapter \textbf{ref}), but it cannot provide good performance in all cases. \pkg{PyMC}'s friendly and extensible system of step methods can be used to create fine-tuned jumping strategies for particular applications.
+
+To improve performance, all of this package's numerical computations are done in C or Fortran extensions, some of which are provided by the \pkg{NumPy} package \citep{numpybook}. Covariance function evaluations are multithreaded for sufficiently large matrices.
+
+\medskip
+This paper introduces  All examples can be found in the folder \code{pymc/examples/gp} in the \pkg{PyMC} source tree.
+
+\include{tutorial1} 
+
+\include{tutorial2}
+
+\section{Conclusion}
+
+This package is built around the \code{Realization} object, which represents random mathematical functions as random \proglang{Python} functions. This is arguably the most natural and intuitive representation possible within the \proglang{Python} programming language, which itself is widely regarded as unusually human-friendly.
+
+This package inherits the flexibility of PyMC, as described in section \ref{sec:gp-sub}. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, and \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GaussianProcess} objects are function-valued random variables, this package supports construction of a wides variety of probability models that involve scalar-valued Gaussian processes. The Duffy negativity example in section \ref{sub:geostat} implements a probability model that is not a member of the generalized linear model family, whose nonstandard likelihood function involves transformations of two Gaussian processes. In keeping with the extensible spirit of PyMC, the package accomodates user-specified covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
+
+Strenuous efforts at optimization have resulted in good performance for `standard' Gaussian process-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \code{NumPy}, which can be configured to make use of optimized, multithreaded BLAS and LAPACK \textbf{cite} implementations. 
+
+However, there are many use cases for which this package cannot achieve performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \texttt{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy} and the toy example above) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \texttt{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm for reasons explained in section \textbf{ref}. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unacceptable level of program complexity.
+
+More tutorial material, as well as documentation of several additional features and the incomplete Cholesky decomposition algorithms, can be found in the \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{package documentation}.
+
+% \nocite{*}
+% \bibliographystyle{plain}v
+\bibliography{gp}
+
+\end{document}
