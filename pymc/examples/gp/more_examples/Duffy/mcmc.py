@@ -22,18 +22,21 @@ import pymc as pm
 
 
 data = csv2rec('duffy-jittered.csv')
-DuffySampler = pm.MCMC(model.make_model(**dict([(k,data[k]) for k in data.dtype.names])), db='hdf5', dbcomplevel=1, dbcomplib='zlib', dbname='duffydb.hdf5')
+# Convert from record array to dictionary
+data = dict([(k,data[k]) for k in data.dtype.names])
+# Create model. Use the HDF5 database backend, because the trace will take up a lot of memory.
+DuffySampler = pm.MCMC(model.make_model(**data), db='hdf5', dbcomplevel=1, dbcomplib='zlib', dbname='duffydb.hdf5')
 
 # ====================
 # = Do the inference =
 # ====================
-# Use the HDF5 database backend, because the trace will take up a lot of memory.
+# Use GPEvaluationGibbs step methods.
 DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_b, DuffySampler.V_b, DuffySampler.eps_p_fb)
 DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_0, DuffySampler.V_0, DuffySampler.eps_p_f0)
+# Run the MCMC.
 DuffySampler.isample(50000,10000,100)
 
 n = len(DuffySampler.trace('V_b')[:])
-
 
 # ==========================
 # = Mean and variance maps =
@@ -45,10 +48,10 @@ xplot = covariate_raster.root.lon[:]*pi/180.
 yplot = covariate_raster.root.lat[:]*pi/180.
 
 data = ma.masked_array(covariate_raster.root.data[:], mask = covariate_raster.root.mask[:])
-covariate_raster.close()
 
 where_unmasked = np.where(True-data.mask)
 dpred = dstack(meshgrid(xplot,yplot))[::-1][where_unmasked]
+africa = covariate_raster.root.data[:][where_unmasked]
 
 # This computation is O(m^2)
 Msurf = zeros(data.shape)
@@ -59,6 +62,7 @@ for i in xrange(n):
     # Reset all variables to their values at frame i of the trace
     DuffySampler.remember(0,i)
     # Evaluate the observed mean
+    store_africa_val(DuffySampler.sp_sub_b.M_obs.value, dpred, africa)
     Msurf_b, Vsurf_b = pm.gp.point_eval(DuffySampler.sp_sub_b.M_obs.value, DuffySampler.sp_sub_b.C_obs.value, dpred)
     Msurf_0, Vsurf_0 = pm.gp.point_eval(DuffySampler.sp_sub_0.M_obs.value, DuffySampler.sp_sub_0.C_obs.value, dpred)
     
@@ -77,48 +81,25 @@ SDsurf = sqrt(Vsurf)
 
 Msurf = ma.masked_array(Msurf, mask=covariate_raster.root.mask[:])
 SDsurf = ma.masked_array(SDsurf, mask=covariate_raster.root.mask[:])
-
+covariate_raster.close()
 
 # Plot mean and standard deviation surfaces
 close('all')
-imshow(Msurf[::-1,:], extent=[xplot.min(),xplot.max(),yplot.min(),yplot.max()],interpolation='nearest')
-plot(DuffySampler.lon*pi/180.,DuffySampler.lat*pi/180.,'r.',markersize=4)
-axis([xplot.min(),xplot.max(),yplot.min(),yplot.max()])
+imshow(Msurf[::-1,:], extent=np.array([xplot.min(),xplot.max(),yplot.min(),yplot.max()])*180./pi,interpolation='nearest')
+plot(DuffySampler.lon,DuffySampler.lat,'r.',markersize=4)
+axis(np.array([xplot.min(),xplot.max(),yplot.min(),yplot.max()])*180./pi)
 title('Posterior predictive mean surface')
+xlabel('Degrees longitude')
+ylabel('Degrees latitude')
 colorbar()
 savefig('duffymean.pdf')
 
 figure()
-imshow(SDsurf[::-1,:], extent=[xplot.min(),xplot.max(),yplot.min(),yplot.max()],interpolation='nearest')
-plot(DuffySampler.lon*pi/180.,DuffySampler.lat*pi/180.,'r.',markersize=4)
-axis([xplot.min(),xplot.max(),yplot.min(),yplot.max()])
+imshow(SDsurf[::-1,:], extent=np.array([xplot.min(),xplot.max(),yplot.min(),yplot.max()])*180./pi,interpolation='nearest')
+plot(DuffySampler.lon,DuffySampler.lat,'r.',markersize=4)
+axis(np.array([xplot.min(),xplot.max(),yplot.min(),yplot.max()])*180./pi)
 title('Posterior predictive standard deviation surface')
+xlabel('Degrees longitude')
+ylabel('Degrees latitude')
 colorbar()
 savefig('duffyvar.pdf')
-
-
-# # ====================
-# # = Realization maps =
-# # ====================
-# 
-# # Use thinner input arrays, this computation is O(m^6)!!
-# m = 101
-# xplot = linspace(x.min(),x.max(),m)
-# yplot = linspace(y.min(),y.max(),m)
-# dpred = dstack(meshgrid(yplot,xplot))
-# 
-# indices = random_integers(n,size=2)
-# for j,i in enumerate(indices):
-#     # Reset all variables to their values at frame i of the trace
-#     DuffySampler.remember(0,i)
-#     # Evaluate the Gaussian process realisation
-#     R = DuffySampler.walker_v.f.value(dpred)
-# 
-#     # Plot the realization
-#     figure()
-#     imshow(R,extent=[x.min(),x.max(),y.min(),y.max()],interpolation='nearest')
-#     plot(x,y,'r.',markersize=4)
-#     axis([x.min(),x.max(),y.min(),y.max()])
-#     title('Realization from the posterior predictive distribution')
-#     colorbar()
-#     savefig('elevdraw%i.pdf'%j)

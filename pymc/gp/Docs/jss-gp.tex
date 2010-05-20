@@ -526,6 +526,7 @@ If $f$'s children depend on its value only via its evaluation on the mesh, the l
 \end{figure}
 
 \subsection{Gibbs steps} 
+\label{sec:gp-gibbs} 
 If all of $f$'s children, $K$, depend on it as follows:
 \begin{eqnarray*}
     K_i|f \stackrel{\textup{\tiny ind}}{\sim} \textup{Normal}(f(x_{*i}),V_i)
@@ -542,12 +543,12 @@ The initialization arguments are the GP submodel that contains $f$, the observat
 \code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \code{AdaptiveMetropolis} \citep{pymc}, which implements the algorithm of Haario, Saksman and Tamminenn \citep{haario}.
 
 
-\section{Example: mapping Duffy negativity prevalence in Africa}
+\section{Example: Duffy negativity prevalence in Africa}
 \label{sec:duffy} 
 
 \cite{Howes} recently presented global maps of the Duffy negative blood group \cite{duffy-cite}, which is a genetic trait in humans. Duffy negativity is of medical interest primarily because it confers resistance to the malaria parasite \emph{Plasmodium vivax} \cite{duffy-vivax-cite}. The geostatistical analysis they present was implemented using this package. The original implementation is freely available on the internet \citep{duffy-code, generic-mbg}. 
 
-The Duffy negativity analysis is included as an example in the PyMC source tree because it provides a `real-world' example showcasing the ability of this package's object model to support a model space that extends far beyond the standard linear model and generalized linear model families. Code implementing the same analysis is included in the folder \\\code{pymc/examples/gp/more_examples/Duffy}. Files \code{model.py} and \code{mcmc.py} contain the model specification, and the model-fitting and predictive simulation procedure, respectively. The datafile \code{duffy-jittered.csv} contains a simulated dataset designed to induce a similar posterior distribution to the dataset collected by \cite{Howes}. 
+The Duffy negativity analysis is included as an example in the PyMC source tree because it provides a `real-world' example showcasing the ability of this package's object model to support a model space that extends far beyond the standard linear model and generalized linear model families. Code implementing the same analysis is included in the folder \\\code{pymc/examples/gp/more_examples/Duffy}. Files \code{model.py} and \code{mcmc.py} contain the model specification, and the model-fitting and predictive simulation procedure, respectively. The datafile \code{duffy-jittered.csv} contains a simulated dataset designed to induce a similar posterior distribution to the dataset collected by \cite{Howes} in Africa and the Arabian peninsula. 
 
 \subsection{Scientific background and data}
 \label{subsec:duffy-data} 
@@ -573,7 +574,7 @@ Incorporating all of these datatypes in a geostatistical analysis requires model
     \begin{array}{r}
         \phi_b,\theta_b,\phi_s,\theta_s,p_1,V_b,V_s\beta\sim\ldots\\
         C_{\phi,\theta}(x,y)=\phi\exp\left[{-\frac{d(x,y)}{\theta}}\right]\\\\
-        M_b : x\mapsto \beta1_{x\in \textup{africa} }\\
+        M_b : x\mapsto \beta1_{x\in r}\\
         f_b|\phi_b,\theta_b,\beta\sim \textup{GP}(M_b, C_{\phi_b,\theta_b}) \\
         \tilde f_b(x) | f_b(x) \stackrel{\textup{\tiny ind}}{\sim} \textup{N}(f_b(x),V_b) \\\\
         M_s : x\mapsto 0\\
@@ -584,12 +585,39 @@ Incorporating all of these datatypes in a geostatistical analysis requires model
         p(s(x)|\neg b(x))= p_1
     \end{array}
 \end{equation}  
-The $s$ variant is found almost exclusively in conjunction with the $b$ variant, so $p(s(x)|a(x))$ is modelled as a simple constant rather than a random field. The function $d(x,y)$ gives the great-circle distance between $x$ and $y$. \cite{Howes} use the Mat\`ern covariance function, but this example uses a simple exponential for shorter mixing time. 
+The $s$ variant is found almost exclusively in conjunction with the $b$ variant, so $p(s(x)|a(x))$ is modelled as a simple constant rather than a random field. The function $d(x,y)$ gives the great-circle distance between $x$ and $y$. \cite{Howes} use the Mat\`ern covariance function, but this example uses a simple exponential for shorter mixing time. The region $r$, defined by \cite{Howes}, includes Africa south of the Sahara. The $b$ variant is known to be relatively common in this region. 
 
 The Hardy-Weinberg model \citep{hardy-weinberg}, which assumes that the alleles found in each of an individual's two chromosomes are independent of one another, makes it possible to write down likelihoods for each of the datatypes at location $x$ conditional on $p(b(x))$, $p(s(x)|b(x))$ and $p(s(x)|\neg b(x))$. These are implemented using \pkg{PyMC}'s \code{Binomial} and \code{Multinomial} classes in \code{model.py} to complete model~\ref{eq:duffy-model}. \cite{Howes} give full details.
 
 \bigskip
-Model~\ref{eq:duffy-model}, completed with the nonstandard likelihood outlined in Section~\ref{subsec:duffy-data}, is not a member of the standard families of Bayesian geostatistical models. However, this package focuses on providing a Python representation of Gaussian processes that closely resembles the corresponding mathematical objects rather than covering a particular model family. Because model~\ref{eq:duffy-model} is straightforward to express in terms of those mathematical objects, it falls comfortably within this package's scope. The implementation in \code{model.py} is little more than a transliteration from mathematical notation to Python. The only bit of added complexity is the `chunking' scheme.
+Model~\ref{eq:duffy-model}, completed with the nonstandard likelihood outlined in Section~\ref{subsec:duffy-data}, is not a member of the standard families of Bayesian geostatistical models. However, this package focuses on providing a Python representation of Gaussian processes that closely resembles the corresponding mathematical objects rather than covering a particular model family. Because model~\ref{eq:duffy-model} is straightforward to express in terms of those mathematical objects, it falls comfortably within this package's scope. The highly declarative implementation in \code{model.py} is little more than a transliteration from mathematical notation to Python. 
+
+\subsection{Model fitting and prediction}
+The portion of \code{mcmc.py} that creates the model and runs the sampling loop is very concise: 
+\begin{CodeInput}
+DuffySampler = pm.MCMC(model.make_model(**data, db='hdf5', dbcomplevel=1, \
+    dbcomplib='zlib', dbname='duffydb.hdf5')
+
+DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_b, \
+    DuffySampler.V_b, DuffySampler.eps_p_fb)
+
+DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_0, \
+    DuffySampler.V_0, DuffySampler.eps_p_f0)
+
+DuffySampler.isample(50000,10000,100)    
+\end{CodeInput}
+The middle two lines choose the \code{GPEvaluationGibbs} step method, described in Section~\ref{sec:gp-gibbs}, for updating the \code{f_eval} attributes of the Gaussian process submodels. The final line calls for 50k MCMC iterations, with every 100 iterations after the first 10k saved to an on-disk database under compression.
+
+Most of the code in \code{mcmc.py} is devoted to estimating the mean and standard deviation of the posterior predictive distribution of Duffy negativity prevalence, $\E(p(s(x))^2)$ and $\sqrt{\VAR(p(s(x))^2)}$, at unsampled locations $x$ in Africa and the Arabian peninsula. The maps generated by \code{mcmc.py} are shown in Figure~\ref{fig:duffymaps}. The \code{remember} method of the \code{DuffySampler} object 
+
+\begin{figure}
+\begin{center}
+    \epsfig{file=duffymean.pdf, width=7cm} 
+    \epsfig{file=duffyvar.pdf, width=7cm}     
+    \caption{The mean and variance of the posterior predictive distribution of Duffy negativity prevalence, $p(s(x))^2$ in the notation of model~\ref{eq:duffy-model}, in Africa and the Arabian peninsula. These maps were produced by \code{pymc/examples/gp/more_examples/Duffy/mcmc.py}. The locations of observations are shown as red dots.}
+    \label{fig:duffymaps}
+\end{center}    
+\end{figure}
 
 % \begin{figure}
 %     \centering
