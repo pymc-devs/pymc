@@ -1,0 +1,148 @@
+The document presents python functionality to examine and manipulate
+Gaussian Processes in the python language.
+
+The manuscript did not point unambiguously to PyMC (which I had to
+google for).  I regard this as a serious deficiency: the manuscript
+points to http://code.google.com/p/pymc/ which is a moving target (and
+appears to have been changed since I adopted the manuscript).  This is
+unacceptable: the submission should be reviewed together with the
+software, and the software is changing arbitrarily.
+
+I used this:
+
+pymc-2.1alpha.tar.gz
+
+
+but this didn't include the gp functionality;
+I tried to install the gp_submodel but failed:
+
+>>> from numpy import *
+>>> from pymc.gp import *
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/lib/python2.6/site-packages/pymc/__init__.py", line 45, in <module>
+    import gp
+  File "/usr/local/lib/python2.6/site-packages/pymc/gp/__init__.py", line 28, in <module>
+    from gp_submodel import *
+ImportError: No module named gp_submodel
+>>>
+
+Yes, I could download gp_submodel, but the submission should be a
+definite fixed piece of software, and I appear to be reviewing a
+moving target.  Also, the copyright on gp_submodel.py on
+code.google.com does not appear to be consistent with the open-source
+philosophy of JSS.
+
+I would need an unambiguous identification of a particular fixed piece
+of software before sending the document for another review.
+
+<<<<<<<
+
+Apologies, the alpha release contained a broken version of the Gaussian process functionality. The attached tarball can run all of the examples except a new example that I have just added (see below). It corresponds to <github link>.
+
+If/when this manuscript passes review, I will tag the corresponding reference release on GitHub, so that the URL becomes more readable.
+
+This manuscript does not document all of the package's functionality, because the full documentation is quite long and would presumably take months to review. I have acccordingly retained some pointers to more extensive documentation at code.google.com/p/pymc, but not code.
+
+>>>>>>>
+
+However, the most serious problem is one of novelty.  As far as I can
+see, much of the manuscript presents calculations that are simple to
+reproduce using the emulator package of the BACCO bundle of R
+packages.
+
+@Article{,
+title = {Introducing BACCO, an R bundle for Bayesian Analysis of
+Computer Code Output},
+author = {R. K. S. Hankin},
+journal = {Journal of Statistical Software},
+year = {2005},
+volume = {14},
+issue = {16},
+month = {October},
+}
+
+For example, I had no difficulty in reproducing Figure 4 using BACCO.
+
+Presumably, the novelty lies in the fact that python has functionality
+not readily available in R (I am not a python expert but am happy to
+go along with this).
+
+<<<<<<<
+
+On re-reading the manuscript, I can see that I seriously under-egged the pudding. I have added some I have added some 'why should we care' text to the introduction and conclusion. I have avoided mentioning BACCO by name, because I do not feel it is necessary to criticize another package in order to point out the advantages of mine.
+
+The package is centered on an object (GP) which _is_ a Gaussian process, in the sense that a PyMC or WinBugs 'normal' node _is_ a normally distributed random variable. That means just about any probability model involving (scalar-valued) Gaussian processes can be implemented using the package. It is not limited to normally-distributed observations (as BACCO seems to be) or even to the standard GLM family. I do not know of any other Gaussian process package that can make this claim.
+
+I wanted to avoid over-selling the flexibility of the package because, although it can create and start to fit a huge model space, it (forgivably) cannot guarantee good performance in all cases. In this version, I have simply tried to make that limitation explicit.
+
+I have also replaced the standard geostatistics example in Chapter 9 with a more interesting example from my recent work, which is far outside the model space supported by BACCO but still on my package's algorithmic 'fast path'. I feel that this example gives a good feel for the package's practical capabilities.
+
+The new example involves data that I am not at liberty to release. Accordingly, I have simulated a dataset using the posterior predictive distribution derived from the actual dataset.
+
+>>>>>>>
+
+I did quite like the way that Realization() was used in a nice object
+oriented way.  Ditto Covariance(): This is just the kind of thing
+python is good at, and OO techniques are very conducive to clear
+programming.  
+
+<<<<<<<
+
+Thank you.
+
+>>>>>>>
+
+The BACCO equivalent is much klunkier.  But this
+niceness does not alone justify inclusion in JSS, unless coupled with
+a detailed discussion of why the approach used in pymc particularly
+elegant (or fast, or bugfree, or ...)
+
+<<<<<<<<
+
+I would argue that in software niceness is very important. A good example would be WinBUGS; it didn't do anything that people couldn't already do with hand-written C code, but it was a publishable contribution precisely because it was so much nicer than any existing tool. Because of its niceness, it has had a much bigger impact on the field of Bayesian analysis than most actual methodological advances.
+
+>>>>>>>>
+
+I found Figure 7 incomprehensible.  Rectangles were defined twice,
+differently. 
+
+>>>>>>>
+
+Such detailed information is more at home in a user guide than in a manuscript like this, so I have removed figure 7.
+
+<<<<<<<
+
+There are many instances of citation usage that are unacceptable in
+that the submission should be more self-contained.  For example,
+section 6.1 refers me to gp/observation.py blindly; 
+
+>>>>>>>
+
+gp/observation.py is the example file that produced figure 4; I have replaced the reference with a reference directly to figure 4. Throughout the manuscript, I have tried to give more background for PyMC-specific concepts.
+
+<<<<<<<
+
+section 7 (p11)
+includes citation to Patil [in press] without which statements such as
+"...has a logp attribute" are incomprehensible.
+
+>>>>>>>
+
+A brief introduction to PyMC's object model has been included at the beginning of section 7.
+
+<<<<<<<
+
+Chapter 9 was uninformative.  I would expect such a chapter to
+introduce, in an accessible manner, the scientific field from which
+the dataset was drawn, and to analyze the data (which is done OK
+except that the python command used were not given or discussed), and
+then to interpret the findings from a geostatistical perspective
+(which is not done).  I did quite like Figures 10 and 11 but these
+should be bigger.
+
+>>>>>>>
+
+As mentioned above, this chapter has been replaced with a more unusual example. More scientific context is provided.
+
+<<<<<<<
