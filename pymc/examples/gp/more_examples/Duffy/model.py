@@ -29,7 +29,7 @@ import generic_mbg
 
 __all__ = ['make_model']
 
-def make_gp_submodel(suffix, mesh, africa, with_africa_covariate):
+def make_gp_submodel(suffix, mesh, africa_val=None, with_africa_covariate=False):
     """
     A small function that creates the mean and covariance object
     of the random field.
@@ -115,8 +115,7 @@ def make_model(lon,lat,africa,n,datatype,
                 pheab,phea,pheb,
                 phe0,prom0,promab,
                 aphea,aphe0,
-                bpheb,bphe0,
-                cpus=1):
+                bpheb,bphe0):
     """
     This function is required by the generic MBG code.
     """
@@ -146,8 +145,8 @@ def make_model(lon,lat,africa,n,datatype,
         sl = slice(i*grainsize,(i+1)*grainsize,None)
         
         if sl.stop>sl.start:
-            this_fb = pm.Lambda('fb_%i'%i, lambda f=sp_sub_b.f_eval, sl=sl: f[fi[sl]], trace=False)
-            this_f0 = pm.Lambda('f0_%i'%i, lambda f=sp_sub_0.f_eval, sl=sl: f[fi[sl]], trace=False)
+            this_fb = pm.Lambda('fb_%i'%i, lambda f=sp_sub_b.f_eval, sl=sl: f[sl], trace=False)
+            this_f0 = pm.Lambda('f0_%i'%i, lambda f=sp_sub_0.f_eval, sl=sl: f[sl], trace=False)
 
             # Nuggeted field in this cluster
             eps_p_fb_d.append(pm.Normal('eps_p_fb_%i'%i, this_fb, 1./V_b, value=np.random.normal(size=np.shape(this_fb.value)), trace=False))
