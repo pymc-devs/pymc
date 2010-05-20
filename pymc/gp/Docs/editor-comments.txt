@@ -42,7 +42,7 @@ Apologies, the alpha release contained a broken version of the Gaussian process 
 
 If/when this manuscript passes review, I will tag the corresponding reference release on GitHub, so that the URL becomes more readable.
 
-This manuscript does not document all of the package's functionality, because the full documentation is quite long and would presumably take months to review. I have acccordingly retained some pointers to more extensive documentation at code.google.com/p/pymc, but not code.
+This manuscript does not document all of the package's functionality, because the full documentation is quite long and would presumably take months to review. I have accordingly retained some pointers to more extensive documentation at code.google.com/p/pymc, but not code.
 
 >>>>>>>
 
@@ -70,11 +70,11 @@ go along with this).
 
 <<<<<<<
 
-On re-reading the manuscript, I can see that I seriously under-egged the pudding. I have added some I have added some 'why should we care' text to the introduction and conclusion. I have avoided mentioning BACCO by name, because I do not feel it is necessary to criticize another package in order to point out the advantages of mine.
+On re-reading the manuscript, I can see that I badly under-egged the pudding. I have added some I have added some 'why should we care' text to the introduction and conclusion. I have avoided mentioning BACCO by name, because I do not feel it is necessary to criticize another package in order to point out the advantages of mine.
 
 The package is centered on an object (GP) which _is_ a Gaussian process, in the sense that a PyMC or WinBugs 'normal' node _is_ a normally distributed random variable. That means just about any probability model involving (scalar-valued) Gaussian processes can be implemented using the package. It is not limited to normally-distributed observations (as BACCO seems to be) or even to the standard GLM family. I do not know of any other Gaussian process package that can make this claim.
 
-I wanted to avoid over-selling the flexibility of the package because, although it can create and start to fit a huge model space, it (forgivably) cannot guarantee good performance in all cases. In this version, I have simply tried to make that limitation explicit.
+I wanted to avoid over-selling the flexibility of the package because, although it can create and start to fit any element of a huge model space, it (forgivably) cannot guarantee good performance in all cases. In this version, I have simply tried to make that limitation explicit.
 
 I have also replaced the standard geostatistics example in Chapter 9 with a more interesting example from my recent work, which is far outside the model space supported by BACCO but still on my package's algorithmic 'fast path'. I feel that this example gives a good feel for the package's practical capabilities.
 
