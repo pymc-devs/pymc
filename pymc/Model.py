@@ -604,7 +604,11 @@ class Sampler(Model):
 
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
-                variable.value = self.trace(variable.__name__, chain=chain)[trace_index]
+                try:
+                    variable.value = self.trace(variable.__name__, chain=chain)[trace_index]
+                except:
+                    cls, inst, tb = sys.exc_info()
+                    warnings.warn('Unable to remember value of variable %s. Original error: \n\n%s: %s'%(variable,cls.__name__,inst.message))
 
     def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
