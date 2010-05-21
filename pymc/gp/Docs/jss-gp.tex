@@ -479,9 +479,9 @@ The file's output is shown in Figure~\ref{fig:MCMCOutput}. Note that after the M
 
 \section{Step methods}
 \label{sec:step-methods}
-\pkg{PyMC} delegates the task of updating variables in MCMC loops to `step method' objects \citep{pymc}. The most common and familiar of these is \code{Metropolis}, which updates variables according to the Metropolis-Hastings algorithm \citep{metropolis}. \code{Metropolis} and related step methods rely on the \code{logp} attributes (see Section~\ref{sec:gp-sub}) of the variables they handle to compute acceptance probabilities for proposed values. 
+\pkg{PyMC} delegates the task of updating variables in MCMC loops to `step method' objects \citep{pymc}. The most common and familiar of these is \code{Metropolis}, which updates variables according to the Metropolis-Hastings algorithm \citep{gamerman}. \code{Metropolis} and related step methods rely on the \code{logp} attributes (see Section~\ref{sec:gp-sub}) of the variables they handle to compute acceptance probabilities for proposed values. 
 
-Because a GP is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it\footnote{A density with respect to a base measure could be used, but would introduce new complications. For example, GP measures with the Mat\`ern covariance function with different degrees of differentiability are not mutually continuous \citep{something}.}. \code{GaussianProcess}es therefore have no \code{logp} attribute, and hence cannot be handled by the Metropolis-Hastings family of step methods. This package uses a relatively simple work-around that will be described in this section. The parents of $f$ are denoted $P$ and the children $K$ throughout.
+Because a GP is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it. \code{GaussianProcess}es have no \code{logp} attribute, and cannot be handled by the Metropolis-Hastings family of step methods. This package uses a relatively simple work-around that will be described in this section. The parents of $f$ are denoted $P$ and the children $K$ throughout.
 
 
 \subsection{Step methods that handle parents of Gaussian processes}
@@ -546,7 +546,7 @@ The initialization arguments are the GP submodel that contains $f$, the observat
 \section{Example: Duffy negativity prevalence in Africa}
 \label{sec:duffy} 
 
-\cite{Howes} recently presented global maps of the Duffy negative blood group \cite{duffy-cite}, which is a genetic trait in humans. Duffy negativity is of medical interest primarily because it confers resistance to the malaria parasite \emph{Plasmodium vivax} \cite{duffy-vivax-cite}. The geostatistical analysis they present was implemented using this package. The original implementation is freely available on the internet \citep{duffy-code, generic-mbg}. 
+\cite{Howes} recently presented global maps of the Duffy negative blood group, which is a genetic trait in humans. Duffy negativity is of medical interest primarily because it confers resistance to the malaria parasite \emph{Plasmodium vivax} \citep{duffy-vivax}. The geostatistical analysis they present was implemented using this package. The original implementation is freely available on the internet \citep{duffy-code, generic-mbg}. 
 
 The Duffy negativity analysis is included as an example in the PyMC source tree because it provides a `real-world' example showcasing the ability of this package's object model to support a model space that extends far beyond the standard linear model and generalized linear model families. Code implementing the same analysis is included in the folder \\\code{pymc/examples/gp/more_examples/Duffy}. Files \code{model.py} and \code{mcmc.py} contain the model specification, and the model-fitting and predictive simulation procedure, respectively. The datafile \code{duffy-jittered.csv} contains a simulated dataset designed to induce a similar posterior distribution to the dataset collected by \cite{Howes} in Africa and the Arabian peninsula. 
 
@@ -566,7 +566,7 @@ For clarity, in the remainder of this section the event that the $B$ variant is 
 \end{description}
 
 \subsection{Statistical model}
-The data types from which the frequency of Duffy negativity can be computed directly are \textbf{gen}, \textbf{prom} and \textbf{phe}. If the entire dataset consisted of such observations the standard spatial generalized linear model framework could be applied \citep{standard-glm}. The other datatypes are not direct observations of the quantity to be predicted, but they are closely related and can be expected to contain valuable information that should be incorporated in any appropriate statistical analysis. 
+The data types from which the frequency of Duffy negativity can be computed directly are \textbf{gen}, \textbf{prom} and \textbf{phe}. If the entire dataset consisted of such observations the standard spatial generalized linear model framework could be applied \citep{diggle}. The other datatypes are not direct observations of the quantity to be predicted, but they are closely related and can be expected to contain valuable information that should be incorporated in any appropriate statistical analysis. 
 
 Incorporating all of these datatypes in a geostatistical analysis requires modeling the two frequencies $p_s$ and $p_b$ simultaneously. A simplified version of the model for these fields chosen by \cite{Howes}, and implemented in \code{model.py}, is given here with priors for scalar parameters suppressed for brevity:
 \begin{equation}
@@ -587,7 +587,7 @@ Incorporating all of these datatypes in a geostatistical analysis requires model
 \end{equation}  
 The $s$ variant is found almost exclusively in conjunction with the $b$ variant, so $p(s(x)|a(x))$ is modelled as a simple constant rather than a random field. The function $d(x,y)$ gives the great-circle distance between $x$ and $y$. \cite{Howes} use the Mat\`ern covariance function, but this example uses a simple exponential for shorter mixing time. The region $r$, defined by \cite{Howes}, includes Africa south of the Sahara. The $b$ variant is known to be relatively common in this region. 
 
-The Hardy-Weinberg model \citep{hardy-weinberg}, which assumes that the alleles found in each of an individual's two chromosomes are independent of one another, makes it possible to write down likelihoods for each of the datatypes at location $x$ conditional on $p(b(x))$, $p(s(x)|b(x))$ and $p(s(x)|\neg b(x))$. These are implemented using \pkg{PyMC}'s \code{Binomial} and \code{Multinomial} classes in \code{model.py} to complete model~\ref{eq:duffy-model}. \cite{Howes} give full details.
+The Hardy-Weinberg model \citep{gillespie}, which assumes that the alleles in each of an individual's two chromosomes are `chosen' independently, makes it possible to write down likelihoods for each of the datatypes at location $x$ conditional on $p(b(x))$, $p(s(x)|b(x))$ and $p(s(x)|\neg b(x))$. These are implemented using \pkg{PyMC}'s \code{Binomial} and \code{Multinomial} classes in \code{model.py} to complete model~\ref{eq:duffy-model}. \cite{Howes} give full details.
 
 \bigskip
 Model~\ref{eq:duffy-model}, completed with the nonstandard likelihood outlined in Section~\ref{subsec:duffy-data}, is not a member of the standard families of Bayesian geostatistical models. However, this package focuses on providing a Python representation of Gaussian processes that closely resembles the corresponding mathematical objects rather than covering a particular model family. Because model~\ref{eq:duffy-model} is straightforward to express in terms of those mathematical objects, it falls comfortably within this package's scope. The highly declarative implementation in \code{model.py} is little more than a transliteration from mathematical notation to Python. 
@@ -608,13 +608,59 @@ DuffySampler.isample(50000,10000,100)
 \end{CodeInput}
 The middle two lines choose the \code{GPEvaluationGibbs} step method, described in Section~\ref{sec:gp-gibbs}, for updating the \code{f_eval} attributes of the Gaussian process submodels. The final line calls for 50k MCMC iterations, with every 100 iterations after the first 10k saved to an on-disk database under compression.
 
-Most of the code in \code{mcmc.py} is devoted to estimating the mean and standard deviation of the posterior predictive distribution of Duffy negativity prevalence, $\E(p(s(x))^2)$ and $\sqrt{\VAR(p(s(x))^2)}$, at unsampled locations $x$ in Africa and the Arabian peninsula. The maps generated by \code{mcmc.py} are shown in Figure~\ref{fig:duffymaps}. The \code{remember} method of the \code{DuffySampler} object 
+\bigskip
+Most of the code in \code{mcmc.py} is devoted to estimating the mean and standard deviation of the posterior predictive distribution of Duffy negativity prevalence at unsampled locations $x$ in Africa and the Arabian peninsula (Figure~\ref{fig:duffymaps}). For each sample from the joint posterior of the model variables  
+\begin{equation}
+    \label{eq:all-vars} 
+    \phi_b,\theta_b,\beta_b,V_b,C_{\phi_b,\theta_b},M_\beta,f_b(o),f_b,\tilde f_b(o),
+\end{equation}
+the pointwise mean and variance 
+\begin{equation}
+    \label{eq:map-moments} 
+    \begin{array}{l}
+        \E(f_b(x_i)|f_b(o), \phi_b, \theta_b, \beta)\\
+        \VAR(f_b(x_i)|f_b(o), \phi_b, \theta_b, \beta)\\\\
+        \E(f_0(x_i)|f_0(o), \phi_0, \theta_0)\\
+        \VAR(f_0(x_i)|f_0(o), \phi_0, \theta_0)
+    \end{array}
+\end{equation}
+are computed for each pixel $x_i$ in the output map. Independent samples of $f_b(x_i)$ and $f_0(x_i)$ at each $x_i$ are sufficient for mapping, and are much cheaper to produce than joint samples of $f_b(x)$ and $f_0(x)$, so the conditional covariances of $f_b(x)$ and $f_0(x)$ are not needed.
+
+Samples for $\tilde f_b(x_i)$ and $\tilde f_0(x_i)$ are obtained for each element $x_i$ of $x$ using equation~\ref{eq:map-moments}, and the last three lines of model~\ref{eq:duffy-model} are used to convert these to posterior predictive samples of the frequency of the silencing variant, $p(s(x_i))$, and thence the frequency of Duffy negativity, $p(s(x)_i)^2$. The posterior predictive mean and variance of Duffy negativity are estimated from these samples, and these quantities are displayed on a map.
+
+\bigskip
+The \code{remember} method of the \code{DuffySampler} object is used to set all of its constituent variables (equation~\ref{eq:all-vars}) to values stored at a particular frame of the joint dynamic trace:
+\begin{CodeInput}
+for i in xrange(n):
+    DuffySampler.remember(0,i)
+\end{CodeInput}
+Inside the loop, the pointwise means and variances of equation~\ref{eq:map-moments} are computed efficiently and in a multithreaded fashion (assuming the environment variable \code{OMP_NUM_THREADS} is set to a value greater than 1) using \code{point_eval}:
+\begin{CodeInput}
+    Msurf_b, Vsurf_b = pm.gp.point_eval(DuffySampler.sp_sub_b.M_obs.value, \
+        DuffySampler.sp_sub_b.C_obs.value, dpred)
+    
+    Msurf_0, Vsurf_0 = pm.gp.point_eval(DuffySampler.sp_sub_0.M_obs.value, \
+        DuffySampler.sp_sub_0.C_obs.value, dpred)
+        
+    Vsurf_b += DuffySampler.V_b.value
+    Vsurf_0 += DuffySampler.V_0.value
+\end{CodeInput}
+The `nugget' variances $V_b$ and $V_0$ are added to the variances in equation~\ref{eq:map-moments} to obtain the means and variances of the conditional distributions of $\tilde f_0$ and $\tilde f_b$. Samples from these distributions are drawn, and converted to posterior predictive samples for the frequencies $p(s(x_i))$ and $p(b(x_i))$ at each pixel $x_i$:
+\begin{CodeInput}
+    freq_b = pm.invlogit(Msurf_b +pm.rnormal(0,1)*np.sqrt(Vsurf_b))
+    freq_0 = pm.invlogit(Msurf_0 +pm.rnormal(0,1)*np.sqrt(Vsurf_0))
+\end{CodeInput}
+Finally, these samples are converted to a posterior predictive sample for Duffy negativity $p(s(x_i))^2=[p(s(x_i)|b(x_i))p(b(x_i))+p(s(x_i)|\neg b(x_i))p(\neg b(x_i))]^2$:
+\begin{CodeInput}
+    samp_i = (freq_b*freq_0+(1-freq_b)*DuffySampler.p1.value)**2
+\end{CodeInput}
+These samples are accumulated to produce estimates of the first two moments of the posterior predictive distribution of $p(s(x_i))^2$ for each $x_i$, and these moments are used to fill in the maps of the posterior predictive mean and standard deviation shown in Figure~\ref{fig:duffymaps}.
 
 \begin{figure}
 \begin{center}
-    \epsfig{file=duffymean.pdf, width=7cm} 
-    \epsfig{file=duffyvar.pdf, width=7cm}     
-    \caption{The mean and variance of the posterior predictive distribution of Duffy negativity prevalence, $p(s(x))^2$ in the notation of model~\ref{eq:duffy-model}, in Africa and the Arabian peninsula. These maps were produced by \code{pymc/examples/gp/more_examples/Duffy/mcmc.py}. The locations of observations are shown as red dots.}
+    \epsfig{file=figs/duffymean.pdf, width=7cm} 
+    \epsfig{file=figs/duffyvar.pdf, width=7cm}     
+    \caption{The mean and variance of the posterior predictive distribution of Duffy negativity prevalence, $p(s(x))^2$ in the notation of model~\ref{eq:duffy-model}, in Africa and the Arabian peninsula. These maps were produced by \code{pymc/examples/gp/more_examples/Duffy/mcmc.py}. The locations of (simulated) observations are shown as red dots.}
     \label{fig:duffymaps}
 \end{center}    
 \end{figure}
@@ -655,7 +701,7 @@ This package is built around the \code{Realization} object, which represents ran
 
 This package inherits the flexibility of \pkg{PyMC}, as described in Section~\ref{sec:gp-sub}. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, and \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GaussianProcess} objects are function-valued random variables, this package supports construction of a wide variety of probability models that involve scalar-valued GPs. The Duffy negativity example in Section~\ref{sec:duffy} implements a probability model that is not a member of the generalized linear model family, whose nonstandard likelihood function involves transformations of two GPs. In keeping with the extensible spirit of \pkg{PyMC}, the package accomodates user-specified covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
 
-Strenuous efforts at optimization have resulted in good performance for `standard' GP-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \pkg{NumPy}, which can be configured to make use of optimized, multithreaded \pkg{BLAS} and \pkg{LAPACK} \citep{blas} implementations. 
+Strenuous efforts at optimization have resulted in good performance for `standard' GP-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \pkg{NumPy}, which can be configured to make use of optimized, multithreaded \pkg{BLAS} \citep{blas} and \pkg{LAPACK} \citep{lapack}  implementations. 
 
 However, there are many use cases for which this package cannot achieve performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \code{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy}) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \code{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm for reasons explained in Section~\ref{sec:step-methods}. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unmanageable amount of additional complexity.
 

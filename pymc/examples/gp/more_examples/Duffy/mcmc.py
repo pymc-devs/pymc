@@ -53,7 +53,6 @@ where_unmasked = np.where(True-data.mask)
 dpred = dstack(meshgrid(xplot,yplot))[::-1][where_unmasked]
 africa = covariate_raster.root.data[:][where_unmasked]
 
-# This computation is O(m^2)
 Msurf = zeros(data.shape)
 E2surf = zeros(data.shape)
 
@@ -65,6 +64,8 @@ for i in xrange(n):
     store_africa_val(DuffySampler.sp_sub_b.M_obs.value, dpred, africa)
     Msurf_b, Vsurf_b = pm.gp.point_eval(DuffySampler.sp_sub_b.M_obs.value, DuffySampler.sp_sub_b.C_obs.value, dpred)
     Msurf_0, Vsurf_0 = pm.gp.point_eval(DuffySampler.sp_sub_0.M_obs.value, DuffySampler.sp_sub_0.C_obs.value, dpred)
+    Vsurf_b += DuffySampler.V_b.value
+    Vsurf_0 += DuffySampler.V_0.value
     
     freq_b = pm.invlogit(Msurf_b +pm.rnormal(0,1)*np.sqrt(Vsurf_b))
     freq_0 = pm.invlogit(Msurf_0 +pm.rnormal(0,1)*np.sqrt(Vsurf_0))
