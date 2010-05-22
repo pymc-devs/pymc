@@ -648,7 +648,7 @@ Whenever a variable is used as a parent for a child variable, \pkg{PyMC} replace
 
 \subsection{Fitting the model with MCMC}
 
-\pkg{PyMC} provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm \citep{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \code{DisasterModel.py} and use it as an argument for \code{MCMC}:
+\pkg{PyMC} provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with a Markov chain Monte Carlo algorithm \citep{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \code{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{CodeInput}
 >>> from pymc.examples import DisasterModel
 >>> from pymc import MCMC
@@ -717,13 +717,15 @@ array([ 0.52721865,  0.60788251,  0.68854637,  0.76921023,  0.84987409,
 <a list of 10 Patch objects>)
 >>> show()
 \end{CodeInput}
-You should see something like this:
+You should see something similar to Figure~\ref{fig:hist}.
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=ltrace.pdf, width=15cm}
    \caption{Histogram of the marginal posterior probability of parameter $l$.}
+	\label{fig:hist}
 \end{center}
 \end{figure}
+
 \pkg{PyMC} has its own plotting functionality, via the optional
 \code{matplotlib} module as noted in the installation notes. The
 \code{Matplot} module includes a \code{plot} function that takes the
@@ -732,15 +734,14 @@ model (or a single parameter) as an argument:
 >>> from pymc.Matplot import plot
 >>> plot(M)
 \end{CodeInput}
-For each variable in the model, \code{plot} generates a composite figure, such as this one for the switchpoint in the disasters model:
+For each variable in the model, \code{plot} generates a composite figure, such as that for the switchpoint in the disasters model (Figure~\ref{fig:switch}). The left-hand pane of this figure~shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see \cite*{gelman}), while the histogram is useful for visualizing the posterior.
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
    \caption{Temporal series and histogram of the samples drawn for $s$. }
+\label{fig:switch}
 \end{center}
 \end{figure}
-
-The left-hand pane of this figure~shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see \cite*{gelman}), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call \code{M.stats()}.
 
@@ -1310,14 +1311,16 @@ psi_i = pm.Potential(  logp = psi_i_logp,
 
 The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Section~\ref{chap:modelfitting}) instances using GraphViz via the \proglang{Python} package PyDot. See \citet{dawidmarkov} and \citet{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
-The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
+The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} is shown in Figure~\ref{fig:disaster-dag}. Note that $D$ is shaded because it is flagged as data.
+
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=7cm}
     \caption{Graphical representation of the coal mining disaster model example.}
+	\label{fig:disaster-dag}
 \end{center}
 \end{figure}
-$D$ is shaded because it is flagged as data.
+
 
 % Note that if a deterministic variable has more than one child, its parents each inherit all of its children when it is made implicit:
 % \begin{center}
@@ -1325,7 +1328,6 @@ $D$ is shaded because it is flagged as data.
 % \end{center}
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
-The symbol for factor potentials is a rectangle, as in the following model.
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExample.pdf, width=12cm}
@@ -1333,14 +1335,16 @@ The symbol for factor potentials is a rectangle, as in the following model.
     \label{fig:dgm}
 \end{center}
 \end{figure}
-Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
+
+The symbol for factor potentials is a rectangle (Figure~\ref{fig:dgm}). Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model is much more compact (Figure~\ref{fig:dgm-collapsed}). Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
+
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=10cm}
     \caption{The undirected version of the graphical model of figure~\ref{fig:dgm}.}
+	\label{fig:dgm-collapsed}
 \end{center}
 \end{figure}
-Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
 \subsection[Class LazyFunction and caching]{Class \code{LazyFunction}
