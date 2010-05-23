@@ -2194,7 +2194,7 @@ The arguments are:
 
     \item \verb=r=: Desired accuracy for quantile.
 
-    \item \verb=s=(optional): Probability of attaining the requested accuracy (defaults to 0.95).
+    \item \verb=s= (optional): Probability of attaining the requested accuracy (defaults to 0.95).
 
     \item \verb=epsilon= (optional) : Half width of the tolerance interval required for the q-quantile (defaults to 0.001).
 
@@ -2451,29 +2451,29 @@ Suppose we want to handle \code{cutoff} with a smarter step method that doesn't 
 We can implement this Metropolis-Hastings algorithm with the following step method class:
 \begin{CodeInput}
 class TruncatedMetropolis(pymc.Metropolis):
-def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-    self.low_bound = low_bound
-    self.up_bound = up_bound
-    pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
+	def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
+	    self.low_bound = low_bound
+	    self.up_bound = up_bound
+	    pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-def propose(self):
-    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-    self.stochastic.value = \
-        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+	def propose(self):
+	    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	    self.stochastic.value = \
+	        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-def hastings_factor(self):
-    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-    cur_val = self.stochastic.value
-    last_val = self.stochastic.last_value
+	def hastings_factor(self):
+	    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	    cur_val = self.stochastic.value
+	    last_val = self.stochastic.last_value
 
-    lp_for = pymc.truncnorm_like(cur_val, last_val, tau, \
-        self.low_bound, self.up_bound)
-    lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, \
-        self.low_bound, self.up_bound)
+	    lp_for = pymc.truncnorm_like(cur_val, last_val, tau, \
+	        self.low_bound, self.up_bound)
+	    lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, \
+	        self.low_bound, self.up_bound)
 
-    if self.verbose > 1:
-        print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
-    return lp_bak - lp_for
+	    if self.verbose > 1:
+	        print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
+	    return lp_bak - lp_for
 \end{CodeInput}
 
 The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which can be set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \\\code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
@@ -2532,8 +2532,8 @@ class NewStepMethod(pymc.StepMethod):
    \begin{CodeInput}
 state = {}
 for s in self._state:
-state[s] = getattr(self, s)
-return state
+	state[s] = getattr(self, s)
+	return state
 \end{CodeInput}
    \code{self._state} should be a list containing the names of the attributes needed to reproduce the current jumping strategy. If an \code{MCMC} object writes its state out to a database, these attributes will be preserved. If an \code{MCMC} object restores its state from that database later, the corresponding step method will have these attributes set to their saved values.
 \end{description}
@@ -2542,7 +2542,7 @@ Step methods should also maintain the following attributes:
 \begin{description}
    \item[\code{_id}:] A string that can identify each step method uniquely (usually something like \\\code{<class_name>_<stochastic_name>}).
    \item[\code{adaptive_scale_factor}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
-   \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \code{Metropolis} instances, this would be \code{['adaptive_scale_factor']}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \citep{tuning}.
+   \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \code{Metropolis} instances, this would be \code{[`adaptive_scale_factor']}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \citep{tuning}.
 \end{description}
 
 All step methods have a property called \code{loglike}, which gives the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio. The \code{logp_plus_loglike} property gives the sum of that and the log-probabilities of \code{self.stochastics}.  
@@ -2556,8 +2556,8 @@ A Metropolis-Hastings step method only needs to implement the following methods,
    \item[\code{reject()}:] Usually just
    \begin{CodeInput}
 def reject(self):
-self.rejected += 1
-[s.value = s.last_value for s in self.stochastics]
+	self.rejected += 1
+	[s.value = s.last_value for s in self.stochastics]
 \end{CodeInput}
    \item[\code{propose():}] Sets the values of all \code{self.stochastics} to new, proposed values. This method may use the \code{adaptive_scale_factor} attribute to take advantage of the standard tuning scheme.
 \end{description}
@@ -2573,7 +2573,7 @@ Metropolis-Hastings step methods should log the number of jumps they have accept
 
 Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children.
 
-This Section~describes \pkg{PyMC}'s current scheme for Gibbs step methods, several of which are in a semi-working state in the sandbox. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass \code{StepMethod} directly when writing Gibbs step methods if you prefer.
+This Section~describes \pkg{PyMC}'s current scheme for Gibbs step methods, several of which are in a semi-working state in the \emph{sandbox} directory. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass \code{StepMethod} directly when writing Gibbs step methods if you prefer.
 
 Gibbs step methods that subclass \pkg{PyMC}'s \code{Gibbs} should define the following class attributes:
 \begin{description}
@@ -2617,7 +2617,7 @@ Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms sh
 Samplers may alternatively want to override the default \code{sample()} method. In that case, they should call the \code{tally()} method whenever it is appropriate to save the current model state. Like custom \code{_loop()} methods, custom \code{sample()} methods should handle \code{KeyboardInterrupts} and call the \code{halt()} method when sampling terminates to finalize the traces.
 
 
-\subsection{Don't update stochastic variables' values in-place}
+\subsection{A second warning: Don't update stochastic variables' values in-place}
 \label{dont-update-indepth}
 
 
@@ -2637,7 +2637,7 @@ However, a \code{Stochastic} object's value can make in-place updates to itself 
 
 MCMC is a surprisingly difficult and bug-prone algorithm to implement by hand. We find \pkg{PyMC} makes it much easier and less stressful. \pkg{PyMC} also makes our work more dynamic; getting hand-coded MCMC's working used to be so much work that we were reluctant to change anything, but with \pkg{PyMC} changing models is much easier. 
 
-We welcome new contributors at all levels. If you would like to contribute new code, improve documentation, share your results or provide ideas for new features, please introduce yourself on our mailing list at \href{pymc@googlegroups.com}. Our wiki page at \href{http://code.google.com/p/pymc/w/list} also hosts a number of tutorials and examples from users that could give you some ideas. We have taken great care to make the code easy to extend, whether by adding new database backends, step methods or entirely new sampling algorithms.
+We welcome new contributors at all levels. If you would like to contribute new code, improve documentation, share your results or provide ideas for new features, please introduce yourself on our mailing list at \href{pymc@googlegroups.com}{pymc@googlegroups.com}. Our wiki page at \href{http://code.google.com/p/pymc/w/list}{http://code.google.com/p/ pymc/w/list} also hosts a number of tutorials and examples from users that could give you some ideas. We have taken great care to make the code easy to extend, whether by adding new database backends, step methods or entirely new sampling algorithms.
 
 
 
