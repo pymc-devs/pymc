@@ -528,12 +528,12 @@ We have above created a \pkg{PyMC} probability model, which is simply a linked c
 \begin{CodeInput}
 >>> from pymc.examples import DisasterModel
 >>> DisasterModel.s.parents
-{'lower': 0, 'upper': 110}
+{`lower': 0, 'upper': 110}
 \end{CodeInput}
 The \code{parents} dictionary shows us the distributional parameters of $s$, which are constants. Now let's examinine $D$'s parents:
 \begin{CodeInput}
 >>> DisasterModel.D.parents
-{'mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
+{`mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
 \end{CodeInput}
 We are using $r$ as a distributional parameter of $D$ (\emph{i.e.} $r$ is $D$'s parent). $D$ internally labels $r$ as \code{mu}, meaning $r$ plays the role of the rate parameter in $D$'s Poisson distribution. Now examine $r$'s \code{children} attribute:
 \begin{CodeInput}
@@ -932,7 +932,7 @@ A stochastic variable has the following primary attributes:
 \end{description}
 A stochastic variable can optionally be endowed with a method called \code{\bfseries rand}, which draws a value for the variable given the values of its parents\footnote{Note that the \code{random} method does not provide a Gibbs sample unless the variable has no children.}. Stochastic variables have the following additional attributes:
 \begin{description}
-    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary are to the labels assigned to the parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{'t_l'} and \code{'t_h'}. The actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
+    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary are to the labels assigned to the parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{`t_l'} and \code{`t_h'}. The actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
     \item[\code{children}:] A set containing the variable's children.
     \item[\code{extended_parents}:] A set containing all stochastic variables on which the variable depends, either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability.
     \item[\code{extended_children}:] A set containing all stochastic variables and potentials that depend on the variable, either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables and potentials will need to recompute their log-probabilities.
@@ -1020,7 +1020,7 @@ return numpy.round( (t_l - t_h) * random() ) + t_l
 s = pm.Stochastic( logp = s_logp,
             doc = 'The switchpoint for the rate of disaster occurrence.',
             name = 's',
-            parents = {'t_l': 1851, 't_h': 1962},
+            parents = {`t_l': 1851, 't_h': 1962},
             random = s_rand,
             trace = True,
             value = 1900,
@@ -1157,7 +1157,7 @@ def r_eval(switchpoint = s, early_rate = e, late_rate = l):
 
 r = pm.Deterministic(  eval = r_eval,
                 name = 'r',
-                parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l},
+                parents = {`switchpoint': s, 'early_rate': e, 'late_rate': l},
                 doc = 'The rate of disaster occurrence.',
                 trace = True,
                 verbose = 0,
@@ -1283,18 +1283,18 @@ There are two ways to create potentials:
 \begin{CodeInput}
 @pm.potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
-"""A pair potential"""
-return -(x_lo - x_hi)**2
+	"""A pair potential"""
+	return -(x_lo - x_hi)**2
 \end{CodeInput}
 The function supplied should return the potential's current \emph{log}-probability or \emph{log}-density as a \pkg{NumPy} \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{CodeInput}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
-return -(x_lo - x_hi)**2
+	return -(x_lo - x_hi)**2
 
 psi_i = pm.Potential(  logp = psi_i_logp,
                 name = 'psi_i',
-                parents = {'xlo': x[i], 'xhi': x[i+1]},
+                parents = {`xlo': x[i], 'xhi': x[i+1]},
                 doc = 'A pair potential',
                 verbose = 0,
                 cache_depth = 2)
@@ -1305,9 +1305,9 @@ psi_i = pm.Potential(  logp = psi_i_logp,
 \subsection{Graphing models} \label{graphical}
 
 
-The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Section~\ref{chap:modelfitting}) instances using GraphViz via the \proglang{Python} package PyDot. See \citet{dawidmarkov} and \citet{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \code{graph} (or \code{dag}) in \code{pymc.graph} draws graphical representations of \code{Model} (Section~\ref{chap:modelfitting}) instances using GraphViz via the \proglang{Python} package PyDot. See \citet{dawidmarkov} and \citet{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
-The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} is shown in Figure~\ref{fig:disaster-dag}. Note that $D$ is shaded because it is flagged as data.
+The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model (\ref{disastermodel}) is shown in Figure~\ref{fig:disaster-dag}. Note that $D$ is shaded because it is flagged as data.
 
 \begin{figure}[h!]
 \begin{center}
@@ -1394,7 +1394,7 @@ M = Model(MyModule)
     \item Using a `model factory' function:
     \begin{CodeInput}
 def make_model(x):
-a = pm.Exponential('a',beta=x,value=0.5)
+	a = pm.Exponential('a',beta=x,value=0.5)
 
 @pm.deterministic
 def b(a=a):
@@ -1536,7 +1536,7 @@ It provides the following additional attributes:
 \subsection[Markov chain Monte Carlo: the MCMC class]{Markov chain Monte
 Carlo: the \code{MCMC} class} \label{sec:mcmc}
 
-The \code{MCMC} class implements \pkg{PyMC}'s core business: producing `traces' for a model's variables which can be considered sequences of joint samples from the posterior. See Section~\ref{chap:tutorial} for an example of basic usage.
+The \code{MCMC} class implements \pkg{PyMC}'s core business: producing Markov chains from a model's variables which can be considered sequences of joint samples from the posterior. See Section~\ref{chap:tutorial} for an example of basic usage.
 
 \code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in Section~\ref{chap:extending}.
 
@@ -1584,7 +1584,7 @@ In addition, the sampler attribute \code{deviance} is a deterministic variable v
 \subsection{Step methods} \label{sec:stepmethod}
 
 
-Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \code{StepMethod} implements a method called \code{step()}, which is called by \code{MCMC}. Step methods with adaptive tuning parameters can optionally implement a method called \code{tune()}, which causes them to assess performance so far and adjust.
+Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \code{StepMethod} implements a method called \code{step()}, which is called by \code{MCMC}. Step methods with adaptive tuning parameters can optionally implement a method called \code{tune()}, which causes them to assess performance (based on the acceptance rates of proposed values for the variable) so far and adjust.
 
 The major subclasses of \code{StepMethod} are \code{Metropolis},
 \code{AdaptiveMetropolis} and \code{Gibbs}. \pkg{PyMC} provides several flavors of the
@@ -1621,7 +1621,7 @@ if all(self.stochastic.value != 0.):
 else:
    self.proposal_sd = ones(shape(self.stochastic.value)) * scale
 \end{CodeInput}
-   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise.
+   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{`Normal'} and \code{`Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{`Prior'} if the variable has no children and has a random method, and to \code{`Normal'} otherwise.
    \item[\code{verbose}:] An integer. By convention, $0$ indicates minimal output and $2$ indicates maximum verbosity.
 \end{description}
 
@@ -1685,7 +1685,7 @@ non-Markovian.
 \code{DiscreteMetropolis} class}
 This class is just like \code{Metropolis}, but specialized to handle
 \code{Stochastic} instances with dtype \code{int}. The jump proposal
-distribution can either be \code{'Normal'}, \code{'Prior'} or \code{'Poisson'}.
+distribution can either be \code{`Normal'}, \code{`Prior'} or \code{`Poisson'}.
 In the normal case, the proposed value is drawn from a normal distribution
 centered at the current value and then rounded to the
 nearest integer. In the Poisson case, the proposed value is obtained by adding
@@ -2607,10 +2607,10 @@ Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms sh
    \item[\code{draw()}:] If it is possible to generate an independent sample from the posterior at every iteration, the \code{draw} method should do so. The default \code{_loop} method can be used in this case.
    \item[\code{_loop()}:] If it is not possible to implement a \code{draw()} method, but you want to take advantage of the interactive sampling option, you should override \code{_loop()}. This method is responsible for generating the posterior samples and calling \code{tally()} when it is appropriate to save the model's state. In addition, \code{_loop} should monitor the sampler's \code{status} attribute at every iteration and respond appropriately. The possible values of \code{status} are:
    \begin{description}
-      \item[\code{'ready'}:] Ready to sample.
-      \item[\code{'running'}:] Sampling should continue as normal.
-      \item[\code{'halt'}:] Sampling should halt as soon as possible. \code{_loop} should call the \code{halt()} method and return control. \code{_loop} can set the status to \code{'halt'} itself if appropriate (eg the database is full or a \code{KeyboardInterrupt} has been caught).
-      \item[\code{'paused'}:] Sampling should pause as soon as possible. \code{_loop} should return, but should be able to pick up where it left off next time it's called.
+      \item[\code{`ready'}:] Ready to sample.
+      \item[\code{`running'}:] Sampling should continue as normal.
+      \item[\code{`halt'}:] Sampling should halt as soon as possible. \code{_loop} should call the \code{halt()} method and return control. \code{_loop} can set the status to \code{`halt'} itself if appropriate (eg the database is full or a \code{KeyboardInterrupt} has been caught).
+      \item[\code{`paused'}:] Sampling should pause as soon as possible. \code{_loop} should return, but should be able to pick up where it left off next time it's called.
    \end{description}
 \end{description}
 
