@@ -31,8 +31,8 @@ DuffySampler = pm.MCMC(model.make_model(**data), db='hdf5', dbcomplevel=1, dbcom
 # = Do the inference =
 # ====================
 # Use GPEvaluationGibbs step methods.
-DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_b, DuffySampler.V_b, DuffySampler.eps_p_fb)
-DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_0, DuffySampler.V_0, DuffySampler.eps_p_f0)
+DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_b, DuffySampler.V_b, DuffySampler.tilde_fb)
+DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_s, DuffySampler.V_s, DuffySampler.tilde_fs)
 # Run the MCMC.
 DuffySampler.isample(50000,10000,100)
 
@@ -63,14 +63,14 @@ for i in xrange(n):
     # Evaluate the observed mean
     store_africa_val(DuffySampler.sp_sub_b.M_obs.value, dpred, africa)
     Msurf_b, Vsurf_b = pm.gp.point_eval(DuffySampler.sp_sub_b.M_obs.value, DuffySampler.sp_sub_b.C_obs.value, dpred)
-    Msurf_0, Vsurf_0 = pm.gp.point_eval(DuffySampler.sp_sub_0.M_obs.value, DuffySampler.sp_sub_0.C_obs.value, dpred)
+    Msurf_s, Vsurf_s = pm.gp.point_eval(DuffySampler.sp_sub_s.M_obs.value, DuffySampler.sp_sub_s.C_obs.value, dpred)
     Vsurf_b += DuffySampler.V_b.value
-    Vsurf_0 += DuffySampler.V_0.value
+    Vsurf_s += DuffySampler.V_s.value
     
     freq_b = pm.invlogit(Msurf_b +pm.rnormal(0,1)*np.sqrt(Vsurf_b))
-    freq_0 = pm.invlogit(Msurf_0 +pm.rnormal(0,1)*np.sqrt(Vsurf_0))
+    freq_s = pm.invlogit(Msurf_s +pm.rnormal(0,1)*np.sqrt(Vsurf_s))
     
-    samp_i = (freq_b*freq_0+(1-freq_b)*DuffySampler.p1.value)**2
+    samp_i = (freq_b*freq_s+(1-freq_b)*DuffySampler.p1.value)**2
     
     Msurf[where_unmasked] += samp_i/float(n)
     # Evaluate the observed covariance with one argument

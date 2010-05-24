@@ -99,30 +99,30 @@ def make_model(lon,lat,africa,n,datatype,
             
     # Spatial submodels
     spatial_b_vars = make_gp_submodel('b',logp_mesh,africa,with_africa_covariate=True)
-    spatial_0_vars = make_gp_submodel('0',logp_mesh)
+    spatial_s_vars = make_gp_submodel('0',logp_mesh)
     sp_sub_b = spatial_b_vars['sp_sub']
-    sp_sub_0 = spatial_0_vars['sp_sub']
+    sp_sub_s = spatial_s_vars['sp_sub']
     
     # Loop over data clusters, adding nugget and applying link function.
-    eps_p_f0_d = []
+    tilde_fs_d = []
     p0_d = []
-    eps_p_fb_d = []
+    tilde_fb_d = []
     pb_d = []
     V_b = spatial_b_vars['V']
-    V_0 = spatial_0_vars['V']            
+    V_s = spatial_s_vars['V']            
     data_d = []    
 
     for i in xrange(len(n)):        
         this_fb =sp_sub_b.f_eval[i]
-        this_f0 = sp_sub_0.f_eval[i]
+        this_fs = sp_sub_s.f_eval[i]
 
         # Nuggeted field in this cluster
-        eps_p_fb_d.append(pm.Normal('eps_p_fb_%i'%i, this_fb, 1./V_b, value=np.random.normal(), trace=False))
-        eps_p_f0_d.append(pm.Normal('eps_p_f0_%i'%i, this_f0, 1./V_0, value=np.random.normal(), trace=False))
+        tilde_fb_d.append(pm.Normal('tilde_fb_%i'%i, this_fb, 1./V_b, value=np.random.normal(), trace=False))
+        tilde_fs_d.append(pm.Normal('tilde_fs_%i'%i, this_fs, 1./V_s, value=np.random.normal(), trace=False))
             
         # The frequencies.
-        p0 = pm.Lambda('pb_%i'%i,lambda lt=eps_p_fb_d[-1]: pm.invlogit(lt),trace=False)
-        pb = pm.Lambda('p0_%i'%i,lambda lt=eps_p_f0_d[-1]: pm.invlogit(lt),trace=False)
+        p0 = pm.Lambda('pb_%i'%i,lambda lt=tilde_fb_d[-1]: pm.invlogit(lt),trace=False)
+        pb = pm.Lambda('p0_%i'%i,lambda lt=tilde_fs_d[-1]: pm.invlogit(lt),trace=False)
         
         # The likelihoods
         if datatype[i]=='prom':
@@ -167,13 +167,13 @@ def make_model(lon,lat,africa,n,datatype,
             
     # The fields plus the nugget, in convenient vector form
     @pm.deterministic
-    def eps_p_fb(eps_p_fb_d = eps_p_fb_d):
-        """Concatenated version of eps_p_fb, for postprocessing & Gibbs sampling purposes"""
-        return np.hstack(eps_p_fb_d)
+    def tilde_fb(tilde_fb_d = tilde_fb_d):
+        """Concatenated version of tilde_fb, for postprocessing & Gibbs sampling purposes"""
+        return np.hstack(tilde_fb_d)
 
     @pm.deterministic
-    def eps_p_f0(eps_p_f0_d = eps_p_f0_d):
-        """Concatenated version of eps_p_f0, for postprocessing & Gibbs sampling purposes"""
-        return np.hstack(eps_p_f0_d)
+    def tilde_fs(tilde_fs_d = tilde_fs_d):
+        """Concatenated version of tilde_fs, for postprocessing & Gibbs sampling purposes"""
+        return np.hstack(tilde_fs_d)
 
     return locals()
