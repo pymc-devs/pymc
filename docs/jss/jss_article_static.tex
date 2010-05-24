@@ -407,15 +407,16 @@ online documentation can also be found on the \proglang{Python} documentation pa
 \href{http://www.python.org/doc/}{http://www.python.org/doc/}.
 
 \subsection{An example statistical model}
-Consider the following dataset, which is a time series of recorded coal mining
-disasters in the UK from 1851 to 1962 \citep{Jarrett:1979fr}.
+Consider a sample dataset consisting of a time series of recorded coal mining
+disasters in the UK from 1851 to 1962 \cite[Figure~\ref{fig:disaster-data}, ][]{Jarrett:1979fr}.
 \begin{figure}[h!]
 \begin{center}
 \epsfig{file=disasterts.pdf, width=15cm}
 \caption{Recorded coal mining disasters in the UK. }
+\label{fig:disaster-data}
 \end{center}
 \end{figure}
-Occurrences of disasters in the time series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
+Occurrences of disasters in the series is thought to be derived from a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 \begin{equation}
@@ -499,7 +500,7 @@ Next, we define the variable $r$, which selects the early rate $e$ for times bef
 \begin{CodeInput}
 @deterministic(plot=False)
 def r(s=s, e=e, l=l):
-  """ Concatenate Poisson means """
+    """ Concatenate Poisson means """
     out = numpy.empty(len(disasters_array))
     out[:s] = e
     out[s:] = l
@@ -512,7 +513,7 @@ D = Poisson('D', mu=r, value=disasters_array, observed=True)
 
 \subsection{Why are data and unknown variables represented by the same
 object?}
-Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of \pkg{PyMC}'s syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model \ref{disastermodel}, we require the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
+Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of \pkg{PyMC}'s syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model (\ref{disastermodel}), we require the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -527,12 +528,12 @@ We have above created a \pkg{PyMC} probability model, which is simply a linked c
 \begin{CodeInput}
 >>> from pymc.examples import DisasterModel
 >>> DisasterModel.s.parents
-{'lower': 0, 'upper': 110}
+{`lower': 0, 'upper': 110}
 \end{CodeInput}
 The \code{parents} dictionary shows us the distributional parameters of $s$, which are constants. Now let's examinine $D$'s parents:
 \begin{CodeInput}
 >>> DisasterModel.D.parents
-{'mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
+{`mu': <pymc.PyMCObjects.Deterministic 'r' at 0x3e51a70>}
 \end{CodeInput}
 We are using $r$ as a distributional parameter of $D$ (\emph{i.e.} $r$ is $D$'s parent). $D$ internally labels $r$ as \code{mu}, meaning $r$ plays the role of the rate parameter in $D$'s Poisson distribution. Now examine $r$'s \code{children} attribute:
 \begin{CodeInput}
@@ -541,11 +542,12 @@ set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
 \end{CodeInput}
 Because $D$ considers $r$ its parent, $r$ considers $D$ its child. Unlike \code{parents}, \code{children} is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the \code{parents} and \code{children} attributes of the other parameters in the model.
 
-The following `directed acyclic graph' is a visualization of the parent-child relationships in the model. Unobserved stochastic variables $s$, $e$ and $l$ are open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See Section~\ref{graphical} for more details.
+A `directed acyclic graph' is a visualization of the parent-child relationships in the model. For example, in Figure~\ref{fig:dag-example} unobserved stochastic variables $s$, $e$ and $l$ are represented by open ellipses, observed stochastic variable $D$ is a filled ellipse and deterministic variable $r$ is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See Section~\ref{graphical} for more details.
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=DisasterModel2.pdf, width=10cm}
    \caption{Directed acyclic graph of the relationships in the coal mining disaster model example.}
+	\label{fig:dag-example}
 \end{center}
 \end{figure}
 
@@ -648,7 +650,7 @@ Whenever a variable is used as a parent for a child variable, \pkg{PyMC} replace
 
 \subsection{Fitting the model with MCMC}
 
-\pkg{PyMC} provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with the Markov chain Monte Carlo algorithm \citep{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \code{DisasterModel.py} and use it as an argument for \code{MCMC}:
+\pkg{PyMC} provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, \code{MCMC}, fits models with a Markov chain Monte Carlo algorithm \citep{Gamerman:1997tb}. To create an \code{MCMC} object to handle our model, import \code{DisasterModel.py} and use it as an argument for \code{MCMC}:
 \begin{CodeInput}
 >>> from pymc.examples import DisasterModel
 >>> from pymc import MCMC
@@ -656,7 +658,7 @@ Whenever a variable is used as a parent for a child variable, \pkg{PyMC} replace
 \end{CodeInput}
 In this case \code{M} will expose variables \code{s}, \code{e}, \code{l}, \code{r} and \code{D} as attributes; that is, \code{M.s} will be the same object as \code{DisasterModel.s}.
 
-To run the sampler, call the MCMC object's \code{isample()} (or \code{sample()}) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired):
+To run the sampler, call the MCMC object's \code{sample()} (or \code{isample()}, for  interactive sampling) method with arguments for the number of iterations, burn-in length, and thinning interval (if desired):
 \begin{CodeInput}
 >>> M.isample(iter=10000, burn=1000, thin=10)
 \end{CodeInput}
@@ -664,7 +666,7 @@ After a few seconds, you should see that sampling has finished normally. The mod
 
 \subsection{What does it mean to fit a model?}
 
-`Fitting' a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\citet{gelman}) for \code{iter}  iterations.
+`Fitting' a model means characterizing its posterior distribution, by whatever suitable means. In this case, we are trying to represent the posterior $p(s,e,l|D)$ by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of $s$, $e$ and $l$ according to the Metropolis-Hastings algorithm (\citet{gelman}) for \code{iter}  iterations.
 
 As the number of samples tends to infinity, the MCMC distribution of $s$, $e$
 and $l$ converges to the stationary distribution. In other words, their
@@ -680,7 +682,7 @@ To circumvent this, it is often effective to thin the sample by only retaining
 every $k$th sample, where $k$ is an integer value. This thinning interval is
 passed to the sampler via the \code{thin} argument.
 
-If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1}, and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \citet{gelman} for general guidance.
+If you are not sure ahead of time what values to choose for the \code{burn} and \code{thin} parameters, you may want to retain all the MCMC samples, that is to set \code{burn=0} and \code{thin=1} (these are the default values for the samplers provided by \pkg{PyMC}), and then discard the `burnin period' and thin the samples after examining the traces (the series of samples). See \citet{gelman} for general guidance.
 
 \subsection{Accessing the samples}
 The output of the MCMC algorithm is a `trace', the sequence of retained
@@ -717,13 +719,15 @@ array([ 0.52721865,  0.60788251,  0.68854637,  0.76921023,  0.84987409,
 <a list of 10 Patch objects>)
 >>> show()
 \end{CodeInput}
-You should see something like this:
-\begin{figure}[h!]
+You should see something similar to Figure~\ref{fig:hist}.
+\begin{figure}[ht!]
 \begin{center}
-   \epsfig{file=ltrace.pdf, width=15cm}
+   \epsfig{file=ltrace.pdf, width=12cm}
    \caption{Histogram of the marginal posterior probability of parameter $l$.}
+	\label{fig:hist}
 \end{center}
 \end{figure}
+
 \pkg{PyMC} has its own plotting functionality, via the optional
 \code{matplotlib} module as noted in the installation notes. The
 \code{Matplot} module includes a \code{plot} function that takes the
@@ -732,15 +736,14 @@ model (or a single parameter) as an argument:
 >>> from pymc.Matplot import plot
 >>> plot(M)
 \end{CodeInput}
-For each variable in the model, \code{plot} generates a composite figure, such as this one for the switchpoint in the disasters model:
+For each variable in the model, \code{plot} generates a composite figure, such as that for the switchpoint in the disasters model (Figure~\ref{fig:switch}). The left-hand pane of this figure~shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see \cite*{gelman}), while the histogram is useful for visualizing the posterior.
 \begin{figure}[h!]
 \begin{center}
    \epsfig{file=spost.pdf, width=15cm}
    \caption{Temporal series and histogram of the samples drawn for $s$. }
+\label{fig:switch}
 \end{center}
 \end{figure}
-
-The left-hand pane of this figure~shows the temporal series of the samples from $s$, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see \cite*{gelman}), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call \code{M.stats()}.
 
@@ -753,7 +756,7 @@ As with most ``textbook examples", the models we have examined so far assume tha
 
 For example, consider a survey dataset for some wildlife species:
 
-\begin{table}
+\begin{table}[h!]
 \begin{center}
 \begin{tabular}{cccc}
 \hline
@@ -775,9 +778,9 @@ In a Bayesian modelling framework, missing data are accommodated simply by treat
   p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta
 \end{equation}
 
-This describes additional data $\tilde{y}$, which may either be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data.
+This describes additional data $\tilde{y}$, which may either be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data, which accounts for both predictive and inferential uncertainty.
 
-Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, None.
+Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, \code{None}.
 
 \begin{CodeInput}
 x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
@@ -929,10 +932,10 @@ A stochastic variable has the following primary attributes:
 \end{description}
 A stochastic variable can optionally be endowed with a method called \code{\bfseries rand}, which draws a value for the variable given the values of its parents\footnote{Note that the \code{random} method does not provide a Gibbs sample unless the variable has no children.}. Stochastic variables have the following additional attributes:
 \begin{description}
-    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary are to the labels assigned to the parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{'t_l'} and \code{'t_h'}. The actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
+    \item[\code{parents}:] A dictionary containing the variable's parents. The keys of the dictionary are to the labels assigned to the parents by the variable, and the values correspond to the actual parents. For example, the keys of $s$'s parents dictionary in model (\ref{disastermodel}) would be \code{`t_l'} and \code{`t_h'}. The actual parents (\emph{i.e.} the values of the dictionary) may be of any class or type.
     \item[\code{children}:] A set containing the variable's children.
-    \item[\code{extended_parents}:] A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability.
-    \item[\code{extended_children}:] A set containing all the stochastic variables and potentials that depend on the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables and potentials will need to recompute their log-probabilities.
+    \item[\code{extended_parents}:] A set containing all stochastic variables on which the variable depends, either directly or via a sequence of deterministic variables. If the value of any of these variables changes, the variable will need to recompute its log-probability.
+    \item[\code{extended_children}:] A set containing all stochastic variables and potentials that depend on the variable, either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables and potentials will need to recompute their log-probabilities.
     % \item[\code{coparents}:] A set containing all the stochastic variables that share extended children with the variable.
     % \item[\code{moral_neighbors}:] A set containing the union of the variable's extended parents, extended children and coparents, with Potential objects removed.
     % \item[\code{markov_blanket}:] A set containing self and self's moral neighbors.
@@ -946,7 +949,7 @@ A stochastic variable can optionally be endowed with a method called \code{\bfse
 There are three main ways to create stochastic variables, called the \textbf{automatic}, \textbf{decorator}, and \textbf{direct} interfaces.
 
 \begin{description}
-    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see the appendix can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
+    \item[Automatic] Stochastic variables with standard distributions provided by \pkg{PyMC} (see Appendices A-D) can be created in a single line using special subclasses of \code{Stochastic}. For example, the uniformly-distributed discrete variable $s$ in (\ref{disastermodel}) could be created using the automatic interface as follows:
 \begin{CodeInput}
 import pymc as pm
 s = pm.DiscreteUniform('s', 1851, 1962, value=1900)
@@ -981,7 +984,7 @@ Note that this is a simple \proglang{Python} function preceded by a \proglang{Py
 
 To emphasize, the \proglang{Python} function decorated by \code{@stochastic} should compute the \emph{log}-density or \emph{log}-probability of the variable. That's why the return value in the example above is $-\log(t_h-t_l+1)$ rather than $1/(t_h-t_l+1)$.
 
-The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). \pkg{PyMC} and \pkg{SciPy} both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in \pkg{PyMC} tend to be approximately an order of magnitude faster than their counterparts in \pkg{SciPy} (using version 0.7). See \pkg{PyMC}\'s wiki page on benchmarks at \href{http://code.google.com/p/pymc/wiki/Benchmarks}{http://code.google.com/p/pymc/wiki/Benchmarks}.
+The \code{value} and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (\code{float}). \pkg{PyMC} and \pkg{SciPy} both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. Based on informal comparison using version 2.0, the distributions in \pkg{PyMC} tend to be approximately an order of magnitude faster than their counterparts in \pkg{SciPy} (using version 0.7). See the \pkg{PyMC} wiki page on benchmarks at \href{http://code.google.com/p/pymc/wiki/Benchmarks}{http://code.google.com/p/pymc/wiki/Benchmarks}.
 
     The decorator \code{stochastic} can take any of the arguments \code{Stochastic.__init__} takes except \code{parents}, \code{logp}, \code{random}, \code{doc} and \code{value}. These arguments include \code{trace}, \code{plot}, \code{verbose}, \code{dtype}, \code{rseed} and \code{name}.
 
@@ -1017,7 +1020,7 @@ return numpy.round( (t_l - t_h) * random() ) + t_l
 s = pm.Stochastic( logp = s_logp,
             doc = 'The switchpoint for the rate of disaster occurrence.',
             name = 's',
-            parents = {'t_l': 1851, 't_h': 1962},
+            parents = {`t_l': 1851, 't_h': 1962},
             random = s_rand,
             trace = True,
             value = 1900,
@@ -1032,7 +1035,7 @@ Notice that the log-probability and random variate functions are specified exter
 
 \end{description}
 
-\subsection{Don't update stochastic variables' values in-place}
+\subsection{A warning: Don't update stochastic variables' values in-place}
 
 
 \code{Stochastic} objects' values should not be updated in-place. This confuses \pkg{PyMC}'s caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form:
@@ -1068,10 +1071,9 @@ In the other interfaces, the \code{observed=True} argument is added to the initi
 x = pm.Binomial('x', value=7, n=10, p=.8, observed=True)
 \end{CodeInput}
 
-Alternatively, in the decorator interface only, a \code{Stochastic} object's \code{observed} flag can be set to true by stacking an \code{@observed} decorator on top of the \code{@stochastic} decorator:
+Alternatively, in the decorator interface only, a \code{Stochastic} object's \code{observed} flag can be set to true by using an \code{@observed} decorator in place of the \code{@stochastic} decorator:
 \begin{CodeInput}
-@observed
-@stochastic(dtype=int)
+@observed(dtype=int)
     def ...
 \end{CodeInput}
 
@@ -1123,13 +1125,10 @@ There are several ways to create deterministic variables:
 \begin{CodeInput}
 >>> x = pm.MvNormalCov('x',numpy.ones(3),numpy.eye(3))
 >>> y = pm.MvNormalCov('y',numpy.ones(3),numpy.eye(3))
->>>
 >>> print x+y
 <pymc.\pkg{PyMC}Objects.Deterministic '(x_add_y)' at 0x105c3bd10>
->>>
 >>> print x[0]
 <pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390>
->>>
 >>> print x[1]+y[2]
 <pymc.\pkg{PyMC}Objects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
 \end{CodeInput}
@@ -1140,25 +1139,25 @@ All the objects thus created have \code{trace=False} and \code{plot=False} by de
 \begin{CodeInput}
 @pm.deterministic
 def r(switchpoint = s, early_rate = e, late_rate = l):
-"""The rate of disaster occurrence."""
-value = numpy.zeros(len(D))
-value[:switchpoint] = early_rate
-value[switchpoint:] = late_rate
-return value
+	"""The rate of disaster occurrence."""
+	value = numpy.zeros(len(D))
+	value[:switchpoint] = early_rate
+	value[switchpoint:] = late_rate
+	return value
 \end{CodeInput}
 Notice that rather than returning the log-probability, as is the case for \code{Stochastic} objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable~for the problem at hand. Also notice that, unlike for \code{Stochastic} objects, there is no \code{value} argument passed, since the value is calculated deterministically by the function itself. Arguments' keys and values are converted into a parent dictionary as with \code{Stochastic}'s short interface. The \code{deterministic} decorator can take \code{trace}, \code{verbose} and \code{plot} arguments, like the \code{stochastic} decorator\footnote{Note that deterministic variables have no \code{observed} flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the \code{StepMethod} level.}.
 
     \item[Direct] \code{Deterministic} can also be instantiated directly:
 \begin{CodeInput}
 def r_eval(switchpoint = s, early_rate = e, late_rate = l):
-value = numpy.zeros(len(D))
-value[:switchpoint] = early_rate
-value[switchpoint:] = late_rate
-return value
+	value = numpy.zeros(len(D))
+	value[:switchpoint] = early_rate
+	value[switchpoint:] = late_rate
+	return value
 
 r = pm.Deterministic(  eval = r_eval,
                 name = 'r',
-                parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l},
+                parents = {`switchpoint': s, 'early_rate': e, 'late_rate': l},
                 doc = 'The rate of disaster occurrence.',
                 trace = True,
                 verbose = 0,
@@ -1180,22 +1179,20 @@ In some situations it would be inconvenient to assign a unique label to each par
 \end{align*}
 Here, $y$ depends on every element of the Markov chain $x$, but we wouldn't want to manually enter $N$ parent labels \code{`x_0'}, \code{`x_1'}, etc.
 
-This situation can be handled naturally in \pkg{PyMC}:
+This situation can be handled easily in \pkg{PyMC}:
 \begin{CodeInput}
 N = 10
 x_0 = pm.Normal('x_0', mu=0, tau=1)
 
-x = numpy.empty(N,dtype=object)
+x = numpy.empty(N, dtype=object)
 x[0] = x_0
 
 for i in range(1,N):
-
-x[i] = pm.Normal('x_%i' % i, mu=x[i-1], tau=1)
+	x[i] = pm.Normal('x_%i' % i, mu=x[i-1], tau=1)
 
 @pm.observed
-@pm.stochastic
 def y(value = 1, mu = x, tau = 100):
-return pm.normal_like(value, numpy.sum(mu**2), tau)
+	return pm.normal_like(value, numpy.sum(mu**2), tau)
 \end{CodeInput}
 \pkg{PyMC} automatically wraps array $x$ in an appropriate \code{Container} class. The  expression \code{`x_\%i'\%i} labels each \code{Normal} object in the container with the appropriate index $i$; so if \code{i=1}, the name of the corresponding element becomes \code{`x_1'}.
 
@@ -1255,9 +1252,9 @@ Potentials have one important attribute, \code{\bfseries logp}, the log of their
 \subsection{An example of soft data}
 The role of potentials can be confusing, so we will provide another example: we have a dataset $t$ consisting of the days on which several marked animals were recaptured. We believe that the probability $S$ that an animal is not recaptured on any given day can be explained by a covariate vector $x$. We model this situation as follows:
 \begin{eqnarray*}
-    t_i|S_i \sim \textup{Geometric}(S_i), & i=1\ldots N\\
-    S_i = \textup{logit}^{-1}(\beta x_i), &i=1\ldots N\\
-    \beta\sim \textup{N}(\mu_\beta, V_\beta).
+    t_i|S_i &\sim& \textup{Geometric}(S_i), i=1\ldots N\\
+    S_i &=& \textup{logit}^{-1}(\beta x_i)\\
+    \beta &\sim& \textup{N}(\mu_\beta, V_\beta).
 \end{eqnarray*}
 So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be independent of the value of $\beta$. It's not obvious how to work this `soft data', because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
 \begin{itemize}
@@ -1286,18 +1283,18 @@ There are two ways to create potentials:
 \begin{CodeInput}
 @pm.potential
 def psi_i(x_lo = x[i], x_hi = x[i+1]):
-"""A pair potential"""
-return -(x_lo - x_hi)**2
+	"""A pair potential"""
+	return -(x_lo - x_hi)**2
 \end{CodeInput}
 The function supplied should return the potential's current \emph{log}-probability or \emph{log}-density as a \pkg{NumPy} \code{float}. The \code{potential} decorator can take \code{verbose} and \code{cache_depth} arguments like the \code{stochastic} decorator.
     \item[Direct] The same potential could be created directly as follows:
 \begin{CodeInput}
 def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
-return -(x_lo - x_hi)**2
+	return -(x_lo - x_hi)**2
 
 psi_i = pm.Potential(  logp = psi_i_logp,
                 name = 'psi_i',
-                parents = {'xlo': x[i], 'xhi': x[i+1]},
+                parents = {`xlo': x[i], 'xhi': x[i+1]},
                 doc = 'A pair potential',
                 verbose = 0,
                 cache_depth = 2)
@@ -1308,16 +1305,18 @@ psi_i = pm.Potential(  logp = psi_i_logp,
 \subsection{Graphing models} \label{graphical}
 
 
-The function \code{graph} in \code{pymc.graph} draws graphical representations of \code{Model} (Section~\ref{chap:modelfitting}) instances using GraphViz via the \proglang{Python} package PyDot. See \citet{dawidmarkov} and \citet{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function \code{graph} (or \code{dag}) in \code{pymc.graph} draws graphical representations of \code{Model} (Section~\ref{chap:modelfitting}) instances using GraphViz via the \proglang{Python} package PyDot. See \citet{dawidmarkov} and \citet{Jordan:2004p5439} for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
-The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model \ref{disastermodel} follows:
+The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. \pkg{PyMC}'s symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model (\ref{disastermodel}) is shown in Figure~\ref{fig:disaster-dag}. Note that $D$ is shaded because it is flagged as data.
+
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=DisasterModel2.pdf, width=7cm}
     \caption{Graphical representation of the coal mining disaster model example.}
+	\label{fig:disaster-dag}
 \end{center}
 \end{figure}
-$D$ is shaded because it is flagged as data.
+
 
 % Note that if a deterministic variable has more than one child, its parents each inherit all of its children when it is made implicit:
 % \begin{center}
@@ -1325,7 +1324,6 @@ $D$ is shaded because it is flagged as data.
 % \end{center}
 % These inherited children can be accessed via the \code{extended_children} attributes of the parents.
 
-The symbol for factor potentials is a rectangle, as in the following model.
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExample.pdf, width=12cm}
@@ -1333,14 +1331,16 @@ The symbol for factor potentials is a rectangle, as in the following model.
     \label{fig:dgm}
 \end{center}
 \end{figure}
-Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact:
+
+The symbol for factor potentials is a rectangle (Figure~\ref{fig:dgm}). Factor potentials are usually associated with \emph{undirected} grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model is much more compact (Figure~\ref{fig:dgm-collapsed}). Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
+
 \begin{figure}[h!]
 \begin{center}
     \epsfig{file=PotExampleCollapsed.pdf, width=10cm}
     \caption{The undirected version of the graphical model of figure~\ref{fig:dgm}.}
+	\label{fig:dgm-collapsed}
 \end{center}
 \end{figure}
-Directed or mixed graphical models can be represented in an undirected form by `moralizing', which is done by the function \code{pymc.graph.moral_graph}.
 
 
 \subsection[Class LazyFunction and caching]{Class \code{LazyFunction}
@@ -1394,7 +1394,7 @@ M = Model(MyModule)
     \item Using a `model factory' function:
     \begin{CodeInput}
 def make_model(x):
-a = pm.Exponential('a',beta=x,value=0.5)
+	a = pm.Exponential('a',beta=x,value=0.5)
 
 @pm.deterministic
 def b(a=a):
@@ -1536,7 +1536,7 @@ It provides the following additional attributes:
 \subsection[Markov chain Monte Carlo: the MCMC class]{Markov chain Monte
 Carlo: the \code{MCMC} class} \label{sec:mcmc}
 
-The \code{MCMC} class implements \pkg{PyMC}'s core business: producing `traces' for a model's variables which can be considered sequences of joint samples from the posterior. See Section~\ref{chap:tutorial} for an example of basic usage.
+The \code{MCMC} class implements \pkg{PyMC}'s core business: producing Markov chains from a model's variables which can be considered sequences of joint samples from the posterior. See Section~\ref{chap:tutorial} for an example of basic usage.
 
 \code{MCMC}'s primary job is to create and coordinate a collection of `step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in Section~\ref{chap:extending}.
 
@@ -1584,7 +1584,7 @@ In addition, the sampler attribute \code{deviance} is a deterministic variable v
 \subsection{Step methods} \label{sec:stepmethod}
 
 
-Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \code{StepMethod} implements a method called \code{step()}, which is called by \code{MCMC}. Step methods with adaptive tuning parameters can optionally implement a method called \code{tune()}, which causes them to assess performance so far and adjust.
+Step method objects handle individual stochastic variables, or sometimes groups of them. They are responsible for making the variables they handle take single MCMC steps conditional on the rest of the model. Each subclass of \code{StepMethod} implements a method called \code{step()}, which is called by \code{MCMC}. Step methods with adaptive tuning parameters can optionally implement a method called \code{tune()}, which causes them to assess performance (based on the acceptance rates of proposed values for the variable) so far and adjust.
 
 The major subclasses of \code{StepMethod} are \code{Metropolis},
 \code{AdaptiveMetropolis} and \code{Gibbs}. \pkg{PyMC} provides several flavors of the
@@ -1621,7 +1621,7 @@ if all(self.stochastic.value != 0.):
 else:
    self.proposal_sd = ones(shape(self.stochastic.value)) * scale
 \end{CodeInput}
-   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{'Normal'} and \code{'Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{'Prior'} if the variable has no children and has a random method, and to \code{'Normal'} otherwise.
+   \item[\code{proposal_distribution}:] A string indicating which distribution should be used for proposals. Current options are \code{`Normal'} and \code{`Prior'}. If \code{proposal_distribution=None}, the proposal distribution is chosen automatically. It is set to \code{`Prior'} if the variable has no children and has a random method, and to \code{`Normal'} otherwise.
    \item[\code{verbose}:] An integer. By convention, $0$ indicates minimal output and $2$ indicates maximum verbosity.
 \end{description}
 
@@ -1685,7 +1685,7 @@ non-Markovian.
 \code{DiscreteMetropolis} class}
 This class is just like \code{Metropolis}, but specialized to handle
 \code{Stochastic} instances with dtype \code{int}. The jump proposal
-distribution can either be \code{'Normal'}, \code{'Prior'} or \code{'Poisson'}.
+distribution can either be \code{`Normal'}, \code{`Prior'} or \code{`Poisson'}.
 In the normal case, the proposed value is drawn from a normal distribution
 centered at the current value and then rounded to the
 nearest integer. In the Poisson case, the proposed value is obtained by adding
@@ -2194,7 +2194,7 @@ The arguments are:
 
     \item \verb=r=: Desired accuracy for quantile.
 
-    \item \verb=s=(optional): Probability of attaining the requested accuracy (defaults to 0.95).
+    \item \verb=s= (optional): Probability of attaining the requested accuracy (defaults to 0.95).
 
     \item \verb=epsilon= (optional) : Half width of the tolerance interval required for the q-quantile (defaults to 0.001).
 
@@ -2451,29 +2451,29 @@ Suppose we want to handle \code{cutoff} with a smarter step method that doesn't 
 We can implement this Metropolis-Hastings algorithm with the following step method class:
 \begin{CodeInput}
 class TruncatedMetropolis(pymc.Metropolis):
-def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
-    self.low_bound = low_bound
-    self.up_bound = up_bound
-    pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
+	def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
+	    self.low_bound = low_bound
+	    self.up_bound = up_bound
+	    pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-def propose(self):
-    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-    self.stochastic.value = \
-        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+	def propose(self):
+	    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	    self.stochastic.value = \
+	        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-def hastings_factor(self):
-    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
-    cur_val = self.stochastic.value
-    last_val = self.stochastic.last_value
+	def hastings_factor(self):
+	    tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+	    cur_val = self.stochastic.value
+	    last_val = self.stochastic.last_value
 
-    lp_for = pymc.truncnorm_like(cur_val, last_val, tau, \
-        self.low_bound, self.up_bound)
-    lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, \
-        self.low_bound, self.up_bound)
+	    lp_for = pymc.truncnorm_like(cur_val, last_val, tau, \
+	        self.low_bound, self.up_bound)
+	    lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, \
+	        self.low_bound, self.up_bound)
 
-    if self.verbose > 1:
-        print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
-    return lp_bak - lp_for
+	    if self.verbose > 1:
+	        print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
+	    return lp_bak - lp_for
 \end{CodeInput}
 
 The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which can be set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \\\code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
@@ -2532,8 +2532,8 @@ class NewStepMethod(pymc.StepMethod):
    \begin{CodeInput}
 state = {}
 for s in self._state:
-state[s] = getattr(self, s)
-return state
+	state[s] = getattr(self, s)
+	return state
 \end{CodeInput}
    \code{self._state} should be a list containing the names of the attributes needed to reproduce the current jumping strategy. If an \code{MCMC} object writes its state out to a database, these attributes will be preserved. If an \code{MCMC} object restores its state from that database later, the corresponding step method will have these attributes set to their saved values.
 \end{description}
@@ -2542,7 +2542,7 @@ Step methods should also maintain the following attributes:
 \begin{description}
    \item[\code{_id}:] A string that can identify each step method uniquely (usually something like \\\code{<class_name>_<stochastic_name>}).
    \item[\code{adaptive_scale_factor}:] An `adaptive scale factor'. This attribute is only needed if the default \code{tune()} method is used.
-   \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \code{Metropolis} instances, this would be \code{['adaptive_scale_factor']}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \citep{tuning}.
+   \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \code{Metropolis} instances, this would be \code{[`adaptive_scale_factor']}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \citep{tuning}.
 \end{description}
 
 All step methods have a property called \code{loglike}, which gives the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio. The \code{logp_plus_loglike} property gives the sum of that and the log-probabilities of \code{self.stochastics}.  
@@ -2556,8 +2556,8 @@ A Metropolis-Hastings step method only needs to implement the following methods,
    \item[\code{reject()}:] Usually just
    \begin{CodeInput}
 def reject(self):
-self.rejected += 1
-[s.value = s.last_value for s in self.stochastics]
+	self.rejected += 1
+	[s.value = s.last_value for s in self.stochastics]
 \end{CodeInput}
    \item[\code{propose():}] Sets the values of all \code{self.stochastics} to new, proposed values. This method may use the \code{adaptive_scale_factor} attribute to take advantage of the standard tuning scheme.
 \end{description}
@@ -2573,7 +2573,7 @@ Metropolis-Hastings step methods should log the number of jumps they have accept
 
 Gibbs step methods handle conjugate submodels. These models usually have two components: the `parent' and the `children'. For example, a gamma-distributed variable serving as the precision of several normally-distributed variables is a conjugate submodel; the gamma variable is the parent and the normal variables are the children.
 
-This Section~describes \pkg{PyMC}'s current scheme for Gibbs step methods, several of which are in a semi-working state in the sandbox. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass \code{StepMethod} directly when writing Gibbs step methods if you prefer.
+This Section~describes \pkg{PyMC}'s current scheme for Gibbs step methods, several of which are in a semi-working state in the \emph{sandbox} directory. It is meant to be as generic as possible to minimize code duplication, but it is admittedly complicated. Feel free to subclass \code{StepMethod} directly when writing Gibbs step methods if you prefer.
 
 Gibbs step methods that subclass \pkg{PyMC}'s \code{Gibbs} should define the following class attributes:
 \begin{description}
@@ -2607,17 +2607,17 @@ Unless there is a good reason to do otherwise, Monte Carlo fitting algorithms sh
    \item[\code{draw()}:] If it is possible to generate an independent sample from the posterior at every iteration, the \code{draw} method should do so. The default \code{_loop} method can be used in this case.
    \item[\code{_loop()}:] If it is not possible to implement a \code{draw()} method, but you want to take advantage of the interactive sampling option, you should override \code{_loop()}. This method is responsible for generating the posterior samples and calling \code{tally()} when it is appropriate to save the model's state. In addition, \code{_loop} should monitor the sampler's \code{status} attribute at every iteration and respond appropriately. The possible values of \code{status} are:
    \begin{description}
-      \item[\code{'ready'}:] Ready to sample.
-      \item[\code{'running'}:] Sampling should continue as normal.
-      \item[\code{'halt'}:] Sampling should halt as soon as possible. \code{_loop} should call the \code{halt()} method and return control. \code{_loop} can set the status to \code{'halt'} itself if appropriate (eg the database is full or a \code{KeyboardInterrupt} has been caught).
-      \item[\code{'paused'}:] Sampling should pause as soon as possible. \code{_loop} should return, but should be able to pick up where it left off next time it's called.
+      \item[\code{`ready'}:] Ready to sample.
+      \item[\code{`running'}:] Sampling should continue as normal.
+      \item[\code{`halt'}:] Sampling should halt as soon as possible. \code{_loop} should call the \code{halt()} method and return control. \code{_loop} can set the status to \code{`halt'} itself if appropriate (eg the database is full or a \code{KeyboardInterrupt} has been caught).
+      \item[\code{`paused'}:] Sampling should pause as soon as possible. \code{_loop} should return, but should be able to pick up where it left off next time it's called.
    \end{description}
 \end{description}
 
 Samplers may alternatively want to override the default \code{sample()} method. In that case, they should call the \code{tally()} method whenever it is appropriate to save the current model state. Like custom \code{_loop()} methods, custom \code{sample()} methods should handle \code{KeyboardInterrupts} and call the \code{halt()} method when sampling terminates to finalize the traces.
 
 
-\subsection{Don't update stochastic variables' values in-place}
+\subsection{A second warning: Don't update stochastic variables' values in-place}
 \label{dont-update-indepth}
 
 
@@ -2637,7 +2637,7 @@ However, a \code{Stochastic} object's value can make in-place updates to itself 
 
 MCMC is a surprisingly difficult and bug-prone algorithm to implement by hand. We find \pkg{PyMC} makes it much easier and less stressful. \pkg{PyMC} also makes our work more dynamic; getting hand-coded MCMC's working used to be so much work that we were reluctant to change anything, but with \pkg{PyMC} changing models is much easier. 
 
-We welcome new contributors at all levels. If you would like to contribute new code, improve documentation, share your results or provide ideas for new features, please introduce yourself on our mailing list at \href{pymc@googlegroups.com}. Our wiki page at \href{http://code.google.com/p/pymc/w/list} also hosts a number of tutorials and examples from users that could give you some ideas. We have taken great care to make the code easy to extend, whether by adding new database backends, step methods or entirely new sampling algorithms.
+We welcome new contributors at all levels. If you would like to contribute new code, improve documentation, share your results or provide ideas for new features, please introduce yourself on our mailing list at \href{pymc@googlegroups.com}{pymc@googlegroups.com}. Our wiki page at \href{http://code.google.com/p/pymc/w/list}{http://code.google.com/p/ pymc/w/list} also hosts a number of tutorials and examples from users that could give you some ideas. We have taken great care to make the code easy to extend, whether by adding new database backends, step methods or entirely new sampling algorithms.
 
 
 
@@ -2668,7 +2668,7 @@ David Huard's early work on \pkg{PyMC} was supported by a scholarship from the N
 This Section~describes the likelihood functions of these distributions.
 
 \section{Discrete distributions}
-\label{chap:discrete-distributions} 
+%\label{chap:discrete} 
 
 \subsection[bernoulli]{\code{bernoulli_like(x, p)}}
      
@@ -2913,7 +2913,7 @@ $\VAR(x)=\mu$
 
 
 \section{Continuous distributions}
-\label{chap:continuous-distributions} 
+%\label{chap:continuous} 
 
 
 \subsection[beta]{\code{beta_like(x, alpha, beta)} }
@@ -3472,7 +3472,9 @@ $\VAR(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 \end{description}
 
 
-\section{Multivariate discrete distributions}
+\section{Multivariate discrete distributions} % (fold)
+%\label{chap:multivariate_discrete}
+
 \subsection[multivariate hypergeometric]{\code{multivariate_hypergeometric_like(x, mu, m)} }
 
 
@@ -3542,9 +3544,11 @@ $\COV(X_i,X_j) = -n p_i p_j$
 \end{description}
 
 
+% section multivariate_discrete_distributions (end)
 
+\section{Multivariate continuous distributions} % (fold)
+%\label{chap:multivariate_continuous}
 
-\section{Multivariate continuous distributions}
 \subsection[Dirichlet]{\code{dirichlet_like(x, theta)} }
 
 
@@ -3731,6 +3735,7 @@ where $k$ is the rank of $x$.
 
 \end{description}
 \normalsize
+% section multivariate_continuous_distributions (end)
 
 
 \newpage
