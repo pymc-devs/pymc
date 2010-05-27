@@ -101,8 +101,7 @@ database, or \pkg{HDF5} \citep{hdf5}  archives. Summaries including tables and p
 with the full power of \proglang{Python}.
 
 
-\pkg{PyMC} includes a large suite of well-documented statistical distributions which use \pkg{NumPy} \citep{numpy}  and hand-optimized \proglang{Fortran} routines wherever possible for performance. It also includes a module for modeling Gaussian processes. Equally importantly, easily incorporates custom step methods and unusual probability
-distributions.
+\pkg{PyMC} includes a large suite of well-documented statistical distributions which use \pkg{NumPy} \citep{numpy}  and hand-optimized \proglang{Fortran} routines wherever possible for performance. It also includes a module for modeling Gaussian processes. Equally importantly, \pkg{PyMC} can easily be extended with custom step methods and unusual probability distributions.
 
 
 
@@ -314,7 +313,7 @@ into the unpacked directory and follow the platform specific instructions.
 
 %___________________________________________________________________________
 
-\subsection{Windows}
+\subsubsection{Windows}
   \label{windows}%
 
 
@@ -339,7 +338,7 @@ modules in the \code{C:/Python26/Lib/site-packages/pymc} directory.
 
 %___________________________________________________________________________
 
-\subsection{Mac OS X or Linux}
+\subsubsection{Mac OS X or Linux}
   \label{mac-os-x-or-linux}%
 
 
@@ -513,7 +512,7 @@ D = Poisson('D', mu=r, value=disasters_array, observed=True)
 
 \subsection{Why are data and unknown variables represented by the same
 object?}
-Since its represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of \pkg{PyMC}'s syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model (\ref{disastermodel}), we require the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
+Since it is represented by a \code{Stochastic} object, $D$ is defined by its dependence on its parent $r$ even though its value is fixed. This isn't just a quirk of \pkg{PyMC}'s syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior $p(e,s,l|D)$ of model (\ref{disastermodel}), we require the likelihood $p(D|e,s,l)$. Even though $D$'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like (\ref{disastermodel}) as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of $D$, we could have sampled from its prior predictive distribution $p(D)$ (\emph{i.e.} the marginal distribution of the data) as follows:
 \begin{enumerate}
@@ -697,7 +696,7 @@ slice. By default, the returned trace array contains the samples from the
 last call to \code{sample}, that is, \code{chain=-1}, but the trace from
 previous sampling runs can be retrieved by specifying the correspondent
 chain index. To return the trace from all chains, simply use
-\code{chain=None}.\footnote{Note that the unknown variables $s$, $e$, $l$ and $r$ will all
+\code{chain=None}. \footnote{Note that the unknown variables $s$, $e$, $l$ and $r$ will all
 accrue samples, but $D$ will not because its value has been observed and is
 not updated. Hence $D$ has no trace and calling \code{M.trace('D')[:]} will
 raise an error. }
@@ -1126,11 +1125,11 @@ There are several ways to create deterministic variables:
 >>> x = pm.MvNormalCov('x',numpy.ones(3),numpy.eye(3))
 >>> y = pm.MvNormalCov('y',numpy.ones(3),numpy.eye(3))
 >>> print x+y
-<pymc.\pkg{PyMC}Objects.Deterministic '(x_add_y)' at 0x105c3bd10>
+<pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10>
 >>> print x[0]
 <pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390>
 >>> print x[1]+y[2]
-<pymc.\pkg{PyMC}Objects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
+<pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
 \end{CodeInput}
 
 All the objects thus created have \code{trace=False} and \code{plot=False} by default. This convenient method of generating simple deterministics was inspired by \citet{fbc}.
@@ -1256,7 +1255,7 @@ The role of potentials can be confusing, so we will provide another example: we 
     S_i &=& \textup{logit}^{-1}(\beta x_i)\\
     \beta &\sim& \textup{N}(\mu_\beta, V_\beta).
 \end{eqnarray*}
-So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what $S$ will be independent of the value of $\beta$. It's not obvious how to work this `soft data', because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
+So far, so good. Now suppose we have some knowledge of other related experiments and we are confident $S$ will be independent of the value of $\beta$. It's not obvious how to work this `soft data', because as we've written the model $S$ is completely determined by $\beta$. There are three options within the strict Bayesian hierarchical framework:
 \begin{itemize}
     \item Work the soft data into the prior on $\beta$.
     \item Incorporate the data from the previous experiments explicitly into the model.
@@ -3066,10 +3065,10 @@ Exponentiated Weibull log-likelihood.
 The exponentiated Weibull distribution is a generalization of the Weibull
 family. Its value lies in being able to model monotone and non-monotone
 failure rates.
-\begin{eqnarray*}
+\begin{align*}
     f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
     z & = \frac{x-loc}{scale}    
-\end{eqnarray*}
+\end{align*}
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
 \item {} 
