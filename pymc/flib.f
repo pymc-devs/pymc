@@ -2849,8 +2849,8 @@ cf2py threadsafe
                   ltheta(i) = dlog(1.0D0+a2t*ltheta(i))/a2t
               end if
               
-          else
-              ltheta(i) = 0.5D0
+!           else
+!               ltheta(i) = 0.5D0
           end if
 
       end do
