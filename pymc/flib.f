@@ -1253,8 +1253,8 @@ cf2py threadsafe
           like = -infinity
           RETURN
         endif
-        like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
-        like = like - (alpha_tmp+1.0D0)*dlog(x(i)) - 1.0D0/x(i)/beta_tmp
+        like = like - gammln(alpha_tmp) + alpha_tmp*dlog(beta_tmp)
+        like = like - (alpha_tmp+1.0D0)*dlog(x(i)) - 1.0D0*beta_tmp/x(i)
       enddo
 
       return
