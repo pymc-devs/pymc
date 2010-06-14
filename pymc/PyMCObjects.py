@@ -402,7 +402,7 @@ class Deterministic(DeterministicBase):
     """
     __array_priority__ =1000
 
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians = None, jacobian_formats = {}):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians = {}, jacobian_formats = {}):
         self.ParentDict = ParentDict
 
         
@@ -863,6 +863,7 @@ class Stochastic(StochasticBase):
     def grad_logp(self, variable, calculation_set ):
         if (calculation_set is None) or (self in calculation_set):
             
+            #is there better way to make sure the variable is continuous?
             if not (variable.dtype in float_dtypes):
                 return zeros(shape(variable.value))
             

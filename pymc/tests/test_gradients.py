@@ -18,7 +18,6 @@ def find_variable_set(stochastic):
 class test_gradients(TestCase):
     
     def check_jacobians(self, deterministic):
-        
         for parameter, pvalue in deterministic.parents.iteritems():
             
             if isinstance(pvalue, Variable): 
@@ -36,10 +35,10 @@ class test_gradients(TestCase):
                 
         
     def get_analytic_partial_gradient(self, deterministic, parameter, variable, grad):
-        #parameter_values = pymc.parameter_value_dict({}, deterministic.parents) 
-        
-        jacobian = deterministic._jacobians[parameter].get()#( **parameter_values)
-
+        try:
+            jacobian = deterministic._jacobians[parameter].get()
+        except KeyError:
+            raise ValueError(str(deterministic) +" has no jacobian for " + str(parameter))
         mapping = deterministic._jacobian_formats.get(parameter, 'full')
 
             
@@ -108,6 +107,17 @@ class test_gradients(TestCase):
         absing = abs(a)
         self.check_jacobians(absing)
         
+        indexing1 = a[0:1,5:8]
+        self.check_jacobians(indexing1)
+        
+        
+        indexing3 = a[::-1,:]
+        self.check_jacobians(indexing3)
+        
+        #this currently does not work because scalars use the Index deterministic which is special and needs more thought 
+        indexing2 = a[0]
+        self.check_jacobians(indexing2)
+        
     def test_numpy_deterministics_jacobians(self):
         
         shape = (2, 3)
@@ -169,7 +179,7 @@ class test_gradients(TestCase):
         arccoshing = arccosh(f)
         self.check_jacobians(arccoshing)
         
-        arctanhing = arctanh(a)
+        arctanhing = arctanh(d)
         self.check_jacobians(arctanhing)
          
         arctan2ing = arctan2(b, e)

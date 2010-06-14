@@ -249,7 +249,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, grad_logp=None, dtype=np.float, mv=False):
+def stochastic_from_dist(name, logp, random=None, grad_logp={}, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -304,10 +304,9 @@ def stochastic_from_dist(name, logp, random=None, grad_logp=None, dtype=np.float
     distribution_arguments = logp.__dict__
     
     wrapped_grad_logps = {}
-    if grad_logp is not None:
-          
-        for parameter, func in grad_logp.iteritems():
-            wrapped_grad_logps[parameter] = valuewrapper(grad_logp[parameter], arguments = distribution_arguments)
+
+    for parameter, func in grad_logp.iteritems():
+        wrapped_grad_logps[parameter] = valuewrapper(grad_logp[parameter], arguments = distribution_arguments)
          
     return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, wrapped_grad_logps)
 
@@ -2649,7 +2648,7 @@ def name_to_funcs(name, module):
     try:
         grad_logp = module[name + "_grad_like"]
     except:
-        grad_logp = None
+        grad_logp = {}
 
     return logp, random, grad_logp
 

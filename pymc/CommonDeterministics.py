@@ -739,7 +739,7 @@ def __getitem__(self, index):
     def eval_fun(self, index):
         return self[index]
     
-    jacobians = {'self' : getitem_jacobians}
+    jacobians = {'self' : getitem_jacobian}
     jacobian_formats = {'self' : 'index_operation'}
     return pm.Deterministic(eval_fun,
                             'A Deterministic returning the value of %s[%s]'%(self.__name__, str(index)),
