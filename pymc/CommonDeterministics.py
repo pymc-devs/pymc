@@ -722,6 +722,10 @@ for op in ['iadd','isub','imul','idiv','itruediv','ifloordiv','imod','ipow','ils
     create_nonimplemented_method(op, Variable)
 
 
+def getitem_jacobian(self, index):
+    return index
+
+
 # Create __getitem__ method.
 def __getitem__(self, index):
     if not check_special_methods():
@@ -734,12 +738,17 @@ def __getitem__(self, index):
     # Otherwise make a standard Deterministic.
     def eval_fun(self, index):
         return self[index]
+    
+    jacobians = {'self' : getitem_jacobians}
+    jacobian_formats = {'self' : 'index_operation'}
     return pm.Deterministic(eval_fun,
                             'A Deterministic returning the value of %s[%s]'%(self.__name__, str(index)),
                             name,
                             {'self':self, 'index':index},
                             trace=False,
-                            plot=False)
+                            plot=False,
+                            jacobians = jacobians,
+                            jacobian_formats = jacobian_formats)
 Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
 
 # Create __call__ method for Variable.

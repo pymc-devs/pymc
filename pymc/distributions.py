@@ -301,7 +301,15 @@ def stochastic_from_dist(name, logp, random=None, grad_logp=None, dtype=np.float
     docstr += logp.__doc__
 
     logp=valuewrapper(logp)
-    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, grad_logp)
+    distribution_arguments = logp.__dict__
+    
+    wrapped_grad_logps = {}
+    if grad_logp is not None:
+          
+        for parameter, func in grad_logp.iteritems():
+            wrapped_grad_logps[parameter] = valuewrapper(grad_logp[parameter], arguments = distribution_arguments)
+         
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, wrapped_grad_logps)
 
 
 #-------------------------------------------------------------
@@ -676,7 +684,7 @@ def beta_like(x, alpha, beta):
     #     return -np.Inf
     return flib.beta_like(x, alpha, beta)
 
-beta_grad_like = {'x' : flib.beta_grad_x,
+beta_grad_like = {'value' : flib.beta_grad_x,
                   'alpha' : flib.beta_grad_a,
                   'beta' : flib.beta_grad_b}
 
@@ -849,7 +857,7 @@ def cauchy_like(x, alpha, beta):
 
     return flib.cauchy(x,alpha,beta)
 
-cauchy_grad_like = {'x' : flib.cauchy_grad_x,
+cauchy_grad_like = {'value' : flib.cauchy_grad_x,
                  'alpha' : flib.cauchy_grad_a,
                  'beta' : flib.cauchy_grad_b}
 
@@ -894,7 +902,7 @@ def chi2_like(x, nu):
 
     return flib.gamma(x, 0.5*nu, 1./2)
 
-chi2_grad_like = {'x'  : lambda x, nu : flib.gamma_grad_x    (x, 0.5* nu, 1./2),
+chi2_grad_like = {'value'  : lambda x, nu : flib.gamma_grad_x    (x, 0.5* nu, 1./2),
                   'nu' : lambda x, nu : flib.gamma_grad_alpha(x, 0.5* nu, 1./2) * .5}
 
 #chi2_grad_like = {'x'  : lambda x, nu : (nu / 2 - 1) / x -.5,
@@ -1047,7 +1055,7 @@ def exponential_like(x, beta):
 
     return flib.gamma(x, 1, beta)
 
-exponential_grad_like = {'x' : lambda x, beta : flib.gamma_grad_x(x, 1.0, beta),
+exponential_grad_like = {'value' : lambda x, beta : flib.gamma_grad_x(x, 1.0, beta),
                          'beta' : lambda x, beta : flib.gamma_grad_beta(x, 1.0, beta)}
 
 # Exponentiated Weibull-----------------------------------
@@ -1116,7 +1124,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     """
     return flib.exponweib(x,alpha,k,loc,scale)
 
-exponweib_grad_like = {'x' : flib.exponweib_gx,
+exponweib_grad_like = {'value' : flib.exponweib_gx,
                    'alpha' : flib.exponweib_ga,
                    'k' : flib.exponweib_gk,
                    'loc' : flib.exponweib_gl,
@@ -1167,7 +1175,7 @@ def gamma_like(x, alpha, beta):
     return flib.gamma(x, alpha, beta)
 
 
-gamma_grad_like = {'x'     : flib.gamma_grad_x,
+gamma_grad_like = {'value'     : flib.gamma_grad_x,
                    'alpha' : flib.gamma_grad_alpha,
                    'beta'  : flib.gamma_grad_beta}
 
@@ -1336,7 +1344,7 @@ def half_normal_like(x, tau):
 
     return flib.hnormal(x, tau)
 
-half_normal_grad_like = {'x'   : flib.hnormal_gradx,
+half_normal_grad_like = {'value'   : flib.hnormal_gradx,
                  'tau' : flib.hnormal_gradtau}
 
 # Hypergeometric----------------------------------------------
@@ -1426,7 +1434,7 @@ def inverse_gamma_like(x, alpha, beta):
 
     return flib.igamma(x, alpha, beta)
 
-inverse_gamma_grad_like = {'x' : flib.igamma_grad_x,
+inverse_gamma_grad_like = {'value' : flib.igamma_grad_x,
              'alpha' : flib.igamma_grad_alpha,
              'beta' : flib.igamma_grad_beta}
 
@@ -1524,7 +1532,7 @@ def laplace_like(x, mu, tau):
 
     return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
 
-laplace_grad_like = {'x'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
+laplace_grad_like = {'value'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
                      'mu'  : lambda x, mu, tau: -flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
                      'tau' : lambda x, mu, tau: flib.gamma_grad_beta(np.abs(x- mu), 1, tau)}
 
@@ -1622,7 +1630,7 @@ def lognormal_like(x, mu, tau):
     """
     return flib.lognormal(x,mu,tau)
 
-lognormal_grad_like = {'x'   : flib.lognormal_gradx,
+lognormal_grad_like = {'value'   : flib.lognormal_gradx,
                        'mu'  : flib.lognormal_gradmu,
                        'tau' : flib.lognormal_gradtau}
 
@@ -2017,10 +2025,21 @@ def normal_like(x, mu, tau):
 
     return flib.normal(x, mu, tau)
 
+def t_normal_grad_x(x, mu, tau):
+    return flib.normal_grad_x(x,mu, tau)
 
-normal_grad_like = {'x' : flib.normal_grad_x,
-             'mu' : flib.normal_grad_mu,
-             'tau' : flib.normal_grad_tau}
+def t_normal_grad_mu(x, mu, tau):
+    return flib.normal_grad_mu(x,mu, tau)
+def t_normal_grad_tau(x, mu, tau):
+    return flib.normal_grad_tau(x,mu, tau)
+
+normal_grad_like = {'value' : t_normal_grad_x,
+             'mu' : t_normal_grad_mu,
+             'tau' : t_normal_grad_tau}
+
+#normal_grad_like = {'x' : flib.normal_grad_x,
+#             'mu' : flib.normal_grad_mu,
+#             'tau' : flib.normal_grad_tau}
 
 # von Mises--------------------------------------------------
 @randomwrap
@@ -2359,7 +2378,7 @@ def t_grad_setup(x, nu, f):
 
     return f(x, nu)
 
-t_grad_like = {'x'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
+t_grad_like = {'value'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
                'nu' : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_nu)}
 
 
@@ -2434,7 +2453,7 @@ def uniform_like(x,lower, upper):
 
     return flib.uniform_like(x, lower, upper)
 
-uniform_grad_like = {'x' : flib.uniform_grad_x,
+uniform_grad_like = {'value' : flib.uniform_grad_x,
              'lower' : flib.uniform_grad_l,
              'upper' : flib.uniform_grad_u}
 
@@ -2479,7 +2498,7 @@ def weibull_like(x, alpha, beta):
     #     return -np.Inf
     return flib.weibull(x, alpha, beta)
 
-weibull_grad_like = {'x' : flib.weibull_gx,
+weibull_grad_like = {'value' : flib.weibull_gx,
                  'alpha' : flib.weibull_ga,
                  'beta' : flib.weibull_gb}
 
@@ -2634,14 +2653,19 @@ def name_to_funcs(name, module):
 
     return logp, random, grad_logp
 
-def valuewrapper(f):
+def valuewrapper(f, arguments = None):
     """Return a likelihood accepting value instead of x as a keyword argument.
     This is specifically intended for the instantiator above.
     """
     def wrapper(**kwds):
         value = kwds.pop('value')
         return f(value, **kwds)
-    wrapper.__dict__.update(f.__dict__)
+    
+    if arguments is None: 
+        wrapper.__dict__.update(f.__dict__)
+    else :
+        wrapper.__dict__.update(arguments)
+        
     return wrapper
 
 """

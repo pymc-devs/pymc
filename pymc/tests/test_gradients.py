@@ -36,9 +36,9 @@ class test_gradients(TestCase):
                 
         
     def get_analytic_partial_gradient(self, deterministic, parameter, variable, grad):
-        p = pymc.PyMCObjects.params(deterministic.parents) 
+        #parameter_values = pymc.parameter_value_dict({}, deterministic.parents) 
         
-        jacobian = deterministic._jacobians[parameter]( **p)
+        jacobian = deterministic._jacobians[parameter].get()#( **parameter_values)
 
         mapping = deterministic._jacobian_formats.get(parameter, 'full')
 
@@ -52,7 +52,7 @@ class test_gradients(TestCase):
         return reshape(pg, shape(pvalue.value))
     
     def get_numeric_jacobian(self, deterministic, pvalue ): 
-        e = 1e-10
+        e = 1e-9
         initial_pvalue = pvalue.value
         shape = initial_pvalue.shape
         size = initial_pvalue.size
@@ -78,7 +78,8 @@ class test_gradients(TestCase):
         shape = (3, 10)
         a = Normal('a', mu = zeros(shape), tau = ones(shape))
         b = Normal('b', mu = zeros(shape), tau = ones(shape))
-
+        c = Uniform('c', lower = ones(shape) * .1, upper = ones(shape) * 10)
+        d = Uniform('d', lower = ones(shape) * -10, upper = ones(shape) * -.1)
         
         addition = a + b 
         self.check_jacobians(addition)
@@ -89,8 +90,10 @@ class test_gradients(TestCase):
         multiplication = a * b
         self.check_jacobians(subtraction)
         
-        division = a / b
-        self.check_jacobians(division)
+        division1 = a / c
+        self.check_jacobians(division1)
+        division2 = a / d
+        self.check_jacobians(division2)
         
         a2 = Uniform('a2', lower = .1 * ones(shape), upper = 2.0 * ones(shape))
         powering = a2 ** b
@@ -113,6 +116,7 @@ class test_gradients(TestCase):
         c = Uniform('c', lower = ones(shape) * .1, upper = ones(shape) * 10)
         d = Uniform('d', lower = ones(shape) * -1.0, upper = ones(shape) * 1.0)
         e = Normal('e', mu = zeros(shape), tau = ones(shape))
+        f = Uniform('c', lower = ones(shape) * 1.0, upper = ones(shape) * 10)
         
         summing = sum(a, axis = 0)
         self.check_jacobians(summing)
@@ -162,7 +166,7 @@ class test_gradients(TestCase):
         arcsinhing = arcsinh(a)
         self.check_jacobians(arcsinhing)
         
-        arccoshing = arccosh(a)
+        arccoshing = arccosh(f)
         self.check_jacobians(arccoshing)
         
         arctanhing = arctanh(a)
@@ -191,7 +195,7 @@ class test_gradients(TestCase):
         
 
     def get_numeric_gradient(self, stochastic, pvalue ): 
-        e = 1e-10
+        e = 1e-9
         initial_value = pvalue.value
         shape = initial_value.shape
         size = initial_value.size
@@ -291,8 +295,8 @@ class test_gradients(TestCase):
         negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
         self.check_gradients(negative_binomial)
         
-        #exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
-        #self.check_gradients(exponweib)
+        exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
+        self.check_gradients(exponweib)
         
         
     def check_model_gradients(self, model):
