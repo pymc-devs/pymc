@@ -370,6 +370,7 @@ class Index(pm.Deterministic):
       Deterministic, Lambda, LinearCombination
     """
     def __init__(self, name, x, index, doc = "Selects one of a list of several variables", *args, **kwds):
+        raise ValueError
         self.index = Lambda('index', lambda i=index: np.int(i))
         self.x = x
 

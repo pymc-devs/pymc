@@ -874,7 +874,7 @@ class Stochastic(StochasticBase):
                 except KeyError:
                     raise ValueError(str(self) + " has no gradient function for 'value'")
                 
-                gradient = gradient_func.get()
+                gradient = np.reshape(gradient_func.get(), np.shape(variable.value))
             else:
                 gradient = __builtin__.sum([self._pgradient(variable, parameter, value) for parameter, value in self.parents.iteritems()])
         
@@ -885,7 +885,7 @@ class Stochastic(StochasticBase):
     def _pgradient(self, variable, parameter, value):
         if value is variable:
             try :
-                return self._grad_logps[parameter].get()
+                return np.reshape(self._grad_logps[parameter].get(), np.shape(variable.value))
             except KeyError:
                 raise ValueError(str(self) + " has no gradient function for parameter " + parameter)
         else:
