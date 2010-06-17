@@ -370,7 +370,6 @@ class Index(pm.Deterministic):
       Deterministic, Lambda, LinearCombination
     """
     def __init__(self, name, x, index, doc = "Selects one of a list of several variables", *args, **kwds):
-        raise ValueError
         self.index = Lambda('index', lambda i=index: np.int(i))
         self.x = x
 
@@ -568,7 +567,6 @@ def create_rl_bin_method(op_name, klass,  jacobians = {}):
                 parents = {'a':self, 'b':other}
             jacobian_formats = {'a' : 'broadcast_operation',
                                'b' : 'broadcast_operation'}
-                
             return pm.Deterministic(op_function,
                                     'A Deterministic returning the value of %s(%s,%s)'%(prefix+op_name,self.__name__, str(other)),
                                     '('+'_'.join([self.__name__,prefix+op_name,str(other)])+')',
@@ -693,7 +691,7 @@ for op in ['neg','pos','abs','invert','index']:
     create_uni_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
 # Casting operators
-for op in [iter,complex,int,long,float,oct,hex,len]:
+for op in [iter,complex,int,long,float,oct,hex]:
     create_casting_method(op, Variable)
 
 # Addition, subtraction, multiplication
