@@ -849,15 +849,10 @@ class Stochastic(StochasticBase):
         Calculates the gradient of the joint log posterior with respect to self. 
         Calculation of the log posterior is restricted to the variables in calculation_set. 
         """
-        gradient = 0
-        try :
-            #NEED some sort of check to see if the log p calculation has recently failed, in which case not to continue
+        #NEED some sort of check to see if the log p calculation has recently failed, in which case not to continue
             
-            gradient = self.grad_logp(self, calculation_set) + __builtin__.sum([child.grad_logp(self, calculation_set) for child in self.children] )
+        gradient = self.grad_logp(self, calculation_set) + __builtin__.sum([child.grad_logp(self, calculation_set) for child in self.children] )
 
-        except ZeroProbability:
-            # probably a better way to test whether this is in a valid region but this will do for now
-            gradient = 0
             
         return gradient
 
