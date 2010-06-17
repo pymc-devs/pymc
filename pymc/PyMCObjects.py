@@ -847,6 +847,10 @@ class Stochastic(StochasticBase):
 
 
     def gradient(self, calculation_set = None):
+        """
+        Calculates the gradient of the joint log posterior with respect to self. 
+        Calculation of the log posterior is restricted to the variables in calculation_set. 
+        """
         gradient = 0
         try :
             #NEED some sort of check to see if the log p calculation has recently failed, in which case not to continue
@@ -860,7 +864,11 @@ class Stochastic(StochasticBase):
         return gradient
         
     parameter_values = {}
-    def grad_logp(self, variable, calculation_set ):
+    def grad_logp(self, variable, calculation_set = None):
+        """
+        Calculates the partial gradient of the posterior of self with respect to variable.
+        Returns zero if self is not in calculation_set.
+        """
         if (calculation_set is None) or (self in calculation_set):
             
             #is there better way to make sure the variable is continuous?
