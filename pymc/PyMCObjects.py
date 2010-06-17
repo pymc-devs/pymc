@@ -309,7 +309,6 @@ class Potential(PotentialBase):
 
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
     
-    parameter_values = {}
     def grad_logp(self, calculation_set = None):
         gradient = 0
         if self in calculation_set:
@@ -323,7 +322,7 @@ class Potential(PotentialBase):
                     try :
                         grad_func = self._grad_logps[parameter]
                     except KeyError:
-                        raise ValueError(str(self) + " has no gradient function for parameter " + parameter)
+                        raise NotImplementedError(repr(self) + " has no gradient function for parameter " + parameter)
                     
                     gradient = gradient + grad_func.get()
         
@@ -461,7 +460,6 @@ class Deterministic(DeterministicBase):
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
 
-    parameter_values = {}
     def grad_logp(self, variable, calculation_set = None):
         """
         gets the logp gradient of this deterministic with respect to variable
@@ -486,7 +484,7 @@ class Deterministic(DeterministicBase):
                 try :
                     jacobian_func = self._jacobians[parameter]
                 except KeyError:
-                    raise ValueError(str(self) + " has no jacobian function for parameter " + parameter)
+                    raise NotImplementedError(repr(self) + " has no jacobian function for parameter " + parameter)
                 
                 jacobian = jacobian_func.get()
                 
@@ -862,8 +860,7 @@ class Stochastic(StochasticBase):
             gradient = 0
             
         return gradient
-        
-    parameter_values = {}
+
     def grad_logp(self, variable, calculation_set = None):
         """
         Calculates the partial gradient of the posterior of self with respect to variable.
@@ -880,7 +877,7 @@ class Stochastic(StochasticBase):
                     gradient_func = self._grad_logps['value']
     
                 except KeyError:
-                    raise ValueError(str(self) + " has no gradient function for 'value'")
+                    raise NotImplementedError(repr(self) + " has no gradient function for 'value'")
                 
                 gradient = np.reshape(gradient_func.get(), np.shape(variable.value))
             else:
@@ -895,7 +892,7 @@ class Stochastic(StochasticBase):
             try :
                 return np.reshape(self._grad_logps[parameter].get(), np.shape(variable.value))
             except KeyError:
-                raise ValueError(str(self) + " has no gradient function for parameter " + parameter)
+                raise NotImplementedError(repr(self) + " has no gradient function for parameter " + parameter)
         else:
             return 0
      
