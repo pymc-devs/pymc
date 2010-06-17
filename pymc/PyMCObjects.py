@@ -310,7 +310,7 @@ class Potential(PotentialBase):
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
     
     parameter_values = {}
-    def grad_logp(self, calculation_set):
+    def grad_logp(self, calculation_set = None):
         gradient = 0
         if self in calculation_set:
             
