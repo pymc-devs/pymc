@@ -119,7 +119,7 @@ def new_dist_class(*new_class_args):
 
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
-        __doc__ = docstr
+    
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
             parents=parents_default
@@ -245,9 +245,14 @@ def new_dist_class(*new_class_args):
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
-
+    new_class.parents_default = parents_default
+    new_class.dtype = dtype
+    new_class.__doc__ = docstr
+    new_class.mv = mv
+    new_class.raw_fns = {'logp': logp, 'random': random}
+    
     return new_class
-
+    
 
 def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
