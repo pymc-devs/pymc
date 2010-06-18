@@ -117,11 +117,11 @@ def new_dist_class(*new_class_args):
         stochastic_from_dist
     """
 
-    (dtype, name, parent_names, parents_default, docstr, logp, random, mv, grad_logps) = new_class_args
+    (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
     class new_class(Stochastic):
         __doc__ = docstr
         def __init__(self, *args, **kwds):
-            (dtype, name, parent_names, parents_default, docstr, logp, random, mv, grad_logps) = new_class_args
+            (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
             parents=parents_default
 
             # Figure out what argument names are needed.
@@ -241,7 +241,7 @@ def new_dist_class(*new_class_args):
                 logp = debug_wrapper(logp)
                 random = debug_wrapper(random)
             else:
-                Stochastic.__init__(self, logp=logp, random=random, grad_logps = grad_logps, dtype=dtype, **arg_dict_out)
+                Stochastic.__init__(self, logp=logp, random=random, logp_partial_gradients = logp_partial_gradients, dtype=dtype, **arg_dict_out)
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
@@ -249,7 +249,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, grad_logp={}, dtype=np.float, mv=False):
+def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -303,12 +303,13 @@ def stochastic_from_dist(name, logp, random=None, grad_logp={}, dtype=np.float, 
     logp=valuewrapper(logp)
     distribution_arguments = logp.__dict__
     
-    wrapped_grad_logps = {}
+    wrapped_logp_partial_gradients = {}
 
-    for parameter, func in grad_logp.iteritems():
-        wrapped_grad_logps[parameter] = valuewrapper(grad_logp[parameter], arguments = distribution_arguments)
+    print logp_partial_gradients
+    for parameter, func in logp_partial_gradients.iteritems():
+        wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
          
-    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, wrapped_grad_logps)
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, wrapped_logp_partial_gradients)
 
 
 #-------------------------------------------------------------
@@ -2695,23 +2696,23 @@ def local_decorated_likelihoods(obj):
 
 for dist in sc_continuous_distributions:
     dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, grad_logp)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp)
 
 for dist in mv_continuous_distributions:
     dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, grad_logp = grad_logp, mv=True)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, mv=True)
 
 for dist in sc_discrete_distributions:
     dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, grad_logp = grad_logp, dtype=np.int)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, dtype=np.int)
 
 for dist in mv_discrete_distributions:
     dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, grad_logp = grad_logp, dtype=np.int, mv=True)
+    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, dtype=np.int, mv=True)
 
 
 dist_logp, dist_random, grad_logp = name_to_funcs('bernoulli', locals())
-Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random,grad_logp, dtype=np.bool)
+Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random,logp_partial_gradients = grad_logp, dtype=np.bool)
 
 
 def uninformative_like(x):

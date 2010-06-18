@@ -28,15 +28,13 @@ def logp_of_set(s):
     else:
         raise exc[0], exc[1], exc[2]
 
-def grad_logp_of_set(variable_set, calculation_set = None):
+def logp_gradient_of_set(variable_set, calculation_set = None):
      
-    grad_logp = {}
+    logp_gradient = {}
     for var in variable_set:   
-        gradient = var.gradient(calculation_set)
-        
-        grad_logp[var] = gradient
+        logp_gradient[var] = var.logp_gradient_contribution(calculation_set)
                     
-    return grad_logp
+    return logp_gradient
     
     
     

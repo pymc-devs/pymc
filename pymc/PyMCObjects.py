@@ -235,13 +235,13 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, grad_logps = {}):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, logp_partial_gradients = {}):
 
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
-        self._grad_logp_functions = grad_logps
+        self._logp_partial_gradients_functions = logp_partial_gradients
         
 
         self.errmsg = "Potential %s forbids its parents' current values"%name
@@ -271,14 +271,14 @@ class Potential(PotentialBase):
                                     cache_depth = self._cache_depth)
         self._logp.force_compute()
 
-        self._grad_logps = {}
-        for parameter, function in self._grad_logp_functions.iteritems():
-            lazy_grad_logp = LazyFunction(fun = function,
+        self._logp_partial_gradients= {}
+        for parameter, function in self._logp_partial_gradients_functions.iteritems():
+            lazy_logp_partial_gradients = LazyFunction(fun = function,
                                             arguments = self.parents,
                                             ultimate_args = self.extended_parents,
                                             cache_depth = self._cache_depth)
-            lazy_grad_logp.force_compute()
-            self._grad_logps[parameter] = lazy_grad_logp
+            lazy_logp_partial_gradients.force_compute()
+            self._logp_partial_gradients[parameter] = lazy_logp_partial_gradients
 
     def get_logp(self):
         if self.verbose > 1:
@@ -309,7 +309,7 @@ class Potential(PotentialBase):
 
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
     
-    def grad_logp(self, calculation_set = None):
+    def logp_partial_gradient(self, calculation_set = None):
         gradient = 0
         if self in calculation_set:
             
@@ -320,36 +320,13 @@ class Potential(PotentialBase):
 
                 if value is variable:
                     try :
-                        grad_func = self._grad_logps[parameter]
+                        grad_func = self._logp_partial_gradients[parameter]
                     except KeyError:
                         raise NotImplementedError(repr(self) + " has no gradient function for parameter " + parameter)
                     
                     gradient = gradient + grad_func.get()
         
-        #_grad_logp can return either raveled or non-raveled values, but they should be consistent
         return np.reshape(gradient, np.shape(variable.value)) #np.reshape(gradient, np.shape(variable.value))
-
-
-
-def parameter_value_dict(p, parameters):
-    for parameter, value in parameters.iteritems():
-        if isinstance(value, Variable):
-            p[parameter] = value.value 
-        else: 
-            p[parameter] = value
-    return p
-# should be able to be replaced in python 3.0 by 
-#def params(parameters):
-#    return dict( parameter : get_val(value) for parameter, value in parameters.iteritems())
-
-#def get_val(value):
-#    if isinstance(value, Variable):
-#        return value.value 
-#    else: 
-#        return value
-
-
-
 
 class Deterministic(DeterministicBase):
     """
@@ -460,12 +437,12 @@ class Deterministic(DeterministicBase):
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
 
-    def grad_logp(self, variable, calculation_set = None):
+    def logp_partial_gradient(self, variable, calculation_set = None):
         """
         gets the logp gradient of this deterministic with respect to variable
         """
         if self.verbose > 0:
-            print '\t' + self.__name__ + ': grad_logp accessed.'
+            print '\t' + self.__name__ + ': logp_partial_gradient accessed.'
 
         if not (variable.dtype in float_dtypes and self.dtype in float_dtypes):
                 return zeros(shape(variable.value))
@@ -473,10 +450,8 @@ class Deterministic(DeterministicBase):
         #gradient = 0
 
         # loop through all the parameters and add up all the gradients of log p with respect to the approrpiate variable
-        gradient = __builtin__.sum([child.grad_logp(self, calculation_set) for child in self.children ])
-        #for child in self.children:
-        #    gradient = gradient + child.grad_logp(self, calculation_set)
-            
+        gradient = __builtin__.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children ])
+
         totalGradient = 0
         for parameter, value in self.parents.iteritems():
             if value is variable:
@@ -654,7 +629,7 @@ class Stochastic(StochasticBase):
                     verbose = None,
                     isdata=None,
                     check_logp=True,
-                    grad_logps = {}):
+                    logp_partial_gradients = {}):
 
         self.counter = Counter()
         self.ParentDict = ParentDict
@@ -673,7 +648,7 @@ class Stochastic(StochasticBase):
         self._logp_fun = logp
         
         #This function will be used to evaluate self's gradient of log probability.
-        self._grad_logp_functions = grad_logps
+        self._logp_partial_gradient_functions = logp_partial_gradients
 
         # This function will be used to draw values for self conditional on self's parents.
         self._random = random
@@ -753,14 +728,14 @@ class Stochastic(StochasticBase):
         self._logp.force_compute()
         
         
-        self._grad_logps = {}
-        for parameter, function in self._grad_logp_functions.iteritems():
-            lazy_grad_logp = LazyFunction(fun = function,
+        self._logp_partial_gradients = {}
+        for parameter, function in self._logp_partial_gradient_functions.iteritems():
+            lazy_logp_partial_gradient = LazyFunction(fun = function,
                                             arguments = arguments,
                                             ultimate_args = self.extended_parents | set([self]),
                                             cache_depth = self._cache_depth)
-            lazy_grad_logp.force_compute()
-            self._grad_logps[parameter] = lazy_grad_logp
+            lazy_logp_partial_gradient.force_compute()
+            self._logp_partial_gradients[parameter] = lazy_logp_partial_gradient
         
     def get_value(self):
         # Define value attribute
@@ -844,19 +819,17 @@ class Stochastic(StochasticBase):
 
 
 
-    def gradient(self, calculation_set = None):
+    def logp_gradient_contribution(self, calculation_set = None):
         """
         Calculates the gradient of the joint log posterior with respect to self. 
         Calculation of the log posterior is restricted to the variables in calculation_set. 
         """
         #NEED some sort of check to see if the log p calculation has recently failed, in which case not to continue
             
-        gradient = self.grad_logp(self, calculation_set) + __builtin__.sum([child.grad_logp(self, calculation_set) for child in self.children] )
+        return self.logp_partial_gradient(self, calculation_set) + __builtin__.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children] )
 
-            
-        return gradient
 
-    def grad_logp(self, variable, calculation_set = None):
+    def logp_partial_gradient(self, variable, calculation_set = None):
         """
         Calculates the partial gradient of the posterior of self with respect to variable.
         Returns zero if self is not in calculation_set.
@@ -869,7 +842,7 @@ class Stochastic(StochasticBase):
             
             if variable is self:
                 try :
-                    gradient_func = self._grad_logps['value']
+                    gradient_func = self._logp_partial_gradients['value']
     
                 except KeyError:
                     raise NotImplementedError(repr(self) + " has no gradient function for 'value'")
@@ -885,7 +858,7 @@ class Stochastic(StochasticBase):
     def _pgradient(self, variable, parameter, value):
         if value is variable:
             try :
-                return np.reshape(self._grad_logps[parameter].get(), np.shape(variable.value))
+                return np.reshape(self._logp_partial_gradients[parameter].get(), np.shape(variable.value))
             except KeyError:
                 raise NotImplementedError(repr(self) + " has no gradient function for parameter " + parameter)
         else:

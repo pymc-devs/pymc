@@ -192,7 +192,7 @@ class test_gradients(TestCase):
     def check_gradients(self, stochastic):
         
         stochastics = find_variable_set(stochastic)
-        gradients = utils.grad_logp_of_set(stochastics, stochastics)
+        gradients = utils.logp_gradient_of_set(stochastics, stochastics)
 
         for s, analytic_gradient in gradients.iteritems():
 
@@ -324,7 +324,7 @@ class test_gradients(TestCase):
         markov_blanket = list(model)+list(children)
 
         
-        gradients = utils.grad_logp_of_set(model)
+        gradients = utils.logp_gradient_of_set(model)
         for variable in model:
             
             analytic_gradient = gradients[variable]
