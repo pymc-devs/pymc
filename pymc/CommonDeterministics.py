@@ -731,7 +731,7 @@ def __getitem__(self, index):
         raise NotImplementedError, 'Special method __index__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self)
     # If index is number or number-valued variable, make an Index object
     name = '%s[%s]'%(self.__name__, str(index))
-    if np.isscalar(value(index)):
+    if np.isscalar(value(index)) and len(np.shape(self.value)) < 2:
         if np.isreal(value(index)):
             return Index(name, self, index, trace=False, plot=False)
     # Otherwise make a standard Deterministic.

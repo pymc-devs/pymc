@@ -241,6 +241,7 @@ class Potential(PotentialBase):
 
         # This function gets used to evaluate self's value.
         self._logp_fun = logp
+        self._grad_logp_functions = grad_logps
         
 
         self.errmsg = "Potential %s forbids its parents' current values"%name
@@ -253,7 +254,6 @@ class Potential(PotentialBase):
                         verbose=verbose)
         
         
-        self._grad_logp_functions = grad_logps
 
         self._plot = plot
 
