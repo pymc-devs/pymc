@@ -2792,7 +2792,7 @@ cf2py threadsafe
         if (not_scalar_b) beta_tmp = beta(i)
         
          
-        gradxlike(i) = -(alpha_tmp + 1.0)/x(i) + 1.0d0/beta_tmp/x(i)**2
+        gradxlike(i) = -(alpha_tmp + 1.0)/x(i) + beta_tmp/x(i)**2
 
       enddo     
 
@@ -2849,7 +2849,7 @@ cf2py threadsafe
         if (not_scalar_b) beta_tmp = beta(i)
         
          
-        gradalpha = -dlog(x(i)) - psi(alpha_tmp) - dlog(beta_tmp)
+        gradalpha = -dlog(x(i)) - psi(alpha_tmp) + dlog(beta_tmp)
         
         if (not_scalar_a) then 
         	gradalphalike(i) = gradalpha
@@ -2909,7 +2909,7 @@ cf2py threadsafe
         if (not_scalar_a) alpha_tmp = alpha(i)
         if (not_scalar_b) beta_tmp = beta(i)
        
-        gradbeta = 1d0/(x(i) * beta_tmp**2) - alpha_tmp/beta_tmp
+        gradbeta = alpha_tmp/beta_tmp - 1d0/x(i)
         
         if (not_scalar_a) then 
         	gradbetalike(i) = gradbeta
