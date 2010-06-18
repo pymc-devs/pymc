@@ -173,16 +173,20 @@ class TWalk(StepMethod):
         u = random(sum(phi))
         z = (theta / (1 + theta))*(theta*u**2 + 2*u - 1)
         
-        x = self.stochastic.value[phi]
-        xp = self.stochastic_prime.value[phi]
+        x_all = copy(self.stochastic.value)
+        x = x_all[phi]
+        xp_all = copy(self.stochastic_prime.value)
+        xp = xp_all[phi]
         
         if self._prime:
-            
-            self.stochastic_prime.value[phi] = xp + (xp - x)*z
+
+            xp_all[phi] = xp + (xp - x)*z
+            self.stochastic_prime.value = xp_all
         
         else:
             
-            self.stochastic.value[phi] = x + (x - xp)*z
+            x_all[phi] = x + (x - xp)*z
+            self.stochastic.value = x_all
         
         # Set proposal adjustment factor
         self.hastings_factor = 0.0
@@ -201,16 +205,20 @@ class TWalk(StepMethod):
         else:
             beta = exp(1/(1 - theta)*log(random()))
         
-        x = self.stochastic.value[phi]
-        xp = self.stochastic_prime.value[phi]
+        x_all = copy(self.stochastic.value)
+        x = x_all[phi]
+        xp_all = copy(self.stochastic_prime.value)
+        xp = xp_all[phi]
         
         if self._prime:
             
-            self.stochastic_prime.value[phi] = x + beta*(x - xp)
+            xp_all[phi] = x + beta*(x - xp)
+            self.stochastic_prime.value = xp_all
         
         else:
             
-            self.stochastic.value[phi] = xp + beta*(xp - x)
+            x_all[phi] = xp + beta*(xp - x)
+            self.stochastic.value = x_all
         
         # Set proposal adjustment factor
         self.hastings_factor = (sum(phi) - 2)*log(beta)
@@ -230,7 +238,8 @@ class TWalk(StepMethod):
             
             sigma = max(phi*abs(x - xp))
             
-            self.stochastic_prime.value[phi] = xp + sigma*rnormal()
+            xp_all[phi] = xp + sigma*rnormal()
+            self.stochastic_prime.value = xp_all
             
             self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
         
@@ -238,7 +247,8 @@ class TWalk(StepMethod):
             
             sigma = max(phi*abs(xp - x))
             
-            self.stochastic.value[phi] = x + sigma*rnormal()
+            x_all[phi] = x + sigma*rnormal()
+            self.stochastic.value = x_all
             
             self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
     
@@ -266,7 +276,8 @@ class TWalk(StepMethod):
             
             sigma = max(phi*abs(x - xp))/3.0
             
-            self.stochastic_prime.value[phi] = x + sigma*rnormal()
+            xp_all[phi] = x + sigma*rnormal()
+            self.stochastic_prime.value = xp_all
             
             self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
         
@@ -274,7 +285,8 @@ class TWalk(StepMethod):
             
             sigma = max(phi*abs(xp - x))/3.0
             
-            self.stochastic.value[phi] = xp + sigma*rnormal()
+            xp[phi] = xp + sigma*rnormal()
+            self.stochastic.value = xp
             
             self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
     

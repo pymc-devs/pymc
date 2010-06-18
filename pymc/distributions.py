@@ -1146,7 +1146,7 @@ def gamma_expval(alpha, beta):
 
     Expected value of gamma distribution.
     """
-    return asarray(alpha) / beta
+    return 1. * asarray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
     R"""
@@ -1410,7 +1410,7 @@ def inverse_gamma_expval(alpha, beta):
 
     Expected value of inverse gamma distribution.
     """
-    return 1. / (asarray(beta) * (alpha-1.))
+    return 1. * asarray(beta) / (alpha-1.)
 
 def inverse_gamma_like(x, alpha, beta):
     R"""

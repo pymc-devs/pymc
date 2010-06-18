@@ -5,14 +5,10 @@ from pymc.gp import *
 from numpy import *
 
 # Impose observations on the GP
-obs_x = array([-.5,.5])
+o = array([-.5,.5])
 V = array([.002,.002])
 data = array([3.1, 2.9])
-observe(M=M,
-        C=C,
-        obs_mesh=obs_x,
-        obs_V = V,
-        obs_vals = data)
+observe(M, C, obs_mesh=o, obs_V = V, obs_vals = data)
 
 # Generate realizations
 f_list=[Realization(M, C) for i in range(3)]

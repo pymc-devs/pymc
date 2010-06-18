@@ -640,7 +640,7 @@ class test_inverse_gamma(TestCase):
         assert_array_almost_equal(hist, like,1)
 
     def test_normalization(self):
-        parameters=dict(alpha=1.5, beta=4)
+        parameters=dict(alpha=1.5, beta=0.25)
         integral = normalization(flib.igamma, parameters, [0, 10], 200)
         assert_almost_equal(integral, 1, 2)
 

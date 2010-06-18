@@ -2736,8 +2736,8 @@ cf2py threadsafe
           like = -infinity
           RETURN
         endif
-        like = like - gammln(alpha_tmp) - alpha_tmp*dlog(beta_tmp)
-        like = like - (alpha_tmp+1.0D0)*dlog(x(i)) - 1.0D0/x(i)/beta_tmp
+        like = like - gammln(alpha_tmp) + alpha_tmp*dlog(beta_tmp)
+        like = like - (alpha_tmp+1.0D0)*dlog(x(i)) - 1.0D0*beta_tmp/x(i)
       enddo
 
       return
@@ -5274,8 +5274,8 @@ cf2py threadsafe
                   ltheta(i) = dlog(1.0D0+a2t*ltheta(i))/a2t
               end if
               
-          else
-              ltheta(i) = 0.5D0
+!           else
+!               ltheta(i) = 0.5D0
           end if
 
       end do

@@ -42,7 +42,7 @@ def manual2article(text):
 
     # Proglang and pkg
     text = re.sub(r"\\pdfbookmark.*", r"", text)
-    for pkgname in ['PyMC','NumPy','SciPy','PyTables','Matplotlib','Pylab','Pyrex']:
+    for pkgname in ['PyMC','NumPy','SciPy','PyTables','Matplotlib','Pylab','Pyrex','WinBUGS','JAGS','Hierarchical Bayes Compiler','pyTables','pydot','IPython','nose','gfortran','gcc','Enthought Python Distribution','Gnu Compiler Collection','GCC','g77','subversion']:
         text = re.sub(pkgname, r'\\pkg{%s}'%pkgname,text)
     for proglang in ['Python','Fortran']:
         text = re.sub(' ' + proglang, r' \\proglang{%s}'%proglang, text)
