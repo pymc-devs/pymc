@@ -305,8 +305,8 @@ class test_gradients(TestCase):
         negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
         self.check_gradients(negative_binomial)
         
-        exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
-        self.check_gradients(exponweib)
+        #exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
+        #self.check_gradients(exponweib)
         
         
     def check_model_gradients(self, model):

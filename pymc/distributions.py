@@ -305,7 +305,6 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     
     wrapped_logp_partial_gradients = {}
 
-    print logp_partial_gradients
     for parameter, func in logp_partial_gradients.iteritems():
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
          
@@ -1123,13 +1122,13 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
 
     """
     return flib.exponweib(x,alpha,k,loc,scale)
-
+"""
 exponweib_grad_like = {'value' : flib.exponweib_gx,
                    'alpha' : flib.exponweib_ga,
                    'k' : flib.exponweib_gk,
                    'loc' : flib.exponweib_gl,
                    'scale' : flib.exponweib_gs}
-
+"""
 # Gamma----------------------------------------------
 @randomwrap
 def rgamma(alpha, beta, size=None):
