@@ -10,17 +10,18 @@ from utils import find_element
 import inspect
 
 #accumulations 
+_boolean_accumulation_deterministics = ['any' , 'all']
 _accumulation_deterministics = ['sum']#['sum', 'prod']
 
 
 #transformations (broadcasted)
-_generic = ['abs', 'exp', 'log', 'sqrt']
+_generic = ['abs', 'exp', 'log', 'sqrt','expm1', 'log1p]
 _trig = ['sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan']
 _hyp_trig = ['sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh']
 _transformation_deterministics = _generic + _trig + _hyp_trig
 _misc_funcs1 = ['arctan2', 'hypot']
 
-__all__ = _accumulation_deterministics + _transformation_deterministics + _misc_funcs1
+__all__ = _accumulation_deterministics  + _boolean_accumulation_deterministics+ _transformation_deterministics + _misc_funcs1
 
 def deterministic_from_funcs(name, eval, jacobians=None, jacobian_formats=None, dtype=np.float, mv=False):
     """
@@ -160,6 +161,8 @@ log_jacobians = {'x' : lambda x : 1.0/x      }
 sqrt_jacobians = {'x': lambda x : .5    * x **-.5}
 hypot_jacobians = {'x1' : lambda x1, x2 : (x1**2 + x2**2)**-.5 * x1,
                    'x2' : lambda x1, x2 : (x1**2 + x2**2)**-.5 * x2}
+expm1_jacobians = exp_jacobians
+log1p_jacobians = {'x' : lambda x : 1.0/(1.0 + x)}
 
 sin_jacobians = {'x' : lambda x : np.cos(x)  }
 cos_jacobians = {'x' : lambda x : -np.sin(x) }
@@ -194,6 +197,13 @@ for function_name in _accumulation_deterministics:
     jacobians = find_element(function_name + "_jacobians", locals(), error_on_fail = True)
     
     locals()[function_name] = deterministic_from_funcs(function_name, wrapped_function, jacobians, jacobian_formats = {'a' : 'accumulation_operation'})
+
+
+for function_name in _boolean_accumulation_deterministics:
+    wrapped_function = wrap_function_accum(find_element(function_name, np, error_on_fail = True))
+
+    locals()[function_name] = deterministic_from_funcs(function_name, wrapped_function)
+
 
 
 def wrapped_function_trans(function):

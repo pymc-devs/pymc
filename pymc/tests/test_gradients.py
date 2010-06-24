@@ -311,6 +311,7 @@ class test_gradients(TestCase):
         
     def check_model_gradients(self, model):
 
+        model = set(model)
         # find the markov blanket 
         children = set([])
         for s in model:

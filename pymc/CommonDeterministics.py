@@ -676,9 +676,9 @@ pow_jacobians = {'a' : lambda a, b: b * a**(b - 1.0),
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
     create_rl_bin_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
-# # Binary operators
-# for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
-#     create_bin_method(op ,Variable)
+# Binary operators
+for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
+     create_bin_method(op ,Variable)
 
 # Unary operators
 neg_jacobians = {'self' : lambda self: -ones(shape(self))}

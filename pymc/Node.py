@@ -35,6 +35,8 @@ def logp_gradient_of_set(variable_set, calculation_set = None):
     
     Returns a dictionary of the gradients.
     """
+    calculation_set = set(calculation_set) # this is important because using the 'in' operator on lists will use the __eq__method which will create a new deterministic
+    
     logp_gradients = {}
     for variable in variable_set:   
         logp_gradients[variable] = logp_gradient(variable, calculation_set)
