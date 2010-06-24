@@ -485,36 +485,6 @@ to the domain $x \in [0, \infty)$.
 
 \end{description}
 \end{funcdesc}
-\index{hypergeometric\_like() (in module pymc.distributions)}
-
-\begin{funcdesc}{hypergeometric\_like}{x, n, m, N}
-Hypergeometric log-likelihood. Discrete probability distribution that
-describes the number of successes in a sequence of draws from a finite
-population without replacement.
-\begin{gather}
-\begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
-\end{gather}\begin{description}
-\item[Parameters] \leavevmode\begin{itemize}
-\item {} 
-\emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
-
-\item {} 
-\emph{n} : {[}int{]} Size of sample drawn from the population.
-
-\item {} 
-\emph{m} : {[}int{]} Number of successes in the population.
-
-\item {} 
-\emph{N} : {[}int{]} Total number of units in the population.
-
-\end{itemize}
-
-\end{description}
-
-\begin{notice}{note}{Note:}
-$E(X) = \frac{n n}{N}$
-\end{notice}
-\end{funcdesc}
 \index{inverse\_gamma\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.inverse_gamma_like}{}\begin{funcdesc}{inverse\_gamma\_like}{x, alpha, beta}
