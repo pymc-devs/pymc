@@ -469,7 +469,7 @@ def _cut_time(gammas):
     """Support function for iat(). 
     Find cutting time, when gammas become negative."""
     
-    for i in range(len(gammas)):
+    for i in range(len(gammas)-1):
         
         if not ((gammas[i+1]>0.0) & (gammas[i+1]<gammas[i])): return i
         
@@ -482,15 +482,15 @@ def iat(x, maxlag=None):
         # Calculate maximum lag to which autocorrelation is calculated
         maxlag = _find_max_lag(x)
         
-    acr = [autocorr(x, lag) for lag in range(maxlag+1)]
+    acr = [autocorr(x, lag) for lag in range(1, maxlag+1)]
     
     # Calculate gamma values
     gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag/2)]
-    
+
     cut = _cut_time(gammas)
     
     if cut+1 == len(gammas):
         print "Not enough lag to calculate IAT"
         
-    return np.sum(2*gammas[cut+1]) - 1.0
+    return np.sum(2*gammas[:cut+1]) - 1.0
     
