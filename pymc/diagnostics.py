@@ -1,10 +1,11 @@
 # Convergence diagnostics and model validation
 # Heidelberger and Welch (1983) ?
 
-__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy']
+__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
 
 import numpy as np
 import pymc
+from pymc.utils import autocorr, autocov
 from copy import copy
 import pdb
 
@@ -424,3 +425,72 @@ def gelman_rubin(x):
 # x contains multiple chains
 # Transform positive or [0,1] variables using a logarithmic/logittranformation.
 #
+
+def _find_max_lag(x, rho_limit=0.05, maxmaxlag=20000, verbose=0):
+    """Automatically find an appropriate maximum lag to calculate IAT"""
+    
+    # Fetch autocovariance matrix
+    acv = autocov(x)
+    # Calculate rho
+    rho = acv[0,1]/acv[0,0]
+    
+    lam = -1./np.log(abs(rho))
+    
+    # Initial guess at 1.5 times lambda (i.e. 3 times mean life)
+    maxlag = int(np.floor(3.*lam)) + 1
+    
+    # Jump forward 1% of lambda to look for rholimit threshold
+    jump = int(np.ceil(0.01*lam)) + 1
+    
+    T = len(x)
+    
+    while ((abs(rho) > rho_limit) & (maxlag < min(T/2, maxmaxlag))):
+        
+        acv = autocov(x, maxlag)
+        rho = acv[0,1]/acv[0,0]
+        maxlag += jump
+        
+    # Add 30% for good measure
+    maxlag = int(np.floor(1.3*maxlag))
+    
+    if maxlag >= min(T/2, maxmaxlag):
+        maxlag = min(min(T/2, maxlag), maxmaxlag)
+        "maxlag fixed to %d" % maxlag
+        return maxlag
+        
+    if maxlag <= 1:
+        print "maxlag = %d, fixing value to 10" % maxlag
+        return 10
+        
+    print "maxlag = %d" % maxlag
+    return maxlag
+    
+def _cut_time(gammas):
+    """Support function for iat(). 
+    Find cutting time, when gammas become negative."""
+    
+    for i in range(len(gammas)):
+        
+        if not ((gammas[i+1]>0.0) & (gammas[i+1]<gammas[i])): return i
+        
+    return i
+
+def iat(x, maxlag=None):
+    """Calculate the integrated autocorrelation time (IAT), given the trace from a Stochastic."""
+    
+    if not maxlag:
+        # Calculate maximum lag to which autocorrelation is calculated
+        maxlag = _find_max_lag(x)
+        
+    acr = [autocorr(x, lag) for lag in range(maxlag+1)]
+    
+    # Calculate gamma values
+    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag/2)]
+    
+    cut = _cut_time(gammas)
+    
+    if cut+1 == len(gammas):
+        print "Not enough lag to calculate IAT"
+        
+    return np.sum(2*gammas[cut+1]) - 1.0
+    

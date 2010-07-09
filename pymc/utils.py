@@ -489,6 +489,18 @@ def autocorr(x, lag=1):
     mu = x.mean()
     v = x.var()
     return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
+    
+def autocov(x, lag=1):
+    """
+    Sample autocovariance at specified lag. 
+    The autocovariance is a 2x2 matrix with the variances of
+    x[:-lag] and x[lag:] in the diagonal and the autocovariance
+    on the off-diagonal.
+    """
+
+    if not lag: return 1
+    if lag<0: return
+    return np.cov(x[:-lag], x[lag:], bias=1)
 
 def trace_generator(trace, start=0, stop=None, step=1):
     """Return a generator returning values from the object's trace.
