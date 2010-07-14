@@ -1,13 +1,11 @@
 # Convergence diagnostics and model validation
-# Heidelberger and Welch (1983) ?
-
-__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
-
 import numpy as np
 import pymc
 from pymc.utils import autocorr, autocov
 from copy import copy
 import pdb
+
+__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
 
 def open01(x, limit=1.e-6):
     """Constrain numbers to (0,1) interval"""
@@ -286,7 +284,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return zscores
 
 # From StatLib -- gibbsit.f
-@diagnostic
+@diagnostic()
 def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     """
     Return the number of iterations needed to achieve a given
@@ -482,6 +480,9 @@ def gelman_rubin(x):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
     
+    if len(x) < 2:
+        raise ValueError, 'Gelman-Rubin diagnostic requires multiple chains.'
+    
     try:
         m,n = np.shape(x)
     except ValueError:
@@ -541,7 +542,8 @@ def _find_max_lag(x, rho_limit=0.05, maxmaxlag=20000, verbose=0):
         print "maxlag = %d, fixing value to 10" % maxlag
         return 10
     
-    print "maxlag = %d" % maxlag
+    if verbose:
+        print "maxlag = %d" % maxlag
     return maxlag
 
 def _cut_time(gammas):
@@ -554,7 +556,7 @@ def _cut_time(gammas):
     
     return i
 
-@diagnostic
+@diagnostic()
 def iat(x, maxlag=None):
     """Calculate the integrated autocorrelation time (IAT), given the trace from a Stochastic."""
     
