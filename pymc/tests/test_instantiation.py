@@ -14,7 +14,7 @@
 
 from numpy.testing import *
 import pymc
-from pymc import Sampler, data, stochastic, deterministic, \
+from pymc import Sampler, observed, stochastic, deterministic, \
     Stochastic,Deterministic
 from numpy import array, log, sum, ones, concatenate, inf
 from pymc import uniform_like, exponential_like, poisson_like
@@ -44,7 +44,7 @@ def l(value=.1, rate = 1.):
     """Rate stochastic of poisson distribution."""
     return exponential_like(value, rate)
 
-@data(dtype=int)
+@observed(dtype=int)
 def D(  value = D_array,
         s = s,
         e = e,
@@ -52,9 +52,9 @@ def D(  value = D_array,
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
 
-E = data(e)
+E = observed(e)
 
-@data
+@observed
 def F(value = D_array*.5,
         s = s,
         e = e,
@@ -62,8 +62,7 @@ def F(value = D_array*.5,
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s],e) + poisson_like(value[s:],l)
 
-@data
-@stochastic
+@observed
 def G(value = D_array*.5,
         s = s,
         e = e,

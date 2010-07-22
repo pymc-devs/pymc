@@ -122,7 +122,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
     parameters = sampler.stochastics
     if deterministic:
         # Add deterministics to the mix, if requested
-        parameters = parameters.union(sampler.deterministics)
+        parameters = parameters | sampler.deterministics
     
     # Assign database backend
     original_backend = sampler.db.__name__

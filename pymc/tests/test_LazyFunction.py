@@ -2,7 +2,7 @@ from numpy.testing import *
 import numpy as np
 from numpy.random import random, normal
 from pymc.LazyFunction import LazyFunction
-from pymc import stochastic, data, deterministic, Normal, potential, ZeroProbability
+from pymc import stochastic, observed, deterministic, Normal, potential, ZeroProbability
 
 verbose = False
 
@@ -26,8 +26,7 @@ while B.value<0.:
         # print 'B computing'
         return A + normcoef * normal()
 
-@data
-@stochastic(verbose=verbose)
+@observed(verbose=verbose)
 def C(value = 0., B=[A,B]):
     if B[0]<0.:
          return -np.Inf
