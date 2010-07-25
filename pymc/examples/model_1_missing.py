@@ -11,6 +11,7 @@ __all__ = ['swichpoint','early_mean','late_mean','disasters']
 
 from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform, Lambda, MCMC, observed, poisson_like
 from pymc.distributions import Impute
+from numpy.ma import masked_array
 import numpy as np
 
 # Missing values indicated by None placeholders
@@ -42,4 +43,11 @@ def r(s=s, e=e, l=l):
 
 
 # Where the mask is true, the value is taken as missing.
-D = Impute('D', Poisson, disasters_array, mu=r)
+# The inefficient way:
+# D = Impute('D', Poisson, disasters_array, mu=r)
+
+# The efficient way, using masked arrays
+mask = [v is None for v in disasters_array]
+# Generate masked array
+masked_values = masked_array(disasters_array, mask)
+D = Poisson('D', mu=r, value=masked_values, observed=True)

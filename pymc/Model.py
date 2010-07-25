@@ -347,11 +347,20 @@ class Sampler(Model):
 
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
-        for object in self.stochastics | self.deterministics :
+        for object in self.stochastics | self.deterministics:
 
             if object.trace:
                 self._variables_to_tally.add(object)
-                self._funs_to_tally[object.__name__] = object.get_value
+                try:
+                    if object.mask is None:
+                        # Standard stochastic
+                        self._funs_to_tally[object.__name__] = object.get_value
+                    else:
+                        # Has missing values, so only fetch stochastic elements using mask
+                        self._funs_to_tally[object.__name__] = object.get_stoch_value
+                except AttributeError:
+                    # Not a stochastic object, so no mask
+                    self._funs_to_tally[object.__name__] = object.get_value
             else:
                 object.trace = no_trace.Trace(object.__name__)
 
