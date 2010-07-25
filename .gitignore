@@ -3,3 +3,10 @@
 build/*
 dist/*
 pymc.egg-info/
+docs/UserGuide.pdf
+docs/jss/
+docs/pdf/
+docs/INSTALL.tex
+docs/README.tex
+docs/database.tex
+develop
