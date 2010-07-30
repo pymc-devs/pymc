@@ -47,8 +47,7 @@ def make_model():
     V = Gamma('V', alpha=3., beta=.002/3., verbose=0)
 
     # The data d is just array-valued. It's normally distributed about GP.f(obs_x).
-    @data
-    @stochastic(verbose=0)
+    @observed(verbose=0)
     def d(value=array([3.1, 2.9]), mu=submod.f, V=V, verbose=0):
         """
         Data

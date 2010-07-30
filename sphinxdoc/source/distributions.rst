@@ -56,8 +56,6 @@ Continuous distributions
 
 .. autofunction:: half_normal_like
 
-.. autofunction:: hypergeometric_like
-
 .. autofunction:: inverse_gamma_like
 
 .. autofunction:: laplace_like

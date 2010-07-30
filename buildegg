@@ -1,4 +1,0 @@
-#!/bin/sh
-rm -rf build
-python setup.py config_fc --fcompiler gnu95 build
-python setupegg.py egg_info -d bdist_egg
