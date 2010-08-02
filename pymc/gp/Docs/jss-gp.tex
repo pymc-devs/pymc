@@ -19,7 +19,11 @@
 
 %% an abstract and keywords
 \Abstract{
+<<<<<<< HEAD
   This article introduces a package adding Gaussian process functionality to the Bayesian analysis package \pkg{PyMC}. Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown. They can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can be complicated. This package implements GPs as a set of \proglang{Python} classes that can conveniently support many types of usage, from intuitive exploration to embedding in larger probability models and fitting with MCMC.
+=======
+  This article introduces a package adding Gaussian process functionality to the Bayesian analysis package \pkg{PyMC}. Gaussian processes (GPs) are probability distributions for functions. In Bayesian statistics, they are often used as priors for functions whose forms are unknown. They can encode many types of knowledge about functions, yet remain much less restrictive than priors based on particular functional forms. GPs are not hard to understand at a conceptual level, but implementing them efficiently on a computer can require fairly involved linear algebra. This package implements Gaussian processes as a set of \proglang{Python} classes that can support many types of usage, from intuitive exploration to embedding them in larger probability models and fitting with MCMC.
+>>>>>>> gppaper
 }
 \Keywords{gassian process, bayesian, \proglang{Python}}
 \Plainkeywords{gaussian process, bayesian, Python} %% without formatting
@@ -100,12 +104,17 @@
 
 \section{Introduction}\label{sec:firstlook}
 
+<<<<<<< HEAD
 Gaussian processes (GPs) are probability distributions for functions. The statement `random function $f$ has a GP distribution with mean $M$ and covariance $C$' is usually written as follows:
+=======
+Gaussian processes are probability distributions for functions. The statement `random function $f$ has a Gaussian process distribution with mean $M$ and covariance $C$' is usually written as follows:
+>>>>>>> gppaper
 \begin{equation}
     f\sim\textup{GP}(M,C).
 \end{equation}
 The two parameters of the distribution are analogous to the parameters of the normal distribution. $M$ is the mean function, $M(x)=\E(f(x))$. $C$ is the covariance function, $C(x,y)=\COV(f(x),f(y))$. Among other things, $C$ regulates the amount by which $f$ may deviate from $M$ at any input value $x$, the roughnesss of $f$ and the typical lengthscale of changes in $f$.
 
+<<<<<<< HEAD
 As with any probability distribution, random values can be drawn from a GP. However, these values (called `realizations') are functions rather than the usual numbers or vectors. This package represents these random values as \code{Realization} objects which, in accordance with intuition, behave like \proglang{Python} functions with a few extra features.
 
 GPs are represented by \code{GaussianProcess} objects. These are \pkg{PyMC} stochastic variables \citep{pymc} (analogous to \pkg{WinBugs}' stochastic nodes \citep{bugs}) valued as \code{Realization} objects. This package enables \pkg{PyMC} to fit models involving \code{GaussianProcess}es using Markov chain Monte Carlo \citep{gamerman}, after which the `dynamic trace' for each \code{GaussianProcess} consists of a sequence of \code{Realization} objects sampled from the target distribution. 
@@ -118,22 +127,48 @@ To improve performance, all of this package's numerical computations are done in
 
 \medskip
 All examples can be found in the folder \code{pymc/examples/gp} in the \pkg{PyMC} source tree.
+=======
+As with any probability distribution, random values can be drawn from a Gaussian process. However, these values (called `realizations') are actually functions rather than the usual numbers or vectors. This package represents these random values as \code{Realization} objects which, in accordance with intuition, behave like \proglang{Python} functions with a few extra features.
+
+Gaussian processes are represented by \code{GaussianProcess} objects. These are \pkg{PyMC} stochastic variables \citep{pymc} (analogous to \pkg{WinBugs}' stochastic nodes \citep{bugs}) valued as \code{Realization} objects. These models can be fit using Markov chain Monte Carlo \cite{gamerman}, after which the `dynamic trace' for each \code{GaussianProcess} consists of a sequence of \code{Realization} objects sampled from the target distribution. 
+
+This intuitive object model simplifies and expedites construction and fitting of probability models, as well as predictive simulation. It also makes available an enormous model space, which extends far beyond the standard linear model and generalized linear model families. The \code{GaussianProcess} object `is' a Gaussian process in the sense that a \pkg{PyMC} \code{Normal} variable `is' a normal random variable; as is the case for a \code{Normal}, a \code{GaussianProcess}'s descendants' dependencies on it can be defined using the full expressive power of \proglang{Python}.
+
+This package's model-fitting functionality is generic enough to support, in theory, any model that can be defined using \code{GaussianProcess}s and the standard variable classes in \pkg{PyMC}. It is known to perform well for standard situations such as Bayesian geostatistics (see chapter \textbf{ref}), but it cannot provide good performance in all cases. \pkg{PyMC}'s friendly and extensible system of step methods can be used to create fine-tuned jumping strategies for particular applications.
+
+To improve performance, all of this package's numerical computations are done in C or Fortran extensions, some of which are provided by the \pkg{NumPy} package \citep{numpybook}. Covariance function evaluations are multithreaded for sufficiently large matrices.
+
+\medskip
+This paper introduces  All examples can be found in the folder \code{pymc/examples/gp} in the \pkg{PyMC} source tree.
+>>>>>>> gppaper
 
 
 \section{Creating a Gaussian process}\label{sub:inst}
 
+<<<<<<< HEAD
 This section demonstrates creation of a covariance function, a mean function, and finally several random functions drawn from the GP distribution defined by those objects.
+=======
+This section demonstrates creation of a covariance function, a mean function, and finally several random functions drawn from the Gaussian process distribution defined by those objects.
+>>>>>>> gppaper
 
 \subsection{Creating a mean function}\label{subsub:mean}
 
 \begin{figure}
     \centering
         \epsfig{file=figs/mean.pdf,width=8cm}
+<<<<<<< HEAD
     \caption{The mean function generated by \code{pymc/examples/gp/mean.py}.}
     \label{fig:mean}
 \end{figure}
 
 The mean function of a univariate GP is a univariate function that can be interpreted as a prior guess for the GP. Mean functions are represented by \code{Mean} objects, which are wrappers for ordinary \proglang{Python} functions. The following code (from \code{pymc/examples/gp/Mean.py}) will produce an instance of class \code{Mean} called $M$:
+=======
+    \caption{The mean function generated by {\sffamily `examples/mean.py'}.}
+    \label{fig:mean}
+\end{figure}
+
+The mean function of a univariate Gaussian process can be interpreted as a prior guess for the GP, so it is also a univariate function. Mean functions are represented by class \code{Mean}, which is a wrapper for an ordinary \proglang{Python} function. The following code (from \code{pymc/examples/gp/Mean.py}) will produce an instance of class \code{Mean} called $M$:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 from pymc.gp import *
@@ -143,6 +178,7 @@ M = Mean(quadfun, a = 1., b = .5, c = 2.)
 \end{CodeInput}
 \end{CodeChunk}
 
+<<<<<<< HEAD
 The first argument of \code{Mean}'s init method is the underlying \proglang{Python} function, in this case \code{quadfun}. The extra arguments $a$, $b$  and $c$ will be memorized and passed to \code{quadfun} whenever $M$ is called; the call $M(x)$ in the plotting portion of \code{pymc/examples/gp/Mean.py}, which produces Figure~\ref{fig:mean}, does not need to pass them in.
 
 Mean functions broadcast over their arguments in the same way as \pkg{NumPy} universal functions \citep{numpybook}, which means that the call $M(x)$, where $x$ is a vector, returns the vector
@@ -151,18 +187,37 @@ Mean functions broadcast over their arguments in the same way as \pkg{NumPy} uni
 \end{eqnarray*}
 
 The last part of the code plots $M(x)$ on $-1<x<1$, and its output is shown in Figure~\ref{fig:mean}. As expected, the plot is a parabola.
+=======
+The first argument of \code{Mean}'s init method is the underlying \proglang{Python} function, in this case \code{quadfun}. The extra arguments $a$, $b$  and $c$ will be memorized and passed to \code{quadfun} whenever $M$ is called; the call $M(x)$ in the plotting portion of the script does not need to pass them in.
+
+Mean functions broadcast over their arguments in the same way as \href{http://docs.scipy.org/doc/numpy/reference/ufuncs.html}{\pkg{NumPy} universal functions} \citep{numpybook}, which means that the call $M(x)$, where $x$ is a vector, returns the vector
+\begin{eqnarray*}
+    [M(x_0),\ldots, M(x_{N-1})].
+\end{eqnarray*}
+
+The last part of the code plots $M(x)$ on $-1<x<1$, and its output is shown in figure \ref{fig:mean}. As expected, the plot is a parabola.
+>>>>>>> gppaper
 
 \subsection{Creating a covariance function}\label{subsub:cov}
 \begin{figure}
     \centering
+<<<<<<< HEAD
         \epsfig{file=figs/cov.pdf,width=15cm}
     \caption{The covariance function generated by \code{pymc/examples/gp/cov.py}. On the left is the covariance function $C(x,y)$ evaluated over a square: $-1\le x\le 1,\ -1\le y\le 1$. On the right is a slice of the covariance: $C(x,0)$ for $0\le x \le 1$}
+=======
+        \epsfig{file=figs/cov.pdf,width=12cm}
+    \caption{The covariance function generated by {\sffamily `examples/cov.py'}. On the left is the covariance function $C(x,y)$ evaluated over a square: $-1\le x\le 1,\ -1\le y\le 1$. On the right is a slice of the covariance: $C(x,0)$ for $0\le x \le 1$}
+>>>>>>> gppaper
     \label{fig:cov}
 \end{figure}
 
 Covariance functions are represented by the class \code{Covariance}, which like \code{Mean} is essentially a wrapper for ordinary \proglang{Python} functions. The example in \code{pymc/examples/gp/cov.py} uses the popular Mat\`ern function \citep{banerjee}, which is provided in module \code{cov_funs}. In addition to the two arguments $x$ and $y$, the Mat\`ern function takes three parameters: \code{amp} controls the amount by which realizations may deviate from their mean, \code{diff_degree} controls the roughness of realizations (the degree of differentiability), and \code{scale} controls the lengthscale over which realizations change.
 
+<<<<<<< HEAD
 The user is free to write functions to wrap in \code{Covariance} objects. See the full package documentation at \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{http://pymc.googlecode.com/files/GPUserGuide.pdf} for more information.
+=======
+The user is free to write functions to wrap in \code{Covariance} objects. See \href{http://code.google.com/p/pymc}{the package documentation} for more information.
+>>>>>>> gppaper
 
 The code in \code{pymc/examples/gp/cov.py} will produce an instance of class \code{Covariance} called $C$:
 \begin{CodeChunk}
@@ -177,10 +232,17 @@ C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale =
 The first argument to \code{Covariance}'s init method is the \proglang{Python} function from which the covariance function will be made. In this case, \code{eval_fun} is \code{matern.euclidean}. Covariance functions' calling conventions are slightly different from ordinary \pkg{NumPy} universal functions' \citep{numpybook} in two ways. First, broadcasting works differently. If $C$ were a \pkg{NumPy} universal function, $C(x,y)$ would return the following array:
     \begin{eqnarray*}
         \begin{array}{ccc}
+<<<<<<< HEAD
             [C(x_0,y_0)& \ldots& C(x_{N_x-1},y_{N_x-1})],
         \end{array}
     \end{eqnarray*}
     where $x$ and $y$ would need to be vectors of the same length $N_x$. In fact $C(x,y)$ returns a matrix:
+=======
+            [C(x_0,y_0)& \ldots& C(x_{N-1},y_{N-1})],
+        \end{array}
+    \end{eqnarray*}
+    where $x$ and $y$ would need to be vectors of the same length. In fact $C(x,y)$ returns a matrix:
+>>>>>>> gppaper
     \begin{eqnarray*}
         \left[\begin{array}{ccc}
             C(x_0,y_0)& \ldots& C(x_0,y_{N_y-1})\\
@@ -188,13 +250,18 @@ The first argument to \code{Covariance}'s init method is the \proglang{Python} f
             C(x_{N_x-1},y_0)& \ldots& C(x_{N_x-1},y_{N_y-1})
         \end{array}\right],
     \end{eqnarray*}
+<<<<<<< HEAD
     and input arguments $x$ and $y$ can have different lengths $N_x$ and $N_y$. Second, covariance functions can be called with just one argument. $C(x)$ returns
+=======
+    and input arguments $x$ and $y$ don't need to be the same length. Second, covariance functions can be called with just one argument. $C(x)$ returns
+>>>>>>> gppaper
     \begin{eqnarray*}
          [C(x_0,x_0)& \ldots& C(x_{N_x-1},x_{N_x-1})] = \textup{diag}(C(x,x)),
     \end{eqnarray*}
     but is computed much faster than diag$(C(x,x))$ would be.
 The extra arguments \code{diff_degree, amp} and \code{scale}, which are required by \code{matern.euclidean}, will be passed to \code{matern.euclidean} by $C$ every time is called.
  
+<<<<<<< HEAD
 The output of \code{pymc/examples/gp/cov.py} is shown in Figure~\ref{fig:cov}.
 
 \subsubsection{Cholesky algorithms}
@@ -202,16 +269,34 @@ The output of \code{pymc/examples/gp/cov.py} is shown in Figure~\ref{fig:cov}.
 The numerical `heavy lifting' required by this package is mostly done by \code{Covariance} and its subclasses. \code{Covariance} itself bases all its computations on the incomplete Cholesky decomposition algorithm used by the \proglang{Matlab} package \pkg{chol_incomplete} \citep{seeger}. \code{Covariance} computes rows of covariance matrices as they are needed, so if the function it wraps tends to produce covariance matrices with only a few large eigenvalues it can approximate the Cholesky decomposition in less than $O(n^2)$ arithmetic operations \citep{predictivechol}.
 
 \code{Covariance} calls back to \proglang{Python} from \proglang{Fortran} every time it needs a new row. If the function it wraps tends to produce full-rank covariance matrices (for which all rows are required), this is inefficient. \code{FullRankCovariance} is a drop-in replacement for \code{Covariance} that is much faster, but fails (with a helpful error message) if it attempts to factor a matrix that is not of full rank. \code{NearlyFullRankCovariance} provides a compromise between the two: it computes covariance matrices in full in \proglang{Fortran}, then factors them using the robust algorithm of \pkg{chol_incomplete}.
+=======
+The output of \code{examples/cov.py} is shown in figure \ref{fig:cov}.
+
+\subsubsection{Cholesky algorithms}
+
+The numerical `heavy lifting' done by this package is primarily handled by \code{Covariance} and its subclasses. \texttt{Covariance} itself bases all its computations on the incomplete Cholesky decomposition algorithm used by the \proglang{Matlab} package \pkg{chol_incomplete} \citep{seeger}. \code{Covariance} computes rows of covariance matrices as they are needed, so if the function it wraps tends to produce covariance matrices with only a few large eigenvalues it can approximate the Cholesky decomposition in less than $O(n^2)$ arithmetic operations \citep{predictivechol}.
+
+\code{Covariance} calls back to \proglang{Python} from \proglang{Fortran} every time it needs a new row. If the function it wraps tends to produce full-rank covariance matrices (for which all rows are required), this is inefficient. \code{FullRankCovariance} is a drop-in replacement for \code{Covariance} that is much faster, but fails (with a helpful error message) if it attempts to factor a matrix that is not full rank. \code{NearlyFullRankCovariance} provides a compromise between the two: it computes covariance matrices in full in \proglang{Fortran}, then factors them using the robust algorithm of \pkg{chol_incomplete}.
+>>>>>>> gppaper
 
 \subsection{Drawing realizations}\label{subsub:realizations}
 \begin{figure}
     \centering
+<<<<<<< HEAD
         \epsfig{file=figs/realizations.pdf,width=10cm}
     \caption{Three realizations from a GP generated by \code{pymc/examples/gp/realizations.py} displayed with mean and a $\pm$ one standard deviation envelope.}
     \label{fig:realizations}
 \end{figure}
 
 The code in \code{pymc/examples/gp/realizations.py} generates a list of \code{Realization} objects, which represent realizations (draws) from the GP defined by $M$ and $C$:
+=======
+        \epsfig{file=figs/realizations.pdf,width=8cm}
+    \caption{Three realizations from a Gaussian process displayed with mean $\pm$ 1 sd envelope. Generated by {\sffamily `examples/realizations.py'}.}
+    \label{fig:realizations}
+\end{figure}
+
+The code in \texttt{pymc/examples/gp/realizations.py} generates a list of \code{Realization} objects, which represent realizations (draws) from the Gaussian process defined by $M$ and $C$:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 from mean import M
@@ -222,6 +307,7 @@ f_list = [Realization(M,C) for i in range(3)]
 \end{CodeInput}
 \end{CodeChunk}
 
+<<<<<<< HEAD
 The init method of \code{Realization} takes only two required arguments, a \code{Mean} object and a \code{Covariance} object. Each element of \code{f_list} is a GP realization, which is essentially a randomly-generated \proglang{Python} function. Like \code{Mean} objects, \code{Realization} objects use the same broadcasting rules as \pkg{NumPy} universal functions. The call $f(x)$ returns the vector
 \begin{eqnarray*}
     [f(x_0)\ldots f(x_{N_x-1})].
@@ -241,6 +327,27 @@ Each of the three realizations in \code{f_list} is plotted in Figure~\ref{fig:re
 \end{figure}
 
 Consider the common statistical situation in which a GP prior for an unknown function $f$ is chosen with mean and covariance $M$ and $C$, and the value of $f$ is subsequently observed at $N_o$ input points $[o_0\ldots o_{N_o-1}]$, possibly with uncertainty. If the observation error is normally distributed, it turns out that $f$'s posterior distribution given the new information is another GP, with new mean and covariance functions $M_o$ and $C_o$.
+=======
+The init method of \code{Realization} takes only two required arguments, a \code{Mean} object and a \code{Covariance} object. Each element of \code{f_list} is a Gaussian process realization, which is essentially a randomly-generated \proglang{Python} function. Like \code{Mean} objects, \code{Realization} objects use the same broadcasting rules as \pkg{NumPy} universal functions. The call $f(x)$ returns the vector
+\begin{eqnarray*}
+    [f(x_0)\ldots f(x_{N-1})].
+\end{eqnarray*}
+
+Each of the three realizations in \code{f_list} is plotted in figure \ref{fig:realizations}, superimposed on a $\pm$ 1 standard deviation envelope.
+
+
+\section{Nonparametric regression: observing Gaussian processes}\label{sec:observing}
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/obs.pdf,width=5cm}
+        \epsfig{file=figs/cond.pdf,width=5cm}
+    \caption{The output of {\sffamily `examples/observations.py'}: the observed GP with \code{obs_V = .002} (left) and \code{obs_V = 0} (right). Note that in the conditioned case, the $\pm$ 1 SD envelope shrinks to zero at the points where the observations were made, and all realizations pass through the observed values. Compare these plots to those in figure \ref{fig:realizations}.}
+    \label{fig:obs}
+\end{figure}
+
+Consider the following common statistical situation: A Gaussian process prior for an unknown function $f$ is chosen, then the value of $f$ is observed at $N$ input points $[o_0\ldots o_{N-1}]$, possibly with uncertainty. If the observation error is normally distributed, it turns out that $f$'s posterior distribution given the new information is another Gaussian process, with new mean and covariance functions.
+>>>>>>> gppaper
 
 The probability model that represents this situation is as follows:
 \begin{equation}
@@ -250,14 +357,22 @@ The probability model that represents this situation is as follows:
         f \sim \textup{GP}(M,C)\\
     \end{array}\right\}\Rightarrow f|\textup{data} \sim \textup{GP}(M_o, C_o).
 \end{equation}
+<<<<<<< HEAD
 Function \code{observe} imposes normally-distributed observations on GP distributions. This function converts $f$'s prior to its posterior by transforming $M$ and $C$ in equation~\ref{regprior} to $M_o$ and $C_o$.
+=======
+Function \code{observe} imposes normally-distributed observations on Gaussian process distributions. This function converts $f$'s prior to its posterior by transforming $M$ and $C$ in equation \ref{regprior} to $M_o$ and $C_o$:
+>>>>>>> gppaper
 
 The code in \code{pymc/examples/gp/observation.py} imposes the observations
 \begin{eqnarray*}
     f(-.5) = 3.1\\
     f(.5) = 2.9
 \end{eqnarray*}
+<<<<<<< HEAD
 with observation variance $V=.002$ on the GP defined in \code{mean.py} and \code{cov.py}:
+=======
+with observation variance $V=.002$ on the GP distribution defined in \code{mean.py} and \code{cov.py}:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 from mean import M
@@ -265,10 +380,17 @@ from cov import C
 from pymc.gp import *
 from numpy import *
 
+<<<<<<< HEAD
 o = array([-.5,.5])
 V = array([.002,.002])
 data = array([3.1, 2.9])
 observe(M, C, obs_mesh=o, obs_V=V, obs_vals=data)
+=======
+obs_x = array([-.5,.5])
+V = array([.002,.002])
+data = array([3.1, 2.9])
+observe(M=M, C=C, obs_mesh=obs_x, obs_V=V, obs_vals=data)
+>>>>>>> gppaper
 
 f_list = [Realization(M,C) for i in range(3)]
 \end{CodeInput}
@@ -276,6 +398,7 @@ f_list = [Realization(M,C) for i in range(3)]
 
 The function \code{observe} takes a covariance $C$ and a mean $M$ as arguments, and tells them that their `true' realization's value on \code{obs_mesh} has been observed to be \code{obs_vals} with variance \code{obs_V}. 
 
+<<<<<<< HEAD
 The output of \code{observation.py}  is shown in Figure~\ref{fig:obs}. Compare this to the analogous figure for the unobserved GP, Figure~\ref{fig:realizations}. The covariance after observation is visualized in Figure~\ref{fig:obscov}. The covariance `tent' of Figure~\ref{fig:cov} has been pressed down at points where $x\approx \pm .5$ and/or $y\approx\pm .5$, which are the values where the observations were made.
 
 \begin{figure}
@@ -288,6 +411,20 @@ The output of \code{observation.py}  is shown in Figure~\ref{fig:obs}. Compare t
 \section{Higher-dimensional Gaussian processes}\label{sec:highdim}
 
 In addition to functions of one variable such as $f(x)$, this package supports GP priors for functions of $d>1$ variables such as $f(\mathbf{x})$, where $\mathbf{x}=[x_0\ldots x_{d-1}]$. This is useful for modeling dynamical or biological functions of many variables as well as for spatial statistics.
+=======
+The output of \code{observation.py}  is shown in figure \ref{fig:obs}, along with the output with \code{obs_V=0}. Compare these to the analogous figure for the unobserved GP, figure \ref{fig:realizations}. The covariance after observation is visualized in figure \ref{fig:obscov}. The covariance `tent' has been pressed down at points where $x\approx \pm .5$ and/or $y\approx\pm .5$, which are the values where the observations were made.
+
+\begin{figure}
+    \centering
+        \epsfig{file=figs/obscov.pdf,width=5cm}
+    \caption{The covariance function from {\sffamily `observation.py'} after observation. Compare this with the covariance function before observation, visualized in figure \ref{fig:cov} }
+    \label{fig:obscov}
+\end{figure}
+
+\section{Higher-dimensional GPs}\label{sec:highdim}
+
+In addition to functions of one variable such as $f(x)$, this package supports Gaussian process priors for functions of many variables such as $f(\mathbf{x})$, where $\mathbf{x}=[x_0\ldots x_{n-1}]$. This is useful for modeling dynamical or biological functions of many variables as well as for spatial statistics.
+>>>>>>> gppaper
 
 When array is passed into a \code{Mean}, \code{Covariance} or \code{Realization}'s init method or one of these objects is evaluated on an array, the array's last index is understood to iterate over spatial dimension. To evaluate a covariance $C$ on the ordered pairs $(0,1)$, $(2,3)$, $(4,5)$ and $(6,7)$, the user could pass in the following two-dimensional \pkg{NumPy} array:
 \begin{verbatim}
@@ -319,7 +456,11 @@ is interpreted as a single eight-dimensional value according to the convention a
 Means and covariances learn their spatial dimension the first time they are called or observed. Some covariances, such as those specified in geographic coordinates, have an intrinsic spatial dimension. Realizations inherit their spatial dimension from their means and covariances when possible, otherwise they infer it the first time they are called. If one of these objects is subsequently called with an input of a different dimension, it raises an error.
 
 \subsection{Covariance function bundles and coordinate systems}
+<<<<<<< HEAD
 The examples so far, starting with \code{pymc/examples/gp/cov.py}, have used the covariance function \code{matern.euclidean}. This function is an attribute of the \code{matern} object, which is an instance of class \code{covariance_function_bundle}.
+=======
+The examples so far, starting with \code{examples/cov.py}, have used the covariance function \code{matern.euclidean}. This function is an attribute of the \code{matern} object, which is an instance of class \code{covariance_function_bundle}.
+>>>>>>> gppaper
 
 Instances of \code{covariance_function_bundle} have three attributes, \code{euclidean}, \code{geo_deg} and \code{geo_rad}, which correspond to standard coordinate systems:
 \begin{itemize}
@@ -328,14 +469,23 @@ Instances of \code{covariance_function_bundle} have three attributes, \code{eucl
     \item \code{geo_rad}: Geographic coordinates (longitude, latitude) in radians, with unit radius.
 \end{itemize}
 
+<<<<<<< HEAD
 See the full package documentation at \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{http://pymc.googlecode.com/files/GPUserGuide.pdf} for information regarding creation and extension of covariance function bundles.
+=======
+See \href{http://code.google.com/p/pymc}{the package documentation} for information regarding creation and extension of covariance function bundles.
+>>>>>>> gppaper
 
 \section{Basis covariances}\label{sec:basis}
 
 \begin{figure}[htbp]
     \centering
+<<<<<<< HEAD
         \epsfig{file=figs/basiscov.pdf,width=10cm}
         \caption{The output of \code{pymc/examples/gp/basis_cov.py} shows three realizations of an observed GP whose covariance is an instance of \code{BasisCovariance}. The basis in this case is function \code{fourier_basis} from module \code{cov_funs}. 25 basis functions are used. The realizations are substantially smoother than those in Figure~\ref{fig:obs}.}
+=======
+        \epsfig{file=figs/basiscov.pdf,width=8cm}
+        \caption{Three realizations of an observed Gaussian process whose covariance is an instance of \code{BasisCovariance}. The basis in this case is function \code{fourier_basis} from module \code{cov_funs}. 25 basis functions are used.}
+>>>>>>> gppaper
     \label{fig:basiscov}
 \end{figure}
 
@@ -344,7 +494,11 @@ It is possible to create random functions from linear combinations of finite set
     f(x) = M(x) + \sum_{i_0=0}^{n_0-1}\ldots \sum_{i_{N-1}=0}^{n_{N-1}-1} c_{i_1\ldots i_{N-1}} e_{i_1\ldots i_{N-1}}(x), \\
     \{c\}\sim \textup{N}(0,K).
 \end{eqnarray*}
+<<<<<<< HEAD
 It follows that $f$ is a GP with mean $M$ and covariance defined by
+=======
+It follows that $f$ is a Gaussian process with mean $M$ and covariance defined by
+>>>>>>> gppaper
 \begin{eqnarray*}
     C(x,y)=\sum_{i_0=0}^{n_0-1}\ldots \sum_{i_{N-1}=0}^{n_{N-1}-1} \sum_{j_0=0}^{n_0-1}\ldots \sum_{j_{N-1}=0}^{n_{N-1}-1} e_{i_0\ldots i_{N-1}}(x) e_{j_0\ldots j_{N-1}}(x) K_{i_0\ldots i_{N-1}, j_0\ldots j_{N-1}},
 \end{eqnarray*}
@@ -353,8 +507,13 @@ where $K$ is the covariance of the coefficients $c$.
 Particularly successful applications of this general idea are:
 \begin{description}
     \item[Random Fourier series:] $e_i(x) = \sin(i\pi x/L)$ or $\cos(i\pi x/L)$. See \cite{spanos}.
+<<<<<<< HEAD
     \item[GP convolutions:] $e_i(x) = \exp(-(x-\mu_n)^2)$. See \cite{convolution}.
     \item[B-splines:] $e_i(x) = $ a polynomial times an interval indicator. See .
+=======
+    \item[Gaussian process convolutions:] $e_i(x) = \exp(-(x-\mu_n)^2)$. See \cite{convolution}.
+    \item[B-splines:] $e_i(x) = $ a polynomial times an interval indicator. See \href{http://en.wikipedia.org/wiki/Basis_B-spline}{Wikipedia}'s article.
+>>>>>>> gppaper
 \end{description}
 Such representations can be very efficient when there are many observations in a low-dimensional space, but are relatively inflexible in that they generally produce realizations that are infinitely differentiable. In some applications, this tradeoff makes sense.
 
@@ -386,39 +545,65 @@ Basis covariances constructed using such bases can be represented more efficient
                        ...
               [e[N-1][0], ... ,e[N-1][n[N-1]-1]] ].
 \end{verbatim}
+<<<<<<< HEAD
 For an $N$-dimensional Fourier basis, each of the \code{e}'s would be a sine or cosine; frequency would increase with the second index. As with \code{BasisCovariance}, each basis needs to take the entire input array \code{x} and \code{basis_params} as arguments. See \code{fourier_basis} in \code{pymc/examples/gp/basiscov.py} for an example.
 
 \subsection{Example}
 
 Once created, a \code{BasisCovariance} or \code{SeparableBasisCovariance} object behaves just like a \code{Covariance} object, but it and any \code{Mean} and \code{Realization} objects associated with it will take advantage of the efficient basis representation in their internal computations. An example of \code{SeparableBasisCovariance} usage is given in \code{pymc/examples/gp/basis_cov.py}. Compare its output in Figure~\ref{fig:basiscov} to Figure~\ref{fig:obs}.
+=======
+For an $N$-dimensional Fourier basis, each of the \code{e}'s would be a sine or cosine; frequency would increase with the second index. As with \code{BasisCovariance}, each basis needs to take the entire input array \code{x} and \code{basis_params} as arguments. See \code{fourier_basis} in \code{examples/gp/basiscov.py} for an example.
+
+\subsection{Example}
+
+Once created, a \code{BasisCovariance} or \code{SeparableBasisCovariance} object behaves just like a \code{Covariance} object, but it and any \code{Mean} and \code{Realization} objects associated with it will take advantage of the efficient basis representation in their internal computations. An example of \code{SeparableBasisCovariance} usage is given in \code{pymc/examples/gp/basis_cov.py}. Compare its output in figure \ref{fig:basiscov} to that in figure \ref{fig:obs}.
+>>>>>>> gppaper
 
 
 \section{Gaussian process submodels}
 \label{sec:gp-sub} 
 
+<<<<<<< HEAD
 \pkg{PyMC} represents random variables as objects of class \code{Stochastic}. For example, the following code produces a normally-distributed random variable, labelled $a$, with mean zero and precision one:
+=======
+\pkg{PyMC} \citep{pymc} represents random variables as objects of class \code{Stochastic}. For example, the following code produces a normally-distributed random variable, labelled \code{'a'}, with mean zero and precision one:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 a = pymc.Normal('a',0,1)
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 The current value of variable $a$ can be queried and updated as follows:
+=======
+The current value of variable \code{a} can be queried and updated as follows:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 print a.value
 a.value = 0.5
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 The logarithm of $a$'s probability density function, evaluated at its current value, can be obtained via \code{a.logp}. \pkg{PyMC} has a large library of optimized log-probability density/mass functions, and readily incorporates new functions created by users.
 
 \pkg{PyMC} variables can serve as parents of other variables; for example, the following code produces a normally-distributed variable labelled $b$ whose mean is $a$:
+=======
+The logarithm of \code{a}'s probability density function, evaluated at its current value, can be obtained via \code{a.logp}. PyMC has a large library of optimized log-probability density/mass functions, and readily incorporates new functions created by users.
+
+PyMC variables can serve as parents of other variables; for example, the following code produces a normally-distributed variable labelled \code{'b'} whose mean is \code{a}:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 b = pymc.Normal('b',a,1)    
 \end{CodeInput}
 \end{CodeChunk}
 
+<<<<<<< HEAD
 Any Python function can be used to transform random variables via objects of class \code{Deterministic}. For example, the following code produces a variable labelled $c$ whose value is the square of $b$ 's value:
+=======
+Any Python function can be used to transform random variables via objects of class \code{Deterministic}. For example, the following code produces a variable labelled \code{'c'} whose value is the square of \code{b} 's value:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 @pymc.deterministic
@@ -428,6 +613,7 @@ def c(b=b):
 \end{CodeChunk}
 Deterministic variables can be used as parents of other variables, stochastic or deterministic. 
 
+<<<<<<< HEAD
 This package equips \pkg{PyMC} with GPs via the \code{GaussianProcess} objects, which are random variables whose values are \code{Realization} objects. Because a GP is an infinite-dimensional variable, it is not practical to compute anything like a probability density for it, and \code{GaussianProcess}es have no \code{logp} attribute.
 
 However, the evaluation $f(x_*)$ of a GP $f$ on a mesh $x_*$ is a simple multivariate normal random variable, which can be endowed with a \code{logp} attribute. For reasons explained in Section~\ref{sec:step-methods}, every \code{GaussianProcess} is wrapped in a \code{GPSubmodel} container object along with a multivariate normal variable representing its evaluation on a constant mesh. The mesh does not affect the mathematical specification of the model (\emph{ie} the posterior), but does have a substantial effect on the performance of the MCMC algorithm.  
@@ -435,49 +621,89 @@ However, the evaluation $f(x_*)$ of a GP $f$ on a mesh $x_*$ is a simple multiva
 \subsection{Example: nonparametric regression with unknown mean and covariance parameters}\label{sub:BasicMCMC}
 
 A GP submodel is created in \code{pymc/examples/gp/PyMCmodel.py} with the following call:
+=======
+Because it allows any \proglang{Python} function to be used as a log-probability density/mass function or variable transformation, PyMC supports a very large model space. This package enlarges that model space to include Gaussian processes via the \code{GaussianProcess} object, which is a random variable whose value is a \code{Realization} object.
+
+Because a Gaussian process is an infinite-dimensional variable, it is not feasible to compute anything like a probability density function for it \footnote{A density with respect to a base measure could be used, but would introduce new complications. For example, Gaussian process measures with the Mat\`ern covariance function with different degrees of differentiability are not mutually continuous. \textbf{ref}}. \code{GaussianProcess}es therefore have no \code{logp} attribute, and \code{GaussianProcess}es cannot be handled by \pkg{PyMC}'s standard MCMC machinery. 
+
+However, the evaluation $f(x_*)$ of Gaussian process $f$ on mesh $x_*$ is a simple multivariate normal random variable, which has a \code{logp} attribute and can be handled by the standard machinery. If $f(x_*)$ is incorporated in the model as a variable, a minor extension to the standard machinery (implemented by this package) makes it possible to handle $f$ itself as well. Pairs of $f$ and $f(x_*)$ variables are housed in container objects of class \code{GPSubmodel}.
+
+\subsection{Example: nonparametric regression with unknown mean and covariance parameters}\label{sub:BasicMCMC}
+
+A Gaussian process submodel is created in \code{pymc/examples/gp/PyMCmodel.py} with the following call:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 sm = gp.GPSubmodel('sm',M,C,fmesh)
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 There are two stochastic variables in the submodel: \code{sm.f} and \code{sm.f_eval}. The first is the actual GP $f$: a stochastic variable valued as a \code{Realization} object. The second is $f(x_*)$, where $x_*$ is the constant input argument \code{fmesh}.
 
 Once the GP submodel has been created, other variables can depend on $f$ and $f(x_*)$ in any way that can be expressed in \proglang{Python} code. In \code{PyMCmodel.py}, the observation $d$ depends on $f(x_*)$ in a very standard way: 
+=======
+There are two stochastic variables in the submodel: \code{sm.f} and \code{sm.f_eval}. The first is the actual Gaussian process $f$: a stochastic variable valued as a \code{Realization} object. The second is $f(x_*)$, where $x_*$ is the input argument \code{fmesh}.
+
+Once the Gaussian process submodel has been created, other variables depend on $f$ and $f(x_*)$ in any way that can be expressed in \proglang{Python} code. In \code{\pkg{PyMC}model.py}, the observation $d$ depends on $f(x_*)$ in a very standard way: 
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 d = pymc.Normal('d',mu=sm.f_eval, tau=1./V, value=init_val, observed=True)
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 In Section~\ref{sec:duffy}, a \code{GaussianProcess}'s children depend on it in a nonstandard way. 
 
 % The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the conditional independence relationships between the variables in a GP submodel.
 
 The file \code{pymc/examples/gp/MCMC.py} fits the probability model specified in \code{\pkg{PyMC}model.py} using MCMC. The part of the file that actually dispatches the sampling loop is very simple:
+=======
+In section \textbf{ref}, a \code{GaussianProcess}'s children depend on it in a highly nonstandard way. 
+
+% The full probability model is shown as a directed acyclic graph in figure \ref{fig:unobservedModel}. It illustrates the conditional independence relationships between the variables in a GP submodel.
+
+The file \code{pymc/examples/gp/MCMC.py} fits the probability model created in \code{\pkg{PyMC}model.py} using MCMC. The part of the file that actually dispatches the MCMC is very simple:
+>>>>>>> gppaper
 \begin{CodeChunk}
 \begin{CodeInput}
 GPSampler = MCMC(PyMCmodel)
 GPSampler.isample(iter=5000,burn=1000,thin=100)    
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 The file's output is shown in Figure~\ref{fig:MCMCOutput}. After the MCMC loop has terminated, \\\code{GPSampler.trace('sm_f')[:]} yields a `dynamic trace' for \code{sm.f}. This is a sequence of \code{Realization} objects, which can be evaluated on new arrays for plotting. Traces for GP realizations can even be stored on disk via \pkg{PyTables} \citep{tables}, see \cite{pymc}.
+=======
+The file's output is shown in figure \ref{fig:MCMCOutput}. Note that after the MCMC run \code{GPSampler.trace('sm_f')[:]} yields a sequence of \code{Realization} objects, which can be evaluated on new arrays for plotting. GP realizations can even be tallied on disk using the HDF5 backend via \pkg{PyTables} \citep{tables}, see \cite{pymc}.
+>>>>>>> gppaper
 
 % \begin{figure}
 %     \centering
 %         \epsfig{file=figs/unobservedModel.pdf, width=15cm}
+<<<<<<< HEAD
 %     \caption{The \pkg{PyMC}-generated directed acyclic graph representation of the extended nonparametric regression model created by \code{pymc/examples/gp/PyMCModel.py}. Ellipses represent \code{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \code{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \code{Stochastic} objects with the \code{isdata} flag set to \code{True} (data). Rectangles represent potentials. Arrows point from parent to child. The submodel contains the GP \code{sm\_f} and its evaluation \code{sm\_f\_eval} on input array \code{sm\_mesh}. It also contains the mean \code{sm\_M\_eval} of \code{sm\_f\_eval} and the lower-triangular Cholesky factor \code{sm\_S\_eval} of its covariance matrix, and a potential \code{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \code{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
+=======
+%     \caption{The \pkg{PyMC}-generated directed acyclic graph representation of the extended nonparametric regression model created by \code{pymc/examples/gp/PyMCModel.py}. Ellipses represent \code{Stochastic} objects (variables whose values are unknown even if their parents' values are known), triangles represent \code{Deterministic} objects (variables whose values can be determined if their parents' values are known), and rectangles represent \code{Stochastic} objects with the \code{isdata} flag set to \code{True} (data). Rectangles represent potentials. Arrows point from parent to child. The submodel contains the Gaussian process \code{sm\_f} and its evaluation \code{sm\_f\_eval} on input array \code{sm\_mesh}. It also contains the mean \code{sm\_M\_eval} of \code{sm\_f\_eval} and the lower-triangular Cholesky factor \code{sm\_S\_eval} of its covariance matrix, and a potential \code{sm_fr_check} that forces that covariance matrix to remain positive definite. The actual covariance evaluation \code{sm\_C\_eval} is not needed by the model, but it is exposed for use by Gibbs step methods.}
+>>>>>>> gppaper
 %     \label{fig:unobservedModel}
 % \end{figure}
 
 \begin{figure}
     \centering
+<<<<<<< HEAD
         \epsfig{file=figs/gibbsSamples.pdf,width=10cm}
         % \epsfig{file=figs/metroSamples.pdf,width=10cm}
     \caption{The output of \code{pymc/examples/gp/MCMC.py}. The left-hand panel shows all the samples generated for the GP $f$, and the right-hand panel shows the trace of $f(0)$.}
+=======
+        \epsfig{file=figs/gibbsSamples.pdf,width=8cm}
+        % \epsfig{file=figs/metroSamples.pdf,width=10cm}
+    \caption{The output of \code{pymc/examples/gp/MCMC.py}. The left-hand panel shows all the samples generated for the Gaussian process $f$, and the right-hand panel shows the trace of $f(0)$.}
+>>>>>>> gppaper
     \label{fig:MCMCOutput}
 \end{figure}
  
 
 \section{Step methods}
+<<<<<<< HEAD
 \label{sec:step-methods}
 \pkg{PyMC} delegates the task of updating variables in MCMC loops to `step method' objects \citep{pymc}. The most common and familiar of these is \code{Metropolis}, which updates variables using the Metropolis-Hastings algorithm \citep{gamerman}. \code{Metropolis} and related step methods rely on the \code{logp} attributes (see Section~\ref{sec:gp-sub}) of the variables they handle to compute acceptance probabilities for proposed values. 
 
@@ -492,6 +718,20 @@ If a probability density function for $f$ were available, the Metropolis-Hasting
 where $q$ denotes the proposal density. Similarly, if a value were proposed for $f$ conditional on proposed values for the parents $P_p$ \emph{and} $f_p(x_*)$, the acceptance ratio would become
 \begin{eqnarray*}
     \frac{p(K|f_p)\ p(f_p|f(x_*), P_p)\ p(f(x_*) | P_p)\ p(P_p)\ q(f_p|f(x_*),f_p, P_p)\ q(P)}{p(K|f)\ p(f|f(x_*), P)\ p(f(x_*) | P)\ p(P)\ q(f_p|f(x_*),f,P)\ q(P_p)}
+=======
+\label{sec:step-methods} 
+Since $f$ has no \code{logp} attribute, the Metropolis-Hastings family of step methods \citep{pymc} cannot be used to update $f$, $f(x_*)$ or any of their mean or covariance parameters. This package uses a relatively simple work-around that will be described here. Throughout this section, the parents of $f$ are denoted $P$ and the children $K$.
+
+
+\subsection{Step methods that handle parents of Gaussian processes}
+If a probability density function for $f$ were available, the Metropolis-Hastings acceptance ratio for a proposed value $P_p$ of the parents \emph{and} a proposed value $\tilde f$ for $f$ would be:
+\begin{eqnarray*}
+    \frac{p(K|f_p)\ p(f_p|P_p)\ q(P)}{p(K|f)\ p(f|P)\ q(P_p)}
+\end{eqnarray*}
+where $q$ denotes the proposal density. Now, suppose we proposed a value for $f$ conditional on the proposed values for the parents $P$ \emph{and} $f(x_*)$. The new acceptance ratio would become
+\begin{eqnarray*}
+    \frac{p(K|f_p)\ p(f_p|f(x_*), P_p)\ p(f(x_*) | P_p)\ q(f_p|f(x_*),f_p, P_p)\ q(P)}{p(K|f)\ p(f|f(x_*), P)\ p(f(x_*) | P)\ q(f_p|f(x_*),f,P)\ q(P_p)}
+>>>>>>> gppaper
 \end{eqnarray*}
  The problematic terms are the ones with $f$ or $f_p$ in the consequent position:
 \begin{eqnarray*}
@@ -504,25 +744,45 @@ These can be made to cancel by choosing a proposal distribution as follows:
 In other words, if $f$ is proposed from its prior distribution conditional on $f(x_*)$ and its parents whenever $f(x_*)$ is proposed, the intractable terms don't have to be computed. This argument can be made more rigorous by replacing $f$ with its evaluation at all the points at which its value would ever be needed.
 
 \smallskip
+<<<<<<< HEAD
 To summarize, any Metropolis-Hastings step method can handle the parents of $f$ or $f(x_*)$, if it proposes values for $f$ jointly with its target variable as outlined above. This minor alteration in jumping strategy is implemented by the function \\\code{wrap_metropolis_for_gp_parents}, which takes a subclass of \code{Metropolis} as an argument and returns a new step method class with altered \code{propose} and \code{reject} methods. The function automatically produces modified versions of all Metropolis step methods implemented by \pkg{PyMC} \citep{pymc}. The modified step methods are automatically assigned to parents of GPs.
 
 \subsection{Choosing a mesh} 
 
 The mesh points $x_*$ are the points where Metropolis-Hastings step methods can `grab' the value of $f$ to moderate the variance of its proposal distribution. If $x_*$ is an empty array, $f$'s value will be proposed from its prior, and rejection rates are likely to be quite large. If $x_*$ is too dense, on the other hand, computation of the log-probability of $f(x_*)$ will be expensive, as its cost scales as the cube of the number of points in the mesh. This continuum is illustrated in Figure~ \ref{fig:meshpropose}. Finding the happy medium requires some experimentation.
+=======
+To summarize, any Metropolis-Hastings step method can handle the parents of $f$, as well as $f(x_*)$, if it proposes values for $f$ jointly with its target variable as outlined above. 
+
+This minor alteration in jumping strategy is implemented by the function \code{wrap_metropolis_for_gp_parents}, which takes a subclass of \code{Metropolis} as an argument and returns a new step method class with altered \code{propose} and \code{reject} methods. The function automatically produces modified versions of all Metropolis step methods in \pkg{PyMC}'s step method registry (\code{Metropolis}, \code{AdaptiveMetropolis}, etc.) \citep{pymc}. The modified step methods are automatically assigned to parents of Gaussian processes.
+
+\subsection{Choosing a mesh} 
+
+The mesh points $x_*$ are the points where Metropolis-Hastings step methods can `grab' the value of $f$ to moderate the variance of its proposal distribution. If $x_*$ is an empty array, $f$'s value will be proposed from its prior, and rejection rates are likely to be quite large. If $x_*$ is too dense, on the other hand, computation of the log-probability of $f(x_*)$ will be expensive, as it scales as the cube of the number of points in the mesh.This continuum is illustrated in figure \ref{fig:meshpropose}. Finding the happy medium requires some experimentation.
+>>>>>>> gppaper
 
 If $f$'s children depend on its value only via its evaluation on the mesh, the likelihood terms $p(K|f_p)$ and $p(K|f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(x_*))$ then the proposed value of $f$ will have no bearing on the acceptance probability of the proposed value of $f(x_*)$ or of the parents $P$. This is the situation in \code{\pkg{PyMC}Model.py}. Such a mesh choice will generally improve the acceptance rate.
 
 \begin{figure}
     \centering
+<<<<<<< HEAD
         \epsfig{file=figs/nomeshpropose.pdf,width=5cm}
         \epsfig{file=figs/lightmeshpropose.pdf,width=5cm}
         \epsfig{file=figs/densemeshpropose.pdf,width=5cm}
     \caption{Several possible proposals of $f$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (left), a sparse mesh (middle), and a dense mesh (right). Proposal distributions'  $\pm$ one standard deviation envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is proposed from its prior and the acceptance rate will usually be very low. A denser mesh permits a high degree of control over $f$ and hence better acceptance ratios, but computing the log-probability is more expensive.}
+=======
+        \epsfig{file=figs/nomeshpropose.pdf,width=4cm}
+        \epsfig{file=figs/lightmeshpropose.pdf,width=4cm}
+        \epsfig{file=figs/densemeshpropose.pdf,width=4cm}
+    \caption{Several possible proposals of $f$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions' envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is proposed from its prior and the acceptance rate will be very low. A denser mesh permits a high degree of control over $f$, but computing the log-probability will be more expensive.}
+>>>>>>> gppaper
     \label{fig:meshpropose}
 \end{figure}
 
 \subsection{Gibbs steps} 
+<<<<<<< HEAD
 \label{sec:gp-gibbs} 
+=======
+>>>>>>> gppaper
 If all of $f$'s children, $K$, depend on it as follows:
 \begin{eqnarray*}
     K_i|f \stackrel{\textup{\tiny ind}}{\sim} \textup{Normal}(f(x_{*i}),V_i)
@@ -534,6 +794,7 @@ GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, \
     GPSampler.V, GPSampler.d)
 \end{CodeInput}
 \end{CodeChunk}
+<<<<<<< HEAD
 The initialization arguments are the GP submodel that contains $f$, the observation variance of $f$'s children, and the children, in this case the vector-valued normal variable $d$. 
 
 \code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \code{AdaptiveMetropolis} \citep{pymc}, which implements the algorithm of Haario, Saksman and Tamminenn \citep{haario}.
@@ -699,6 +960,58 @@ Strenuous efforts at optimization have resulted in good performance for `standar
 However, there are many use cases for which this package cannot achieve performance on par with hand-optimized algorithms. For example, in many reversible-jump MCMC applications (e.g. \cite{gramacy}) the set of input locations under consideration changes as the MCMC progresses. It would be possible to create these models and start to fit them using this package, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm for reasons explained in Section~\ref{sec:step-methods}. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unmanageable amount of additional complexity.
 
 More tutorial material, as well as documentation of several additional features and the incomplete Cholesky decomposition algorithms, can be found in the full package documentation at \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{http://pymc.googlecode.com/files/GPUserGuide.pdf}.
+=======
+The initialization arguments are the Gaussian process submodel that contains $f$, the observation variance of $f$'s children, and the children, in this case the vector-valued normal variable $d$. 
+
+\code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will generally be handled by a wrapped version of \code{AdaptiveMetropolis} \citep{pymc}, which implements the algorithm of Haario, Saksman and Tamminenn \textbf{ref}.
+
+
+
+
+
+\section{Geostatistical example}\label{sub:geostat}
+\begin{figure}
+    \centering
+        \epsfig{file=figs/elevmean.pdf, width=5cm}
+        \epsfig{file=figs/elevvar.pdf, width=5cm}
+    \caption{The posterior mean and variance surfaces for the $v$ variable of the Walker lake example. The posterior variance is relatively small in the neighborhood of observations, but large in regions where no observations were made.}
+    \label{fig:walker}
+\end{figure}
+\begin{figure}
+    \centering
+        \epsfig{file=figs/elevdraw0.pdf, width=5cm}
+        \epsfig{file=figs/elevdraw1.pdf, width=5cm}
+    \caption{Two realizations from the posterior distribution of the $v$ surface for the Walker Lake example. Elevation is measured in meters.}
+    \label{fig:walkerreal}
+\end{figure}
+Bayesian geostatistics is demonstrated in the folder \code{pymc/examples/gp/more_examples/Geostatistics}. File \code{getdata.py} downloads the Walker Lake dataset of Isaaks and Srivastava \citep{isaaks} from the internet and manipulates the $x$ and $y$ coordinates into the array format described in section \ref{sec:highdim}. File \code{model.py} contains the geostatistical model specification, which is
+
+\begin{eqnarray*}
+    d|f \sim \textup{Normal}(f(x),V)\\
+    f|M,C \sim \textup{GP}(M,C) \\
+    M:x\rightarrow m\\
+    C:x,y,\mathtt{amp},\mathtt{scale},\mathtt{diff\_degree}\rightarrow \mathtt{matern.euclidean}(x,y;\mathtt{amp},\mathtt{scale},\mathtt{diff\_degree})\\
+    p(m)\propto 1\\
+    \mathtt{amp}\sim \textup{Exponential}(7e-5) \\
+    \mathtt{scale}\sim \textup{Exponential}(4e-3) \\
+    \mathtt{diff\_degree}\sim \textup{Uniform}(.5,2)\\ 
+    V\sim \textup{Exponential}(5e-9)\\
+\end{eqnarray*}
+
+File \code{mcmc.py} fits the model and produces output maps.  The output of \code{mcmc.py} is shown in figures \ref{fig:walker} and \ref{fig:walkerreal}. Figure \ref{fig:walker} shows the posterior mean and variance of the $v$ variable of the dataset, which is a function of elevation (see \cite{isaaks}, appendix A).
+
+\section{Conclusion}
+
+This package is built around the \code{Realization} object, which represents random mathematical functions as random \proglang{Python} functions. This is arguably the most natural and intuitive representation possible within the \proglang{Python} programming language, which itself is widely regarded as unusually human-friendly.
+
+This package inherits the flexibility of PyMC, as described in section \ref{sec:gp-sub}. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, and \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GaussianProcess} objects are function-valued random variables, this package supports construction of a wides variety of probability models that involve scalar-valued Gaussian processes. The Duffy negativity example in section \ref{sub:geostat} implements a probability model that is not a member of the generalized linear model family, whose nonstandard likelihood function involves transformations of two Gaussian processes. In keeping with the extensible spirit of PyMC, the package accomodates user-specified covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
+
+Strenuous efforts at optimization have resulted in good performance for `standard' Gaussian process-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian MCMC analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \code{NumPy}, which can be configured to make use of optimized, multithreaded BLAS and LAPACK \textbf{cite} implementations. 
+
+However, there are many use cases for which this package cannot achieve performance on par with hand-optimized algorithms. For example, the \code{mesh} attribute of \texttt{GPSubmodel} objects is fixed on creation, but in many reversible-jump MCMC applications (e.g. \cite{gramacy} and the toy example above) the set of input locations under consideration changes as the MCMC progresses. It would be possible to fit these models using \texttt{GPSubmodel}, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm for reasons explained in section \textbf{ref}. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unacceptable level of program complexity.
+
+More tutorial material, as well as documentation of several additional features and the incomplete Cholesky decomposition algorithms, can be found in the \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{package documentation}.
+>>>>>>> gppaper
 
 % \nocite{*}
 % \bibliographystyle{plain}v
