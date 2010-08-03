@@ -2609,14 +2609,11 @@ c
 !       END
       
       
-      
-c
       SUBROUTINE categorical(x,p,nx,np,k,like)
 
-c Multinomial log-likelihood function     
-c Updated 12/02/2007 DH. N-D still buggy.
-c Fixed 22/11/2007 CF
+c Categorical log-likelihood function     
 
+cf2py intent(in) x
 cf2py intent(in) p
 cf2py intent(hide) np,nx,k
 cf2py intent(out) like      
@@ -2631,32 +2628,34 @@ cf2py threadsafe
 
       sump = 0.0
       do i=1,k
-            p_tmp(i) = p(1,i)
-            sump = sump + p_tmp(i)
+        p_tmp(i) = p(1,i)
+        sump = sump + p_tmp(i)
       enddo
 
       like = 0.0
       do j=1,nx
         if (np .NE. 1) then
-              sump = 0.0
-              do i=1,k
-                    p_tmp(i) = p(j,i)
-                    sump = sump + p_tmp(i)
-              enddo
-!               print *,p_tmp
+          sump = 0.0
+          do i=1,k
+            p_tmp(i) = p(j,i)
+            sump = sump + p_tmp(i)
+          enddo
         endif
-        
-!         Protect against zero p[x]
+c       Protect against zero p[x]
         if (p_tmp(x(j)+1).LE.0.0D0) then
-            like = -infinity
-            RETURN
+          like = -infinity
+          RETURN
+        end if
+c       Category outside of set
+        if ((x(j) .GT. k-1) .OR. (x(j) .LT. 0)) then
+          like = -infinity
+          RETURN
         end if
         like = like + dlog(p_tmp(x(j)+1))
 
 c This is to account for the kth term that is not passed!
 c The kth term does get passed... we can check for consistency.
 c But roundoff error ofter triggers a false alarm.
-
          if ((sump .GT. 1.000001) .OR. (sump .LT. 0.999999)) then
              like=-infinity
              return

@@ -56,13 +56,17 @@ class ArgumentError(AttributeError):
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
-'weibull','skew_normal', 'truncated_normal', 'von_mises']
+'weibull', 'skew_normal', 'truncated_normal', 'von_mises']
 
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform', 'truncated_poisson']
+
+sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric', 'inverse_gamma', 'lognormal', 'weibull']
 
 mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
 mv_discrete_distributions = ['multivariate_hypergeometric','multinomial']
+
+mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart', 'wishart_cov', 'multivariate_hypergeometric', 'multinomial']
 
 
 availabledistributions = sc_continuous_distributions + sc_discrete_distributions + mv_continuous_distributions + mv_discrete_distributions

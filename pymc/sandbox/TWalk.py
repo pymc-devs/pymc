@@ -123,10 +123,11 @@ class TWalk(StepMethod):
         """
         The competence function for TWalk.
         """
-        if stochastic.dtype in integer_dtypes:
-            return 0
-        else:
+        if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
+            if np.alen(stochastic.value) >=10:
+                return 2
             return 1
+        return 0
     
     def walk(self):
         """Walk proposal kernel"""
