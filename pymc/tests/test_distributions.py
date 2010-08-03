@@ -14,7 +14,8 @@ For each distribution:
 #       Maybe compare the relative error (hist-like)/like. Doesn't work so well.
 #       Tried (hist-like)/sqrt(like), seems to work better.
 
-# FIXME no tests for categorical, discrete_uniform, negative_binomial, uniform.
+# FIXME no tests for discrete_uniform, negative_binomial, uniform.
+# TODO add tests for boundaries of distributions with restricted support
 
 #from decorators import *
 from pymc.distributions import *
@@ -388,6 +389,11 @@ class test_categorical(TestCase):
             compare_hist(figname='categorical', **figdata)
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
+        
+    def test_bounds(self):
+        """Check to make sure values outside support are -inf"""
+        assert categorical_like([-1], [[0.4,0.4,0.2]]) < -1e300
+        assert categorical_like([3], [[0.4,0.4,0.2]]) < -1e300
 
 class test_cauchy(TestCase):
     def test_consistency(self):
