@@ -390,10 +390,11 @@ class test_categorical(TestCase):
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
         
-    def test_bounds(self):
+    def test_support(self):
         """Check to make sure values outside support are -inf"""
         assert categorical_like([-1], [[0.4,0.4,0.2]]) < -1e300
         assert categorical_like([3], [[0.4,0.4,0.2]]) < -1e300
+        assert categorical_like([1.3], [[0.4,0.4,0.2]]) < -1e300
 
 class test_cauchy(TestCase):
     def test_consistency(self):

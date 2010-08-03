@@ -2613,10 +2613,12 @@ c
 
 c Categorical log-likelihood function     
 
-cf2py intent(in) x
-cf2py intent(in) p
-cf2py intent(hide) np,nx,k
-cf2py intent(out) like      
+cf2py integer dimension(nx), intent(in) :: x
+cf2py double precision dimension(np,k), intent(in) :: p
+cf2py integer intent(hide), depend(p) :: np=shape(p, 1)
+cf2py integer intent(hide), depend(x) :: nx=len(x)
+cf2py integer intent(hide), depend(p) :: k=shape(p, 1)
+cf2py double precision intent(out) :: like      
 cf2py threadsafe
 
       DOUBLE PRECISION like, factln, infinity, sump
