@@ -636,7 +636,7 @@ class Stochastic(StochasticBase):
             
             new_value = self.value.copy()
         
-            new_value[self.mask] = value[self.mask]
+            new_value[self.mask] = asanyarray(value, dtype=self.dtype)[self.mask]
             self._value = new_value
 
         self.counter.click()
