@@ -1601,6 +1601,8 @@ def multinomial_like(x, n, p):
        - :math:`E(X_i)=n p_i`
        - :math:`Var(X_i)=n p_i(1-p_i)`
        - :math:`Cov(X_i,X_j) = -n p_i p_j`
+       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf 
+       will be returned.
 
     """
 
