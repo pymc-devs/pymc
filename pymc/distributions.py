@@ -1079,7 +1079,7 @@ def gamma_expval(alpha, beta):
 
     Expected value of gamma distribution.
     """
-    return 1. * asarray(alpha) / beta
+    return 1. * np.asrray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
     R"""
@@ -1250,7 +1250,7 @@ def half_normal_expval(tau):
     Expected value of half normal distribution.
     """
 
-    return np.sqrt(2. * pi / asarray(tau))
+    return np.sqrt(2. * pi / np.asrray(tau))
 
 def half_normal_like(x, tau):
     R"""
@@ -1334,7 +1334,7 @@ def inverse_gamma_expval(alpha, beta):
 
     Expected value of inverse gamma distribution.
     """
-    return 1. * asarray(beta) / (alpha-1.)
+    return 1. * np.asrray(beta) / (alpha-1.)
 
 def inverse_gamma_like(x, alpha, beta):
     R"""
@@ -1572,7 +1572,7 @@ def multinomial_expval(n,p):
 
     Expected value of multinomial distribution.
     """
-    return asarray([pr * n for pr in p])
+    return np.asrray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
     R"""
