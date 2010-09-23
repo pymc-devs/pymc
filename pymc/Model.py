@@ -234,7 +234,7 @@ class Sampler(Model):
         """Reset the status and tell the database to finalize the traces."""
         if self.status in ['running', 'halt']:
             if self.verbose > 0:
-                print 'Sampling finished normally.'
+                print '\nSampling finished normally.'
             self.status = 'ready'
 
         self.save_state()
