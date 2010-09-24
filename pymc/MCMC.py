@@ -189,8 +189,8 @@ class MCMC(Sampler):
         self._tune_interval = int(tune_interval)
         self._tune_throughout = tune_throughout
         self._save_interval = save_interval
-
-        length = int(np.ceil((1.0*iter-burn)/thin))
+        
+        length = max(int(np.floor((1.0*iter-burn)/thin)), 1)
         self.max_trace_length = length
 
         # Flags for tuning
