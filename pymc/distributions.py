@@ -337,11 +337,11 @@ def randomwrap(func):
       >>> rbernoulli(.1)
       0
       >>> rbernoulli([.1,.9])
-      asarray([0, 1])
+      np.asarray([0, 1])
       >>> rbernoulli(.9, size=2)
-      asarray([1, 1])
+      np.asarray([1, 1])
       >>> rbernoulli([.1,.9], 2)
-      asarray([[0, 1],
+      np.asarray([[0, 1],
              [0, 1]])
     """
 
