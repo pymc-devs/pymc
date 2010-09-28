@@ -911,7 +911,7 @@ def var_str(name, shape):
     return names 
     
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05,  rhat=True, chain_spacing=0.05, vline_pos=0):
+def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, rhat=True, main=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
     
@@ -935,7 +935,12 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
             
         rhat (optional): bool
-            Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains (defaults to True).
+            Flag for plotting Gelman-Rubin statistics. Requires 2 or more 
+            chains (defaults to True).
+            
+        main (optional): string
+            Title for main plot. Passing False results in titles being 
+            suppressed; passing False (default) results in default titles.
             
         chain_spacing (optional): float
             Plot spacing between chains (defaults to 0.05).
@@ -947,6 +952,8 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     
     # Quantiles to be calculated
     quantiles = [100*alpha/2, 50, 100*(1-alpha/2)]
+    if quartiles:
+        quantiles = [100*alpha/2, 25, 50, 75, 100*(1-alpha/2)]
 
     # Range for x-axis
     plotrange = None
@@ -994,7 +1001,8 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         traces = []
         while True:
            try:
-               traces.append(pymc_obj.trace(varname, chain=i)[:])
+               #traces.append(pymc_obj.trace(varname, chain=i)[:])
+               traces.append(variable.trace(chain=i))
                i+=1
            except KeyError:
                break
@@ -1054,22 +1062,35 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                     # Y coordinate with jitter
                     y = -(var+i) + e[j]
                     
-                    # Plot median
-                    pyplot(q[1], y, 'bo')
+                    if quartiles:
+                        # Plot median
+                        pyplot(q[2], y, 'bo', markersize=4)
+                        # Plot quartile interval
+                        errorbar(x=(q[1],q[3]), y=(y,y), linewidth=2, color="blue")
+                        
+                    else:
+                        # Plot median
+                        pyplot(q[1], y, 'bo', markersize=4)
 
                     # Plot outer interval
-                    errorbar(x=(q[0],q[2]), y=(y,y), linewidth=1, color="blue")
+                    errorbar(x=(q[0],q[-1]), y=(y,y), linewidth=1, color="blue")
 
             else:
                 
                 # Y coordinate with jitter
                 y = -var + e[j]
                 
-                # Plot median
-                pyplot(quants[1], y, 'bo')
+                if quartiles:
+                    # Plot median
+                    pyplot(quants[2], y, 'bo', markersize=4)
+                    # Plot quartile interval
+                    errorbar(x=(quants[1],quants[3]), y=(y,y), linewidth=2, color="blue")
+                else:
+                    # Plot median
+                    pyplot(quants[1], y, 'bo', markersize=4)
                 
                 # Plot outer interval
-                errorbar(x=(quants[0],quants[2]), y=(y,y), linewidth=1, color="blue")
+                errorbar(x=(quants[0],quants[-1]), y=(y,y), linewidth=1, color="blue")
             
         # Increment index
         var += k
@@ -1084,7 +1105,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     ylabels = yticks([-(l+1) for l in range(len(labels))], labels)        
             
     # Add title
-    title(str(int((1-alpha)*100)) + "% Credible Intervals")
+    if main is not False:
+        plot_title = main or str(int((1-alpha)*100)) + "% Credible Intervals"
+        title(plot_title)
     
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
@@ -1099,7 +1122,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             spine.set_color('none') # don't draw spine
       
     # Reference line
-    axvline(vline_pos, color='0.5')  
+    axvline(vline_pos, color='k', linestyle='--')  
         
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
@@ -1109,17 +1132,23 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
         
-        title("R-hat")
+        if main is not False:
+            title("R-hat")
         
         # Set x range
         xlim(0.9,2.1)
         
         # X axis labels
-        xticks((1.0,1.5,2.0), ("1", "", "2+"))
+        xticks((1.0,1.5,2.0), ("1", "1.5", "2+"))
         yticks([-(l+1) for l in range(len(labels))], "")
         
         # Calculate diagnostic
-        R = gelman_rubin(pymc_obj)
+        try:
+            R = gelman_rubin(pymc_obj)
+        except ValueError:
+            R = {}
+            for variable in vars:
+                R[variable.__name__] = gelman_rubin(variable)
         
         i = 1
         for variable in vars:
