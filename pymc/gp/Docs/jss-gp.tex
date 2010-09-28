@@ -527,7 +527,7 @@ If all of $f$'s children, $K$, depend on it as follows:
 then $f(x_*)$ can be handled by the \code{GPEvaluationGibbs} step method. This step method is used in \code{MCMC.py}:
 \begin{CodeChunk}
 \begin{CodeInput}
-GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, \
+GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, \
     GPSampler.V, GPSampler.d)
 \end{CodeInput}
 \end{CodeChunk}
