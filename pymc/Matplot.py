@@ -1167,9 +1167,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             k = size(value)
             
             if k>1:
-                pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo')
+                pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo', markersize=4)
             else:
-                pyplot(min(R[varname], 2), -i, 'bo')
+                pyplot(min(R[varname], 2), -i, 'bo', markersize=4)
     
             i += k
             
