@@ -957,6 +957,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     # Gridspec
     gs = None
     
+    # Subplots
+    interval_plot = None
+    rhat_plot = None
+    
     try:
         # First try Model type
         vars = pymc_obj._variables_to_tally
@@ -1007,7 +1011,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                 gs = gridspec.GridSpec(1, 1)
                 
             # Subplot for confidence intervals
-            subplot(gs[0])
+            interval_plot = subplot(gs[0])
                 
         # Get quantiles
         data = [calc_quantiles(d, quantiles) for d in traces]
@@ -1081,9 +1085,21 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
     # Add title
     title(str(int((1-alpha)*100)) + "% Credible Intervals")
+    
+    # Remove ticklines on y-axes
+    for ticks in interval_plot.yaxis.get_major_ticks():
+        ticks.tick1On = False
+        ticks.tick2On = False
+    
+    for loc, spine in interval_plot.spines.iteritems():
+        if loc in ['bottom','top']:
+            pass
+            #spine.set_position(('outward',10)) # outward by 10 points
+        elif loc in ['left','right']:
+            spine.set_color('none') # don't draw spine
       
     # Reference line
-    axvline(vline_pos)  
+    axvline(vline_pos, color='0.5')  
         
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
@@ -1091,7 +1107,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         from diagnostics import gelman_rubin
         
         # If there are multiple chains, calculate R-hat
-        subplot(gs[1])
+        rhat_plot = subplot(gs[1])
         
         title("R-hat")
         
@@ -1130,5 +1146,17 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
         # Define range of y-axis
         ylim(-i+0.5, -0.5)
+        
+        # Remove ticklines on y-axes
+        for ticks in rhat_plot.yaxis.get_major_ticks():
+            ticks.tick1On = False
+            ticks.tick2On = False
+        
+        for loc, spine in rhat_plot.spines.iteritems():
+            if loc in ['bottom','top']:
+                pass
+                #spine.set_position(('outward',10)) # outward by 10 points
+            elif loc in ['left','right']:
+                spine.set_color('none') # don't draw spine
         
     savefig("%s%s%s.%s" % (path, name, suffix, format))                
