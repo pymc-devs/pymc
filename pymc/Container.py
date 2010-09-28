@@ -175,7 +175,7 @@ def file_items(container, iterable):
         if isinstance(item, Variable):
             container.variables.add(item)
             if isinstance(item, StochasticBase):
-                if item.observed or getattr(item, 'data', False):
+                if item.observed or not getattr(item, 'mask', None) is None:
                     container.observed_stochastics.add(item)                    
                 if not item.observed:
                     container.stochastics.add(item)

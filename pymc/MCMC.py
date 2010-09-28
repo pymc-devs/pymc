@@ -12,6 +12,8 @@ import sys, time, pdb
 import numpy as np
 from utils import crawl_dataless
 
+from progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
+
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
@@ -118,7 +120,7 @@ class MCMC(Sampler):
 
             # Assign dataless stepper first
             last_gen = set([])
-            for s in self.stochastics:
+            for s in self.stochastics - self.observed_stochastics:
                 if s._random is not None:
                     if len(s.extended_children)==0:
                         last_gen.add(s)
@@ -187,22 +189,29 @@ class MCMC(Sampler):
         self._tune_interval = int(tune_interval)
         self._tune_throughout = tune_throughout
         self._save_interval = save_interval
-
-        length = int(np.ceil((1.0*iter-burn)/thin))
+        
+        length = max(int(np.floor((1.0*iter-burn)/thin)), 1)
         self.max_trace_length = length
 
         # Flags for tuning
         self._tuning = True
         self._tuned_count = 0
+        
+        self.pbar = None
+        if not verbose:
+            widgets = ['Sampling: ', Percentage(), ' ',
+                       Bar(marker='0',left='[',right=']'),
+                       ' ', Iterations()]
+            self.pbar = ProgressBar(widgets=widgets, maxval=self._iter)
 
         Sampler.sample(self, iter, length, verbose)
 
     def _loop(self):
         # Set status flag
         self.status='running'
-
-        # Record start time
-        start = time.time()
+                   
+        if self.pbar:
+            self.pbar.start()
 
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
@@ -217,10 +226,8 @@ class MCMC(Sampler):
 
                 if i == self._burn:
                     if self.verbose>0:
-                        print 'Burn-in interval complete'
+                        print '\nBurn-in interval complete'
                     if not self._tune_throughout:
-                        if self.verbose > 0:
-                            print 'Stopping tuning due to burn-in being complete.'
                         self._tuning = False
 
                 # Tell all the step methods to take a step
@@ -237,23 +244,23 @@ class MCMC(Sampler):
                     if i % self._save_interval==0:
                         self.save_state()
 
-                if not i % 10000 and i and self.verbose > 0:
-                    per_step = (time.time() - start)/i
-                    remaining = self._iter - i
-                    time_left = remaining * per_step
-
-                    print "Iteration %i of %i (%i:%02d:%02d remaining)" % (i, self._iter, time_left/3600, (time_left%3600)/60, (time_left%60))
-
                 if not i % 1000:
                     self.commit()
 
                 self._current_iter += 1
+                
+                if self.pbar:
+                    self.pbar.update(i)
 
         except KeyboardInterrupt:
             self.status='halt'
+        finally:  
+            if self.pbar:  
+                self.pbar.finish()
 
         if self.status == 'halt':
             self._halt()
+            
 
     def tune(self):
         """
@@ -294,7 +301,7 @@ class MCMC(Sampler):
 
             # 5 consecutive clean intervals removed tuning
             if self._tuned_count == 5:
-                if self.verbose > 0: print 'Finished tuning'
+                if self.verbose > 0: print '\nFinished tuning'
                 self._tuning = False
 
 

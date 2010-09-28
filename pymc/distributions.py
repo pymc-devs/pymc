@@ -56,13 +56,17 @@ class ArgumentError(AttributeError):
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
 'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
-'weibull','skew_normal', 'truncated_normal', 'von_mises']
+'weibull', 'skew_normal', 'truncated_normal', 'von_mises']
 
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform', 'truncated_poisson']
+
+sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric', 'inverse_gamma', 'lognormal', 'weibull']
 
 mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
 
 mv_discrete_distributions = ['multivariate_hypergeometric','multinomial']
+
+mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart', 'wishart_cov', 'multivariate_hypergeometric', 'multinomial']
 
 
 availabledistributions = sc_continuous_distributions + sc_discrete_distributions + mv_continuous_distributions + mv_discrete_distributions
@@ -333,11 +337,11 @@ def randomwrap(func):
       >>> rbernoulli(.1)
       0
       >>> rbernoulli([.1,.9])
-      asarray([0, 1])
+      np.asarray([0, 1])
       >>> rbernoulli(.9, size=2)
-      asarray([1, 1])
+      np.asarray([1, 1])
       >>> rbernoulli([.1,.9], 2)
-      asarray([[0, 1],
+      np.asarray([[0, 1],
              [0, 1]])
     """
 
@@ -1075,7 +1079,7 @@ def gamma_expval(alpha, beta):
 
     Expected value of gamma distribution.
     """
-    return 1. * asarray(alpha) / beta
+    return 1. * np.asrray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
     R"""
@@ -1246,7 +1250,7 @@ def half_normal_expval(tau):
     Expected value of half normal distribution.
     """
 
-    return np.sqrt(2. * pi / asarray(tau))
+    return np.sqrt(2. * pi / np.asrray(tau))
 
 def half_normal_like(x, tau):
     R"""
@@ -1330,7 +1334,7 @@ def inverse_gamma_expval(alpha, beta):
 
     Expected value of inverse gamma distribution.
     """
-    return 1. * asarray(beta) / (alpha-1.)
+    return 1. * np.asrray(beta) / (alpha-1.)
 
 def inverse_gamma_like(x, alpha, beta):
     R"""
@@ -1568,7 +1572,7 @@ def multinomial_expval(n,p):
 
     Expected value of multinomial distribution.
     """
-    return asarray([pr * n for pr in p])
+    return np.asrray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
     R"""
@@ -1597,6 +1601,8 @@ def multinomial_like(x, n, p):
        - :math:`E(X_i)=n p_i`
        - :math:`Var(X_i)=n p_i(1-p_i)`
        - :math:`Cov(X_i,X_j) = -n p_i p_j`
+       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf 
+       will be returned.
 
     """
 

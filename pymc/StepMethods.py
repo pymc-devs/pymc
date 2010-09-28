@@ -988,6 +988,8 @@ class AdaptiveMetropolis(StepMethod):
             return 0
             # Algorithm is not well-suited to sparse datasets. Dont use if less than
             # 25 percent of values are nonzero
+        if not getattr(stochastic, 'mask', None) is None:
+            return 0
         if np.alen(stochastic.value) == 1:
             return 0
         elif np.alen(stochastic.value) < 5:
