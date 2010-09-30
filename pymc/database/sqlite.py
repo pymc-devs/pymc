@@ -49,7 +49,6 @@ class Trace(base.Trace):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
-
         # Determine size
         try:
             self._shape = np.shape(self._getfunc())
@@ -65,7 +64,7 @@ class Trace(base.Trace):
         # Create the variable name strings.
         vstr = ', '.join(v + ' FLOAT' for v in var_str(self._shape))
 
-        query = "create table %s (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
+        query = "create table [%s] (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
 
         self.db.cur.execute(query)
 
