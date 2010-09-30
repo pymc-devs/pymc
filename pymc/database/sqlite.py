@@ -86,7 +86,7 @@ class Trace(base.Trace):
 
 
         # Add value to database
-        query = "INSERT INTO %s (recid, trace, %s) values (NULL, %s, %s)" % \
+        query = "INSERT INTO [%s] (recid, trace, %s) values (NULL, %s, %s)" % \
             (self.name, self._vstr, chain, valstring)
         self.db.cur.execute(query)
 
@@ -114,7 +114,7 @@ class Trace(base.Trace):
             # Deal with negative chains (starting from the end)
             if chain < 0:
                 chain = range(self.db.chains)[chain]
-            self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
+            self.db.cur.execute('SELECT * FROM [%s] WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
         trace = np.array(trace)[:,2:]
         if len(self._shape) > 1:
@@ -131,7 +131,7 @@ class Trace(base.Trace):
             # Deal with negative chains (starting from the end)
             if chain < 0:
                 chain = range(self.db.chains)[chain]
-            self.db.cur.execute('SELECT * FROM %s WHERE trace=%s' % (self.name, chain))
+            self.db.cur.execute('SELECT * FROM [%s] WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
             
         trace = np.array(trace)[:,2:]
@@ -243,7 +243,7 @@ def load(dbname):
         db._traces[name] = Trace(name=name, db=db)
         db._traces[name]._shape = get_shape(db.cur, name)
         setattr(db, name, db._traces[name])
-        db.cur.execute('SELECT MAX(trace) FROM %s'%name)
+        db.cur.execute('SELECT MAX(trace) FROM [%s]'%name)
         chains = max(chains, db.cur.fetchall()[0][0]+1)
 
     db.chains=chains
