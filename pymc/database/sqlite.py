@@ -33,6 +33,7 @@ Added support for multidimensional arrays, DH Oct. 2009
 import numpy as np
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
+from sqlite3 import OperationalError
 import base, pickle, ram, pymc
 import pdb,os, warnings
 from pymc.database import base
@@ -41,38 +42,42 @@ __all__ = ['Trace', 'Database', 'load']
 
 class Trace(base.Trace):
     """SQLite Trace class."""
-
+    
     def _initialize(self, chain, length):
         """Create an SQL table.
         """
-
+        
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
-
+        
         # Determine size
         try:
             self._shape = np.shape(self._getfunc())
         except TypeError:
             self._shape = None
-
+        
         self._vstr = ', '.join(var_str(self._shape))
-
+        
         # If the table already exists, exit now.
         if chain != 0:
             return
-
+        
         # Create the variable name strings.
         vstr = ', '.join(v + ' FLOAT' for v in var_str(self._shape))
+        
+        try:
+            query = "create table [%s] (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
+        
+            self.db.cur.execute(query)
+        except OperationalError:
+            "Table already exists"
+            return
 
-        query = "create table [%s] (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
 
-        self.db.cur.execute(query)
-
-
-
+    
     def tally(self, chain):
         """Adds current value to trace."""
-
+        
         try:
             # I changed str(x) to '%f'%x to solve a bug appearing due to
             # locale settings. In french for instance, str prints a comma
@@ -84,17 +89,17 @@ class Trace(base.Trace):
         except:
             valstring = str(self._getfunc())
 
-
+        
         # Add value to database
         query = "INSERT INTO [%s] (recid, trace, %s) values (NULL, %s, %s)" % \
             (self.name, self._vstr, chain, valstring)
         self.db.cur.execute(query)
 
 
-
+    
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
-
+        
         Input:
           - burn (int): The number of transient steps to skip.
           - thin (int): Keep one in thin.
@@ -105,7 +110,7 @@ class Trace(base.Trace):
         # warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
         if not slicing:
             slicing = slice(burn, None, thin)
-
+        
         # If chain is None, get the data from all chains.
         if chain is None:
             self.db.cur.execute('SELECT * FROM %s' % self.name)
@@ -120,7 +125,7 @@ class Trace(base.Trace):
         if len(self._shape) > 1:
             trace = trace.reshape(-1, *self._shape)
         return squeeze(trace[slicing])
-
+    
     def __getitem__(self, index):
         chain = self._chain
         
@@ -133,7 +138,7 @@ class Trace(base.Trace):
                 chain = range(self.db.chains)[chain]
             self.db.cur.execute('SELECT * FROM [%s] WHERE trace=%s' % (self.name, chain))
             trace = self.db.cur.fetchall()
-            
+        
         trace = np.array(trace)[:,2:]
         if len(self._shape) > 1:
             trace = trace.reshape(-1, *self._shape)
@@ -142,7 +147,7 @@ class Trace(base.Trace):
         
         return trace[index]
 
-
+    
     __call__ = gettrace
 
 #    def nchains(self):
@@ -157,7 +162,7 @@ class Trace(base.Trace):
 #                return trace + 1
 #        except:
 #           return 0
-
+    
     def length(self, chain=-1):
         """Return the sample length of given chain. If chain is None,
         return the total length of all chains."""
@@ -166,10 +171,10 @@ class Trace(base.Trace):
 class Database(base.Database):
     """SQLite database.
     """
-
+    
     def __init__(self, dbname, dbmode='a'):
         """Open or create an SQL database.
-
+        
         :Parameters:
         dbname : string
           The name of the database file.
@@ -180,21 +185,21 @@ class Database(base.Database):
         self.__name__ = 'sqlite'
         self.dbname = dbname
         self.__Trace__ = Trace
-
+        
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
         self.chains = 0
 
         if os.path.exists(dbname) and dbmode=='w':
             os.remove(dbname)
-
+        
         self.DB = sqlite3.connect(dbname, check_same_thread=False)
         self.cur = self.DB.cursor()
-
+    
     def commit(self):
         """Commit updates to database"""
         self.DB.commit()
-
+    
     def close(self, *args, **kwds):
         """Close database."""
         self.cur.close()
@@ -216,12 +221,12 @@ class Database(base.Database):
 # a dictionary to and from a sqlite database. Unfortunately, I'm not familiar with
 # SQL enough to do that without having to read too much SQL documentation
 # for my taste.
-
+    
     def savestate(self, state):
         """Store a dictionnary containing the state of the Sampler and its
         StepMethods."""
         pass
-
+    
     def getstate(self):
         """Return a dictionary containing the state of the Sampler and its
         StepMethods."""
@@ -229,14 +234,14 @@ class Database(base.Database):
 
 def load(dbname):
     """Load an existing SQLite database.
-
+    
     Return a Database instance.
     """
     db = Database(dbname)
-
+    
     # Get the name of the objects
     tables = get_table_list(db.cur)
-
+    
     # Create a Trace instance for each object
     chains = 0
     for name in tables:
@@ -245,7 +250,7 @@ def load(dbname):
         setattr(db, name, db._traces[name])
         db.cur.execute('SELECT MAX(trace) FROM [%s]'%name)
         chains = max(chains, db.cur.fetchall()[0][0]+1)
-
+    
     db.chains=chains
     db.trace_names = chains * [tables,]
     db._state_ = {}
@@ -272,18 +277,18 @@ def get_shape(cursor, name):
 
 def var_str(shape):
     """Return a sequence of strings naming the element of the tallyable object.
-
+    
     :Examples:
     >>> var_str((5,))
     ['v1', 'v2', 'v3', 'v4', 'v5']
-
+    
     >>> var_str((2,2))
     ['v1_1', 'v1_2', 'v2_1', 'v2_2']
     """
-
+    
     if shape in [None, ()]:
         return ['v1',]
-
+    
     size = np.prod(shape)
     indices = (np.indices(shape) + 1).reshape(-1, size)
     return ['v'+'_'.join(map(str, i)) for i in zip(*indices)]
