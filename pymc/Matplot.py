@@ -6,7 +6,10 @@ from __future__ import division
 
 # Import matplotlib functions
 import matplotlib
-import matplotlib.gridspec as gridspec
+try:
+    import matplotlib.gridspec as gridspec
+except ImportError:
+    gridspec = None
 import pymc
 import os
 from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig
@@ -949,6 +952,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             Location of vertical reference line (defaults to 0).
     
     """
+    
+    if not gridspec:
+        print '\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.'
+        return
     
     # Quantiles to be calculated
     quantiles = [100*alpha/2, 50, 100*(1-alpha/2)]
