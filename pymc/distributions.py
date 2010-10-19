@@ -33,7 +33,7 @@ import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, Deterministic
 from CommonDeterministics import Lambda
-from numpy import pi
+from numpy import pi, inf
 import pdb
 import utils
 import warnings
@@ -801,7 +801,13 @@ def categorical_like(x, p):
       - `x` : [int] :math:`x \in 0\ldots k-1`
       - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
     """
+
     p = np.atleast_2d(p)
+    if any(np.sum(p, 1)!=1):
+        print "Probabilities may not sum to unity:", p
+    if np.array(x).dtype != int:
+        print "Non-integer values in categorical_like"
+        return -inf
     return flib.categorical(x, p)
 
 

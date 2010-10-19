@@ -2487,37 +2487,37 @@ cf2py threadsafe
       return
       end
 
-        double precision function uniform()
-c
-c    Generate uniformly distributed random numbers using the 32-bit
-c    generator from figure 3 of:
-c    L`Ecuyer, P. Efficient and portable combined random number
-c    generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
-c
-c    The cycle length is claimed to be 2.30584E+18
-c
-c    Seeds can be set by calling the routine set_uniform
-c
-c    It is assumed that the Fortran compiler supports long variable
-c    names, and integer*4.
-c
-        integer*4 z, k, s1, s2
-        common /unif_seeds/ s1, s2
-        save /unif_seeds/
-c
-        k = s1 / 53668
-        s1 = 40014 * (s1 - k * 53668) - k * 12211
-        if (s1 .lt. 0) s1 = s1 + 2147483563
-c
-        k = s2 / 52774
-        s2 = 40692 * (s2 - k * 52774) - k * 3791
-        if (s2 .lt. 0) s2 = s2 + 2147483399
-c
-        if (z .lt. 1) z = z + 2147483562
-c
-        uniform = z / 2147483563.
-        return
-        end
+!         double precision function uniform()
+! c
+! c    Generate uniformly distributed random numbers using the 32-bit
+! c    generator from figure 3 of:
+! c    L`Ecuyer, P. Efficient and portable combined random number
+! c    generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
+! c
+! c    The cycle length is claimed to be 2.30584E+18
+! c
+! c    Seeds can be set by calling the routine set_uniform
+! c
+! c    It is assumed that the Fortran compiler supports long variable
+! c    names, and integer*4.
+! c
+!         integer*4 z, k, s1, s2
+!         common /unif_seeds/ s1, s2
+!         save /unif_seeds/
+! c
+!         k = s1 / 53668
+!         s1 = 40014 * (s1 - k * 53668) - k * 12211
+!         if (s1 .lt. 0) s1 = s1 + 2147483563
+! c
+!         k = s2 / 52774
+!         s2 = 40692 * (s2 - k * 52774) - k * 3791
+!         if (s2 .lt. 0) s2 = s2 + 2147483399
+! c
+!         if (z .lt. 1) z = z + 2147483562
+! c
+!         uniform = z / 2147483563.
+!         return
+!         end
 
 
         subroutine set_uniform(seed1, seed2)
@@ -2615,7 +2615,7 @@ c Categorical log-likelihood function
 
 cf2py integer dimension(nx), intent(in) :: x
 cf2py double precision dimension(np,k), intent(in) :: p
-cf2py integer intent(hide), depend(p) :: np=shape(p, 1)
+cf2py integer intent(hide), depend(p) :: np=shape(p, 0)
 cf2py integer intent(hide), depend(x) :: nx=len(x)
 cf2py integer intent(hide), depend(p) :: k=shape(p, 1)
 cf2py double precision intent(out) :: like      
@@ -2626,7 +2626,6 @@ cf2py threadsafe
       INTEGER i,j,n_tmp
       INTEGER x(nx)
       PARAMETER (infinity = 1.7976931348623157d308)
-
 
       sump = 0.0
       do i=1,k
@@ -2654,14 +2653,6 @@ c       Category outside of set
           RETURN
         end if
         like = like + dlog(p_tmp(x(j)+1))
-
-c This is to account for the kth term that is not passed!
-c The kth term does get passed... we can check for consistency.
-c But roundoff error ofter triggers a false alarm.
-         if ((sump .GT. 1.000001) .OR. (sump .LT. 0.999999)) then
-             like=-infinity
-             return
-         endif
 
       enddo
       RETURN
