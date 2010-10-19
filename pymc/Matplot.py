@@ -907,9 +907,9 @@ def var_str(name, shape):
     size = prod(shape)
     ind = (indices(shape) + 1).reshape(-1, size)
     names = ['['+','.join(map(str, i))+']' for i in zip(*ind)]
-    if len(name)>6:
+    if len(name)>12:
         name = '\n'.join(name.split('_'))
-        name += '\n'
+        #name += '\n'
     names[0] = '%s %s' % (name, names[0])
     return names 
     
@@ -1101,6 +1101,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
         # Increment index
         var += k
+        
+    # Update margins
+    left_margin = max([len(x) for x in labels])*0.015
+    gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
         
     # Define range of y-axis
     ylim(-var+0.5, -0.5)
