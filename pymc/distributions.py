@@ -123,7 +123,7 @@ def new_dist_class(*new_class_args):
 
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
-    
+
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
             parents=parents_default
@@ -254,9 +254,9 @@ def new_dist_class(*new_class_args):
     new_class.__doc__ = docstr
     new_class.mv = mv
     new_class.raw_fns = {'logp': logp, 'random': random}
-    
+
     return new_class
-    
+
 
 def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
@@ -964,17 +964,17 @@ def dirichlet_like(x, theta):
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-      x : (n, k-1) array 
-        Array of shape (n, k-1) where `n` is the number of samples 
-        and `k` the dimension. 
+      x : (n, k-1) array
+        Array of shape (n, k-1) where `n` is the number of samples
+        and `k` the dimension.
         :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
       theta : array
         An (n,k) or (1,k) array > 0.
-      
+
     .. note::
         Only the first `k-1` elements of `x` are expected. Can be used as a parent of Multinomial and Categorical
         nevertheless.
-      
+
 
     """
     x = np.atleast_2d(x)
@@ -1377,6 +1377,19 @@ def rinverse_wishart(n, Tau):
     flib.symmetrize(wi)
     return wi
 
+def rinverse_wishart_cov(n, C):
+    """
+    rinverse_wishart_cov(n, C)
+
+    Return an inverse Wishart random matrix.
+
+    n is the degrees of freedom.
+    C is a positive definite covariance matrix
+    """
+    wi = rwishart(n, np.asmatrix(C)).I
+    flib.symmetrize(wi)
+    return wi
+
 def inverse_wishart_expval(n, Tau):
     """
     inverse_wishart_expval(n, Tau)
@@ -1595,11 +1608,11 @@ def multinomial_like(x, n, p):
 
     :Parameters:
       x : (ns, k) int
-          Random variable indicating the number of time outcome i is 
+          Random variable indicating the number of time outcome i is
           observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
       n : int
           Number of trials.
-      p : (k,) 
+      p : (k,)
           Probability of each one of the different outcomes.
           :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
 
@@ -1607,7 +1620,7 @@ def multinomial_like(x, n, p):
        - :math:`E(X_i)=n p_i`
        - :math:`Var(X_i)=n p_i(1-p_i)`
        - :math:`Cov(X_i,X_j) = -n p_i p_j`
-       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf 
+       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf
        will be returned.
 
     """
@@ -1763,7 +1776,7 @@ def mv_normal_cov_like(x, mu, C):
     R"""
     mv_normal_cov_like(x, mu, C)
 
-    Multivariate normal log-likelihood parameterized by a covariance 
+    Multivariate normal log-likelihood parameterized by a covariance
     matrix.
 
     .. math::
@@ -1772,7 +1785,7 @@ def mv_normal_cov_like(x, mu, C):
     :Parameters:
       - `x` : (n,k)
       - `mu` : (k) Location parameter.
-      - `C` : (k,k) Positive definite covariance matrix. 
+      - `C` : (k,k) Positive definite covariance matrix.
 
     .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_chol_like`
     """
@@ -1937,7 +1950,7 @@ def normal_like(x, mu, tau):
     #     constrain(tau, lower=0)
     # except ZeroProbability:
     #     return -np.Inf
-    
+
     return flib.normal(x, mu, tau)
 
 # von Mises--------------------------------------------------
@@ -2815,13 +2828,13 @@ def Impute(name, dist_class, imputable, **parents):
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
-    
+
     dims = np.shape(imputable)
     masked_values = np.ravel(imputable)
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        
+
         mask = [v is None or np.isnan(v) for v in masked_values]
         # Generate masked array
         masked_values = np.ma.masked_array(masked_values, mask)
