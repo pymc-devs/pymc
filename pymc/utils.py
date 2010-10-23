@@ -7,28 +7,34 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential, ZeroProbability
+from PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
+                         ZeroProbability)
 import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
 from Node import logp_of_set
 
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
-    pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
-    zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr, \
-    diag, cov
+from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
+                   pi, asarray, ones, atleast_1d, iterable, linspace, diff,
+                   around, log10, zeros, arange, digitize, apply_along_axis,
+                   concatenate, bincount, sort, hsplit, argsort, inf, shape,
+                   ndim, swapaxes, ravel, transpose as tr, diag, cov)
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1',
+           'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
+           'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
+           'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len',
+           'log_difference', 'find_generations','crawl_dataless', 'logit',
+           'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
 
-symmetrize=flib.symmetrize
+symmetrize = flib.symmetrize
 
 def value(a):
     """
     Returns a.value if a is a Variable, or just a otherwise.
     """
-    if isinstance(a,Variable):
+    if isinstance(a, Variable):
         return a.value
     else:
         return a
@@ -492,10 +498,10 @@ def autocorr(x, lag=1):
     #     return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
     S = autocov(x, lag)
     return S[0,1]/sqrt(prod(diag(S)))
-    
+
 def autocov(x, lag=1):
     """
-    Sample autocovariance at specified lag. 
+    Sample autocovariance at specified lag.
     The autocovariance is a 2x2 matrix with the variances of
     x[:-lag] and x[lag:] in the diagonal and the autocovariance
     on the off-diagonal.

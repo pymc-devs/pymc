@@ -74,7 +74,7 @@ sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential',
 
 mv_continuous_distributions = ['dirichlet', 'inverse_wishart', 'mv_normal',
                                'mv_normal_cov', 'mv_normal_chol', 'wishart',
-                               'wishart_cov', 'inverse_wishart_cov']
+                               'wishart_cov', 'inverse_wishart_prec']
 
 mv_discrete_distributions = ['multivariate_hypergeometric', 'multinomial']
 
@@ -676,8 +676,8 @@ def beta_like(x, alpha, beta):
     R"""
     beta_like(x, alpha, beta)
 
-    Beta log-likelihood. The conjugate prior for the parameter :math:
-    `p` of the binomial distribution.
+    Beta log-likelihood. The conjugate prior for the parameter
+    :math:`p` of the binomial distribution.
 
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
@@ -774,8 +774,8 @@ def betabin_like(x, alpha, beta, n):
     betabin_like(x, alpha, beta)
 
     Beta-binomial log-likelihood. Equivalent to binomial random
-    variables with probabilities drawn from a :math:
-    `\texttt{Beta}(\alpha,\beta)` distribution.
+    variables with probabilities drawn from a
+    :math:`\texttt{Beta}(\alpha,\beta)` distribution.
 
     .. math::
         f(x \mid \alpha, \beta, n) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)} \frac{\Gamma(n+1)}{\Gamma(x+1)\Gamma(n-x+1)} \frac{\Gamma(\alpha + x)\Gamma(n+\beta-x)}{\Gamma(\alpha+\beta+n)}
@@ -1385,102 +1385,98 @@ def inverse_gamma_like(x, alpha, beta):
 
 # Inverse Wishart---------------------------------------------------
 
-def rinverse_wishart(n, Tau):
+def rinverse_wishart(n, Sigma):
     """
-    rinverse_wishart(n, Tau)
+    rinverse_wishart(n, Sigma)
 
     Return an inverse Wishart random matrix.
 
     n is the degrees of freedom.
-    Tau is a positive definite scale matrix.
+    Sigma is a positive definite scale matrix.
     """
-    wi = rwishart(n, np.asmatrix(Tau).I).I
+    wi = rwishart(n, np.asmatrix(Sigma).I).I
     flib.symmetrize(wi)
     return wi
 
-def inverse_wishart_expval(n, Tau):
+def inverse_wishart_expval(n, Sigma):
     """
-    inverse_wishart_expval(n, Tau)
+    inverse_wishart_expval(n, Sigma)
 
     :Parameters:
       - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite precision matrix
+      - `Sigma` : Symmetric and positive definite scale matrix
 
     Expected value of inverse Wishart distribution.
     """
-    return np.asarray(Tau)/(n-len(Tau)-1)
+    return np.asarray(Sigma)/(n-len(Sigma)-1)
 
-def inverse_wishart_like(X, n, Tau):
+def inverse_wishart_like(X, n, Sigma):
     R"""
-    inverse_wishart_like(X, n, Tau)
+    inverse_wishart_like(X, n, Sigma)
 
     Inverse Wishart log-likelihood. The inverse Wishart distribution
     is the conjugate prior for the covariance matrix of a multivariate
     normal distribution.
 
     .. math::
-        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}
+        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
+        \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
+        \right\}}{2^{nk/2} \Gamma_p(n/2)}
 
     where :math:`k` is the rank of X.
 
     :Parameters:
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite precision matrix
+      - `Sigma` : Symmetric and positive definite scale matrix
 
     .. note::
        Step method MatrixMetropolis will preserve the symmetry of
        Wishart variables.
 
     """
-    return flib.blas_inv_wishart(X,n,Tau)
+    return flib.blas_inv_wishart(X, n, Sigma)
 
-def rinverse_wishart_cov(n, C):
+def rinverse_wishart_prec(n, Tau):
     """
-    rinverse_wishart_cov(n, C)
+    rinverse_wishart_prec(n, Tau)
 
     Return an inverse Wishart random matrix.
 
     n is the degrees of freedom.
-    C is a positive definite covariance matrix
+    Tau is a positive definite precision matrix
     """
-    wi = rwishart(n, np.asmatrix(C)).I
+    wi = rwishart(n, np.asmatrix(Tau)).I
     flib.symmetrize(wi)
     return wi
 
-def inverse_wishart_cov_expval(X, n, C):
+def inverse_wishart_prec_expval(X, n, Tau):
     """
     inverse_wishart_expval(n, Tau)
-
-    For an alternative parameterization based on :math:`T=C^{-1}`, see
-    `inverse_wishart_expval`.
 
     :Parameters:
       - `n` : [int] Degrees of freedom (n > 0).
       - `Tau` : Symmetric and positive definite precision matrix
 
     Expected value of inverse Wishart distribution.
-    :Parameters:
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `C` : Symmetric and positive definite covariance matrix
     """
-    return inverse_wishart_like(X, n, inverse(C))
+    return inverse_wishart_like(X, n, inverse(Tau))
 
-def inverse_wishart_cov_like(X, n, C):
+def inverse_wishart_prec_like(X, n, Tau):
     """
-    inverse_wishart_cov_like(X, n, C)
+    inverse_wishart_prec_like(X, n, Tau)
 
     Inverse Wishart log-likelihood
 
-    For an alternative parameterization based on :math:`T=C^{-1}`, see
+    For an alternative parameterization based on :math:`C=Tau^{-1}`, see
     `inverse_wishart_like`.
 
     :Parameters:
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
-      - `C` : Symmetric and positive definite covariance matrix
+      - `Tau` : Symmetric and positive definite precision matrix
     """
-    return inverse_wishart_like(X, n, inverse(C))
+    return inverse_wishart_like(X, n, inverse(Tau))
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
@@ -1687,8 +1683,9 @@ def multinomial_like(x, n, p):
        will be returned.
 
     """
-
-    x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
+    # flib expects 2d arguments. Do we still want to support multiple p
+    # values along realizations ?
+    x = np.atleast_2d(x)
     p = np.atleast_2d(p)
 
     return flib.multinomial(x, n, p)
@@ -1706,9 +1703,11 @@ def rmultivariate_hypergeometric(n, m, size=None):
     urn = np.repeat(np.arange(N), m)
 
     if size:
-        draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]] for j in range(size)])
+        draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]]
+                         for j in range(size)])
 
-        r = [[np.sum(draw[j]==i) for i in range(len(m))] for j in range(size)]
+        r = [[np.sum(draw[j]==i) for i in range(len(m))]
+             for j in range(size)]
     else:
         draw = np.array([urn[i] for i in np.random.permutation(len(urn))[:n]])
 
@@ -2003,7 +2002,8 @@ def normal_like(x, mu, tau):
     :Parameters:
       - `x` : Input data.
       - `mu` : Mean of the distribution.
-      - `tau` : Precision of the distribution, which corresponds to :math:`1/\sigma^2` (tau > 0).
+      - `tau` : Precision of the distribution, which corresponds to
+        :math:`1/\sigma^2` (tau > 0).
 
     .. note::
        - :math:`E(X) = \mu`
@@ -2026,7 +2026,7 @@ def rvon_mises(mu, kappa, size=None):
     Random von Mises variates.
     """
     # TODO: Just return straight from numpy after release 1.3
-    return (np.random.mtrand.vonmises( mu, kappa, size) + np.pi)%(2.*np.pi)-np.pi
+    return (np.random.mtrand.vonmises(mu, kappa, size) + np.pi)%(2.*np.pi)-np.pi
 
 def von_mises_expval(mu, kappa):
     """
@@ -2125,7 +2125,8 @@ def rtruncated_poisson(mu, k, size=None):
     except TypeError, ValueError:
         # More than one mu
         k=np.array(k)-1
-        return np.transpose(np.array([rtruncated_poisson(x, i, size) for x,i in zip(mu, np.resize(k, np.size(mu)))]))
+        return np.array([rtruncated_poisson(x, i, size)
+                         for x,i in zip(mu, np.resize(k, np.size(mu)))]).T
 
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
@@ -2138,10 +2139,11 @@ def rtruncated_poisson(mu, k, size=None):
     while(len(rvs)<total_size):
 
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.squeeze(np.random.poisson(mu+m, (total_size*4, np.size(m))))
+        proposals = np.random.poisson(mu+m, (total_size*4, np.size(m))).squeeze()
 
         # Acceptance probability
-        a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
+        a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y))
+                          for y in proposals])
         a *= proposals > k
 
         # Uniform random variates
@@ -2213,7 +2215,13 @@ def truncated_normal_expval(mu, tau, a, b):
     """Expectation value of the truncated normal distribution.
 
     .. math::
-       E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma**2. """
+       E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where
+       T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi
+       \left(\frac{A-\mu}{\sigma}\right) and \varphi_1 =
+       \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 =
+       \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the
+       probability density function of a standard normal random
+       variable and tau is 1/sigma**2."""
     phia = np.exp(normal_like(a, mu, tau))
     phib = np.exp(normal_like(b, mu, tau))
     sigma = 1./np.sqrt(tau)
