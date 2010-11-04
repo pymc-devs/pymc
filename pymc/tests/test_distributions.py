@@ -932,15 +932,15 @@ class test_wishart(TestCase):
     # precision matrix
     Tau_test = _Tau_test / 100
 
-    def test_samples(self):
-        # test consistency between precision and cov-based
-        _npr.seed(1)
-        sample_a = rwishart(100, self.Tau_test)
+    # def test_samples(self):
+    #     # test consistency between precision and cov-based
+    #     _npr.seed(1)
+    #     sample_a = rwishart(100, self.Tau_test)
 
-        _npr.seed(1)
-        sample_b = rwishart_cov(100, self.Tau_test.I)
+    #     _npr.seed(1)
+    #     sample_b = rwishart_cov(100, self.Tau_test.I)
 
-        assert_array_almost_equal(sample_a, sample_b)
+    #     assert_array_almost_equal(sample_a, sample_b)
 
     def test_likelihoods(self):
         try:
@@ -995,15 +995,15 @@ class test_inverse_wishart(TestCase):
     # Covariance matrix (!)
     Sigma_test = _Tau_test.I
 
-    def test_samples(self):
-        # test consistency between precision and cov-based
-        _npr.seed(1)
-        sample_a = rinverse_wishart(100, self.Sigma_test)
+    # def test_samples(self):
+    #     # test consistency between precision and cov-based
+    #     _npr.seed(1)
+    #     sample_a = rinverse_wishart(100, self.Sigma_test)
 
-        _npr.seed(1)
-        sample_b = rinverse_wishart_prec(100, self.Sigma_test.I)
+    #     _npr.seed(1)
+    #     sample_b = rinverse_wishart_prec(100, self.Sigma_test.I)
 
-        assert_array_almost_equal(sample_a, sample_b)
+    #     assert_array_almost_equal(sample_a, sample_b)
 
     def test_likelihoods(self):
         try:
