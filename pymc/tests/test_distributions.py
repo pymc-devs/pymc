@@ -993,15 +993,15 @@ class test_inverse_wishart(TestCase):
     Adapted from test_wishart
     """
     # Covariance matrix (!)
-    Sigma_test = _Tau_test.I
+    C_test = _Tau_test.I
 
     # def test_samples(self):
     #     # test consistency between precision and cov-based
     #     _npr.seed(1)
-    #     sample_a = rinverse_wishart(100, self.Sigma_test)
+    #     sample_a = rinverse_wishart(100, self.C_test)
 
     #     _npr.seed(1)
-    #     sample_b = rinverse_wishart_prec(100, self.Sigma_test.I)
+    #     sample_b = rinverse_wishart_prec(100, self.C_test.I)
 
     #     assert_array_almost_equal(sample_a, sample_b)
 
@@ -1011,7 +1011,7 @@ class test_inverse_wishart(TestCase):
         except:
             raise nose.SkipTest, "SciPy not installed."
 
-        IW_test = rinverse_wishart(100,self.Sigma_test)
+        IW_test = rinverse_wishart(100,self.C_test)
 
         def slo_inv_wishart(W,n,V):
             p = W.shape[0]
@@ -1026,11 +1026,11 @@ class test_inverse_wishart(TestCase):
             return logp
 
         for i in [5,10,100,10000]:
-            right_answer = slo_inv_wishart(IW_test,i,self.Sigma_test)
-            calculated = inverse_wishart_like(IW_test,i,self.Sigma_test)
+            right_answer = slo_inv_wishart(IW_test,i,self.C_test)
+            calculated = inverse_wishart_like(IW_test,i,self.C_test)
             assert_array_almost_equal(calculated, right_answer, decimal=1)
 
-            calculated = inverse_wishart_prec_like(IW_test,i,self.Sigma_test.I)
+            calculated = inverse_wishart_prec_like(IW_test,i,self.C_test.I)
             assert_array_almost_equal(calculated, right_answer, decimal=1)
 
     """
@@ -1039,11 +1039,11 @@ class test_inverse_wishart(TestCase):
         n = 100
         N = 1000
 
-        A = 0.*self.Sigma_test
+        A = 0.*self.C_test
         for i in xrange(N):
-            A += rinverse_wishart(n,self.Sigma_test)
+            A += rinverse_wishart(n,self.C_test)
         A /= N
-        delta=A-inverse_wishart_expval(n,self.Sigma_test)
+        delta=A-inverse_wishart_expval(n,self.C_test)
         print np.abs(np.asarray(delta)/np.asarray(A)).max()
         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.5)
     """
