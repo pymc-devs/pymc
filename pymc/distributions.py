@@ -1385,34 +1385,34 @@ def inverse_gamma_like(x, alpha, beta):
 
 # Inverse Wishart---------------------------------------------------
 
-def rinverse_wishart(n, Sigma):
+def rinverse_wishart(n, C):
     """
-    rinverse_wishart(n, Sigma)
+    rinverse_wishart(n, C)
 
     Return an inverse Wishart random matrix.
 
     n is the degrees of freedom.
-    Sigma is a positive definite scale matrix.
+    C is a positive definite scale matrix.
     """
-    wi = rwishart(n, np.asmatrix(Sigma).I).I
+    wi = rwishart(n, np.asmatrix(C).I).I
     flib.symmetrize(wi)
     return wi
 
-def inverse_wishart_expval(n, Sigma):
+def inverse_wishart_expval(n, C):
     """
-    inverse_wishart_expval(n, Sigma)
+    inverse_wishart_expval(n, C)
 
     :Parameters:
       - `n` : [int] Degrees of freedom (n > 0).
-      - `Sigma` : Symmetric and positive definite scale matrix
+      - `C` : Symmetric and positive definite scale matrix
 
     Expected value of inverse Wishart distribution.
     """
-    return np.asarray(Sigma)/(n-len(Sigma)-1)
+    return np.asarray(C)/(n-len(C)-1)
 
-def inverse_wishart_like(X, n, Sigma):
+def inverse_wishart_like(X, n, C):
     R"""
-    inverse_wishart_like(X, n, Sigma)
+    inverse_wishart_like(X, n, C)
 
     Inverse Wishart log-likelihood. The inverse Wishart distribution
     is the conjugate prior for the covariance matrix of a multivariate
@@ -1428,14 +1428,14 @@ def inverse_wishart_like(X, n, Sigma):
     :Parameters:
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
-      - `Sigma` : Symmetric and positive definite scale matrix
+      - `C` : Symmetric and positive definite scale matrix
 
     .. note::
        Step method MatrixMetropolis will preserve the symmetry of
        Wishart variables.
 
     """
-    return flib.blas_inv_wishart(X, n, Sigma)
+    return flib.blas_inv_wishart(X, n, C)
 
 def rinverse_wishart_prec(n, Tau):
     """
@@ -2488,7 +2488,6 @@ def rwishart(n, Tau):
     A = flib.expand_triangular(chi_sqs, norms)
 
     flib.dtrsm_wrap(sig, A, side='L', uplo='L', transa='T')
-    # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
     w = np.asmatrix(np.dot(A,A.T))
     flib.symmetrize(w)
     return w
@@ -2538,29 +2537,28 @@ def rwishart_cov(n, C):
     """
     rwishart(n, C)
 
+    n is degrees of freedom, C is the 'covariance' matrix
+
     Return a Wishart random matrix.
     """
-    return rwishart(n, np.linalg.inv(C))
+    # return rwishart(n, np.linalg.inv(C))
 
-    # This code does *not* produce the same result as rwishart for
-    # identical random seed!
+    p = np.shape(C)[0]
+    # Need cholesky decomposition of precision matrix C^-1?
+    sig = np.linalg.cholesky(C)
 
-    # p = np.shape(C)[0]
-    # # Need cholesky decomposition of precision matrix C^-1?
-    # sig = np.linalg.cholesky(C)
+    if n<p:
+        raise ValueError('Wishart parameter n must be greater '
+                         'than size of matrix.')
 
-    # if n<p:
-    #     raise ValueError('Wishart parameter n must be greater '
-    #                      'than size of matrix.')
+    norms = np.random.normal(size=p*(p-1)/2)
+    chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
+    A = flib.expand_triangular(chi_sqs, norms)
 
-    # norms = np.random.normal(size=p*(p-1)/2)
-    # chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
-    # A = flib.expand_triangular(chi_sqs, norms)
-
-    # flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N')
-    # w = np.asmatrix(np.dot(A,A.T))
-    # flib.symmetrize(w)
-    # return w
+    flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N')
+    w = np.asmatrix(np.dot(A,A.T))
+    flib.symmetrize(w)
+    return w
 
 def wishart_cov_expval(n, C):
     """
