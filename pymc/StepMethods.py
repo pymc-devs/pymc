@@ -426,7 +426,7 @@ class Metropolis(StepMethod):
 
         if self.verbose>1:
             print self._id + ' proposing.'
-
+            
         # Sample a candidate value
         self.propose()
 
@@ -494,7 +494,7 @@ class Metropolis(StepMethod):
         if self.proposal_distribution is "Normal" (i.e. no proposal specified).
         """
         if self.proposal_distribution == "Normal":
-            self.stochastic.value = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd)
+            self.stochastic.value = rnormal(self.stochastic.value, self.adaptive_scale_factor * self.proposal_sd, size=self.stochastic.value.shape)
         elif self.proposal_distribution == "Prior":
             self.stochastic.random()
 
@@ -984,21 +984,21 @@ class AdaptiveMetropolis(StepMethod):
         The AM algorithm is well suited to deal with multivariate
         parameters.
         """
-        if not stochastic.dtype in float_dtypes and not stochastic.dtype in integer_dtypes:
-            return 0
-            # Algorithm is not well-suited to sparse datasets. Dont use if less than
-            # 25 percent of values are nonzero
-        if not getattr(stochastic, 'mask', None) is None:
-            return 0
-        if np.alen(stochastic.value) == 1:
-            return 0
-        elif np.alen(stochastic.value) < 5:
-            return 2
-        elif (len(stochastic.value.nonzero()[0]) > 0.25*len(stochastic.value)):
-            return 2
-        else:
-            return 0
-
+        # if not stochastic.dtype in float_dtypes and not stochastic.dtype in integer_dtypes:
+        #             return 0
+        #             # Algorithm is not well-suited to sparse datasets. Dont use if less than
+        #             # 25 percent of values are nonzero
+        #         if not getattr(stochastic, 'mask', None) is None:
+        #             return 0
+        #         if np.alen(stochastic.value) == 1:
+        #             return 0
+        #         elif np.alen(stochastic.value) < 5:
+        #             return 2
+        #         elif (len(stochastic.value.nonzero()[0]) > 0.25*len(stochastic.value)):
+        #             return 2
+        #         else:
+        #             return 0
+        return 0
                 
     def cov_from_value(self, scaling):
         """Return a covariance matrix for the jump distribution using 
