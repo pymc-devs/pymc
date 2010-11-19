@@ -450,11 +450,10 @@ cf2py integer intent(in), optional :: cmax=-1
 cf2py intent(inplace) C
 cf2py intent(hide) nx, ny, Bk
 cf2py logical intent(in), optional:: symm=0
-cf2py double precision intent(in),check(origin_val>0)::origin_val
 
       DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
       DOUBLE PRECISION hx(nx), hy(ny)
-      DOUBLE PRECISION origin_val
+      DOUBLE PRECISION origin_val(nx,ny)
       DOUBLE PRECISION rem, dd_here, far
       DOUBLE PRECISION GA, prefac, snu
       INTEGER nx, ny, i, j, fl, N, cmin, cmax
@@ -491,16 +490,16 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
 
 
             if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=origin_val / dd_here
+              C(i,j)=origin_val(i,j) / dd_here
             else
               if (dd_here .GT. 5.0D0) then
-                  C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                  C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
                   goto 1
               endif      
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
-              prefac = prefac * origin_val
+              prefac = prefac * origin_val(i,j)
               snu = DSQRT(dd_here) * 2.0D0
               fl = INT(dd_here)
               rem = dd_here - fl
@@ -540,16 +539,16 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
             end if            
             
             if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=origin_val / dd_here
+              C(i,j)=origin_val(i,j) / dd_here
             else
               if (dd_here .GT. 5.0D0) then
-                C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
                 goto 2
               endif      
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
-              prefac = prefac * origin_val
+              prefac = prefac * origin_val(i,j)
               snu = DSQRT(dd_here) * 2.0D0
               fl = INT(dd_here)
               rem = dd_here - fl
