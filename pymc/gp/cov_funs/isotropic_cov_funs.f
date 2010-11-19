@@ -441,7 +441,7 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
 
 c
       SUBROUTINE nsst
-     *(C,Gt,origin_val,ddx,ddy,hx,hy,
+     *(C,Gt,origin_val,hx,hy,
      * Bk,cmin,cmax,nx,ny,symm)
 
 cf2py threadsafe
@@ -453,7 +453,7 @@ cf2py logical intent(in), optional:: symm=0
 cf2py double precision intent(in),check(origin_val>0)::origin_val
 
       DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
-      DOUBLE PRECISION ddx(nx), hx(nx), ddy(ny), hy(ny)
+      DOUBLE PRECISION hx(nx), hy(ny)
       DOUBLE PRECISION origin_val
       DOUBLE PRECISION rem, dd_here, far
       DOUBLE PRECISION GA, prefac, snu
@@ -481,7 +481,7 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
-            dd_here=Gt(i,j)+(ddx(i)+ddy(j))*0.5D0
+            dd_here=Gt(i,j)
             
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
@@ -531,7 +531,7 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
-            dd_here=Gt(i,j)+(ddx(i)+ddy(j))*0.5D0
+            dd_here=Gt(i,j)
             
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
