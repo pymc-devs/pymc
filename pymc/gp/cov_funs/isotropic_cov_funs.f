@@ -305,6 +305,275 @@ cf2py threadsafe
       RETURN
       END
 
+
+      SUBROUTINE stein_spatiotemporal
+     *(C,Gt,origin_val,Bk,
+     * cmin,cmax,nx,ny,symm)
+
+cf2py threadsafe
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py intent(inplace) C
+cf2py intent(hide) nx, ny, Bk
+cf2py logical intent(in), optional:: symm=0
+cf2py double precision intent(in),check(origin_val>0)::origin_val
+
+      DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
+      DOUBLE PRECISION origin_val
+      DOUBLE PRECISION rem, dd_here, far
+      DOUBLE PRECISION GA, prefac, snu
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax
+      DOUBLE PRECISION BK(50), DGAMMA
+      LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+      
+      if (symm) then           
+       
+        do j=cmin+1,cmax
+          
+          C(j,j) = 1.0D0
+          
+          do i=1,j-1
+                        
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
+            else
+                far = infinity
+            end if
+
+
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=origin_val / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                  C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                  goto 1
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N = fl
+              
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
+
+            endif
+    1 continue        
+!     1       C(j,i)=C(i,j)
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+              
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
+            else
+                far = infinity
+            end if            
+            
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=origin_val / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                goto 2
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N=fl
+              
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
+            endif
+    2     enddo
+        enddo
+      endif     
+
+
+      RETURN
+      END
+
+c
+      SUBROUTINE nsst
+     *(C,Gt,origin_val,ddx,ddy,hx,hy,
+     * Bk,cmin,cmax,nx,ny,symm)
+
+cf2py threadsafe
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py intent(inplace) C
+cf2py intent(hide) nx, ny, Bk
+cf2py logical intent(in), optional:: symm=0
+cf2py double precision intent(in),check(origin_val>0)::origin_val
+
+      DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
+      DOUBLE PRECISION ddx(nx), hx(nx), ddy(ny), hy(ny)
+      DOUBLE PRECISION origin_val
+      DOUBLE PRECISION rem, dd_here, far
+      DOUBLE PRECISION GA, prefac, snu
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax
+      DOUBLE PRECISION BK(50), DGAMMA
+      LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+      
+      if (symm) then           
+       
+        do j=cmin+1,cmax
+          
+          C(j,j) = hx(j)*hy(j)
+          
+          do i=1,j-1
+                        
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)+(ddx(i)+ddy(j))*0.5D0
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
+            else
+                far = infinity
+            end if
+
+
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=origin_val / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                  C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                  goto 1
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N = fl
+              
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
+
+            endif
+    1 continue        
+!     1       C(j,i)=C(i,j)
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+              
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)+(ddx(i)+ddy(j))*0.5D0
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
+            else
+                far = infinity
+            end if            
+            
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=origin_val / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
+                goto 2
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N=fl
+              
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
+            endif
+    2     enddo
+        enddo
+      endif     
+
+
+      RETURN
+      END
+
             
       SUBROUTINE gaussian(C,nx,ny,cmin,cmax,symm)
 
