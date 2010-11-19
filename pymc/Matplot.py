@@ -22,7 +22,7 @@ from pprint import pformat
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
-from numpy import append, ones, dtype, indices, array
+from numpy import append, ones, dtype, indices, array, unique
 from utils import autocorr as _autocorr, quantiles as calc_quantiles
 import pdb
 from scipy import special
@@ -436,7 +436,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         subplot(rows, columns, num)
 
         #Specify number of bins (10 as default)
-        nbins = nbins or int(4 + 1.5*log(len(data)))
+        uniquevals = len(unique(simdata))
+        nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(simdata)))
 
         # Generate histogram
         hist(data.tolist(), nbins)
@@ -580,7 +581,7 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
 
 def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
-    
+
     try:
         if ndim(simdata)==1:
             simdata = simdata.trace()
@@ -600,7 +601,8 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     figure()
 
     #Specify number of bins (10 as default)
-    nbins = nbins or int(4 + 1.5*log(len(simdata)))
+    uniquevals = len(unique(simdata))
+    nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(simdata)))
 
     # Generate histogram
     hist(simdata, nbins)
@@ -907,9 +909,9 @@ def var_str(name, shape):
     size = prod(shape)
     ind = (indices(shape) + 1).reshape(-1, size)
     names = ['['+','.join(map(str, i))+']' for i in zip(*ind)]
-    if len(name)>6:
-        name = '\n'.join(name.split('_'))
-        name += '\n'
+    # if len(name)>12:
+    #     name = '\n'.join(name.split('_'))
+    #     name += '\n'
     names[0] = '%s %s' % (name, names[0])
     return names 
     
@@ -1101,6 +1103,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
         # Increment index
         var += k
+        
+    # Update margins
+    left_margin = max([len(x) for x in labels])*0.015
+    gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
         
     # Define range of y-axis
     ylim(-var+0.5, -0.5)
