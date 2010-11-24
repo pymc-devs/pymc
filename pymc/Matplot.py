@@ -436,8 +436,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         subplot(rows, columns, num)
 
         #Specify number of bins (10 as default)
-        uniquevals = len(unique(simdata))
-        nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(simdata)))
+        uniquevals = len(unique(data))
+        nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
 
         # Generate histogram
         hist(data.tolist(), nbins)
@@ -1013,7 +1013,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                #traces.append(pymc_obj.trace(varname, chain=i)[:])
                traces.append(variable.trace(chain=i))
                i+=1
-           except KeyError:
+           except (KeyError, IndexError):
                break
                
         chains = len(traces)
@@ -1055,7 +1055,8 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             names = var_str(varname, shape(value))
             labels += names
         else:
-            labels.append('\n'.join(varname.split('_')))
+            labels.append(varname)
+            #labels.append('\n'.join(varname.split('_')))
             
         # Add spacing for each chain, if more than one
         e = [0] + [(chain_spacing * ((i+2)/2))*(-1)**i for i in range(chains-1)]
