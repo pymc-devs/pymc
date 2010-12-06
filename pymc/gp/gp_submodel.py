@@ -125,7 +125,7 @@ class GPSubmodel(pm.ObjectContainer):
     :SeeAlso: GaussianProcess, Realization, GPEvaluation
     """
     
-    def __init__(self, name, M, C, mesh, init_vals=None, obs_on_mesh=False, tally_M=False, tally_C=False, tally_f=False, tally_all=False):
+    def __init__(self, name, M, C, mesh, init_vals=None, obs_on_mesh=False, tally_M=False, tally_C=False, tally_f=True, tally_all=False):
         
         if isinstance(mesh, pm.Variable):
             mesh = pm.Lambda('%s_mesh'%name, lambda mesh=mesh: pm.gp.regularize_array(mesh), trace=False)
@@ -169,7 +169,7 @@ class GPSubmodel(pm.ObjectContainer):
                 return 0
         fr_check=fr_check
         
-        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True, observed=obs_on_mesh, 
+        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=tally_f or tally_all, observed=obs_on_mesh, 
             doc="The evaluation %s.f(%s.mesh).\nThis is a multivariate normal variable with mean %s.M_eval and covariance %s.C_eval."%(name,name,name,name))
         
         @pm.deterministic(trace=tally_all or tally_M, name='%s_M_obs'%name)
