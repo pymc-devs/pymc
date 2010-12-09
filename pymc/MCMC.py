@@ -345,10 +345,14 @@ class MCMC(Sampler):
         for stochastic in self.stochastics:
 
             # Calculate mean of paramter
-            mean_value = np.mean(stochastic.trace(), axis=0)
+            try:
+                mean_value = np.mean(self.db.trace(stochastic.__name__)(), axis=0)
 
-            # Set current value to mean
-            stochastic.value = mean_value
+                # Set current value to mean
+                stochastic.value = mean_value
+                
+            except KeyError:
+                print "No trace available for %s. DIC value may not be valid." % stochastic.__name__
 
         # Return twice deviance minus deviance at means
         return 2*mean_deviance - self.deviance
