@@ -2798,12 +2798,12 @@ Docstring of categorical_like (case where P is a Dirichlet):
     parent_names = ['p', 'minval', 'step']
 
     def __init__(self, name, p, value=None, dtype=np.int, observed=False,
-                 size=1, trace=True, rseed=False, cache_depth=2, plot=None,
+                 size=None, trace=True, rseed=False, cache_depth=2, plot=None,
                  verbose=None,**kwds):
 
         if value is not None:
             if np.isscalar(value):
-                self.size = 1
+                self.size = None
             else:
                 self.size = len(value)
         else:
