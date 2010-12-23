@@ -425,7 +425,7 @@ def randomwrap(func):
                 return np.vstack(r)
         else:
             if size > 1 and vec_stochastics:
-                return np.atleast_2d(r).transpose()
+                return np.atleast_2d(r).T
             elif vec_stochastics or size > 1:
                 return np.concatenate(r)
             else: # Scalar case
@@ -959,7 +959,7 @@ def rdirichlet(theta, size=1):
     """
     gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
-        return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
+        return (gammas.T/gammas.sum(1))[:-1].T
     elif np.size(theta)>1:
         return (gammas[0]/gammas[0].sum())[:-1]
     else:

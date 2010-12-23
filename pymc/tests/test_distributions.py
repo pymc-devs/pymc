@@ -439,7 +439,7 @@ class test_dirichlet(TestCase):
         s = theta.sum()
         m = r.mean(0)
         m = np.append(m, 1-sum(m))
-        cov_ex = np.cov(np.append(r.transpose(), 1.-sum(r.transpose(),0)))
+        cov_ex = np.cov(np.append(r.T, 1.-sum(r.T,0)))
 
         # Theoretical mean
         M = theta/s
