@@ -12,3 +12,4 @@ docs/database.tex
 develop
 testresults/*
 sphinxdoc/build/*
+*.tmproj

@@ -425,7 +425,7 @@ def randomwrap(func):
                 return np.vstack(r)
         else:
             if size > 1 and vec_stochastics:
-                return np.atleast_2d(r).transpose()
+                return np.atleast_2d(r).T
             elif vec_stochastics or size > 1:
                 return np.concatenate(r)
             else: # Scalar case
@@ -959,7 +959,7 @@ def rdirichlet(theta, size=1):
     """
     gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
-        return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
+        return (gammas.T/gammas.sum(1))[:-1].T
     elif np.size(theta)>1:
         return (gammas[0]/gammas[0].sum())[:-1]
     else:
@@ -2798,12 +2798,12 @@ Docstring of categorical_like (case where P is a Dirichlet):
     parent_names = ['p', 'minval', 'step']
 
     def __init__(self, name, p, value=None, dtype=np.int, observed=False,
-                 size=1, trace=True, rseed=False, cache_depth=2, plot=None,
+                 size=None, trace=True, rseed=False, cache_depth=2, plot=None,
                  verbose=None,**kwds):
 
         if value is not None:
             if np.isscalar(value):
-                self.size = 1
+                self.size = None
             else:
                 self.size = len(value)
         else:

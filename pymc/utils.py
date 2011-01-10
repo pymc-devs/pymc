@@ -19,7 +19,7 @@ from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    pi, asarray, ones, atleast_1d, iterable, linspace, diff,
                    around, log10, zeros, arange, digitize, apply_along_axis,
                    concatenate, bincount, sort, hsplit, argsort, inf, shape,
-                   ndim, swapaxes, ravel, transpose as tr, diag, cov)
+                   ndim, swapaxes, ravel, diag, cov)
 
 __all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1',
            'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
@@ -682,7 +682,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     # For multivariate node
     if x.ndim>1:
         # Transpose first, then sort, then transpose back
-        sx = tr(sort(tr(x)))
+        sx = sort(x.T).T
     else:
         # Sort univariate node
         sx = sort(x)
