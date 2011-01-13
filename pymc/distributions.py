@@ -2057,6 +2057,96 @@ def von_mises_like(x, mu, kappa):
 
     """
     return flib.vonmises(x, mu, kappa)
+    
+# Pareto---------------------------------------------------
+@randomwrap
+def rpareto(alpha, m, size=None):
+    """
+    rpareto(alpha, m, size=1)
+    
+    Random Pareto variates.
+    """
+    return m / (random_number(size)**(1./alpha))
+    
+def pareto_expval(alpha, m):
+    """
+    pareto_expval(alpha, m)
+    
+    Expected value of Pareto distribution.
+    """
+    
+    if alpha <= 1:
+        return inf
+    return alpha*m/(alpha-1)
+    
+def pareto_like(x, alpha, m):
+    R"""
+    pareto_like(x,mu)
+
+    Pareto log-likelihood. The Pareto is a continuous, positive 
+    probability distribution with two parameters. It is often used
+    to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    .. math::
+        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
+
+    :Parameters:
+      - `x` : Input data (x > m)
+      - `alpha` : Shape parameter (alpha>0)
+      - `m` : Scale parameter (m>0)
+
+    .. note::
+       - :math:`E(x)=\frac{\alpha m}{\alpha-1} if \alpha > 1`
+       - :math:`Var(x)=\frac{m^2 \alpha}{(\alpha-1)^2(\alpha-2)} if \alpha > 2`
+    """
+    return flib.pareto(x, alpha, m)
+    
+# Truncated Pareto---------------------------------------------------
+@randomwrap
+def rtruncated_pareto(alpha, m, b, size=None):
+    """
+    rtruncated_pareto(alpha, m, b, size=1)
+    
+    Random bounded Pareto variates.
+    """
+    u = random_number(size)
+    return (-(u*b**alpha - u*m**alpha - b**alpha)/(b**alpha * m**alpha))**(-1./alpha)
+    
+def truncated_pareto_expval(alpha, m, b):
+    """
+    truncated_pareto_expval(alpha, m, b)
+    
+    Expected value of truncated Pareto distribution.
+    """
+    
+    if alpha <= 1:
+        return inf
+    part1 = (m**alpha)/(1 - (m/b)**alpha)
+    part2 = alpha/(alpha-1)
+    part3 = (1/(m**(alpha-1)) - 1/(b**(alpha-1)))
+    return part1*part2*part3
+    
+def truncated_pareto_like(x, alpha, m, b):
+    R"""
+    truncated_pareto_like(x,mu,b)
+
+    Truncated Pareto log-likelihood. The Pareto is a continuous, positive 
+    probability distribution with two parameters. It is often used
+    to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    .. math::
+        f(x \mid \alpha, m, b) = \frac{\alpha m^{\alpha} x^{-\alpha}}{1-(m/b)**{\alpha}}
+
+    :Parameters:
+      - `x` : Input data (x > m)
+      - `alpha` : Shape parameter (alpha>0)
+      - `m` : Scale parameter (m>0)
+      - `b` : Upper bound (b>m)
+
+    """
+    return flib.truncated_pareto(x, alpha, m, b)
 
 # Poisson--------------------------------------------------
 @randomwrap

@@ -3239,3 +3239,100 @@ cf2py threadsafe
       enddo
       return
       END
+
+
+      SUBROUTINE pareto(x,alpha,m,n,nalpha,nm,like)
+
+c Pareto log-likelihood function      
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nm),intent(in) :: m
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha,n),check(nalpha==1||nalpha==n) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(m,n),check(nm==1||nm==n) :: nm=len(m)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nalpha,nm
+      DOUBLE PRECISION like
+      DOUBLE PRECISION tmp
+      DOUBLE PRECISION x(n),m(nm),alpha(nalpha)
+      DOUBLE PRECISION m_tmp, alpha_tmp
+      LOGICAL not_scalar_m, not_scalar_alpha
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      DOUBLE PRECISION i0
+
+      not_scalar_m = (nm .NE. 1)
+      not_scalar_alpha = (nalpha .NE. 1)
+
+      m_tmp = m(1)
+      alpha_tmp = alpha(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_m) m_tmp=m(i)
+        if (not_scalar_alpha) alpha_tmp=alpha(i)
+        if ((alpha_tmp .LE. 0.0) .OR. (m_tmp .LE. 0.0) .OR. 
+     +(x(i) .LT. m_tmp)) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + dlog(alpha_tmp) + alpha_tmp*dlog(m_tmp)
+        like = like - (alpha_tmp + 1)*dlog(x(i))
+      enddo
+      return
+      END
+
+      SUBROUTINE truncated_pareto(x,alpha,m,b,n,nalpha,nm,nb,like)
+
+c Truncated Pareto log-likelihood function      
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nm),intent(in) :: m
+cf2py double precision dimension(nb),intent(in) :: b
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha,n),check(nalpha==1||nalpha==n) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(m,n),check(nm==1||nm==n) :: nm=len(m)
+cf2py integer intent(hide),depend(b,n),check(nb==1||nb==n) :: nb=len(b)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nalpha,nm,nb
+      DOUBLE PRECISION like
+      DOUBLE PRECISION tmp
+      DOUBLE PRECISION x(n),m(nm),alpha(nalpha),b(nb)
+      DOUBLE PRECISION m_tmp, alpha_tmp, b_tmp
+      LOGICAL not_scalar_m, not_scalar_alpha, not_scalar_b
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      DOUBLE PRECISION i0
+
+      not_scalar_m = (nm .NE. 1)
+      not_scalar_alpha = (nalpha .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      m_tmp = m(1)
+      alpha_tmp = alpha(1)
+      b_tmp = b(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_m) m_tmp=m(i)
+        if (not_scalar_alpha) alpha_tmp=alpha(i)
+        if (not_scalar_b) b_tmp=b(i)
+        if ((alpha_tmp .LE. 0.0) .OR. (m_tmp .LE. 0.0) .OR. 
+     +(x(i) .LT. m_tmp) .OR. (b_tmp .LT. x(i))) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + dlog(alpha_tmp) + alpha_tmp*dlog(m_tmp)
+        like = like - (alpha_tmp + 1)*dlog(x(i))
+        like = like - dlog(1 - (m_tmp/b_tmp)**alpha_tmp)
+      enddo
+      return
+      END
