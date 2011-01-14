@@ -59,7 +59,8 @@ sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
-                               'lognormal', 'normal', 't', 'uniform',
+                               'lognormal', 'normal', 'pareto', 't', 
+                               'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 
