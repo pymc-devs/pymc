@@ -15,7 +15,7 @@ _accumulation_deterministics = ['sum']#['sum', 'prod']
 
 
 #transformations (broadcasted)
-_generic = ['abs', 'exp', 'log', 'sqrt','expm1', 'log1p]
+_generic = ['abs', 'exp', 'log', 'sqrt','expm1', 'log1p']
 _trig = ['sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan']
 _hyp_trig = ['sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh']
 _transformation_deterministics = _generic + _trig + _hyp_trig

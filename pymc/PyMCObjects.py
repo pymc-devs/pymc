@@ -437,6 +437,21 @@ class Deterministic(DeterministicBase):
 
     value = property(fget = get_value, fset=set_value, doc="Self's value computed from current values of parents.")
 
+    def apply_jacobian(self, parameter, variable, gradient):
+        try :
+            jacobian_func = self._jacobians[parameter]
+        except KeyError:
+            raise NotImplementedError(repr(self) + " has no jacobian function for parameter " + parameter)
+        
+        jacobian = jacobian_func.get()
+        
+        
+        mapping = self._jacobian_formats.get(parameter, 'full')
+
+            
+        return self._format_mapping[mapping](self, variable, jacobian, gradient)
+    
+        
     def logp_partial_gradient(self, variable, calculation_set = None):
         """
         gets the logp gradient of this deterministic with respect to variable
@@ -446,8 +461,6 @@ class Deterministic(DeterministicBase):
 
         if not (variable.dtype in float_dtypes and self.dtype in float_dtypes):
                 return zeros(shape(variable.value))
-            
-        #gradient = 0
 
         # loop through all the parameters and add up all the gradients of log p with respect to the approrpiate variable
         gradient = __builtin__.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children ])
@@ -455,19 +468,8 @@ class Deterministic(DeterministicBase):
         totalGradient = 0
         for parameter, value in self.parents.iteritems():
             if value is variable:
-
-                try :
-                    jacobian_func = self._jacobians[parameter]
-                except KeyError:
-                    raise NotImplementedError(repr(self) + " has no jacobian function for parameter " + parameter)
-                
-                jacobian = jacobian_func.get()
-                
-                
-                mapping = self._jacobian_formats.get(parameter, 'full')
-
                     
-                totalGradient += self._format_mapping[mapping](self, variable, jacobian, gradient)
+                totalGradient += self.apply_gradient(parameter, variable, gradient )
 
         return np.reshape(totalGradient, shape(variable.value))
         
@@ -478,12 +480,12 @@ class Deterministic(DeterministicBase):
     def transformation_operation_jacobian(self, variable, jacobian, gradient):
         return jacobian * gradient
     
-    _bog_history = {}
+    _BO_history = {}
     def broadcast_operation_jacobian(self, variable, jacobian, gradient):
         
         tgradient = jacobian * gradient
         try :
-            axes, lx = self._bog_history[id(variable)]
+            axes, lx = self._BO_history[id(variable)]
         except KeyError: 
             sshape = array(shape(self.value))
             vshape = zeros(sshape.size)
@@ -491,7 +493,7 @@ class Deterministic(DeterministicBase):
             axes = np.where(sshape != vshape)
             lx = size(axes)
             
-            self._bog_history[id(variable)] = (axes, lx )
+            self._BO_history[id(variable)] = (axes, lx )
             
         if lx > 0:
             return np.apply_over_axes(np.sum, tgradient, axes)   
@@ -506,7 +508,6 @@ class Deterministic(DeterministicBase):
         return gradient * jacobian
         
     def index_operation_jacobian(self, variable, jacobian, gradient):
-        #index = jacobian
         derivative = zeros(variable.shape)
         derivative[jacobian] = gradient
         return derivative 

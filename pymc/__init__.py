@@ -10,7 +10,7 @@ Required external components: TclTk
 
 """
 
-__version__ = '2.1alpha'
+__version__ = '2.2grad'
 
 try:
     import numpy
