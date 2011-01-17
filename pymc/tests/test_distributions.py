@@ -796,6 +796,38 @@ class test_von_mises(TestCase):
         assert_equal(a,b)
         assert_equal(b,c)
 
+class test_pareto(TestCase):
+    def test_consistency(self):
+        parameters=dict(alpha=5, m = 3)
+        hist, like, figdata = consistency(rpareto, flib.pareto, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='Pareto', **figdata)
+        assert_array_almost_equal(hist, like, 1)
+
+    def test_vectorization(self):
+        a = flib.pareto([3,4,5], alpha=3, m=1)
+        b = flib.pareto([3,4,5], alpha=[3,3,3], m=1)
+        c = flib.pareto([3,4,5], alpha=[3,3,3], m=[1,1,1])
+        assert_equal(a,b)
+        assert_equal(b,c)
+        
+class test_truncated_pareto(TestCase):
+    def test_consistency(self):
+        parameters=dict(alpha=5, m = 3, b=5)
+        hist, like, figdata = consistency(rtruncated_pareto, flib.truncated_pareto, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='Truncated Pareto', **figdata)
+        assert_array_almost_equal(hist, like, 1)
+
+    def test_vectorization(self):
+        a = flib.truncated_pareto([3,4,5], alpha=3, m=1, b=6)
+        b = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=1, b=6)
+        c = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=[1,1,1], b=[6,6,6])
+        assert_equal(a,b)
+        assert_equal(b,c)
+
 class test_poisson(TestCase):
     def test_consistency(self):
         parameters = {'mu':2.}
