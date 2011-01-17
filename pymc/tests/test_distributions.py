@@ -802,7 +802,7 @@ class test_pareto(TestCase):
         hist, like, figdata = consistency(rpareto, flib.pareto, parameters,\
             nrandom=5000)
         if PLOT:
-            compare_hist(figname='Pareto', **figdata)
+            compare_hist(figname='pareto', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):
@@ -818,7 +818,7 @@ class test_truncated_pareto(TestCase):
         hist, like, figdata = consistency(rtruncated_pareto, flib.truncated_pareto, parameters,\
             nrandom=5000)
         if PLOT:
-            compare_hist(figname='Truncated Pareto', **figdata)
+            compare_hist(figname='truncated_pareto', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):

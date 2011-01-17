@@ -2282,23 +2282,72 @@ def truncated_poisson_like(x,mu,k):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a, b, size=None):
+def rtruncated_normal(mu, tau, a=None, b=None, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
-    Random truncated normal variates.
+    Random truncated normal variates using method from Robert (1995).
     """
-    sigma = 1./np.sqrt(tau)
 
-    na = pymc.utils.normcdf((a-mu)/sigma)
-    nb = pymc.utils.normcdf((b-mu)/sigma)
+    factor = 10
+    sign = 1.0
 
-    # Use the inverse CDF generation method.
-    U = np.random.mtrand.uniform(size=size)
-    q = U * nb + (1-U)*na
-    R = pymc.utils.invcdf(q)
+    while True:
 
-    # Unnormalize
-    return R*sigma + mu
+        if a is None and b is None:
+            raise ValueError, 'No truncation boundary given.'
+
+        elif a is None or b is None:
+            # One-sided truncation
+            
+            if a is None:
+                # See top of p.123 in Robert (1995)
+                a = -b
+                mu = -mu
+                sign = -1.0
+            
+            # Algorithm is in terms of standard normal
+            a = np.sqrt(tau) * (a - mu)
+            
+            # Parameter of exponential proposal
+            beta = (a + np.sqrt(a**2 + 4))/2.0
+            # Sample from exponential
+            z = np.random.exponential(1./beta, size*factor) + a
+
+            if a<beta:
+
+                x = np.exp(-0.5 * (beta - z)**2)
+
+            else:
+                
+                x = np.exp(0.5 * (a - beta)**2) * np.exp(-(beta - z)**2)
+
+        else:
+            # Two-sided truncation
+
+            # Algorithm is in terms of standard normal
+            a = np.sqrt(tau) * (a - mu)
+            b = np.sqrt(tau) * (b - mu)
+
+            # Sample z ~ U(a,b)
+            z = (b - a) * random_number(size*factor) + a
+            
+            if a<=0<=b:
+                x = np.exp(-0.5 * z**2)
+            elif b<0:
+                x = np.exp(0.5 * (b**2 - z**2))
+            else:
+                x = np.exp(0.5 * (a**2 - z**2))
+
+        # Accept-reject
+        u = random_number(size*factor)
+        y = sign * (z[u <= x] / np.sqrt(tau) + mu)
+
+        # Return <size> samples
+        if len(y) >= size:
+            return y[:size]
+        else:
+            # Get a larger sample next time
+            factor *=10
 
 rtruncnorm = rtruncated_normal
 
