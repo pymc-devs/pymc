@@ -19,7 +19,7 @@ from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    pi, asarray, ones, atleast_1d, iterable, linspace, diff,
                    around, log10, zeros, arange, digitize, apply_along_axis,
                    concatenate, bincount, sort, hsplit, argsort, inf, shape,
-                   ndim, swapaxes, ravel, diag, cov)
+                   ndim, swapaxes, ravel, diag, cov, transpose as tr)
 
 __all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1',
            'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
@@ -434,6 +434,11 @@ def normcdf(x):
     """Normal cumulative density function."""
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+    
+def lognormcdf(x, mu, tau):
+    """Log-normal cumulative density function"""
+    x = np.atleast_1d(x)
+    return np.array([0.5*(1-flib.derf(-(np.sqrt(tau/2))*(np.log(y)-mu))) for y in x])
 
 def invcdf(x):
     """Inverse of normal cumulative density function."""
