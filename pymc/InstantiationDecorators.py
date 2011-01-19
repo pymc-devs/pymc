@@ -146,12 +146,7 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     """
 
     def instantiate_p(__func__):
-        value, parents = _extract(__func__, kwds, keys, 'Stochastic')
-        v2 = kwds.pop('value',None)
-        if v2 is not None:
-            if value is not None:
-                raise TypeError, 'Multiple starting values provided.'
-            value = v2
+        value, parents = _extract(__func__, kwds, keys, 'Stochastic') 
         return __class__(value=value, parents=parents, **kwds)
 
     keys = ['logp','random','rseed']
