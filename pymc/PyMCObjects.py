@@ -14,8 +14,7 @@ from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import sys
 import pdb
 
-from numpy import single, float_, longfloat
-float_dtypes = [float, single, float_, longfloat]
+import datatypes
 
 d_neg_inf = float(-1.7976931348623157e+308)
 
@@ -309,11 +308,11 @@ class Potential(PotentialBase):
 
     logp = property(fget = get_logp, fset=set_logp, doc="Self's log-probability value conditional on parents.")
     
-    def logp_partial_gradient(self, calculation_set = None):
+    def logp_partial_gradient(self, variable, calculation_set = None):
         gradient = 0
         if self in calculation_set:
-            
-            if not (variable.dtype in float_dtypes):
+
+            if not datatypes.is_continuous(variable):
                 return zeros(shape(variable.value))
             
             for parameter, value in self.parents.iteritems():
@@ -459,7 +458,7 @@ class Deterministic(DeterministicBase):
         if self.verbose > 0:
             print '\t' + self.__name__ + ': logp_partial_gradient accessed.'
 
-        if not (variable.dtype in float_dtypes and self.dtype in float_dtypes):
+        if not (datatypes.is_continuous(variable) and datatypes.is_continuous(self)):
                 return zeros(shape(variable.value))
 
         # loop through all the parameters and add up all the gradients of log p with respect to the approrpiate variable
@@ -838,7 +837,7 @@ class Stochastic(StochasticBase):
         if (calculation_set is None) or (self in calculation_set):
             
             #is there better way to make sure the variable is continuous?
-            if not (variable.dtype in float_dtypes):
+            if not datatypes.is_continuous(variable):
                 return zeros(shape(variable.value))
             
             if variable is self:
