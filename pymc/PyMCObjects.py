@@ -469,7 +469,7 @@ class Deterministic(DeterministicBase):
         for parameter, value in self.parents.iteritems():
             if value is variable:
                     
-                totalGradient += self.apply_gradient(parameter, variable, gradient )
+                totalGradient += self.apply_jacobian(parameter, variable, gradient )
 
         return np.reshape(totalGradient, shape(variable.value))
         
