@@ -56,12 +56,13 @@ class Trace(ram.Trace):
         """
         path = os.path.join(self.db._directory, self.db.get_chains()[chain], self.name+'.txt')
         arr = self.gettrace(chain=chain)
-        f = open(path, 'w')
-        print >> f, '# Variable: %s' % self.name
-        print >> f, '# Sample shape: %s' % str(arr.shape)
-        print >> f, '# Date: %s' % datetime.datetime.now()
-        np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
-        f.close()
+        
+        with open(path, 'w') as f:
+            print >> f, '# Variable: %s' % self.name
+            print >> f, '# Sample shape: %s' % str(arr.shape)
+            print >> f, '# Date: %s' % datetime.datetime.now()
+            np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
+            f.close()
 
 class Database(base.Database):
     """Txt Database class."""
@@ -118,9 +119,9 @@ class Database(base.Database):
         oldstate = np.get_printoptions()
         np.set_printoptions(threshold=1e6)
         try:
-            file = open(os.path.join(self._directory, 'state.txt'), 'w')
-            print >> file, state
-            file.close()
+            with open(os.path.join(self._directory, 'state.txt'), 'w') as f:
+                print >> f, state
+                f.close()
         finally:
             np.set_printoptions(**oldstate)
 
@@ -145,9 +146,10 @@ def load(dirname):
             if not data.has_key(name):
                 data[name] = {} # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
             # Read the shape information
-            f = open(os.path.join(folder, file))
-            f.readline(); shape = eval(f.readline()[16:])
-            data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',').reshape(shape)
+            with open(os.path.join(folder, file)) as f:
+                f.readline(); shape = eval(f.readline()[16:])
+                data[name][chain] = np.loadtxt(os.path.join(folder, file), delimiter=',').reshape(shape)
+                f.close()
 
 
     # Create the Traces.
@@ -158,8 +160,8 @@ def load(dirname):
     # Load the state.
     statefile = os.path.join(dirname, 'state.txt')
     if os.path.exists(statefile):
-        file = open(statefile, 'r')
-        db._state_ = eval(file.read())
+        with open(statefile, 'r') as f:
+            db._state_ = eval(f.read())
     else:
         db._state_= {}
 
