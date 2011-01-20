@@ -489,7 +489,7 @@ class Deterministic(DeterministicBase):
             sshape = array(shape(self.value))
             vshape = zeros(sshape.size)
             vshape[0:ndim(variable.value)] += array(shape(variable.value))
-            axes = np.where(sshape != vshape)
+            axes = np.where(sshape != vshape)[0]
             lx = size(axes)
             
             self._BO_history[id(variable)] = (axes, lx )
