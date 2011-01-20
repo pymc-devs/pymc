@@ -875,7 +875,6 @@ class Stochastic(StochasticBase):
         """
         if (calculation_set is None) or (self in calculation_set):
             
-            #is there better way to make sure the variable is continuous?
             if not datatypes.is_continuous(variable):
                 return zeros(shape(variable.value))
             

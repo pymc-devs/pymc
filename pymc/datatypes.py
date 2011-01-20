@@ -20,6 +20,7 @@ def check_type(stochastic):
     is scalar, or a nontrivial tuple otherwise.
     """
     val = stochastic.value
+    
     if val.__class__ in bool_dtypes:
         return bool, ()
     elif val.__class__ in integer_dtypes:
@@ -29,22 +30,24 @@ def check_type(stochastic):
     elif val.__class__ in complex_dtypes:
         return complex, ()
     elif isinstance(val, ndarray):
-        
-        if obj2sctype(val) is bool_:
+        if obj2sctype(val) in bool_dtypes:
             return bool, val.shape
         elif obj2sctype(val) in integer_dtypes:
             return int, val.shape
-        elif obj2sctype(val) in complex_dtypes:
+        elif obj2sctype(val) in float_dtypes:
             return float, val.shape
         elif obj2sctype(val) in complex_dtypes:
             return complex, val.shape
+        else:
+            return 'object', val.shape
     else:
         return 'object', ()
     
 continuous_types = [float, complex]
 
 def is_continuous(stochastic):
-    if check_type(stochastic) in continuous_types:
+    dtype, shape = check_type(stochastic)
+    if dtype in continuous_types:
         return True
     else:
         return False

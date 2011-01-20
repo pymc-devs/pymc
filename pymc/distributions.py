@@ -55,7 +55,7 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
+sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
@@ -63,7 +63,7 @@ sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
                                't_full','truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
-
+sc_bool_distributions = ['bernoulli']
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
                              'negative_binomial', 'categorical',
                              'discrete_uniform', 'truncated_poisson']
@@ -84,6 +84,7 @@ mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart',
                                 'multinomial']
 
 availabledistributions = (sc_continuous_distributions +
+                          sc_bool_distributions +
                           sc_discrete_distributions +
                           mv_continuous_distributions +
                           mv_discrete_distributions)
@@ -308,8 +309,8 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     :SeeAlso:
       new_dist_class
-    """
-
+    """  
+    
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
     parent_names = args[1:]
     try:
@@ -2991,13 +2992,16 @@ for dist in sc_continuous_distributions:
 for dist in mv_continuous_distributions:
     _inject_dist(dist, kwargs={'mv' : True})
 
+for dist in sc_bool_distributions:
+    _inject_dist(dist, kwargs={'dtype' : np.bool})
+    
 for dist in sc_discrete_distributions:
     _inject_dist(dist, kwargs={'dtype' : np.int})
 
 for dist in mv_discrete_distributions:
     _inject_dist(dist, kwargs={'dtype' : np.int, 'mv' : True})
+    
 
-_inject_dist('bernoulli', {'dtype' : np.bool})
 
 def uninformative_like(x):
     """

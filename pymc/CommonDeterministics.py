@@ -499,7 +499,6 @@ def create_uni_method(op_name, klass, jacobians = None):
     #many such functions do not take keyword arguments, so we need to wrap them 
     def op_function(self):
         return op_function_base(self)
-        
     
     def new_method(self):
         # This code creates a Deterministic object.
@@ -658,7 +657,7 @@ def op_to_jacobians(op, module):
        jacobians = module[name]
     except:
         jacobians = {} 
-        
+    
     return jacobians
 
 # Left/right binary operators
@@ -676,9 +675,18 @@ pow_jacobians = {'a' : lambda a, b: b * a**(b - 1.0),
 for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
     create_rl_bin_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
-# Binary operators
-for op in ['lt', 'le', 'eq', 'ne', 'gt', 'ge']:
+# Binary operators eq not part of this set because it messes up having stochastics in lists 
+for op in ['lt', 'le', 'ne', 'gt', 'ge']:
      create_bin_method(op ,Variable)
+    
+def equal(s1, s2): #makes up for deficiency of __eq__
+    return pm.Deterministic(lambda x1, x2 : x1 == x2,
+                            'A Deterministic returning the value of x1 == x2',
+                            '('+'_'.join([s1.__name__,'=',str(s2)])+')',
+                            {'x1':s1, 'x2':s2},
+                            trace=False,
+                            plot=False)
+
 
 # Unary operators
 neg_jacobians = {'self' : lambda self: -ones(shape(self))}
@@ -687,7 +695,7 @@ pos_jacobians = {'self' : lambda self: np.ones(shape(self))}
 
 abs_jacobians = {'self' : lambda self: np.sign(self)}
 
-for op in ['neg','pos','abs','invert','index']:
+for op in ['neg','abs','invert']: # no need for pos and __index__ seems to cause a lot of problems
     create_uni_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
 # Casting operators

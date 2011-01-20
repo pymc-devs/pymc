@@ -101,9 +101,6 @@ class test_gradients(TestCase):
         negation = -a
         self.check_jacobians(negation)
         
-        posing = +a 
-        self.check_jacobians(posing)
-        
         absing = abs(a)
         self.check_jacobians(absing)
         
@@ -324,7 +321,7 @@ class test_gradients(TestCase):
         # raise ZeroProbability exceptions before self.children.
         markov_blanket = list(model)+list(children)
 
-        
+        print model
         gradients = utils.logp_gradient_of_set(model)
         for variable in model:
             
