@@ -55,7 +55,7 @@ class ArgumentError(AttributeError):
 
 sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
 'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't', 'uniform',
+'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't','t_full', 'uniform',
 'weibull','skew_normal', 'truncated_normal', 'von_mises']
 
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform', 'truncated_poisson']
