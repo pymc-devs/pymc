@@ -2943,7 +2943,7 @@ def valuewrapper(f, arguments = None):
         return f(value, **kwds)
     
     if arguments is None: 
-    wrapper.__dict__.update(f.__dict__)
+        wrapper.__dict__.update(f.__dict__)
     else :
         wrapper.__dict__.update(arguments)
         
