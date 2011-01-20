@@ -3,6 +3,8 @@ from numpy.testing import *
 import numpy as np
 import nose
 
+DIR = 'testresults'
+
 def mymodel():
     mu=pm.Normal('mu',0,1)
     N= [pm.Normal('N_%i'%i,mu,1) for i in xrange(3)]
@@ -38,7 +40,7 @@ class test_graph(TestCase):
         for mods in [[mu], [mu,N], [mu,N,z1,z2], [mu,N,z1,z2,y]]:
             for args in powerset([('collapse_deterministics', True), ('collapse_potentials', True), ('label_edges', False), ('legend', True), ('consts', True)]):
                 M = pm.Model(mods)
-                pm.graph.graph(M, **dict(args))
+                pm.graph.graph(M, path=DIR, **dict(args))
                 
     def test_moral(self):
         try:
@@ -48,7 +50,7 @@ class test_graph(TestCase):
         mu,N,z1,z2,y = mymodel()
         for mods in [[mu], [mu,N], [mu,N,z1,z2], [mu,N,z1,z2,y]]:
             M = pm.Model(mods)
-            pm.graph.moral_graph(M)
+            pm.graph.moral_graph(M, path=DIR)
 
 
 

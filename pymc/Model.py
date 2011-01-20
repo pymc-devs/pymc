@@ -121,7 +121,12 @@ class Model(ObjectContainer):
                         value = s.random(**s.parents.value)
                 except:
                     pass
-
+    
+    def get_node(self, node_name):
+        """Retrieve node with passed name"""
+        for node in self.nodes:
+            if node.__name__ is node_name:
+                return node 
 
 
 
@@ -234,7 +239,7 @@ class Sampler(Model):
         """Reset the status and tell the database to finalize the traces."""
         if self.status in ['running', 'halt']:
             if self.verbose > 0:
-                print 'Sampling finished normally.'
+                print '\nSampling finished normally.'
             self.status = 'ready'
 
         self.save_state()
@@ -286,22 +291,44 @@ class Sampler(Model):
         """
         pass
 
-    def stats(self, alpha=0.05, start=0, variable=None):
+    def stats(self, variables=[], alpha=0.05, start=0, batches=100, chain=None):
         """
         Statistical output for variables.
+        
+        :Parameters:
+        variables : iterable
+          List or array of variables for which statistics are to be 
+          generated. If it is an empty list, all the tallied variables
+          are summarized.
+          
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+          
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+          
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
         """
-        if variable is not None:
-            return variable.stats(alpha=alpha, start=start)
+        
+        # If no names provided, run them all
+        variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally] or self._variables_to_tally
 
-        else:
-            stat_dict = {}
+        stat_dict = {}
 
-            # Loop over nodes
-            for variable in self._variables_to_tally:
-                # Plot object
-                stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start)
+        # Loop over nodes
+        for variable in variables:
+            # Plot object
+            stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start, batches=batches, chain=chain)
 
-            return stat_dict
+        return stat_dict
 
     # Property --- status : the sampler state.
     def status():
@@ -347,11 +374,20 @@ class Sampler(Model):
 
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
-        for object in self.stochastics | self.deterministics :
+        for object in self.stochastics | self.deterministics:
 
             if object.trace:
                 self._variables_to_tally.add(object)
-                self._funs_to_tally[object.__name__] = object.get_value
+                try:
+                    if object.mask is None:
+                        # Standard stochastic
+                        self._funs_to_tally[object.__name__] = object.get_value
+                    else:
+                        # Has missing values, so only fetch stochastic elements using mask
+                        self._funs_to_tally[object.__name__] = object.get_stoch_value
+                except AttributeError:
+                    # Not a stochastic object, so no mask
+                    self._funs_to_tally[object.__name__] = object.get_value
             else:
                 object.trace = no_trace.Trace(object.__name__)
 

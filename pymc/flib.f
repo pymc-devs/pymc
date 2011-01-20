@@ -362,9 +362,9 @@ cf2py threadsafe
           endif
         enddo
       END subroutine uniform_like
-      
+
       subroutine uniform_grad_x(x,lower,upper,n,nlower,nupper,gradxlike)
-        
+
 c Return the uniform likelihood gradient wrt x.
 c CREATED 01/10
 
@@ -1578,9 +1578,9 @@ c kernel of distribution
       enddo
       return
       END
-
+      
       SUBROUTINE weibull_gx(x,alpha,beta,n,nalpha,nbeta,gradlike)
-
+      
 c Weibull log-likelihood function      
 c UPDATED 1/16/07 AP
 
@@ -2149,7 +2149,7 @@ cf2py threadsafe
       enddo
       return
       END
-      
+
       SUBROUTINE lognormal_gradx(x,mu,tau,n,nmu,ntau,gradlike)
 
 c Log-normal log-likelihood function
@@ -2504,7 +2504,7 @@ cf2py threadsafe
 
       return
       END
-      
+
       SUBROUTINE gamma_grad_x(x,alpha,beta,n,na,nb,gradxlike)
 
 c Gamma log-likelihood gradient function wrt x     
@@ -2742,7 +2742,7 @@ cf2py threadsafe
 
       return
       END
-	  
+
 	  SUBROUTINE igamma_grad_x(x,alpha,beta,n,na,nb,gradxlike)
 
 c Gamma log-likelihood gradient function wrt x     
@@ -3028,7 +3028,7 @@ cf2py threadsafe
       enddo
       return
       END SUBROUTINE geometric
-      
+
       SUBROUTINE geometric_gp(x,p,n,np,gradlike)
 
 c Geometric log-likelihood
@@ -3677,7 +3677,7 @@ cf2py threadsafe
       enddo
       return
       END
-      
+
       SUBROUTINE binomial_gp(x,n,p,nx,nn,np,gradlike)
 
 c Binomial log-likelihood function     
@@ -3790,7 +3790,7 @@ C     Check parameter size
       END
 
       SUBROUTINE bern_grad_p(x,p,nx,np,grad_like)
-         
+
 c Modified on Jan 16 2007 by D. Huard to allow scalar p.
 
 cf2py logical dimension(nx),intent(in) :: x
@@ -3884,7 +3884,7 @@ cf2py threadsafe
       END
       
       SUBROUTINE beta_grad_x(x,alpha,beta,nx,na,nb,gradlikex)
-
+      
 c Beta log-likelihood function      
 c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
 c Renamed to use alpha and beta arguments for compatibility with 
@@ -4484,7 +4484,7 @@ c http://www.uv.es/~bernardo/1976AppStatist.pdf
 cf2py     double precision intent(in) :: x
 cf2py 	  double precision intent(out) :: psi    
 	      double precision x, y, R
-	      
+      
 	      DATA S /1.0e-5/, C /8.5/ S3 /8.333333333e-2/
 	      DATA S4 /8.333333333e-3/, S5 /3.968253968e-3/
 	      DATA D1 /-0.5772156649/	 
@@ -4912,37 +4912,37 @@ cf2py threadsafe
       return
       end
 
-        double precision function uniform()
-c
-c    Generate uniformly distributed random numbers using the 32-bit
-c    generator from figure 3 of:
-c    L`Ecuyer, P. Efficient and portable combined random number
-c    generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
-c
-c    The cycle length is claimed to be 2.30584E+18
-c
-c    Seeds can be set by calling the routine set_uniform
-c
-c    It is assumed that the Fortran compiler supports long variable
-c    names, and integer*4.
-c
-        integer*4 z, k, s1, s2
-        common /unif_seeds/ s1, s2
-        save /unif_seeds/
-c
-        k = s1 / 53668
-        s1 = 40014 * (s1 - k * 53668) - k * 12211
-        if (s1 .lt. 0) s1 = s1 + 2147483563
-c
-        k = s2 / 52774
-        s2 = 40692 * (s2 - k * 52774) - k * 3791
-        if (s2 .lt. 0) s2 = s2 + 2147483399
-c
-        if (z .lt. 1) z = z + 2147483562
-c
-        uniform = z / 2147483563.
-        return
-        end
+!         double precision function uniform()
+! c
+! c    Generate uniformly distributed random numbers using the 32-bit
+! c    generator from figure 3 of:
+! c    L`Ecuyer, P. Efficient and portable combined random number
+! c    generators, C.A.C.M., vol. 31, 742-749 & 774-?, June 1988.
+! c
+! c    The cycle length is claimed to be 2.30584E+18
+! c
+! c    Seeds can be set by calling the routine set_uniform
+! c
+! c    It is assumed that the Fortran compiler supports long variable
+! c    names, and integer*4.
+! c
+!         integer*4 z, k, s1, s2
+!         common /unif_seeds/ s1, s2
+!         save /unif_seeds/
+! c
+!         k = s1 / 53668
+!         s1 = 40014 * (s1 - k * 53668) - k * 12211
+!         if (s1 .lt. 0) s1 = s1 + 2147483563
+! c
+!         k = s2 / 52774
+!         s2 = 40692 * (s2 - k * 52774) - k * 3791
+!         if (s2 .lt. 0) s2 = s2 + 2147483399
+! c
+!         if (z .lt. 1) z = z + 2147483562
+! c
+!         uniform = z / 2147483563.
+!         return
+!         end
 
 
         subroutine set_uniform(seed1, seed2)
@@ -5032,60 +5032,52 @@ c
 !       enddo
 !       return
 !       END
-
-
       
-c
+      
       SUBROUTINE categorical(x,p,nx,np,k,like)
 
-c Multinomial log-likelihood function     
-c Updated 12/02/2007 DH. N-D still buggy.
-c Fixed 22/11/2007 CF
+c Categorical log-likelihood function     
 
-cf2py intent(in) p
-cf2py intent(hide) np,nx,k
-cf2py intent(out) like      
+cf2py integer dimension(nx), intent(in) :: x
+cf2py double precision dimension(np,k), intent(in) :: p
+cf2py integer intent(hide), depend(p) :: np=shape(p, 0)
+cf2py integer intent(hide), depend(x) :: nx=len(x)
+cf2py integer intent(hide), depend(p) :: k=shape(p, 1)
+cf2py double precision intent(out) :: like      
 cf2py threadsafe
-            
+
       DOUBLE PRECISION like, factln, infinity, sump
       DOUBLE PRECISION p(np,k), p_tmp(k)
       INTEGER i,j,n_tmp
       INTEGER x(nx)
       PARAMETER (infinity = 1.7976931348623157d308)
 
-
       sump = 0.0
       do i=1,k
-            p_tmp(i) = p(1,i)
-            sump = sump + p_tmp(i)
+        p_tmp(i) = p(1,i)
+        sump = sump + p_tmp(i)
       enddo
 
       like = 0.0
       do j=1,nx
         if (np .NE. 1) then
-      sump = 0.0
-              do i=1,k
-                    p_tmp(i) = p(j,i)
-                    sump = sump + p_tmp(i)
-      end do
-!               print *,p_tmp
+          sump = 0.0
+          do i=1,k
+            p_tmp(i) = p(j,i)
+            sump = sump + p_tmp(i)
+          enddo
         endif
-        
-!         Protect against zero p[x]
+c       Protect against zero p[x]
         if (p_tmp(x(j)+1).LE.0.0D0) then
           like = -infinity
           RETURN
-        endif
+        end if
+c       Category outside of set
+        if ((x(j) .GT. k-1) .OR. (x(j) .LT. 0)) then
+          like = -infinity
+          RETURN
+        end if
         like = like + dlog(p_tmp(x(j)+1))
-
-c This is to account for the kth term that is not passed!
-c The kth term does get passed... we can check for consistency.
-c But roundoff error ofter triggers a false alarm.
-
-         if ((sump .GT. 1.000001) .OR. (sump .LT. 0.999999)) then
-             like=-infinity
-             return
-        endif
 
       enddo
       RETURN
@@ -5669,6 +5661,103 @@ cf2py threadsafe
         endif
         like = like - dlog(2*PI*i0(kappa_tmp))
         like = like + kappa_tmp*dcos(x(i)-mu_tmp)
+      enddo
+      return
+      END
+
+
+      SUBROUTINE pareto(x,alpha,m,n,nalpha,nm,like)
+
+c Pareto log-likelihood function      
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nm),intent(in) :: m
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha,n),check(nalpha==1||nalpha==n) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(m,n),check(nm==1||nm==n) :: nm=len(m)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nalpha,nm
+      DOUBLE PRECISION like
+      DOUBLE PRECISION tmp
+      DOUBLE PRECISION x(n),m(nm),alpha(nalpha)
+      DOUBLE PRECISION m_tmp, alpha_tmp
+      LOGICAL not_scalar_m, not_scalar_alpha
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      DOUBLE PRECISION i0
+
+      not_scalar_m = (nm .NE. 1)
+      not_scalar_alpha = (nalpha .NE. 1)
+
+      m_tmp = m(1)
+      alpha_tmp = alpha(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_m) m_tmp=m(i)
+        if (not_scalar_alpha) alpha_tmp=alpha(i)
+        if ((alpha_tmp .LE. 0.0) .OR. (m_tmp .LE. 0.0) .OR. 
+     +(x(i) .LT. m_tmp)) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + dlog(alpha_tmp) + alpha_tmp*dlog(m_tmp)
+        like = like - (alpha_tmp + 1)*dlog(x(i))
+      enddo
+      return
+      END
+
+      SUBROUTINE truncated_pareto(x,alpha,m,b,n,nalpha,nm,nb,like)
+
+c Truncated Pareto log-likelihood function      
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nm),intent(in) :: m
+cf2py double precision dimension(nb),intent(in) :: b
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha,n),check(nalpha==1||nalpha==n) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(m,n),check(nm==1||nm==n) :: nm=len(m)
+cf2py integer intent(hide),depend(b,n),check(nb==1||nb==n) :: nb=len(b)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nalpha,nm,nb
+      DOUBLE PRECISION like
+      DOUBLE PRECISION tmp
+      DOUBLE PRECISION x(n),m(nm),alpha(nalpha),b(nb)
+      DOUBLE PRECISION m_tmp, alpha_tmp, b_tmp
+      LOGICAL not_scalar_m, not_scalar_alpha, not_scalar_b
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      DOUBLE PRECISION i0
+
+      not_scalar_m = (nm .NE. 1)
+      not_scalar_alpha = (nalpha .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      m_tmp = m(1)
+      alpha_tmp = alpha(1)
+      b_tmp = b(1)
+      like = 0.0
+      do i=1,n
+        if (not_scalar_m) m_tmp=m(i)
+        if (not_scalar_alpha) alpha_tmp=alpha(i)
+        if (not_scalar_b) b_tmp=b(i)
+        if ((alpha_tmp .LE. 0.0) .OR. (m_tmp .LE. 0.0) .OR. 
+     +(x(i) .LT. m_tmp) .OR. (b_tmp .LT. x(i))) then
+          like = -infinity
+          RETURN
+        endif
+        like = like + dlog(alpha_tmp) + alpha_tmp*dlog(m_tmp)
+        like = like - (alpha_tmp + 1)*dlog(x(i))
+        like = like - dlog(1 - (m_tmp/b_tmp)**alpha_tmp)
       enddo
       return
       END

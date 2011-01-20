@@ -7,7 +7,8 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential, ZeroProbability
+from PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
+                         ZeroProbability)
 import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
@@ -16,20 +17,26 @@ from Node import logp_of_set, logp_gradient_of_set
 import types
 from datatypes import * 
 
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
-    pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
-    zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr
+from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
+                   pi, asarray, ones, atleast_1d, iterable, linspace, diff,
+                   around, log10, zeros, arange, digitize, apply_along_axis,
+                   concatenate, bincount, sort, hsplit, argsort, inf, shape,
+                   ndim, swapaxes, ravel, diag, cov, transpose as tr)
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
+__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1',
+           'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
+           'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
+           'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len',
+           'log_difference', 'find_generations','crawl_dataless', 'logit',
+           'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
 
-symmetrize=flib.symmetrize
+symmetrize = flib.symmetrize
 
 def value(a):
     """
     Returns a.value if a is a Variable, or just a otherwise.
     """
-    if isinstance(a,Variable):
+    if isinstance(a, Variable):
         return a.value
     else:
         return a
@@ -391,6 +398,11 @@ def normcdf(x):
     """Normal cumulative density function."""
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+    
+def lognormcdf(x, mu, tau):
+    """Log-normal cumulative density function"""
+    x = np.atleast_1d(x)
+    return np.array([0.5*(1-flib.derf(-(np.sqrt(tau/2))*(np.log(y)-mu))) for y in x])
 
 def invcdf(x):
     """Inverse of normal cumulative density function."""
@@ -449,10 +461,24 @@ def autocorr(x, lag=1):
 
     if not lag: return 1
     if lag<0: return
-    x = np.squeeze(asarray(x))
-    mu = x.mean()
-    v = x.var()
-    return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
+    # x = np.squeeze(asarray(x))
+    #     mu = x.mean()
+    #     v = x.var()
+    #     return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
+    S = autocov(x, lag)
+    return S[0,1]/sqrt(prod(diag(S)))
+
+def autocov(x, lag=1):
+    """
+    Sample autocovariance at specified lag.
+    The autocovariance is a 2x2 matrix with the variances of
+    x[:-lag] and x[lag:] in the diagonal and the autocovariance
+    on the off-diagonal.
+    """
+
+    if not lag: return 1
+    if lag<0: return
+    return cov(x[:-lag], x[lag:], bias=1)
 
 def trace_generator(trace, start=0, stop=None, step=1):
     """Return a generator returning values from the object's trace.
@@ -625,7 +651,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     # For multivariate node
     if x.ndim>1:
         # Transpose first, then sort, then transpose back
-        sx = tr(sort(tr(x)))
+        sx = sort(x.T).T
     else:
         # Sort univariate node
         sx = sort(x)
@@ -744,8 +770,8 @@ def crawl_dataless(sofar, gens):
     new_gen = set([])
     all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
     for p in all_ext_parents:
-        if p._random is not None:
-            if len(p.extended_children & sofar) == len(p.extended_children):
+        if p._random is not None and not p.observed:
+            if len(p.extended_children-sofar) == 0:
                 new_gen.add(p)
     if len(new_gen)==0:
         return sofar, gens

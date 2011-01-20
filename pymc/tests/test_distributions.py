@@ -14,19 +14,25 @@ For each distribution:
 #       Maybe compare the relative error (hist-like)/like. Doesn't work so well.
 #       Tried (hist-like)/sqrt(like), seems to work better.
 
-# FIXME no tests for categorical, discrete_uniform, negative_binomial, uniform.
+# FIXME no tests for discrete_uniform, negative_binomial, uniform.
+# TODO add tests for boundaries of distributions with restricted support
+#from decorators import *
 
 #from decorators import *
 from __future__ import with_statement
+from unittest import TestCase
 from pymc.distributions import *
 import unittest
-from numpy.testing import *
-from pymc import flib, utils
-import numpy as np
-from numpy import exp, log, array, sqrt
-from numpy.linalg import cholesky
 import os, pdb, warnings, nose
-from unittest import TestCase
+
+from numpy import exp, log, array, sqrt
+from numpy.linalg import cholesky, det, inv
+from numpy.testing import *
+import numpy as np
+import numpy.random as _npr
+
+from pymc.distributions import *
+from pymc import flib, utils
 
 PLOT=True
 DIR = 'testresults'
@@ -42,13 +48,13 @@ try:
     from scipy.optimize import fmin
     SP = True
 except:
-    SP= False
+    SP = False
 
 try:
     import pylab as P
 except:
     print 'Plotting disabled'
-    PLOT=False
+    PLOT = False
 
 
 # Some python densities for comparison
@@ -113,7 +119,7 @@ def mv_normal(x, mu, C):
     mu = np.asmatrix(mu)
     C = np.asmatrix(C)
 
-    I = (N/2.)*log(2.*pi) + .5*log(np.linalg.det(C))
+    I = (N/2.)*log(2.*pi) + .5*log(det(C))
     z = (x-mu)
 
     return -(I +.5 * z * np.linalg.inv(C) * z.T).A[0][0]
@@ -390,6 +396,12 @@ class test_categorical(TestCase):
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
 
+    def test_support(self):
+        """Check to make sure values outside support are -inf"""
+        assert categorical_like([-1], [[0.4,0.4,0.2]]) < -1e300
+        assert categorical_like([3], [[0.4,0.4,0.2]]) < -1e300
+        assert categorical_like([1.3], [[0.4,0.4,0.2]]) < -1e300
+
 class test_cauchy(TestCase):
     def test_consistency(self):
         parameters={'alpha':0, 'beta':.5}
@@ -430,7 +442,7 @@ class test_dirichlet(TestCase):
         s = theta.sum()
         m = r.mean(0)
         m = np.append(m, 1-sum(m))
-        cov_ex = np.cov(np.append(r.transpose(), 1.-sum(r.transpose(),0)))
+        cov_ex = np.cov(np.append(r.T, 1.-sum(r.T,0)))
 
         # Theoretical mean
         M = theta/s
@@ -787,6 +799,38 @@ class test_von_mises(TestCase):
         assert_equal(a,b)
         assert_equal(b,c)
 
+class test_pareto(TestCase):
+    def test_consistency(self):
+        parameters=dict(alpha=5, m = 3)
+        hist, like, figdata = consistency(rpareto, flib.pareto, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='pareto', **figdata)
+        assert_array_almost_equal(hist, like, 1)
+
+    def test_vectorization(self):
+        a = flib.pareto([3,4,5], alpha=3, m=1)
+        b = flib.pareto([3,4,5], alpha=[3,3,3], m=1)
+        c = flib.pareto([3,4,5], alpha=[3,3,3], m=[1,1,1])
+        assert_equal(a,b)
+        assert_equal(b,c)
+        
+class test_truncated_pareto(TestCase):
+    def test_consistency(self):
+        parameters=dict(alpha=5, m = 3, b=5)
+        hist, like, figdata = consistency(rtruncated_pareto, flib.truncated_pareto, parameters,\
+            nrandom=5000)
+        if PLOT:
+            compare_hist(figname='truncated_pareto', **figdata)
+        assert_array_almost_equal(hist, like, 1)
+
+    def test_vectorization(self):
+        a = flib.truncated_pareto([3,4,5], alpha=3, m=1, b=6)
+        b = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=1, b=6)
+        c = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=[1,1,1], b=[6,6,6])
+        assert_equal(a,b)
+        assert_equal(b,c)
+
 class test_poisson(TestCase):
     def test_consistency(self):
         parameters = {'mu':2.}
@@ -908,14 +952,30 @@ class test_weibull(TestCase):
         b = flib.weibull([1,2], [2,2], [3,3])
         assert_equal(a,b)
 
+#-------------------------------------------------------------------------------
+# Test Wishart / Inverse Wishart distributions
+_Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
+                       [  10.88057915,  213.58694978,   11.18453854],
+                       [  13.80581557,   11.18453854,  209.89396417]])
+
 class test_wishart(TestCase):
     """
-    There are results out there on the asymptotic distribution of eigenvalues
-    of very large Wishart matrices that we could use to make another test case...
+    There are results out there on the asymptotic distribution of
+    eigenvalues of very large Wishart matrices that we could use to
+    make another test case...
     """
-    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
-                          [  10.88057915,  213.58694978,   11.18453854],
-                          [  13.80581557,   11.18453854,  209.89396417]])/100.
+    # precision matrix
+    Tau_test = _Tau_test / 100
+
+    # def test_samples(self):
+    #     # test consistency between precision and cov-based
+    #     _npr.seed(1)
+    #     sample_a = rwishart(100, self.Tau_test)
+
+    #     _npr.seed(1)
+    #     sample_b = rwishart_cov(100, self.Tau_test.I)
+
+    #     assert_array_almost_equal(sample_a, sample_b)
 
     def test_likelihoods(self):
         try:
@@ -928,7 +988,8 @@ class test_wishart(TestCase):
         def slo_wishart_cov(W,n,V):
             p = W.shape[0]
 
-            logp = (n-p-1)*.5 * np.log(np.linalg.det(W)) - n*p*.5*np.log(2) - n*.5*np.log(np.linalg.det(V)) - p*(p-1)/4.*np.log(pi)
+            logp = ((n-p-1)*.5 * np.log(det(W)) - n*p*.5*np.log(2)
+                    - n*.5*np.log(det(V)) - p*(p-1)/4.*np.log(pi))
             for i in xrange(1,p+1):
                 logp -= gammaln((n+1-i)*.5)
             logp -= np.trace(np.linalg.solve(V,W)*.5)
@@ -936,8 +997,11 @@ class test_wishart(TestCase):
 
         for i in [5,10,100,10000]:
             right_answer = slo_wishart_cov(W_test,i,self.Tau_test.I)
-            assert_array_almost_equal(wishart_like(W_test,i,self.Tau_test), right_answer, decimal=5)
-            assert_array_almost_equal(wishart_cov_like(W_test,i,self.Tau_test.I), right_answer, decimal=5)
+            assert_array_almost_equal(wishart_like(W_test,i,self.Tau_test),
+                                      right_answer, decimal=5)
+            assert_array_almost_equal(
+                wishart_cov_like(W_test,i,self.Tau_test.I),
+                right_answer, decimal=5)
 
     def test_expval(self):
 
@@ -963,9 +1027,18 @@ class test_inverse_wishart(TestCase):
     """
     Adapted from test_wishart
     """
-    Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
-                          [  10.88057915,  213.58694978,   11.18453854],
-                          [  13.80581557,   11.18453854,  209.89396417]]).I
+    # Covariance matrix (!)
+    C_test = _Tau_test.I
+
+    # def test_samples(self):
+    #     # test consistency between precision and cov-based
+    #     _npr.seed(1)
+    #     sample_a = rinverse_wishart(100, self.C_test)
+
+    #     _npr.seed(1)
+    #     sample_b = rinverse_wishart_prec(100, self.C_test.I)
+
+    #     assert_array_almost_equal(sample_a, sample_b)
 
     def test_likelihoods(self):
         try:
@@ -973,12 +1046,13 @@ class test_inverse_wishart(TestCase):
         except:
             raise nose.SkipTest, "SciPy not installed."
 
-        IW_test = rinverse_wishart(100,self.Tau_test)
+        IW_test = rinverse_wishart(100,self.C_test)
 
         def slo_inv_wishart(W,n,V):
             p = W.shape[0]
 
-            logp = -0.5*(n+p+1) * np.log(np.linalg.det(W)) - n*p*.5*np.log(2) + n*.5*np.log(np.linalg.det(V)) - p*(p-1)/4.*np.log(pi)
+            logp = (-0.5*(n+p+1) * np.log(det(W)) - n*p*.5*np.log(2)
+                     + n*.5*np.log(det(V)) - p*(p-1)/4.*np.log(pi))
 
             for i in xrange(1,p+1):
                 logp -= gammaln((n+1-i)*.5)
@@ -987,8 +1061,12 @@ class test_inverse_wishart(TestCase):
             return logp
 
         for i in [5,10,100,10000]:
-            right_answer = slo_inv_wishart(IW_test,i,self.Tau_test)
-            assert_array_almost_equal(inverse_wishart_like(IW_test,i,self.Tau_test), right_answer, decimal=1)
+            right_answer = slo_inv_wishart(IW_test,i,self.C_test)
+            calculated = inverse_wishart_like(IW_test,i,self.C_test)
+            assert_array_almost_equal(calculated, right_answer, decimal=1)
+
+            calculated = inverse_wishart_prec_like(IW_test,i,self.C_test.I)
+            assert_array_almost_equal(calculated, right_answer, decimal=1)
 
     """
     def test_expval(self):
@@ -996,11 +1074,11 @@ class test_inverse_wishart(TestCase):
         n = 100
         N = 1000
 
-        A = 0.*self.Tau_test
+        A = 0.*self.C_test
         for i in xrange(N):
-            A += rinverse_wishart(n,self.Tau_test)
+            A += rinverse_wishart(n,self.C_test)
         A /= N
-        delta=A-inverse_wishart_expval(n,self.Tau_test)
+        delta=A-inverse_wishart_expval(n,self.C_test)
         print np.abs(np.asarray(delta)/np.asarray(A)).max()
         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.5)
     """
@@ -1011,11 +1089,11 @@ class test_Stochastic_generator(TestCase):
             B = Bernoulli('x', np.ones(s)*.5)
             B.random()
             assert_equal(B.value.shape, s)
-        
+
             N = Normal('x', np.ones(s), 1)
             N.random()
             assert_equal(N.value.shape, s)
-            
+
             N = Normal('x', np.ones(s), np.ones(s))
             N.random()
             assert_equal(N.value.shape, s)
@@ -1038,7 +1116,7 @@ class test_shape_consistency(TestCase):
         #data has shape (10,5) but means returns an array of shape (10 * 5,)
         assert_raises(ValueError, pymc.Normal, "obs", mu = means, tau = 1, observed =
 True, value = data)
-        
+
 
 
 if __name__ == '__main__':

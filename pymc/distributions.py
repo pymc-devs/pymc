@@ -33,7 +33,8 @@ import numpy as np
 from Node import ZeroProbability
 from PyMCObjects import Stochastic, Deterministic
 from CommonDeterministics import Lambda
-from numpy import pi
+from numpy import pi, inf
+import itertools
 import pdb
 import utils
 import warnings
@@ -41,7 +42,8 @@ import warnings
 def poiscdf(a, x):
     x = np.atleast_1d(x)
     a = np.resize(a, x.shape)
-    return np.array([flib.gammq(b,y) for b,y in zip(a.ravel(), x.ravel())]).reshape(x.shape)
+    values = np.array([flib.gammq(b,y) for b, y in zip(a.ravel(), x.ravel())])
+    return values.reshape(x.shape)
 
 # Import utility functions
 import inspect, types
@@ -53,28 +55,49 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2', 'degenerate',
-'exponential', 'exponweib', 'gamma', 'half_normal', 'hypergeometric',
-'inverse_gamma', 'laplace', 'logistic', 'lognormal', 'normal', 't','t_full', 'uniform',
-'weibull','skew_normal', 'truncated_normal', 'von_mises']
+sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
+                               'degenerate', 'exponential', 'exponweib',
+                               'gamma', 'half_normal', 'hypergeometric',
+                               'inverse_gamma', 'laplace', 'logistic',
+                               'lognormal', 'normal', 'pareto', 't', 
+                               't_full','truncated_pareto', 'uniform',
+                               'weibull', 'skew_normal', 'truncated_normal',
+                               'von_mises']
 
-sc_discrete_distributions = ['binomial', 'geometric', 'poisson', 'negative_binomial', 'categorical', 'discrete_uniform', 'truncated_poisson']
+sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
+                             'negative_binomial', 'categorical',
+                             'discrete_uniform', 'truncated_poisson']
 
-mv_continuous_distributions = ['dirichlet','inverse_wishart','mv_normal','mv_normal_cov','mv_normal_chol','wishart','wishart_cov']
+sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential',
+                                'exponweib', 'gamma', 'half_normal',
+                                'hypergeometric', 'inverse_gamma', 'lognormal',
+                                'weibull']
 
-mv_discrete_distributions = ['multivariate_hypergeometric','multinomial']
+mv_continuous_distributions = ['dirichlet', 'inverse_wishart', 'mv_normal',
+                               'mv_normal_cov', 'mv_normal_chol', 'wishart',
+                               'wishart_cov', 'inverse_wishart_prec']
 
+mv_discrete_distributions = ['multivariate_hypergeometric', 'multinomial']
 
-availabledistributions = sc_continuous_distributions + sc_discrete_distributions + mv_continuous_distributions + mv_discrete_distributions
+mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart',
+                                'wishart_cov', 'multivariate_hypergeometric',
+                                'multinomial']
 
-# Changes lower case, underscore-separated names into "Class style" capitalized names
-# For example, 'negative_binomial' becomes 'NegativeBinomial'
+availabledistributions = (sc_continuous_distributions +
+                          sc_discrete_distributions +
+                          mv_continuous_distributions +
+                          mv_discrete_distributions)
+
+# Changes lower case, underscore-separated names into "Class style"
+# capitalized names For example, 'negative_binomial' becomes
+# 'NegativeBinomial'
 capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 
 
-# ============================================================================================
-# = User-accessible function to convert a logp and random function to a Stochastic subclass. =
-# ============================================================================================
+# ==============================================================================
+# User-accessible function to convert a logp and random function to a
+# Stochastic subclass.
+# ==============================================================================
 
 # TODO Document this function
 def bind_size(randfun, shape):
@@ -119,7 +142,7 @@ def new_dist_class(*new_class_args):
 
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
     class new_class(Stochastic):
-        __doc__ = docstr
+
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
             parents=parents_default
@@ -245,6 +268,11 @@ def new_dist_class(*new_class_args):
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
+    new_class.parents_default = parents_default
+    new_class.dtype = dtype
+    new_class.__doc__ = docstr
+    new_class.mv = mv
+    new_class.raw_fns = {'logp': logp, 'random': random}
 
     return new_class
 
@@ -302,13 +330,14 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     logp=valuewrapper(logp)
     distribution_arguments = logp.__dict__
-    
+
     wrapped_logp_partial_gradients = {}
 
     for parameter, func in logp_partial_gradients.iteritems():
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
          
-    return new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, mv, wrapped_logp_partial_gradients)
+    return new_dist_class(dtype, name, parent_names, parents_default, docstr,
+						 logp, random, mv, wrapped_logp_partial_gradients)
 
 
 #-------------------------------------------------------------
@@ -335,11 +364,11 @@ def randomwrap(func):
       >>> rbernoulli(.1)
       0
       >>> rbernoulli([.1,.9])
-      asarray([0, 1])
+      np.asarray([0, 1])
       >>> rbernoulli(.9, size=2)
-      asarray([1, 1])
+      np.asarray([1, 1])
       >>> rbernoulli([.1,.9], 2)
-      asarray([[0, 1],
+      np.asarray([[0, 1],
              [0, 1]])
     """
 
@@ -404,7 +433,7 @@ def randomwrap(func):
                 return np.vstack(r)
         else:
             if size > 1 and vec_stochastics:
-                return np.atleast_2d(r).transpose()
+                return np.atleast_2d(r).T
             elif vec_stochastics or size > 1:
                 return np.concatenate(r)
             else: # Scalar case
@@ -656,7 +685,8 @@ def beta_like(x, alpha, beta):
     R"""
     beta_like(x, alpha, beta)
 
-    Beta log-likelihood. The conjugate prior for the parameter :math: `p` of the binomial distribution.
+    Beta log-likelihood. The conjugate prior for the parameter
+    :math:`p` of the binomial distribution.
 
     .. math::
         f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
@@ -760,7 +790,9 @@ def betabin_like(x, alpha, beta, n):
     R"""
     betabin_like(x, alpha, beta)
 
-    Beta-binomial log-likelihood. Equivalent to binomial random variables with probabilities drawn from a :math: `\texttt{Beta}(\alpha,\beta)` distribution.
+    Beta-binomial log-likelihood. Equivalent to binomial random
+    variables with probabilities drawn from a
+    :math:`\texttt{Beta}(\alpha,\beta)` distribution.
 
     .. math::
         f(x \mid \alpha, \beta, n) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)} \frac{\Gamma(n+1)}{\Gamma(x+1)\Gamma(n-x+1)} \frac{\Gamma(\alpha + x)\Gamma(n+\beta-x)}{\Gamma(\alpha+\beta+n)}
@@ -811,7 +843,13 @@ def categorical_like(x, p):
       - `x` : [int] :math:`x \in 0\ldots k-1`
       - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
     """
+
     p = np.atleast_2d(p)
+    if any(np.sum(p, 1)!=1):
+        print "Probabilities may not sum to unity:", p
+    if np.array(x).dtype != int:
+        print "Non-integer values in categorical_like"
+        return -inf
     return flib.categorical(x, p)
 
 
@@ -966,7 +1004,7 @@ def rdirichlet(theta, size=1):
     """
     gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
-        return (gammas.transpose()/gammas.sum(1))[:-1].transpose()
+        return (gammas.T/gammas.sum(1))[:-1].T
     elif np.size(theta)>1:
         return (gammas[0]/gammas[0].sum())[:-1]
     else:
@@ -993,18 +1031,16 @@ def dirichlet_like(x, theta):
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-      x : (n, k-1) array 
-              Array of shape (n, k-1) where `n` is the number of samples 
-              and `k` the dimension. 
-              :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
+      x : (n, k-1) array
+        Array of shape (n, k-1) where `n` is the number of samples
+        and `k` the dimension.
+        :math:`0 < x_i < 1`,  :math:`\sum_{i=1}^{k-1} x_i < 1`
       theta : array
-              An (n,k) or (1,k) array > 0.
-      
-    .. note::
-        Only the first `k-1` elements of `x` are expected. Can be used as a parent of Multinomial and Categorical
-        nevertheless.
-      
+        An (n,k) or (1,k) array > 0.
 
+    .. note::
+        Only the first `k-1` elements of `x` are expected. Can be used
+        as a parent of Multinomial and Categorical nevertheless.
     """
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
@@ -1146,7 +1182,7 @@ def gamma_expval(alpha, beta):
 
     Expected value of gamma distribution.
     """
-    return 1. * asarray(alpha) / beta
+    return 1. * np.asrray(alpha) / beta
 
 def gamma_like(x, alpha, beta):
     R"""
@@ -1323,7 +1359,7 @@ def half_normal_expval(tau):
     Expected value of half normal distribution.
     """
 
-    return np.sqrt(2. * pi / asarray(tau))
+    return np.sqrt(2. * pi / np.asrray(tau))
 
 def half_normal_like(x, tau):
     R"""
@@ -1410,7 +1446,7 @@ def inverse_gamma_expval(alpha, beta):
 
     Expected value of inverse gamma distribution.
     """
-    return 1. * asarray(beta) / (alpha-1.)
+    return 1. * np.asrray(beta) / (alpha-1.)
 
 def inverse_gamma_like(x, alpha, beta):
     R"""
@@ -1438,49 +1474,99 @@ inverse_gamma_grad_like = {'value' : flib.igamma_grad_x,
              'beta' : flib.igamma_grad_beta}
 
 # Inverse Wishart---------------------------------------------------
-def rinverse_wishart(n, Tau):
+
+def rinverse_wishart(n, C):
     """
-    rinverse_wishart(n, Tau)
+    rinverse_wishart(n, C)
 
     Return an inverse Wishart random matrix.
 
     n is the degrees of freedom.
-    Tau is a positive definite scale matrix.
+    C is a positive definite scale matrix.
     """
-    wi = rwishart(n, np.asmatrix(Tau).I).I
+    wi = rwishart(n, np.asmatrix(C).I).I
     flib.symmetrize(wi)
     return wi
 
-def inverse_wishart_expval(n, Tau):
+def inverse_wishart_expval(n, C):
     """
-    inverse_wishart_expval(n, Tau)
+    inverse_wishart_expval(n, C)
+
+    :Parameters:
+      - `n` : [int] Degrees of freedom (n > 0).
+      - `C` : Symmetric and positive definite scale matrix
 
     Expected value of inverse Wishart distribution.
     """
-    return np.asarray(Tau)/(n-len(Tau)-1)
+    return np.asarray(C)/(n-len(C)-1)
 
-def inverse_wishart_like(X, n, Tau):
+def inverse_wishart_like(X, n, C):
     R"""
-    inverse_wishart_like(X, n, Tau)
+    inverse_wishart_like(X, n, C)
 
-    Inverse Wishart log-likelihood. The inverse Wishart distribution is the conjugate
-    prior for the covariance matrix of a multivariate normal distribution.
+    Inverse Wishart log-likelihood. The inverse Wishart distribution
+    is the conjugate prior for the covariance matrix of a multivariate
+    normal distribution.
 
     .. math::
-        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1}) \right\}}{2^{nk/2} \Gamma_p(n/2)}
+        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
+        \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
+        \right\}}{2^{nk/2} \Gamma_p(n/2)}
 
     where :math:`k` is the rank of X.
 
     :Parameters:
       - `X` : Symmetric, positive definite matrix.
       - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite matrix.
+      - `C` : Symmetric and positive definite scale matrix
 
     .. note::
-       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
+       Step method MatrixMetropolis will preserve the symmetry of
+       Wishart variables.
 
     """
-    return flib.blas_inv_wishart(X,n,Tau)
+    return flib.blas_inv_wishart(X, n, C)
+
+def rinverse_wishart_prec(n, Tau):
+    """
+    rinverse_wishart_prec(n, Tau)
+
+    Return an inverse Wishart random matrix.
+
+    n is the degrees of freedom.
+    Tau is a positive definite precision matrix
+    """
+    wi = rwishart(n, np.asmatrix(Tau)).I
+    flib.symmetrize(wi)
+    return wi
+
+def inverse_wishart_prec_expval(X, n, Tau):
+    """
+    inverse_wishart_expval(n, Tau)
+
+    :Parameters:
+      - `n` : [int] Degrees of freedom (n > 0).
+      - `Tau` : Symmetric and positive definite precision matrix
+
+    Expected value of inverse Wishart distribution.
+    """
+    return inverse_wishart_like(X, n, inverse(Tau))
+
+def inverse_wishart_prec_like(X, n, Tau):
+    """
+    inverse_wishart_prec_like(X, n, Tau)
+
+    Inverse Wishart log-likelihood
+
+    For an alternative parameterization based on :math:`C=Tau^{-1}`, see
+    `inverse_wishart_like`.
+
+    :Parameters:
+      - `X` : Symmetric, positive definite matrix.
+      - `n` : [int] Degrees of freedom (n > 0).
+      - `Tau` : Symmetric and positive definite precision matrix
+    """
+    return inverse_wishart_like(X, n, inverse(Tau))
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
@@ -1636,12 +1722,14 @@ lognormal_grad_like = {'value'   : flib.lognormal_gradx,
 
 # Multinomial----------------------------------------------
 #@randomwrap
-def rmultinomial(n,p,size=None): # Leaving size=None as the default means return value is 1d array if not specified-- nicer.
+def rmultinomial(n,p,size=None):
     """
     rmultinomial(n,p,size=1)
 
     Random multinomial variates.
     """
+    # Leaving size=None as the default means return value is 1d array
+    # if not specified-- nicer.
 
     # Single value for p:
     if len(np.shape(p))==1:
@@ -1661,7 +1749,7 @@ def multinomial_expval(n,p):
 
     Expected value of multinomial distribution.
     """
-    return asarray([pr * n for pr in p])
+    return np.asrray([pr * n for pr in p])
 
 def multinomial_like(x, n, p):
     R"""
@@ -1678,11 +1766,11 @@ def multinomial_like(x, n, p):
 
     :Parameters:
       x : (ns, k) int
-          Random variable indicating the number of time outcome i is 
+          Random variable indicating the number of time outcome i is
           observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
       n : int
           Number of trials.
-      p : (k,) 
+      p : (k,)
           Probability of each one of the different outcomes.
           :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
 
@@ -1690,10 +1778,13 @@ def multinomial_like(x, n, p):
        - :math:`E(X_i)=n p_i`
        - :math:`Var(X_i)=n p_i(1-p_i)`
        - :math:`Cov(X_i,X_j) = -n p_i p_j`
+       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf
+       will be returned.
 
     """
-
-    x = np.atleast_2d(x) #flib expects 2d arguments. Do we still want to support multiple p values along realizations ?
+    # flib expects 2d arguments. Do we still want to support multiple p
+    # values along realizations ?
+    x = np.atleast_2d(x)
     p = np.atleast_2d(p)
 
     return flib.multinomial(x, n, p)
@@ -1711,9 +1802,11 @@ def rmultivariate_hypergeometric(n, m, size=None):
     urn = np.repeat(np.arange(N), m)
 
     if size:
-        draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]] for j in range(size)])
+        draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]]
+                         for j in range(size)])
 
-        r = [[np.sum(draw[j]==i) for i in range(len(m))] for j in range(size)]
+        r = [[np.sum(draw[j]==i) for i in range(len(m))]
+             for j in range(size)]
     else:
         draw = np.array([urn[i] for i in np.random.permutation(len(urn))[:n]])
 
@@ -1844,7 +1937,7 @@ def mv_normal_cov_like(x, mu, C):
     R"""
     mv_normal_cov_like(x, mu, C)
 
-    Multivariate normal log-likelihood parameterized by a covariance 
+    Multivariate normal log-likelihood parameterized by a covariance
     matrix.
 
     .. math::
@@ -1853,7 +1946,7 @@ def mv_normal_cov_like(x, mu, C):
     :Parameters:
       - `x` : (n,k)
       - `mu` : (k) Location parameter.
-      - `C` : (k,k) Positive definite covariance matrix. 
+      - `C` : (k,k) Positive definite covariance matrix.
 
     .. seealso:: :func:`mv_normal_like`, :func:`mv_normal_chol_like`
     """
@@ -1955,9 +2048,10 @@ def negative_binomial_like(x, mu, alpha):
     R"""
     negative_binomial_like(x, mu, alpha)
 
-    Negative binomial log-likelihood. The negative binomial distribution describes a
-    Poisson random variable whose rate parameter is gamma distributed. PyMC's chosen
-    parameterization is based on this mixture interpretation.
+    Negative binomial log-likelihood. The negative binomial
+    distribution describes a Poisson random variable whose rate
+    parameter is gamma distributed. PyMC's chosen parameterization is
+    based on this mixture interpretation.
 
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
@@ -2010,7 +2104,8 @@ def normal_like(x, mu, tau):
     :Parameters:
       - `x` : Input data.
       - `mu` : Mean of the distribution.
-      - `tau` : Precision of the distribution, which corresponds to :math:`1/\sigma^2` (tau > 0).
+      - `tau` : Precision of the distribution, which corresponds to
+        :math:`1/\sigma^2` (tau > 0).
 
     .. note::
        - :math:`E(X) = \mu`
@@ -2049,7 +2144,7 @@ def rvon_mises(mu, kappa, size=None):
     Random von Mises variates.
     """
     # TODO: Just return straight from numpy after release 1.3
-    return (np.random.mtrand.vonmises( mu, kappa, size) + np.pi)%(2.*np.pi)-np.pi
+    return (np.random.mtrand.vonmises(mu, kappa, size) + np.pi)%(2.*np.pi)-np.pi
 
 def von_mises_expval(mu, kappa):
     """
@@ -2080,6 +2175,96 @@ def von_mises_like(x, mu, kappa):
 
     """
     return flib.vonmises(x, mu, kappa)
+    
+# Pareto---------------------------------------------------
+@randomwrap
+def rpareto(alpha, m, size=None):
+    """
+    rpareto(alpha, m, size=1)
+    
+    Random Pareto variates.
+    """
+    return m / (random_number(size)**(1./alpha))
+    
+def pareto_expval(alpha, m):
+    """
+    pareto_expval(alpha, m)
+    
+    Expected value of Pareto distribution.
+    """
+    
+    if alpha <= 1:
+        return inf
+    return alpha*m/(alpha-1)
+    
+def pareto_like(x, alpha, m):
+    R"""
+    pareto_like(x,mu)
+
+    Pareto log-likelihood. The Pareto is a continuous, positive 
+    probability distribution with two parameters. It is often used
+    to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    .. math::
+        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
+
+    :Parameters:
+      - `x` : Input data (x > m)
+      - `alpha` : Shape parameter (alpha>0)
+      - `m` : Scale parameter (m>0)
+
+    .. note::
+       - :math:`E(x)=\frac{\alpha m}{\alpha-1} if \alpha > 1`
+       - :math:`Var(x)=\frac{m^2 \alpha}{(\alpha-1)^2(\alpha-2)} if \alpha > 2`
+    """
+    return flib.pareto(x, alpha, m)
+    
+# Truncated Pareto---------------------------------------------------
+@randomwrap
+def rtruncated_pareto(alpha, m, b, size=None):
+    """
+    rtruncated_pareto(alpha, m, b, size=1)
+    
+    Random bounded Pareto variates.
+    """
+    u = random_number(size)
+    return (-(u*b**alpha - u*m**alpha - b**alpha)/(b**alpha * m**alpha))**(-1./alpha)
+    
+def truncated_pareto_expval(alpha, m, b):
+    """
+    truncated_pareto_expval(alpha, m, b)
+    
+    Expected value of truncated Pareto distribution.
+    """
+    
+    if alpha <= 1:
+        return inf
+    part1 = (m**alpha)/(1 - (m/b)**alpha)
+    part2 = alpha/(alpha-1)
+    part3 = (1/(m**(alpha-1)) - 1/(b**(alpha-1)))
+    return part1*part2*part3
+    
+def truncated_pareto_like(x, alpha, m, b):
+    R"""
+    truncated_pareto_like(x,mu,b)
+
+    Truncated Pareto log-likelihood. The Pareto is a continuous, positive 
+    probability distribution with two parameters. It is often used
+    to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    .. math::
+        f(x \mid \alpha, m, b) = \frac{\alpha m^{\alpha} x^{-\alpha}}{1-(m/b)**{\alpha}}
+
+    :Parameters:
+      - `x` : Input data (x > m)
+      - `alpha` : Shape parameter (alpha>0)
+      - `m` : Scale parameter (m>0)
+      - `b` : Upper bound (b>m)
+
+    """
+    return flib.truncated_pareto(x, alpha, m, b)
 
 # Poisson--------------------------------------------------
 @randomwrap
@@ -2107,10 +2292,11 @@ def poisson_like(x,mu):
     R"""
     poisson_like(x,mu)
 
-    Poisson log-likelihood. The Poisson is a discrete probability distribution.
-    It is often used to model the number of events occurring in a fixed period of
-    time when the times at which events occur are independent. The Poisson
-    distribution can be derived as a limiting case of the binomial distribution.
+    Poisson log-likelihood. The Poisson is a discrete probability
+    distribution.  It is often used to model the number of events
+    occurring in a fixed period of time when the times at which events
+    occur are independent. The Poisson distribution can be derived as
+    a limiting case of the binomial distribution.
 
     .. math::
         f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
@@ -2149,7 +2335,8 @@ def rtruncated_poisson(mu, k, size=None):
     except TypeError, ValueError:
         # More than one mu
         k=np.array(k)-1
-        return np.transpose(np.array([rtruncated_poisson(x, i, size) for x,i in zip(mu, np.resize(k, np.size(mu)))]))
+        return np.array([rtruncated_poisson(x, i, size)
+                         for x,i in zip(mu, np.resize(k, np.size(mu)))]).T
 
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
@@ -2162,10 +2349,11 @@ def rtruncated_poisson(mu, k, size=None):
     while(len(rvs)<total_size):
 
         # Propose values by sampling from untruncated Poisson with mean mu + m
-        proposals = np.squeeze(np.random.poisson(mu+m, (total_size*4, np.size(m))))
+        proposals = np.random.poisson(mu+m, (total_size*4, np.size(m))).squeeze()
 
         # Acceptance probability
-        a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y)) for y in proposals])
+        a = C * np.array([np.exp(flib.factln(y-m)-flib.factln(y))
+                          for y in proposals])
         a *= proposals > k
 
         # Uniform random variates
@@ -2190,10 +2378,11 @@ def truncated_poisson_like(x,mu,k):
     R"""
     truncpoisson_like(x,mu,k)
 
-    Truncated Poisson log-likelihood. The Truncated Poisson is a discrete
-    probability distribution that is arbitrarily truncated to be greater than some
-    minimum value k. For example, zero-truncated Poisson distributions can be used
-    to model counts that are constrained to be non-negative.
+    Truncated Poisson log-likelihood. The Truncated Poisson is a
+    discrete probability distribution that is arbitrarily truncated to
+    be greater than some minimum value k. For example, zero-truncated
+    Poisson distributions can be used to model counts that are
+    constrained to be non-negative.
 
     .. math::
         f(x \mid \mu, k) = \frac{e^{-\mu}\mu^x}{x!(1-F(k|\mu))}
@@ -2214,23 +2403,72 @@ truncated_poisson_grad_like = {'mu' : flib.trpoisson_gmu}
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a, b, size=None):
+def rtruncated_normal(mu, tau, a=None, b=None, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
-    Random truncated normal variates.
+    Random truncated normal variates using method from Robert (1995).
     """
-    sigma = 1./np.sqrt(tau)
 
-    na = pymc.utils.normcdf((a-mu)/sigma)
-    nb = pymc.utils.normcdf((b-mu)/sigma)
+    factor = 10
+    sign = 1.0
 
-    # Use the inverse CDF generation method.
-    U = np.random.mtrand.uniform(size=size)
-    q = U * nb + (1-U)*na
-    R = pymc.utils.invcdf(q)
+    while True:
 
-    # Unnormalize
-    return R*sigma + mu
+        if a is None and b is None:
+            raise ValueError, 'No truncation boundary given.'
+
+        elif a is None or b is None:
+            # One-sided truncation
+            
+            if a is None:
+                # See top of p.123 in Robert (1995)
+                a = -b
+                mu = -mu
+                sign = -1.0
+            
+            # Algorithm is in terms of standard normal
+            a = np.sqrt(tau) * (a - mu)
+            
+            # Parameter of exponential proposal
+            beta = (a + np.sqrt(a**2 + 4))/2.0
+            # Sample from exponential
+            z = np.random.exponential(1./beta, size*factor) + a
+
+            if a<beta:
+
+                x = np.exp(-0.5 * (beta - z)**2)
+
+            else:
+                
+                x = np.exp(0.5 * (a - beta)**2) * np.exp(-(beta - z)**2)
+
+        else:
+            # Two-sided truncation
+
+            # Algorithm is in terms of standard normal
+            a = np.sqrt(tau) * (a - mu)
+            b = np.sqrt(tau) * (b - mu)
+
+            # Sample z ~ U(a,b)
+            z = (b - a) * random_number(size*factor) + a
+            
+            if a<=0<=b:
+                x = np.exp(-0.5 * z**2)
+            elif b<0:
+                x = np.exp(0.5 * (b**2 - z**2))
+            else:
+                x = np.exp(0.5 * (a**2 - z**2))
+
+        # Accept-reject
+        u = random_number(size*factor)
+        y = sign * (z[u <= x] / np.sqrt(tau) + mu)
+
+        # Return <size> samples
+        if len(y) >= size:
+            return y[:size]
+        else:
+            # Get a larger sample next time
+            factor *=10
 
 rtruncnorm = rtruncated_normal
 
@@ -2238,7 +2476,13 @@ def truncated_normal_expval(mu, tau, a, b):
     """Expectation value of the truncated normal distribution.
 
     .. math::
-       E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi\left(\frac{A-\mu}{\sigma}\right) and \varphi_1 = \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 = \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the probability density function of a standard normal random variable and tau is 1/sigma**2. """
+       E(X)=\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}, where
+       T=\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi
+       \left(\frac{A-\mu}{\sigma}\right) and \varphi_1 =
+       \varphi\left(\frac{A-\mu}{\sigma}\right) and \varphi_2 =
+       \varphi\left(\frac{B-\mu}{\sigma}\right), where \varphi is the
+       probability density function of a standard normal random
+       variable and tau is 1/sigma**2."""
     phia = np.exp(normal_like(a, mu, tau))
     phib = np.exp(normal_like(b, mu, tau))
     sigma = 1./np.sqrt(tau)
@@ -2350,9 +2594,10 @@ def rt(nu, size=None):
 def t_like(x, nu):
     R"""t_like(x, nu)
 
-    Student's T log-likelihood. Describes a zero-mean normal variable whose precision is
-    gamma distributed. Alternatively, describes the mean of several zero-mean normal
-    random variables divided by their sample standard deviation.
+    Student's T log-likelihood. Describes a zero-mean normal variable
+    whose precision is gamma distributed. Alternatively, describes the
+    mean of several zero-mean normal random variables divided by their
+    sample standard deviation.
 
     .. math::
         f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
@@ -2532,6 +2777,7 @@ weibull_grad_like = {'value' : flib.weibull_gx,
                  'beta' : flib.weibull_gb}
 
 # Wishart---------------------------------------------------
+
 def rwishart(n, Tau):
     """
     rwishart(n, Tau)
@@ -2540,22 +2786,19 @@ def rwishart(n, Tau):
 
     Tau is the inverse of the 'covariance' matrix :math:`C`.
     """
-
     p = np.shape(Tau)[0]
-    # sig = np.linalg.cholesky(np.linalg.inv(Tau))
     sig = np.linalg.cholesky(Tau)
     if n<p:
-        raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+        raise ValueError('Wishart parameter n must be greater '
+                         'than size of matrix.')
     norms = np.random.normal(size=p*(p-1)/2)
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
-    A= flib.expand_triangular(chi_sqs, norms)
-    flib.dtrsm_wrap(sig,A,side='L',uplo='L',transa='T')
-    # flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    w=np.asmatrix(np.dot(A,A.T))
+    A = flib.expand_triangular(chi_sqs, norms)
+
+    flib.dtrsm_wrap(sig, A, side='L', uplo='L', transa='T')
+    w = np.asmatrix(np.dot(A,A.T))
     flib.symmetrize(w)
     return w
-
-
 
 def wishart_expval(n, Tau):
     """
@@ -2597,24 +2840,33 @@ def wishart_like(X, n, Tau):
     return flib.blas_wishart(X,n,Tau)
 
 # Wishart, parametrized by covariance ------------------------------------
+
 def rwishart_cov(n, C):
     """
     rwishart(n, C)
 
+    n is degrees of freedom, C is the 'covariance' matrix
+
     Return a Wishart random matrix.
     """
+    # return rwishart(n, np.linalg.inv(C))
+
     p = np.shape(C)[0]
+    # Need cholesky decomposition of precision matrix C^-1?
     sig = np.linalg.cholesky(C)
+
     if n<p:
-        raise ValueError, 'Wishart parameter n must be greater than size of matrix.'
+        raise ValueError('Wishart parameter n must be greater '
+                         'than size of matrix.')
+
     norms = np.random.normal(size=p*(p-1)/2)
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
-    A= flib.expand_triangular(chi_sqs, norms)
-    flib.dtrmm_wrap(sig,A,side='L',uplo='L',transa='N')
-    w=np.asmatrix(np.dot(A,A.T))
+    A = flib.expand_triangular(chi_sqs, norms)
+
+    flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N')
+    w = np.asmatrix(np.dot(A,A.T))
     flib.symmetrize(w)
     return w
-
 
 def wishart_cov_expval(n, C):
     """
@@ -2633,7 +2885,7 @@ def wishart_cov_like(X, n, C):
     matrix of a multivariate normal distribution. If C=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
-    For an alternative parameterization based on :math:`T=C{-1}`, see
+    For an alternative parameterization based on :math:`T=C^{-1}`, see
     `wishart_like`.
 
     .. math::
@@ -2691,7 +2943,7 @@ def valuewrapper(f, arguments = None):
         return f(value, **kwds)
     
     if arguments is None: 
-        wrapper.__dict__.update(f.__dict__)
+    wrapper.__dict__.update(f.__dict__)
     else :
         wrapper.__dict__.update(arguments)
         
@@ -2716,33 +2968,36 @@ def local_decorated_likelihoods(obj):
         obj[name+'_like'] = gofwrapper(like, snapshot)
 
 
-#local_decorated_likelihoods(locals())
-# Decorating the likelihoods breaks the creation of distribution instantiators -DH.
-
-
+# local_decorated_likelihoods(locals())
+# Decorating the likelihoods breaks the creation of distribution
+# instantiators -DH.
 
 # Create Stochastic instantiators
 
+def _inject_dist(distname, kwargs={}, ns=locals()):
+    """
+    Reusable function to inject Stochastic subclasses into module
+    namespace
+    """
+    dist_logp, dist_random, grad_logp = name_to_funcs(dist, ns)
+    classname = capitalize(dist)
+    ns[classname]= stochastic_from_dist(dist, dist_logp,
+                                        dist_random,
+										grad_logp, **kwargs)
+
 for dist in sc_continuous_distributions:
-    dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp)
+    _inject_dist(dist)
 
 for dist in mv_continuous_distributions:
-    dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, mv=True)
+    _inject_dist(dist, kwargs={'mv' : True})
 
 for dist in sc_discrete_distributions:
-    dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, dtype=np.int)
+    _inject_dist(dist, kwargs={'dtype' : np.int})
 
 for dist in mv_discrete_distributions:
-    dist_logp, dist_random, grad_logp = name_to_funcs(dist, locals())
-    locals()[capitalize(dist)]= stochastic_from_dist(dist, dist_logp, dist_random, logp_partial_gradients = grad_logp, dtype=np.int, mv=True)
+    _inject_dist(dist, kwargs={'dtype' : np.int, 'mv' : True})
 
-
-dist_logp, dist_random, grad_logp = name_to_funcs('bernoulli', locals())
-Bernoulli = stochastic_from_dist('bernoulli', dist_logp, dist_random,logp_partial_gradients = grad_logp, dtype=np.bool)
-
+_inject_dist('bernoulli', {'dtype' : np.bool})
 
 def uninformative_like(x):
     """
@@ -2765,14 +3020,13 @@ def one_over_x_like(x):
         return -np.sum(np.log(x))
 
 
-Uninformative = stochastic_from_dist('uninformative', logp = uninformative_like)
-DiscreteUninformative = stochastic_from_dist('uninformative', logp = uninformative_like, dtype=np.int)
+Uninformative = stochastic_from_dist('uninformative', logp=uninformative_like)
+DiscreteUninformative = stochastic_from_dist('uninformative', logp=uninformative_like, dtype=np.int)
 DiscreteUninformative.__name__ = 'DiscreteUninformative'
 OneOverX = stochastic_from_dist('one_over_x', logp = one_over_x_like)
 
-
-
-# Conjugates of Dirichlet get special treatment, can be parametrized by first k-1 'p' values
+# Conjugates of Dirichlet get special treatment, can be parametrized
+# by first k-1 'p' values
 
 def extend_dirichlet(p):
     """
@@ -2839,7 +3093,8 @@ def rmod_categor(p,size=None):
 
 class Categorical(Stochastic):
     __doc__ = """
-C = Categorical(name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None)
+C = Categorical(name, p, value=None, dtype=np.int, observed=False,
+size=1, trace=True, rseed=False, cache_depth=2, plot=None)
 
 Stochastic variable with Categorical distribution.
 Parent is: p
@@ -2860,24 +3115,35 @@ Docstring of categorical_like (case where P is a Dirichlet):
 
     parent_names = ['p', 'minval', 'step']
 
-    def __init__(self, name, p, value=None, dtype=np.int, observed=False, size=1, trace=True, rseed=False, cache_depth=2, plot=None, verbose=None,**kwds):
+    def __init__(self, name, p, value=None, dtype=np.int, observed=False,
+                 size=None, trace=True, rseed=False, cache_depth=2, plot=None,
+                 verbose=None,**kwds):
 
         if value is not None:
             if np.isscalar(value):
-                self.size = 1
+                self.size = None
             else:
                 self.size = len(value)
         else:
             self.size = size
 
         if isinstance(p, Dirichlet):
-            Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like), doc='A Categorical random variable', name=name,
-                parents={'p':p}, random=bind_size(rmod_categor, self.size), trace=trace, value=value, dtype=dtype,
-                rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
+            Stochastic.__init__(self, logp=valuewrapper(mod_categorical_like),
+                                doc='A Categorical random variable', name=name,
+                                parents={'p':p}, random=bind_size(rmod_categor, self.size),
+                                trace=trace, value=value, dtype=dtype,
+                                rseed=rseed, observed=observed,
+                                cache_depth=cache_depth, plot=plot,
+                                verbose=verbose, **kwds)
         else:
-            Stochastic.__init__(self, logp=valuewrapper(categorical_like), doc='A Categorical random variable', name=name,
-                parents={'p':p}, random=bind_size(rcategorical, self.size), trace=trace, value=value, dtype=dtype,
-                rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
+            Stochastic.__init__(self, logp=valuewrapper(categorical_like),
+                                doc='A Categorical random variable', name=name,
+                                parents={'p':p},
+                                random=bind_size(rcategorical, self.size),
+                                trace=trace, value=value, dtype=dtype,
+                                rseed=rseed, observed=observed,
+                                cache_depth=cache_depth, plot=plot,
+                                verbose=verbose, **kwds)
 
 # class ModCategorical(Stochastic):
 #     __doc__ = """
@@ -2944,16 +3210,26 @@ Otherwise parent p's value should sum to 1.
 
     parent_names = ['n', 'p']
 
-    def __init__(self, name, n, p, trace=True, value=None, rseed=False, observed=False, cache_depth=2, plot=None, verbose=None, **kwds):
+    def __init__(self, name, n, p, trace=True, value=None, rseed=False,
+                 observed=False, cache_depth=2, plot=None, verbose=None,
+                 **kwds):
 
         if isinstance(p, Dirichlet):
-            Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like), doc='A Multinomial random variable', name=name,
-                parents={'n':n,'p':p}, random=mod_rmultinom, trace=trace, value=value, dtype=np.int, rseed=rseed,
-                observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
+            Stochastic.__init__(self, logp=valuewrapper(mod_multinom_like),
+                                doc='A Multinomial random variable', name=name,
+                                parents={'n':n,'p':p}, random=mod_rmultinom,
+                                trace=trace, value=value, dtype=np.int,
+                                rseed=rseed, observed=observed,
+                                cache_depth=cache_depth, plot=plot,
+                                verbose=verbose, **kwds)
         else:
-            Stochastic.__init__(self, logp=valuewrapper(multinomial_like), doc='A Multinomial random variable', name=name,
-                parents={'n':n,'p':p}, random=rmultinomial, trace=trace, value=value, dtype=np.int, rseed=rseed,
-                observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
+            Stochastic.__init__(self, logp=valuewrapper(multinomial_like),
+                                doc='A Multinomial random variable', name=name,
+                                parents={'n':n,'p':p}, random=rmultinomial,
+                                trace=trace, value=value, dtype=np.int,
+                                rseed=rseed, observed=observed,
+                                cache_depth=cache_depth, plot=plot,
+                                verbose=verbose, **kwds)
 
 def Impute(name, dist_class, imputable, **parents):
     """
@@ -2970,8 +3246,9 @@ def Impute(name, dist_class, imputable, **parents):
       - dist_class : Stochastic
         Stochastic subclass such as Poisson, Normal, etc.
       - imputable : numpy.ma.core.MaskedArray or iterable
-        A masked array with missing elements (where mask=True, value is assumed missing),
-        or any iterable that contains None elements that will be imputed.
+        A masked array with missing elements (where mask=True, value
+        is assumed missing), or any iterable that contains None
+        elements that will be imputed.
       - parents (optional): dict
         Arbitrary keyword arguments.
     """
@@ -2981,7 +3258,7 @@ def Impute(name, dist_class, imputable, **parents):
 
     if not type(masked_values) == np.ma.core.MaskedArray:
         # Generate mask
-        
+
         mask = [v is None or np.isnan(v) for v in masked_values]
         # Generate masked array
         masked_values = np.ma.masked_array(masked_values, mask)
@@ -3004,9 +3281,12 @@ def Impute(name, dist_class, imputable, **parents):
                 shape = np.shape(parent)
 
             if shape == dims:
-                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=np.ravel(parent), i=i: p[i])
+                these_parents[key] = Lambda(key + '[%i]'%i,
+                                            lambda p=np.ravel(parent),
+                                            i=i: p[i])
             elif shape == np.shape(masked_values):
-                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent, i=i: p[i])
+                these_parents[key] = Lambda(key + '[%i]'%i, lambda p=parent,
+                                            i=i: p[i])
             else:
                 these_parents[key] = parent
 
@@ -3015,7 +3295,8 @@ def Impute(name, dist_class, imputable, **parents):
             vars.append(dist_class(this_name, **these_parents))
         else:
             # Observed values
-            vars.append(dist_class(this_name, value=masked_values[i], observed=True, **these_parents))
+            vars.append(dist_class(this_name, value=masked_values[i],
+                                   observed=True, **these_parents))
     return np.reshape(vars, dims)
 
 ImputeMissing = Impute

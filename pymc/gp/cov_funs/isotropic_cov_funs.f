@@ -74,6 +74,236 @@ cf2py threadsafe
       RETURN
       END
 
+      SUBROUTINE matern(C,diff_degree,nx,ny,cmin,cmax,symm,BK,N)
+
+cf2py intent(inplace) C
+cf2py integer intent(in), optional :: cmin = 0
+cf2py integer intent(in), optional :: cmax = -1
+cf2py intent(hide) nx,ny,Bk
+cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(hide), depend(diff_degree):: N = floor(diff_degree)
+cf2py double precision intent(in),check(diff_degree>0)::diff_degree
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny)
+      DOUBLE PRECISION diff_degree, rem
+      DOUBLE PRECISION GA, prefac, snu
+      DOUBLE PRECISION far
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax
+      DOUBLE PRECISION BK(N+1), DGAMMA
+      LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+
+!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+      
+      if (diff_degree.GE. 0.01) then
+          far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
+      else
+          far = infinity
+      end if
+      
+      if (diff_degree .GT. 10.0D0) then
+        call gaussian(C,nx,ny,cmin,cmax,symm)
+        return
+      endif
+      
+
+      if (diff_degree .EQ. 1.0D0) then
+          prefac = 1.0D0
+      else
+          GA = DGAMMA(diff_degree)
+          prefac = 0.5D0 ** (diff_degree-1.0D0) / GA
+      endif
+      snu = DSQRT(diff_degree) * 2.0D0
+      fl = DINT(diff_degree)
+      rem = diff_degree - fl
+
+      if (symm) then           
+       
+        do j=cmin+1,cmax
+          C(j,j) = 1.0D0
+          do i=1,j-1
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=1.0D0
+            else  
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=prefac*(C(i,j)**diff_degree)*BK(fl+1)
+            endif
+!           C(j,i)=C(i,j)
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=1.0D0
+            else
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=prefac * (C(i,j) ** diff_degree) * BK(fl+1)
+            endif
+          enddo
+        enddo
+      endif  
+
+
+      RETURN
+      END
+
+
+
+      SUBROUTINE nsmatrn(C,ddx,ddy,hx,hy,Nmax,
+     1                      nx,ny,cmin,cmax,symm,BK)
+cf2py intent(inplace) C
+cf2py integer intent(in), optional :: cmin = 0
+cf2py integer intent(in), optional :: cmax = -1
+cf2py intent(hide) nx,ny,Bk
+cf2py logical intent(in), optional:: symm=0
+cf2py threadsafe
+
+      DOUBLE PRECISION C(nx,ny)
+      DOUBLE PRECISION diff_degree, rem, ddx(nx), ddy(ny)
+      DOUBLE PRECISION GA, prefac, snu, hx(nx), hy(ny)
+      DOUBLE PRECISION far
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax, Nmax
+      DOUBLE PRECISION BK(Nmax+1), DGAMMA
+      LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+
+
+! N should be floor of diff_degree everywhere.
+!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if      
+
+      if (symm) then           
+       
+        do j=cmin+1,cmax
+          C(j,j) = hx(j)*hx(j)
+          do i=1,j-1
+            h=hx(i)*hy(j)              
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=h
+            else
+!             Nonstationary part
+              diff_degree = (ddx(i)+ddy(j))*0.5D0
+              N = floor(diff_degree)
+              
+              if (diff_degree.GE. 0.01) then
+                  far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
+              else
+                  far = infinity
+              end if
+              
+              if (diff_degree .GT. 10.0D0) then
+                call gaussian(C,nx,ny,cmin,cmax,symm)
+                return
+              endif
+              
+              
+              if (diff_degree .EQ. 1.0D0) then
+                  prefac = 1.0D0
+              else
+                  GA = DGAMMA(diff_degree)
+                  prefac = 0.5D0 ** (diff_degree-1.0D0) / GA
+              endif
+              snu = DSQRT(diff_degree) * 2.0D0
+              fl = DINT(diff_degree)
+              rem = diff_degree - fl
+            
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=h*prefac*(C(i,j)**diff_degree)*BK(fl+1)
+            endif
+!           C(j,i)=C(i,j)
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+            h=hx(i)*hy(j)                            
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=h
+            else
+!             Nonstationary part
+              diff_degree = (ddx(i)+ddy(j))*0.5D0
+              N = floor(diff_degree)              
+              
+              h=hx(i)*hy(j)
+              
+              if (diff_degree.GE. 0.01) then
+                  far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
+              else
+                  far = infinity
+              end if
+              
+              if (diff_degree .GT. 10.0D0) then
+                call gaussian(C,nx,ny,cmin,cmax,symm)
+                return
+              endif
+              
+              
+              if (diff_degree .EQ. 1.0D0) then
+                  prefac = 1.0D0
+              else
+                  GA = DGAMMA(diff_degree)
+                  prefac = 0.5D0 ** (diff_degree-1.0D0) / GA
+              endif
+              snu = DSQRT(diff_degree) * 2.0D0
+              fl = DINT(diff_degree)
+              rem = diff_degree - fl
+            
+              ! Asymptotic form for large distances, to avoid numerical problems           
+              if (C(i,j) .GT. far) then
+                 C(i,j) = C(i,j) * snu
+                 BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
+              else
+                C(i,j) = C(i,j) * snu
+                CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
+              end if
+              C(i,j)=h*prefac*(C(i,j)**diff_degree)*BK(fl+1)
+            endif
+
+          enddo
+        enddo
+      endif  
+
+
+      RETURN
+      END
 
 
       SUBROUTINE stein_spatiotemporal
@@ -92,10 +322,14 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
       DOUBLE PRECISION origin_val
       DOUBLE PRECISION rem, dd_here, far
       DOUBLE PRECISION GA, prefac, snu
-      INTEGER nx, ny, i, j, fl, N, nd, cmin, cmax
+      INTEGER nx, ny, i, j, fl, N, cmin, cmax
       DOUBLE PRECISION BK(50), DGAMMA
-      DOUBLE PRECISION sp_x(nx,2), sp_y(ny,2)
       LOGICAL symm
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)      
+      
       
       if (cmax.EQ.-1) then
           cmax = ny
@@ -205,65 +439,72 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
       RETURN
       END
 
+c
+      SUBROUTINE nsst
+     *(C,Gt,origin_val,hx,hy,
+     * Bk,cmin,cmax,nx,ny,symm)
 
-      SUBROUTINE matern(C,diff_degree,nx,ny,cmin,cmax,symm,BK,N)
-
-cf2py intent(inplace) C
-cf2py integer intent(in), optional :: cmin = 0
-cf2py integer intent(in), optional :: cmax = -1
-cf2py intent(hide) nx,ny,Bk
-cf2py logical intent(in), optional:: symm=0
-cf2py integer intent(hide), depend(diff_degree):: N = floor(diff_degree)
-cf2py double precision intent(in),check(diff_degree>0)::diff_degree
 cf2py threadsafe
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py intent(inplace) C
+cf2py intent(hide) nx, ny, Bk
+cf2py logical intent(in), optional:: symm=0
 
-      DOUBLE PRECISION C(nx,ny)
-      DOUBLE PRECISION diff_degree, rem
+      DOUBLE PRECISION C(nx,ny), Gt(nx,ny)
+      DOUBLE PRECISION hx(nx), hy(ny)
+      DOUBLE PRECISION origin_val(nx,ny)
+      DOUBLE PRECISION rem, dd_here, far
       DOUBLE PRECISION GA, prefac, snu
-      DOUBLE PRECISION far
       INTEGER nx, ny, i, j, fl, N, cmin, cmax
-      DOUBLE PRECISION BK(N+1), DGAMMA
+      DOUBLE PRECISION BK(50), DGAMMA
       LOGICAL symm
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)      
-
-!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+      
+      
       if (cmax.EQ.-1) then
           cmax = ny
       end if
       
-      if (diff_degree.GE. 0.01) then
-          far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
-      else
-          far = infinity
-      end if
-      
-      if (diff_degree .GT. 10.0D0) then
-        call gaussian(C,nx,ny,cmin,cmax,symm)
-        return
-      endif
-      
-
-      if (diff_degree .EQ. 1.0D0) then
-          prefac = 1.0D0
-      else
-          GA = DGAMMA(diff_degree)
-          prefac = 0.5D0 ** (diff_degree-1.0D0) / GA
-      endif
-      snu = DSQRT(diff_degree) * 2.0D0
-      fl = DINT(diff_degree)
-      rem = diff_degree - fl
-
       if (symm) then           
        
         do j=cmin+1,cmax
-          C(j,j) = 1.0D0
+          
+          C(j,j) = hx(j)*hy(j)
+          
           do i=1,j-1
+                        
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
+            else
+                far = infinity
+            end if
+
+
             if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=1.0D0
-            else  
+              C(i,j)=origin_val(i,j) / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                  C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
+                  goto 1
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val(i,j)
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N = fl
+              
               ! Asymptotic form for large distances, to avoid numerical problems           
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
@@ -272,9 +513,12 @@ cf2py threadsafe
                 C(i,j) = C(i,j) * snu
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
-              C(i,j)=prefac*(C(i,j)**diff_degree)*BK(fl+1)
+              C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
+
             endif
-!           C(j,i)=C(i,j)
+    1 continue        
+!     1       C(j,i)=C(i,j)
           enddo
         enddo
 
@@ -282,9 +526,34 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           do i=1,nx
-            if (C(i,j) .EQ. 0.0D0) then
-              C(i,j)=1.0D0
+              
+! ================================
+! = gamma(t) can be changed here =
+! ================================
+            dd_here=Gt(i,j)
+            
+            if (dd_here.GE. 0.01) then
+                far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
             else
+                far = infinity
+            end if            
+            
+            if (C(i,j) .EQ. 0.0D0) then
+              C(i,j)=origin_val(i,j) / dd_here
+            else
+              if (dd_here .GT. 5.0D0) then
+                C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
+                goto 2
+              endif      
+
+              GA = DGAMMA(dd_here+1.0D0)
+              prefac = 0.5D0 ** (dd_here-1.0D0) / GA
+              prefac = prefac * origin_val(i,j)
+              snu = DSQRT(dd_here) * 2.0D0
+              fl = INT(dd_here)
+              rem = dd_here - fl
+              N=fl
+              
               ! Asymptotic form for large distances, to avoid numerical problems           
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
@@ -293,16 +562,16 @@ cf2py threadsafe
                 C(i,j) = C(i,j) * snu
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
-              C(i,j)=prefac * (C(i,j) ** diff_degree) * BK(fl+1)
+              C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
+                            
             endif
-          enddo
+    2     enddo
         enddo
-      endif  
+      endif     
 
 
       RETURN
       END
-
 
             
       SUBROUTINE gaussian(C,nx,ny,cmin,cmax,symm)

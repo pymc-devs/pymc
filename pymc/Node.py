@@ -144,10 +144,11 @@ class Node(object):
 
     def _set_parents(self, new_parents):
         # Define parents of this object
-
+            
+        # THERE DOES NOT APPEAR TO BE A detach_children() METHOD IN CLASS
         # Remove from current parents
-        if hasattr(self,'_parents'):
-            self._parents.detach_children()
+        # if hasattr(self,'_parents'):
+        #             self._parents.detach_children()
 
         # Specify new parents
         self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
@@ -238,15 +239,32 @@ class Variable(Node):
 
     plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
 
-    def stats(self, alpha=0.05, start=0, batches=100):
+    def stats(self, alpha=0.05, start=0, batches=100, chain=None):
         """
         Generate posterior statistics for node.
+        
+        :Parameters:
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+          
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+          
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
         """
         from utils import hpd, quantiles
         from numpy import sqrt
 
         try:
-            trace = np.squeeze(np.array(self.trace(), float)[start:])
+            trace = np.squeeze(np.array(self.trace(burn=start, chain=chain), float))
 
             n = len(trace)
             if not n:

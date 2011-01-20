@@ -22,6 +22,7 @@ import pymc as pm
 
 
 data = csv2rec('duffy-jittered.csv')
+
 # Convert from record array to dictionary
 data = dict([(k,data[k]) for k in data.dtype.names])
 # Create model. Use the HDF5 database backend, because the trace will take up a lot of memory.
@@ -30,6 +31,7 @@ DuffySampler = pm.MCMC(model.make_model(**data), db='hdf5', dbcomplevel=1, dbcom
 # ====================
 # = Do the inference =
 # ====================
+
 # Use GPEvaluationGibbs step methods.
 DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_b, DuffySampler.V_b, DuffySampler.tilde_fb)
 DuffySampler.use_step_method(pm.gp.GPEvaluationGibbs, DuffySampler.sp_sub_s, DuffySampler.V_s, DuffySampler.tilde_fs)

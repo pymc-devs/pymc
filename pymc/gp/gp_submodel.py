@@ -125,7 +125,7 @@ class GPSubmodel(pm.ObjectContainer):
     :SeeAlso: GaussianProcess, Realization, GPEvaluation
     """
     
-    def __init__(self, name, M, C, mesh, init_vals=None, obs_on_mesh=False, tally_all=False):
+    def __init__(self, name, M, C, mesh, init_vals=None, obs_on_mesh=False, tally_all=False, **kwds):
         
         if isinstance(mesh, pm.Variable):
             mesh = pm.Lambda('%s_mesh'%name, lambda mesh=mesh: pm.gp.regularize_array(mesh), trace=False)
@@ -152,11 +152,11 @@ class GPSubmodel(pm.ObjectContainer):
             except np.linalg.LinAlgError:
                 return None
 
-        S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0] if cb else None, doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all)
-        C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1] if cb else None, doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all)
-        C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2] if cb else None, doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all)
-        Uo_Cxo = pm.Lambda('%s_Uo_Cxo'%name, lambda cb=covariance_bits: cb[3] if cb else None, doc="A byproduct of observation of %s.C that can be used by %s.M"%(name,name), trace=tally_all)
-        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh, Uo_Cxo=Uo_Cxo: M(mesh, Uo_Cxo=Uo_Cxo), trace=tally_all, doc="The evaluation %s.M(%s.mesh)"%(name,name))
+        S_eval = pm.Lambda('%s_S_eval'%name, lambda cb=covariance_bits: cb[0] if cb else None, doc="The lower triangular Cholesky factor of %s.C_eval"%name, trace=tally_all or kwds.get('tally_S_eval',False))
+        C_eval = pm.Lambda('%s_C_eval'%name, lambda cb=covariance_bits: cb[1] if cb else None, doc="The evaluation %s.C(%s.mesh, %s.mesh)"%(name,name,name), trace=tally_all or kwds.get('tally_C_eval',False))
+        C_obs = pm.Lambda('%s_C_obs'%name, lambda cb=covariance_bits: cb[2] if cb else None, doc="%s.C, observed on %s.mesh"%(name,name), trace=tally_all or kwds.get('tally_C_obs',False))
+        Uo_Cxo = pm.Lambda('%s_Uo_Cxo'%name, lambda cb=covariance_bits: cb[3] if cb else None, doc="A byproduct of observation of %s.C that can be used by %s.M"%(name,name), trace=tally_all or kwds.get('tally_Uo_Cxo',False))
+        M_eval = pm.Lambda('%s_M_eval'%name, lambda M=M, mesh=mesh, Uo_Cxo=Uo_Cxo: M(mesh, Uo_Cxo=Uo_Cxo), trace=tally_all or kwds.get('tally_M_eval',False), doc="The evaluation %s.M(%s.mesh)"%(name,name))
                 
         @pm.potential(name = '%s_fr_check'%name)
         def fr_check(S_eval=S_eval):
@@ -169,10 +169,10 @@ class GPSubmodel(pm.ObjectContainer):
                 return 0
         fr_check=fr_check
         
-        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=True, observed=obs_on_mesh, 
+        f_eval = GPEvaluation('%s_f_eval'%name, mu=M_eval, sig=S_eval, value=init_vals, trace=kwds.get('tally_f_eval',True), observed=obs_on_mesh, 
             doc="The evaluation %s.f(%s.mesh).\nThis is a multivariate normal variable with mean %s.M_eval and covariance %s.C_eval."%(name,name,name,name))
         
-        @pm.deterministic(trace=tally_all, name='%s_M_obs'%name)
+        @pm.deterministic(trace=tally_all or kwds.get('tally_M_obs',False), name='%s_M_obs'%name)
         def M_obs(M=M, f_eval=f_eval, C_obs=C_obs, mesh=mesh):
             """
             Creates an observed mean object to match %sC_obs.
@@ -187,7 +187,7 @@ class GPSubmodel(pm.ObjectContainer):
         self.M_obs = M_obs
         self.C_obs = C_obs
         self.f_eval = f_eval
-        f = GaussianProcess('%s_f'%name, self)
+        f = GaussianProcess('%s_f'%name, self, trace=tally_all or kwds.get('tally_f',True))
         f.rand()
         l = locals()
         lk = filter(lambda k:isinstance(l[k],pm.Node), l.keys())

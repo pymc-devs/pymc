@@ -1,9 +1,9 @@
-__author__ = 'Christopher Fonnesbeck, fonnesbeck@gmail.com'
+__author__ = 'Christopher Fonnesbeck, chris.fonnesbeck@vanderbilt.edu'
 
 from pymc.StepMethods import StepMethod
 import numpy as np
 from pymc.utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
+from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri, pi
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
 from numpy.random import randint, random
@@ -43,9 +43,6 @@ class TWalk(StepMethod):
       - n1 (optional) : integer
           The number of elements to be moved at each iteration.
           Christen and Fox recommend values in [2, 20] (Defaults to 4).
-      - la (optional) : float
-          A parameter used to calculate the probability of choosing each
-          parameter (Defaults to 0.2876821)
       - support (optional) : function
           Function defining the support of the stochastic (Defaults to real line).
       - verbose (optional) : integer
@@ -53,7 +50,7 @@ class TWalk(StepMethod):
       - tally (optional) : bool
           Flag for recording values for trace (Defaults to True).
     """
-    def __init__(self, stochastic, kernel_probs=[0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, la=0.2876821, support=lambda x: True, verbose=None, tally=True):
+    def __init__(self, stochastic, inits=None, kernel_probs=[0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, support=lambda x: True, verbose=None, tally=True):
         
         # Initialize superclass
         StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)
@@ -86,13 +83,16 @@ class TWalk(StepMethod):
         else:
             self._len = 1
         
-        # Make second point from copy of stochastic
-        self.stochastic_prime = copy(self.stochastic)
-        self.stochastic_prime.__name__ = self.stochastic.__name__ + ' prime'
-        # Don't need to store values
-        self.stochastic_prime.trace = False
-        # Initialize to different value from stochastic
-        self.stochastic_prime.random()
+        # Create attribute for holding value and secondary value
+        self.values = [self.stochastic.value]
+        
+        # Initialize to different value from stochastic or supplied values
+        if inits is None:
+            self.values.append(self.stochastic.random())
+            # Reset original value
+            self.stochastic.value = self.values[0]
+        else:
+            self.values.append(inits)
         
         # Flag for using second point in log-likelihood calculations
         self._prime = False
@@ -100,25 +100,13 @@ class TWalk(StepMethod):
         # Proposal adjustment factor for current iteration
         self.hastings_factor = 0.0
         
-        # Set n1 to min(k, n1)
-        self.n1 = (self._len<n1)*self._len or n1
-        self.la = la
-        
         # Set probability of selecting any parameter
-        self._calc_p()
+        self.p = 1.*min(self._len, n1)/self._len
         
         # Support function
         self._support = support
         
         self._state = ['accepted', 'rejected', 'p']
-        
-        
-    def _calc_p(self):
-        """Calculate probability of parameter selection for updating"""
-        try:
-            self.p = (self.n1 - (self.n1 - 1) * exp(-self.la * (self._len-1))) / self._len
-        except AttributeError:
-            self.p = None
         
     def n1():
         doc = "Mean number of parameters to be selected for updating"
@@ -129,70 +117,55 @@ class TWalk(StepMethod):
             self._calc_p()
         return locals()
     n1 = property(**n1())
-        
-    def la():
-        doc = "Parameter for dermining probability of parameter selection for updating"
-        def fget(self):
-            return self._la
-        def fset(self, value):
-            self._la = value
-            self._calc_p()
-        return locals()
-    la = property(**la())
-    
-    def _get_logp_plus_loglike(self):
-        
-        # Calculate log-likelihood plus current log-probability for both x and xprime
-        sum = [logp_of_set(self.markov_blanket), logp_of_set(list([self.stochastic_prime])+list(self.children))]
-        
-        if self.verbose>1:
-            print '\t' + self._id + ' Current log-likelihood plus current log-probability', sum
-        return sum
-    
-    # Make get property for retrieving log-probability
-    logp_plus_loglike = property(fget = _get_logp_plus_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
     
     @staticmethod
     def competence(stochastic):
         """
         The competence function for TWalk.
         """
-        if stochastic.dtype in integer_dtypes:
-            return 0
-        else:
+        if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
+            if np.alen(stochastic.value) >=10:
+                return 2
             return 1
+        return 0
     
     def walk(self):
         """Walk proposal kernel"""
+        
+        if self.verbose>1:
+            print '\t' + self._id + ' Running Walk proposal kernel'
         
         # Mask for values to move
         phi = self.phi
         
         theta = self.walk_theta
         
-        u = random(sum(phi))
+        u = random(len(phi))
         z = (theta / (1 + theta))*(theta*u**2 + 2*u - 1)
-        
-        x_all = copy(self.stochastic.value)
-        x = x_all[phi]
-        xp_all = copy(self.stochastic_prime.value)
-        xp = xp_all[phi]
-        
-        if self._prime:
 
-            xp_all[phi] = xp + (xp - x)*z
-            self.stochastic_prime.value = xp_all
-        
+        if self._prime:
+            xp, x = self.values
         else:
+            x, xp = self.values
             
-            x_all[phi] = x + (x - xp)*z
-            self.stochastic.value = x_all
+        if self.verbose>1:
+            print '\t' + 'Current value = ' + str(x)
+        
+        x = x + phi*(x - xp)*z
+        
+        if self.verbose>1:
+            print '\t' + 'Proposed value = ' + str(x)
+        
+        self.stochastic.value = x
         
         # Set proposal adjustment factor
         self.hastings_factor = 0.0
     
     def traverse(self):
         """Traverse proposal kernel"""
+        
+        if self.verbose>1:
+            print '\t' + self._id + ' Running Traverse proposal kernel'
         
         # Mask for values to move
         phi = self.phi
@@ -205,55 +178,53 @@ class TWalk(StepMethod):
         else:
             beta = exp(1/(1 - theta)*log(random()))
         
-        x_all = copy(self.stochastic.value)
-        x = x_all[phi]
-        xp_all = copy(self.stochastic_prime.value)
-        xp = xp_all[phi]
-        
         if self._prime:
-            
-            xp_all[phi] = x + beta*(x - xp)
-            self.stochastic_prime.value = xp_all
-        
+            xp, x = self.values
         else:
+            x, xp = self.values
             
-            x_all[phi] = xp + beta*(xp - x)
-            self.stochastic.value = x_all
+        if self.verbose>1:
+            print '\t' + 'Current value = ' + str(x)
         
+        x = (xp + beta*(xp - x))*phi + x*(phi==False)
+        
+        if self.verbose>1:
+            print '\t' + 'Proposed value = ' + str(x)
+        
+        self.stochastic.value = x
+    
         # Set proposal adjustment factor
         self.hastings_factor = (sum(phi) - 2)*log(beta)
     
     def blow(self):
         """Blow proposal kernel"""
         
+        if self.verbose>1:
+            print '\t' + self._id + ' Running Blow proposal kernel'
+        
         # Mask for values to move
         phi = self.phi
         
-        x_all = copy(self.stochastic.value)
-        x = x_all[phi]
-        xp_all = copy(self.stochastic_prime.value)
-        xp = xp_all[phi]
-        
         if self._prime:
-            
-            sigma = max(phi*abs(x - xp))
-            
-            xp_all[phi] = xp + sigma*rnormal()
-            self.stochastic_prime.value = xp_all
-            
-            self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
-        
+            xp, x = self.values
         else:
+            x, xp = self.values
             
-            sigma = max(phi*abs(xp - x))
-            
-            x_all[phi] = x + sigma*rnormal()
-            self.stochastic.value = x_all
-            
-            self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
-    
-    
-    def _g(self, h, x, xp, s):
+        if self.verbose>1:
+            print '\t' + 'Current value ' + str(x)
+        
+        sigma = max(phi*abs(xp - x))
+
+        x = x + phi*sigma*rnormal()
+        
+        if self.verbose>1:
+            print '\t' + 'Proposed value = ' + str(x)
+        
+        self.hastings_factor = self._g(x, xp, sigma) - self._g(self.stochastic.value, xp, sigma)
+
+        self.stochastic.value = x
+
+    def _g(self, h, xp, s):
         """Density function for blow and hop moves"""
         
         nphi = sum(self.phi)
@@ -264,36 +235,41 @@ class TWalk(StepMethod):
     def hop(self):
         """Hop proposal kernel"""
         
+        if self.verbose>1:
+            print '\t' + self._id + ' Running Hop proposal kernel'
+        
         # Mask for values to move
         phi = self.phi
         
-        x_all = copy(self.stochastic.value)
-        x = x_all[phi]
-        xp_all = copy(self.stochastic_prime.value)
-        xp = xp_all[phi]
-        
         if self._prime:
-            
-            sigma = max(phi*abs(x - xp))/3.0
-            
-            xp_all[phi] = x + sigma*rnormal()
-            self.stochastic_prime.value = xp_all
-            
-            self.hastings_factor = self._gblow(self.stochastic_prime.value, xp_all, x_all) - self._gblow(xp_all, self.stochastic_prime.value, x_all)
-        
+            xp, x = self.values
         else:
-            
-            sigma = max(phi*abs(xp - x))/3.0
-            
-            xp[phi] = xp + sigma*rnormal()
-            self.stochastic.value = xp
-            
-            self.hastings_factor = self._g(self.stochastic.value, x_all, xp_all) - self._g(x_all, self.stochastic.value, xp_all)
+            x, xp = self.values
     
+        if self.verbose>1:
+            print '\t' + 'Current value of x = ' + str(x)
+        
+        sigma = max(phi*abs(xp - x))/3.0
+
+        x = (xp + sigma*rnormal())*phi + x*(phi==False)
+        
+        if self.verbose>1:
+            print '\t' + 'Proposed value = ' + str(x)
+        
+        self.hastings_factor = self._g(x, xp, sigma) - self._g(self.stochastic.value, xp, sigma)
+        
+        self.stochastic.value = x
+
     
     def reject(self):
         """Sets current s value to the last accepted value"""
         self.stochastic.revert()
+        
+        # Increment rejected count
+        self.rejected[self.current_kernel] += 1
+        
+        if self.verbose>1:
+            print self._id, "rejected, reverting to value =", self.stochastic.value
     
     def propose(self):
         """This method is called by step() to generate proposed values"""
@@ -304,48 +280,96 @@ class TWalk(StepMethod):
         
         # Parameters to move
         self.phi = (random(self._len) < self.p)
+
+        # Propose new value
+        kernel()
+
+    
+    def step(self):
+        """Single iteration of t-walk algorithm"""
+                
+        valid_proposal = False
         
         # Use x or xprime as pivot
         self._prime = (random() < 0.5)
         
-        # Propose new value
-        kernel()
-    
-    def step(self):
-        """Single iteration of t-walk algorithm"""
+        if self.verbose>1:
+            print "\n\nUsing x%s as pivot" % (" prime"*self._prime or "")
         
-        valid_proposal = False
+        if self._prime:
+            # Set the value of the stochastic to the auxiliary
+            self.stochastic.value = self.values[1]
+            
+            if self.verbose>1:
+                print self._id, "setting value to auxiliary", self.stochastic.value
         
         # Current log-probability
         logp = self.logp_plus_loglike
+        if self.verbose>1:
+            print "Current logp", logp
         
-        # Propose new value
-        while not valid_proposal:
-            self.propose()
-            # Check that proposed value lies in support
-            valid_proposal = self._support(self.stochastic.value)
-        
-        # Proposed log-probability
-        logp_p = self.logp_plus_loglike
+        try:
+            # Propose new value
+            while not valid_proposal:
+                self.propose()
+                # Check that proposed value lies in support
+                valid_proposal = self._support(self.stochastic.value)
+                
+            if not sum(self.phi):
+                raise ZeroProbability
+
+            # Proposed log-probability
+            logp_p = self.logp_plus_loglike
+            if self.verbose>1:
+                print "Proposed logp", logp_p
+            
+        except ZeroProbability:
+            
+            # Reject proposal
+            if self.verbose>1:
+                print self._id + ' rejecting due to ZeroProbability.'
+            self.reject()
+            
+            if self._prime:
+                # Update value list
+                self.values[1] = self.stochastic.value
+                # Revert to stochastic's value for next iteration
+                self.stochastic.value = self.values[0]
+            
+                if self.verbose>1:
+                    print self._id, "reverting stochastic to primary value", self.stochastic.value
+            else:
+                # Update value list
+                self.values[0] = self.stochastic.value
+
+            if self.verbose>1:
+                print self._id + ' returning.'
+            return
         
         if self.verbose>1:
-            print 'logp_p - logp: ', logp_p[self._prime] - logp[self._prime]
+            print 'logp_p - logp: ', logp_p - logp
         
         # Evaluate acceptance ratio
-        if log(random()) > logp_p[self._prime] - logp[self._prime] + self.hastings_factor:
+        if log(random()) > (logp_p - logp + self.hastings_factor):
             
             # Revert s if fail
             self.reject()
-            
-            # Increment rejected count
-            self.rejected[self.current_kernel] += 1
-            if self.verbose > 1:
-                print self._id + ' rejecting'
+
         else:
             # Increment accepted count
             self.accepted[self.current_kernel] += 1
             if self.verbose > 1:
                 print self._id + ' accepting'
         
-        if self.verbose > 1:
-            print self._id + ' returning.'
+        if self._prime:
+            # Update value list
+            self.values[1] = self.stochastic.value
+            # Revert to stochastic's value for next iteration
+            self.stochastic.value = self.values[0]
+            
+            if self.verbose>1:
+                print self._id, "reverting stochastic to primary value", self.stochastic.value
+                
+        else:
+            # Update value list
+            self.values[0] = self.stochastic.value
