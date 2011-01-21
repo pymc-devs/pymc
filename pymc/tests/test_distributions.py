@@ -508,6 +508,25 @@ class test_t(TestCase):
             compare_hist(figname='Student t', **figdata)
         assert_array_almost_equal(hist, like,1)
 
+class test_noncentral_t(TestCase):
+    """Based on gamma."""
+    def test_consistency(self):
+        parameters={'mu':-10, 'lam':0.2, 'nu':5}
+        hist, like, figdata = consistency(rnoncentral_t, noncentral_t_like,
+            parameters, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='noncentral t', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
+    def test_vectorization(self):
+        a = flib.nct([3,4,5], mu=3, lam=.1, nu=5)
+        b = flib.nct([3,4,5], mu=[3,3,3], lam=.1, nu=5)
+        c = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=5)
+        d = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=[5,5,5])
+        assert_equal(a,b)
+        assert_equal(b,c)
+        assert_equal(c,d)
+
 class test_exponweib(TestCase):
     def test_consistency(self):
         parameters = {'alpha':2, 'k':2, 'loc':1, 'scale':3}
