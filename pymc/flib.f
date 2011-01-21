@@ -720,7 +720,7 @@ cf2py double precision dimension(nnu),intent(in) :: nu
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
-cf2py integer intent(hide),depend(lam) :: nnu=len(lam)
+cf2py integer intent(hide),depend(lam) :: nlam=len(lam)
 cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
 cf2py threadsafe
 
@@ -758,7 +758,7 @@ cf2py threadsafe
           like = -infinity
           RETURN
         endif
-    
+
         like = like + gammln((nut+1.0)/2.0)
         like = like - gammln(nut/2.0)
         like = like + 0.5*dlog(lamt) - 0.5*dlog(nut * PI)
