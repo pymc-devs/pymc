@@ -60,7 +60,7 @@ sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
                                'lognormal', 'normal', 'pareto', 't', 
-                               't_full','truncated_pareto', 'uniform',
+                               'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 sc_bool_distributions = ['bernoulli']
@@ -2625,36 +2625,6 @@ def t_grad_setup(x, nu, f):
 
 t_grad_like = {'value'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
                'nu' : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_nu)}
-
-
-def t_full_like(x, nu, mu, tau):
-    R"""t_full_like(x, nu)
-
-    Student's T log-likelihood with location (mu) and precision (tau) parameters. Describes a zero-mean normal variable whose precision is
-    gamma distributed. Alternatively, describes the mean of several zero-mean normal
-    random variables divided by their sample standard deviation.
-
-    :Parameters:
-      - `x` : Input data.
-      - `nu` : Degrees of freedom.
-      - `mu` : Mean. 
-      - `tau` : Precision. 
-
-    """
-    nu = np.asarray(nu)
-    return flib.t((x - mu) * tau, nu) + .5 * tau
-
-def t_full_expval(x, nu, mu, tau):
-    """t_expval(nu)
-
-    Expectation of Student's t random variables.
-    """
-    return 0
-
-t_full_grad_like = {'value' : lambda x, nu, mu, tau : t_grad_setup((x - mu) * tau, nu, flib.t_grad_x),
-                    'nu'    : lambda x, nu, mu, tau : t_grad_setup((x - mu) * tau, nu, flib.t_grad_nu),
-                    'mu'    : lambda x, nu, mu, tau : t_grad_setup((x - mu) * tau, nu, flib.t_grad_x) * tau,
-                    'tau'   : lambda x, nu, mu, tau : t_grad_setup((x - mu) * tau, nu, flib.t_grad_x) * (x - mu) + .5}
 
 
 # DiscreteUniform--------------------------------------------------

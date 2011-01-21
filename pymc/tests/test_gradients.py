@@ -272,6 +272,7 @@ class test_gradients(TestCase):
         t = T('t', nu = f)
         self.check_gradients(t)
         
+        
         half_normal = HalfNormal('half_normal', tau = e)
         self.check_gradients(half_normal)
         
@@ -320,8 +321,7 @@ class test_gradients(TestCase):
         # self.markov_blanket is a list, because we want self.stochastics to have the chance to
         # raise ZeroProbability exceptions before self.children.
         markov_blanket = list(model)+list(children)
-
-        print model
+        
         gradients = utils.logp_gradient_of_set(model)
         for variable in model:
             

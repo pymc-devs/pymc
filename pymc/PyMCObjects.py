@@ -13,6 +13,7 @@ import Container
 from Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import sys
 import pdb
+import calc_utils
 
 import datatypes
 
@@ -448,8 +449,8 @@ class Deterministic(DeterministicBase):
         mapping = self._jacobian_formats.get(parameter, 'full')
 
             
-        return self._format_mapping[mapping](self, variable, jacobian, gradient)
-    
+        p =  self._format_mapping[mapping](self, variable, jacobian, gradient)
+        return p 
         
     def logp_partial_gradient(self, variable, calculation_set = None):
         """
@@ -479,26 +480,9 @@ class Deterministic(DeterministicBase):
     def transformation_operation_jacobian(self, variable, jacobian, gradient):
         return jacobian * gradient
     
-    _BO_history = {}
+    
     def broadcast_operation_jacobian(self, variable, jacobian, gradient):
-        
-        tgradient = jacobian * gradient
-        try :
-            axes, lx = self._BO_history[id(variable)]
-        except KeyError: 
-            sshape = array(shape(self.value))
-            vshape = zeros(sshape.size)
-            vshape[0:ndim(variable.value)] += array(shape(variable.value))
-            axes = np.where(sshape != vshape)[0]
-            lx = size(axes)
-            
-            self._BO_history[id(variable)] = (axes, lx )
-            
-        if lx > 0:
-            return np.apply_over_axes(np.sum, tgradient, axes)   
-            
-        else:
-            return tgradient
+        return calc_utils.sum_to_shape(id(variable), id(self), jacobian * gradient, shape(variable.value))
 
     def accumulation_operation_jacobian(self, variable, jacobian, gradient):   
         for i in range(ndim(jacobian)):

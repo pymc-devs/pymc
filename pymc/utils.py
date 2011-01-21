@@ -16,6 +16,7 @@ from numpy.linalg import cholesky, eigh, det, inv
 from Node import logp_of_set, logp_gradient_of_set
 import types
 from datatypes import * 
+from collections import defaultdict
 
 from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    pi, asarray, ones, atleast_1d, iterable, linspace, diff,
@@ -62,7 +63,6 @@ def check_list(thing, label):
         if thing.__class__ is not list:
             return [thing]
         return thing
-
 
 # TODO: Look into using numpy.core.numerictypes to do this part.
 
