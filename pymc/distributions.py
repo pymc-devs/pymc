@@ -2287,8 +2287,7 @@ def rtruncated_normal(mu, tau, a=None, b=None, size=None):
 
     Random truncated normal variates using method from Robert (1995).
     """
-
-    factor = 10
+    factor = max(10, int(tau))
     sign = 1.0
     if not size:
         size = 1
