@@ -709,6 +709,65 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE nct(x,mu,lam,nu,n,nmu,nlam,nnu,like)
+
+c Non-central Student's t log-likelihood function    
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(nlam),intent(in) :: lam
+cf2py double precision dimension(nnu),intent(in) :: nu
+cf2py double precision intent(out) :: like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py integer intent(hide),depend(lam) :: nnu=len(lam)
+cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nnu, nmu, nlam
+      DOUBLE PRECISION x(n)
+      DOUBLE PRECISION nu(nnu), mu(nmu), lam(nlam), like, infinity
+      DOUBLE PRECISION mut, lamt, nut
+      PARAMETER (infinity = 1.7976931348623157d308)
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      
+      nut = nu(1)
+      mut = mu(1)
+      lamt = lam(1)
+
+      like = 0.0
+      do i=1,n
+        if (nmu .GT. 1) then
+          mut = mu(i)
+        endif
+        if (nlam .GT. 1) then
+          lamt = lam(i)
+        endif
+        if (nnu .GT. 1) then
+          nut = nu(i)
+        endif
+        
+        if (nut .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+        if (lamt .LE. 0.0) then
+          like = -infinity
+          RETURN
+        endif
+    
+        like = like + gammln((nut+1.0)/2.0)
+        like = like - gammln(nut/2.0)
+        like = like + 0.5*dlog(lamt) - 0.5*dlog(nut * PI)
+        like = like - (nut+1)/2 * dlog(1 + (lamt*(x(i) - mut)**2)/nut)
+      enddo
+      return
+      END
+
+
       SUBROUTINE multinomial(x,n,p,nx,nn,np,k,like)
 
 c Multinomial log-likelihood function     

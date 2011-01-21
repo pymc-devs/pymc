@@ -59,8 +59,8 @@ sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
-                               'lognormal', 'normal', 'pareto', 't', 
-                               'truncated_pareto', 'uniform',
+                               'lognormal', 'noncentral_t', 'normal', 
+                               'pareto', 't', 'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 
@@ -2499,6 +2499,50 @@ def t_expval(nu):
     Expectation of Student's t random variables.
     """
     return 0
+    
+# Non-central Student's t-----------------------------------
+@randomwrap
+def rnoncentral_t(mu, lam, nu, size=None):
+    """rnoncentral_t(mu, lam, nu, size=1)
+
+    Non-central Student's t random variates.
+    """
+    tau = rgamma(nu/2., nu/(2.*lam), size)
+    return rnormal(mu, tau)
+
+def noncentral_t_like(x, mu, lam, nu):
+    R"""noncentral_t_like(x, mu, lam, nu)
+
+    Non-central Student's T log-likelihood. Describes a normal variable
+    whose precision is gamma distributed.
+
+    .. math::
+        f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu +
+        1}{2})}{\Gamma(\frac{\nu}{2})}
+        \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+        \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
+
+    :Parameters:
+      - `x` : Input data.
+      - `mu` : Location parameter.
+      - `lambda` : Scale parameter. 
+      - `nu` : Degrees of freedom.
+
+    """
+    mu = np.asarray(mu)
+    lam = np.asarray(lam)
+    nu = np.asarray(nu)
+    return flib.nct(x, mu, lam, nu)
+
+def noncentral_t_expval(mu, lam, nu):
+    """noncentral_t_expval(mu, lam, nu)
+
+    Expectation of non-central Student's t random variables. Only defined
+    for nu>1.
+    """
+    if nu>1:
+        return mu
+    return inf
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap
