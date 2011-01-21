@@ -2282,7 +2282,7 @@ def truncated_poisson_like(x,mu,k):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a=None, b=None, size=None):
+def rtruncated_normal(mu, tau, a=None, b=None, size=1):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
     Random truncated normal variates using method from Robert (1995).
@@ -2344,7 +2344,7 @@ def rtruncated_normal(mu, tau, a=None, b=None, size=None):
 
         # Return <size> samples
         if len(y) >= size:
-            return y[:size]
+            return np.squeeze(y[:size])
         else:
             # Get a larger sample next time
             factor *=10
