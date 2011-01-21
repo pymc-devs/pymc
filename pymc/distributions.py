@@ -2282,7 +2282,7 @@ def truncated_poisson_like(x,mu,k):
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a=None, b=None, size=1):
+def rtruncated_normal(mu, tau, a=None, b=None, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
     Random truncated normal variates using method from Robert (1995).
@@ -2290,7 +2290,9 @@ def rtruncated_normal(mu, tau, a=None, b=None, size=1):
 
     factor = 10
     sign = 1.0
-
+    if not size:
+        size = 1
+    size = np.squeeze(size)
     while True:
 
         if a is None and b is None:
@@ -2374,7 +2376,7 @@ def truncated_normal_expval(mu, tau, a, b):
 
 truncnorm_expval = truncated_normal_expval
 
-def truncated_normal_like(x, mu, tau, a, b):
+def truncated_normal_like(x, mu, tau, a=None, b=None):
     R"""truncnorm_like(x, mu, tau, a, b)
 
     Truncated normal log-likelihood.
@@ -2392,7 +2394,9 @@ def truncated_normal_like(x, mu, tau, a, b):
       - `b` : Right bound of the distribution.
     """
     x = np.atleast_1d(x)
+    if a is None: a = -np.inf
     a = np.atleast_1d(a)
+    if b is None: b = np.inf
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
     sigma = (1./np.atleast_1d(np.sqrt(tau)))
