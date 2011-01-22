@@ -2123,9 +2123,9 @@ def truncated_pareto_expval(alpha, m, b):
     
     if alpha <= 1:
         return inf
-    part1 = (m**alpha)/(1 - (m/b)**alpha)
-    part2 = alpha/(alpha-1)
-    part3 = (1/(m**(alpha-1)) - 1/(b**(alpha-1)))
+    part1 = (m**alpha)/(1. - (m/b)**alpha)
+    part2 = 1.*alpha/(alpha-1)
+    part3 = (1./(m**(alpha-1)) - 1./(b**(alpha-1.)))
     return part1*part2*part3
     
 def truncated_pareto_like(x, alpha, m, b):
