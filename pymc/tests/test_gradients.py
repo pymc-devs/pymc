@@ -15,63 +15,152 @@ def find_variable_set(stochastic):
             set.append(variable)
     return set
 
+def check_jacobians( deterministic):
+    for parameter, pvalue in deterministic.parents.iteritems():
+        
+        if isinstance(pvalue, Variable): 
+            
+            grad = random.normal(.5, .1, size = shape(deterministic.value))
+            a_partial_grad = get_analytic_partial_gradient(deterministic, parameter, pvalue, grad)
+            
+            n_partial_grad = get_numeric_partial_gradient(deterministic, pvalue, grad)
+
+            assert_array_almost_equal(a_partial_grad, n_partial_grad,4,
+                     "analytic partial gradient for " + str(deterministic) +
+                     " with respect to parameter " + str(parameter) +
+                     " is not correct.")
+            
+            
+    
+def get_analytic_partial_gradient(deterministic, parameter, variable, grad):
+    try:
+        jacobian = deterministic._jacobians[parameter].get()
+    except KeyError:
+        raise ValueError(str(deterministic) +" has no jacobian for " + str(parameter))
+    mapping = deterministic._jacobian_formats.get(parameter, 'full')
+
+        
+    return deterministic._format_mapping[mapping](deterministic, variable, jacobian, grad)
+    
+            
+def get_numeric_partial_gradient( deterministic, pvalue, grad ):
+    j = get_numeric_jacobian(deterministic, pvalue)
+    pg = deterministic._format_mapping['full'](deterministic, pvalue,j , grad)
+    return reshape(pg, shape(pvalue.value))
+
+def get_numeric_jacobian( deterministic, pvalue ): 
+    e = 1e-9
+    initial_pvalue = pvalue.value
+    shape = initial_pvalue.shape
+    size = initial_pvalue.size
+    
+    initial_value = ravel(deterministic.value)
+
+    numeric_jacobian= zeros((deterministic.value.size,size))
+    for i in range(size):
+        
+        delta = zeros(size)
+        delta[i] += e
+        
+        pvalue.value = reshape(initial_pvalue.ravel() + delta, shape)
+        value = ravel(deterministic.value)
+
+        numeric_jacobian[:, i] = (value - initial_value)/e
+    
+    pvalue.value = initial_pvalue
+    return numeric_jacobian
+
+def check_model_gradients( model):
+
+    model = set(model)
+    # find the markov blanket 
+    children = set([])
+    for s in model:
+        for s2 in s.extended_children:
+            if isinstance(s2, Stochastic) and s2.observed == True:
+                children.add( s2)
+    
+
+    # self.markov_blanket is a list, because we want self.stochastics to have the chance to
+    # raise ZeroProbability exceptions before self.children.
+    markov_blanket = list(model)+list(children)
+    
+    gradients = utils.logp_gradient_of_set(model)
+    for variable in model:
+        
+        analytic_gradient = gradients[variable]
+        
+        numeric_gradient = get_numeric_model_gradient(markov_blanket, variable)
+        
+        assert_array_almost_equal(numeric_gradient, analytic_gradient,3,
+                                 "analytic gradient for model " + str(model) +
+                                 " with respect to variable " + str(variable) +
+                                 " is not correct.")
+
+def check_gradients( stochastic):
+       
+    stochastics = find_variable_set(stochastic)
+    gradients = utils.logp_gradient_of_set(stochastics, stochastics)
+    
+    for s, analytic_gradient in gradients.iteritems():
+    
+            numeric_gradient = get_numeric_gradient(stochastics, s)
+            
+            assert_array_almost_equal(numeric_gradient, analytic_gradient,4,
+                                     "analytic gradient for " + str(stochastic) +
+                                     " with respect to parameter " + str(s) +
+                                     " is not correct.")
+       
+
+def get_numeric_gradient( stochastic, pvalue ): 
+    e = 1e-9
+    initial_value = pvalue.value
+    shape = initial_value.shape
+    size = initial_value.size
+    
+    initial_logp = utils.logp_of_set(stochastic)
+    numeric_gradient = zeros(size)
+    if not (pvalue.dtype in float_dtypes):
+        return numeric_gradient 
+    
+    for i in range(size):
+       
+        delta = zeros(size)
+        delta[i] += e
+        
+        pvalue.value = reshape(initial_value.ravel() + delta, shape)
+        logp = utils.logp_of_set(stochastic)
+        
+        numeric_gradient[i] = (logp - initial_logp)/e
+    
+    pvalue.value = initial_value
+    return numeric_gradient
+
+def get_numeric_model_gradient( model, variable): 
+    e = 1e-9
+    initial_value = variable.value
+    shape = initial_value.shape
+    size = initial_value.size
+    
+    initial_logp = utils.logp_of_set(model)
+    
+    numeric_gradient = zeros(size)
+    for i in range(size):
+        
+        delta = zeros(size)
+        delta[i] += e
+        
+        variable.value = reshape(initial_value.ravel() + delta, shape)
+        logp = utils.logp_of_set(model)
+        
+        numeric_gradient[i] = (logp - initial_logp)/e
+    
+    variable.value = initial_value
+    return numeric_gradient
+
 class test_gradients(TestCase):
     
-    def check_jacobians(self, deterministic):
-        for parameter, pvalue in deterministic.parents.iteritems():
-            
-            if isinstance(pvalue, Variable): 
-                
-                grad = random.normal(.5, .1, size = shape(deterministic.value))
-                a_partial_grad = self.get_analytic_partial_gradient(deterministic, parameter, pvalue, grad)
-                
-                n_partial_grad = self.get_numeric_partial_gradient(deterministic, pvalue, grad)
 
-                assert_array_almost_equal(a_partial_grad, n_partial_grad,4,
-                         "analytic partial gradient for " + str(deterministic) +
-                         " with respect to parameter " + str(parameter) +
-                         " is not correct.")
-                
-                
-        
-    def get_analytic_partial_gradient(self, deterministic, parameter, variable, grad):
-        try:
-            jacobian = deterministic._jacobians[parameter].get()
-        except KeyError:
-            raise ValueError(str(deterministic) +" has no jacobian for " + str(parameter))
-        mapping = deterministic._jacobian_formats.get(parameter, 'full')
-
-            
-        return deterministic._format_mapping[mapping](deterministic, variable, jacobian, grad)
-        
-                
-    def get_numeric_partial_gradient(self, deterministic, pvalue, grad ):
-        j = self.get_numeric_jacobian(deterministic, pvalue)
-        pg = deterministic._format_mapping['full'](deterministic, pvalue,j , grad)
-        return reshape(pg, shape(pvalue.value))
-    
-    def get_numeric_jacobian(self, deterministic, pvalue ): 
-        e = 1e-9
-        initial_pvalue = pvalue.value
-        shape = initial_pvalue.shape
-        size = initial_pvalue.size
-        
-        initial_value = ravel(deterministic.value)
-
-        numeric_jacobian= zeros((deterministic.value.size,size))
-        for i in range(size):
-            
-            delta = zeros(size)
-            delta[i] += e
-            
-            pvalue.value = reshape(initial_pvalue.ravel() + delta, shape)
-            value = ravel(deterministic.value)
-
-            numeric_jacobian[:, i] = (value - initial_value)/e
-        
-        pvalue.value = initial_pvalue
-        return numeric_jacobian
-        
         
     def test_jacobians(self):
         shape = (3, 10)
@@ -81,39 +170,40 @@ class test_gradients(TestCase):
         d = Uniform('d', lower = ones(shape) * -10, upper = ones(shape) * -.1)
         
         addition = a + b 
-        self.check_jacobians(addition)
+        check_jacobians(addition)
         
         subtraction = a - b
-        self.check_jacobians(subtraction)
+        check_jacobians(subtraction)
         
         multiplication = a * b
-        self.check_jacobians(subtraction)
+        check_jacobians(subtraction)
         
         division1 = a / c
-        self.check_jacobians(division1)
+        check_jacobians(division1)
+        
         division2 = a / d
-        self.check_jacobians(division2)
+        check_jacobians(division2)
         
         a2 = Uniform('a2', lower = .1 * ones(shape), upper = 2.0 * ones(shape))
         powering = a2 ** b
-        self.check_jacobians(powering)
+        check_jacobians(powering)
         
         negation = -a
-        self.check_jacobians(negation)
+        check_jacobians(negation)
         
         absing = abs(a)
-        self.check_jacobians(absing)
+        check_jacobians(absing)
         
         indexing1 = a[0:1,5:8]
-        self.check_jacobians(indexing1)
+        check_jacobians(indexing1)
         
         
         indexing3 = a[::-1,:]
-        self.check_jacobians(indexing3)
+        check_jacobians(indexing3)
         
         #this currently does not work because scalars use the Index deterministic which is special and needs more thought 
         indexing2 = a[0]
-        self.check_jacobians(indexing2)
+        check_jacobians(indexing2)
         
     def test_numpy_deterministics_jacobians(self):
         
@@ -126,104 +216,67 @@ class test_gradients(TestCase):
         f = Uniform('c', lower = ones(shape) * 1.0, upper = ones(shape) * 10)
         
         summing = sum(a, axis = 0)
-        self.check_jacobians(summing)
+        check_jacobians(summing)
         
         summing2 = sum(a)
-        self.check_jacobians(summing2)
+        check_jacobians(summing2)
         
         absing = abs(a)
-        self.check_jacobians(absing)
+        check_jacobians(absing)
         
         exping = exp(a)
-        self.check_jacobians(exping)
+        check_jacobians(exping)
         
         logging = log(c)
-        self.check_jacobians(logging)
+        check_jacobians(logging)
         
         sqrting = sqrt(c)
-        self.check_jacobians(sqrting)
+        check_jacobians(sqrting)
         
         sining = sin(a)
-        self.check_jacobians(sining)
+        check_jacobians(sining)
         
         cosing = cos(a)
-        self.check_jacobians(cosing)
+        check_jacobians(cosing)
         
         taning = tan(a)
-        self.check_jacobians(taning)
+        check_jacobians(taning)
         
         arcsining = arcsin(d)
-        self.check_jacobians(arcsining)
+        check_jacobians(arcsining)
         
         arcosing = arccos(d)
-        self.check_jacobians(arcosing)
+        check_jacobians(arcosing)
         
         arctaning = arctan(d)
-        self.check_jacobians(arctaning)
+        check_jacobians(arctaning)
         
         sinhing = sinh(a)
-        self.check_jacobians(sinhing)
+        check_jacobians(sinhing)
         
         coshing = cosh(a)
-        self.check_jacobians(coshing)
+        check_jacobians(coshing)
         
         tanhing = tanh(a)
-        self.check_jacobians(tanhing)
+        check_jacobians(tanhing)
         
         arcsinhing = arcsinh(a)
-        self.check_jacobians(arcsinhing)
+        check_jacobians(arcsinhing)
         
         arccoshing = arccosh(f)
-        self.check_jacobians(arccoshing)
+        check_jacobians(arccoshing)
         
         arctanhing = arctanh(d)
-        self.check_jacobians(arctanhing)
+        check_jacobians(arctanhing)
          
         arctan2ing = arctan2(b, e)
-        self.check_jacobians(arctan2ing)
+        check_jacobians(arctan2ing)
          
         hypoting = hypot(b, e)
-        self.check_jacobians(hypoting)
+        check_jacobians(hypoting)
         
 
-    def check_gradients(self, stochastic):
-        
-        stochastics = find_variable_set(stochastic)
-        gradients = utils.logp_gradient_of_set(stochastics, stochastics)
-
-        for s, analytic_gradient in gradients.iteritems():
-
-                numeric_gradient = self.get_numeric_gradient(stochastics, s)
-                
-                assert_array_almost_equal(numeric_gradient, analytic_gradient,4,
-                                         "analytic gradient for " + str(stochastic) +
-                                         " with respect to parameter " + str(s) +
-                                         " is not correct.")
-        
-
-    def get_numeric_gradient(self, stochastic, pvalue ): 
-        e = 1e-9
-        initial_value = pvalue.value
-        shape = initial_value.shape
-        size = initial_value.size
- 
-        initial_logp = utils.logp_of_set(stochastic)
-        numeric_gradient = zeros(size)
-        if not (pvalue.dtype in float_dtypes):
-            return numeric_gradient 
-         
-        for i in range(size):
-            
-            delta = zeros(size)
-            delta[i] += e
-            
-            pvalue.value = reshape(initial_value.ravel() + delta, shape)
-            logp = utils.logp_of_set(stochastic)
-            
-            numeric_gradient[i] = (logp - initial_logp)/e
-        
-        pvalue.value = initial_value
-        return numeric_gradient
+    
         
     def test_gradients(self):
         
@@ -244,118 +297,73 @@ class test_gradients(TestCase):
         b2.value = 2.5
         
         norm = Normal('norm', mu = a, tau = b)
-        self.check_gradients(norm)
+        check_gradients(norm)
         
         norm2 = Normal('norm2', mu = 0, tau = b2)
-        self.check_gradients(norm2)
+        check_gradients(norm2)
         
         gamma = Gamma('gamma', alpha = a, beta = b)
-        self.check_gradients(gamma)
+        check_gradients(gamma)
         
         bern = Bernoulli('bern',p = p)
-        self.check_gradients(bern )
+        check_gradients(bern )
 
         beta = Beta('beta', alpha = c, beta = d)
 
-        self.check_gradients(beta)
+        check_gradients(beta)
         
         cauchy = Cauchy('cauchy', alpha = a, beta = d)
-        self.check_gradients(cauchy)
+        check_gradients(cauchy)
         
         chi2 = Chi2('chi2', nu = e)
 
-        self.check_gradients(chi2)
+        check_gradients(chi2)
         
         exponential = Exponential('expon', beta = d)
-        self.check_gradients(exponential)
+        check_gradients(exponential)
         
         t = T('t', nu = f)
-        self.check_gradients(t)
+        check_gradients(t)
         
         
         half_normal = HalfNormal('half_normal', tau = e)
-        self.check_gradients(half_normal)
+        check_gradients(half_normal)
         
         inverse_gamma = InverseGamma ('inverse_gamma', alpha = c, beta = d)
-        self.check_gradients(inverse_gamma)
+        check_gradients(inverse_gamma)
         
         laplace = Laplace('laplace', mu = a , tau = c)
-        self.check_gradients(laplace)
+        check_gradients(laplace)
         
         lognormal = Lognormal('lognormal', mu = a, tau = c)
-        self.check_gradients(lognormal)
+        check_gradients(lognormal)
         
         weibull = Weibull('weibull', alpha = c, beta = d)
-        self.check_gradients(weibull)
+        check_gradients(weibull)
         
         binomial = Binomial('binomial', p = p, n = n)
-        self.check_gradients(binomial)
+        check_gradients(binomial)
         
         geometric = Geometric('geometric', p = p)
-        self.check_gradients(geometric)
+        check_gradients(geometric)
         
         poisson = Poisson('poisson', mu = c)
-        self.check_gradients(poisson)
+        check_gradients(poisson)
         
         u = Uniform('u', lower = a, upper = b)
-        self.check_gradients(u)
+        check_gradients(u)
         
         negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
-        self.check_gradients(negative_binomial)
+        check_gradients(negative_binomial)
         
         #exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
-        #self.check_gradients(exponweib)
+        #check_gradients(exponweib)
         
-        
-    def check_model_gradients(self, model):
-
-        model = set(model)
-        # find the markov blanket 
-        children = set([])
-        for s in model:
-            for s2 in s.extended_children:
-                if isinstance(s2, Stochastic) and s2.observed == True:
-                    children.add( s2)
         
 
-        # self.markov_blanket is a list, because we want self.stochastics to have the chance to
-        # raise ZeroProbability exceptions before self.children.
-        markov_blanket = list(model)+list(children)
-        
-        gradients = utils.logp_gradient_of_set(model)
-        for variable in model:
-            
-            analytic_gradient = gradients[variable]
-            
-            numeric_gradient = self.get_numeric_model_gradient(markov_blanket, variable)
-            
-            assert_array_almost_equal(numeric_gradient, analytic_gradient,3,
-                                     "analytic gradient for model " + str(model) +
-                                     " with respect to variable " + str(variable) +
-                                     " is not correct.")
         
 
-    def get_numeric_model_gradient(self, model, variable): 
-        e = 1e-9
-        initial_value = variable.value
-        shape = initial_value.shape
-        size = initial_value.size
-        
-        initial_logp = utils.logp_of_set(model)
-        
-        numeric_gradient = zeros(size)
-        for i in range(size):
-            
-            delta = zeros(size)
-            delta[i] += e
-            
-            variable.value = reshape(initial_value.ravel() + delta, shape)
-            logp = utils.logp_of_set(model)
-            
-            numeric_gradient[i] = (logp - initial_logp)/e
-        
-        variable.value = initial_value
-        return numeric_gradient
+    
         
     def test_model(self):
         import model1
@@ -365,9 +373,9 @@ class test_gradients(TestCase):
         model[1].value = 10.2
         model[2].value = .5 
         
-        self.check_gradients(model[0])
+        check_gradients(model[0])
         
-        self.check_model_gradients(model)
+        check_model_gradients(model)
         
         
 
