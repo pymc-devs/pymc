@@ -59,8 +59,8 @@ sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
-                               'lognormal', 'normal', 'pareto', 't', 
-                               'truncated_pareto', 'uniform',
+                               'lognormal', 'noncentral_t', 'normal', 
+                               'pareto', 't', 'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 sc_bool_distributions = ['bernoulli']
@@ -2241,9 +2241,9 @@ def truncated_pareto_expval(alpha, m, b):
     
     if alpha <= 1:
         return inf
-    part1 = (m**alpha)/(1 - (m/b)**alpha)
-    part2 = alpha/(alpha-1)
-    part3 = (1/(m**(alpha-1)) - 1/(b**(alpha-1)))
+    part1 = (m**alpha)/(1. - (m/b)**alpha)
+    part2 = 1.*alpha/(alpha-1)
+    part3 = (1./(m**(alpha-1)) - 1./(b**(alpha-1.)))
     return part1*part2*part3
     
 def truncated_pareto_like(x, alpha, m, b):
@@ -2404,72 +2404,23 @@ truncated_poisson_grad_like = {'mu' : flib.trpoisson_gmu}
 
 # Truncated normal distribution--------------------------
 @randomwrap
-def rtruncated_normal(mu, tau, a=None, b=None, size=None):
+def rtruncated_normal(mu, tau, a=-np.inf, b=np.inf, size=None):
     """rtruncated_normal(mu, tau, a, b, size=1)
 
-    Random truncated normal variates using method from Robert (1995).
+    Random truncated normal variates.
     """
-
-    factor = 10
-    sign = 1.0
-
-    while True:
-
-        if a is None and b is None:
-            raise ValueError, 'No truncation boundary given.'
-
-        elif a is None or b is None:
-            # One-sided truncation
-            
-            if a is None:
-                # See top of p.123 in Robert (1995)
-                a = -b
-                mu = -mu
-                sign = -1.0
-            
-            # Algorithm is in terms of standard normal
-            a = np.sqrt(tau) * (a - mu)
-            
-            # Parameter of exponential proposal
-            beta = (a + np.sqrt(a**2 + 4))/2.0
-            # Sample from exponential
-            z = np.random.exponential(1./beta, size*factor) + a
-
-            if a<beta:
-
-                x = np.exp(-0.5 * (beta - z)**2)
-
-            else:
-                
-                x = np.exp(0.5 * (a - beta)**2) * np.exp(-(beta - z)**2)
-
-        else:
-            # Two-sided truncation
-
-            # Algorithm is in terms of standard normal
-            a = np.sqrt(tau) * (a - mu)
-            b = np.sqrt(tau) * (b - mu)
-
-            # Sample z ~ U(a,b)
-            z = (b - a) * random_number(size*factor) + a
-            
-            if a<=0<=b:
-                x = np.exp(-0.5 * z**2)
-            elif b<0:
-                x = np.exp(0.5 * (b**2 - z**2))
-            else:
-                x = np.exp(0.5 * (a**2 - z**2))
-
-        # Accept-reject
-        u = random_number(size*factor)
-        y = sign * (z[u <= x] / np.sqrt(tau) + mu)
-
-        # Return <size> samples
-        if len(y) >= size:
-            return y[:size]
-        else:
-            # Get a larger sample next time
-            factor *=10
+    
+    sigma = 1./np.sqrt(tau)
+    na = pymc.utils.normcdf((a-mu)/sigma)
+    nb = pymc.utils.normcdf((b-mu)/sigma)
+    
+    # Use the inverse CDF generation method.
+    U = np.random.mtrand.uniform(size=size)	
+    q = U * nb + (1-U)*na
+    R = pymc.utils.invcdf(q)
+    
+    # Unnormalize
+    return R*sigma + mu
 
 rtruncnorm = rtruncated_normal
 
@@ -2496,7 +2447,7 @@ def truncated_normal_expval(mu, tau, a, b):
 
 truncnorm_expval = truncated_normal_expval
 
-def truncated_normal_like(x, mu, tau, a, b):
+def truncated_normal_like(x, mu, tau, a=None, b=None):
     R"""truncnorm_like(x, mu, tau, a, b)
 
     Truncated normal log-likelihood.
@@ -2514,7 +2465,9 @@ def truncated_normal_like(x, mu, tau, a, b):
       - `b` : Right bound of the distribution.
     """
     x = np.atleast_1d(x)
+    if a is None: a = -np.inf
     a = np.atleast_1d(a)
+    if b is None: b = np.inf
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
     sigma = (1./np.atleast_1d(np.sqrt(tau)))
@@ -2617,6 +2570,50 @@ def t_expval(nu):
     Expectation of Student's t random variables.
     """
     return 0
+    
+# Non-central Student's t-----------------------------------
+@randomwrap
+def rnoncentral_t(mu, lam, nu, size=None):
+    """rnoncentral_t(mu, lam, nu, size=1)
+
+    Non-central Student's t random variates.
+    """
+    tau = rgamma(nu/2., nu/(2.*lam), size)
+    return rnormal(mu, tau)
+
+def noncentral_t_like(x, mu, lam, nu):
+    R"""noncentral_t_like(x, mu, lam, nu)
+
+    Non-central Student's T log-likelihood. Describes a normal variable
+    whose precision is gamma distributed.
+
+    .. math::
+        f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu +
+        1}{2})}{\Gamma(\frac{\nu}{2})}
+        \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+        \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
+
+    :Parameters:
+      - `x` : Input data.
+      - `mu` : Location parameter.
+      - `lambda` : Scale parameter. 
+      - `nu` : Degrees of freedom.
+
+    """
+    mu = np.asarray(mu)
+    lam = np.asarray(lam)
+    nu = np.asarray(nu)
+    return flib.nct(x, mu, lam, nu)
+
+def noncentral_t_expval(mu, lam, nu):
+    """noncentral_t_expval(mu, lam, nu)
+
+    Expectation of non-central Student's t random variables. Only defined
+    for nu>1.
+    """
+    if nu>1:
+        return mu
+    return inf
 
 def t_grad_setup(x, nu, f):
     nu = np.asarray(nu)

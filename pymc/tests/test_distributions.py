@@ -511,6 +511,25 @@ class test_t(TestCase):
             compare_hist(figname='Student t', **figdata)
         assert_array_almost_equal(hist, like,1)
 
+class test_noncentral_t(TestCase):
+    """Based on gamma."""
+    def test_consistency(self):
+        parameters={'mu':-10, 'lam':0.2, 'nu':5}
+        hist, like, figdata = consistency(rnoncentral_t, noncentral_t_like,
+            parameters, nrandom=5000)
+        if PLOT:
+            compare_hist(figname='noncentral t', **figdata)
+        assert_array_almost_equal(hist, like,1)
+        
+    def test_vectorization(self):
+        a = flib.nct([3,4,5], mu=3, lam=.1, nu=5)
+        b = flib.nct([3,4,5], mu=[3,3,3], lam=.1, nu=5)
+        c = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=5)
+        d = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=[5,5,5])
+        assert_equal(a,b)
+        assert_equal(b,c)
+        assert_equal(c,d)
+
 class test_exponweib(TestCase):
     def test_consistency(self):
         parameters = {'alpha':2, 'k':2, 'loc':1, 'scale':3}
@@ -823,6 +842,12 @@ class test_truncated_pareto(TestCase):
         if PLOT:
             compare_hist(figname='truncated_pareto', **figdata)
         assert_array_almost_equal(hist, like, 1)
+        
+    def test_random(self):
+        r = rtruncated_pareto(alpha=3, m=1, b=6, size=10000)
+        assert_almost_equal(r.mean(), truncated_pareto_expval(3, 1, 6), 1)
+        assert (r > 1).all()
+        assert (r < 6).all()
 
     def test_vectorization(self):
         a = flib.truncated_pareto([3,4,5], alpha=3, m=1, b=6)
@@ -856,7 +881,12 @@ class test_truncated_poisson(TestCase):
         if PLOT:
             compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)
-
+        
+    def test_random(self):
+        r = rtruncated_poisson(mu=5, k=1, size=10000)
+        assert_almost_equal(r.mean(), truncated_poisson_expval(5, 1), 1)
+        assert (r >= 1).all()
+        
     def test_normalization(self):
         parameters = {'mu':4., 'k':1}
         summation=discrete_normalization(flib.trpoisson,parameters,20)
