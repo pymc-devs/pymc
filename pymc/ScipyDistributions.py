@@ -135,7 +135,7 @@ computation using the rv objects in scipy.stats.distributions directly before
 reporting the bug.
     """
 
-    new_class = new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, True, None)
+    new_class = new_dist_class(dtype, name, parent_names, parents_default, docstr, logp, random, True)
     class newer_class(new_class):
         __doc__ = docstr
         rv = scipy_dist

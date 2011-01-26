@@ -2,7 +2,6 @@
 The DisasterMCMC example.
 
 """
-from __future__ import with_statement
 from numpy.testing import *
 from pymc import MCMC, database
 from pymc.examples import DisasterModel

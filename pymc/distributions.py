@@ -55,7 +55,7 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
+sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal', 'hypergeometric',
                                'inverse_gamma', 'laplace', 'logistic',
@@ -63,7 +63,7 @@ sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'pareto', 't', 'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
-sc_bool_distributions = ['bernoulli']
+
 sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
                              'negative_binomial', 'categorical',
                              'discrete_uniform', 'truncated_poisson']
@@ -84,7 +84,6 @@ mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart',
                                 'multinomial']
 
 availabledistributions = (sc_continuous_distributions +
-                          sc_bool_distributions +
                           sc_discrete_distributions +
                           mv_continuous_distributions +
                           mv_discrete_distributions)
@@ -141,11 +140,11 @@ def new_dist_class(*new_class_args):
         stochastic_from_dist
     """
 
-    (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
+    (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
     class new_class(Stochastic):
 
         def __init__(self, *args, **kwds):
-            (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
+            (dtype, name, parent_names, parents_default, docstr, logp, random, mv) = new_class_args
             parents=parents_default
 
             # Figure out what argument names are needed.
@@ -265,7 +264,7 @@ def new_dist_class(*new_class_args):
                 logp = debug_wrapper(logp)
                 random = debug_wrapper(random)
             else:
-                Stochastic.__init__(self, logp=logp, random=random, logp_partial_gradients = logp_partial_gradients, dtype=dtype, **arg_dict_out)
+                Stochastic.__init__(self, logp=logp, random=random, dtype=dtype, **arg_dict_out)
 
     new_class.__name__ = name
     new_class.parent_names = parent_names
@@ -278,7 +277,7 @@ def new_dist_class(*new_class_args):
     return new_class
 
 
-def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dtype=np.float, mv=False):
+def stochastic_from_dist(name, logp, random=None, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 
@@ -309,8 +308,8 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     :SeeAlso:
       new_dist_class
-    """  
-    
+    """
+
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
     parent_names = args[1:]
     try:
@@ -330,15 +329,8 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     docstr += logp.__doc__
 
     logp=valuewrapper(logp)
-    distribution_arguments = logp.__dict__
-
-    wrapped_logp_partial_gradients = {}
-
-    for parameter, func in logp_partial_gradients.iteritems():
-        wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
-         
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
-						 logp, random, mv, wrapped_logp_partial_gradients)
+                          logp, random, mv)
 
 
 #-------------------------------------------------------------
@@ -659,7 +651,6 @@ def bernoulli_like(x, p):
 
     return flib.bernoulli(x, p)
 
-bernoulli_grad_like = {'p' : flib.bern_grad_p}
 
 # Beta----------------------------------------------
 @randomwrap
@@ -714,11 +705,6 @@ def beta_like(x, alpha, beta):
     #     return -np.Inf
     return flib.beta_like(x, alpha, beta)
 
-beta_grad_like = {'value' : flib.beta_grad_x,
-                  'alpha' : flib.beta_grad_a,
-                  'beta' : flib.beta_grad_b}
-
-
 # Binomial----------------------------------------------
 @randomwrap
 def rbinomial(n, p, size=None):
@@ -761,9 +747,6 @@ def binomial_like(x, n, p):
     """
 
     return flib.binomial(x,n,p)
-
-
-binomial_grad_like = {'p' : flib.binomial_gp}
 
 # Beta----------------------------------------------
 @randomwrap
@@ -813,10 +796,7 @@ def betabin_like(x, alpha, beta, n):
       - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    return flib.betabin_like(x, alpha, beta, n)
-
-betabin_grad_like = {'alpha' : flib.betabin_ga,
-                 'beta' : flib.betabin_gb}
+    return flib.betbin_like(x, alpha, beta, n)
 
 # Categorical----------------------------------------------
 # Note that because categorical elements are not ordinal, there
@@ -895,10 +875,6 @@ def cauchy_like(x, alpha, beta):
 
     return flib.cauchy(x,alpha,beta)
 
-cauchy_grad_like = {'value' : flib.cauchy_grad_x,
-                 'alpha' : flib.cauchy_grad_a,
-                 'beta' : flib.cauchy_grad_b}
-
 # Chi square----------------------------------------------
 @randomwrap
 def rchi2(nu, size=None):
@@ -940,12 +916,6 @@ def chi2_like(x, nu):
 
     return flib.gamma(x, 0.5*nu, 1./2)
 
-chi2_grad_like = {'value'  : lambda x, nu : flib.gamma_grad_x    (x, 0.5* nu, 1./2),
-                  'nu' : lambda x, nu : flib.gamma_grad_alpha(x, 0.5* nu, 1./2) * .5}
-
-#chi2_grad_like = {'x'  : lambda x, nu : (nu / 2 - 1) / x -.5,
-#                  'nu' : flib.chi2_grad_nu }
-
 # Degenerate---------------------------------------------
 @randomwrap
 def rdegenerate(k, size=1):
@@ -979,21 +949,6 @@ def degenerate_like(x, k):
     """
     x = np.atleast_1d(x)
     return sum(np.log([i==k for i in x]))
-
-#def degenerate_grad_like(x, k):
-#    R"""
-#    degenerate_grad_like(x, k)
-#
-#    Degenerate gradient log-likelihood.
-#
-#    .. math::
-#        f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.
-#
-#    :Parameters:
-#      - `x` : Input value.
-#      - `k` : Degenerate value.
-#    """
-#    return np.zeros(np.size(x))*k
 
 # Dirichlet----------------------------------------------
 @randomwrap
@@ -1091,8 +1046,6 @@ def exponential_like(x, beta):
 
     return flib.gamma(x, 1, beta)
 
-exponential_grad_like = {'value' : lambda x, beta : flib.gamma_grad_x(x, 1.0, beta),
-                         'beta' : lambda x, beta : flib.gamma_grad_beta(x, 1.0, beta)}
 
 # Exponentiated Weibull-----------------------------------
 @randomwrap
@@ -1136,36 +1089,6 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     """
     return flib.exponweib(x,alpha,k,loc,scale)
 
-def exponweib_like(x, alpha, k, loc=0, scale=1):
-    R"""
-    exponweib_like(x,alpha,k,loc=0,scale=1)
-
-    Exponentiated Weibull log-likelihood.
-
-    The exponentiated Weibull distribution is a generalization of the Weibull
-    family. Its value lies in being able to model monotone and non-monotone
-    failure rates.
-
-    .. math::
-        f(x \mid \alpha,k,loc,scale)  & = \frac{\alpha k}{scale} (1-e^{-z^k})^{\alpha-1} e^{-z^k} z^{k-1} \\
-        z & = \frac{x-loc}{scale}
-
-    :Parameters:
-      - `x` : x > 0
-      - `alpha` : Shape parameter
-      - `k` : k > 0
-      - `loc` : Location parameter
-      - `scale` : Scale parameter (scale > 0).
-
-    """
-    return flib.exponweib(x,alpha,k,loc,scale)
-"""
-exponweib_grad_like = {'value' : flib.exponweib_gx,
-                   'alpha' : flib.exponweib_ga,
-                   'k' : flib.exponweib_gk,
-                   'loc' : flib.exponweib_gl,
-                   'scale' : flib.exponweib_gs}
-"""
 # Gamma----------------------------------------------
 @randomwrap
 def rgamma(alpha, beta, size=None):
@@ -1210,10 +1133,6 @@ def gamma_like(x, alpha, beta):
 
     return flib.gamma(x, alpha, beta)
 
-
-gamma_grad_like = {'value'     : flib.gamma_grad_x,
-                   'alpha' : flib.gamma_grad_alpha,
-                   'beta'  : flib.gamma_grad_beta}
 
 # GEV Generalized Extreme Value ------------------------
 # Modify parameterization -> Hosking (kappa, xi, alpha)
@@ -1298,8 +1217,6 @@ def geometric_like(x, p):
 
     return flib.geometric(x, p)
 
-geometric_grad_like = {'p' : flib.geometric_gp}
-
 # Half Cauchy----------------------------------------------
 @randomwrap
 def rhalf_cauchy(alpha, beta, size=None):
@@ -1379,9 +1296,6 @@ def half_normal_like(x, tau):
     """
 
     return flib.hnormal(x, tau)
-
-half_normal_grad_like = {'value'   : flib.hnormal_gradx,
-                 'tau' : flib.hnormal_gradtau}
 
 # Hypergeometric----------------------------------------------
 def rhypergeometric(n, m, N, size=None):
@@ -1469,10 +1383,6 @@ def inverse_gamma_like(x, alpha, beta):
     """
 
     return flib.igamma(x, alpha, beta)
-
-inverse_gamma_grad_like = {'value' : flib.igamma_grad_x,
-             'alpha' : flib.igamma_grad_alpha,
-             'beta' : flib.igamma_grad_beta}
 
 # Inverse Wishart---------------------------------------------------
 
@@ -1618,13 +1528,7 @@ def laplace_like(x, mu, tau):
 
     return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
 
-laplace_grad_like = {'value'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
-                     'mu'  : lambda x, mu, tau: -flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
-                     'tau' : lambda x, mu, tau: flib.gamma_grad_beta(np.abs(x- mu), 1, tau)}
-
-
 dexponential_like = laplace_like
-dexponential_grad_like = laplace_grad_like
 
 # Logistic-----------------------------------
 @randomwrap
@@ -1714,12 +1618,9 @@ def lognormal_like(x, mu, tau):
        :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
        :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
     """
+
+
     return flib.lognormal(x,mu,tau)
-
-lognormal_grad_like = {'value'   : flib.lognormal_gradx,
-                       'mu'  : flib.lognormal_gradmu,
-                       'tau' : flib.lognormal_gradtau}
-
 
 # Multinomial----------------------------------------------
 #@randomwrap
@@ -2072,9 +1973,6 @@ def negative_binomial_like(x, mu, alpha):
     """
     return flib.negbin2(x, mu, alpha)
 
-negative_binomial_grad_like = {'mu'    : flib.negbin2_gmu,
-                               'alpha' : flib.negbin2_ga}
-
 # Normal---------------------------------------------------
 @randomwrap
 def rnormal(mu, tau,size=None):
@@ -2119,22 +2017,6 @@ def normal_like(x, mu, tau):
     #     return -np.Inf
 
     return flib.normal(x, mu, tau)
-
-def t_normal_grad_x(x, mu, tau):
-    return flib.normal_grad_x(x,mu, tau)
-
-def t_normal_grad_mu(x, mu, tau):
-    return flib.normal_grad_mu(x,mu, tau)
-def t_normal_grad_tau(x, mu, tau):
-    return flib.normal_grad_tau(x,mu, tau)
-
-normal_grad_like = {'value' : t_normal_grad_x,
-             'mu' : t_normal_grad_mu,
-             'tau' : t_normal_grad_tau}
-
-#normal_grad_like = {'x' : flib.normal_grad_x,
-#             'mu' : flib.normal_grad_mu,
-#             'tau' : flib.normal_grad_tau}
 
 # von Mises--------------------------------------------------
 @randomwrap
@@ -2317,8 +2199,6 @@ def poisson_like(x,mu):
     #     return -np.Inf
     return flib.poisson(x,mu)
 
-poisson_grad_like = {'mu' : flib.poisson_gmu}
-
 # Truncated Poisson--------------------------------------------------
 @randomwrap
 def rtruncated_poisson(mu, k, size=None):
@@ -2399,8 +2279,6 @@ def truncated_poisson_like(x,mu,k):
        - :math:`Var(x)=\frac{\mu}{1-F(k|\mu)}`
     """
     return flib.trpoisson(x,mu,k)
-
-truncated_poisson_grad_like = {'mu' : flib.trpoisson_gmu}
 
 # Truncated normal distribution--------------------------
 @randomwrap
@@ -2615,15 +2493,6 @@ def noncentral_t_expval(mu, lam, nu):
         return mu
     return inf
 
-def t_grad_setup(x, nu, f):
-    nu = np.asarray(nu)
-
-    return f(x, nu)
-
-t_grad_like = {'value'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
-               'nu' : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_nu)}
-
-
 # DiscreteUniform--------------------------------------------------
 @randomwrap
 def rdiscrete_uniform(lower, upper, size=None):
@@ -2695,10 +2564,6 @@ def uniform_like(x,lower, upper):
 
     return flib.uniform_like(x, lower, upper)
 
-uniform_grad_like = {'value' : flib.uniform_grad_x,
-             'lower' : flib.uniform_grad_l,
-             'upper' : flib.uniform_grad_u}
-
 # Weibull--------------------------------------------------
 @randomwrap
 def rweibull(alpha, beta,size=None):
@@ -2739,10 +2604,6 @@ def weibull_like(x, alpha, beta):
     # except ZeroProbability:
     #     return -np.Inf
     return flib.weibull(x, alpha, beta)
-
-weibull_grad_like = {'value' : flib.weibull_gx,
-                 'alpha' : flib.weibull_ga,
-                 'beta' : flib.weibull_gb}
 
 # Wishart---------------------------------------------------
 
@@ -2895,26 +2756,17 @@ def name_to_funcs(name, module):
     except:
         random = None
 
-    try:
-        grad_logp = module[name + "_grad_like"]
-    except:
-        grad_logp = {}
+    return logp, random
 
-    return logp, random, grad_logp
 
-def valuewrapper(f, arguments = None):
+def valuewrapper(f):
     """Return a likelihood accepting value instead of x as a keyword argument.
     This is specifically intended for the instantiator above.
     """
     def wrapper(**kwds):
         value = kwds.pop('value')
         return f(value, **kwds)
-    
-    if arguments is None: 
-        wrapper.__dict__.update(f.__dict__)
-    else :
-        wrapper.__dict__.update(arguments)
-        
+    wrapper.__dict__.update(f.__dict__)
     return wrapper
 
 """
@@ -2947,11 +2799,10 @@ def _inject_dist(distname, kwargs={}, ns=locals()):
     Reusable function to inject Stochastic subclasses into module
     namespace
     """
-    dist_logp, dist_random, grad_logp = name_to_funcs(dist, ns)
+    dist_logp, dist_random = name_to_funcs(dist, ns)
     classname = capitalize(dist)
     ns[classname]= stochastic_from_dist(dist, dist_logp,
-                                        dist_random,
-										grad_logp, **kwargs)
+                                        dist_random, **kwargs)
 
 for dist in sc_continuous_distributions:
     _inject_dist(dist)
@@ -2959,16 +2810,13 @@ for dist in sc_continuous_distributions:
 for dist in mv_continuous_distributions:
     _inject_dist(dist, kwargs={'mv' : True})
 
-for dist in sc_bool_distributions:
-    _inject_dist(dist, kwargs={'dtype' : np.bool})
-    
 for dist in sc_discrete_distributions:
     _inject_dist(dist, kwargs={'dtype' : np.int})
 
 for dist in mv_discrete_distributions:
     _inject_dist(dist, kwargs={'dtype' : np.int, 'mv' : True})
-    
 
+_inject_dist('bernoulli', {'dtype' : np.bool})
 
 def uninformative_like(x):
     """

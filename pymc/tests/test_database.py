@@ -1,5 +1,5 @@
 """ Test database backends """
-from __future__ import with_statement
+
 import os,sys, pdb
 from numpy.testing import TestCase, assert_array_equal, assert_equal
 from pymc.examples import DisasterModel

@@ -1,4 +1,5 @@
 """Test AdaptiveMetropolis."""
+
 import pymc
 import numpy as np
 from numpy.testing import *
