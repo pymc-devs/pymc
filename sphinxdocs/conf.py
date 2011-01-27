@@ -26,6 +26,7 @@ import sys, os
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.viewcode']
+extensions.append('sphinx.ext.mathjax')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -109,9 +110,9 @@ html_theme = 'default'
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
 
-# The name of an image file (relative to this directory) to place at the top
+# The name of an   file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = '_images/icon.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

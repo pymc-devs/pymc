@@ -11,6 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   README.rst
+   INSTALL.rst
+   references.rst
+
 Indices and tables
 ==================
 
