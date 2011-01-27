@@ -55,17 +55,17 @@ class ArgumentError(AttributeError):
     """Incorrect class argument"""
     pass
 
-sc_continuous_distributions = ['bernoulli', 'beta', 'cauchy', 'chi2',
+sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
-                               'gamma', 'half_normal', 'hypergeometric',
+                               'gamma', 'half_normal', 
                                'inverse_gamma', 'laplace', 'logistic',
                                'lognormal', 'noncentral_t', 'normal', 
                                'pareto', 't', 'truncated_pareto', 'uniform',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 
-sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
-                             'negative_binomial', 'categorical',
+sc_discrete_distributions = ['bernoulli', 'binomial', 'geometric', 'poisson',
+                             'negative_binomial', 'categorical', 'hypergeometric',
                              'discrete_uniform', 'truncated_poisson']
 
 sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential',
