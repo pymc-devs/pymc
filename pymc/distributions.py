@@ -2799,10 +2799,11 @@ def _inject_dist(distname, kwargs={}, ns=locals()):
     Reusable function to inject Stochastic subclasses into module
     namespace
     """
-    dist_logp, dist_random = name_to_funcs(dist, ns)
-    classname = capitalize(dist)
-    ns[classname]= stochastic_from_dist(dist, dist_logp,
+    dist_logp, dist_random = name_to_funcs(distname, ns)
+    classname = capitalize(distname)
+    ns[classname]= stochastic_from_dist(distname, dist_logp,
                                         dist_random, **kwargs)
+
 
 for dist in sc_continuous_distributions:
     _inject_dist(dist)
@@ -2817,6 +2818,7 @@ for dist in mv_discrete_distributions:
     _inject_dist(dist, kwargs={'dtype' : np.int, 'mv' : True})
 
 _inject_dist('bernoulli', {'dtype' : np.bool})
+
 
 def uninformative_like(x):
     """
