@@ -751,7 +751,7 @@ class DiscreteMetropolis(Metropolis):
         elif self.proposal_distribution == "Prior":
             self.stochastic.random()
 
-
+# TODO Implement independence sampler for BinaryMetropolis
 
 class BinaryMetropolis(Metropolis):
     """
@@ -837,9 +837,9 @@ class BinaryMetropolis(Metropolis):
 
             rand_array = random(size=shape(self.stochastic.value))
             new_value = copy(self.stochastic.value)
+            # Locations where switches occur, according to p_jump
             switch_locs = where(rand_array<p_jump)
             new_value[switch_locs] = True - new_value[switch_locs]
-            # print switch_locs, rand_array, new_value, self.stochastic.value
             self.stochastic.value = new_value
 
 

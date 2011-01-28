@@ -36,6 +36,7 @@ from tests import test
 
 # Utilities modules
 import utils
+append = utils.append
 import CommonDeterministics
 from CircularStochastic import *
 import distributions

@@ -21,7 +21,8 @@ from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    concatenate, bincount, sort, hsplit, argsort, inf, shape,
                    ndim, swapaxes, ravel, diag, cov, transpose as tr)
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1',
+__all__ = ['append', 'check_list', 'autocorr', 'calc_min_interval',
+           'check_type', 'ar1',
            'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
            'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
            'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len',
@@ -861,5 +862,36 @@ def find_generations(container, with_data = False):
             children_remaining = False
     return generations
 
+def append(nodelist, node, label=None, sep='_'):
+    """
+    Append function to automate the naming of list elements in Containers.
+    
+    :Arguments:
+        - `nodelist` : List containing nodes for Container.
+        - `node` : Node to be added to list.
+        - `label` : Label to be appended to list (If not passed, 
+        defaults to element number).
+        - `sep` : Separator character for label (defaults to underscore).
+        
+    :Return:
+        - `nodelist` : Passed list with node added.
+    
+    """
+    
+    nname = node.__name__
+    
+    # Determine label
+    label = label or len(nodelist)
+    
+    # Look for separator at the end of name
+    ind = nname.rfind(sep)
+    
+    # If there is no separator, we will remove last character and 
+    # replace with label.
+    node.__name__ = nname[:ind] + sep + str(label)
+    
+    nodelist.append(node)
+    
+    return nodelist
 
-
+    
