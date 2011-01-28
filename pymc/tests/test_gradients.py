@@ -356,6 +356,7 @@ class test_gradients(TestCase):
         negative_binomial = NegativeBinomial('negative_binomial', mu = c, alpha = d )
         check_gradients(negative_binomial)
         
+        #exponweib still not working for unknown reasons
         #exponweib = Exponweib('exponweib', alpha = c, k =d , loc = a, scale = e )
         #check_gradients(exponweib)
         
