@@ -28,7 +28,28 @@ def logp_of_set(s):
     else:
         raise exc[0], exc[1], exc[2]
 
+def logp_gradient_of_set(variable_set, calculation_set = None):
+    """
+    Calculates the gradient of the joint log posterior with respect to all the variables in variable_set.
+    Calculation of the log posterior is restricted to the variables in calculation_set. 
+    
+    Returns a dictionary of the gradients.
+    """
 
+    logp_gradients = {}
+    for variable in variable_set:   
+        logp_gradients[variable] = logp_gradient(variable, calculation_set)
+                    
+    return logp_gradients
+    
+def logp_gradient(variable, calculation_set = None):
+    """
+    Calculates the gradient of the joint log posterior with respect to variable. 
+    Calculation of the log posterior is restricted to the variables in calculation_set. 
+    """
+    return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children] )
+
+    
 def batchsd(trace, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent

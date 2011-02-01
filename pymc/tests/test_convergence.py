@@ -4,7 +4,7 @@
 #
 ###
 
-
+from __future__ import with_statement
 from numpy.testing import assert_equal, assert_array_equal, assert_approx_equal, TestCase
 import unittest
 import numpy as np
