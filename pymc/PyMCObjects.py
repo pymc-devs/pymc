@@ -491,7 +491,7 @@ class Deterministic(DeterministicBase):
         return gradient * jacobian
         
     def index_operation_jacobian(self, variable, jacobian, gradient):
-        derivative = zeros(variable.shape)
+        derivative = zeros(shape(variable.value))
         derivative[jacobian] = gradient
         return derivative 
     
