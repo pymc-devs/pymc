@@ -1160,6 +1160,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
     """
     return flib.exponweib(x,alpha,k,loc,scale)
 """
+commented out because tests fail
 exponweib_grad_like = {'value' : flib.exponweib_gx,
                    'alpha' : flib.exponweib_ga,
                    'k' : flib.exponweib_gk,
