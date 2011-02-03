@@ -60,7 +60,7 @@ def make_model():
 GPSampler = MCMC(make_model())
 GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.submod, GPSampler.V, GPSampler.d)
 GPSampler.assign_step_methods()
-GPSampler.sample(iter=500,burn=0,thin=10)
+GPSampler.sample(iter=500,burn=0,thin=10, progress_bar=0)
 # 
 # if __name__ == '__main__':
 #     import unittest

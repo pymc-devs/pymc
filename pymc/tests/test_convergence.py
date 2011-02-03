@@ -15,7 +15,7 @@ import copy
 
 
 S = pymc.MCMC(model, 'ram')
-S.sample(10000, 2000)
+S.sample(10000, 2000, progress_bar=0)
 #a = S.a.trace()
 #b = S.b.trace()
 
@@ -81,7 +81,7 @@ class test_gelman_rubin(TestCase):
     def test_simple(self):
         
         S2 = copy.copy(S)
-        S2.sample(10000, 2000)
+        S2.sample(10000, 2000, progress_bar=0)
         
         gr = pymc.gelman_rubin(S2)
         

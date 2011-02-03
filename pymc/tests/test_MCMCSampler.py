@@ -25,7 +25,7 @@ class test_MCMC(TestCase):
     M = MCMC(DisasterModel, db='pickle')
 
     # Sample
-    M.sample(4000,2000,verbose=0)
+    M.sample(4000,2000,verbose=0, progress_bar=False)
     M.db.close()
     def test_instantiation(self):
 

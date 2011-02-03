@@ -25,7 +25,7 @@ class TestMissing(TestCase):
         M = MCMC([mu, s, tau, x])
         
         # Run sampler
-        M.sample(10000, 5000)
+        M.sample(10000, 5000, progress_bar=0)
         
         # Check length of value
         assert_equal(len(x.value), 100)

@@ -41,18 +41,18 @@ class TestAM(TestCase):
         S = pymc.MCMC([mean, obs])
         S.use_step_method(pymc.AdaptiveMetropolis,  mean, delay=200)
         
-        S.sample(6000, burn=1000)
+        S.sample(6000, burn=1000, progress_bar=0)
         Cs = np.cov(S.trace('mean')[:].T)
         assert_array_almost_equal(Cs,  C/N, 2)
 
     def test_cov_from_trace(self):
         S = pymc.MCMC([mean, obs])
         S.use_step_method(pymc.Metropolis,  mean)
-        S.sample(2000)
+        S.sample(2000, progress_bar=0)
         m = S.trace('mean')[:]
         S.remove_step_method(S.step_method_dict[mean][0])
         S.use_step_method(pymc.AdaptiveMetropolis, mean, delay=200, verbose=0)
-        S.sample(10)
+        S.sample(10, progress_bar=0)
         AM = S.step_method_dict[mean][0]
         assert_almost_equal(AM.C , np.cov(m.T))
         

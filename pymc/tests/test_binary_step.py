@@ -37,7 +37,7 @@ class BinaryTestModel:
 class TestBinary(TestCase):
     def test(self):
         S = pymc.MCMC(input = BinaryTestModel)
-        S.sample(1000,500)
+        S.sample(1000,500, progress_bar=0)
         f = S.fair.trace()
         assert(1.0*f.sum()/len(f) > .5)
 
