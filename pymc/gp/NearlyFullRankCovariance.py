@@ -82,7 +82,10 @@ class NearlyFullRankCovariance(Covariance):
 
         # Special fast version for single points.
         if N_new==1:
-            U=asmatrix(sqrt(self.__call__(x, regularize = False, observed = observed)))
+            V = self.__call__(x, regularize = False, observed = observed)
+            if nugget is not None:
+                V += nugget
+            U=asmatrix(sqrt(V))
             # print U
             if not apply_pivot:
                 return {'pivots': array([0]), 'U': U}

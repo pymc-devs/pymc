@@ -93,9 +93,15 @@ class Covariance(object):
         # Number of points in x.
         N_new = x.shape[0]
 
+        # diagonal
+        diag = self.__call__(x, y=None, regularize=False, observed=observed)
+
+        if nugget is not None:
+            diag += nugget.ravel()
+
         # Special fast version for single points.
         if N_new==1:
-            U=asmatrix(sqrt(self.__call__(x, regularize = False, observed = observed)))
+            U=asmatrix(sqrt(diag))
             # print U
             if not apply_pivot:
                 return {'pivots': array([0]), 'U': U}
@@ -114,13 +120,6 @@ class Covariance(object):
             A function that can be used to overwrite an input array with rows.
             """
             rowvec[i:]=self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
-
-
-        # diagonal
-        diag = self.__call__(x, y=None, regularize=False, observed=observed)
-
-        if nugget is not None:
-            diag += nugget.ravel()
 
 
         # ==================================
