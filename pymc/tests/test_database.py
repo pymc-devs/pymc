@@ -354,7 +354,7 @@ def test_identical_object_names():
 def test_regression_155():
     """thin > iter"""
     M = MCMC(DisasterModel, db='ram')
-    M.sample(10,0,100)
+    M.sample(10,0,100, progress_bar=0)
 
 
 def test_interactive():
