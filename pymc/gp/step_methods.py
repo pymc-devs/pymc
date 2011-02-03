@@ -111,7 +111,7 @@ class GPEvaluationGibbs(pm.Metropolis):
                 self.children_no_data.discard(epf)
             self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=False)
         
-        self.V = pm.Lambda('%s_vect'%V.__name__, lambda V=V: V*np.ones(len(submod.f_eval)))
+        self.V = pm.Lambda('%s_vect'%V.__name__, lambda V=V: np.resize(V, len(submod.mesh)))
         self.C_eval = submod.C_eval
         self.M_eval = submod.M_eval
         self.S_eval = submod.S_eval
