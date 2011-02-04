@@ -1866,7 +1866,7 @@ def rmv_normal(mu, tau, size=1):
     if size==1:
         out = np.random.normal(size=mu_size)
         try:
-            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L')
+            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L', 1.)
         except:
             out = np.linalg.solve(sig, out)
         out+=mu
@@ -1878,7 +1878,7 @@ def rmv_normal(mu, tau, size=1):
         out = np.random.normal(size = (tot_size,) + mu_size)
         for i in xrange(tot_size):
             try:
-                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L')
+                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L', 1.)
             except:
                 out[i,:] = np.linalg.solve(sig, out[i,:])
             out[i,:] += mu
@@ -1971,7 +1971,7 @@ def rmv_normal_chol(mu, sig, size=1):
     if size==1:
         out = np.random.normal(size=mu_size)
         try:
-            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L')
+            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L', 1.)
         except:
             out = np.dot(sig, out)
         out+=mu
@@ -1983,7 +1983,7 @@ def rmv_normal_chol(mu, sig, size=1):
         out = np.random.normal(size = (tot_size,) + mu_size)
         for i in xrange(tot_size):
             try:
-                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L')
+                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L', 1.)
             except:
                 out[i,:] = np.dot(sig, out[i,:])
             out[i,:] += mu
@@ -2764,7 +2764,7 @@ def rwishart(n, Tau):
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
-    flib.dtrsm_wrap(sig, A, side='L', uplo='L', transa='T')
+    flib.dtrsm_wrap(sig, A, side='L', uplo='L', transa='T', alpha=1.)
     w = np.asmatrix(np.dot(A,A.T))
     flib.symmetrize(w)
     return w
@@ -2832,7 +2832,7 @@ def rwishart_cov(n, C):
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
-    flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N')
+    flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N', alpha=1.)
     w = np.asmatrix(np.dot(A,A.T))
     flib.symmetrize(w)
     return w
