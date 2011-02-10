@@ -10,7 +10,7 @@ import os, nose
 
 def test_interactive():
     S = MCMC(DisasterModel)
-    S.isample(200,100,2,  out=open('testresults/interactive.log', 'w'))
+    S.isample(200,100,2,  out=open('testresults/interactive.log', 'w'), progress_bar=0)
 
 
 if __name__ == '__main__':

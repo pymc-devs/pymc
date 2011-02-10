@@ -18,7 +18,10 @@ For each distribution:
 # TODO add tests for boundaries of distributions with restricted support
 #from decorators import *
 
+#from decorators import *
+from __future__ import with_statement
 from unittest import TestCase
+from pymc.distributions import *
 import unittest
 import os, pdb, warnings, nose
 

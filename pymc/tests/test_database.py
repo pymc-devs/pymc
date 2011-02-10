@@ -1,5 +1,5 @@
 """ Test database backends """
-
+from __future__ import with_statement
 import os,sys, pdb
 from numpy.testing import TestCase, assert_array_equal, assert_equal
 from pymc.examples import DisasterModel
@@ -55,7 +55,7 @@ class TestRam(TestBase):
 
     def test_simple_sample(self):
 
-        self.S.sample(50,25,5)
+        self.S.sample(50,25,5, progress_bar=0)
 
         assert_array_equal(self.S.trace('e')[:].shape, (5,))
         assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
@@ -65,7 +65,7 @@ class TestRam(TestBase):
         assert_equal(self.S.trace('e').length(chain=0), 5)
         assert_equal(self.S.trace('e').length(chain=None), 5)
 
-        self.S.sample(10,0,1)
+        self.S.sample(10,0,1, progress_bar=0)
 
         assert_array_equal(self.S.trace('e')[:].shape, (10,))
         assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
@@ -136,7 +136,7 @@ class TestPickle(TestRam):
             warnings.simplefilter('ignore')            
             S = pymc.MCMC(DisasterModel, db=db)
             S.use_step_method(pymc.Metropolis, S.e, tally=True)
-            S.sample(5)
+            S.sample(5, progress_bar=0)
             assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
             assert_array_equal(db.trace('e', chain=None)[:].shape, (20,))
             db.close()
@@ -146,13 +146,13 @@ class TestPickle(TestRam):
             warnings.simplefilter('ignore')
             db = self.load()
             S = pymc.MCMC(DisasterModel, db=db)
-            S.sample(10)
+            S.sample(10, progress_bar=0)
             sm = S.step_methods.pop()
             assert_equal(sm.accepted+sm.rejected, 75)
 
     def test_nd(self):
         M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
-        M.sample(10)
+        M.sample(10, progress_bar=0)
         a = M.trace('nd')[:]
         assert_equal(a.shape, (10,2,2))
         db = getattr(pymc.database, self.name).load(os.path.join(testdir, 'ND.'+self.name))
@@ -273,7 +273,7 @@ class TestHDF5(TestPickle):
                                              dbmode='w',
                                              dbcomplevel=5)                                 
             S = MCMC(DisasterModel, db=db)
-            S.sample(45,10,1)
+            S.sample(45,10,1, progress_bar=0)
             assert_array_equal(S.trace('e')[:].shape, (35,))
             S.db.close()
             db.close()
@@ -296,7 +296,7 @@ class testHDF5Objects(TestCase):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Objects.hdf5'))
 
     def test_simple_sample(self):
-        self.S.sample(50, 25, 5)
+        self.S.sample(50, 25, 5, progress_bar=0)
 
         assert_array_equal(self.S.trace('B')[:].shape, (5,))
         assert_array_equal(self.S.trace('K')[:].shape, (5,))
@@ -308,7 +308,7 @@ class testHDF5Objects(TestCase):
         assert_equal(self.S.trace('K').length(chain=None), 5)
 
 
-        self.S.sample(10)
+        self.S.sample(10, progress_bar=0)
 
         assert_array_equal(self.S.trace('K')[:].shape, (10,))
         assert_array_equal(self.S.trace('K', chain=1)[:].shape, (10,))
@@ -332,7 +332,7 @@ class testHDF5Objects(TestCase):
         db = self.load()
         import objectmodel
         S = pymc.MCMC(objectmodel, db=db)
-        S.sample(5)
+        S.sample(5, progress_bar=0)
         assert_array_equal(db.K(chain=0).shape, (5,))
         assert_array_equal(db.K(chain=1).shape, (10,))
         assert_array_equal(db.K(chain=2).shape, (5,))
@@ -354,7 +354,7 @@ def test_identical_object_names():
 def test_regression_155():
     """thin > iter"""
     M = MCMC(DisasterModel, db='ram')
-    M.sample(10,0,100)
+    M.sample(10,0,100, progress_bar=0)
 
 
 def test_interactive():
@@ -363,7 +363,7 @@ def test_interactive():
     M=MCMC(DisasterModel,db='sqlite',
            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
            dbmode='w')
-    M.isample(10, out=open('testresults/interactivesqlite.log', 'w'))
+    M.isample(10, out=open('testresults/interactivesqlite.log', 'w'), progress_bar=0)
 
 # def test_getitem():
 #    class tmp(database.base.Database):

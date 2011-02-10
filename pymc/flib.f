@@ -363,6 +363,128 @@ cf2py threadsafe
         enddo
       END subroutine uniform_like
 
+      subroutine uniform_grad_x(x,lower,upper,n,nlower,nupper,gradxlike)
+
+c Return the uniform likelihood gradient wrt x.
+c CREATED 01/10
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(nlower), intent(in) :: lower
+cf2py double precision dimension(nupper), intent(in) :: upper 
+cf2py integer intent(hide), depend(x) :: n=len(x)
+cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
+cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
+cf2py double precision dimension(n), intent(out) :: gradxlike
+cf2py threadsafe
+
+        IMPLICIT NONE
+        
+        INTEGER n, nlower, nupper, i
+        DOUBLE PRECISION x(n), lower(nlower), upper(nupper)
+        double precision gradxlike(n)
+        DOUBLE PRECISION like, low, high
+        DOUBLE PRECISION infinity
+        PARAMETER (infinity = 1.7976931348623157d308)
+                
+      END subroutine uniform_grad_x
+
+
+      subroutine uniform_grad_l(x,lower,upper,n,nlower,nupper,gradllike)
+        
+c Return the uniform likelihood gradient wrt lower.
+c CREATED 1/10 JS
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(nlower), intent(in) :: lower
+cf2py double precision dimension(nupper), intent(in) :: upper 
+cf2py integer intent(hide), depend(x) :: n=len(x)
+cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
+cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
+cf2py double precision dimension(nlower), intent(out) :: gradllike
+cf2py threadsafe
+
+        IMPLICIT NONE
+        
+        INTEGER n, nlower, nupper, i
+        DOUBLE PRECISION x(n), lower(nlower), upper(nupper)
+        double precision gradllike(nlower)
+        DOUBLE PRECISION gradlower, low, high
+        DOUBLE PRECISION infinity
+        PARAMETER (infinity = 1.7976931348623157d308)
+                
+        low = lower(1)
+        high = upper(1)       
+ 
+ 		
+        do i=1,n
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
+          if ((x(i) < low) .OR. (x(i) > high)) then
+            RETURN
+          endif
+        enddo
+        
+        do i=1,n
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
+
+          gradlower = 1.0/(high - low)
+	        
+	        if (nlower .NE. 1) then 
+	        	gradllike(i) = gradlower
+	        else
+	        	gradllike(1) = gradlower + gradllike(1)
+	        endif
+        enddo
+      END subroutine uniform_grad_l
+
+      subroutine uniform_grad_u(x,lower,upper,n,nlower,nupper,gradulike)
+        
+c Return the uniform likelihood gradient wrt lower.
+c CREATED 01/10 JS
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(nlower), intent(in) :: lower
+cf2py double precision dimension(nupper), intent(in) :: upper 
+cf2py integer intent(hide), depend(x) :: n=len(x)
+cf2py integer intent(hide), depend(lower) :: nlower=len(lower)
+cf2py integer intent(hide), depend(upper) :: nupper=len(upper)
+cf2py double precision dimension(nupper), intent(out) :: gradulike
+cf2py threadsafe
+
+        IMPLICIT NONE
+        
+        INTEGER n, nlower, nupper, i
+        DOUBLE PRECISION x(n), lower(nlower), upper(nupper)
+        double precision gradulike(nupper)
+        DOUBLE PRECISION gradupper, low, high
+        DOUBLE PRECISION infinity
+        PARAMETER (infinity = 1.7976931348623157d308)
+                
+        low = lower(1)
+        high = upper(1)       
+ 		
+        do i=1,n
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
+          if ((x(i) < low) .OR. (x(i) > high)) then
+            RETURN
+          endif
+        enddo
+        
+        do i=1,n
+          if (nlower .NE. 1) low = lower(i)
+          if (nupper .NE. 1) high = upper(i)
+
+          gradupper = 1.0/(low - high)
+	        
+	        if (nlower .NE. 1) then 
+	        	gradulike(i) = gradupper
+	        else
+	        	gradulike(1) = gradupper + gradulike(1)
+	        endif
+        enddo
+      END 
 
       subroutine duniform_like(x,lower,upper,n,nlower,nupper,like)
         
@@ -464,6 +586,365 @@ c Compute z
         like = like + dlog(pdf/sigma)
       enddo
       END SUBROUTINE EXPONWEIB
+
+      SUBROUTINE exponweib_gx(x,alpha,k,loc,scale,n,na,nk
+     &,nloc,nscale,gradlike)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+c CREATED 12/06 DH
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(na), intent(in) :: alpha
+cf2py double precision dimension(nk), intent(in) :: k
+cf2py double precision dimension(nloc), intent(in) :: loc
+cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: na=len(alpha)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py double precision dimension(n), intent(out) :: gradlike
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n), z(n), alpha(na), t1, t2
+      DOUBLE PRECISION k(nk), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nk, nloc, nscale
+      DOUBLE PRECISION gradlike(n)
+      LOGICAL not_scalar_a, not_scalar_k, not_scalar_scale
+      DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      aa = alpha(1)
+      cc = k(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_k = (nk .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+     
+      do i = 1,na
+     	if (alpha(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,nk
+     	if (k(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,n
+     	if (z(i) .LE. 0.0) return
+      enddo 
+     
+      do i=1,n
+        if (not_scalar_a) aa = alpha(i)
+        if (not_scalar_k) cc = k(i)
+        if (not_scalar_scale) sigma = scale(i)
+
+		t2 = -z(i)**cc
+        t1 = dexp(t2)
+        
+        gradlike(i) = (aa - 1d0)/(1d0 - t1) * t1 * 
+     & z(i) **(cc -1d0) * cc / sigma
+        gradlike(i) = gradlike(i) + -  z(i) **(cc -1d0)
+     & * cc/sigma - (cc -1d0)/(z(i) *sigma)
+      enddo
+      END SUBROUTINE 
+      
+      
+      SUBROUTINE exponweib_gl(x,alpha,k,loc,scale,n,na,
+     &nk,nloc,nscale,gradlike)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+c CREATED 12/06 DH
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(na), intent(in) :: alpha
+cf2py double precision dimension(nk), intent(in) :: k
+cf2py double precision dimension(nloc), intent(in) :: loc
+cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: na=len(alpha)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py double precision dimension(nloc), intent(out) :: gradlike
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n), z(n), alpha(na), t1, t2
+      DOUBLE PRECISION k(nk), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nk, nloc, nscale
+      DOUBLE PRECISION gradlike(nloc), grad
+      LOGICAL not_scalar_a, not_scalar_k, not_scalar_scale
+      DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      aa = alpha(1)
+      cc = k(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_k = (nk .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+     
+      do i = 1,na
+     	if (alpha(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,nc
+     	if (k(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,n
+     	if (z(i) .LE. 0.0) return
+      enddo 
+     
+      do i=1,n
+        if (not_scalar_a) aa = alpha(i)
+        if (not_scalar_k) cc = k(i)
+        if (not_scalar_scale) sigma = scale(i)
+
+		t2 = -z(i)**cc
+        t1 = dexp(t2)
+        
+                
+        grad = (aa - 1d0)/(1d0 - t1) * t1 * z(i) **(cc -1d0)
+     & * cc / sigma
+        grad = grad + -  z(i) **(cc -1d0) * cc/sigma -
+     & (cc -1d0)/(z(i) *sigma)
+        grad = -grad
+        if (nloc .NE. 1) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad 
+        endif 
+      enddo
+      END SUBROUTINE 
+      
+      SUBROUTINE exponweib_gk(x,alpha,k,loc,scale,n,na,nk,
+     &nloc,nscale,gradlike)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+c CREATED 12/06 DH
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(na), intent(in) :: alpha
+cf2py double precision dimension(nk), intent(in) :: k
+cf2py double precision dimension(nloc), intent(in) :: loc
+cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: na=len(alpha)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py double precision dimension(nk), intent(out) :: gradlike
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n), z(n), alpha(na), t1, t2
+      DOUBLE PRECISION k(nk), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nk, nloc, nscale
+      DOUBLE PRECISION gradlike(nk), grad
+      LOGICAL not_scalar_a, not_scalar_k, not_scalar_scale
+      DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      aa = alpha(1)
+      cc = k(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_k = (nk .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+     
+      do i = 1,na
+     	if (alpha(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,nk
+     	if (k(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,n
+     	if (z(i) .LE. 0.0) return
+      enddo 
+     
+      do i=1,n
+        if (not_scalar_a) aa = alpha(i)
+        if (not_scalar_k) cc = k(i)
+        if (not_scalar_scale) sigma = scale(i)
+
+		t2 = -z(i)**cc
+        t1 = dexp(t2)
+        
+        grad = 1d0/cc  + (aa - 1d0)/(1d0 - t1) * -t1 * -t2 
+        grad = grad + t2 +1d0
+        grad = grad * dlog(z(i))
+        
+        if (not_scalar_k) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad 
+        endif 
+      enddo
+      END SUBROUTINE 
+      
+      SUBROUTINE exponweib_ga(x,alpha,k,loc,scale,n,na,
+     &nk,nloc,nscale,gradlike)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+c CREATED 12/06 DH
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(na), intent(in) :: alpha
+cf2py double precision dimension(nk), intent(in) :: k
+cf2py double precision dimension(nloc), intent(in) :: loc
+cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: na=len(alpha)
+cf2py integer intent(hide),depend(k) :: nc=len(k)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py double precision dimension(na), intent(out) :: gradlike
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n), z(n), alpha(na), t1, t2
+      DOUBLE PRECISION k(nk), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nk, nloc, nscale
+      DOUBLE PRECISION gradlike(na), grad
+      LOGICAL not_scalar_a, not_scalar_k, not_scalar_scale
+      DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      aa = alpha(1)
+      cc = k(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_k = (nk .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+     
+      do i = 1,na
+     	if (alpha(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,nk
+     	if (k(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,n
+     	if (z(i) .LE. 0.0) return
+      enddo 
+     
+      do i=1,n
+        if (not_scalar_a) aa = alpha(i)
+        if (not_scalar_k) cc = k(i)
+        if (not_scalar_scale) sigma = scale(i)
+
+		t2 = -z(i)**cc
+        t1 = dexp(t2)
+        
+        grad = 1d0/aa + dlog(1d0 - t1)
+        
+        if (not_scalar_a) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad 
+        endif 
+      enddo
+      END SUBROUTINE
+      
+      SUBROUTINE exponweib_gs(x,alpha,k,loc,scale,n,na,
+     &nk,nloc,nscale,gradlike)
+      
+c Exponentiated log-likelihood function
+c pdf(z) = a*c*(1-exp(-z**c))**(a-1)*exp(-z**c)*z**(c-1)
+c Where z is standardized, ie z = (x-mu)/scale
+c CREATED 12/06 DH
+
+cf2py double precision dimension(n), intent(in) :: x
+cf2py double precision dimension(na), intent(in) :: alpha
+cf2py double precision dimension(nk), intent(in) :: k
+cf2py double precision dimension(nloc), intent(in) :: loc
+cf2py double precision dimension(nscale), intent(in) :: scale
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: na=len(alpha)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
+cf2py integer intent(hide),depend(loc) :: nloc=len(loc)
+cf2py integer intent(hide),depend(scale) :: nscale=len(scale)
+cf2py double precision dimension(nscale), intent(out) :: gradlike
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n), z(n), alpha(na), t1, t2
+      DOUBLE PRECISION k(nk), loc(nloc), scale(nscale)
+      INTEGER i, n, na, nk, nloc, nscale
+      DOUBLE PRECISION gradlike(nscale), grad
+      LOGICAL not_scalar_a, not_scalar_k, not_scalar_scale
+      DOUBLE PRECISION aa, cc, sigma, pdf
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      aa = alpha(1)
+      cc = k(1)
+      sigma = scale(1)
+      not_scalar_a = (na .NE. 1)
+      not_scalar_k = (nk .NE. 1)
+      not_scalar_scale = (nscale .NE. 1)
+
+c Compute z
+      CALL standardize(x, loc, scale, n, nloc, nscale, z)
+     
+      do i = 1,na
+     	if (alpha(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,nc
+     	if (k(i) .LE. 0.0) return
+      enddo 
+     
+      do i = 1,n
+     	if (z(i) .LE. 0.0) return
+      enddo 
+     
+      do i=1,n
+        if (not_scalar_a) aa = alpha(i)
+        if (not_scalar_k) cc = k(i)
+        if (not_scalar_scale) sigma = scale(i)
+
+		t2 = -z(i)**cc
+        t1 = dexp(t2)
+        
+        grad = -1d0/sigma + (aa -1d0)/(1-t1) * 
+     & t1 * z(i) **(cc - 1d0) *cc 
+        grad = grad + z(i) **(cc - 1d0) *cc  
+     & + (cc - 1d0)/z(i)
+        grad = grad * -z(i)/sigma
+        
+        if (not_scalar_a) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad 
+        endif 
+      enddo
+      END SUBROUTINE
+      
 
       SUBROUTINE exponweib_ppf(q,a,c,n,na,nc,ppf)
       
@@ -609,22 +1090,73 @@ c      CALL constrain(mu,0,INFINITY,allow_equal=0)
       return
       END
       
-      SUBROUTINE trpoisson(x,mu,k,n,nmu,like)
+      SUBROUTINE poisson_gmu(x,mu,n,nmu,gradlike)
+
+c Poisson log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nmu
+      INTEGER x(n)
+      DOUBLE PRECISION mu(nmu), gradlike(nmu), grad
+      DOUBLE PRECISION sumx, mut, infinity, sumfact
+      DOUBLE PRECISION factln
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
+      mut = mu(1)
+      
+c      CALL constrain(x,0,INFINITY,allow_equal=1)
+c      CALL constrain(mu,0,INFINITY,allow_equal=0)
+
+		do i = 1,nmu
+	    	if (mu(i) .LT. 0.0) return 
+	    enddo
+    
+        do i = 1,n
+	    	if (x(i) .LT. 0.0) return 
+	    enddo
+        
+      do i=1,n
+        if (nmu .NE. 1) then
+          mut = mu(i)
+        endif
+    
+        grad = x(i) / mut -1d0
+        if (nmu .NE. 1) then
+          gradlike(i) = grad
+        else 
+        	gradlike(1) = gradlike(1) + grad
+        endif 
+        
+      enddo
+      return
+      END
+      
+      SUBROUTINE trpoisson(x,mu,k,n,nmu,nk,like)
 
 c Truncated poisson log-likelihood function      
 c UPDATED 1/16/07 AP
 
 cf2py integer dimension(n),intent(in) :: x
 cf2py double precision dimension(nmu),intent(in) :: mu
-cf2py integer dimension(nmu),intent(in) :: k
+cf2py integer dimension(nk),intent(in) :: k
 cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(x) :: n=len(x)
 cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
 cf2py threadsafe
 
       IMPLICIT NONE
-      INTEGER n, i, nmu, kt
-      INTEGER x(n), k(nmu)
+      INTEGER n, i, nmu, nk, kt
+      INTEGER x(n), k(nk)
       DOUBLE PRECISION mu(nmu), like, cdf
       DOUBLE PRECISION sumx, mut, infinity, sumfact, sumcdf
       DOUBLE PRECISION factln, gammq
@@ -640,6 +1172,9 @@ cf2py threadsafe
       do i=1,n
         if (nmu .NE. 1) then
           mut = mu(i)
+        endif
+        
+        if (nk .NE. 1) then
           kt = k(i)
         endif
         
@@ -668,6 +1203,70 @@ cf2py threadsafe
       like = sumx - sumfact - sumcdf
       return
       END
+      
+      SUBROUTINE trpoisson_gmu(x,mu,k,n,nmu,nk,gradlike)
+
+c Truncated poisson log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py integer dimension(nk),intent(in) :: k
+cf2py double precision dimension(nmu),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu) :: nmu=len(mu)
+cf2py integer intent(hide),depend(k) :: nk=len(k)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nmu, nk, kt
+      INTEGER x(n), k(nk)
+      DOUBLE PRECISION mu(nmu), gradlike(nmu),grad, cdf
+      DOUBLE PRECISION sumx, mut, infinity, sumfact, sumcdf
+      DOUBLE PRECISION factln, gammq
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
+      mut = mu(1)
+      kt = k(1)
+      
+      do i = 1, nk
+        if (kt .LT. 0.0) return
+      enddo
+        
+      do i = 1,n
+        if (nmu .NE. 1) then
+          mut = mu(i)
+        endif
+        if (nk .NE. 1) then
+          kt = k(i)
+        endif
+        if (x(i) .LT. kt) return
+        if (mut .LT. kt) return
+      enddo
+        
+      mut = mu(1)
+      kt = k(1)
+      
+      do i=1,n
+        if (nmu .NE. 1) then
+          mut = mu(i)
+        endif
+        
+        if (nk .NE. 1) then
+          kt = k(i)
+        endif
+    
+        grad = x(i) / mut -1d0
+        if (nmu .NE. 1) then
+          gradlike(i) = grad
+        else 
+        	gradlike(1) = gradlike(1) + grad
+        endif 
+      enddo
+      return
+      END
+     
       
       SUBROUTINE t(x,nu,n,nnu,like)
 
@@ -705,6 +1304,141 @@ cf2py threadsafe
         like = like + gammln((nut+1.0)/2.0)
         like = like - 0.5*dlog(nut * PI) - gammln(nut/2.0)
         like = like - (nut+1)/2 * dlog(1 + (x(i)**2)/nut)
+      enddo
+      return
+      END
+
+      SUBROUTINE t_grad_x(x,nu,n,nnu,gradlikex)
+
+c Student's t log-likelihood function    
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nnu),intent(in) :: nu
+cf2py double precision dimension(n),intent(out) :: gradlikex
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nnu
+      DOUBLE PRECISION x(n), nu(nnu), gradlikex(n),gradx, infinity, nut
+      PARAMETER (infinity = 1.7976931348623157d308)
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      
+      nut = nu(1)
+
+		do i =1,nnu
+		  if (nu(i) .LE. 0.0) then
+          	RETURN
+          endif
+		enddo
+		
+      gradx = 0.0 
+      do i=1,n
+        if (nnu .GT. 1) then
+          nut = nu(i)
+        endif
+        
+    	gradx = - (nut + 1) * x(i) / ( nut + x(i)**2)
+    	if (nnu .GT. 1) then
+    		gradlikex(i) = gradx
+    	else
+    		gradlikex(1) = gradlikex(1) + gradx
+    	endif
+      enddo
+      return
+      END
+      
+            SUBROUTINE t_grad_nu(x,nu,n,nnu,gradlikenu)
+
+c Student's t log-likelihood function    
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nnu),intent(in) :: nu
+cf2py double precision dimension(nnu),intent(out) :: gradlikenu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nnu
+      double precision x(n)
+      DOUBLE PRECISION nu(nnu), gradlikenu(nnu),gradnu, infinity, nut
+      PARAMETER (infinity = 1.7976931348623157d308)
+      DOUBLE PRECISION psi
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0)
+      
+      nut = nu(1)
+
+		do i =1,nnu
+		
+		  if (nu(i) .LE. 0.0) then
+          	RETURN
+          endif
+		enddo
+		
+      gradnu = 0.0 
+      do i=1,n
+        if (nnu .GT. 1) then
+          nut = nu(i)
+        endif
+        
+    	gradnu = psi((nut + 1d0)/2d0) * .5 - .5/nut - psi(nut/2d0) *.5  
+    	gradnu = gradnu - .5 * dlog(1 + x(i)**2/nut)
+    	gradnu = gradnu + ((nut + 1)/2) * x(i)**2/(nut**2+x(i)**2*nut) 
+
+    	if (nnu .GT. 1) then
+    		gradlikenu(i) = gradnu
+    	else
+    		gradlikenu(1) = gradlikenu(1) + gradnu
+    	endif
+      enddo
+      return
+      END
+      
+	  SUBROUTINE chi2_grad_nu(x,nu,n,nnu,gradlikenu)
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nnu),intent(in) :: nu
+cf2py double precision dimension(nnu),intent(out) :: gradlikenu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(nu) :: nnu=len(nu)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n, i, nnu
+      double precision x(n)
+      DOUBLE PRECISION nu(nnu), gradlikenu(nnu),gradnu, infinity, nut
+      PARAMETER (infinity = 1.7976931348623157d308)
+      DOUBLE PRECISION psi
+      DOUBLE PRECISION PI, C
+      PARAMETER (PI=3.141592653589793238462643d0)
+      PARAMETER (C = -0.34657359027997264d0)
+      
+      nut = nu(1)
+
+		do i =1,nnu
+		
+		  if (nu(i) .LE. 0.0) then
+          	RETURN
+          endif
+		enddo
+		
+      gradnu = 0.0 
+      do i=1,n
+        if (nnu .GT. 1) then
+          nut = nu(i)
+        endif
+        
+    	gradnu = C - psi(nut /2d0) + dlog(x(i))/2d0
+    	if (nnu .GT. 1) then
+    		gradlikenu(i) = gradnu
+    	else
+    		gradlikenu(1) = gradlikenu(1) + gradnu
+    	endif
       enddo
       return
       END
@@ -904,7 +1638,146 @@ c kernel of distribution
       return
       END
       
+      SUBROUTINE weibull_gx(x,alpha,beta,n,nalpha,nbeta,gradlike)
       
+c Weibull log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nbeta),intent(in) :: beta
+cf2py double precision dimension(n), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
+      DOUBLE PRECISION gradlike(n), alphat, betat
+      INTEGER n,nalpha,nbeta,i
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      alphat = alpha(1)
+      betat = beta(1)
+	
+	  do i=1,nalpha
+        if (alpha(i) .LE. 0.0) return
+      enddo
+	  do i=1,nbeta
+        if (beta(i) .LE. 0.0) return
+      enddo
+	  do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo
+                 
+      do i=1,n
+        if (nalpha .NE. 1) alphat = alpha(i)
+        if (nbeta .NE. 1) betat = beta(i)
+
+            
+		gradlike(i) =(alphat-1d0)/x(i)
+     +-alphat*betat**(-alphat)*x(i)**(alphat-1d0)
+      enddo
+      return
+      END
+            SUBROUTINE weibull_ga(x,alpha,beta,n,nalpha,nbeta,gradlike)
+
+c Weibull log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nbeta),intent(in) :: beta
+cf2py double precision dimension(nalpha), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
+      DOUBLE PRECISION gradlike(nalpha), alphat, betat, glike
+      INTEGER n,nalpha,nbeta,i
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      alphat = alpha(1)
+      betat = beta(1)
+	
+	  do i=1,nalpha
+        if (alpha(i) .LE. 0.0) return
+      enddo
+	  do i=1,nbeta
+        if (beta(i) .LE. 0.0) return
+      enddo
+	  do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo
+                 
+      do i=1,n
+        if (nalpha .NE. 1) alphat = alpha(i)
+        if (nbeta .NE. 1) betat = beta(i)
+
+            
+		glike = 1d0/alphat+dlog(x(i))-dlog(betat)
+     +-(x(i)/betat)**alphat*dlog(x(i)/betat)
+		if (nalpha .NE. 1) then 
+        	gradlike(i) = glike
+        else
+        	gradlike(1) = glike + gradlike(1)
+        endif
+      enddo
+      return
+      END
+
+      SUBROUTINE weibull_gb(x,alpha,beta,n,nalpha,nbeta,gradlike)
+
+c Weibull log-likelihood function      
+c UPDATED 1/16/07 AP
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nalpha),intent(in) :: alpha
+cf2py double precision dimension(nbeta),intent(in) :: beta
+cf2py double precision dimension(nbeta), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha) :: nalpha=len(alpha)
+cf2py integer intent(hide),depend(beta) :: nbeta=len(beta)
+cf2py threadsafe
+
+      DOUBLE PRECISION x(n),alpha(nalpha),beta(nbeta)
+      DOUBLE PRECISION gradlike(nbeta), alphat, betat, glike
+      INTEGER n,nalpha,nbeta,i
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      alphat = alpha(1)
+      betat = beta(1)
+	
+	  do i=1,nalpha
+        if (alpha(i) .LE. 0.0) return
+      enddo
+	  do i=1,nbeta
+        if (beta(i) .LE. 0.0) return
+      enddo
+	  do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo
+                 
+      do i=1,n
+        if (nalpha .NE. 1) alphat = alpha(i)
+        if (nbeta .NE. 1) betat = beta(i)
+
+            
+		glike = -1d0/betat-(alphat-1d0)/betat+x(i)**alphat
+     +*alphat*betat**(-alphat-1d0)
+		if (nalpha .NE. 1) then 
+        	gradlike(i) = glike
+        else
+        	gradlike(1) = glike + gradlike(1)
+        endif
+      enddo
+      return
+      END      
       SUBROUTINE logistic(x, mu, tau, n, nmu, ntau, like)
 
 c Logistic log-likelihood function      
@@ -992,6 +1865,160 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE normal_grad_tau(x,mu,tau,n,nmu, ntau, grad_tau_like)
+
+c Normal log-likelihood function      
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(ntau), intent(out) :: grad_tau_like
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION grad_tau_like(ntau)
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp,grad_tau
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+	
+	
+	  do i = 1, ntau
+	  	  if (tau(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+        
+        grad_tau = 1.0 / (2 * tau_tmp) - .5 * (x(i) - mu_tmp)**2
+        if (not_scalar_tau) then 
+        	grad_tau_like(i) = grad_tau
+        else
+        	grad_tau_like(1) = grad_tau + grad_tau_like(1)
+        endif
+      enddo
+      return
+      END
+      
+      SUBROUTINE normal_grad_x(x,mu,tau,n,nmu, ntau, grad_x_like)
+
+c Normal log-likelihood function      
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py double precision dimension(n), intent(out) :: grad_x_like
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION grad_x_like(n)
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+	
+	
+	  do i = 1, ntau
+	  	  if (tau(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+
+        grad_x_like(i) = -(x(i) - mu_tmp) * tau_tmp
+        
+      enddo
+      return
+      END
+      
+            SUBROUTINE normal_grad_mu(x,mu,tau,n,nmu,ntau,gradmulike)
+
+c Normal log-likelihood function      
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py double precision dimension(nmu), intent(out) :: gradmulike
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION gradmulike(nmu)
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp,grad_mu
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+	
+	
+	  do i = 1, ntau
+	  	  if (tau(i) .LE. 0.0) return
+      enddo 
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+
+        grad_mu = (x(i) - mu_tmp) * tau_tmp
+        
+        if (not_scalar_mu) then 
+        	gradmulike(i) = grad_mu
+        else
+        	gradmulike(1) = grad_mu + gradmulike(1)
+        endif
+      enddo
+      return
+      END
+
 
       SUBROUTINE hnormal(x,tau,n,ntau,like)
 
@@ -1029,6 +2056,109 @@ cf2py threadsafe
         endif
         like = like + 0.5 * (dlog(2. * tau_tmp / PI)) 
         like = like - (0.5 * x(i)**2 * tau_tmp)
+      enddo
+      return
+      END
+
+      SUBROUTINE hnormal_gradx(x,tau,n,ntau,gradlike)
+
+c Half-normal log-likelihood function    
+
+c Updated 24/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(n),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau
+      DOUBLE PRECISION gradlike(n), grad
+      DOUBLE PRECISION x(n),tau(ntau),tau_tmp
+      LOGICAL not_scalar_tau
+
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_tau = (ntau .NE. 1)
+
+      tau_tmp = tau(1)
+      
+      do i = 1, ntau
+	  	  if (tau(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i = 1, n
+	  	  if (x(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i=1,n
+        if (not_scalar_tau) tau_tmp=tau(i)
+
+        gradlike(i) = -x(i) * tau_tmp
+        
+      enddo
+      return
+      END
+      
+      
+      SUBROUTINE hnormal_gradtau(x,tau,n,ntau,gradlike)
+
+c Half-normal log-likelihood function    
+
+c Updated 24/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(ntau),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1 || ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau
+      DOUBLE PRECISION gradlike(ntau), grad
+      DOUBLE PRECISION x(n),tau(ntau),tau_tmp
+      LOGICAL not_scalar_tau
+
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_tau = (ntau .NE. 1)
+
+      tau_tmp = tau(1)
+      
+      do i = 1, ntau
+	  	  if (tau(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i = 1, n
+	  	  if (x(i) .LE. 0.0) then
+          	RETURN
+          endif
+      enddo 
+      
+      do i=1,n
+        if (not_scalar_tau) tau_tmp=tau(i)
+        
+        grad = 1.0 / (2 * tau_tmp) - .5 * x(i)**2
+        if (not_scalar_tau) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = grad + gradlike(1)
+        endif
       enddo
       return
       END
@@ -1079,7 +2209,168 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE lognormal_gradx(x,mu,tau,n,nmu,ntau,gradlike)
 
+c Log-normal log-likelihood function
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(n), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION gradlike(n)
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+      
+      do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo 
+      do i=1,nmu
+        if (mu(i) .LE. 0.0) return
+      enddo 
+      do i=1,ntau
+        if (tau(i) .LE. 0.0) return
+      enddo       
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+       
+        gradlike(i) = - (1 + (dlog(x(i)) - mu_tmp) * tau_tmp)/x(i)
+      enddo
+      return
+      END
+
+	  SUBROUTINE lognormal_gradmu(x,mu,tau,n,nmu,ntau,gradlike)
+
+c Log-normal log-likelihood function
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(nmu), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION gradlike(nmu), glike
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+      
+      do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo 
+      do i=1,nmu
+        if (mu(i) .LE. 0.0) return
+      enddo 
+      do i=1,ntau
+        if (tau(i) .LE. 0.0) return
+      enddo       
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+       
+        glike = (dlog(x(i)) - mu_tmp) * tau_tmp
+        if (not_scalar_mu) then 
+        	gradlike(i) = glike
+        else
+        	gradlike(1) = glike + gradlike(1)
+        end if
+      enddo
+      return
+      END
+
+	  SUBROUTINE lognormal_gradtau(x,mu,tau,n,nmu,ntau,gradlike)
+
+c Log-normal log-likelihood function
+
+c Updated 26/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py double precision dimension(ntau),intent(in) :: tau
+cf2py double precision dimension(ntau), intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,n),check(nmu==1||nmu==n) :: nmu=len(mu)
+cf2py integer intent(hide),depend(tau,n),check(ntau==1||ntau==n) :: ntau=len(tau)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,ntau,nmu
+      DOUBLE PRECISION gradlike(ntau), glike
+      DOUBLE PRECISION x(n),mu(nmu),tau(ntau)
+      DOUBLE PRECISION mu_tmp, tau_tmp
+      LOGICAL not_scalar_mu, not_scalar_tau
+      DOUBLE PRECISION PI
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_tau = (ntau .NE. 1)
+
+      mu_tmp = mu(1)
+      tau_tmp = tau(1)
+      
+      do i=1,n
+        if (x(i) .LE. 0.0) return
+      enddo 
+      do i=1,nmu
+        if (mu(i) .LE. 0.0) return
+      enddo 
+      do i=1,ntau
+        if (tau(i) .LE. 0.0) return
+      enddo       
+      
+      do i=1,n
+        if (not_scalar_mu) mu_tmp=mu(i)
+        if (not_scalar_tau) tau_tmp=tau(i)
+       
+        glike = 1D0 /(2D0 * tau_tmp) - (dlog(x(i)) - mu_tmp)**2/2D0
+        if (not_scalar_tau) then 
+        	gradlike(i) = glike
+        else
+        	gradlike(1) = glike + gradlike(1)
+        end if
+      enddo
+      return
+      END
       SUBROUTINE arlognormal(x, mu, sigma, rho, beta, n, nmu, like)
 
 C Autocorrelated lognormal loglikelihood.
@@ -1273,6 +2564,198 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE gamma_grad_x(x,alpha,beta,n,na,nb,gradxlike)
+
+c Gamma log-likelihood gradient function wrt x     
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(n),intent(out) :: gradxlike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradxlike(n)
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+      
+      do i = 1, n
+      	if (x(i) .LT. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        
+        if (x(i).EQ.0.0) then
+			if (alpha_tmp .EQ. 1.0) then 
+				gradxlike(i) = -beta_tmp
+			else
+c might be a better way to handle this, but this will do for now
+				gradxlike(i) = 0
+			end if 
+        else            
+            gradxlike(i) = (alpha_tmp - 1.0)/x(i) - beta_tmp
+        end if
+      enddo     
+
+      return
+      END
+      
+      SUBROUTINE gamma_grad_alpha(x,alpha,beta,n,na,nb,gradalphalike)
+
+c Gamma log-likelihood gradient function wrt alpha      
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(na),intent(out) :: gradalphalike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradalphalike(na)
+      double precision gradalpha
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+
+      
+      do i = 1, n
+      	if (x(i) .LT. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        
+        if (x(i) .EQ. 0.0) then
+				gradalpha = -infinity
+        else            
+            gradalpha = dlog(x(i)) - psi(alpha_tmp) + dlog(beta_tmp)
+        end if
+        
+        if (not_scalar_a) then 
+        	gradalphalike(i) = gradalpha
+        else
+        	gradalphalike(1) = gradalpha + gradalphalike(1)
+        end if
+      enddo     
+
+      return
+      END
+      
+      SUBROUTINE gamma_grad_beta(x,alpha,beta,n,na,nb,gradbetalike)
+
+c Gamma log-likelihood gradient function wrt beta      
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(nb),intent(out) :: gradbetalike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradbetalike(nb)
+      double precision gradbeta
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+      
+      do i = 1, n
+      	if (x(i) .LT. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        
+        if (beta_tmp .EQ. 0.0) then
+				gradbeta = infinity
+        else            
+            gradbeta = -x(i) + alpha_tmp/beta_tmp
+        end if
+        
+        if (not_scalar_b) then 
+        	gradbetalike(i) = gradbeta
+        else
+        	gradbetalike(1) = gradbeta + gradbetalike(1)
+        end if
+      enddo     
+
+      return
+      END
+
       SUBROUTINE igamma(x,alpha,beta,n,na,nb,like)
 
 c Inverse gamma log-likelihood function      
@@ -1319,6 +2802,183 @@ cf2py threadsafe
       return
       END
 
+	  SUBROUTINE igamma_grad_x(x,alpha,beta,n,na,nb,gradxlike)
+
+c Gamma log-likelihood gradient function wrt x     
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(n),intent(out) :: gradxlike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradxlike(n)
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+      
+      do i = 1, n
+      	if (x(i) .LE. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        
+         
+        gradxlike(i) = -(alpha_tmp + 1.0)/x(i) + beta_tmp/x(i)**2
+
+      enddo     
+
+      return
+      END
+      
+      SUBROUTINE igamma_grad_alpha(x,alpha,beta,n,na,nb,gradalphalike)
+
+c Gamma log-likelihood gradient function wrt alpha      
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(na),intent(out) :: gradalphalike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradalphalike(na)
+      double precision gradalpha
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+
+      
+      do i = 1, n
+      	if (x(i) .LE. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+        
+         
+        gradalpha = -dlog(x(i)) - psi(alpha_tmp) + dlog(beta_tmp)
+        
+        if (not_scalar_a) then 
+        	gradalphalike(i) = gradalpha
+        else
+        	gradalphalike(1) = gradalpha + gradalphalike(1)
+        end if
+      enddo     
+
+      return
+      END
+      
+      SUBROUTINE igamma_grad_beta(x,alpha,beta,n,na,nb,gradbetalike)
+
+c Gamma log-likelihood gradient function wrt beta      
+
+c Updated 19/01/2007 DH.
+
+cf2py double precision dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(nb),intent(out) :: gradbetalike
+cf2py threadsafe
+
+
+      INTEGER i,n,na,nb
+      DOUBLE PRECISION x(n),alpha(na),beta(nb)
+      double precision gradbetalike(nb)
+      double precision gradbeta
+      DOUBLE PRECISION beta_tmp, alpha_tmp
+      LOGICAL not_scalar_a, not_scalar_b
+      DOUBLE PRECISION gammln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_a = (na .NE. 1)
+      not_scalar_b = (nb .NE. 1)
+
+      alpha_tmp = alpha(1)
+      beta_tmp = beta(1)
+      
+      do i = 1, n
+      	if (x(i) .LE. 0.0) return 
+      enddo
+      
+      do i=1,na
+        if  (alpha(i) .LE. 0.0) RETURN
+      enddo
+      
+      do i=1,nb
+        if  (beta(i) .LE. 0.0) RETURN
+      enddo      
+      
+      do i=1,n
+        if (not_scalar_a) alpha_tmp = alpha(i)
+        if (not_scalar_b) beta_tmp = beta(i)
+       
+        gradbeta = alpha_tmp/beta_tmp - 1d0/x(i)
+        
+        if (not_scalar_a) then 
+        	gradbetalike(i) = gradbeta
+        else
+        	gradbetalike(1) = gradbeta + gradbetalike(1)
+        end if
+      enddo     
+
+      return
+      END
 
       SUBROUTINE hyperg(x,draws,success,total,n,nd,ns,nt,like)
 
@@ -1427,6 +3087,51 @@ cf2py threadsafe
       enddo
       return
       END SUBROUTINE geometric
+
+      SUBROUTINE geometric_gp(x,p,n,np,gradlike)
+
+c Geometric log-likelihood
+
+c Created 29/01/2007 DH.
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(p,n),check(np==1 || np==n) :: np=len(p)
+cf2py double precision dimension(np), intent(out) :: gradlike      
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,np,i
+      INTEGER x(n)
+      DOUBLE PRECISION p(np), p_tmp
+      DOUBLE PRECISION gradlike(np), grad
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+
+      p_tmp = p(1)
+      do i=1, np
+		  if ((p(i) .LE. 0.0) .OR. (p(i) .GE. 1.0)) return
+	  enddo
+      
+      do i=1, n
+      	if (x(i) .LT. 1) return
+      enddo
+
+      do i=1, n
+        if (np .NE. 1) p_tmp = p(i)
+          
+        grad = - (x(i) - 1)/(1 - p_tmp) + 1d0 / p_tmp
+        
+        if (np .NE. 1) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = grad + gradlike(1)
+        end if
+      enddo
+      return
+      END SUBROUTINE
 
 
 !       SUBROUTINE dirichlet(x,theta,nx,nt,k,like)
@@ -1594,6 +3299,154 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE cauchy_grad_x(x,alpha,beta,nx, na, nb,gradlike)
+
+c Cauchy log-likelihood function      
+
+c UPDATED 17/01/2007 DH. 
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py double precision dimension(nx),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER nx,na,nb,i
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb)
+      DOUBLE PRECISION gradlike(nx), atmp, btmp, PI, glike
+      LOGICAL not_scalar_alpha, not_scalar_beta
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_alpha = (na .NE. 1)
+      not_scalar_beta = (nb .NE. 1)
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      
+      do i=1,nb
+        if (beta(i) .LE. 0.0) return
+      enddo
+      
+      do i=1,nx
+        if (not_scalar_alpha) atmp = alpha(i)
+        if (not_scalar_beta) btmp = beta(i)
+        
+        gradlike(i) = - 2 * (x(i) - atmp)/
+     &(btmp**2 + (x(i) - atmp)**2)
+        
+      enddo
+      return
+      END
+      
+      SUBROUTINE cauchy_grad_a(x,alpha,beta,nx, na, nb,gradlike)
+
+c Cauchy log-likelihood function      
+
+c UPDATED 17/01/2007 DH. 
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py double precision dimension(nx),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER nx,na,nb,i
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb)
+      DOUBLE PRECISION gradlike(na), atmp, btmp, PI, glike
+      LOGICAL not_scalar_alpha, not_scalar_beta
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_alpha = (na .NE. 1)
+      not_scalar_beta = (nb .NE. 1)
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      
+      do i=1,nb
+        if (beta(i) .LE. 0.0) return
+      enddo
+      
+      do i=1,nx
+        if (not_scalar_alpha) atmp = alpha(i)
+        if (not_scalar_beta) btmp = beta(i)
+        
+        glike = 2 * (x(i) - atmp)/(btmp**2 + (x(i)-atmp)**2)
+        if (not_scalar_alpha) then 
+        	gradlike(i) = glike
+        	
+        else
+        	gradlike(1) = gradlike(1) + glike
+        endif
+
+      enddo
+      return
+      END
+
+      SUBROUTINE cauchy_grad_b(x,alpha,beta,nx, na, nb,gradlike)
+
+c Cauchy log-likelihood function      
+
+c UPDATED 17/01/2007 DH. 
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py double precision dimension(nx),intent(out) :: gradlike
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER nx,na,nb,i
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb)
+      DOUBLE PRECISION gradlike(nb), atmp, btmp, PI, glike
+      LOGICAL not_scalar_alpha, not_scalar_beta
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_alpha = (na .NE. 1)
+      not_scalar_beta = (nb .NE. 1)
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      
+      do i=1,nb
+        if (beta(i) .LE. 0.0) return
+      enddo
+      
+      do i=1,nx
+        if (not_scalar_alpha) atmp = alpha(i)
+        if (not_scalar_beta) btmp = beta(i)
+        
+        glike = -1D0/btmp 
+        glike = glike + 2d0 * (x(i)-atmp)**2/
+     & 		(btmp**3*(1D0+(x(i)-atmp)**2/btmp**2))
+        
+        if (not_scalar_beta) then 
+        	gradlike(i) = glike
+        	
+        else
+        	gradlike(1) = gradlike(1) + glike
+        endif
+
+      enddo
+      return
+      END
+
       SUBROUTINE negbin(x,r,p,n,nr,np,like)
 
 c Negative binomial log-likelihood function     
@@ -1694,7 +3547,126 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE negbin2_gmu(x,mu,alpha,n,nmu,na,gradlike)
 
+c Negative binomial log-likelihood function 
+c (alternative parameterization)    
+c Updated 1/4/08 CF
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
+cf2py integer intent(hide),depend(alpha,x),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py double precision dimension (nmu), intent(out) :: gradlike      
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nmu,na
+      DOUBLE PRECISION gradlike(nmu), grad
+      DOUBLE PRECISION alpha(na),mu(nmu), a_tmp, mu_tmp
+      INTEGER x(n)
+      LOGICAL not_scalar_a, not_scalar_mu
+      DOUBLE PRECISION gammln, factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_a = (na .NE. 1)
+
+      mu_tmp = mu(1)
+      a_tmp = alpha(1)
+      
+	  do i =1,n
+	  	if (x(i) .LT. 0) return
+	  enddo
+	  
+	  do i =1,nmu
+	  	if (mu(i) .LE. 0.0) return 
+	  enddo 
+	  
+	  do i=1,na
+	  	if (alpha(i) .LE. 0.0) return
+	  enddo
+
+      do i=1,n
+        if (not_scalar_mu) mu_tmp = mu(i)
+        if (not_scalar_a) a_tmp = alpha(i)
+
+        grad= x(i)/mu_tmp - (x(i) + a_tmp)/(mu_tmp + a_tmp)
+        
+        if (not_scalar_mu) then 
+        	gradlike(i) = grad
+        	
+        else
+        	gradlike(1) = gradlike(1) + grad
+        endif
+        
+      enddo
+      return
+      END
+
+      SUBROUTINE negbin2_ga(x,mu,alpha,n,nmu,na,gradlike)
+
+c Negative binomial log-likelihood function 
+c (alternative parameterization)    
+c Updated 1/4/08 CF
+
+cf2py integer dimension(n),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nmu),intent(in) :: mu
+cf2py integer intent(hide),depend(x) :: n=len(x)
+cf2py integer intent(hide),depend(mu,x),check(nmu==1 || nmu==len(x)) :: nmu=len(mu)
+cf2py integer intent(hide),depend(alpha,x),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py double precision dimension (na), intent(out) :: gradlike      
+cf2py threadsafe
+
+      IMPLICIT NONE
+      INTEGER n,i,nmu,na
+      DOUBLE PRECISION gradlike(na), grad
+      DOUBLE PRECISION alpha(na),mu(nmu), a_tmp, mu_tmp
+      INTEGER x(n)
+      LOGICAL not_scalar_a, not_scalar_mu
+      DOUBLE PRECISION gammln, factln, psi
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_mu = (nmu .NE. 1)
+      not_scalar_a = (na .NE. 1)
+
+      mu_tmp = mu(1)
+      a_tmp = alpha(1)
+      
+	  do i =1,n
+	  	if (x(i) .LT. 0) return
+	  enddo
+	  
+	  do i =1,nmu
+	  	if (mu(i) .LE. 0.0) return 
+	  enddo 
+	  
+	  do i=1,na
+	  	if (alpha(i) .LE. 0.0) return
+	  enddo
+
+      do i=1,n
+        if (not_scalar_mu) mu_tmp = mu(i)
+        if (not_scalar_a) a_tmp = alpha(i)
+
+		grad=psi(x(i)+a_tmp)-psi(a_tmp)+dlog(a_tmp)+1.0 
+     +  - dlog(a_tmp+mu_tmp)-a_tmp/(a_tmp+mu_tmp)         
+     +  - x(i)/(mu_tmp+a_tmp) 
+     
+        if (not_scalar_a) then 
+        	gradlike(i) = grad	
+        else
+        	gradlike(1) = gradlike(1) + grad
+        endif
+        
+      enddo
+      return
+      END
 
 
       SUBROUTINE binomial(x,n,p,nx,nn,np,like)
@@ -1765,6 +3737,75 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE binomial_gp(x,n,p,nx,nn,np,gradlike)
+
+c Binomial log-likelihood function     
+
+c  Updated 17/01/2007. DH. 
+
+cf2py integer dimension(nx),intent(in) :: x
+cf2py integer dimension(nn),intent(in) :: n
+cf2py double precision dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
+cf2py integer intent(hide),depend(p),check(np==1 || np==len(x)) :: np=len(p)
+cf2py double precision dimension(np), intent(out) :: gradlike      
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER nx,nn,np,i
+      DOUBLE PRECISION gradlike(np), p(np)
+      INTEGER x(nx),n(nn)
+      LOGICAL not_scalar_n,not_scalar_p
+      INTEGER ntmp
+      DOUBLE PRECISION ptmp
+      DOUBLE PRECISION factln
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+      not_scalar_n = (nn .NE. 1)
+      not_scalar_p = (np .NE. 1) 
+
+      ntmp = n(1)
+      ptmp = p(1)
+
+	  do i =1,nx
+	    if (not_scalar_n) ntmp = n(i)
+        if ((x(i).LT.0).OR.(ntmp.LT.0) .OR.(x(i) .GT. ntmp)) return
+	  enddo
+	  
+	  do i=1,nx
+        if (not_scalar_n) ntmp = n(i)
+        if (not_scalar_p) ptmp = p(i)
+
+        if ((ptmp .LE. 0.0D0) .OR. (ptmp .GE. 1.0D0)) then
+!         if p = 0, number of successes must be 0
+          if (ptmp .EQ. 0.0D0) then
+            if (x(i) .GT. 0.0D0) return
+
+          else if (ptmp .EQ. 1.0D0) then
+!           if p = 1, number of successes must be n
+            if (x(i) .LT. ntmp) RETURN
+          else
+            RETURN
+          endif
+        endif
+      enddo
+
+      do i=1,nx
+        if (not_scalar_n) ntmp = n(i)
+        if (not_scalar_p) ptmp = p(i)
+
+        
+        if ((ptmp .LE. 0.0D0) .OR. (ptmp .GE. 1.0D0)) then
+			gradlike(i) = 0d0
+		else
+			gradlike(i) = x(i) / ptmp - (ntmp - x(i))/(1d0 -ptmp)
+		endif
+
+      enddo
+      return
+      END
+
 
       SUBROUTINE bernoulli(x,p,nx,np,like)
          
@@ -1807,6 +3848,53 @@ C     Check parameter size
       return
       END
 
+      SUBROUTINE bern_grad_p(x,p,nx,np,grad_like)
+
+c Modified on Jan 16 2007 by D. Huard to allow scalar p.
+
+cf2py logical dimension(nx),intent(in) :: x
+cf2py double precision dimension(np),intent(in) :: p
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(p),check(len(p)==1 || len(p)==len(x)):: np=len(p) 
+cf2py double precision dimension(np),intent(out) :: grad_like     
+cf2py threadsafe
+      IMPLICIT NONE
+
+      INTEGER np,nx,i
+      DOUBLE PRECISION p(np), ptmp, glike, grad_like(np)
+      LOGICAL x(nx)
+      LOGICAL not_scalar_p
+      DOUBLE PRECISION infinity
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+C     Check parameter size
+      not_scalar_p = (np .NE. 1)
+
+      ptmp = p(1)
+      
+      do i=1,np
+        if (p(i) .LT. 0.0 .OR. p(i) .GT. 1.0) return
+      enddo
+        
+      
+      do i=1,nx
+        if (not_scalar_p) ptmp = p(i)
+        
+        if (x(i)) then 
+          glike = 1.0D0 / ptmp
+        else 
+          glike = -1.0D0 / (1.0D0 - ptmp)
+        endif
+        
+        if (not_scalar_p) then 
+        	grad_like(i) = glike
+        else 
+        	grad_like(1) = grad_like(1) + glike
+        endif
+          
+      enddo
+      return
+      END
 
       SUBROUTINE beta_like(x,alpha,beta,nx,na,nb,like)
 
@@ -1854,6 +3942,175 @@ cf2py threadsafe
       return
       END
       
+      SUBROUTINE beta_grad_x(x,alpha,beta,nx,na,nb,gradlikex)
+      
+c Beta log-likelihood function      
+c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
+c Renamed to use alpha and beta arguments for compatibility with 
+c random.beta.
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(nx),intent(out):: gradlikex
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb
+      DOUBLE PRECISION gradlikex(nx), gradx
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
+      DOUBLE PRECISION psi
+      DOUBLE PRECISION infinity, e, zero, one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data e/1.0d-9/, zero/0.0d0/, one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      gradx = 0.0
+      
+      do i=1,na
+      	if (alpha(i) .LE. 0.0) return
+      enddo
+
+      do i=1,nb
+      	if (beta(i) .LE. 0.0) return
+      enddo
+            
+      do i=1,nx
+      	if ((x(i) .LE. 0.0) .OR. (x(i) .GE. 1.0)) return
+      enddo
+      
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+
+        gradlikex(i) = (atmp - 1)/x(i) - (btmp - 1)/(1 - x(i))
+        
+      enddo   
+
+      return
+      END
+      
+      SUBROUTINE beta_grad_a(x,alpha,beta,nx,na,nb,gradlikea)
+
+c Beta log-likelihood function      
+c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
+c Renamed to use alpha and beta arguments for compatibility with 
+c random.beta.
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(na),intent(out):: gradlikea
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb
+      DOUBLE PRECISION gradlikea(na), grada
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
+      DOUBLE PRECISION psi
+      DOUBLE PRECISION infinity, e, zero, one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data e/1.0d-9/, zero/0.0d0/, one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      grada = 0.0
+      
+      do i=1,na
+      	if (alpha(i) .LE. 0.0) return 
+      enddo
+
+      do i=1,nb
+      	if (beta(i) .LE. 0.0) return
+      enddo
+            
+      do i=1,nx
+      	if ((x(i) .LE. 0.0) .OR. (x(i) .GE. 1.0)) return 
+      enddo
+      
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+
+        grada = dlog(x(i)) - psi(atmp) + psi(atmp + btmp)
+        if (na .NE. 1) then 
+        	gradlikea(i) = grada
+        else
+        	gradlikea(1) = gradlikea(1) + grada
+        endif
+        
+      enddo   
+
+      return
+      END
+      
+            SUBROUTINE beta_grad_b(x,alpha,beta,nx,na,nb,gradlikeb)
+
+c Beta log-likelihood function      
+c Modified by D. Huard on Jan 17 2007 to accept scalar parameters.
+c Renamed to use alpha and beta arguments for compatibility with 
+c random.beta.
+
+cf2py double precision dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py double precision dimension(nb),intent(out):: gradlikeb
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb
+      DOUBLE PRECISION gradlikeb(nb), gradb
+      DOUBLE PRECISION x(nx),alpha(na),beta(nb), atmp, btmp
+      DOUBLE PRECISION psi
+      DOUBLE PRECISION infinity, e, zero, one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data e/1.0d-9/, zero/0.0d0/, one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      gradb = 0.0
+      
+      do i=1,na
+      	if (alpha(i) .LE. 0.0) return
+
+      enddo
+
+      do i=1,nb
+      	if (beta(i) .LE. 0.0) return
+
+      enddo
+            
+      do i=1,nx
+      	if ((x(i) .LE. 0.0) .OR. (x(i) .GE. 1.0)) then
+          RETURN
+        endif
+      enddo
+      
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+
+        gradb = dlog(1 - x(i)) - psi(btmp) + psi(atmp + btmp)
+        if (nb .NE. 1) then 
+        	gradlikeb(i) = gradb
+        else
+        	gradlikeb(1) = gradlikeb(1) + gradb
+        endif
+        
+      enddo   
+
+      return
+      END
       
       SUBROUTINE betabin_like(x,alpha,beta,n,nx,na,nb,nn,like)
 
@@ -1905,6 +4162,138 @@ cf2py threadsafe
         
         like =like + gammln(atmp+x(i)) + gammln(ntmp+btmp-x(i)) 
         like =like - gammln(atmp+btmp+ntmp)
+        
+      enddo   
+
+      return
+      END
+      
+      SUBROUTINE betabin_ga(x,alpha,beta,n,nx,na,nb,nn,gradlike)
+
+c Beta-binomial log-likelihood function      
+
+cf2py integer dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer dimension(nn),intent(in) :: n
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
+cf2py double precision dimension(na), intent(out) :: gradlike
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb,nn
+      DOUBLE PRECISION gradlike(na), grad
+      DOUBLE PRECISION alpha(na),beta(nb)
+      INTEGER x(nx),n(nn)
+      DOUBLE PRECISION atmp,btmp,ntmp
+      DOUBLE PRECISION gammln, psi
+      DOUBLE PRECISION infinity,one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      ntmp = n(1)
+      
+	  do i = 1,na
+	  	if (alpha(i) .LE. 0.0) return
+	  enddo
+	  
+	  do i = 1,nb
+	  	if (beta(i) .LE. 0.0) return
+	  enddo
+	  
+	  do i = 1,nn
+	  	if (n(i) .LE. 0) return
+	  enddo
+	  
+	  do i = 1,nx
+	  	if (x(i) .LT. 0) return
+	  enddo
+
+
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+        if (nn .NE. 1) ntmp = n(i)
+
+        grad=psi(atmp+btmp)-psi(atmp)+
+     +       psi(atmp+x(i))-psi(atmp+btmp+ntmp)
+        
+        if (na .NE. 1) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad
+        endif
+        
+      enddo   
+
+      return
+      END
+      
+      SUBROUTINE betabin_gb(x,alpha,beta,n,nx,na,nb,nn,gradlike)
+
+c Beta-binomial log-likelihood function      
+
+cf2py integer dimension(nx),intent(in) :: x
+cf2py double precision dimension(na),intent(in) :: alpha
+cf2py double precision dimension(nb),intent(in) :: beta
+cf2py integer dimension(nn),intent(in) :: n
+cf2py integer intent(hide),depend(x) :: nx=len(x)
+cf2py integer intent(hide),depend(alpha),check(na==1 || na==len(x)) :: na=len(alpha)
+cf2py integer intent(hide),depend(beta),check(nb==1 || nb==len(x)) :: nb=len(beta)
+cf2py integer intent(hide),depend(n),check(nn==1 || nn==len(x)) :: nn=len(n)
+cf2py double precision dimension(nb), intent(out) :: gradlike
+cf2py threadsafe
+      IMPLICIT NONE
+      INTEGER i,nx,na,nb,nn
+      DOUBLE PRECISION gradlike(nb), grad
+      DOUBLE PRECISION alpha(na),beta(nb)
+      INTEGER x(nx),n(nn)
+      DOUBLE PRECISION atmp,btmp,ntmp
+      DOUBLE PRECISION gammln, psi
+      DOUBLE PRECISION infinity,one
+      PARAMETER (infinity = 1.7976931348623157d308)
+      data one/1.0d0/
+      
+
+      atmp = alpha(1)
+      btmp = beta(1)
+      ntmp = n(1)
+      
+	  do i = 1,na
+	  	if (alpha(i) .LE. 0.0) return
+	  enddo
+	  
+	  do i = 1,nb
+	  	if (beta(i) .LE. 0.0) return
+	  enddo
+	  
+	  do i = 1,nn
+	  	if (n(i) .LE. 0) return
+	  enddo
+	  
+	  do i = 1,nx
+	  	if (x(i) .LT. 0) return
+	  enddo
+
+
+      do i=1,nx
+        if (na .NE. 1) atmp = alpha(i)
+        if (nb .NE. 1) btmp = beta(i)
+        if (nn .NE. 1) ntmp = n(i)
+
+        grad =psi(atmp+btmp)+ psi(ntmp + btmp - x(i))
+     +        -psi(atmp +btmp+ntmp)
+        
+        if (na .NE. 1) then 
+        	gradlike(i) = grad
+        else
+        	gradlike(1) = gradlike(1) + grad
+        endif
         
       enddo   
 
@@ -2147,6 +4536,42 @@ c
       return
       end
       
+      double precision function psi(x)
+c taken from 
+c Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function. Applied Statistics. 25 (3), 315-317. 
+c http://www.uv.es/~bernardo/1976AppStatist.pdf
+cf2py     double precision intent(in) :: x
+cf2py 	  double precision intent(out) :: psi    
+	      double precision x, y, R
+      
+	      DATA S /1.0e-5/, C /8.5/ S3 /8.333333333e-2/
+	      DATA S4 /8.333333333e-3/, S5 /3.968253968e-3/
+	      DATA D1 /-0.5772156649/	 
+	      
+	      psi = 0
+	
+	      y = x
+	      
+	      if (y .LE. 0.0) return 
+	            
+	      if (y .LE. S) then
+	      	 psi = d1 - 1.0/y
+	      	 return
+	      endif
+	      
+	      do while (y .LT. C) 
+	      	psi = psi - 1.0 / y
+	      	y = y + 1
+	      enddo 
+	      
+	      R= 1.0 / y
+	      psi = psi + dlog(y) - .5 * R 
+	      R= R*R
+	      psi = psi - R * (S3 - R * (S4 - R * S5))
+	      return
+      	
+      
+      end
       
       SUBROUTINE gser(gamser,a,x,gln) 
       INTEGER ITMAX 

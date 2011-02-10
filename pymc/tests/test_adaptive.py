@@ -1,5 +1,4 @@
 """Test AdaptiveMetropolis."""
-
 import pymc
 import numpy as np
 from numpy.testing import *
@@ -10,7 +9,7 @@ def test_square():
     mnc = pymc.MvNormalCov("v", mu = np.zeros(2), C = iw, value = np.zeros(2), observed = True)
 
     M = pymc.MCMC([iw, mnc])
-    M.sample(8)
+    M.sample(8, progress_bar=0)
 
 
 

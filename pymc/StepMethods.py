@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize
+from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize, logp_gradient_of_set
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
@@ -280,6 +280,11 @@ class StepMethod(object):
     # Make get property for retrieving log-probability
     logp_plus_loglike = property(fget = _get_logp_plus_loglike, doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
 
+    def _get_logp_gradient(self):
+        return logp_gradient_of_set(self.stochastics, self.markov_blanket)
+    
+    logp_gradient = property(fget = _get_logp_gradient)
+    
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
         the state of the step method."""
@@ -751,7 +756,7 @@ class DiscreteMetropolis(Metropolis):
         elif self.proposal_distribution == "Prior":
             self.stochastic.random()
 
-
+# TODO Implement independence sampler for BinaryMetropolis
 
 class BinaryMetropolis(Metropolis):
     """
@@ -837,9 +842,9 @@ class BinaryMetropolis(Metropolis):
 
             rand_array = random(size=shape(self.stochastic.value))
             new_value = copy(self.stochastic.value)
+            # Locations where switches occur, according to p_jump
             switch_locs = where(rand_array<p_jump)
             new_value[switch_locs] = True - new_value[switch_locs]
-            # print switch_locs, rand_array, new_value, self.stochastic.value
             self.stochastic.value = new_value
 
 

@@ -156,7 +156,7 @@ class MCMC(Sampler):
         self.restore_sm_state()
         self._sm_assigned = True
     
-    def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0, progress_bar=True):
         """
         sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose)
         
@@ -199,7 +199,7 @@ class MCMC(Sampler):
         
         # Progress bar
         self.pbar = None
-        if not verbose:
+        if not verbose and progress_bar:
             widgets = ['Sampling: ', Percentage(), ' ',
                        Bar(marker='0',left='[',right=']'),
                        ' ', Iterations()]
