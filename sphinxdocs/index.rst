@@ -13,6 +13,7 @@ Contents:
 
    README.rst
    INSTALL.rst
+   tutorial.rst
    references.rst
 
 Indices and tables
