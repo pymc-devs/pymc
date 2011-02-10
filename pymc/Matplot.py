@@ -715,7 +715,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
             # Current subplot number
             _num = i % _rows + 1
             # Final subplot of current figure?
-            _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
+            _last = not _num % _rows or (i==len(tdata)-1)
 
             autocorrelation(tdata[i], name+'_'+str(i), maxlag=maxlag, format=format, suffix=suffix, path=path, fontmap=fontmap, new=_new, last=_last, rows=_rows, num=_num, verbose=verbose)
     
