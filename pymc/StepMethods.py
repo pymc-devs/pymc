@@ -782,7 +782,11 @@ class BinaryMetropolis(Metropolis):
         The competence function for Binary One-At-A-Time Metropolis
         """
         if stochastic.dtype in bool_dtypes:
-            return 1
+            return 2
+        
+        elif type(stochastic) is distributions.Bernoulli:
+            return 2
+            
         else:
             return 0
 
