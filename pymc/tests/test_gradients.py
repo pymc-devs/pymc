@@ -90,7 +90,7 @@ def check_model_gradients( model):
         
         analytic_gradient = gradients[variable]
         
-        numeric_gradient = get_numeric_model_gradient(markov_blanket, variable)
+        numeric_gradient = get_numeric_gradient(markov_blanket, variable)
         
         assert_array_almost_equal(numeric_gradient, analytic_gradient,3,
                                  "analytic gradient for model " + str(model) +
@@ -115,47 +115,25 @@ def check_gradients( stochastic):
 def get_numeric_gradient( stochastic, pvalue ): 
     e = 1e-9
     initial_value = pvalue.value
-    shape = initial_value.shape
-    size = initial_value.size
+    i_shape = shape(initial_value)
+    i_size = size(initial_value)
     
     initial_logp = utils.logp_of_set(stochastic)
-    numeric_gradient = zeros(size)
+    numeric_gradient = zeros(i_shape)
     if not (pvalue.dtype in float_dtypes):
         return numeric_gradient 
     
-    for i in range(size):
+    for i in range(i_size):
        
-        delta = zeros(size)
-        delta[i] += e
+        delta = zeros(i_shape)
+        delta[unravel_index(i,i_shape)] += e
         
-        pvalue.value = reshape(initial_value.ravel() + delta, shape)
+        pvalue.value = initial_value + delta
         logp = utils.logp_of_set(stochastic)
         
-        numeric_gradient[i] = (logp - initial_logp)/e
+        numeric_gradient[unravel_index(i,i_shape)] = (logp - initial_logp)/e
     
     pvalue.value = initial_value
-    return numeric_gradient
-
-def get_numeric_model_gradient( model, variable): 
-    e = 1e-9
-    initial_value = variable.value
-    shape = initial_value.shape
-    size = initial_value.size
-    
-    initial_logp = utils.logp_of_set(model)
-    
-    numeric_gradient = zeros(size)
-    for i in range(size):
-        
-        delta = zeros(size)
-        delta[i] += e
-        
-        variable.value = reshape(initial_value.ravel() + delta, shape)
-        logp = utils.logp_of_set(model)
-        
-        numeric_gradient[i] = (logp - initial_logp)/e
-    
-    variable.value = initial_value
     return numeric_gradient
 
 class test_gradients(TestCase):
