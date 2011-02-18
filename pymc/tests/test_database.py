@@ -51,57 +51,57 @@ class TestRam(TestBase):
     @classmethod
     def setUpClass(self):
         self.S = pymc.MCMC(disaster_model, db='ram')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
+        self.S.use_step_method(pymc.Metropolis, self.S.early_mean, tally=True)
 
     def test_simple_sample(self):
 
         self.S.sample(50,25,5, progress_bar=0)
 
-        assert_array_equal(self.S.trace('e')[:].shape, (5,))
-        assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
-        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (5,))
+        assert_array_equal(self.S.trace('early_mean')[:].shape, (5,))
+        assert_array_equal(self.S.trace('early_mean', chain=0)[:].shape, (5,))
+        assert_array_equal(self.S.trace('early_mean', chain=None)[:].shape, (5,))
 
-        assert_equal(self.S.trace('e').length(), 5)
-        assert_equal(self.S.trace('e').length(chain=0), 5)
-        assert_equal(self.S.trace('e').length(chain=None), 5)
+        assert_equal(self.S.trace('early_mean').length(), 5)
+        assert_equal(self.S.trace('early_mean').length(chain=0), 5)
+        assert_equal(self.S.trace('early_mean').length(chain=None), 5)
 
         self.S.sample(10,0,1, progress_bar=0)
 
-        assert_array_equal(self.S.trace('e')[:].shape, (10,))
-        assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
-        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
+        assert_array_equal(self.S.trace('early_mean')[:].shape, (10,))
+        assert_array_equal(self.S.trace('early_mean', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('early_mean', chain=None)[:].shape, (15,))
 
-        assert_equal(self.S.trace('e').length(), 10)
-        assert_equal(self.S.trace('e').length(chain=1), 10)
-        assert_equal(self.S.trace('e').length(chain=None), 15)
+        assert_equal(self.S.trace('early_mean').length(), 10)
+        assert_equal(self.S.trace('early_mean').length(chain=1), 10)
+        assert_equal(self.S.trace('early_mean').length(chain=None), 15)
 
-        assert_equal(self.S.trace('e')[:].__class__,  np.ndarray)
+        assert_equal(self.S.trace('early_mean')[:].__class__,  np.ndarray)
 
         # Test __getitem__
-        assert_equal(self.S.trace('e').gettrace(slicing=slice(1,2)), self.S.e.trace[1])
+        assert_equal(self.S.trace('early_mean').gettrace(slicing=slice(1,2)), self.S.early_mean.trace[1])
 
         # Test __getslice__
-        assert_array_equal(self.S.trace('e').gettrace(thin=2), self.S.e.trace[::2])
+        assert_array_equal(self.S.trace('early_mean').gettrace(thin=2), self.S.early_mean.trace[::2])
 
         # Test Sampler trace method
-        assert_array_equal(self.S.trace('e')[:].shape, (10,))
-        assert_array_equal(self.S.trace('e', chain=0)[:].shape, (5,))
-        assert_array_equal(self.S.trace('e', chain=1)[:].shape, (10,))
-        assert_array_equal(self.S.trace('e', chain=1)[::2].shape, (5,))
-        assert_array_equal(self.S.trace('e', chain=1)[1::].shape, (9,))
-        assert_array_equal(self.S.trace('e', chain=1)[0],  self.S.trace('e', chain=1)[:][0])
-        assert_array_equal(self.S.trace('e', chain=None)[:].shape, (15,))
+        assert_array_equal(self.S.trace('early_mean')[:].shape, (10,))
+        assert_array_equal(self.S.trace('early_mean', chain=0)[:].shape, (5,))
+        assert_array_equal(self.S.trace('early_mean', chain=1)[:].shape, (10,))
+        assert_array_equal(self.S.trace('early_mean', chain=1)[::2].shape, (5,))
+        assert_array_equal(self.S.trace('early_mean', chain=1)[1::].shape, (9,))
+        assert_array_equal(self.S.trace('early_mean', chain=1)[0],  self.S.trace('early_mean', chain=1)[:][0])
+        assert_array_equal(self.S.trace('early_mean', chain=None)[:].shape, (15,))
 
         # Test internal state
-        t1 = self.S.trace('e', 0)
-        t2 = self.S.trace('e', 1)
+        t1 = self.S.trace('early_mean', 0)
+        t2 = self.S.trace('early_mean', 1)
         assert_equal(t1._chain, 0)
 
 
         # Test remember
-        s1 = np.shape(self.S.e.value)
+        s1 = np.shape(self.S.early_mean.value)
         self.S.remember(0,0)
-        s2 = np.shape(self.S.e.value)
+        s2 = np.shape(self.S.early_mean.value)
         assert_equal(s1, s2)
 
 
@@ -115,17 +115,17 @@ class TestPickle(TestRam):
                            db='pickle',
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
+        self.S.use_step_method(pymc.Metropolis, self.S.early_mean, tally=True)
 
     def load(self):
         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
 
     def test_xload(self):
         db = self.load()
-        assert_array_equal(db.trace('e', chain=0)[:].shape, (5,))
-        assert_array_equal(db.trace('e', chain=1)[:].shape, (10,))
-        assert_array_equal(db.trace('e', chain=-1)[:].shape, (10,))
-        assert_array_equal(db.trace('e', chain=None)[:].shape, (15,))
+        assert_array_equal(db.trace('early_mean', chain=0)[:].shape, (5,))
+        assert_array_equal(db.trace('early_mean', chain=1)[:].shape, (10,))
+        assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (10,))
+        assert_array_equal(db.trace('early_mean', chain=None)[:].shape, (15,))
         db.close()
 
     def test_yconnect_and_sample(self):
@@ -135,10 +135,10 @@ class TestPickle(TestRam):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')            
             S = pymc.MCMC(disaster_model, db=db)
-            S.use_step_method(pymc.Metropolis, S.e, tally=True)
+            S.use_step_method(pymc.Metropolis, S.early_mean, tally=True)
             S.sample(5, progress_bar=0)
-            assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
-            assert_array_equal(db.trace('e', chain=None)[:].shape, (20,))
+            assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (5,))
+            assert_array_equal(db.trace('early_mean', chain=None)[:].shape, (20,))
             db.close()
 
     def test_yrestore_state(self):
@@ -227,7 +227,7 @@ class TestHDF5(TestPickle):
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
                            dbmode='w')
-        self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
+        self.S.use_step_method(pymc.Metropolis, self.S.early_mean, tally=True)
 
     def load(self):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Disaster.hdf5'))
@@ -274,7 +274,7 @@ class TestHDF5(TestPickle):
                                              dbcomplevel=5)                                 
             S = MCMC(disaster_model, db=db)
             S.sample(45,10,1, progress_bar=0)
-            assert_array_equal(S.trace('e')[:].shape, (35,))
+            assert_array_equal(S.trace('early_mean')[:].shape, (35,))
             S.db.close()
             db.close()
             del S
