@@ -1,6 +1,6 @@
 from numpy.testing import *
 from numpy import *
-from pymc.examples import DisasterModel as DM
+from pymc.examples import disaster_model as DM
 from pymc import Container, Normal
 
 class test_Container(TestCase):

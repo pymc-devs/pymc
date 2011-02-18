@@ -2,7 +2,7 @@
 from __future__ import with_statement
 import os,sys, pdb
 from numpy.testing import TestCase, assert_array_equal, assert_equal
-from pymc.examples import DisasterModel
+from pymc.examples import disaster_model
 from pymc import MCMC
 import pymc, pymc.database
 
@@ -20,16 +20,16 @@ except:
 
 class test_backend_attribution(TestCase):
     def test_raise(self):
-        self.assertRaises(AttributeError, MCMC, DisasterModel, 'heysugar')
+        self.assertRaises(AttributeError, MCMC, disaster_model, 'heysugar')
     def test_import(self):
-        self.assertRaises(ImportError, MCMC, DisasterModel, '__test_import__')
+        self.assertRaises(ImportError, MCMC, disaster_model, '__test_import__')
 
 
 class TestBase(TestCase):
     """Test features that should be common to all databases."""
     @classmethod
     def setUpClass(self):
-        self.S = pymc.MCMC(DisasterModel, db='base')
+        self.S = pymc.MCMC(disaster_model, db='base')
 
     def test_init(self):
         assert hasattr(self.S.db, '__Trace__')
@@ -50,7 +50,7 @@ class TestRam(TestBase):
     name = 'ram'
     @classmethod
     def setUpClass(self):
-        self.S = pymc.MCMC(DisasterModel, db='ram')
+        self.S = pymc.MCMC(disaster_model, db='ram')
         self.S.use_step_method(pymc.Metropolis, self.S.e, tally=True)
 
     def test_simple_sample(self):
@@ -111,7 +111,7 @@ class TestPickle(TestRam):
     name = 'pickle'
     @classmethod
     def setUpClass(self):
-        self.S = pymc.MCMC(DisasterModel,
+        self.S = pymc.MCMC(disaster_model,
                            db='pickle',
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
@@ -134,7 +134,7 @@ class TestPickle(TestRam):
             db = self.load()
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')            
-            S = pymc.MCMC(DisasterModel, db=db)
+            S = pymc.MCMC(disaster_model, db=db)
             S.use_step_method(pymc.Metropolis, S.e, tally=True)
             S.sample(5, progress_bar=0)
             assert_array_equal(db.trace('e', chain=-1)[:].shape, (5,))
@@ -145,7 +145,7 @@ class TestPickle(TestRam):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             db = self.load()
-            S = pymc.MCMC(DisasterModel, db=db)
+            S = pymc.MCMC(disaster_model, db=db)
             S.sample(10, progress_bar=0)
             sm = S.step_methods.pop()
             assert_equal(sm.accepted+sm.rejected, 75)
@@ -163,7 +163,7 @@ class TestTxt(TestPickle):
     @classmethod
     def setUpClass(self):
 
-        self.S = pymc.MCMC(DisasterModel,
+        self.S = pymc.MCMC(disaster_model,
                            db='txt',
                            dbname=os.path.join(testdir, 'Disaster.txt'),
                            dbmode='w')
@@ -180,7 +180,7 @@ class TestSqlite(TestPickle):
             raise nose.SkipTest
         if os.path.exists('Disaster.sqlite'):
            os.remove('Disaster.sqlite')
-        self.S = pymc.MCMC(DisasterModel,
+        self.S = pymc.MCMC(disaster_model,
                            db='sqlite',
                            dbname=os.path.join(testdir, 'Disaster.sqlite'),
                            dbmode='w')
@@ -198,7 +198,7 @@ class TestSqlite(TestPickle):
 #     def setUpClass(self):
 #         if 'mysql' not in dir(pymc.database):
 #             raise nose.SkipTest
-#         self.S = pymc.MCMC(DisasterModel,
+#         self.S = pymc.MCMC(disaster_model,
 #                            db='mysql',
 #                            dbname='pymc_test',
 #                            dbuser='pymc',
@@ -223,7 +223,7 @@ class TestHDF5(TestPickle):
     def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
-        self.S = pymc.MCMC(DisasterModel,
+        self.S = pymc.MCMC(disaster_model,
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Disaster.hdf5'),
                            dbmode='w')
@@ -234,7 +234,7 @@ class TestHDF5(TestPickle):
 
     def test_xdata_attributes(self):
         db = self.load()
-        assert_array_equal(db.D, DisasterModel.disasters_array)
+        assert_array_equal(db.D, disaster_model.disasters_array)
         db.close()
         del db
 
@@ -269,10 +269,10 @@ class TestHDF5(TestPickle):
     def test_zcompression(self):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'DisasterModelCompressed.hdf5'),
+            db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
                                              dbmode='w',
                                              dbcomplevel=5)                                 
-            S = MCMC(DisasterModel, db=db)
+            S = MCMC(disaster_model, db=db)
             S.sample(45,10,1, progress_bar=0)
             assert_array_equal(S.trace('e')[:].shape, (35,))
             S.db.close()
@@ -353,14 +353,14 @@ def test_identical_object_names():
 
 def test_regression_155():
     """thin > iter"""
-    M = MCMC(DisasterModel, db='ram')
+    M = MCMC(disaster_model, db='ram')
     M.sample(10,0,100, progress_bar=0)
 
 
 def test_interactive():
     if 'sqlite' not in dir(pymc.database):
         raise nose.SkipTest
-    M=MCMC(DisasterModel,db='sqlite',
+    M=MCMC(disaster_model,db='sqlite',
            dbname=os.path.join(testdir, 'interactiveDisaster.sqlite'),
            dbmode='w')
     M.isample(10, out=open('testresults/interactivesqlite.log', 'w'), progress_bar=0)
