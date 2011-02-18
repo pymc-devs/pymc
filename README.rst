@@ -3,7 +3,7 @@ Introduction
 ************
 
 :Date: April 6, 2007
-:Authors: Chris Fonnesbeck, Anand Patil, David Huard
+:Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: pymc@googlegroups.com
 :Web site: http://code.google.com/p/pymc/
 :Copyright: This document has been placed in the public domain.
