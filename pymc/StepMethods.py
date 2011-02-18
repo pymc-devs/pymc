@@ -334,7 +334,7 @@ class Metropolis(StepMethod):
             The proposal jump width is set to proposal_sd.
 
     - proposal_distribution (optional) : string
-            The proposal distribution. May be 'Normal', 'RoundedNormal', 'Bernoulli',
+            The proposal distribution. May be 'Normal',
             'Prior' or None. If None is provided, a proposal distribution is chosen
             by examining P.value's type.
 
@@ -389,7 +389,13 @@ class Metropolis(StepMethod):
             self.proposal_distribution = "Normal"
 
         else:
-            self.proposal_distribution = proposal_distribution
+            
+            if proposal_distribution.capitalize() in self._valid_proposals:
+                self.proposal_distribution = proposal_distribution
+            else: 
+                raise ValueError, "Invalid proposal distribution '%s' specified for Metropolis sampler." % proposal_distribution
+    
+    _valid_proposals = ['Normal', 'Prior']
 
     @staticmethod
     def competence(s):
@@ -718,6 +724,8 @@ class DiscreteMetropolis(Metropolis):
 
         # Flag for positive-only values
         self._positive = positive
+        
+    _valid_proposals = ['Poisson', 'Normal', 'Prior']
 
     @staticmethod
     def competence(stochastic):
