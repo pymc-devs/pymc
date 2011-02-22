@@ -36,4 +36,4 @@ class TestMissing(TestCase):
         sd2 = [-2 < i < 2 for i in ravel(tr)]
         
         # Check for standard normal output
-        assert_almost_equal(sum(sd2)/10000., 0.95, decimal=2)
+        assert_almost_equal(sum(sd2)/10000., 0.95, decimal=1)

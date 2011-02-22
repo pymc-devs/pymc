@@ -1,5 +1,6 @@
 import pymc as pm
 import os
+from copy import copy
 __all__ = ['graph', 'moral_graph']
 
 try:
@@ -147,7 +148,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
             else:
                 obj_substitute_names[d] = []
                     
-        elif isinstance(obj, Potential):
+        elif isinstance(obj, pm.Potential):
             if obj_substitute_names.has_key(obj):
                 return obj_substitute_names[obj]
             potential = obj
@@ -189,7 +190,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
         if collapse_deterministics:
             parent_tups = [(s.__name__, s) for s in node.extended_parents]
             if consts: 
-                parent_tups += filter(lambda x: not isinstance(x[1],Variable), node.parents.items())
+                parent_tups += filter(lambda x: not isinstance(x[1], pm.Variable), node.parents.items())
             parent_dict = dict(parent_tups)
         else:
             parent_dict = node.parents
