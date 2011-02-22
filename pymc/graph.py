@@ -1,4 +1,4 @@
-from pymc import *
+import pymc as pm
 import os
 __all__ = ['graph', 'moral_graph']
 
@@ -116,7 +116,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     
     def get_obj_names(obj, key):
 
-        if isinstance(obj, Stochastic):
+        if isinstance(obj, pm.Stochastic):
             if obj_substitute_names.has_key(obj):
                 return obj_substitute_names[obj]
             if obj.observed:
@@ -134,7 +134,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
                 shown_objects.add(s)
                 obj_substitute_names[s] = [s.__name__]
     
-        elif isinstance(obj, Deterministic):
+        elif isinstance(obj, pm.Deterministic):
             if obj_substitute_names.has_key(obj):
                 return obj_substitute_names[obj]
             d = obj
@@ -205,11 +205,11 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
             else:
                 const_node_name = key_val.__class__.__name__
 
-            if isinstance(key_val, Variable):
+            if isinstance(key_val, pm.Variable):
                 if any([maybe_connect_parent(name, node.__name__, label) for name in get_obj_names(key_val, None)]):
                     connect_parents(key_val)
                         
-            elif isinstance(key_val, ContainerBase):
+            elif isinstance(key_val, pm.ContainerBase):
                 for var in key_val.variables:
                     if any([maybe_connect_parent(name, node.__name__, label) for name in get_obj_names(var, None)]):
                         connect_parents(var)
@@ -236,7 +236,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
             else:
                 potential_parents=set()
                 for parent in potential.parents.values():
-                    if isinstance(parent, Variable):
+                    if isinstance(parent, pm.Variable):
                         potential_parents |= set(get_obj_names(parent, None))
                     elif isinstance(parent, ContainerBase):
                         for ult_parent in parent.variables:
