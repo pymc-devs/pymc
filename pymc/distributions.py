@@ -846,10 +846,10 @@ def categorical_like(x, p):
     """
 
     p = np.atleast_2d(p)
-    if any(np.sum(p, 1)!=1):
-        print "Probabilities may not sum to unity:", p
+    if abs(np.sum(p, 1)-1)>0.00001:
+        print "Probabilities in categorical_like sum to", np.sum(p, 1)
     if np.array(x).dtype != int:
-        print "Non-integer values in categorical_like"
+        #print "Non-integer values in categorical_like"
         return -inf
     return flib.categorical(x, p)
 
