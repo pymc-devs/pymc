@@ -1855,7 +1855,7 @@ cf2py threadsafe
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
-        if (tau_tmp .LE. 0.0) then
+        if ((tau_tmp .LE. 0.0).OR.(dabs(tau_tmp).GE.infinity)) then
           like = -infinity
           RETURN
         endif
