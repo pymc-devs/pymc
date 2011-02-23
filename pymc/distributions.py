@@ -2071,6 +2071,9 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
+    if alpha > 1e10:
+        # Return Poisson when alpha gets very large
+        return flib.poisson(x, mu)
     return flib.negbin2(x, mu, alpha)
 
 negative_binomial_grad_like = {'mu'    : flib.negbin2_gmu,
