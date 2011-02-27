@@ -1481,10 +1481,10 @@ class TWalk(StepMethod):
         """
         The competence function for TWalk.
         """
-        if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
-            if np.alen(stochastic.value) >=10:
-                return 2
-            return 1
+        # if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
+        #             if np.alen(stochastic.value) >=10:
+        #                 return 2
+        #             return 1
         return 0
     
     def walk(self):
