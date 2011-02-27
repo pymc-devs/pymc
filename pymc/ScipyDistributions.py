@@ -64,7 +64,7 @@ def stochastic_from_scipy_dist(scipy_dist):
 
         def logp(value, **kwds):
             args, kwds = separate_shape_args(kwds, shape_args)
-            return np.sum(np.log(scipy_dist.pdf(value,*args,**kwds)))
+            return np.sum(scipy_dist.logpdf(value,*args,**kwds))
 
         parent_names = shape_args + ['loc', 'scale']
         defaults = [None] * (len(parent_names)-2) + [0., 1.]
@@ -74,7 +74,7 @@ def stochastic_from_scipy_dist(scipy_dist):
 
         def logp(value, **kwds):
             args, kwds = separate_shape_args(kwds, shape_args)
-            return np.sum(np.log(scipy_dist.pmf(value,*args,**kwds)))
+            return np.sum(scipy_dist.logpmf(value,*args,**kwds))
 
         parent_names = shape_args + ['loc']
         defaults = [None] * (len(parent_names)-1) + [0]
