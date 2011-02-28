@@ -110,7 +110,7 @@ class MCMC(Sampler):
             self.step_methods.discard(step_method)
         self._sm_assigned = False
     
-    def assign_step_methods(self, verbose=None):
+    def assign_step_methods(self, verbose=None, draw_from_prior_when_possible = True):
         """
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
@@ -125,15 +125,16 @@ class MCMC(Sampler):
                     if len(s.extended_children)==0:
                         last_gen.add(s)
             
-            dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
-            if len(dataless):
-                new_method = DrawFromPrior(dataless, dataless_gens[::-1], verbose=verbose)
-                setattr(new_method, '_model', self)
-                for d in dataless:
-                    if not d.observed:
-                        self.step_method_dict[d].append(new_method)
-                        if self.verbose > 1:
-                            print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
+            if draw_from_prior_when_possible:
+                dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
+                if len(dataless):
+                    new_method = DrawFromPrior(dataless, dataless_gens[::-1], verbose=verbose)
+                    setattr(new_method, '_model', self)
+                    for d in dataless:
+                        if not d.observed:
+                            self.step_method_dict[d].append(new_method)
+                            if self.verbose > 1:
+                                print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
             
             for s in self.stochastics:
                 # If not handled by any step method, make it a new step method using the registry
