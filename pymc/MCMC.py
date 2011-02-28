@@ -117,15 +117,16 @@ class MCMC(Sampler):
         """
         
         if not self._sm_assigned:
+
+            if draw_from_prior_when_possible:            
+                # Assign dataless stepper first
+                last_gen = set([])
+                for s in self.stochastics - self.observed_stochastics:
+                    if s._random is not None:
+                        if len(s.extended_children)==0:
+                            last_gen.add(s)
             
-            # Assign dataless stepper first
-            last_gen = set([])
-            for s in self.stochastics - self.observed_stochastics:
-                if s._random is not None:
-                    if len(s.extended_children)==0:
-                        last_gen.add(s)
-            
-            if draw_from_prior_when_possible:
+
                 dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
                 if len(dataless):
                     new_method = DrawFromPrior(dataless, dataless_gens[::-1], verbose=verbose)
