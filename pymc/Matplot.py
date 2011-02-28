@@ -390,6 +390,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last, fontmap=fontmap)
 
         if last:
+            import pdb; pdb.set_trace()
             if not os.path.exists(path):
                 os.mkdir(path)
             if not path.endswith('/'):
@@ -417,7 +418,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             # Final subplot of current figure?
             _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
 
-            plot(tdata[i], name+'_'+str(i), format=format, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
+            plot(tdata[i], name+'_'+str(i), format=format, path=path, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
 @plotwrapper
