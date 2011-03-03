@@ -23,7 +23,7 @@ _misc_funcs1 = ['arctan2', 'hypot']
 
 __all__ = _accumulation_deterministics  + _boolean_accumulation_deterministics+ _transformation_deterministics + _misc_funcs1
 
-def deterministic_from_funcs(name, eval, jacobians=None, jacobian_formats=None, dtype=np.float, mv=False):
+def deterministic_from_funcs(name, eval, jacobians={}, jacobian_formats={}, dtype=np.float, mv=False):
     """
     Return a Stochastic subclass made from a particular distribution.
 

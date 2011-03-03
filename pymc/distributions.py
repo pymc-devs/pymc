@@ -846,10 +846,10 @@ def categorical_like(x, p):
     """
 
     p = np.atleast_2d(p)
-    if any(np.sum(p, 1)!=1):
-        print "Probabilities may not sum to unity:", p
+    if abs(np.sum(p, 1)-1)>0.00001:
+        print "Probabilities in categorical_like sum to", np.sum(p, 1)
     if np.array(x).dtype != int:
-        print "Non-integer values in categorical_like"
+        #print "Non-integer values in categorical_like"
         return -inf
     return flib.categorical(x, p)
 
@@ -2071,6 +2071,9 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
+    if alpha > 1e10:
+        # Return Poisson when alpha gets very large
+        return flib.poisson(x, mu)
     return flib.negbin2(x, mu, alpha)
 
 negative_binomial_grad_like = {'mu'    : flib.negbin2_gmu,

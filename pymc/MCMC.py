@@ -110,35 +110,37 @@ class MCMC(Sampler):
             self.step_methods.discard(step_method)
         self._sm_assigned = False
     
-    def assign_step_methods(self):
+    def assign_step_methods(self, verbose=None, draw_from_prior_when_possible = True):
         """
         Make sure every stochastic variable has a step method. If not,
         assign a step method from the registry.
         """
         
         if not self._sm_assigned:
+
+            if draw_from_prior_when_possible:            
+                # Assign dataless stepper first
+                last_gen = set([])
+                for s in self.stochastics - self.observed_stochastics:
+                    if s._random is not None:
+                        if len(s.extended_children)==0:
+                            last_gen.add(s)
             
-            # Assign dataless stepper first
-            last_gen = set([])
-            for s in self.stochastics - self.observed_stochastics:
-                if s._random is not None:
-                    if len(s.extended_children)==0:
-                        last_gen.add(s)
-            
-            dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
-            if len(dataless):
-                new_method = DrawFromPrior(dataless, dataless_gens[::-1])
-                setattr(new_method, '_model', self)
-                for d in dataless:
-                    if not d.observed:
-                        self.step_method_dict[d].append(new_method)
-                        if self.verbose > 1:
-                            print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
+
+                dataless, dataless_gens = crawl_dataless(set(last_gen), [last_gen])
+                if len(dataless):
+                    new_method = DrawFromPrior(dataless, dataless_gens[::-1], verbose=verbose)
+                    setattr(new_method, '_model', self)
+                    for d in dataless:
+                        if not d.observed:
+                            self.step_method_dict[d].append(new_method)
+                            if self.verbose > 1:
+                                print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
             
             for s in self.stochastics:
                 # If not handled by any step method, make it a new step method using the registry
                 if len(self.step_method_dict[s])==0:
-                    new_method = assign_method(s)
+                    new_method = assign_method(s, verbose=verbose)
                     setattr(new_method, '_model', self)
                     self.step_method_dict[s].append(new_method)
                     if self.verbose > 1:
@@ -179,7 +181,7 @@ class MCMC(Sampler):
           - verbose : boolean
         """
         
-        self.assign_step_methods()
+        self.assign_step_methods(verbose=verbose)
         
         if burn >= iter:
             raise ValueError, 'Burn interval must be smaller than specified number of iterations.'

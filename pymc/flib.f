@@ -1855,7 +1855,7 @@ cf2py threadsafe
       do i=1,n
         if (not_scalar_mu) mu_tmp=mu(i)
         if (not_scalar_tau) tau_tmp=tau(i)
-        if (tau_tmp .LE. 0.0) then
+        if ((tau_tmp .LE. 0.0).OR.(dabs(tau_tmp).GE.infinity)) then
           like = -infinity
           RETURN
         endif
@@ -3491,7 +3491,6 @@ cf2py threadsafe
           like = -infinity
           RETURN
         endif
-            
         like = like + r_tmp*dlog(p_tmp) + x(i)*dlog(1.-p_tmp)
         like = like+factln(x(i)+r_tmp-1)-factln(x(i))-factln(r_tmp-1) 
       enddo

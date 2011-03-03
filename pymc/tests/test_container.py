@@ -1,6 +1,6 @@
 from numpy.testing import *
 from numpy import *
-from pymc.examples import DisasterModel as DM
+from pymc.examples import disaster_model as DM
 from pymc import Container, Normal
 
 class test_Container(TestCase):
@@ -27,7 +27,7 @@ class test_Container(TestCase):
 
 # Test set container:
 
-        S = [DM.e, DM.s, DM.l]
+        S = [DM.early_mean, DM.switchpoint, DM.late_mean]
         R = Container(S)
 
         for item in R:
@@ -43,7 +43,7 @@ class test_Container(TestCase):
 
         # Test list/dictionary container:
 
-        A = [[DM.e, DM.s], [DM.l, DM.D, 3.], 54.323]
+        A = [[DM.early_mean, DM.switchpoint], [DM.late_mean, DM.disasters, 3.], 54.323]
         C = Container(A)
 
         for i in range(2):
@@ -60,15 +60,15 @@ class test_Container(TestCase):
         # Test array container:
 
         B = ndarray((3,3),dtype=object)
-        B[0,:] = DM.e
+        B[0,:] = DM.early_mean
         B[1,:] = 1.
         B[2,:] = A
         D = Container(B)
 
 
         for i in range(2):
-            assert(D[0,i] is DM.e)
-            assert(D.value[0,i] is DM.e.value)
+            assert(D[0,i] is DM.early_mean)
+            assert(D.value[0,i] is DM.early_mean.value)
 
             assert(D[1,i] is 1.)
             assert(D.value[1,i] is 1.)

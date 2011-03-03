@@ -69,7 +69,7 @@ if lapack_info:
 
 if not lapack_info or dist in ['bdist', 'sdist']:
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
-    f_sources = []
+    f_sources = ['pymc/blas_wrap.f']
     for fname in os.listdir('blas/BLAS'):
         if fname[-2:]=='.f':
             f_sources.append('blas/BLAS/'+fname)

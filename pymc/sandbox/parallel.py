@@ -138,7 +138,7 @@ class Parallel(Sampler):
 
 
 if __name__ == '__main__':
-    from pymc.examples import DisasterModel
-    P = Parallel(DisasterModel, 'ram')
+    from pymc.examples import disaster_model
+    P = Parallel(disaster_model, 'ram')
     P.sample(1000,500,1)
     #P.mec.killAll(controller=True)
