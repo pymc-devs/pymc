@@ -3,7 +3,7 @@ Installation Instructions
 *************************
 
 :Date: 25 January 2011
-:Authors: Chris Fonnesbeck, Anand Patil, David Huard
+:Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.

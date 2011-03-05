@@ -3,7 +3,7 @@ Introduction
 ************
 
 :Date: 25 January 2011
-:Authors: Chris Fonnesbeck, Anand Patil, David Huard
+:Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
@@ -139,12 +139,9 @@ Getting started
 
 This guide provides all the information needed to install PyMC, code
 a Bayesian statistical model, run the sampler, save and visualize the results.
-In addition, it contains a list of the statistical distributions currently available. More `examples`_ of usage as well as
-`tutorials`_  are available from the PyMC web site.
+In addition, it contains a list of the statistical distributions currently available. More `examples and tutorials`_  are available from the PyMC web site.
 
-.. _`examples`: http://code.google.com/p/pymc/
-
-.. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
+.. _`examples and tutorials`: https://github.com/pymc-devs/pymc/wiki
 
 .. _`WinBUGS`: http://www.mrc-bsu.cam.ac.uk/bugs/
 
@@ -154,4 +151,4 @@ In addition, it contains a list of the statistical distributions currently avail
 
 .. _`R packages`: http://cran.r-project.org/web/packages/
 
-.. _`testimonials`: http://code.google.com/p/pymc/wiki/Testimonials
+.. _`testimonials`: https://github.com/pymc-devs/pymc/wiki/Testimonials

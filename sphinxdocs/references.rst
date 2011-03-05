@@ -8,7 +8,7 @@
 
 .. [] K.P. Burnham and D.R. Anderson. Model Selection and Multi-Model Inference: A Practical, Information-theoretic Approach. Springer, New York, 2002.
 
-.. [] G. Christakos. On the assimilation of uncertain physical knowledge bases: Bayesian and non-Bayesian techniques. Advances in Water Resources, 2002.
+.. [Christakos_2002] G. Christakos. On the assimilation of uncertain physical knowledge bases: Bayesian and non-Bayesian techniques. Advances in Water Resources, 2002.
 
 .. [Gamerman_1997] D. Gamerman. Markov Chain Monte Carlo: statistical simulation for Bayesian inference. Chapman and Hall, 1997. 
 
@@ -24,13 +24,13 @@
 
 .. [Jaynes_2003] E.T. Jaynes. Probability theory: the logic of science. Cambridge university press, 2003.
 
-.. [] M.I. Jordan. Graphical models. Statist. Sci., 19(1):140–155, 2004.
+.. [Jordan_2004] M.I. Jordan. Graphical models. Statist. Sci., 19(1):140–155, 2004.
 
-.. [] J. Kerman and A. Gelman. Fully Bayesian computing. Available at SSRN: http://ssrn.com/abstract=1010387, 2004.
+.. [Kerman_2004] J. Kerman and A. Gelman. Fully Bayesian computing. Available at SSRN: http://ssrn.com/abstract=1010387, 2004.
 
 .. [Langtangen_2009] Hans Petter Langtangen. Python Scripting for Computational Science. Springer-Verlag, 2009.
 
-.. [] S.L. Lauritzen, A.P. Dawid, B.N. Larsen, and H.G. Leimer. Independence properties of directed Markov fields. Networks, 20:491–505, 1990.
+.. [Lauritzen_1990] S.L. Lauritzen, A.P. Dawid, B.N. Larsen, and H.G. Leimer. Independence properties of directed Markov fields. Networks, 20:491–505, 1990.
 
 .. [Lutz_2007] Mark Lutz. Learning Python. O’Reilly, 2007.
 
@@ -39,3 +39,5 @@
 .. [] Gareth O. Roberts and Jeffrey S. Rosenthal. Implementing componentwise Hastings algorithms. Journal of Applied Probability, 44(2):458–475, 2007.
 
 .. [] G. Schwarz. Estimating the dimension of a model. The Annals of Statistics, 6(2):461–464, 1978.
+
+.. [vanRossum_2010] G. van Rossum. The Python Library Reference Release 2.6.5., 2010. URL http://docs. python.org/library/.

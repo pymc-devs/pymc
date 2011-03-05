@@ -1,17 +1,15 @@
+********
+Tutorial
+********
 
-This tutorial will guide you through a typical PyMC application.
-Familiarity with Python is assumed, so if you are new to Python, books such as
-[Lutz_2007]_ or [Langtangen_2009]_ are the place to start. Plenty of
-online documentation can also be found on the
-`Python documentation`_ page.
+This tutorial will guide you through a typical PyMC application. Familiarity with Python is assumed, so if you are new to Python, books such as [Lutz_2007]_ or [Langtangen_2009]_ are the place to start. Plenty of online documentation can also be found on the `Python documentation`_ page.
 
 An example statistical model
 ----------------------------
 
-Consider the following dataset, which is a time series of recorded coal mining
-disasters in the UK from 1851 to 1962 [Jarrett_1979]_.
+Consider the following dataset, which is a time series of recorded coal mining disasters in the UK from 1851 to 1962 [Jarrett_1979]_.
 
-.. disasters_figure:
+.. _disasters_figure:
 
 .. image:: _images/disasterts.*
 
@@ -43,30 +41,13 @@ Two types of variables
 ----------------------
 
 
-At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`,
-:math:`r` and :math:`l` are all random variables. Bayesian `random' variables have not
-necessarily arisen from a physical random process. The Bayesian interpretation
-of probability is *epistemic*, meaning random variable :math:`x`'s probability
-distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value
-[Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are
-relatively more probable, given what we know. Random variables are represented
-in PyMC by the classes ``Stochastic`` and ``Deterministic``.
+At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`, :math:`r` and :math:`l` are all random variables. Bayesian `random' variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is *epistemic*, meaning random variable :math:`x`'s probability distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes ``Stochastic`` and ``Deterministic``.
 
-The only ``Deterministic`` in the model is :math:`r`. If we knew the values of
-:math:`r`'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of :math:`r` exactly. A
-``Deterministic`` like :math:`r` is defined by a mathematical function that returns
-its value given values for its parents. ``Deterministic`` variables are
-sometimes called the *systemic* part of the model. The nomenclature is a
-bit confusing, because these objects usually represent random variables; since
-the parents of :math:`r` are random, :math:`r` is random also. A more descriptive (though
-more awkward) name for this class would be ``DeterminedByValuesOfParents``.
+The only ``Deterministic`` in the model is :math:`r`. If we knew the values of :math:`r`'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of :math:`r` exactly. A ``Deterministic`` like :math:`r` is defined by a mathematical function that returns its value given values for its parents. ``Deterministic`` variables are sometimes called the *systemic* part of the model. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of :math:`r` are random, :math:`r` is random also. A more descriptive (though more awkward) name for this class would be ``DeterminedByValuesOfParents``.
 
 On the other hand, even if the values of the parents of variables :math:`s`, :math:`D` (before observing the data), :math:`e` or :math:`l` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
 
-We can represent model :eq:`disastermodel` in a file called
-``DisasterModel.py`` (the actual file can be found in
-``pymc/examples/``) as follows. First, we import the PyMC and NumPy
-namespaces::
+We can represent model :eq:`disastermodel` in a file called ``DisasterModel.py`` (the actual file can be found in ``pymc/examples/``) as follows. First, we import the PyMC and NumPy namespaces::
 
    from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
    import numpy as np
@@ -99,7 +80,7 @@ Next, we define the variable :math:`r`, which selects the early rate :math:`e` f
 
    @deterministic(plot=False)
    def r(s=s, e=e, l=l):
-      `````` Concatenate Poisson means ``````
+      ''' Concatenate Poisson means '''
        out = numpy.empty(len(disasters_array))
        out[:s] = e
        out[s:] = l
@@ -147,25 +128,20 @@ Because :math:`D` considers :math:`r` its parent, :math:`r` considers :math:`D` 
 
 The following `directed acyclic graph` is a visualization of the parent-child relationships in the model. Unobserved stochastic variables :math:`s`, :math:`e` and :math:`l` are open ellipses, observed stochastic variable :math:`D` is a filled ellipse and deterministic variable :math:`r` is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section :ref:`graphical` for more details.
 
-.. dag:
+.. _dag:
 
 .. image:: _images/DisasterModel2.*
 
    Directed acyclic graph of the relationships in the coal mining disaster model example.
 
-As the examples above have shown, pymc objects need to have a name 
-assigned, such as *lower*, *upper* or *e*. These names 
-are used for storage and post-processing:
+As the examples above have shown, pymc objects need to have a name assigned, such as *lower*, *upper* or *e*. These names are used for storage and post-processing:
 
   * as keys in on-disk databases,
   * as node labels in model graphs,
   * as axis labels in plots of traces, 
   * as table labels in summary statistics. 
 
-A model instantiated with variables having identical names raises an
-error to avoid name conflicts in the database storing the traces. In
-general however, pymc uses references to the objects themselves, not 
-their names, to identify variables. 
+A model instantiated with variables having identical names raises an error to avoid name conflicts in the database storing the traces. In general however, pymc uses references to the objects themselves, not their names, to identify variables. 
 
 
 
@@ -243,7 +219,7 @@ Let's take a closer look at our definition of :math:`r`::
 
    @deterministic(plot=False)
    def r(s=s, e=e, l=l):
-       `````` Concatenate Poisson means ``````
+       ''' Concatenate Poisson means '''
        out = numpy.empty(len(disasters_array))
        out[:s] = e
        out[s:] = l
@@ -276,38 +252,19 @@ What does it mean to fit a model?
 
 `Fitting` a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior :math:`p(s,e,l|D)` by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of :math:`s`, :math:`e` and :math:`l` according to the Metropolis-Hastings algorithm [Gelman_2004]_ for ``iter``  iterations.
 
-As the number of samples tends to infinity, the MCMC distribution of :math:`s`, :math:`e`
-and :math:`l` converges to the stationary distribution. In other words, their
-values can be considered as random draws from the posterior :math:`p(s,e,l|D)`.
-PyMC assumes that the ``burn`` parameter specifies a `sufficiently large`
-number of iterations for convergence of the algorithm, so it is up to the user
-to verify
-that this is the case (see chapter :ref:`chap:modelchecking`). Consecutive values
-sampled from :math:`s`, :math:`e` and :math:`l` are necessarily dependent on the previous sample,
-since it is a Markov chain. However, MCMC often results in strong
-autocorrelation among samples that can result in imprecise posterior inference.
-To circumvent this, it is often effective to thin the sample by only retaining
-every *k* th sample, where :math:`k` is an integer value. This thinning interval is
-passed to the sampler via the ``thin`` argument.
+As the number of samples tends to infinity, the MCMC distribution of :math:`s`, :math:`e` and :math:`l` converges to the stationary distribution. In other words, their values can be considered as random draws from the posterior :math:`p(s,e,l|D)`. PyMC assumes that the ``burn`` parameter specifies a `sufficiently large` number of iterations for convergence of the algorithm, so it is up to the user to verify that this is the case (see chapter :ref:`chap:modelchecking`). Consecutive values sampled from :math:`s`, :math:`e` and :math:`l` are necessarily dependent on the previous sample, since it is a Markov chain. However, MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is often effective to thin the sample by only retaining every *k* th sample, where :math:`k` is an integer value. This thinning interval is passed to the sampler via the ``thin`` argument.
 
 If you are not sure ahead of time what values to choose for the ``burn`` and ``thin`` parameters, you may want to retain all the MCMC samples, that is to set ``burn=0`` and ``thin=1``, and then discard the `burn-in period` and thin the samples after examining the traces (the series of samples). See [Gelman_2004]_ for general guidance.
 
 Accessing the samples
 ~~~~~~~~~~~~~~~~~~~~~
 
-The output of the MCMC algorithm is a `trace`, the sequence of retained
-samples for each variable in the model. These traces can be accessed
-using the ``trace(name, chain=-1)`` method. For example::
+The output of the MCMC algorithm is a `trace`, the sequence of retained samples for each variable in the model. These traces can be accessed using the ``trace(name, chain=-1)`` method. For example::
 
    >>> M.trace('s')[:]
    array([41, 40, 40, ..., 43, 44, 44])
 
-The trace slice ``[start:stop:step]`` works just like the NumPy array
-slice. By default, the returned trace array contains the samples from the
-last call to ``sample``, that is, ``chain=-1``, but the trace from
-previous sampling runs can be retrieved by specifying the correspondent
-chain index. To return the trace from all chains, simply use
-``chain=None``. [#1]_
+The trace slice ``[start:stop:step]`` works just like the NumPy array slice. By default, the returned trace array contains the samples from the last call to ``sample``, that is, ``chain=-1``, but the trace from previous sampling runs can be retrieved by specifying the correspondent chain index. To return the trace from all chains, simply use ``chain=None``. [#1]_
 
 Sampling output
 ~~~~~~~~~~~~~~~
@@ -328,10 +285,7 @@ You should see something like this:
 
    Histogram of the marginal posterior probability of parameter :math:`l`.
 
-PyMC has its own plotting functionality, via the optional
-``matplotlib`` module as noted in the installation notes. The
-``Matplot`` module includes a ``plot`` function that takes the
-model (or a single parameter) as an argument::
+PyMC has its own plotting functionality, via the optional ``matplotlib`` module as noted in the installation notes. The ``Matplot`` module includes a ``plot`` function that takes the model (or a single parameter) as an argument::
 
    >>> from pymc.Matplot import plot
    >>> plot(M)
@@ -431,7 +385,7 @@ The entire model looks very similar to the original model::
 
    @deterministic(plot=False)
    def r(s=s, e=e, l=l):
-       ``````Allocate appropriate mean to time series``````
+       '''Allocate appropriate mean to time series'''
        out = numpy.empty(len(disasters_array))
        # Early mean prior to switchpoint
        out[:s] = e
@@ -449,11 +403,7 @@ The entire model looks very similar to the original model::
    Trace and posterior distribution of the second missing data point in the example.
 
 
-The main limitation of this approach for imputation is performance. Because each
-element in the data array is modeled by an individual Stochastic, rather than a
-single Stochastic for the entire array, the number of nodes in the overall model
-increases from 4 to 113. This significantly slows the rate of sampling, due to
-the overhead costs associated with iterations over individual nodes.
+The main limitation of this approach for imputation is performance. Because each element in the data array is modeled by an individual Stochastic, rather than a single Stochastic for the entire array, the number of nodes in the overall model increases from 4 to 113. This significantly slows the rate of sampling, due to the overhead costs associated with iterations over individual nodes.
 
 
 Fine-tuning the MCMC algorithm
