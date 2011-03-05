@@ -180,7 +180,7 @@ There are three main ways to create stochastic variables, called the
    implementations should be rare.
 
 
-.. warning::
+.. _warning:
 
 A Warning: Don't update stochastic variables' values in-place
 =============================================================

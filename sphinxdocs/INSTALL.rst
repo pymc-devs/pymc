@@ -1,6 +1,6 @@
-*************************
-Installation Instructions
-*************************
+************
+Installation
+************
 
 :Date: 25 January 2011
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
