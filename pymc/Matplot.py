@@ -390,7 +390,6 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
         histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last, fontmap=fontmap)
 
         if last:
-            import pdb; pdb.set_trace()
             if not os.path.exists(path):
                 os.mkdir(path)
             if not path.endswith('/'):
