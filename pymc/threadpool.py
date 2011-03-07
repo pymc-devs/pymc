@@ -307,7 +307,8 @@ class ThreadPool:
 if os.environ.has_key('OMP_NUM_THREADS'):
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 else:
-    __PyMCThreadPool__ = ThreadPool(2)
+    import multiprocessing
+    __PyMCThreadPool__ = ThreadPool(multiprocessing.cpu_count())
 
 class CountDownLatch(object):
     def __init__(self, n):
@@ -372,7 +373,7 @@ def get_threadpool_size():
     
 def thread_partition_array(x):
     "Partition work arrays for multithreaded addition and multiplication"
-    n_threads = int(os.environ['OMP_NUM_THREADS'])
+    n_threads = get_threadpool_size()
     if len(x.shape)>1:
         maxind = x.shape[1]
     else:
