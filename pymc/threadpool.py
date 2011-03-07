@@ -304,9 +304,10 @@ class ThreadPool:
 
 
 
-if os.environ.has_key('OMP_NUM_THREADS'):
+
+try:
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
-else:
+except:
     import multiprocessing
     __PyMCThreadPool__ = ThreadPool(multiprocessing.cpu_count())
 
