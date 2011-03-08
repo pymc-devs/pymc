@@ -373,10 +373,10 @@ parent of some variable. Consider :math:`y` in the following model:
   :nowrap:
 
   \begin{align*}
-      x_0 &\sim \textup N (0,\tau_x)\\
-      x_{i+1}|x_i &\sim \textup{N}(x_i, \tau_x)\\
+      x_0 &\sim N (0,\tau_x)\\
+      x_{i+1}|x_i &\sim \text{N}(x_i, \tau_x)\\
       &&i=0,\ldots, N-2\\
-      y|x &\sim \textup N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
+      y|x &\sim N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
   \end{align*}
 
 
@@ -473,9 +473,9 @@ The role of potentials can be confusing, so we will provide another example: we 
   :nowrap:
 
   \begin{eqnarray*}
-      t_i|S_i \sim \textup{Geometric}(S_i), & i=1\ldots N\\
-      S_i = \textup{logit}^{-1}(\beta x_i), &i=1\ldots N\\
-      \beta\sim \textup{N}(\mu_\beta, V_\beta).
+      t_i|S_i \sim \text{Geometric}(S_i), & i=1\ldots N\\
+      S_i = \text{logit}^{-1}(\beta x_i), &i=1\ldots N\\
+      \beta\sim \text{N}(\mu_\beta, V_\beta).
   \end{eqnarray*}
 
 
@@ -568,7 +568,8 @@ represented in an undirected form by 'moralizing', which is done by the function
 
 .. _pot:
 
-.. image:: _images/PotExample.*
+.. figure:: _images/PotExample.*
+	:width: 600 px
 
 	Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.
 

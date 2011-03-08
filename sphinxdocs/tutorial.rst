@@ -11,7 +11,8 @@ Consider the following dataset, which is a time series of recorded coal mining d
 
 .. _disasters_figure:
 
-.. image:: _images/disasterts.*
+.. figure:: _images/disasterts.*
+	:width: 600 px
 
    Recorded coal mining disasters in the UK.
 
@@ -130,7 +131,8 @@ The following `directed acyclic graph` is a visualization of the parent-child re
 
 .. _dag:
 
-.. image:: _images/DisasterModel2.*
+.. figure:: _images/DisasterModel2.*
+	:width: 600 px
 
    Directed acyclic graph of the relationships in the coal mining disaster model example.
 
@@ -281,7 +283,8 @@ You can examine the marginal posterior of any variable by plotting a histogram o
 
 You should see something like this:
 
-.. image:: _images/ltrace.pdf
+.. figure:: _images/ltrace.*
+	:width: 600 px
 
    Histogram of the marginal posterior probability of parameter :math:`l`.
 
@@ -292,7 +295,7 @@ PyMC has its own plotting functionality, via the optional ``matplotlib`` module 
 
 For each variable in the model, ``plot`` generates a composite figure, such as this one for the switchpoint in the disasters model:
 
-.. image:: spost.png
+.. figure:: _images/spost.*[[;]]
 
    Temporal series and histogram of the samples drawn for :math:`s`.
 
@@ -398,7 +401,7 @@ The entire model looks very similar to the original model::
 
 .. missing_
 
-.. image:: _images/missing.*
+.. figure:: _images/missing.*
 
    Trace and posterior distribution of the second missing data point in the example.
 
