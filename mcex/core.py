@@ -40,12 +40,67 @@ class SampleHistory(object):
 
 class Model(object):
     def __init__(self, free_vars, logps, gradient_vars):
-        logp_calculation = bsum((sum(logp) for logp in logps))
-        grad_calculations = [grad(logp_calculation, free_var) for free_var in gradient_vars]
-    
-        self.evaluate = function(free_vars, [logp_calculation] + grad_calculations)
+
         self.free_vars = free_vars
 
+class ChainState(object):
+    """
+    Encapsulates the state of the chain
+    """
+    def __init__(self):
+        
+        self.values = {}
+        self.values_considered = {}
+        
+    def accept(self):
+        self.values = self.values_considered
+        
+    def reject(self):
+        self._consideration_state = self._state.copy()
+    
+class EvaluationView(object):
+    """
+    encapsulates the action of evaluating the state using the model.
+    """
+    def __init__(self, chain_state,model, logps = [], derivative_vars = [], nderivative = 0):
+        self.chain_state = chain_state
+        self.nderivative = nderivative 
+        
+        logp_calculation = bsum((sum(logp) for logp in model.logps))
+        
+        calculations = [logp_calculation]
+        
+        if nderivative == 1:
+            calculations += [grad(logp_calculation, free_var) for free_var in derivative_vars]
+            self.derivative_order = [ str(var) for var in derivative_vars]
+            
+        
+        
+        self.evaluate = function(model.free_vars, calculations)
+        
+    def evaluate(self, dimensions = None, slices = None):
+        """
+        returns logp, derivative1, derivative2...
+        does not currently do beyond derivative1
+        """
+        return self._package_results(self._evaluate(**self.chain_state.values_considered), 
+                                     dimensions, 
+                                     slices)
+        
+    def _package_results(self,results, dimensions, slices):    
+        
+        if dimensions is None and slices is None:
+            #need N dimensional symmetric dictionary here for derivatives > 1 
+            if self.nderivative == 1: 
+                derivatives = {}
+                for var_name, derivative in zip(self.derivative_order,results[1:]):
+                    derivatives[var_name] = derivative
+                return results[0], derivatives
+            return results[0]
+        else :
+            pass
+        
+        
 
 def sample(model, draws,step_method, sample_history = None):
 
@@ -55,7 +110,7 @@ def sample(model, draws,step_method, sample_history = None):
         sample_history = SampleHistory(model, draws)
     
     for i in xrange(draws):
-        sample_history.record(step_method.step())
+
         
     return sample_history
         
