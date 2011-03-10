@@ -32,12 +32,18 @@
 
 .. [Lauritzen_1990] S.L. Lauritzen, A.P. Dawid, B.N. Larsen, and H.G. Leimer. Independence properties of directed Markov fields. Networks, 20:491–505, 1990.
 
-.. [Lutz_2007] Mark Lutz. Learning Python. O’Reilly, 2007.
+.. [Lutz_2007] M. Lutz. Learning Python. O’Reilly, 2007.
+
+.. [Oberhumer_2008] M.F.X.J. Oberhumer. LZO Real-Time Data Compression Library. 2008. URL http://www.oberhumer.com/opensource/lzo/.
 
 .. [] A.E. Raftery and S.M. Lewis. The number of iterations, convergence diagnostics and generic metropolis al- gorithms. In D.J. Spiegelhalter W.R. Gilks and S. Richardson, editors, Practical Markov Chain Monte Carlo. Chapman and Hall, London, U.K., 1995.
+
+.. [Roelofs_2010] G. Roelofs, J. loup Gailly, M. Adler. zlib: A Massively Spiffy Yet Delicately Unobtrusive Compression Library. 2010. URL http://www.zlib.net/.
 
 .. [Roberts_2007] G.O. Roberts and J.S. Rosenthal. Implementing componentwise Hastings algorithms. Journal of Applied Probability, 44(2):458–475, 2007.
 
 .. [Schwarz_1978] G. Schwarz. Estimating the dimension of a model. The Annals of Statistics, 6(2):461–464, 1978.
+
+.. [Seward_2007] J. Seward. bzip2 and libbzip2, Version 1.0.5 – A Program and Library for Data Compression. 2007. URL http://www.bzip.org/.
 
 .. [vanRossum_2010] G. van Rossum. The Python Library Reference Release 2.6.5., 2010. URL http://docs. python.org/library/.
