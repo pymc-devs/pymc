@@ -58,12 +58,11 @@ class ChainState(object):
     def reject(self):
         self._consideration_state = self._state.copy()
     
-class EvaluationView(object):
+class Evaluation(object):
     """
     encapsulates the action of evaluating the state using the model.
     """
-    def __init__(self, chain_state,model, logps = [], derivative_vars = [], nderivative = 0):
-        self.chain_state = chain_state
+    def __init__(self, model, derivative_vars = [], nderivative = 0):
         self.nderivative = nderivative 
         
         logp_calculation = bsum((sum(logp) for logp in model.logps))
@@ -78,12 +77,12 @@ class EvaluationView(object):
         
         self.evaluate = function(model.free_vars, calculations)
         
-    def evaluate(self, dimensions = None, slices = None):
+    def evaluate(self, chain_state, dimensions = None, slices = None):
         """
         returns logp, derivative1, derivative2...
         does not currently do beyond derivative1
         """
-        return self._package_results(self._evaluate(**self.chain_state.values_considered), 
+        return self._package_results(self._evaluate(**chain_state.values_considered), 
                                      dimensions, 
                                      slices)
         
@@ -100,7 +99,32 @@ class EvaluationView(object):
         else :
             pass
         
+class VariableMapping(object):
+    """encapsulates a mapping between a a set of variables and a vector
+    """
+    def __init__(self,free_vars):
+        self.dimensions = 0
+        self.slices = {}
         
+        for var in free_vars:        
+            self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.size)
+            self.dimensions += var.size
+            
+    def apply(self,values):
+        vector = np.empty(self.dimensions)
+        
+        for var, value in values.iteritems():
+            vector[self.slices[var]] = np.ravel(value)
+            
+        return vector 
+    def apply_inverse(self, vector):
+        values = {}
+        for var, slice in self.slices.iteritems():
+            values[var] = np.reshape(vector[slice], var.shape)
+            
+        return values 
+
+def flatten_vars
 
 def sample(model, draws,step_method, sample_history = None):
 
@@ -110,7 +134,8 @@ def sample(model, draws,step_method, sample_history = None):
         sample_history = SampleHistory(model, draws)
     
     for i in xrange(draws):
-
+        step_method.step()
+        sample_history.record(step_method.chain_state)
         
     return sample_history
         
