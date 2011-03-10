@@ -8,6 +8,7 @@ from theano import function, grad
 from numpy import pi, inf
 import numpy as np 
 from __builtin__ import sum as bsum
+import itertools 
 
 class FreeVariable(TensorVariable ):
     def __init__(self, name, shape, dtype):
@@ -77,27 +78,36 @@ class Evaluation(object):
         
         self.evaluate = function(model.free_vars, calculations)
         
-    def evaluate(self, chain_state, dimensions = None, slices = None):
+    def evaluate(self, chain_state):
         """
         returns logp, derivative1, derivative2...
         does not currently do beyond derivative1
         """
-        return self._package_results(self._evaluate(**chain_state.values_considered), 
-                                     dimensions, 
-                                     slices)
+        results = self._evaluate(**chain_state.values_considered)
         
-    def _package_results(self,results, dimensions, slices):    
+    def evaluatev(self, vector, mapping):
+        results = self.evaluate(mapping.apply_inverse(chain_state.values_considered))
         
-        if dimensions is None and slices is None:
-            #need N dimensional symmetric dictionary here for derivatives > 1 
-            if self.nderivative == 1: 
-                derivatives = {}
-                for var_name, derivative in zip(self.derivative_order,results[1:]):
-                    derivatives[var_name] = derivative
-                return results[0], derivatives
-            return results[0]
-        else :
-            pass
+        derivative = {}
+        for 
+        
+        
+    def _package_results(self,results, mapping):    
+        #need N dimensional symmetric dictionary here for derivatives > 1 
+
+        results = iter(results)
+        return itertools.chain((next(results),) (next_group(order,results) for order in self.derivative_orders))
+
+def next_group(order, it):
+    #replaceable with dict comprehensions
+    values = {}
+    for key in order:
+        values[key] = next(it)  
+    return values
+
+def next_group(mapping, it):
+    return mapping.apply(it)
+    
         
 class VariableMapping(object):
     """encapsulates a mapping between a a set of variables and a vector
