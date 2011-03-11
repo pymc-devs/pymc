@@ -36,7 +36,13 @@
 
 .. [Oberhumer_2008] M.F.X.J. Oberhumer. LZO Real-Time Data Compression Library. 2008. URL http://www.oberhumer.com/opensource/lzo/.
 
-.. [] A.E. Raftery and S.M. Lewis. The number of iterations, convergence diagnostics and generic metropolis al- gorithms. In D.J. Spiegelhalter W.R. Gilks and S. Richardson, editors, Practical Markov Chain Monte Carlo. Chapman and Hall, London, U.K., 1995.
+.. [Plummer_2008] M. Plummer, N. Best, K. Cowles and K. Vines. coda: Output Analysis and Diagnostics for MCMC. R package version 0.13-3, 2008. URL http://CRAN.R-project.org/package=coda.
+
+.. [R_2010] R Development Core Team. R: A Language and Environment for Statistical Computing. R Foundation for Statistical Computing, Vienna, Austria. ISBN 3-900051-07-0, 2010. URL http: //www.R-project.org/.
+
+.. [Raftery_1995a] A.E. Raftery and S.M. Lewis. The number of iterations, convergence diagnostics and generic metropolis al- gorithms. In D.J. Spiegelhalter W.R. Gilks and S. Richardson, editors, Practical Markov Chain Monte Carlo. Chapman and Hall, London, U.K., 1995.
+
+.. [Raftery_1995b] A.E. Raftery and S.M. Lewis. Gibbsit Version 2.0. 1995. URL http://lib.stat.cmu.edu/ general/gibbsit/.
 
 .. [Roelofs_2010] G. Roelofs, J. loup Gailly, M. Adler. zlib: A Massively Spiffy Yet Delicately Unobtrusive Compression Library. 2010. URL http://www.zlib.net/.
 

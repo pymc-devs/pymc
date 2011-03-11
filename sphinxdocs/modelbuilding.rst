@@ -555,10 +555,6 @@ The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical representa
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model :eq:`disastermodel` is shown in :ref:`dag`. Note that  :math:`D` is shaded because it is flagged as data.
 
-.. % \begin{center}
-.. % \epsfig{file=DisasterModel2.pdf, width=6cm}
-.. % \end{center}
-
 The symbol for factor potentials is a rectangle, as in the following model.
 Factor potentials are usually associated with *undirected* grahical models. In
 undirected representations, each parent of a potential is connected to every
