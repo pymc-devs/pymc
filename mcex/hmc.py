@@ -30,12 +30,12 @@ class HMCStep(multi.MultiStep):
             self.step_size_max = self.step_size_min = step_size 
         self.trajectory_length = trajectory_length   
         
-    def step(self):
+    def step(self, chain_state):
         #randomize step size
         step_size = np.random.uniform(self.step_size_min, self.step_size_max)
         step_count = int(np.floor(self.trajectory_length / step_size))
         
-        start_logp, gradient = self.evaluator(self.chain_state, self.var_mapping)
+        start_logp, gradient = self.evaluator(chain_state, self.var_mapping)
         logp = 0
         
         # momentum scale proportional to inverse of parameter scale (basically sqrt(covariance))
@@ -47,8 +47,8 @@ class HMCStep(multi.MultiStep):
         
         for i in range(step_count): 
             #alternate full variable and momentum updates
-            self.chain_state.consider(self.vector + step_size * np.dot(self.covariance, p))
-            logp, gradient = self.evaluator(self.chain_state, self.slices, self.dimensions)
+            chain_state.consider(self.vector + step_size * np.dot(self.covariance, p))
+            logp, gradient = self.evaluator(chain_state, self.var_mapping)
             
             if i != step_count - 1:
                 p = p - step_size * -gradient
@@ -65,9 +65,9 @@ class HMCStep(multi.MultiStep):
         if (np.isfinite(log_metrop_ratio) and 
             np.log(np.random.uniform()) < log_metrop_ratio):
             
-            self.state.accept()
+            chain_state.accept()
         else: 
-            self.reject() 
+            chain_state.reject() 
                 
     
     def kenergy (self, x):

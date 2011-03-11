@@ -11,5 +11,4 @@ class MultiStep(object):
     def init(self, model):
         self.model = model
         self.var_mapping = core.VariableMapping(model.free_vars)
-        self.chain_state = core.ChainState()
-        self.evaluator = core.ChainEvaluation(self.chain_state, model)
+        self.evaluator = core.ChainEvaluation(model)

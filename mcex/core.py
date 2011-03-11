@@ -40,9 +40,10 @@ class SampleHistory(object):
         return self._samples[key][0:self.nsamples,...]
 
 class Model(object):
-    def __init__(self, free_vars, logps, gradient_vars):
+    def __init__(self, free_vars, logps):
 
         self.free_vars = free_vars
+        self.logps = logps
 
 class ChainState(object):
     """
@@ -83,34 +84,20 @@ class Evaluation(object):
         returns logp, derivative1, derivative2...
         does not currently do beyond derivative1
         """
-        results = self._evaluate(**chain_state.values_considered)
+        results = iter(self._evaluate(**chain_state.values_considered))
+        return itertools.chain((next(results),) (dict_group(order,results) for order in self.derivative_orders))
         
-    def evaluatev(self, vector, mapping):
-        results = self.evaluate(mapping.apply_inverse(chain_state.values_considered))
-        
-        derivative = {}
-        for 
-        
-        
-    def _package_results(self,results, mapping):    
-        #need N dimensional symmetric dictionary here for derivatives > 1 
 
-        results = iter(results)
-        return itertools.chain((next(results),) (next_group(order,results) for order in self.derivative_orders))
-
-def next_group(order, it):
+def dict_group(order, it):
     #replaceable with dict comprehensions
     values = {}
     for key in order:
         values[key] = next(it)  
     return values
-
-def next_group(mapping, it):
-    return mapping.apply(it)
     
         
 class VariableMapping(object):
-    """encapsulates a mapping between a a set of variables and a vector
+    """encapsulates a mapping between a subset set of variables and a vector
     """
     def __init__(self,free_vars):
         self.dimensions = 0
@@ -119,33 +106,38 @@ class VariableMapping(object):
         for var in free_vars:        
             self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.size)
             self.dimensions += var.size
+    
+    def apply_to_dict(self, values):
+        return self._apply(values.iteritems())
             
-    def apply(self,values):
+    def _apply(self, var_vals):
         vector = np.empty(self.dimensions)
         
-        for var, value in values.iteritems():
-            vector[self.slices[var]] = np.ravel(value)
-            
-        return vector 
-    def apply_inverse(self, vector):
-        values = {}
+        for var, value in var_vals:
+            try:
+                vector[self.slices[var]] = np.ravel(value)
+            except KeyError:
+                pass
+                
+        return vector
+    
+     
+    def update_with_inverse(self,values, vector):
         for var, slice in self.slices.iteritems():
             values[var] = np.reshape(vector[slice], var.shape)
             
         return values 
 
-def flatten_vars
-
-def sample(model, draws,step_method, sample_history = None):
-
-    step_method.set_model(model)
+def sample(model, draws, model, step_method,chain_state = None, sample_history = None):
+    if chain_state is None:
+        chain_state = ChainState()
     
     if sample_history is None:
         sample_history = SampleHistory(model, draws)
     
     for i in xrange(draws):
-        step_method.step()
-        sample_history.record(step_method.chain_state)
+        step_method.step(chain_state)
+        sample_history.record(chain_state)
         
     return sample_history
         
