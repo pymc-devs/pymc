@@ -1,4 +1,4 @@
-.. _chap:mcmc:
+.. _chap_mcmc:
 
 **********************************
 Appendix: Markov Chain Monte Carlo

@@ -1,4 +1,4 @@
-.. _chap:distributions:
+.. _chap_distributions:
 
 *************************
 Probability distributions
