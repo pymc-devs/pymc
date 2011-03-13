@@ -1,4 +1,4 @@
-.. _chap:modelbuilding:
+.. _chap_modelbuilding:
 
 ***************
 Building models
@@ -10,7 +10,7 @@ A ``Stochastic`` object represents a variable whose value is not completely dete
 
 The third basic class, ``Potential``, represents 'factor potentials' ([Lauritzen_1990]_,[Jordan_2004]_), which are *not* variables but simply terms and/or constraints that are multiplied into joint distributions to modify them. ``Potential`` and ``Variable`` are subclasses of ``Node``.
 
-PyMC probability models are simply linked groups of ``Stochastic``, ``Deterministic`` and ``Potential`` objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter :ref:`chap:modelfitting`.
+PyMC probability models are simply linked groups of ``Stochastic``, ``Deterministic`` and ``Potential`` objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter :ref:`chap_modelfitting`.
    
    
 .. _stochastic:
@@ -70,15 +70,15 @@ There are three main ways to create stochastic variables, called the
 
 **Automatic**
    Stochastic variables with standard distributions provided by PyMC (see 
-   chapter :ref:`chap:distributions`) can be created in a single line using 
+   chapter :ref:`chap_distributions`) can be created in a single line using 
    special subclasses of ``Stochastic``. For example, the    
    uniformly-distributed discrete variable :math:`s` in (:eq:`disastermodel`) 
    could be created using the automatic interface as follows::
 
       import pymc as pm
-      s = pm.DiscreteUniform('s', 1851, 1962, value=1900)
+      s = pymc.DiscreteUniform('s', 1851, 1962, value=1900)
 
-   In addition to the classes in chapter :ref:`chap:distributions`,
+   In addition to the classes in chapter :ref:`chap_distributions`,
    ``scipy.stats.distributions``' random variable classes are wrapped as
    ``Stochastic`` subclasses if SciPy is installed. These distributions are in 
    the submodule ``pymc.SciPyDistributions``.
@@ -92,7 +92,7 @@ There are three main ways to create stochastic variables, called the
    (:eq:`disastermodel`) could alternatively be created from a function that
    computes its log-probability as follows::
 
-      @pm.stochastic(dtype=int)
+      @pymc.stochastic(dtype=int)
       def s(value=1900, t_l=1851, t_h=1962):
           """The switchpoint for the rate of disaster occurrence."""
           if value > t_h or value < t_l:
@@ -128,7 +128,7 @@ There are three main ways to create stochastic variables, called the
    allows you to specify a ``random`` method for sampling the stochastic 
    variable's value conditional on its parents.  ::
 
-      @pm.stochastic(dtype=int)
+      @pymc.stochastic(dtype=int)
       def s(value=1900, t_l=1851, t_h=1962):
           """The switchpoint for the rate of disaster occurrence."""
 
@@ -218,15 +218,15 @@ Declaring stochastic variables to be data
 
 In each interface, an optional keyword argument ``observed`` can be set to ``True``. In the decorator interface, this argument is added to the ``@stochastic`` decorator::
 
-   @pm.stochastic(observed=True)
+   @pymc.stochastic(observed=True)
 
 In the other interfaces, the ``observed=True`` argument is added to the instantiation of the ``Stochastic``, or its subclass::
 
-   x = pm.Binomial('x', n=n, p=p, observed=True)
+   x = pymc.Binomial('x', n=n, p=p, observed=True)
 
 Alternatively, in the decorator interface only, a ``Stochastic`` object's ``observed`` flag can be set to true by stacking an ``@observed`` decorator on top of the ``@stochastic`` decorator::
 
-   @pm.observed(dtype=int)
+   @pymc.observed(dtype=int)
 	def ...
 
 
@@ -307,8 +307,8 @@ Deterministic variables are less complicated than stochastic variables, and have
 	Certain elementary operations on variables create deterministic variables. 
 	For example::
 	
-		>>> x = pm.MvNormalCov('x',numpy.ones(3),numpy.eye(3)) 
-		>>> y = pm.MvNormalCov('y',numpy.ones(3),numpy.eye(3)) 
+		>>> x = pymc.MvNormalCov('x',numpy.ones(3),numpy.eye(3)) 
+		>>> y = pymc.MvNormalCov('y',numpy.ones(3),numpy.eye(3)) 
 		>>> print x+y 
 		<pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10> 
 		>>> print x[0]
@@ -324,7 +324,7 @@ Deterministic variables are less complicated than stochastic variables, and have
    A deterministic variable can be created via a decorator in a way very similar to
    ``Stochastic``'s decorator interface::
 
-      @pm.deterministic
+      @pymc.deterministic
       def r(switchpoint = s, early_rate = e, late_rate = l):
           """The rate of disaster occurrence."""
           value = zeros(N)
@@ -352,7 +352,7 @@ Deterministic variables are less complicated than stochastic variables, and have
           value[switchpoint:] = late_rate
           return value
 
-      r = pm.Deterministic(  eval = r_eval,
+      r = pymc.Deterministic(  eval = r_eval,
                           name = 'r',
                           parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l}),
                           doc = 'The rate of disaster occurrence.',
@@ -387,18 +387,18 @@ etc.
 This situation can be handled naturally in PyMC::
 
 	N = 10
-   x_0 = pm.Normal(`x_0', mu=0, tau=1)
+   x_0 = pymc.Normal(`x_0', mu=0, tau=1)
 
    x = numpy.empty(N, dtype=object)
    x[0] = x_0
 
    for i in range(1, N):
 
-      xi = pm.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+      xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
 
-   @pm.observed
+   @pymc.observed
    def y(value=1, mu=x, tau=100):
-       return pm.normal_like(value, numpy.sum(mu**2), tau)
+       return pymc.normal_like(value, numpy.sum(mu**2), tau)
 
 PyMC automatically wraps array :math:`x` in an appropriate ``Container`` class. The expression ``'x_%i' % i`` labels each ``Normal`` object in the container with the appropriate index :math:`i`; so if ``i=1``, the name of the
 corresponding element becomes ```x_1'``.
@@ -522,7 +522,7 @@ There are two ways to create potentials:
    A potential can be created via a decorator in a way very similar to
    ``Deterministic``'s decorator interface::
 
-      @pm.potential
+      @pymc.potential
       def psi_i(x_lo = x[i], x_hi = x[i+1]):
           """A pair potential"""
           return -(xlo - xhi)**2
@@ -538,7 +538,7 @@ There are two ways to create potentials:
       def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
           return -(xlo - xhi)**2
 
-      psi_i = pm.Potential(  logp = psi_i_logp,
+      psi_i = pymc.Potential(  logp = psi_i_logp,
                           name = 'psi_i',
                           parents = {'xlo': x[i], 'xhi': x[i+1]},
                           doc = 'A pair potential',
@@ -551,7 +551,7 @@ There are two ways to create potentials:
 Graphing models
 ===============
 
-The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical representations of ``Model`` (Chapter :ref:`chap:modelfitting`) instances using **GraphViz** via the Python package **PyDot**. See [Lauritzen_1990]_ and [Jordan_2004]_ for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical representations of ``Model`` (Chapter :ref:`chap_modelfitting`) instances using **GraphViz** via the Python package **PyDot**. See [Lauritzen_1990]_ and [Jordan_2004]_ for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model :eq:`disastermodel` is shown in :ref:`dag`. Note that  :math:`D` is shaded because it is flagged as data.
 
@@ -570,7 +570,7 @@ represented in an undirected form by 'moralizing', which is done by the function
 	Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.
 
 
-.. _sec:caching:
+.. _sec_caching:
 
 Class LazyFunction and caching
 ==============================
@@ -579,7 +579,7 @@ This section gives an overview of how PyMC computes log-probabilities. This is a
 
 The ``logp`` attributes of stochastic variables and potentials and the ``value`` attributes of deterministic variables are wrappers for instances of class ``LazyFunction``. Lazy functions are wrappers for ordinary Python functions. A lazy function ``L`` could be created from a function ``fun`` as follows::
 
-   L = pm.LazyFunction(fun, arguments)
+   L = pymc.LazyFunction(fun, arguments)
 
 The argument ``arguments`` is a dictionary container; ``fun`` must accept keyword arguments only. When ``L``'s ``get()`` method is called, the return value is the same as the call  ::
 

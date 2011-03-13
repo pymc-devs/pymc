@@ -1,13 +1,10 @@
-.. _chap:extending:
+.. _chap_extending:
 
 **************
 Extending PyMC
 **************
 
-PyMC tries to make standard things easy, but keep unusual things possible. Its
-openness, combined with Python's flexibility, invite extensions from using new
-step methods to exotic stochastic processes (see the Gaussian process module).
-This chapter briefly reviews the ways PyMC is designed to be extended.
+PyMC tries to make standard things easy, but keep unusual things possible. Its openness, combined with Python's flexibility, invite extensions from using new step methods to exotic stochastic processes (see the Gaussian process module). This chapter briefly reviews the ways PyMC is designed to be extended.
 
 
 .. _nonstandard:
@@ -15,12 +12,7 @@ This chapter briefly reviews the ways PyMC is designed to be extended.
 Nonstandard Stochastics
 =======================
 
-The simplest way to create a ``Stochastic`` object with a nonstandard
-distribution is to use the medium or long decorator syntax. See chapter
-:ref:`chap:modelbuilding`. If you want to create many stochastics with the same
-nonstandard distribution, the decorator syntax can become cumbersome. An actual
-subclass of ``Stochastic`` can be created using the class factory
-``stochastic_from_dist``. This function takes the following arguments:
+The simplest way to create a ``Stochastic`` object with a nonstandard distribution is to use the medium or long decorator syntax. See Chapter :ref:`chap_modelbuilding`. If you want to create many stochastics with the same nonstandard distribution, the decorator syntax can become cumbersome. An actual subclass of ``Stochastic`` can be created using the class factory ``stochastic_from_dist``. This function takes the following arguments:
 
 * The name of the new class,
 
@@ -28,19 +20,13 @@ subclass of ``Stochastic`` can be created using the class factory
 
 * A ``random`` function,
 
-* The NumPy datatype of the new class (for continuous distributions, this should
-  be ``float``; for discrete distributions, ``int``; for variables valued as non-
-  numerical objects, ``object``),
+* The NumPy datatype of the new class (for continuous distributions, this should be ``float``; for discrete distributions, ``int``; for variables valued as non-numerical objects, ``object``),
 
-* A flag indicating whether the resulting class represents a vector-valued
-  variable.
+* A flag indicating whether the resulting class represents a vector-valued variable.
 
-The necessary parent labels are read from the ``logp`` function, and a docstring
-for the new class is automatically generated. Instances of the new class can be
-created in one line.
+The necessary parent labels are read from the ``logp`` function, and a docstring for the new class is automatically generated. Instances of the new class can be created in one line.
 
-Full subclasses of ``Stochastic`` may be necessary to provide nonstandard
-behaviors (see ``gp.GP``).
+Full subclasses of ``Stochastic`` may be necessary to provide nonstandard behaviors (see ``gp.GP``).
 
 
 .. _custom-stepper:
@@ -48,11 +34,7 @@ behaviors (see ``gp.GP``).
 User-defined step methods
 =========================
 
-The ``StepMethod`` class is meant to be subclassed. There are an enormous number
-of MCMC step methods in the literature, whereas PyMC provides only about half a
-dozen. Most user-defined step methods will be either Metropolis-Hastings or
-Gibbs step methods, and these should subclass ``Metropolis`` or ``Gibbs``
-respectively. More unusual step methods should subclass ``StepMethod`` directly.
+The ``StepMethod`` class is meant to be subclassed. There are an enormous number of MCMC step methods in the literature, whereas PyMC provides only about half a dozen. Most user-defined step methods will be either Metropolis-Hastings or Gibbs step methods, and these should subclass ``Metropolis`` or ``Gibbs`` respectively. More unusual step methods should subclass ``StepMethod`` directly.
 
 
 
@@ -61,19 +43,14 @@ Example: an asymmetric Metropolis step
 
 Consider the probability model in :file:`examples/custom_step.py`::
 
-   mu = pm.Normal('mu',0,.01, value=0)
-   tau = pm.Exponential('tau',.01, value=1)
-   cutoff = pm.Exponential('cutoff',1, value=1.3)
-   D = pm.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
+   mu = pymc.Normal('mu',0,.01, value=0)
+   tau = pymc.Exponential('tau',.01, value=1)
+   cutoff = pymc.Exponential('cutoff',1, value=1.3)
+   D = pymc.Truncnorm('D',mu,tau,-np.inf,cutoff,value=data,observed=True)
 
-The stochastic variable ``cutoff`` cannot be smaller than the largest element of
-:math:`D`, otherwise :math:`D`'s density would be zero. The standard
-``Metropolis`` step method can handle this case without problems; it will
-propose illegal values occasionally, but these will be rejected.
+The stochastic variable ``cutoff`` cannot be smaller than the largest element of :math:`D`, otherwise :math:`D`'s density would be zero. The standard ``Metropolis`` step method can handle this case without problems; it will propose illegal values occasionally, but these will be rejected.
 
-Suppose we want to handle ``cutoff`` with a smarter step method that doesn't
-propose illegal values. Specifically, we want to use the nonsymmetric proposal
-distribution 
+Suppose we want to handle ``cutoff`` with a smarter step method that doesn't propose illegal values. Specifically, we want to use the nonsymmetric proposal distribution 
 
 .. math::
   :nowrap:
@@ -86,68 +63,45 @@ distribution
 We can implement this Metropolis-Hastings algorithm with the following step
 method class::
 
-   class TruncatedMetropolis(pm.Metropolis):
+   class TruncatedMetropolis(pymc.Metropolis):
        def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
            self.low_bound = low_bound
            self.up_bound = up_bound
-           pm.Metropolis.__init__(self, stochastic, *args, **kwargs)
+           pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-       # Propose method written by hacking Metropolis.propose()
        def propose(self):
            tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
            self.stochastic.value = \
-           pm.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
+           pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-       # Hastings factor method accounts for asymmetric proposal distribution
        def hastings_factor(self):
            tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
            cur_val = self.stochastic.value
            last_val = self.stochastic.last_value
 
-           lp_for = pm.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
-           lp_bak = pm.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
+           lp_for = pymc.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+           lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
 
            if self.verbose > 1:
                print self._id + ': Hastings factor %f'%(lp_bak - lp_for)
            return lp_bak - lp_for
 
-The ``propose`` method sets the step method's stochastic's value to a new value,
-drawn from a truncated normal distribution. The precision of this distribution
-is computed from two factors: ``self.proposal_sd``, which can be set with an
-input argument to Metropolis, and ``self.adaptive_scale_factor``. Metropolis
-step methods' default tuning behavior is to reduce ``adaptive_scale_factor`` if
-the acceptance rate is too low, and to increase ``adaptive_scale_factor`` if it
-is too high. By incorporating ``adaptive_scale_factor`` into the proposal
-standard deviation, we avoid having to write our own tuning infrastructure. If
-we don't want the proposal to tune, we don't have to use
-``adaptive_scale_factor``.
+The ``propose`` method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: ``self.proposal_sd``, which can be set with an input argument to Metropolis, and ``self.adaptive_scale_factor``. Metropolis step methods' default tuning behavior is to reduce ``adaptive_scale_factor`` if the acceptance rate is too low, and to increase ``adaptive_scale_factor`` if it is too high. By incorporating ``adaptive_scale_factor`` into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use ``adaptive_scale_factor``.
 
-The ``hastings_factor`` method adjusts for the asymmetric proposal distribution
-[Gelman:2004]_. It computes the log of the quotient of the 'backward' density and the
-'forward' density. For symmetric proposal distributions, this quotient is 1, so
-its log is zero. We have added some code to print the Hastings factor if the
-step method's verbosity level is set high.
+The ``hastings_factor`` method adjusts for the asymmetric proposal distribution [Gelman_2004]_. It computes the log of the quotient of the 'backward' density and the 'forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. We have added some code to print the Hastings factor if the step method's verbosity level is set high.
 
-Having created our custom step method, we need to tell MCMC instances to use it
-to handle the variable ``cutoff``. This is done in :file:`custom_step.py` with
-the following line::
+Having created our custom step method, we need to tell MCMC instances to use it to handle the variable ``cutoff``. This is done in :file:`custom_step.py` with the following line::
 
    M.use_step_method(TruncatedMetropolis, cutoff, D.value.max(), np.inf)
 
-This call causes :math:`M` to pass the arguments ``cutoff, D.value.max(),
-np.inf`` to a ``TruncatedMetropolis`` object's ``init`` method, and use the
-object to handle ``cutoff``.
+This call causes :math:`M` to pass the arguments ``cutoff, D.value.max(), np.inf`` to a ``TruncatedMetropolis`` object's ``init`` method, and use the object to handle ``cutoff``.
 
-It's often convenient to get a handle to a custom step method instance directly
-for debugging purposes. ``M.step_method_dict[cutoff]`` returns a list of all the
-step methods :math:`M` will use to handle ``cutoff``::
+Its often convenient to get a handle to a custom step method instance directly for debugging purposes. ``M.step_method_dict[cutoff]`` returns a list of all the step methods :math:`M` will use to handle ``cutoff``::
 
    >>> M.step_method_dict[cutoff]
    [<custom_step.TruncatedMetropolis object at 0x3c91130>]
 
-There may be more than one, and conversely step methods may handle more than one
-stochastic variable. To see which variables step method :math:`S` is handling,
-try  ::
+There may be more than one, and conversely step methods may handle more than one stochastic variable. To see which variables step method :math:`S` is handling, try::
 
    >>> S.stochastics
    set([<pymc.distributions.Exponential 'cutoff' at 0x3cd6b90>])
@@ -166,21 +120,20 @@ All step methods must implement the following methods:
    Tunes the jumping strategy based on performance so far. A default method is
    available that increases ``self.adaptive_scale_factor`` (see below) when
    acceptance rate is high, and decreases it when acceptance rate is low. This
-   method should return ``True`` if additional tuning will be required later, and
-   ``False`` otherwise.
+   method should return ``True`` if additional tuning will be required later, 
+	and ``False`` otherwise.
 
 ``competence(s):``
-   A class method that examines stochastic variable :math:`s` and returns a value
-   from 0 to 3 expressing the step method's ability to handle the variable. This
-   method is used by ``MCMC`` instances when automatically assigning step methods.
-   Conventions are:
+   A class method that examines stochastic variable :math:`s` and returns a 
+	value from 0 to 3 expressing the step method's ability to handle the 
+	variable. This method is used by ``MCMC`` instances when automatically 
+	assigning step methods. Conventions are:
 
    0
       I cannot safely handle this variable.
 
    1
-      I can handle the variable about as well as the standard ``Metropolis`` step
-      method.
+      I can handle the variable about as well as the standard ``Metropolis`` step method.
 
    2
       I can do better than ``Metropolis``.
@@ -189,10 +142,9 @@ All step methods must implement the following methods:
       I am the best step method you are likely to find for this variable in most
       cases.
 
-   For example, if you write a step method that can handle ``MyStochasticSubclass``
-   well, the competence method might look like this::
+   For example, if you write a step method that can handle ``MyStochasticSubclass`` well, the competence method might look like this::
 
-      class MyStepMethod(pm.StepMethod):
+      class MyStepMethod(pymc.StepMethod):
          def __init__(self, stochastic, *args, **kwargs):
             ...
 
@@ -322,7 +274,7 @@ method's ability to handle a variable :math:`x` by checking whether:
 
 * all :math:`x`'s children are of class ``child_class``, and either apply
   ``parent_label`` to :math:`x` directly or (if ``linear_OK=True``) to a
-  ``LinearCombination`` object (chapter :ref:`chap:modelbuilding`), one of whose
+  ``LinearCombination`` object (chapter :ref:`chap_modelbuilding`), one of whose
   parents contains :math:`x`.
 
 * :math:`x` is of class ``parent_class``
@@ -340,7 +292,7 @@ New fitting algorithms
 PyMC provides a convenient platform for non-MCMC fitting algorithms in addition
 to MCMC. All fitting algorithms should be implemented by subclasses of
 ``Model``. There are virtually no restrictions on fitting algorithms, but many
-of ``Model``'s behaviors may be useful. See chapter :ref:`chap:modelfitting`.
+of ``Model``'s behaviors may be useful. See chapter :ref:`chap_modelfitting`.
 
 
 .. _custom-mc:

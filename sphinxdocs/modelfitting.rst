@@ -1,4 +1,4 @@
-.. _chap:modelfitting:
+.. _chap_modelfitting:
 
 **************
 Fitting Models
@@ -15,7 +15,7 @@ PyMC provides three objects that fit models:
 All three objects are subclasses of ``Model``, which is PyMC's base class for fitting methods. ``MCMC`` and ``NormApprox``, both of which can produce samples from the posterior, are subclasses of ``Sampler``, which is PyMC's base class for Monte Carlo fitting methods. ``Sampler`` provides a generic sampling loop method and database support for storing large sets of joint samples. These base classes implement some basic methods that are inherited by the three implemented fitting methods, so they are documented at the end of this section.
 
 
-.. _sec:modelinstantiation:
+.. _sec_modelinstantiation:
 
 Creating models
 ===============
@@ -38,24 +38,24 @@ The first argument to any fitting method's ``__init__`` method, including that o
 * Using a 'model factory' function::
 
      def make_model(x):
-         a = pm.Exponential('a',.5,beta=x)
+         a = pymc.Exponential('a',.5,beta=x)
 
-         @pm.deterministic
+         @pymc.deterministic
          def b(a=a):
              return 100-a
 
-         @pm.stochastic
+         @pymc.stochastic
          def c(value=.5, a=a, b=b);
              return (value-a)**2/b
 
          return locals()
 
-     M = pm.Model(make_model(3))
+     M = pymc.Model(make_model(3))
 
   In this case, :math:`M` will also expose :math:`a`, :math:`b` and :math:`c` as attributes.
 
 
-.. _sec:model:
+.. _sec_model:
 
 The Model class
 ===============
@@ -105,7 +105,7 @@ Models have the following important attributes:
 In addition, models expose each node they contain as an attribute. For instance, if model ``M`` were produced from model (:eq:`disastermodel`) ``M.s`` would return the switchpoint variable.
 
 
-.. _sec:map:
+.. _sec_map:
 
 Maximum a posteriori estimatestes
 ==============================
@@ -113,7 +113,7 @@ Maximum a posteriori estimatestes
 The ``MAP`` class sets all stochastic variables to their maximum *a posteriori* values using functions in SciPy's ``optimize`` package; hence, SciPy must be installed to use it. ``MAP`` can only handle variables whose dtype is ``float``, so it will not work, for example, on model (:eq:`disastermodel`). To fit the model in :file:`examples/gelman_bioassay.py` using ``MAP``, do the following::
 
    >>> from pymc.examples import gelman_bioassay
-   >>> M = pm.MAP(gelman_bioassay)
+   >>> M = pymc.MAP(gelman_bioassay)
    >>> M.fit()
 
 This call will cause :math:`M` to fit the model using Nelder-Mead optimization, which does not require derivatives. The variables in ``DisasterModel`` have now been set to their maximum *a posteriori* values::
@@ -162,14 +162,14 @@ The useful attributes of ``MAP`` are:
 One use of the ``MAP`` class is finding reasonable initial states for MCMC chains. Note that multiple ``Model`` subclasses can handle the same collection of nodes.
 
 
-.. _sec:norm-approx:
+.. _sec_norm-approx:
 
 Normal approximations
 =====================
 
 The ``NormApprox`` class extends the ``MAP`` class by approximating the posterior covariance of the model using the Fisher information matrix, or the Hessian of the joint log probability at the maximum. To fit the model in :file:`examples/gelman_bioassay.py` using ``NormApprox``, do::
 
-   >>> N = pm.NormApprox(gelman_bioassay)
+   >>> N = pymc.NormApprox(gelman_bioassay)
    >>> N.fit()
 
 The approximate joint posterior mean and covariance of the variables are available via the attributes ``mu`` and ``C``::
@@ -197,7 +197,7 @@ In addition, it's now possible to generate samples from the posterior as with ``
            10.1182532 ,   7.4063525 ,  11.58584317,   8.99331152,
            11.04720439,   9.5084239 ])
 
-Any of the database backends can be used (chapter :ref:`chap:database`).
+Any of the database backends can be used (chapter :ref:`chap_database`).
 
 In addition to the methods and attributes of ``MAP``, ``NormApprox`` provides the following methods:
 
@@ -226,14 +226,14 @@ It provides the following additional attributes:
    concatenated before their covariance matrix is constructed.
 
 
-.. _sec:mcmc:
+.. _sec_mcmc:
 
 Markov chain Monte Carlo: the MCMC class
 ========================================
 
-The ``MCMC`` class implements PyMC's core business: producing 'traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See :ref:`chap:tutorial` for an example of basic usage.
+The ``MCMC`` class implements PyMC's core business: producing 'traces' for a model's variables which, with careful thinning, can be considered independent joint samples from the posterior. See :ref:`chap_tutorial` for an example of basic usage.
 
-``MCMC``'s primary job is to create and coordinate a collection of 'step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in :ref:`chap:extending`.
+``MCMC``'s primary job is to create and coordinate a collection of 'step methods', each of which is responsible for updating one or more variables. The available step methods are described below. Instructions on how to create your own step method are available in :ref:`chap_extending`.
 
 ``MCMC`` provides the following useful methods:
 
@@ -285,12 +285,12 @@ After sampling, the information tallied by ``M`` can be queried via ``M.db.trace
 You can produce 'traces' for arbitrary functions with zero arguments as well. If you issue the command ``M._funs_to_tally['trace_name'] = f`` before sampling begins, then each time the model variables’ values are tallied, ``f`` will be called with no arguments, and the return value will be tallied. After sampling ends you can retrieve the trace as ``M.trace[’trace_name’]``.
 
 
-.. _sec:sampler:
+.. _sec_sampler:
 
 The Sampler class
 =================
 
-``MCMC`` is a subclass of a more general class called ``Sampler``. Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: ``Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)``. The ``input`` argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the ``db`` argument indicates which database backend should be used to store the samples (see chapter :ref:`chap:database`), ``reinit_model`` is a boolean flag that indicates whether the model should be re-initialised before running, and ``calc_deviance`` is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
+``MCMC`` is a subclass of a more general class called ``Sampler``. Samplers fit models with Monte Carlo fitting methods, which characterize the posterior distribution by approximate samples from it. They are initialized as follows: ``Sampler(input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False)``. The ``input`` argument is a module, list, tuple, dictionary, set, or object that contains all elements of the model, the ``db`` argument indicates which database backend should be used to store the samples (see chapter :ref:`chap_database`), ``reinit_model`` is a boolean flag that indicates whether the model should be re-initialised before running, and ``calc_deviance`` is a boolean flag indicating whether deviance should be calculated for the model at each iteration. Samplers have the following important methods:
 
 ``sample(iter, length, verbose, ...)``:
    Samples from the joint distribution. The ``iter`` argument controls how 
@@ -334,7 +334,7 @@ The Sampler class
 In addition, the sampler attribute ``deviance`` is a deterministic variable valued as the model's deviance at its current state.
 
 
-.. _sec:stepmethod:
+.. _sec_stepmethod:
 
 Step methods
 ============
@@ -353,7 +353,7 @@ Metropolis step methods
 
 ``Metropolis`` and subclasses implement Metropolis-Hastings steps. To tell an ``MCMC`` object :math:`M` to handle a variable :math:`x` with a Metropolis step method, you might do the following::
 
-   M.use_step_method(pm.Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
+   M.use_step_method(pymc.Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
 
 ``Metropolis`` itself handles float-valued variables, and subclasses ``DiscreteMetropolis`` and ``BinaryMetropolis`` handle integer- and boolean-valued variables, respectively. Subclasses of ``Metropolis`` must implement the following methods:
 
@@ -366,7 +366,7 @@ Metropolis step methods
 	reset the values of the variables to their values before ``propose()`` was 
 	called.
 
-Note that there is no ``accept()`` method; if a proposal is accepted, the variables' values are simply left alone. Subclasses that use proposal distributions other than symmetric random-walk may specify the 'Hastings factor' by changing the ``hastings_factor`` method. See :ref:`chap:extending` for an example.
+Note that there is no ``accept()`` method; if a proposal is accepted, the variables' values are simply left alone. Subclasses that use proposal distributions other than symmetric random-walk may specify the 'Hastings factor' by changing the ``hastings_factor`` method. See :ref:`chap_extending` for an example.
 
 ``Metropolis``' ``__init__`` method takes the following arguments:
 
@@ -415,7 +415,7 @@ The ``AdaptativeMetropolis`` (AM) step method works like a regular Metropolis st
 
 To tell an ``MCMC`` object :math:`M` to handle variables :math:`x`, :math:`y` and :math:`z` with an ``AdaptiveMetropolis`` instance, you might do the following::
 
-   M.use_step_method(pm.AdaptiveMetropolis, [x,y,z], \
+   M.use_step_method(pymc.AdaptiveMetropolis, [x,y,z], \
                       scales={'x':1, 'y':2, 'z':.5}, delay=10000)
 
 ``AdaptativeMetropolis``' init method takes the following arguments:
@@ -503,7 +503,7 @@ A subclass of ``Gibbs`` that defines these attributes only needs to implement a 
 
 The inherited class method ``Gibbs.competence`` will determine the new step method's ability to handle a variable :math:`x` by checking whether:
 
-* all :math:`x`'s children are of class ``child_class``, and either apply \code{parent_label} to $x$ directly or (if ``linear_OK=True``) to a \code{LinearCombination} object (:ref:`chap:modelbuilding`), one of whose parents contains $x$.
+* all :math:`x`'s children are of class ``child_class``, and either apply \code{parent_label} to $x$ directly or (if ``linear_OK=True``) to a \code{LinearCombination} object (:ref:`chap_modelbuilding`), one of whose parents contains $x$.
 
 * :math:`x` is of class \code{parent_class}
 
@@ -521,11 +521,11 @@ There is currently no way for a stochastic variable to compute individual terms 
 
 To update an array-valued variable's elements individually, simply break it up into an array of scalar-valued variables. Instead of this::
 
-   A = pm.Normal('A', value=zeros(100), mu=0., tau=1.)
+   A = pymc.Normal('A', value=zeros(100), mu=0., tau=1.)
 
 do this::
 
-   A = [pm.Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in range(100)]
+   A = [pymc.Normal('A_%i'%i, value=0., mu=0., tau=1.) for i in range(100)]
 
 An individual step method will be assigned to each element of ``A`` in the latter case, and the elements will be updated individually. Note that ``A`` can be broken up into larger blocks if desired.
 
