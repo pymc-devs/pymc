@@ -9,20 +9,13 @@ import num_derivatives
 import map
 
 class HMCStep(multi.MultiStep):
-    def __init__(self,model, step_size_scaling = .25, trajectory_length = 2., covariance = None, find_mode = True):
+    def __init__(self,model,covariance, step_size_scaling = .25, trajectory_length = 2. ):
         multi.MultiStep(self, model)
         
         self.zero = np.zeros(self.dimensions)
         
-        if find_mode:
-            map.find_map(self.var_mapping, self.evaluation, self.chain_state)
-
-        if covariance is None:
-            self.inv_covariance = num_derivatives.approx_hessian(self.var_mapping, self.evaluation, self.chain_state)
-        else :
-            self.covariance = covariance
-            self.inv_covariance = np.linalg.inv(covariance)
-        
+        self.covariance = covariance
+        self.inv_covariance = np.linalg.inv(covariance)
         
         step_size = step_size_scaling * self.dimensions**(1/4.)
       

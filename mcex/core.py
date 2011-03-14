@@ -13,7 +13,7 @@ class SampleHistory(object):
         self.max_draws = max_draws
         samples = {}
         for var in model.free_vars: 
-            samples[var] = np.empty((max_draws,) + var.shape)
+            samples[var] = np.empty((max_draws,) + var.given_shape)
             
         self._samples = samples
         self.nsamples = 0
@@ -26,7 +26,7 @@ class SampleHistory(object):
         else :
             raise ValueError('out of space!')
         
-    def __getitem__(self, key):
+    def __getitem__(self, keys):
         return self._samples[key][0:self.nsamples,...]
 
 class Model(object):
@@ -52,6 +52,7 @@ class Model(object):
 
 
 class ChainState(object):
+    
     """
     Encapsulates the state of the chain
     """
@@ -141,12 +142,9 @@ class VariableMapping(object):
             
         return values 
 
-def sample(draws, model, step_method,chain_state = None, sample_history = None):
-    if chain_state is None:
-        chain_state = ChainState()
-    
+def sample(draws, sampler,chain_state = None, sample_history = None):
     if sample_history is None:
-        sample_history = SampleHistory(model, draws)
+        sample_history = SampleHistory(sampler.model, draws)
     
     for i in xrange(draws):
         step_method.step(chain_state)
