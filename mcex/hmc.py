@@ -5,6 +5,8 @@ Created on Mar 7, 2011
 '''
 import multi 
 import numpy as np
+import num_derivatives 
+import map
 
 class HMCStep(multi.MultiStep):
     def __init__(self,model, step_size_scaling = .25, trajectory_length = 2., covariance = None, find_mode = True):
@@ -13,10 +15,10 @@ class HMCStep(multi.MultiStep):
         self.zero = np.zeros(self.dimensions)
         
         if find_mode:
-            find_mode(self.chain_state, self.evaluation)
+            map.find_map(self.var_mapping, self.evaluation, self.chain_state)
 
         if covariance is None:
-            self.inv_covariance = #approx hessian
+            self.inv_covariance = num_derivatives.approx_hessian(self.var_mapping, self.evaluation, self.chain_state)
         else :
             self.covariance = covariance
             self.inv_covariance = np.linalg.inv(covariance)
@@ -36,7 +38,7 @@ class HMCStep(multi.MultiStep):
         step_count = int(np.floor(self.trajectory_length / step_size))
         
         
-        q = self.var_mapping.apply_to_dict(chain_stat.values)
+        q = self.var_mapping.apply_to_dict(chain_state.values)
         start_logp, gradient = self.evaluator.evaluate_as_vector(self.var_mapping, chain_state)
         current_logp = start_logp
         
