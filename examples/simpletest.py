@@ -1,8 +1,8 @@
 from mcex import *
 import numpy as np 
 
-import pydevd 
-pydevd.set_pm_excepthook()
+#import pydevd 
+#pydevd.set_pm_excepthook()
 
 
 data = np.random.normal(size = 3)
@@ -26,5 +26,7 @@ hmc_cov = approx_hessian(mapping, hmc_model, chain)
 
 sampler = Sampler([hmc.HMCStep(hmc_model,mapping, hmc_cov)])
 
-history = SampleHistory(hmc_model, 500)
-sample(500, sampler, chain, history)
+
+ndraw = 1e6
+history = SampleHistory(hmc_model, ndraw)
+sample(ndraw, sampler, chain, history)

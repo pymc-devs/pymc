@@ -21,7 +21,7 @@ class SampleHistory(object):
         self.max_draws = max_draws
         samples = {}
         for var in model.free_vars: 
-            samples[str(var)] = np.empty((max_draws,) + var.dshape)
+            samples[str(var)] = np.empty((int(max_draws),) + var.dshape)
             
         self._samples = samples
         self.nsamples = 0
@@ -52,7 +52,6 @@ class Model(object):
 
 
 class ChainState(object):
-    
     """
     Encapsulates the state of the chain
     """
@@ -145,7 +144,7 @@ class VariableMapping(object):
         return values 
 
 def sample(draws, sampler,chain_state , sample_history ):
-    for i in xrange(draws):
+    for i in xrange(int(draws)):
         sampler.step(chain_state)
         sample_history.record(chain_state)
         

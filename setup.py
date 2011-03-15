@@ -7,12 +7,12 @@ from distutils.core import setup
 from distutils.extension import Extension
 
 
-DISTNAME            = 'gradient_samplers'
-DESCRIPTION         = "PyMC step methods that use gradient information"
+DISTNAME            = 'mcex'
+DESCRIPTION         = ""
 LONG_DESCRIPTION    =""""""
 MAINTAINER          = 'John Salvatier'
 MAINTAINER_EMAIL    = "jsalvati@u.washington.edu"
-URL                 = "pypi.python.org/pypi/gradient_samplers"
+URL                 = ""
 LICENSE             = "BSD"
 VERSION             = "0.1"
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         license = LICENSE,
         url = URL,
         long_description = LONG_DESCRIPTION,
-        packages = ['gradient_samplers'], 
+        packages = ['mcex'], 
         classifiers =classifiers,
-        install_requires=['pymc', 'numpy','scipy', 'numdifftools'])
+        install_requires=['theano','numpy','scipy','numdifftools'])
 
