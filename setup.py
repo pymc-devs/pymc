@@ -8,7 +8,7 @@ from distutils.extension import Extension
 
 
 DISTNAME            = 'mcex'
-DESCRIPTION         = ""
+DESCRIPTION         = "Monte-Carlo Experiment"
 LONG_DESCRIPTION    =""""""
 MAINTAINER          = 'John Salvatier'
 MAINTAINER_EMAIL    = "jsalvati@u.washington.edu"
