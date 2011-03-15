@@ -21,12 +21,12 @@ hmc_model = Model([x],
                   derivative_vars = [x])
 mapping = VariableMapping([x])
 
-find_map(mapping, hmc_model, chain)
+find_MAP(mapping, hmc_model, chain)
 hmc_cov = approx_hessian(mapping, hmc_model, chain)
 
-sampler = Sampler([hmc.HMCStep(hmc_model,mapping, hmc_cov)])
+sampler = CompoundStep([hmc.HMCStep(hmc_model,mapping, hmc_cov)])
 
 
-ndraw = 1e6
-history = SampleHistory(hmc_model, ndraw)
+ndraw = 1e3
+history = NpHistory(hmc_model, ndraw)
 print ("took :", sample(ndraw, sampler, chain, history))

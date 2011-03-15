@@ -3,50 +3,24 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from theano.tensor import *
+from theano.tensor import sum, grad, TensorType, TensorVariable
 from theano import function
 import numpy as np 
-from __builtin__ import sum as bsum
+from __builtin__ import sum as buitin_sum
 import time 
 
 def FreeVariable( name, shape, dtype):
     """creates a TensorVariable of the given shape and type"""
-        
     ttype = TensorType(str(dtype), np.array(shape) == 1)
     var = TensorVariable(type = ttype, name = name)
     var.dshape = shape
     var.dsize = np.prod(shape)
     return var
-    
-class SampleHistory(object):
-    """
-    encapsulates the recording of a process chain
-    should handle any burn-in, thinning (though this can also be handled at the sampler level) etc.
-    """
-    def __init__(self, model, max_draws):
-        self.max_draws = max_draws
-        samples = {}
-        for var in model.free_vars: 
-            samples[str(var)] = np.empty((int(max_draws),) + var.dshape)
-            
-        self._samples = samples
-        self.nsamples = 0
-    
-    def record(self, chain_state):
-        """
-        records the position of a chain at a certain point in time
-        """
-        if self.nsamples < self.max_draws:
-            for var, sample in self._samples.iteritems():
-                sample[self.nsamples,...] = chain_state.values[var]
-            self.nsamples += 1
-        else :
-            raise ValueError('out of space!')
-        
-    def __getitem__(self, key):
-        return self._samples[key][0:self.nsamples,...]
 
 class Model(object):
+    """
+    encapsulates the probability model
+    """
     def __init__(self, free_vars, logps, derivative_vars = []):
 
         self.free_vars = free_vars
@@ -82,7 +56,7 @@ class Evaluation(object):
     def __init__(self, model, derivative_vars = []):
         self.derivative = len(derivative_vars) > 0 
         
-        logp_calculation = bsum((sum(logp) for logp in model.logps))
+        logp_calculation = buitin_sum((sum(logp) for logp in model.logps))
         
         self.derivative_order = [str(var) for var in derivative_vars]
         
@@ -160,13 +134,13 @@ class VariableMapping(object):
             
         return values 
 
-def sample(draws, sampler,chain_state , sample_history ):
-    """draw a number of samples using the given sampler
+def sample(draws, step_method, chain_state, sample_history ):
+    """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
     start = time.time()
     for i in xrange(int(draws)):
-        sampler.step(chain_state)
-        sample_history.record(chain_state)
+        step_method.step(chain_state)
+        sample_history.record(chain_state, step_method)
         
     return (time.time() - start)
 
