@@ -8,12 +8,20 @@ from theano import function
 import numpy as np 
 from __builtin__ import sum as bsum
 
+class FreeVariable(TensorVariable ):
+    def __init__(self, name, shape, dtype):
+        
+        ttype = TensorType(str(dtype), np.array(shape) == 1)
+        TensorVariable.__init__(self, name, ttype)
+        self.dshape = shape
+        self.dsize = np.prod(shape)
+
 class SampleHistory(object):
     def __init__(self, model, max_draws):
         self.max_draws = max_draws
         samples = {}
         for var in model.free_vars: 
-            samples[var] = np.empty((max_draws,) + var.given_shape)
+            samples[var] = np.empty((max_draws,) + var.dshape)
             
         self._samples = samples
         self.nsamples = 0
@@ -26,7 +34,7 @@ class SampleHistory(object):
         else :
             raise ValueError('out of space!')
         
-    def __getitem__(self, keys):
+    def __getitem__(self, key):
         return self._samples[key][0:self.nsamples,...]
 
 class Model(object):
@@ -117,7 +125,7 @@ class VariableMapping(object):
         
         self.slices = {}
         for var in free_vars:        
-            self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.size)
+            self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.dsize)
             self.dimensions += var.size
             
     
