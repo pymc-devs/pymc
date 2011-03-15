@@ -42,21 +42,13 @@ class Model(object):
 
         self.free_vars = free_vars
         self.logps = logps
+        
+        if derivative_vars == 'all' :
+            derivative_vars = [ var for var in free_vars if var.dtype in continuous_types]
+            
         self.derivative_vars = derivative_vars 
         
         self.eval = Evaluation(self, derivative_vars)
-        
-    submodels = {}
-    def submodel(self, logps = [], derivative_vars = []):
-        if not logps :
-            logps = self.logps
-        
-        key = tuple(tuple(logps), tuple(derivative_vars))
-        try :
-            return self.submodels[key]
-        except:
-            self.submodels[key] = Model(self, self.free_vars, logps, derivative_vars)
-            return self.submodels[key]
 
 
 class ChainState(object):
@@ -159,4 +151,20 @@ def sample(draws, sampler,chain_state = None, sample_history = None):
         sample_history.record(chain_state)
         
     return sample_history
-        
+
+bool_types = set(['int8'])
+   
+int_types = set(['int8',
+            'int16' ,   
+            'int32',
+            'int64',
+            'uint8',
+            'uint16',
+            'uint32',
+            'uint64'])
+float_types = set(['float32',
+              'float64'])
+complex_types = set(['complex64',
+                'complex128'])
+continuous_types = float_types | complex_types
+discrete_types = bool_types | int_types
