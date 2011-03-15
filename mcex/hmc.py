@@ -8,6 +8,7 @@ import num_derivatives
 import map
 
 class HMCStep(object):
+    """Hamiltonian step method"""
     def __init__(self,model, var_mapping,covariance, step_size_scaling = .25, trajectory_length = 2. ):
         self.model = model
         self.var_mapping = var_mapping 

@@ -8,7 +8,9 @@ import core
 
 
 class Sampler(object):
-    
+    """
+    compound sampler object, calls each of the step methods in sequence
+    """
     def __init__(self, step_methods):
         self.step_methods = step_methods
         

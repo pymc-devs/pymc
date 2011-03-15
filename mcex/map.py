@@ -5,8 +5,10 @@ Created on Mar 12, 2011
 '''
 from scipy.optimize import fmin_bfgs
 
-def find_map(mapping, model, chain_state, disp = False):
-    
+def find_MAP(mapping, model, chain_state, disp = False):
+    """
+    moves the chain to the local maximum a posteriori point given a model
+    """
     def logp(x):
         mapping.update_with_inverse(chain_state.values_considered, x)
         

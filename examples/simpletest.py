@@ -29,4 +29,4 @@ sampler = Sampler([hmc.HMCStep(hmc_model,mapping, hmc_cov)])
 
 ndraw = 1e6
 history = SampleHistory(hmc_model, ndraw)
-sample(ndraw, sampler, chain, history)
+print ("took :", sample(ndraw, sampler, chain, history))

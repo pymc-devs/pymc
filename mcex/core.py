@@ -7,8 +7,10 @@ from theano.tensor import *
 from theano import function
 import numpy as np 
 from __builtin__ import sum as bsum
+import time 
 
 def FreeVariable( name, shape, dtype):
+    """creates a TensorVariable of the given shape and type"""
         
     ttype = TensorType(str(dtype), np.array(shape) == 1)
     var = TensorVariable(type = ttype, name = name)
@@ -17,6 +19,10 @@ def FreeVariable( name, shape, dtype):
     return var
     
 class SampleHistory(object):
+    """
+    encapsulates the recording of a process chain
+    should handle any burn-in, thinning (though this can also be handled at the sampler level) etc.
+    """
     def __init__(self, model, max_draws):
         self.max_draws = max_draws
         samples = {}
@@ -26,10 +32,13 @@ class SampleHistory(object):
         self._samples = samples
         self.nsamples = 0
     
-    def record(self, samples):
+    def record(self, chain_state):
+        """
+        records the position of a chain at a certain point in time
+        """
         if self.nsamples < self.max_draws:
             for var, sample in self._samples.iteritems():
-                sample[self.nsamples,...] = samples.values[var]
+                sample[self.nsamples,...] = chain_state.values[var]
             self.nsamples += 1
         else :
             raise ValueError('out of space!')
@@ -102,14 +111,16 @@ class Evaluation(object):
 
         return self._evaluate(dict_representation, chain_state)
          
-    def evaluate_as_vector(self, mapping, chain_state):   
+    def evaluate_as_vector(self, mapping, chain_state):
+        """
+        perhaps needs to be moved out of Evaluate
+        """   
         def vector_representation(n, ordering, it):
             return mapping.apply(zip(ordering,it))
         return self._evaluate(vector_representation, chain_state)
         
 class VariableMapping(object):
     """encapsulates a mapping between a subset set of variables and a vector
-    may in the future 
     """
     def __init__(self,free_vars):
         self.dimensions = 0
@@ -126,6 +137,9 @@ class VariableMapping(object):
         return self.apply( values.iteritems())
 
     def apply(self,varset_values):
+        """
+        returns a vector given a iterable of (variablename, value)
+        """
         vector = np.empty(self.dimensions)
         
         for varname, value in varset_values:
@@ -138,17 +152,23 @@ class VariableMapping(object):
     
      
     def update_with_inverse(self,values, vector):
+        """
+        does the inverse mapping: updates a dictionary with values from a vector
+        """
         for var, slice in self.slices.iteritems():
             values[var] = np.reshape(vector[slice], self.vars[var].dshape)
             
         return values 
 
 def sample(draws, sampler,chain_state , sample_history ):
+    """draw a number of samples using the given sampler
+    returns the amount of time taken"""
+    start = time.time()
     for i in xrange(int(draws)):
         sampler.step(chain_state)
         sample_history.record(chain_state)
         
-    return sample_history
+    return (time.time() - start)
 
 bool_types = set(['int8'])
    

@@ -6,7 +6,9 @@ Created on Mar 12, 2011
 import numdifftools as nd
 
 def approx_hessian(mapping, model, chain_state):
-    
+    """
+    returns an approximation of the hessian at the current chain location 
+    """
     def grad_logp(x):
         mapping.update_with_inverse(chain_state.values_considered, x)
         
