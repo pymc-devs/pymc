@@ -16,10 +16,3 @@ class Sampler(object):
         
         for step_method in self.step_methods: 
             step_method.step(chain_state)
-
-class MultiStep(object):
-        
-    def init(self, model):
-        self.model = model
-        self.var_mapping = core.VariableMapping(model.free_vars)
-        self.evaluator = core.ChainEvaluation(model)

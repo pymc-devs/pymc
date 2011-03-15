@@ -8,20 +8,20 @@ from theano import function
 import numpy as np 
 from __builtin__ import sum as bsum
 
-class FreeVariable(TensorVariable ):
-    def __init__(self, name, shape, dtype):
+def FreeVariable( name, shape, dtype):
         
-        ttype = TensorType(str(dtype), np.array(shape) == 1)
-        TensorVariable.__init__(self, name, ttype)
-        self.dshape = shape
-        self.dsize = np.prod(shape)
-
+    ttype = TensorType(str(dtype), np.array(shape) == 1)
+    var = TensorVariable(type = ttype, name = name)
+    var.dshape = shape
+    var.dsize = np.prod(shape)
+    return var
+    
 class SampleHistory(object):
     def __init__(self, model, max_draws):
         self.max_draws = max_draws
         samples = {}
         for var in model.free_vars: 
-            samples[var] = np.empty((max_draws,) + var.dshape)
+            samples[str(var)] = np.empty((max_draws,) + var.dshape)
             
         self._samples = samples
         self.nsamples = 0
@@ -29,7 +29,7 @@ class SampleHistory(object):
     def record(self, samples):
         if self.nsamples < self.max_draws:
             for var, sample in self._samples.iteritems():
-                self._samples[var][self.nsamples,...] = samples[var]
+                sample[self.nsamples,...] = samples.values[var]
             self.nsamples += 1
         else :
             raise ValueError('out of space!')
@@ -105,7 +105,7 @@ class Evaluation(object):
          
     def evaluate_as_vector(self, mapping, chain_state):   
         def vector_representation(n, ordering, it):
-            mapping.apply(zip(ordering,it))
+            return mapping.apply(zip(ordering,it))
         return self._evaluate(vector_representation, chain_state)
         
 class VariableMapping(object):
@@ -116,9 +116,11 @@ class VariableMapping(object):
         self.dimensions = 0
         
         self.slices = {}
-        for var in free_vars:        
+        self.vars = {}
+        for var in free_vars:       
+            self.vars[str(var)] = var 
             self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.dsize)
-            self.dimensions += var.size
+            self.dimensions += var.dsize
             
     
     def apply_to_dict(self, values):
@@ -127,9 +129,9 @@ class VariableMapping(object):
     def apply(self,varset_values):
         vector = np.empty(self.dimensions)
         
-        for var, value in varset_values:
+        for varname, value in varset_values:
             try:    
-                vector[self.slices[var]] = np.ravel(value)
+                vector[self.slices[varname]] = np.ravel(value)
             except KeyError:
                 pass
                 
@@ -138,16 +140,13 @@ class VariableMapping(object):
      
     def update_with_inverse(self,values, vector):
         for var, slice in self.slices.iteritems():
-            values[var] = np.reshape(vector[slice], var.shape)
+            values[var] = np.reshape(vector[slice], self.vars[var].dshape)
             
         return values 
 
-def sample(draws, sampler,chain_state = None, sample_history = None):
-    if sample_history is None:
-        sample_history = SampleHistory(sampler.model, draws)
-    
+def sample(draws, sampler,chain_state , sample_history ):
     for i in xrange(draws):
-        step_method.step(chain_state)
+        sampler.step(chain_state)
         sample_history.record(chain_state)
         
     return sample_history

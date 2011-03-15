@@ -1,4 +1,6 @@
- == Monte-Carlo Experiment == 
+**********************
+Monte-Carlo Experiment
+**********************
 
 MCEx is an (not yet functional) experimental package designed to be a well designed MCMC package. It's goal is to be simple to use, understand, extend and improve, while still being fast. The hope is that some of the lessons learned in this experimental package lead to improvements in PyMC.
 

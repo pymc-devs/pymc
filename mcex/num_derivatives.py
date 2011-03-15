@@ -5,12 +5,12 @@ Created on Mar 12, 2011
 '''
 import numdifftools as nd
 
-def approx_hessian(mapping, model_eval, chain_state):
+def approx_hessian(mapping, model, chain_state):
     
     def grad_logp(x):
         mapping.update_with_inverse(chain_state.values_considered, x)
         
-        return -model_eval.evalute_as_vector(chain_state)
+        return -model.eval.evaluate_as_vector(mapping, chain_state)[1]
     
     #find the jacobian of the gradient function at the current position
     #this should be the hessian

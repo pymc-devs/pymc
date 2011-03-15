@@ -3,21 +3,21 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-import multi 
 import numpy as np
 import num_derivatives 
 import map
 
-class HMCStep(multi.MultiStep):
-    def __init__(self,model,covariance, step_size_scaling = .25, trajectory_length = 2. ):
-        multi.MultiStep(self, model)
+class HMCStep(object):
+    def __init__(self,model, var_mapping,covariance, step_size_scaling = .25, trajectory_length = 2. ):
+        self.model = model
+        self.var_mapping = var_mapping 
         
-        self.zero = np.zeros(self.dimensions)
+        self.zero = np.zeros(self.var_mapping.dimensions)
         
         self.covariance = covariance
         self.inv_covariance = np.linalg.inv(covariance)
         
-        step_size = step_size_scaling * self.dimensions**(1/4.)
+        step_size = step_size_scaling * self.var_mapping.dimensions**(1/4.)
       
         if np.size(step_size) > 1:
             self.step_size_max, self.step_size_min = step_size
@@ -32,7 +32,7 @@ class HMCStep(multi.MultiStep):
         
         
         q = self.var_mapping.apply_to_dict(chain_state.values)
-        start_logp, gradient = self.evaluator.evaluate_as_vector(self.var_mapping, chain_state)
+        start_logp, gradient = self.model.eval.evaluate_as_vector(self.var_mapping, chain_state)
         current_logp = start_logp
         
         # momentum scale proportional to inverse of parameter scale (basically sqrt(covariance))
@@ -46,8 +46,8 @@ class HMCStep(multi.MultiStep):
             #alternate full variable and momentum updates
             q = q + step_size * np.dot(self.covariance, p)
             
-            chain_state.consider(self.var_mapping, q)
-            current_logp, gradient = self.evaluator.evaluate_as_vector(self.var_mapping, chain_state)
+            self.var_mapping.update_with_inverse(chain_state.values_considered, q)
+            current_logp, gradient = self.model.eval.evaluate_as_vector(self.var_mapping, chain_state)
             
             if i != step_count - 1:
                 p = p - step_size * -gradient
