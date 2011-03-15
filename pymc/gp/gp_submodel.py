@@ -74,6 +74,8 @@ class GaussianProcess(pm.Stochastic):
         
     logp = property(fget = get_logp, fset = set_logp)
 
+# for attr in ['neg','abs','invert'] + ['add', 'mul', 'sub'] + ['iadd','isub','imul','idiv','itruediv','ifloordiv','imod','ipow','ilshift','irshift','iand','ixor','ior','unicode']:
+#     GaussianProcess.__delattr__('__%s__'%attr)
 
 class GPEvaluation(pm.MvNormalChol):
     pass

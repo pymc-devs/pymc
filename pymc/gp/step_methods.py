@@ -26,9 +26,8 @@ def wrap_metropolis_for_gp_parents(metro_class):
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
-            
             # Remove f from the set that will be used to compute logp_plus_loglike.
-            self.markov_blanket_no_f = filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket)
+            self.markov_blanket_no_f = set(filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket))
             self.fs = filter(lambda x: isinstance(x, GaussianProcess), self.markov_blanket)
             self.fr_checks = [f.submodel.fr_check for f in self.fs]
 
