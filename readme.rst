@@ -10,21 +10,21 @@ MCEx is an experimental package designed to be allow experimentation with how an
  - Objects are constructed more explicitly by the user 
 
  +----------------------------------+---------------------------------------+---------------------------------------------------+
- | Design feature             		| Advantages  							| Disadvantages 									|
+ | Design feature                   | Advantages                            | Disadvantages                                     |
  +==================================+=======================================+===================================================+
- | Computational core out-sourced 	| - simple package code     			| - supporting arbitrary stochastics/deterministics	|
- | to Theano                     	| - efficient							|    more difficult in complex cases				|
- |									| - improvements to Theano improve MCEx |													|
+ | Computational core out-sourced   | - simple package code                 | - supporting arbitrary stochastics/deterministics |
+ | to Theano                        | - efficient                           |    more difficult in complex cases                |
+ |                                  | - improvements to Theano improve MCEx |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
- | Free variables separate from		| - obvious how to apply unknown  		| - more verbose									|
- | prior distributions             	| 	transformations to the data			|													|
- |								   	| - represents computational 			|													|
- |									|	graph closely						|													|
+ | Free variables separate from     | - obvious how to apply unknown        | - more verbose                                    |
+ | prior distributions              |     transformations to the data       |                                                   |
+ |                                  | - represents computational            |                                                   |
+ |                                  |    graph closely                      |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
- | free variables, chains,         	| - easy to understand design			|													|
- | chain history, and model all   	| - hopefully robust					|													|
- | distinct							|										|													|
+ | free variables, chains,          | - easy to understand design           |                                                   |
+ | chain history, and model all     | - hopefully robust                    |                                                   |
+ | distinct                         |                                       |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
- | objects constructed 				| - more obvious to user				| - more verbose									|
- | explicitly by user 				|   how package works     				| 													|
+ | objects constructed              | - more obvious to user                | - more verbose                                    |
+ | explicitly by user               |   how package works                   |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
