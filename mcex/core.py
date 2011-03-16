@@ -3,6 +3,7 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
+import theano
 from theano.tensor import sum, grad, TensorType, TensorVariable
 from theano import function
 import numpy as np 
@@ -11,8 +12,7 @@ import time
 
 def FreeVariable( name, shape, dtype):
     """creates a TensorVariable of the given shape and type"""
-    ttype = TensorType(str(dtype), np.array(shape) == 1)
-    var = TensorVariable(type = ttype, name = name)
+    var = TensorType(str(dtype), np.array(shape) == 1)(name)
     var.dshape = shape
     var.dsize = np.prod(shape)
     return var
@@ -32,6 +32,8 @@ class Model(object):
         self.derivative_vars = derivative_vars 
         
         self.eval = Evaluation(self, derivative_vars)
+
+        
 
 
 class ChainState(object):
@@ -63,6 +65,7 @@ class Evaluation(object):
         calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
             
         self.function = function(model.free_vars, calculations)
+        
         
     def _evaluate(self,d_repr, chain_state):
         """
