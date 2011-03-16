@@ -13,13 +13,13 @@ MCEx is an experimental package designed to be allow experimentation with how an
  | Design feature                   | Advantages                            | Disadvantages                                     |
  +==================================+=======================================+===================================================+
  | Computational core out-sourced   | - simple package code                 | - supporting arbitrary stochastics/deterministics |
- | to Theano                        | - efficient                           |    more difficult in complex cases                |
+ | to Theano                        | - efficient                           |   more difficult in complex cases                 |
  |                                  | - improvements to Theano improve MCEx |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
  | Free variables separate from     | - obvious how to apply unknown        | - more verbose                                    |
- | prior distributions              |     transformations to the data       |                                                   |
+ | prior distributions              |   transformations to the data         |                                                   |
  |                                  | - represents computational            |                                                   |
- |                                  |    graph closely                      |                                                   |
+ |                                  |   graph closely                       |                                                   |
  +----------------------------------+---------------------------------------+---------------------------------------------------+
  | free variables, chains,          | - easy to understand design           |                                                   |
  | chain history, and model all     | - hopefully robust                    |                                                   |
