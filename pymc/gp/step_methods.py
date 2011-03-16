@@ -15,7 +15,16 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis']
+__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod']
+
+class GPStepMethod(pm.NoStepper):
+    @staticmethod
+    def competence(stochastic):
+        if isinstance(stochastic, GaussianProcess):
+            return 1
+        else:
+            return 0
+
 
 def wrap_metropolis_for_gp_parents(metro_class):
     """
@@ -26,6 +35,13 @@ def wrap_metropolis_for_gp_parents(metro_class):
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
+            
+            mb = set(self.markov_blanket)
+            for c in list(self.children):
+                if isinstance(c, GaussianProcess):
+                    self.children |= c.extended_children
+                    mb |= c.extended_children
+            self.markov_blanket = list(mb)
             
             # Remove f from the set that will be used to compute logp_plus_loglike.
             self.markov_blanket_no_f = filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket)
@@ -81,7 +97,6 @@ for sm in filtered_registry:
 GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropolis)
 __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
-
 
 class GPEvaluationGibbs(pm.Metropolis):
     """
