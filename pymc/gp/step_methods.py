@@ -15,7 +15,7 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod']
+__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis']
 
 class GPStepMethod(pm.NoStepper):
     @staticmethod
@@ -24,7 +24,6 @@ class GPStepMethod(pm.NoStepper):
             return 1
         else:
             return 0
-
 
 def wrap_metropolis_for_gp_parents(metro_class):
     """
@@ -97,6 +96,23 @@ for sm in filtered_registry:
 GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropolis)
 __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
+
+class _GPEvaluationMetropolis(pm.Metropolis):
+    def propose(self):
+        delta = pm.rmv_normal_chol(self.stochastic.value, pm.utils.value(self.stochastic.parents['sig']))
+        mu = pm.utils.value(self.stochastic.parents['mu'])
+        beta = self.proposal_sd * self.adaptive_scale_factor
+        # self.stochastic.value = (self.stochastic.value - mu)*np.sqrt(1-beta**2)+beta*delta+mu
+        self.stochastic.value = self.stochastic.value + beta*delta
+        
+    @staticmethod
+    def competence(stochastic):
+        if isinsntance(stochastic, GPEvaluation):
+            return 3
+        else:
+            return 0
+
+GPEvaluationMetropolis = wrap_metropolis_for_gp_parents(_GPEvaluationMetropolis)
 
 class GPEvaluationGibbs(pm.Metropolis):
     """

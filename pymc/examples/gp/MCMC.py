@@ -15,14 +15,13 @@ GPSampler = MCMC(PyMCmodel.make_model(n_fmesh, fmesh_is_obsmesh))
 obs_V = utils.value(GPSampler.V)
 
 if not fmesh_is_obsmesh:
-    offdiag = GPSampler.sm.C.value(GPSampler.fmesh, utils.value(GPSampler.obs_locs))
-    inner = GPSampler.sm.C.value(utils.value(GPSampler.obs_locs), utils.value(GPSampler.obs_locs)) + obs_V*np.eye(offdiag.shape[1])
-    sm_cov = np.asarray(GPSampler.sm.C_eval.value - offdiag*inner.I*offdiag.T)/10000.
-    GPSampler.use_step_method(gp.GPParentAdaptiveMetropolis, GPSampler.sm.f_eval, cov=sm_cov)
+    # offdiag = GPSampler.sm.C.value(GPSampler.fmesh, utils.value(GPSampler.obs_locs))
+    # inner = GPSampler.sm.C.value(utils.value(GPSampler.obs_locs), utils.value(GPSampler.obs_locs)) + obs_V*np.eye(offdiag.shape[1])
+    # sm_cov = np.asarray(GPSampler.sm.C_eval.value - offdiag*inner.I*offdiag.T)/10000.
+    # GPSampler.use_step_method(gp.GPParentAdaptiveMetropolis, GPSampler.sm.f_eval, cov=sm_cov)
+    GPSampler.use_step_method(gp.GPEvaluationMetropolis, GPSampler.sm.f_eval, proposal_sd = .01)
 else:
     GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, GPSampler.V, GPSampler.d)
-
-sm = GPSampler.step_method_dict[GPSampler.sm.f_eval][0]
 
 GPSampler.assign_step_methods()
 sm = GPSampler.step_method_dict[GPSampler.sm.f_eval][0]
