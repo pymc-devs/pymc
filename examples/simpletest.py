@@ -29,4 +29,4 @@ sampler = CompoundStep([hmc.HMCStep(hmc_model,mapping, hmc_cov)])
 
 ndraw = 1e3
 history = NpHistory(hmc_model, ndraw)
-print ("took :", sample(ndraw, sampler, chain, history))
+print "took :", sample(ndraw, sampler, chain, history)
