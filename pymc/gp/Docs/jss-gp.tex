@@ -121,7 +121,7 @@ With these definitions, the formal definition of the GP $f$ above \citep{banerje
 \end{equation}
 for any finite vector $x$, whose elements are all in $\mathbb X$. That is, if the function $f$ is regarded as a random vector in an infinite-dimensional vector space, all of its finite-dimensional marginals are multivariate normal. 
 
-The mean vectors and covariance matrices of these marginal distributions are obtained by evaluating the mean and covariance of $f$. Because these covariance matrices must be positive semidefinite, the covariance $C$ must have the property that $C(x,x)$ is positive semidefinite for any $x$. Such covariances are called `positive semidefinite functions' \cite{someone}. 
+The mean vectors and covariance matrices of these marginal distributions are obtained by evaluating the mean and covariance of $f$. Because these covariance matrices must be positive semidefinite, the covariance $C$ must have the property that $C(x,x)$ is positive semidefinite for any $x$. Such covariances are called `positive semidefinite functions' \cite{diggle}. 
 
 This conceptual simplicity belies the expressive power of the GP formalism; $M$ and $C$ can be chosen to precisely tune some properties of $f$, and leave others vaguely unspecified. Since $M(x)=\E[f(x)]$, the mean $M$ can be chosen to translate $f$. The effects of the covariance $C$ on $f$ are more subtle. Since $\textup{diag}[C(x,x)]=\mathsf{V}[f(x)]$, the covariance determines the expectation of $[f(x)-M(x)]^2$; but when the domain $\mathbb X$ is $\mathbb R^n$, the covariance also affects or determines other properties of $f$ that do not have analogues in finite-dimensional multivariate normal distributions (section \ref{subsub:cov}).
 
