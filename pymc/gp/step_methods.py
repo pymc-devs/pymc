@@ -98,13 +98,22 @@ __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
 
 class _GPEvaluationMetropolis(pm.Metropolis):
+    """
+    Updates a GP evaluation, the 'f_eval' attribute of a GP submodel. 
+    The stationary distribution of the assymetric proposal is equal 
+    to the prior distribution, an attempt to minimize jumps to values
+    forbidden by the prior.
+    """
+    def __init__(self, stochastic, proposal_sd=1, **kwds):
+        pm.Metropolis.__init__(self, stochastic, proposal_sd=proposal_sd, **kwds)
+    
     def propose(self):
         sig = pm.utils.value(self.stochastic.parents['sig'])
         mu = pm.utils.value(self.stochastic.parents['mu'])
         
         delta = pm.rmv_normal_chol(0*mu, sig)
 
-        beta = min(1, self.proposal_sd * self.adaptive_scale_factor)
+        beta = np.minimum(1, self.proposal_sd * self.adaptive_scale_factor)
         bsig = beta*sig
         sb2 = np.sqrt(1-beta**2)
         self.stochastic.value = (self.stochastic.value - mu)*sb2+beta*delta+mu
@@ -119,7 +128,7 @@ class _GPEvaluationMetropolis(pm.Metropolis):
         
     @staticmethod
     def competence(stochastic):
-        if isinsntance(stochastic, GPEvaluation):
+        if isinstance(stochastic, GPEvaluation):
             return 3
         else:
             return 0

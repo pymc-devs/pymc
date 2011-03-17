@@ -13,7 +13,8 @@ fe = GPSampler.sm.f_eval
 d = GPSampler.d
 
 if not fmesh_is_obsmesh:
-    GPSampler.use_step_method(gp.GPEvaluationMetropolis, GPSampler.sm.f_eval, proposal_sd = .01)
+    pass
+    # GPSampler.use_step_method(gp.GPEvaluationMetropolis, GPSampler.sm.f_eval, proposal_sd = .01)
 else:
     GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, GPSampler.V, GPSampler.d)
 
