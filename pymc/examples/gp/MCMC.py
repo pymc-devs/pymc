@@ -8,15 +8,6 @@ n_fmesh = 51
 fmesh_is_obsmesh = False
 
 GPSampler = MCMC(PyMCmodel.make_model(n_fmesh, fmesh_is_obsmesh))
-obs_V = utils.value(GPSampler.V)
-fe = GPSampler.sm.f_eval
-d = GPSampler.d
-
-if not fmesh_is_obsmesh:
-    pass
-    # GPSampler.use_step_method(gp.GPEvaluationMetropolis, GPSampler.sm.f_eval, proposal_sd = .01)
-else:
-    GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, GPSampler.V, GPSampler.d)
 
 GPSampler.assign_step_methods()
 sm = GPSampler.step_method_dict[GPSampler.sm.f_eval][0]

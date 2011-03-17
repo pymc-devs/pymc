@@ -15,7 +15,7 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis']
+__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis', 'MeshlessGPMetropolis']
 
 class GPStepMethod(pm.NoStepper):
     @staticmethod
@@ -96,6 +96,23 @@ for sm in filtered_registry:
 GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropolis)
 __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
+
+class MeshlessGPMetropolis(pm.Metropolis):
+    def __init__(self, gp):
+        pm.Metropolis.__init__(self, gp, proposal_distribution='Prior', check_before_accepting=False)
+    
+    def propose(self):
+        self.stochastic.rand()
+    
+    @staticmethod
+    def competence(stochastic):
+        if isinstance(stochastic, GaussianProcess):
+            if len(stochastic.submodel.mesh)==0:
+                return 3
+            else:
+                return 0
+        else:
+            return 0
 
 class _GPEvaluationMetropolis(pm.Metropolis):
     """

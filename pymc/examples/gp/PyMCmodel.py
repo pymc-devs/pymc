@@ -47,8 +47,8 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
     sm = gp.GPSubmodel('sm',M,C,fmesh)
 
     # Observation variance
-    V = pm.Lognormal('V', mu=-1, tau=1)
-    observed_values = pm.rnormal(actual_obs_locs**2,100)
+    V = pm.Lognormal('V', mu=-1, tau=1, value=.0001)
+    observed_values = pm.rnormal(actual_obs_locs**2,10000)
     # d_mu = sm.f_eval
     d_mu = sm.f(obs_locs)
 
