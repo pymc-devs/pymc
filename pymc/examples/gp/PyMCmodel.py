@@ -12,7 +12,7 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
     # Prior parameters of C
     nu = pm.Uniform('nu', 1., 3, value=1.5)
     phi = pm.Lognormal('phi', mu=.4, tau=1, value=1)
-    theta = pm.Lognormal('theta', mu=.5, tau=1, value=1, observed=True)
+    theta = pm.Lognormal('theta', mu=.5, tau=1, value=1)
 
     # The covariance dtrm C is valued as a Covariance object.
     @pm.deterministic
@@ -20,9 +20,9 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
         return gp.NearlyFullRankCovariance(eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
 
     # Prior parameters of M
-    a = pm.Normal('a', mu=1., tau=1.,value=1)
-    b = pm.Normal('b', mu=.5, tau=1.,value=0)
-    c = pm.Normal('c', mu=2., tau=1.,value=0)
+    a = pm.Normal('a', mu=1., tau=1., value=1)
+    b = pm.Normal('b', mu=.5, tau=1., value=0)
+    c = pm.Normal('c', mu=2., tau=1., value=0)
 
     # The mean M is valued as a Mean object.
     def linfun(x, a, b, c):
@@ -34,8 +34,6 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
 
     # The actual observation locations
     actual_obs_locs = np.linspace(-.8,.8,4)
-    
-    observed_values = actual_obs_locs**2
 
     if fmesh_is_obsmesh:
         obs_locs = actual_obs_locs
@@ -46,11 +44,11 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
         fmesh = np.linspace(-1,1,n_fmesh)
         
     # The GP submodel
-    sm = gp.GPSubmodel('sm',M,C,fmesh, init_vals=pm.gp.Realization(copy.copy(M.value), copy.copy(C.value), actual_obs_locs, observed_values)(fmesh))
+    sm = gp.GPSubmodel('sm',M,C,fmesh)
 
     # Observation variance
-    V = .01
-
+    V = pm.Lognormal('V', mu=-1, tau=1)
+    observed_values = pm.rnormal(actual_obs_locs**2,100)
     # d_mu = sm.f_eval
     d_mu = sm.f(obs_locs)
 

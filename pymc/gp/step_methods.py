@@ -99,11 +99,23 @@ locals().update(new_sm_dict)
 
 class _GPEvaluationMetropolis(pm.Metropolis):
     def propose(self):
-        delta = pm.rmv_normal_chol(self.stochastic.value, pm.utils.value(self.stochastic.parents['sig']))
+        sig = pm.utils.value(self.stochastic.parents['sig'])
         mu = pm.utils.value(self.stochastic.parents['mu'])
-        beta = self.proposal_sd * self.adaptive_scale_factor
-        # self.stochastic.value = (self.stochastic.value - mu)*np.sqrt(1-beta**2)+beta*delta+mu
-        self.stochastic.value = self.stochastic.value + beta*delta
+        
+        delta = pm.rmv_normal_chol(0*mu, sig)
+
+        beta = min(1, self.proposal_sd * self.adaptive_scale_factor)
+        bsig = beta*sig
+        sb2 = np.sqrt(1-beta**2)
+        self.stochastic.value = (self.stochastic.value - mu)*sb2+beta*delta+mu
+        xp,x = self.stochastic.value, self.stochastic.last_value
+        self._hastings_factor = pm.mv_normal_chol_like(x,(xp-mu)*sb2+mu,bsig) - pm.mv_normal_chol_like(xp,(x-mu)*sb2+mu,bsig)
+        
+        # self.stochastic.value = self.stochastic.value + self.adaptive_scale_factor*self.proposal_sd*delta
+        # self._hastings_factor = 0
+    
+    def hastings_factor(self):
+        return self._hastings_factor
         
     @staticmethod
     def competence(stochastic):

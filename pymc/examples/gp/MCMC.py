@@ -4,21 +4,15 @@ from pylab import *
 
 x = linspace(-1,1,400)
 
-n_fmesh = 21
+n_fmesh = 51
 fmesh_is_obsmesh = False
-
-# IDEA: SubsetMetropolis, proposes some elements of a GP conditional on others.
-# Ooh, or GP hit-and-run.
-# Or just a Metropolis in covariance directions, with tunable jump size.
 
 GPSampler = MCMC(PyMCmodel.make_model(n_fmesh, fmesh_is_obsmesh))
 obs_V = utils.value(GPSampler.V)
+fe = GPSampler.sm.f_eval
+d = GPSampler.d
 
 if not fmesh_is_obsmesh:
-    # offdiag = GPSampler.sm.C.value(GPSampler.fmesh, utils.value(GPSampler.obs_locs))
-    # inner = GPSampler.sm.C.value(utils.value(GPSampler.obs_locs), utils.value(GPSampler.obs_locs)) + obs_V*np.eye(offdiag.shape[1])
-    # sm_cov = np.asarray(GPSampler.sm.C_eval.value - offdiag*inner.I*offdiag.T)/10000.
-    # GPSampler.use_step_method(gp.GPParentAdaptiveMetropolis, GPSampler.sm.f_eval, cov=sm_cov)
     GPSampler.use_step_method(gp.GPEvaluationMetropolis, GPSampler.sm.f_eval, proposal_sd = .01)
 else:
     GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, GPSampler.V, GPSampler.d)
@@ -26,7 +20,7 @@ else:
 GPSampler.assign_step_methods()
 sm = GPSampler.step_method_dict[GPSampler.sm.f_eval][0]
 
-GPSampler.isample(iter=50000,burn=0,thin=1000)
+GPSampler.isample(iter=5000,burn=2500,thin=100)
 
 # Uncomment this for a medium run.
 # GPSampler.isample(iter=500,burn=0,thin=10)
@@ -49,7 +43,7 @@ if __name__ == '__main__':
         plot(x,f)
         mid_traces.append(f[len(f)/2])
         plot(obs_locs,GPSampler.d.value,'k.',markersize=16)
-    axis([x.min(),x.max(),-5.,10.])
+    axis([x.min(),x.max(),-2.,4.])
     title('Some samples of f')
 
     subplot(1,2,2)
@@ -60,11 +54,8 @@ if __name__ == '__main__':
     # Plot posterior of C and tau
     figure()
     subplot(2,2,1)
-    try:
-        plot(GPSampler.diff_degree.trace())
-        title("Degree of differentiability of f")
-    except:
-        pass
+    plot(GPSampler.nu.trace())
+    title("Degree of differentiability of f")
     
     subplot(2,2,2)
     plot(GPSampler.phi.trace())
@@ -74,10 +65,9 @@ if __name__ == '__main__':
     plot(GPSampler.theta.trace())
     title("X-axis scaling of f")
     
-    if isinstance(GPSampler.V, pymc.Variable):
-        subplot(2,2,4)
-        plot(GPSampler.V.trace())
-        title('Observation variance')
+    subplot(2,2,4)
+    plot(GPSampler.V.trace())
+    title('Observation variance')
     
     
     # Plot posterior of M
