@@ -31,6 +31,10 @@ in PyMC. People are encouraged to fork MCEx to try out their own designs and imp
 | chain history, and model all     | - hopefully robust                    |                                                   |
 | distinct                         |                                       |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
+| chain and chain history are      | - allows easier restarting of chains  |                                                   |
+| distinct                         |   and other manipulation of chains    |                                                   |
+|                                  |   separate from the history           |                                                   |
++----------------------------------+---------------------------------------+---------------------------------------------------+
 | objects constructed              | - more obvious to user                | - more verbose                                    |
 | explicitly by user               |   how package works                   |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
@@ -40,7 +44,9 @@ Future improvements
 
 - The design of the Model and Evaluation should be better. The goal is to handle the fact that 
   different step methods should be able to have different evaluation procedures but still have 
-  them organized in an intelligent way.
+  them organized in an intelligent way. There should be some kind of top level 'complete' model,
+  but step methods should be able to get some kind of 'view' on a model that can have 
+  specialized interaction and evaluation.
 - The use of VariableMapping (which encapsulate a mapping between values of free variables and 
   a vector) could use more thought. The goal is to make its use simple, obvious and non-awkward.
 - May be possible to create a coherent framework for sampling and doing things like finding the 
