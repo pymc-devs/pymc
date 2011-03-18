@@ -78,7 +78,7 @@ class covariance_wrapper(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, distance_fun_name, distance_fun_module):
+    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, distance_fun_name, distance_fun_module, with_x=False):
 
         self.cov_fun_name = cov_fun_name
         self.distance_fun_name = distance_fun_name
@@ -95,6 +95,7 @@ class covariance_wrapper(object):
         self.distance_fun = distance_fun
         self.extra_cov_params = extra_cov_params
         self.__doc__ = cov_fun_name + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
+        self.with_x = with_x
 
         # Add covariance parameters to function signature
         for parameter in extra_cov_params.iterkeys():
@@ -150,7 +151,10 @@ class covariance_wrapper(object):
             self.distance_fun(C, x, y, cmin=cmin, cmax=cmax, symm=symm, **d_kwargs)
             imul(C, 1./scale, cmin=cmin, cmax=cmax, symm=symm)
             # Compute covariance for this bit
-            self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
+            if self.with_x:
+                self.cov_fun(C,x,y,cmin=cmin, cmax=cmax,symm=symm,*c_args,**c_kwargs)
+            else:
+                self.cov_fun(C, cmin=cmin, cmax=cmax,symm=symm, *c_args, **c_kwargs)
             imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
 
         if n_threads <= 1:
@@ -234,24 +238,26 @@ class covariance_function_bundle(object):
           the output matrix will be symmetric.
     """
 
-    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, ampsq_is_diag=False):
+    def __init__(self, cov_fun_name, cov_fun_module, extra_cov_params, ampsq_is_diag=False, with_x=False):
 
         self.cov_fun_name = cov_fun_name
         self.cov_fun_module = cov_fun_module
         self.extra_cov_params = extra_cov_params
         self.ampsq_is_diag = ampsq_is_diag
+        
+        self.wrappers = []
 
-        self.add_distance_metric('euclidean','wrapped_distances')
-        self.add_distance_metric('geo_rad','wrapped_distances')
-        self.add_distance_metric('geo_deg','wrapped_distances')
-        self.add_distance_metric('aniso_geo_rad','wrapped_distances')
-        self.add_distance_metric('aniso_geo_deg','wrapped_distances')
-        self.add_distance_metric('partition_aniso_geo_deg','wrapped_distances')
-        self.add_distance_metric('partition_aniso_geo_rad','wrapped_distances')
+        self.add_distance_metric('euclidean','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('geo_rad','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('geo_deg','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('aniso_geo_rad','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('aniso_geo_deg','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('partition_aniso_geo_deg','wrapped_distances',with_x=with_x)
+        self.add_distance_metric('partition_aniso_geo_rad','wrapped_distances',with_x=with_x)
 
         self.raw = self.euclidean.cov_fun
 
-    def add_distance_metric(self, distance_fun_name, distance_fun_module):
+    def add_distance_metric(self, distance_fun_name, distance_fun_module, with_x):
         """
         Takes a function that computes a distance matrix for
         points in some coordinate system and returns self's
@@ -281,7 +287,8 @@ class covariance_function_bundle(object):
             kls = covariance_wrapper_with_diag
         else:
             kls = covariance_wrapper
-        new_fun = kls(self.cov_fun_name, self.cov_fun_module, self.extra_cov_params, distance_fun_name, distance_fun_module)
+        new_fun = kls(self.cov_fun_name, self.cov_fun_module, self.extra_cov_params, distance_fun_name, distance_fun_module, with_x=with_x)
+        self.wrappers.append(new_fun)
         # try:
         setattr(self, distance_fun_name, new_fun)
         # except:

@@ -7,28 +7,38 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential, ZeroProbability
+from PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
+                         ZeroProbability)
 import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from Node import logp_of_set
+from Node import logp_of_set, logp_gradient_of_set
+import types
+from datatypes import * 
+from collections import defaultdict
 
-from numpy import sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,\
-    pi, asarray, ones, atleast_1d, iterable, linspace, diff, around, log10, \
-    zeros, arange, digitize, apply_along_axis, concatenate, bincount, sort, \
-    hsplit, argsort, inf, shape, ndim, swapaxes, ravel, transpose as tr, \
-    diag, cov
+from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
+                   pi, asarray, ones, atleast_1d, iterable, linspace, diff,
+                   around, log10, zeros, arange, digitize, apply_along_axis,
+                   concatenate, bincount, sort, hsplit, argsort, inf, shape,
+                   ndim, swapaxes, ravel, diag, cov, transpose as tr)
 
-__all__ = ['check_list', 'autocorr', 'calc_min_interval', 'check_type', 'ar1', 'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf', 'make_indices', 'normcdf', 'quantiles', 'rec_getattr', 'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len', 'log_difference', 'find_generations','crawl_dataless', 'logit', 'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
+__all__ = ['append', 'check_list', 'autocorr', 'calc_min_interval',
+           'check_type', 'ar1',
+           'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
+           'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
+           'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len',
+           'log_difference', 'find_generations','crawl_dataless', 'logit',
+           'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
 
-symmetrize=flib.symmetrize
+symmetrize = flib.symmetrize
 
 def value(a):
     """
     Returns a.value if a is a Variable, or just a otherwise.
     """
-    if isinstance(a,Variable):
+    if isinstance(a, Variable):
         return a.value
     else:
         return a
@@ -55,49 +65,10 @@ def check_list(thing, label):
             return [thing]
         return thing
 
-
 # TODO: Look into using numpy.core.numerictypes to do this part.
-from numpy import bool_
-from numpy import byte, short, intc, int_, longlong, intp
-from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
-from numpy import single, float_, longfloat
-from numpy import csingle, complex_, clongfloat
+
 
 # TODO : Wrap the nd histogramming fortran function.
-
-integer_dtypes = [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
-float_dtypes = [float, single, float_, longfloat]
-complex_dtypes = [complex, csingle, complex_, clongfloat]
-bool_dtypes = [bool, bool_]
-def check_type(stochastic):
-    """
-    type, shape = check_type(stochastic)
-
-    Checks the type of a stochastic's value. Output value 'type' may be
-    bool, int, float, or complex. Nonnative numpy dtypes are lumped into
-    these categories. Output value 'shape' is () if the stochastic's value
-    is scalar, or a nontrivial tuple otherwise.
-    """
-    val = stochastic.value
-    if val.__class__ is bool:
-        return bool, ()
-    elif val.__class__ in [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
-        return int, ()
-    elif val.__class__ in [float, single, float_, longfloat]:
-        return float, ()
-    elif val.__class__ in [complex, csingle, complex_, clongfloat]:
-        return complex, ()
-    elif isinstance(val, ndarray):
-        if obj2sctype(val) is bool_:
-            return bool, val.shape
-        elif obj2sctype(val) in [byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]:
-            return int, val.shape
-        elif obj2sctype(val) in [single, float_, longfloat]:
-            return float, val.shape
-        elif obj2sctype(val) in [csingle, complex_, clongfloat]:
-            return complex, val.shape
-    else:
-        return 'object', ()
 
 def safe_len(val):
     if np.isscalar(val):
@@ -428,6 +399,11 @@ def normcdf(x):
     """Normal cumulative density function."""
     x = np.atleast_1d(x)
     return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+    
+def lognormcdf(x, mu, tau):
+    """Log-normal cumulative density function"""
+    x = np.atleast_1d(x)
+    return np.array([0.5*(1-flib.derf(-(np.sqrt(tau/2))*(np.log(y)-mu))) for y in x])
 
 def invcdf(x):
     """Inverse of normal cumulative density function."""
@@ -492,10 +468,10 @@ def autocorr(x, lag=1):
     #     return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
     S = autocov(x, lag)
     return S[0,1]/sqrt(prod(diag(S)))
-    
+
 def autocov(x, lag=1):
     """
-    Sample autocovariance at specified lag. 
+    Sample autocovariance at specified lag.
     The autocovariance is a 2x2 matrix with the variances of
     x[:-lag] and x[lag:] in the diagonal and the autocovariance
     on the off-diagonal.
@@ -676,7 +652,7 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
     # For multivariate node
     if x.ndim>1:
         # Transpose first, then sort, then transpose back
-        sx = tr(sort(tr(x)))
+        sx = sort(x.T).T
     else:
         # Sort univariate node
         sx = sort(x)
@@ -795,8 +771,8 @@ def crawl_dataless(sofar, gens):
     new_gen = set([])
     all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
     for p in all_ext_parents:
-        if p._random is not None:
-            if len(p.extended_children & sofar) == len(p.extended_children):
+        if p._random is not None and not p.observed:
+            if len(p.extended_children-sofar) == 0:
                 new_gen.add(p)
     if len(new_gen)==0:
         return sofar, gens
@@ -850,5 +826,69 @@ def find_generations(container, with_data = False):
             children_remaining = False
     return generations
 
+def append(nodelist, node, label=None, sep='_'):
+    """
+    Append function to automate the naming of list elements in Containers.
+    
+    :Arguments:
+        - `nodelist` : List containing nodes for Container.
+        - `node` : Node to be added to list.
+        - `label` : Label to be appended to list (If not passed, 
+        defaults to element number).
+        - `sep` : Separator character for label (defaults to underscore).
+        
+    :Return:
+        - `nodelist` : Passed list with node added.
+    
+    """
+    
+    nname = node.__name__
+    
+    # Determine label
+    label = label or len(nodelist)
+    
+    # Look for separator at the end of name
+    ind = nname.rfind(sep)
+    
+    # If there is no separator, we will remove last character and 
+    # replace with label.
+    node.__name__ = nname[:ind] + sep + str(label)
+    
+    nodelist.append(node)
+    
+    return nodelist
 
 
+    
+#deterministic related utilities
+
+def find_element(names, modules, error_on_fail):
+    element = None
+    found = False
+    
+    if type(names) is str:
+        names = [names]
+        
+    if type(modules) is dict or type(modules) is types.ModuleType:
+        modules = [modules]
+         
+    for module in modules:
+        
+        if type(module) is types.ModuleType:
+            module = copy(module.__dict__)
+        elif type(module) is dict:
+            module = copy(module)
+        else:
+            raise AttributeError
+        
+        for name in names:
+            try:
+                function = module[name]
+                found = True
+            except KeyError:
+                pass
+            
+    if not found and error_on_fail:
+        raise NameError("no function or variable " + str(names) + " in " + str(modules))
+        
+    return function

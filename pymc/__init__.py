@@ -7,7 +7,7 @@ pymc only requires NumPy. All other dependencies such as matplotlib, SciPy, pyta
 
 """
 
-__version__ = '2.1alpha'
+__version__ = '2.2grad'
 
 try:
     import numpy
@@ -26,17 +26,22 @@ from Container import *
 from PyMCObjects import *
 from InstantiationDecorators import *
 from CommonDeterministics import *
+from NumpyDeterministics import *
 from distributions import *
 from Model import *
 from StepMethods import *
 from MCMC import *
 from NormalApproximation import *
 
+
+
 from tests import test
 
 # Utilities modules
 import utils
+append = utils.append
 import CommonDeterministics
+import NumpyDeterministics
 from CircularStochastic import *
 import distributions
 import gp

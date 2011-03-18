@@ -34,7 +34,7 @@ def wrap_metropolis_for_gp_parents(metro_class):
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
-            
+
             mb = set(self.markov_blanket)
             for c in list(self.children):
                 if isinstance(c, GaussianProcess):
@@ -43,7 +43,7 @@ def wrap_metropolis_for_gp_parents(metro_class):
             self.markov_blanket = list(mb)
             
             # Remove f from the set that will be used to compute logp_plus_loglike.
-            self.markov_blanket_no_f = filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket)
+            self.markov_blanket_no_f = set(filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket))
             self.fs = filter(lambda x: isinstance(x, GaussianProcess), self.markov_blanket)
             self.fr_checks = [f.submodel.fr_check for f in self.fs]
 
@@ -180,7 +180,7 @@ class GPEvaluationGibbs(pm.Metropolis):
                 self.children_no_data.discard(epf)
             self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=False)
         
-        self.V = V
+        self.V = pm.Lambda('%s_vect'%V.__name__, lambda V=V: np.resize(V, len(submod.mesh)))
         self.C_eval = submod.C_eval
         self.M_eval = submod.M_eval
         self.S_eval = submod.S_eval
@@ -227,6 +227,7 @@ class GPEvaluationGibbs(pm.Metropolis):
         return False
             
     def propose(self):
+
         if self.verbose:
             print self._id + ' proposing'
 
@@ -244,8 +245,11 @@ class GPEvaluationGibbs(pm.Metropolis):
         # Get the Cholesky factor of C_eval, plus the nugget.
         # I don't think you can use S_eval for speed, unfortunately.
         in_chol = fc(C_eval_value, self.scratch1)
+
+        v_val = pm.utils.value(self.V)
         for i in xrange(pm.utils.value(C_eval_shape)[0]):
-            in_chol[i,i] += pm.utils.value(self.V) / np.alen(self.ti[i])
+            in_chol[i,i] += v_val[i] / np.alen(self.ti[i])
+
         info = pm.gp.linalg_utils.dpotrf_wrap(in_chol)
         if info > 0:
             raise np.linalg.LinAlgError

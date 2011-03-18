@@ -59,7 +59,7 @@ init_x = data_x.clip(min=0, max=50)
 # Inferred true inputs.
 x = Uniform('x', lower=0, upper=50, value=init_x)
 
-@deterministic
+@deterministic(plot=False)
 def modelled_y(x=x, theta=theta):
     """Return y computed from the straight line model, given the
     inferred true inputs and the model paramters."""

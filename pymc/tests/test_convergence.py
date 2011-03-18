@@ -4,7 +4,7 @@
 #
 ###
 
-
+from __future__ import with_statement
 from numpy.testing import assert_equal, assert_array_equal, assert_approx_equal, TestCase
 import unittest
 import numpy as np
@@ -15,7 +15,7 @@ import copy
 
 
 S = pymc.MCMC(model, 'ram')
-S.sample(10000, 2000)
+S.sample(10000, 2000, progress_bar=0)
 #a = S.a.trace()
 #b = S.b.trace()
 
@@ -81,12 +81,12 @@ class test_gelman_rubin(TestCase):
     def test_simple(self):
         
         S2 = copy.copy(S)
-        S2.sample(10000, 2000)
+        S2.sample(10000, 2000, progress_bar=0)
         
         gr = pymc.gelman_rubin(S2)
         
         for i in gr:
-            assert_approx_equal(gr[i], 1., 3)
+            assert_approx_equal(gr[i], 1., 2)
         
         
 class test_iat(TestCase):

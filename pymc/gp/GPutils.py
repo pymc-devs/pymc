@@ -173,7 +173,7 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
         x = b.copy('F')
     if U.shape[0] == 0:
         raise ValueError, 'Attempted to solve zero-rank triangular system'
-    dtrsm_wrap(a=U,b=x,uplo=uplo,transa=transa,alpha=alpha)
+    dtrsm_wrap(a=U,b=x,side='L',uplo=uplo,transa=transa,alpha=alpha)
     return x
 
 def regularize_array(A):

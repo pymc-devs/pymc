@@ -121,7 +121,12 @@ class Model(ObjectContainer):
                         value = s.random(**s.parents.value)
                 except:
                     pass
-
+    
+    def get_node(self, node_name):
+        """Retrieve node with passed name"""
+        for node in self.nodes:
+            if node.__name__ is node_name:
+                return node 
 
 
 

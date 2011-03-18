@@ -6,7 +6,10 @@ from __future__ import division
 
 # Import matplotlib functions
 import matplotlib
-import matplotlib.gridspec as gridspec
+try:
+    import matplotlib.gridspec as gridspec
+except ImportError:
+    gridspec = None
 import pymc
 import os
 from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig
@@ -19,7 +22,7 @@ from pprint import pformat
 from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
-from numpy import append, ones, dtype, indices, array
+from numpy import append, ones, dtype, indices, array, unique
 from utils import autocorr as _autocorr, quantiles as calc_quantiles
 import pdb
 from scipy import special
@@ -414,7 +417,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             # Final subplot of current figure?
             _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
 
-            plot(tdata[i], name+'_'+str(i), format=format, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
+            plot(tdata[i], name+'_'+str(i), format=format, path=path, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
 
 @plotwrapper
@@ -433,7 +436,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         subplot(rows, columns, num)
 
         #Specify number of bins (10 as default)
-        nbins = nbins or int(4 + 1.5*log(len(data)))
+        uniquevals = len(unique(data))
+        nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
 
         # Generate histogram
         hist(data.tolist(), nbins)
@@ -577,7 +581,7 @@ def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', pat
 
 def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
-    
+
     try:
         if ndim(simdata)==1:
             simdata = simdata.trace()
@@ -597,7 +601,8 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     figure()
 
     #Specify number of bins (10 as default)
-    nbins = nbins or int(4 + 1.5*log(len(simdata)))
+    uniquevals = len(unique(simdata))
+    nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(simdata)))
 
     # Generate histogram
     hist(simdata, nbins)
@@ -710,7 +715,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
             # Current subplot number
             _num = i % _rows + 1
             # Final subplot of current figure?
-            _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
+            _last = not _num % _rows or (i==len(tdata)-1)
 
             autocorrelation(tdata[i], name+'_'+str(i), maxlag=maxlag, format=format, suffix=suffix, path=path, fontmap=fontmap, new=_new, last=_last, rows=_rows, num=_num, verbose=verbose)
     
@@ -904,14 +909,14 @@ def var_str(name, shape):
     size = prod(shape)
     ind = (indices(shape) + 1).reshape(-1, size)
     names = ['['+','.join(map(str, i))+']' for i in zip(*ind)]
-    if len(name)>6:
-        name = '\n'.join(name.split('_'))
-        name += '\n'
+    # if len(name)>12:
+    #     name = '\n'.join(name.split('_'))
+    #     name += '\n'
     names[0] = '%s %s' % (name, names[0])
     return names 
     
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05,  rhat=True, chain_spacing=0.05, vline_pos=0):
+def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, rhat=True, main=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
     
@@ -935,7 +940,12 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
             
         rhat (optional): bool
-            Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains (defaults to True).
+            Flag for plotting Gelman-Rubin statistics. Requires 2 or more 
+            chains (defaults to True).
+            
+        main (optional): string
+            Title for main plot. Passing False results in titles being 
+            suppressed; passing False (default) results in default titles.
             
         chain_spacing (optional): float
             Plot spacing between chains (defaults to 0.05).
@@ -945,8 +955,14 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     
     """
     
+    if not gridspec:
+        print '\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.'
+        return
+    
     # Quantiles to be calculated
     quantiles = [100*alpha/2, 50, 100*(1-alpha/2)]
+    if quartiles:
+        quantiles = [100*alpha/2, 25, 50, 75, 100*(1-alpha/2)]
 
     # Range for x-axis
     plotrange = None
@@ -994,9 +1010,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         traces = []
         while True:
            try:
-               traces.append(pymc_obj.trace(varname, chain=i)[:])
+               #traces.append(pymc_obj.trace(varname, chain=i)[:])
+               traces.append(variable.trace(chain=i))
                i+=1
-           except KeyError:
+           except (KeyError, IndexError):
                break
                
         chains = len(traces)
@@ -1038,7 +1055,8 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             names = var_str(varname, shape(value))
             labels += names
         else:
-            labels.append('\n'.join(varname.split('_')))
+            labels.append(varname)
+            #labels.append('\n'.join(varname.split('_')))
             
         # Add spacing for each chain, if more than one
         e = [0] + [(chain_spacing * ((i+2)/2))*(-1)**i for i in range(chains-1)]
@@ -1054,25 +1072,42 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                     # Y coordinate with jitter
                     y = -(var+i) + e[j]
                     
-                    # Plot median
-                    pyplot(q[1], y, 'bo')
+                    if quartiles:
+                        # Plot median
+                        pyplot(q[2], y, 'bo', markersize=4)
+                        # Plot quartile interval
+                        errorbar(x=(q[1],q[3]), y=(y,y), linewidth=2, color="blue")
+                        
+                    else:
+                        # Plot median
+                        pyplot(q[1], y, 'bo', markersize=4)
 
                     # Plot outer interval
-                    errorbar(x=(q[0],q[2]), y=(y,y), linewidth=1, color="blue")
+                    errorbar(x=(q[0],q[-1]), y=(y,y), linewidth=1, color="blue")
 
             else:
                 
                 # Y coordinate with jitter
                 y = -var + e[j]
                 
-                # Plot median
-                pyplot(quants[1], y, 'bo')
+                if quartiles:
+                    # Plot median
+                    pyplot(quants[2], y, 'bo', markersize=4)
+                    # Plot quartile interval
+                    errorbar(x=(quants[1],quants[3]), y=(y,y), linewidth=2, color="blue")
+                else:
+                    # Plot median
+                    pyplot(quants[1], y, 'bo', markersize=4)
                 
                 # Plot outer interval
-                errorbar(x=(quants[0],quants[2]), y=(y,y), linewidth=1, color="blue")
+                errorbar(x=(quants[0],quants[-1]), y=(y,y), linewidth=1, color="blue")
             
         # Increment index
         var += k
+        
+    # Update margins
+    left_margin = max([len(x) for x in labels])*0.015
+    gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
         
     # Define range of y-axis
     ylim(-var+0.5, -0.5)
@@ -1084,7 +1119,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     ylabels = yticks([-(l+1) for l in range(len(labels))], labels)        
             
     # Add title
-    title(str(int((1-alpha)*100)) + "% Credible Intervals")
+    if main is not False:
+        plot_title = main or str(int((1-alpha)*100)) + "% Credible Intervals"
+        title(plot_title)
     
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
@@ -1099,7 +1136,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             spine.set_color('none') # don't draw spine
       
     # Reference line
-    axvline(vline_pos, color='0.5')  
+    axvline(vline_pos, color='k', linestyle='--')  
         
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
@@ -1109,17 +1146,23 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
         
-        title("R-hat")
+        if main is not False:
+            title("R-hat")
         
         # Set x range
         xlim(0.9,2.1)
         
         # X axis labels
-        xticks((1.0,1.5,2.0), ("1", "", "2+"))
+        xticks((1.0,1.5,2.0), ("1", "1.5", "2+"))
         yticks([-(l+1) for l in range(len(labels))], "")
         
         # Calculate diagnostic
-        R = gelman_rubin(pymc_obj)
+        try:
+            R = gelman_rubin(pymc_obj)
+        except ValueError:
+            R = {}
+            for variable in vars:
+                R[variable.__name__] = gelman_rubin(variable)
         
         i = 1
         for variable in vars:
@@ -1138,9 +1181,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             k = size(value)
             
             if k>1:
-                pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo')
+                pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo', markersize=4)
             else:
-                pyplot(min(R[varname], 2), -i, 'bo')
+                pyplot(min(R[varname], 2), -i, 'bo', markersize=4)
     
             i += k
             

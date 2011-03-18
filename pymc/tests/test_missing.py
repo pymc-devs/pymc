@@ -25,7 +25,7 @@ class TestMissing(TestCase):
         M = MCMC([mu, s, tau, x])
         
         # Run sampler
-        M.sample(10000, 5000)
+        M.sample(10000, 5000, progress_bar=0)
         
         # Check length of value
         assert_equal(len(x.value), 100)
@@ -36,4 +36,4 @@ class TestMissing(TestCase):
         sd2 = [-2 < i < 2 for i in ravel(tr)]
         
         # Check for standard normal output
-        assert_almost_equal(sum(sd2)/10000., 0.95, decimal=2)
+        assert_almost_equal(sum(sd2)/10000., 0.95, decimal=1)

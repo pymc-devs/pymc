@@ -37,8 +37,8 @@ and the database relays the finalize call to each Trace object.
 To get the samples from the database, the Sampler class provides a trace method
 ``trace(self, name, chain=-1)`` which first sets the db attribute
 _default_chain to chain and returns the trace instance, so that calling
-S.trace('e')[:] will return all samples from the last chain. One potential
-problem with this is that user could simply do ``S.trace('e') = 5`` and
+S.trace('early_mean')[:] will return all samples from the last chain. One potential
+problem with this is that user could simply do ``S.trace('early_mean') = 5`` and
 erase the Trace object. A read-only dictionary-like class could solve
 that problem.
 

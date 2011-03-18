@@ -125,6 +125,7 @@ That is, if the function $f$ is regarded as a random vector in a possibly infini
 
 The mean vectors and covariance matrices of these marginal distributions are obtained by evaluating the mean and covariance of $f$. Because the covariance matrices must all be positive semidefinite, the covariance $C$ must have the property that $C(x,x)$ is positive semidefinite for any $x$. Such covariances are called `positive definite functions' \citep{diggle}. 
 
+
 This conceptual simplicity belies the expressive power of the GP formalism; $M$ and $C$ can be chosen to precisely tune some properties of $f$, yet leave others relatively unconstrained. Since $M(x)=\E[f(x)]$, the mean $M$ translates $f$. The effects of the covariance $C$ on $f$ are more subtle. Since $\textup{diag}[C(x,x)]=\VAR[f(x)]$, the covariance determines the expectation of $[f(x)-M(x)]^2$; but when the domain $\mathbb X$ is $\mathbb R^n$, the covariance also affects or determines other properties of $f$ that do not have analogues in finite-dimensional multivariate normal random variables (see section~\ref{subsub:cov}).
 
 As methodologically straightforward, highly flexible probability distributions for functions, GPs are popular in Bayesian statistics as priors for unknown functions. This paper presents a software package that implements GPs in the programming language \proglang{Python} and equips the Bayesian analysis package \pkg{PyMC} \cite{pymc} to sample from the posteriors of Bayesian probability models that contain GPs. 

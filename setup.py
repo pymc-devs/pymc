@@ -21,7 +21,7 @@ dist = sys.argv[1]
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
 # Otherwise compile blas and lapack from netlib sources.
 lapack_info = get_info('lapack_opt',1)
-f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/math.f', 'pymc/gibbsit.f', 'cephes/i0.c',
+f_sources = ['pymc/flib.f','pymc/histogram.f', 'pymc/flib_blas.f', 'pymc/blas_wrap.f', 'pymc/math.f', 'pymc/gibbsit.f', 'cephes/i0.c',
              'cephes/c2f.c','cephes/chbevl.c']
 if lapack_info:
     config.add_extension(name='flib',sources=f_sources, extra_info=lapack_info, f2py_options=['skip:ppnd7'])
@@ -64,12 +64,12 @@ except:
 
 # Compile linear algebra utilities
 if lapack_info:
-    config.add_extension(name='gp.linalg_utils',sources=['pymc/gp/linalg_utils.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.linalg_utils',sources=['pymc/gp/linalg_utils.f','pymc/blas_wrap.f'], extra_info=lapack_info)
     config.add_extension(name='gp.incomplete_chol',sources=['pymc/gp/incomplete_chol.f'], extra_info=lapack_info)
 
 if not lapack_info or dist in ['bdist', 'sdist']:
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
-    f_sources = []
+    f_sources = ['pymc/blas_wrap.f']
     for fname in os.listdir('blas/BLAS'):
         if fname[-2:]=='.f':
             f_sources.append('blas/BLAS/'+fname)
@@ -93,7 +93,7 @@ config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/dis
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="2.1beta",
+    setup(  version="2.2alpha",
             description="Markov Chain Monte Carlo sampling toolkit.",
             #maintainer="David Huard",
             #maintainer_email="david.huard@gmail.com",
