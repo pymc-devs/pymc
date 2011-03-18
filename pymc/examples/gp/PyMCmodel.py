@@ -36,11 +36,11 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
     actual_obs_locs = np.linspace(-.8,.8,4)
 
     if fmesh_is_obsmesh:
-        obs_locs = actual_obs_locs
-        fmesh = obs_locs
+        o = actual_obs_locs
+        fmesh = o
     else:    
         # The unknown observation locations
-        obs_locs = pm.Normal('obs_locs', actual_obs_locs, 1000., value=actual_obs_locs)
+        o = pm.Normal('o', actual_obs_locs, 1000., value=actual_obs_locs)
         fmesh = np.linspace(-1,1,n_fmesh)
         
     # The GP submodel
@@ -49,10 +49,8 @@ def make_model(n_fmesh=11, fmesh_is_obsmesh=False):
     # Observation variance
     V = pm.Lognormal('V', mu=-1, tau=1, value=.0001)
     observed_values = pm.rnormal(actual_obs_locs**2,10000)
-    # d_mu = sm.f_eval
-    d_mu = sm.f(obs_locs)
 
     # The data d is just array-valued. It's normally distributed about GP.f(obs_x).
-    d = pm.Normal('d',mu=d_mu, tau=1./V, value=observed_values, observed=True)
+    d = pm.Normal('d',mu=sm.f(o), tau=1./V, value=observed_values, observed=True)
     
     return locals()

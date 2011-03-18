@@ -1,6 +1,8 @@
 import PyMCmodel
 from pymc import *
 from pylab import *
+import matplotlib
+matplotlib.rcParams['axes.facecolor']='w'
 
 x = linspace(-1,1,400)
 
@@ -29,18 +31,23 @@ if __name__ == '__main__':
     close('all')
 
     mid_traces = []
+    figure(figsize=(12,6))
     subplot(1,2,1)
     for i in range(0,N_samps):
         f=GPSampler.sm.f.trace()[i](x)
-        plot(x,f)
+        plot(x,f,linewidth=2)
         mid_traces.append(f[len(f)/2])
         plot(obs_locs,GPSampler.d.value,'k.',markersize=16)
     axis([x.min(),x.max(),-2.,4.])
+    xlabel('x')
+    ylabel('f(x)')
     title('Some samples of f')
 
     subplot(1,2,2)
 
-    plot(mid_traces)
+    plot(mid_traces,linewidth=4)
+    xlabel('iteration')
+    ylabel('f(0)')
     title('The trace of f at midpoint')
     
     # Plot posterior of C and tau
