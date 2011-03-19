@@ -4,14 +4,11 @@
 Probability distributions
 *************************
 
-PyMC provides 35 built-in probability distributions. For each
-distribution, it provides:
+PyMC provides a large suite of built-in probability distributions. For each distribution, it provides:
 
-* A function that evaluates its log-probability or log-density:
-  normal_like().
+* A function that evaluates its log-probability or log-density: normal_like().
 * A function that draws random variables: rnormal().
-* A function that computes the expectation associated with the
-  distribution: normal_expval().
+* A function that computes the expectation associated with the distribution: normal_expval().
 * A Stochastic subclass generated from the distribution: Normal.
 
 This section describes the likelihood functions of these distributions.
@@ -37,6 +34,7 @@ Discrete distributions
 
 .. autofunction:: poisson_like
 
+.. autofunction:: truncated_poisson_like
 
 
 Continuous distributions
@@ -66,13 +64,19 @@ Continuous distributions
 
 .. autofunction:: lognormal_like
 
+.. autofunction:: noncentral_t_like
+
 .. autofunction:: normal_like
+
+.. autofunction:: pareto_like
 
 .. autofunction:: skew_normal_like
 
 .. autofunction:: t_like
 
-.. autofunction:: truncnorm_like
+.. autofunction:: truncated_normal_like
+
+.. autofunction:: truncated_pareto_like
 
 .. autofunction:: uniform_like
 
