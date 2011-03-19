@@ -3,7 +3,7 @@ from numpy import *
 from copy import copy
 from pymc.gp import *
 
-N=100
+N=25
 
 # Generate mean
 def quadfun(x, a, b, c):
@@ -65,5 +65,7 @@ if __name__ == '__main__':
         plot(x,f(x))
         title('Three realizations')
 
+
+    plot(obs_x,data,'k.',markersize=16)
 
     # show()

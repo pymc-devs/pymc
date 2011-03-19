@@ -15,7 +15,15 @@ from Mean import Mean
 from Covariance import Covariance
 from GPutils import observe, regularize_array
 
-__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis']
+__all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis', 'MeshlessGPMetropolis']
+
+class GPStepMethod(pm.NoStepper):
+    @staticmethod
+    def competence(stochastic):
+        if isinstance(stochastic, GaussianProcess):
+            return 1
+        else:
+            return 0
 
 def wrap_metropolis_for_gp_parents(metro_class):
     """
@@ -26,9 +34,16 @@ def wrap_metropolis_for_gp_parents(metro_class):
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
+
+            mb = set(self.markov_blanket)
+            for c in list(self.children):
+                if isinstance(c, GaussianProcess):
+                    self.children |= c.extended_children
+                    mb |= c.extended_children
+            self.markov_blanket = list(mb)
             
             # Remove f from the set that will be used to compute logp_plus_loglike.
-            self.markov_blanket_no_f = filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket)
+            self.markov_blanket_no_f = set(filter(lambda x: not isinstance(x, GaussianProcess), self.markov_blanket))
             self.fs = filter(lambda x: isinstance(x, GaussianProcess), self.markov_blanket)
             self.fr_checks = [f.submodel.fr_check for f in self.fs]
 
@@ -82,6 +97,60 @@ GPParentAdaptiveMetropolis = wrap_metropolis_for_gp_parents(pm.AdaptiveMetropoli
 __all__ += new_sm_dict.keys()
 locals().update(new_sm_dict)
 
+class MeshlessGPMetropolis(pm.Metropolis):
+    def __init__(self, gp):
+        pm.Metropolis.__init__(self, gp, proposal_distribution='Prior', check_before_accepting=False)
+    
+    def propose(self):
+        self.stochastic.rand()
+    
+    @staticmethod
+    def competence(stochastic):
+        if isinstance(stochastic, GaussianProcess):
+            if len(stochastic.submodel.mesh)==0:
+                return 3
+            else:
+                return 0
+        else:
+            return 0
+
+class _GPEvaluationMetropolis(pm.Metropolis):
+    """
+    Updates a GP evaluation, the 'f_eval' attribute of a GP submodel. 
+    The stationary distribution of the assymetric proposal is equal 
+    to the prior distribution, an attempt to minimize jumps to values
+    forbidden by the prior.
+    """
+    def __init__(self, stochastic, proposal_sd=1, **kwds):
+        pm.Metropolis.__init__(self, stochastic, proposal_sd=proposal_sd, **kwds)
+    
+    def propose(self):
+        sig = pm.utils.value(self.stochastic.parents['sig'])
+        mu = pm.utils.value(self.stochastic.parents['mu'])
+        
+        delta = pm.rmv_normal_chol(0*mu, sig)
+
+        beta = np.minimum(1, self.proposal_sd * self.adaptive_scale_factor)
+        bsig = beta*sig
+        sb2 = np.sqrt(1-beta**2)
+        self.stochastic.value = (self.stochastic.value - mu)*sb2+beta*delta+mu
+        xp,x = self.stochastic.value, self.stochastic.last_value
+        self._hastings_factor = pm.mv_normal_chol_like(x,(xp-mu)*sb2+mu,bsig) - pm.mv_normal_chol_like(xp,(x-mu)*sb2+mu,bsig)
+        
+        # self.stochastic.value = self.stochastic.value + self.adaptive_scale_factor*self.proposal_sd*delta
+        # self._hastings_factor = 0
+    
+    def hastings_factor(self):
+        return self._hastings_factor
+        
+    @staticmethod
+    def competence(stochastic):
+        if isinstance(stochastic, GPEvaluation):
+            return 3
+        else:
+            return 0
+
+GPEvaluationMetropolis = wrap_metropolis_for_gp_parents(_GPEvaluationMetropolis)
 
 class GPEvaluationGibbs(pm.Metropolis):
     """
