@@ -1,8 +1,12 @@
 .. List of References
 
+******************
+List of References
+******************
+
 .. [Akaike_1973] H. Akaike. Information theory as an extension of the maximum likelihood principle. In B.N. Petrov and F. Csaki, editors, Second International Symposium on Information Theory, pages 267–281, Akademiai Kiado, Budapest, 1973.
 
-.. [] J.M. Bernardo, J. Berger, A.P. Dawid, and J.F.M. Smith, editors. Bayesian Statistics 4. Oxford University Press, Oxford, 1992.
+.. [Bernardo_1992] J.M. Bernardo, J. Berger, A.P. Dawid, and J.F.M. Smith, editors. Bayesian Statistics 4. Oxford University Press, Oxford, 1992.
 
 .. [Brooks_2000] S.P. Brooks, E.A. Catchpole, and B.J.T. Morgan. Bayesian animal survival estimation. Statistical Science, 15: 357–376, 2000.
 

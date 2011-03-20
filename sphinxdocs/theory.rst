@@ -7,38 +7,26 @@ Appendix: Markov Chain Monte Carlo
 Monte Carlo Methods in Bayesian Analysis
 ========================================
 
-Bayesian analysis often requires integration over multiple dimensions that is
-intractable both via analytic methods or standard methods of numerical
-integration. However, it is often possible to compute these integrals by
-simulating (drawing samples) from posterior distributions. For example, consider
-the expected value of a random variable :math:`\mathbf{x}`:
-
+Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating (drawing samples) from posterior distributions. For example, consider the expected value of a random variable :math:`\mathbf{x}`:
    
 .. math::
    E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
    {\bf x} = \{x_1,...,x_k\}
 
-where :math:`k` (the dimension of vector :math:`x`) is perhaps very large. If we
-can produce a reasonable number of random vectors :math:`\{{\bf x_i}\}`, we can
-use these values to approximate the unknown integral. This process is known as
-*Monte Carlo integration*. In general, MC integration allows integrals against
-probability density functions:
+where :math:`k` (the dimension of vector :math:`x`) is perhaps very large. If we can produce a reasonable number of random vectors :math:`\{{\bf x_i}\}`, we can use these values to approximate the unknown integral. This process is known as *Monte Carlo integration*. In general, MC integration allows integrals against probability density functions:
    
 .. math::
    I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
 
 to be estimated by finite sums:
-
    
 .. math::
    \hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),
 
-where :math:`\mathbf{x}_i` is a sample from :math:`f`. This estimate is valid
-and useful because:
+where :math:`\mathbf{x}_i` is a sample from :math:`f`. This estimate is valid and useful because:
 
 * By the strong law of large numbers:
 
-     
 .. math::
      \hat{I} \rightarrow I   \mbox{   with probability 1}
      
@@ -50,11 +38,7 @@ and useful because:
 
      \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\end{equation}
      
-Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})`
-with a posterior, :math:`f(\theta|d)` and make :math:`h(\theta)` an interesting
-function of the unknown parameter, the resulting expectation is that of the
-posterior of :math:`h(\theta)`:
-
+Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})` with a posterior, :math:`f(\theta|d)` and make :math:`h(\theta)` an interesting function of the unknown parameter, the resulting expectation is that of the posterior of :math:`h(\theta)`:
    
 .. math::
   :nowrap:
@@ -67,23 +51,11 @@ posterior of :math:`h(\theta)`:
 Rejection Sampling
 ------------------
 
-Though Monte Carlo integration allows us to estimate integrals that are
-unassailable by analysis and standard numerical methods, it relies on the
-ability to draw samples from the posterior distribution. For known parametric
-forms, this is not a problem; probability integral transforms or bivariate
-techniques (e.g Box-Muller method) may be used to obtain samples from uniform
-pseudo-random variates generated from a computer. Often, however, we cannot
-readily generate random values from non-standard posteriors. In such instances,
-we can use rejection sampling to generate samples.
+Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the  ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
 
-Posit a function, :math:`f(x)` which can be evaluated for any value on the
-support of :math:`x:S_x = [A,B]`, but may not be integrable or easily sampled
-from. If we can calculate the maximum  value of :math:`f(x)`, we can then define
-a rectangle that is guaranteed to contain all possible values :math:`(x,f(x))`.
-It is then trivial to generate points over the box and enumerate the values that
-fall under the curve (Figure :ref:`rejection <fig:bound>`).
+Posit a function, :math:`f(x)` which can be evaluated for any value on the support of :math:`x:S_x = [A,B]`, but may not be integrable or easily sampled from. If we can calculate the maximum  value of :math:`f(x)`, we can then define a rectangle that is guaranteed to contain all possible values :math:`(x,f(x))`. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure :ref:`bound`).
 
-.. _fig:bound:
+.. _bound:
 
 .. figure:: figs/reject.png
    :alt: Rejection figure.
@@ -97,10 +69,9 @@ fall under the curve (Figure :ref:`rejection <fig:bound>`).
 .. math::
    \frac{\mbox{Points under curve}}{\mbox{Points generated}} \times \mbox{box area} = \lim_{n \to \infty} \int_A^B f(x) dx
 
-This approach is useful, for example, in estimating the normalizing constant for
-posterior distributions.
+This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
 
-.. _fig:unbound:
+.. _unbound:
 
 .. figure:: figs/envelope.png
    :alt: envelope figure
@@ -109,109 +80,89 @@ posterior distributions.
    
    Rejection sampling of an unbounded form using an enveloping distribution.
 
-If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian
-distribution, a bounding box is no longer appropriate. We must specify a
-majorizing (or, enveloping) function, :math:`g(x)`, which implies:
+If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian distribution, a bounding box is no longer appropriate. We must specify a majorizing (or, enveloping) function, :math:`g(x)`, which implies:
 
    
 .. math::
    g(x) \ge  f(x) \qquad\forall x \in (-\infty,\infty)
 
-Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept
-or reject each of these values based upon :math:`f(x_i)`. Specifically, for each
-draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept
-:math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant
-(Figure :ref:`unbound <fig:unbound>`). This approach is made more efficient by choosing an
-enveloping distribution that is "close" to the target distribution, thus
-maximizing the number of accepted points. Further improvement is gained by using
-optimized algorithms such as importance sampling which, as the name implies,
-samples more frequently from important areas of the distribution.
+Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept or reject each of these values based upon :math:`f(x_i)`. Specifically, for each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant (Figure :ref:`unbound <fig:unbound>`). This approach is made more efficient by choosing an enveloping distribution that is "close" to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
 
-Rejection sampling is usually subject to declining performance as the dimension
-of the parameter space increases, so it is used less frequently than MCMC for
-evaluation of posterior distributions [Gamerman:1997]_.
+Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman_1997]_.
 
 
 Markov Chains
 =============
 
-A Markov chain is a special type of *stochastic process*. The standard
-definition of a stochastic process is an ordered collection of random variables:
+A Markov chain is a special type of *stochastic process*. The standard definition of a stochastic process is an ordered collection of random variables:
 
    
 .. math::
    \{X_t:t \in T\}
 
-where :math:`t` is frequently (but not necessarily) a time index. If we think of
-:math:`X_t` as a state :math:`X` at time :math:`t`, and invoke the following
-dependence condition on each state:
+where :math:`t` is frequently (but not necessarily) a time index. If we think of :math:`X_t` as a state :math:`X` at time :math:`t`, and invoke the following dependence condition on each state:
 
    
 .. math::
    Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+1} | X_t=x_t)
 
-then the stochastic process is known as a Markov chain. This conditioning
-specifies that the future depends on the current state, but not past states.
-Thus, the Markov chain wanders about the state space, remembering only where it
-has just been in the last time step. The collection of transition probabilities
-is sometimes called a *transition matrix* when dealing with discrete states, or
-more generally, a *transition kernel*.
+then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a *transition matrix* when dealing with discrete states, or more generally, a *transition kernel*.
 
-In the context of Markov chain Monte Carlo, it is useful to think of the
-Markovian property as "mild non-independence". MCMC allows us to indirectly
-generate independent samples from a particular posterior distribution.
+In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as "mild non-independence". MCMC allows us to indirectly generate independent samples from a particular posterior distribution.
 
 
 Jargon-busting
 --------------
 
-Before we move on, it is important to define some general properties of Markov
-chains. They are frequently encountered in the MCMC literature, and some will
-help us decide whether MCMC is producing a useful sample from the posterior.
+Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
 
 * *Homogeneity*: A Markov chain is homogeneous at step :math:`t` if the
-  transition probabilities are independent of time :math:`t`.
+  	transition probabilities are independent of time :math:`t`.
 
 * *Irreducibility*: A Markov chain is irreducible if every state is accessible
-  in one or more steps from any other state. That is, the chain contains no
-  absorbing states. This implies that there is a non-zero probability of
-  eventually reaching state :math:`k` from any other state in the chain.
+  	in one or more steps from any other state. That is, the chain contains no
+	absorbing states. This implies that there is a non-zero probability of
+	eventually reaching state :math:`k` from any other state in the chain.
 
 * *Recurrence*: States which are visited repeatedly are *recurrent*. If the
-  expected time to return to a particular state is bounded, this is known as
-  *positive recurrence*, otherwise the recurrent state is *null recurrent*.
-  Further, a chain is *Harris recurrent* when it visits all states :math:`X \in S`
-  infinitely often in the limit as :math:`t \to \infty`; this is an important
-  characteristic when dealing with unbounded, continuous state spaces. Whenever a
-  chain ends up in a closed, irreducible set of Harris recurrent states, it stays
-  there forever and visits every state with probability one.
+  	expected time to return to a particular state is bounded, this is known as
+	*positive recurrence*, otherwise the recurrent state is *null recurrent*.
+	Further, a chain is *Harris recurrent* when it visits all states :math:`X 
+	\in S` infinitely often in the limit as :math:`t \to \infty`; this is an 
+	important characteristic when dealing with unbounded, continuous state 
+	spaces. Whenever a chain ends up in a closed, irreducible set of Harris 
+	recurrent states, it stays there forever and visits every state with 
+	probability one.
 
 * *Stationarity*: A stationary Markov chain produces the same marginal
-  distribution when multiplied by the transition kernel.  Thus, if :math:`P` is
-  some :math:`n \times n` transition matrix:
+  	distribution when multiplied by the transition kernel.  Thus, if :math:`P` 	
+	is some :math:`n \times n` transition matrix:
 
      
    .. math::
       {\bf \pi P} = {\bf \pi}
      
-  for Markov chain :math:`\pi`. Thus, :math:`\pi` is no longer subscripted, and is
-  referred to as the *limiting distribution* of the chain. In MCMC, the chain
-  explores the state space according to its limiting marginal distribution.
+	for Markov chain :math:`\pi`. Thus, :math:`\pi` is no longer subscripted, 
+	and is referred to as the *limiting distribution* of the chain. In MCMC, 
+	the chain explores the state space according to its limiting marginal 
+	distribution.
 
 * *Ergodicity*: Ergodicity is an emergent property of Markov chains which are
-  irreducible, positive Harris recurrent and aperiodic. Ergodicity is defined as:
+  	irreducible, positive Harris recurrent and aperiodic. Ergodicity is defined 	
+	as:
 
      
   .. math::
       \lim_{n \to \infty} Pr^{(n)}(\theta_i \rightarrow \theta_j) = \pi(\theta) \quad \forall \theta_i, \theta_j \in \Theta
 
-  or in words, after many steps the marginal distribution of the chain is the same
-  at one step as at all other steps. This implies that our Markov chain, which we
-  recall is dependent, can generate samples that are independent if we wait long
-  enough between samples. If it means anything to you, ergodicity is the analogue
-  of the strong law of large numbers for Markov chains. For example, take values
-  :math:`\theta_{i+1},\ldots,\theta_{i+n}` from a chain that has reached an
-  ergodic state. A statistic of interest can then be estimated by:
+	or in words, after many steps the marginal distribution of the chain is the 
+	same at one step as at all other steps. This implies that our Markov chain, 
+	which we recall is dependent, can generate samples that are independent if 
+	we wait long enough between samples. If it means anything to you, 
+	ergodicity is the analogue of the strong law of large numbers for Markov 
+	chains. For example, take values :math:`\theta_{i+1},\ldots,\theta_{i+n}` 
+	from a chain that has reached an ergodic state. A statistic of interest can 
+	then be estimated by:
 
      
   .. math::

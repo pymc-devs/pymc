@@ -79,15 +79,15 @@ The resulting scores are best interpreted graphically, using the ``geweke_plot``
 
 .. _geweke:
 
-.. figure:: figs/geweke.*
+.. figure:: _images/geweke.*
    :align: center
    :alt: Geweke figure.
    
    Sample plot of Geweke z-scores for a variable using ``geweke_plot``.
    The occurrence of the scores well within 2 standard deviations of zero
    gives not indicate of lack of convergence (top), while deviations exceeding 
-	2 standard deviations suggest that additional samples are requred to 
-	achieve convergence (bottom).
+   2 standard deviations suggest that additional samples are requred to 
+   achieve convergence (bottom).
 	
 ``geweke_plot`` takes either a single set of scores, or a dictionary of scores (output by ``geweke`` when an entire Sampler is passed) as its argument::
 
@@ -126,7 +126,7 @@ Alternatively, individual stochastics within ``S`` can be analyzed for convergen
    >>> alpha_scores = pymc.geweke(trace, intervals=20)
    >>> pymc.Matplot.geweke_plot(alpha_scores, 'alpha')
 
-An example of convergence and non-convergence of a chain using `geweke_plot` is given in Figure :ref:geweke_ .
+An example of convergence and non-convergence of a chain using `geweke_plot` is given in Figure :ref:`geweke` .
 
 The second diagnostic provided by PyMC is the [Raftery_1995a]_ procedure. This approach estimates the number of iterations required to reach convergence, along with the number of burn-in samples to be discarded and the appropriate thinning interval. A separate estimate of both quantities can be obtained for each variable in a given model.
 
@@ -256,7 +256,7 @@ Alternatively, variables within a model can be plotted individually. For example
 
 .. _autocorr:
 
-.. figure:: figs/autocorr.*
+.. figure:: _images/autocorr.*
    :align: center
    :alt: Autocorrelation figure
    :scale: 70
@@ -309,7 +309,7 @@ The degree to which simulated data correspond to observations can be evaluated i
 
 .. _gof:
 
-.. figure:: figs/gof.*
+.. figure:: _images/gof.*
    :align: center
    :alt: GOF figure
    :scale: 70
@@ -337,7 +337,7 @@ If :math:`p` is very large (e.g. :math:`>0.975`) or very small (e.g. :math:`<0.0
 
 .. _deviate:
 
-.. figure:: figs/deviates.png
+.. figure:: _images/deviates.png
    :align: center
    :alt: deviates figure
    :scale: 100
