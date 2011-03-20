@@ -12,7 +12,7 @@ Consider the following dataset, which is a time series of recorded coal mining d
 .. _disasters_figure:
 
 .. figure:: _images/disasterts.*
-	:width: 600 px
+   :width: 600 px
 
    Recorded coal mining disasters in the UK.
 
@@ -48,7 +48,7 @@ The only ``Deterministic`` in the model is :math:`r`. If we knew the values of :
 
 On the other hand, even if the values of the parents of variables :math:`s`, :math:`D` (before observing the data), :math:`e` or :math:`l` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
 
-We can represent model :eq:`disastermodel` in a file called ``DisasterModel.py`` (the actual file can be found in ``pymc/examples/``) as follows. First, we import the PyMC and NumPy namespaces::
+We can represent model :eq:`disastermodel` in a file called ``disaster_model.py`` (the actual file can be found in ``pymc/examples/``) as follows. First, we import the PyMC and NumPy namespaces::
 
    from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform
    import numpy as np
@@ -66,7 +66,7 @@ Next, we enter the actual data values into an array::
                       3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                       0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-Note that you don't have to type in this entire array to follow along; the code is available in the source tree, in :download:`this example script <../pymc/examples/DisasterModel.py>`.  Next, we create the switchpoint variable :math:`s` ::
+Note that you don't have to type in this entire array to follow along; the code is available in the source tree, in :download:`this example script <../pymc/examples/disaster_model.py>`.  Next, we create the switchpoint variable :math:`s` ::
 
    s = DiscreteUniform('s', lower=0, upper=110, doc='Switchpoint[year]')
 
@@ -109,7 +109,7 @@ Parents and children
 --------------------
 
 
-We have above created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run ``DisasterModel.py`` and examine :math:`s`'s ``parents`` attribute from the Python prompt::
+We have above created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run ``disaster_model.py`` and examine :math:`s`'s ``parents`` attribute from the Python prompt::
 
    >>> from pymc.examples import DisasterModel
    >>> DisasterModel.s.parents
@@ -132,7 +132,7 @@ The following `directed acyclic graph` is a visualization of the parent-child re
 .. _dag:
 
 .. figure:: _images/DisasterModel2.*
-	:width: 600 px
+   :width: 600 px
 
    Directed acyclic graph of the relationships in the coal mining disaster model example.
 
@@ -234,7 +234,7 @@ Whenever a variable is used as a parent for a child variable, PyMC replaces it w
 Fitting the model with MCMC
 ---------------------------
 
-PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, ``MCMC``, fits models with a Markov chain Monte Carlo algorithm [Gamerman_1997]_. To create an ``MCMC`` object to handle our model, import ``DisasterModel.py`` and use it as an argument for ``MCMC``::
+PyMC provides several objects that fit probability models (linked collections of variables) like ours. The primary such object, ``MCMC``, fits models with a Markov chain Monte Carlo algorithm [Gamerman_1997]_. To create an ``MCMC`` object to handle our model, import ``disaster_odel.py`` and use it as an argument for ``MCMC``::
 
    >>> from pymc.examples import DisasterModel
    >>> from pymc import MCMC
@@ -284,7 +284,7 @@ You can examine the marginal posterior of any variable by plotting a histogram o
 You should see something like this:
 
 .. figure:: _images/ltrace.*
-	:width: 600 px
+   :width: 600 px
 
    Histogram of the marginal posterior probability of parameter :math:`l`.
 
@@ -295,7 +295,7 @@ PyMC has its own plotting functionality, via the optional ``matplotlib`` module 
 
 For each variable in the model, ``plot`` generates a composite figure, such as this one for the switchpoint in the disasters model:
 
-.. figure:: _images/spost.*[[;]]
+.. figure:: _images/spost.*
 
    Temporal series and histogram of the samples drawn for :math:`s`.
 
