@@ -12,7 +12,8 @@ import time
 
 def FreeVariable( name, shape, dtype):
     """creates a TensorVariable of the given shape and type"""
-    var = TensorType(str(dtype), np.array(shape) == 1)(name)
+    shape = np.atleast_1d(shape)
+    var = TensorType(str(dtype), shape == 1)(name)
     var.dshape = shape
     var.dsize = np.prod(shape)
     return var
