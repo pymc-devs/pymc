@@ -29,7 +29,7 @@ class HMCStep(object):
         step_count = int(np.floor(self.trajectory_length / step_size))
         
         
-        q = self.model.consider_vector(chain_state.values)
+        q = self.model.subspace(chain_state)
         start_logp, gradient = self.model.evaluate_as_vector(chain_state)
         current_logp = start_logp
         
@@ -44,8 +44,8 @@ class HMCStep(object):
             #alternate full variable and momentum updates
             q = q + step_size * np.dot(self.covariance, p)
             
-            self.model.consider_vector(chain_state.values_considered, q)
-            current_logp, gradient = self.model.evaluate_as_vector(chain_state)
+            proposed_state = self.model.project(chain_state, q)
+            current_logp, gradient = self.model.evaluate_as_vector(proposed_state)
             
             if i != step_count - 1:
                 p = p - step_size * -gradient
@@ -62,9 +62,9 @@ class HMCStep(object):
         if (np.isfinite(log_metrop_ratio) and 
             np.log(np.random.uniform()) < log_metrop_ratio):
             
-            chain_state.accept()
+            return proposed_state
         else: 
-            chain_state.reject() 
+            return chain_state
                 
     
     def kenergy (self, x):

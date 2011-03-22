@@ -17,11 +17,11 @@ ydata = Normal(value = data, mu = x, tau = .75**-2)
 z_prior = Beta(value = z, alpha = 10, beta =5.5)
 
 #make a chain with some starting point 
-chain = ChainState({'x' : np.array([[0.2],[.3],[.1]]),
-                    'z' : np.array([.5])})
+chain = {'x' : np.array([[0.2],[.3],[.1]]),
+         'z' : np.array([.5])}
 
 
-hmc_model = LocalPropertyEval(free_vars = [x,z], 
+hmc_model = ModelView(free_vars = [x,z], 
                   logps = [x_prior, ydata , z_prior],
                   derivative_vars = [x,z])
 
@@ -29,7 +29,7 @@ hmc_model = LocalPropertyEval(free_vars = [x,z],
 
 
 find_MAP(hmc_model, chain)
-hmc_cov = local_cov( hmc_model, chain) #find a good orientation using the hessian at the MAP
+hmc_cov = approx_cov( hmc_model, chain) #find a good orientation using the hessian at the MAP
 
 step_method = CompoundStep([hmc.HMCStep(hmc_model, hmc_cov)])
 

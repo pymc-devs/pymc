@@ -6,17 +6,13 @@ Created on Mar 12, 2011
 import numdifftools as nd
 import numpy as np 
 
-def approx_cov(mapping, model, chain_state):
+def approx_cov(model, chain_state):
     """
     returns an approximation of the hessian at the current chain location 
     """
-    def grad_logp(x):
-        model.mapping.update_with_inverse(chain_state.values_considered, x)
-        
-        return -model.evaluate_as_vector( chain_state)[1]
+    def grad_logp(x): 
+        return np.nan_to_num(-model.evaluate_as_vector( model.project(chain_state, x))[1])
     
     #find the jacobian of the gradient function at the current position
-    #this should be the hessian
-    cov = np.linalg.inv(nd.Jacobian(grad_logp)(model.mapping.apply_to_dict(chain_state.values)))
-    chain_state.reject()
-    return cov
+    #this should be the hessian; invert it to find the approximate covariance matrix
+    return np.linalg.inv(nd.Jacobian(grad_logp)(model.subspace(chain_state)))

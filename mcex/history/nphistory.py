@@ -25,7 +25,7 @@ class NpHistory(object):
         """
         if self.nsamples < self.max_draws:
             for var, sample in self._samples.iteritems():
-                sample[self.nsamples,...] = chain_state.values[var]
+                sample[self.nsamples,...] = chain_state[var]
             self.nsamples += 1
         else :
             raise ValueError('out of space!')

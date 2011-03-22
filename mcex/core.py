@@ -49,7 +49,7 @@ class ModelView(object):
         returns logp, derivative1, derivative2...
         does not currently do beyond derivative1
         """
-        results = iter(self.function(**chain_state.values_considered))
+        results = iter(self.function(**chain_state))
         if self.derivative_vars:
             return results.next(), d_repr(1, self.derivative_order, results)
         else :
@@ -64,35 +64,23 @@ class ModelView(object):
             return values
 
         return self._evaluate(dict_representation, chain_state)
-    def consider_vector(self, chain_state, vector):
-        self.mapping.update_with_inverse(chain_state.values_considered, vector)
-        
+    
     def evaluate_as_vector(self, chain_state):
         """
         perhaps needs to be moved out of Evaluate
         """   
         def vector_representation(n, ordering, it):
-            return self.mapping.apply(zip(ordering,it))
+            return self.mapping.subspace(zip(ordering,it))
         return self._evaluate(vector_representation, chain_state)
-
-class ChainState(object):
-    """
-    Encapsulates the state of the chain
-    """
-    def __init__(self, values):
         
-        self.values = values
-        self.reject()
+    def project(self, chain_state, vector):
+        return self.mapping.project(chain_state, vector)
+    def subspace(self, chain_state):
+        return self.mapping.dict_subspace(chain_state)
     
-    def accept(self):
-        self.values = self.values_considered
-        
-    def reject(self):
-        self.values_considered = self.values.copy()
-    
-        
 class VariableMapping(object):
-    """encapsulates a mapping between a subset set of variables and a vector
+    """encapsulates a subset of variables represented as a vector
+    each vector defines a subspace of the whole parameter space 
     """
     def __init__(self,free_vars):
         self.dimensions = 0
@@ -104,13 +92,14 @@ class VariableMapping(object):
             self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.dsize)
             self.dimensions += var.dsize
             
-    
-    def apply_to_dict(self, values):
-        return self.apply( values.iteritems())
-
-    def apply(self,varset_values):
+    def dict_subspace(self, values):
+        """gets the subspace given a dict
         """
-        returns a vector given a iterable of (variablename, value)
+        return self.subspace( values.iteritems())
+
+    def subspace(self,varset_values):
+        """
+        returns a vector that defines a subspace given an iterable of (variablename, value)
         """
         vector = np.empty(self.dimensions)
         
@@ -123,10 +112,11 @@ class VariableMapping(object):
         return vector
     
      
-    def update_with_inverse(self,values, vector):
+    def project(self,values, vector):
         """
-        does the inverse mapping: updates a dictionary with values from a vector
+        projects the values onto the subspace defined by the vector
         """
+        values = values.copy()
         for var, slice in self.slices.iteritems():
             values[var] = np.reshape(vector[slice], self.vars[var].dshape)
             
@@ -137,7 +127,7 @@ def sample(draws, step_method, chain_state, sample_history ):
     returns the amount of time taken"""
     start = time.time()
     for i in xrange(int(draws)):
-        step_method.step(chain_state)
+        chain_state = step_method.step(chain_state)
         sample_history.record(chain_state, step_method)
         
     return (time.time() - start)
