@@ -12,12 +12,13 @@ import time
 
 def FreeVariable( name, shape, dtype):
     """creates a TensorVariable of the given shape and type"""
-    var = TensorType(str(dtype), np.array(shape) == 1)(name)
+    shape = np.atleast_1d(shape)
+    var = TensorType(str(dtype), shape == 1)(name)
     var.dshape = shape
     var.dsize = np.prod(shape)
     return var
 
-class LocalPropertyEval(object):
+class ModelView(object):
     """
     encapsulates the probability model
     """
@@ -63,7 +64,9 @@ class LocalPropertyEval(object):
             return values
 
         return self._evaluate(dict_representation, chain_state)
-         
+    def consider_vector(self, chain_state, vector):
+        self.mapping.update_with_inverse(chain_state.values_considered, vector)
+        
     def evaluate_as_vector(self, chain_state):
         """
         perhaps needs to be moved out of Evaluate

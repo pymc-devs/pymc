@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 import numdifftools as nd
 import numpy as np 
 
-def local_cov( model, chain_state):
+def approx_cov(mapping, model, chain_state):
     """
     returns an approximation of the hessian at the current chain location 
     """

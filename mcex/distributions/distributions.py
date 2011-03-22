@@ -3,7 +3,7 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from theano.tensor import log, switch
+from theano.tensor import switch, log
 from numpy import pi, inf
 from special import gammaln
 
@@ -14,4 +14,9 @@ def Beta(value, alpha, beta):
     return switch((value >= 0) & (value <= 1) &
                   (alpha > 0) & (beta > 0),
                   gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta) + (alpha- 1)*log(value) + (beta-1)*log(1-value),
+                  -inf)
+
+def Bernoulli(value, p):
+    return switch((p >= 0) & (p <= 1), 
+                  switch(value, log(p), log(1-p)),
                   -inf)

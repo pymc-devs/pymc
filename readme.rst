@@ -51,3 +51,5 @@ Future improvements
   a vector) could use more thought. The goal is to make its use simple, obvious and non-awkward.
 - May be possible to create a coherent framework for sampling and doing things like finding the 
   MAP (right now these are special functions).
+ 
+ 

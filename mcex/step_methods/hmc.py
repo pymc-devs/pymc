@@ -29,7 +29,7 @@ class HMCStep(object):
         step_count = int(np.floor(self.trajectory_length / step_size))
         
         
-        q = self.model.mapping.apply_to_dict(chain_state.values)
+        q = self.model.consider_vector(chain_state.values)
         start_logp, gradient = self.model.evaluate_as_vector(chain_state)
         current_logp = start_logp
         
@@ -44,7 +44,7 @@ class HMCStep(object):
             #alternate full variable and momentum updates
             q = q + step_size * np.dot(self.covariance, p)
             
-            self.model.mapping.update_with_inverse(chain_state.values_considered, q)
+            self.model.consider_vector(chain_state.values_considered, q)
             current_logp, gradient = self.model.evaluate_as_vector(chain_state)
             
             if i != step_count - 1:
