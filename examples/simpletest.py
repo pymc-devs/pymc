@@ -26,9 +26,7 @@ hmc_model = ModelView(free_vars = [x,z],
                   derivative_vars = [x,z])
 
 #move the chain to the MAP which should be a good starting point
-
-
-find_MAP(hmc_model, chain)
+chain = find_MAP(hmc_model, chain)
 hmc_cov = approx_cov( hmc_model, chain) #find a good orientation using the hessian at the MAP
 
 step_method = CompoundStep([hmc.HMCStep(hmc_model, hmc_cov)])
