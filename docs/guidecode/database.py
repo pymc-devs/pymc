@@ -1,17 +1,17 @@
 import pymc as pm
 
-from pymc.examples import DisasterModel
+from pymc.examples import disaster_model
 M = pm.MCMC(DisasterModel)
 M.sample(10)
-M.trace('e')[:]
+M.trace('early_mean')[:]
 #array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
 #      2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])
 
-M.trace('e')
+M.trace('early_mean')
 #<pymc.database.ram.Trace object at 0x7fa4877a8b50>
 
 M.sample(5)
-M.trace('e', chain=None)[:]
+M.trace('early_mean', chain=None)[:]
 #array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
 #        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,
 #        3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])
