@@ -307,12 +307,12 @@ f_list = [Realization(M,C) for i in range(3)]
 
 The function \code{observe} takes a covariance $C$ and a mean $M$ as arguments, and tells them that their `true' realization's value on \code{obs_mesh} has been observed to be \code{obs_vals} with variance \code{obs_V}. 
 
-The output of \code{observation.py}  is shown in figure \ref{fig:obs}, along with the output with \code{obs_V=0}. Compare these to the analogous figure for the unobserved GP, figure \ref{fig:realizations}. The covariance after observation is visualized in figure \ref{fig:obscov}. The covariance `tent' has been pressed down at points where $x\approx \pm .5$ and/or $y\approx\pm .5$, which are the values where the observations were made.
+The output of \code{observation.py}  is shown in Figure~\ref{fig:obs}, along with the output with \code{obs_V=0}. Compare these to the analogous figure for the unobserved GP, Figure~\ref{fig:realizations}. The covariance after observation is visualized in Figure~\ref{fig:obscov}. The covariance `tent' has been pressed down at points where $x\approx \pm .5$ and/or $y\approx\pm .5$, which are the values where the observations were made.
 
 \begin{figure}
     \centering
         \epsfig{file=figs/obscov.pdf,width=10cm}
-    \caption{The covariance function from {\sffamily `observation.py'} after observation. Compare this with the covariance function before observation, visualized in figure \ref{fig:cov} }
+    \caption{The covariance function from {\sffamily `observation.py'} after observation. Compare this with the covariance function before observation, visualized in Figure~\ref{fig:cov} }
     \label{fig:obscov}
 \end{figure}
 
@@ -428,7 +428,7 @@ Its output, shown in Figure~\ref{fig:basiscov}, is analogous to Figure~\ref{fig:
 \section{Using Gaussian processes in Bayesian probability models}
 \label{sec:gp-sub} 
 
-Like any other random variable, a GP can be incorporated in a Bayesian probability model and its value can, at least conceptually, be inferred from data. Equation~\ref{regprior} provides a simple example: unknown function $f$ is assigned a GP prior, and the dependence of the data on it is modeled as follows:
+Like any other random variable, a GP can be incorporated in a Bayesian probability model and its value can, at least in theory, be inferred from data. Equation~\ref{regprior} provides a simple example: unknown function $f$ is assigned a GP prior, and the dependence of the data on it is modeled as follows:
 \begin{eqnarray*}
     d_i \stackrel{\tiny{\textup{ind}}} {\sim} \textup{N}(f(o_i), V_i)\\
     f \sim \textup{GP}(M,C).
@@ -502,7 +502,7 @@ Model~\ref{eq:simple-example-model} is declared as a \pkg{PyMC} probability mode
 sm = gp.GPSubmodel('sm',M,C,fmesh)
 \end{CodeInput}
 \end{CodeChunk}
-The GP submodel contains two stochastic variables: \code{sm.f} and \code{sm.f_eval}. The first is the actual GP $f$, a stochastic variable valued as a \code{Realization} object. The second is $f(x_*)$, where $x_*$ is the constant vector \code{fmesh}.
+The GP submodel contains two stochastic variables: \code{sm.f_eval} and \code{sm.f}. The first is $f(x_*)$, where $x_*$ is the constant vector \code{fmesh}. The second is the conditional GP $(f|f(x_*))$, which is a stochastic variable valued as a \code{Realization} object. 
 
 Once the GP submodel has been created, other variables can depend on $f$ and $f(x_*)$ in any way that can be expressed in \proglang{Python} code. In model~\ref{eq:simple-example-model}, the observation $d$ depends on $f(o)$, where $o$ are the observation locations:
 \begin{CodeChunk}
@@ -512,7 +512,7 @@ d = pymc.Normal('d',mu=sm.f(o), tau=1./V, value=observed_values, observed=True)
 \end{CodeChunk}
 If $o$ were known in advance, $x_*$ could be chosen to be equal to $o$, so that $d$ depends on $f(x_*)$, and no other evaluations of $f$. As discussed in section \ref{sec:step-methods}, this parameterization is usually computationally advantageous (section~\ref{sec:mesh-choice}) and should be used when possible. In Section~\ref{sec:duffy}, a \code{GaussianProcess}'s children depend on it in a nonstandard way, but the observation locations are known a priori. 
 
-The file \code{pymc/examples/gp/MCMC.py} fits the probability model specified in \code{\pkg{PyMC}model.py} using MCMC. The part of the file that actually dispatches the sampling loop is very simple:
+The file \code{pymc/examples/gp/MCMC.py} fits the probability model specified in \code{\pkg{PyMC}model.py} using MCMC. The part of the file that actually runs the sampling loop is very simple:
 \begin{CodeChunk}
 \begin{CodeInput}
 GPSampler = MCMC(PyMCmodel)
@@ -542,15 +542,15 @@ The file's output is shown in Figure~\ref{fig:MCMCOutput}. After the MCMC loop h
 
 \pkg{PyMC}'s core business is to produce approximate samples from the posteriors of probability models using the MCMC algorithm. Its implementation of the MCMC algorithm uses the usual modular strategy; in a single iteration, the value of each variable in the model is updated using a jumping rule whose stationary distribution is the variable's full conditional distribution. A common jumping rule is the Metropolis-Hastings algorithm \citep{gamerman}. 
 
-The implementation of each jumping rule is delegated to a \code{StepMethod} object. \citep{pymc}. Bespoke MCMC algorithms can be constructed by choosing which step methods to assign to each of the model's stochastic variables. The Metropolis-Hastings algorithm is implemented by the \code{Metropolis} step method. \code{Metropolis} and related step methods use the \code{logp} attributes (see Section~\ref{sec:gp-sub}) of the variables they handle to compute acceptance ratios for proposed values. 
+The implementation of each jumping rule is delegated to a \code{StepMethod} object. \citep{pymc}. Bespoke MCMC algorithms can be constructed by choosing which step methods to assign to each of the model's stochastic variables. The Metropolis-Hastings algorithm \citep{gamerman} is implemented by the \code{Metropolis} step method. \code{Metropolis} and related step methods use the \code{logp} attributes (see Section~\ref{sec:gp-sub}) of the variables they handle to compute acceptance ratios for proposed values. 
 
 \bigskip
-Recognizing that no single MCMC scheme can guarantee good performance for all probability models, \pkg{PyMC}'s overall approach to MCMC is to modularize the algorithm and make it easy for users to tune, alter or rewrite the jumping strategies it uses for individual variables. The Metropolis-Hastings algorithms provided by this package perform relatively well for the models of Bayesian geostatistics such as the example in section~\ref{sec:duffy}, but users may need to override them when working with more unusual model forms. In these cases, the Metropolis-Hastings scheme outlined in section~\ref{sec:step-methods} can still provide a useful starting point. The documentation and user community of \pkg{PyMC} are helpful resources for users who need to write their own jumping strategies. 
+Recognizing that no single MCMC scheme can guarantee good performance for all probability models, \pkg{PyMC}'s overall approach to MCMC is to modularize the algorithm and make it easy for users to tune, alter or rewrite the jumping strategies it uses. The Metropolis-Hastings algorithms provided by this package perform relatively well for the models of Bayesian geostatistics such as the example in section~\ref{sec:duffy}, but users may need to override them when working with more unusual model forms. In these cases, the Metropolis-Hastings scheme outlined in section~\ref{sec:step-methods} can still provide a useful starting point. The documentation and user community of \pkg{PyMC} are helpful resources for users who need to write their own jumping strategies. 
 
 
 
 \subsection{Step methods that handle parents of Gaussian processes}
-Because it is impractical to associate a probability density function with GPs, \code{GaussianProcess}es have no \code{logp} attribute cannot be handled by the Metropolis-Hastings family of step methods, because there is no way to calculate acceptance ratios. This package uses a relatively simple work-around, a Metropolis-Hastings rule for updating the parents of GPs jointly with the GPs themselves, that will be described in this section. The parents of $f$ are denoted $P$ and the children $K$ throughout. In the context of model~\ref{eq:simple-example-model}, the GP itself is $f$; the parents are $a$, $b$, $c$, $\nu$, $\phi$ and $\theta$; and the only child is $d$.
+Because it is impractical to associate a probability density function with GPs, \code{GaussianProcess}es have no \code{logp} attribute. They therefore cannot be handled by the Metropolis-Hastings family of step methods, which would have no way to calculate acceptance probabilities. This package uses a relatively simple work-around, a Metropolis-Hastings rule for updating the parents of GPs jointly with the GPs themselves, that will be described in this section. The parents of $f$ are denoted $P$ and the children $K$ throughout. In the context of model~\ref{eq:simple-example-model}, the GP itself is $f$; the parents are $a$, $b$, $c$, $\nu$, $\phi$ and $\theta$; and the only child is $d$.
 
 The updating rule is developed heuristically in this section by assuming the (false) premise that the probability density functions are available, then choosing the proposal distribution so as to avoid the need to evaluate them. The development can be made more rigorous by replacing $f$ with its evaluation at all the points where its value would ever be needed.
 
@@ -583,21 +583,21 @@ To summarize, any Metropolis-Hastings step method can handle $f(x_*)$ or the par
 
 \subsection{Choosing a mesh} 
 \label{sec:mesh-choice} 
-If $x_*$ is an empty array, $f$'s value will be proposed from its prior, and rejection rates are likely to be quite large. If $x_*$ is too dense, on the other hand, computation of the log-probability of $f(x_*)$ will be expensive, as its cost scales as the cube of the number of points in the mesh. The dependence of the proposal on the mesh density is illustrated in Figure~\ref{fig:meshpropose}. As the figure illustrates, the mesh points $x_*$ are the points where Metropolis-Hastings step methods can `grab' the value of $f$ to moderate the variance of its proposal distribution. Away from the mesh points, step methods have no control over proposal variance.
+If $x_*$ is an empty array, $f$'s value will be proposed from its prior conditional on its parents, and rejection rates are likely to be quite large. If $x_*$ is too dense, on the other hand, computation of the log-probability of $f(x_*)$ will be expensive, as its cost scales as the cube of the number of points in the mesh. The dependence of the proposal distribution on the mesh density is illustrated in Figure~\ref{fig:meshpropose}. As the figure illustrates, the mesh points $x_*$ are the points where Metropolis-Hastings step methods can `grab' the value of $f$ to moderate the variance of its proposal distribution. Away from the mesh points, step methods have no control over proposal variance.
 
 \begin{figure}
     \centering
-        \epsfig{file=figs/nomeshpropose.pdf,width=5cm}
-        \epsfig{file=figs/lightmeshpropose.pdf,width=5cm}
-        \epsfig{file=figs/densemeshpropose.pdf,width=5cm}
-    \caption{Several possible proposals of $f$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (left), a sparse mesh (middle), and a dense mesh (right). Proposal distributions'  $\pm$ one standard deviation envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is proposed from its prior and the acceptance rate will usually be very low. A denser mesh permits a high degree of control over $f$ and hence better acceptance ratios, but computing the log-probability is more expensive.}
+        \epsfig{file=figs/nomeshpropose.pdf,width=8cm}
+        \epsfig{file=figs/lightmeshpropose.pdf,width=8cm}
+        \epsfig{file=figs/densemeshpropose.pdf,width=8cm}
+    \caption{Several possible proposals of $(f|f(x_*))$ (curves) given proposed values for $f(x_*)$ (heavy dots) with no mesh (top), a sparse mesh (middle), and a dense mesh (bottom). Proposal distributions'  $\pm$ one standard deviation envelopes are shown as shaded regions, with means shown as broken lines. With no mesh, $f$ is proposed from its prior and the acceptance rate will usually be very low. A denser mesh permits a high degree of control over $(f|f(x_*))$ and hence better acceptance ratios, but computing the log-probability is more expensive.}
     \label{fig:meshpropose}
 \end{figure}
 
 
 Figure~\ref{fig:meshchoice} provides a concrete example. To generate this figure, model~\ref{eq:simple-example-model} was created with meshes $x_*$ of varying densities, distributed evenly over the interval $[-1,1]$. Recall that that example had four observation locations $o$ evenly spaced between $-.8$ and $.8$. In general neither $x_*$ nor $o$ needs to be evenly spaced. 10000 steps of the default step method for $f(x_*)$ and $(f|f(x_*))$ were timed. 
 
-In this example, the time per jump is fairly constant for sparse meshes, because the time taken by coordinating Python code dominates the time taken by linear algebra and other numerical code. For dense meshes, numerical code is the rate-determining factor and time per jump increases cubically as is typical of GP computations. The rejection rate is close to 1 for mesh sizes up to about 16, after which it decreases. As illustrated in figure~\ref{fig:meshpropose}, large mesh spacings allow excessively large proposal jumps between mesh points, leading to high rejection rates. A happy medium is attained for mesh sizes in the neighborhood of 128.
+In this example, the time per jump is fairly constant for sparse meshes, because the time taken by coordinating Python code dominates the time taken by linear algebra and other numerical code. For dense meshes, numerical code is the rate-determining factor and time per jump increases cubically as is typical of GP computations. The rejection rate is close to 1 for mesh sizes up to about 16, after which it decreases. As illustrated in Figure~\ref{fig:meshpropose}, large mesh spacings allow excessively large proposal jumps between mesh points, leading to high rejection rates. A happy medium is attained for mesh sizes in the neighborhood of 128.
 
 \begin{figure}
     \centering
@@ -606,16 +606,14 @@ In this example, the time per jump is fairly constant for sparse meshes, because
     \label{fig:meshchoice}
 \end{figure}
 
-If $f$'s children depend on its value only via its evaluation on the mesh, that is if $x_*$ coincides with the observation locations $o$, then the likelihood terms $p(K|f_p)$ and $p(K|f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(x_*))$ then the proposed value of $(f|f(x_*))$ will have no bearing on the acceptance probability of the proposed value of $f(x_*)$ or of the parents $P$. The dots in figure~\ref{fig:meshchoice} show the rejection rate and time per jump for a modified version of model~\ref{eq:simple-example-model}, in which $o$ is known a priori and $x_*=o$. 
-
-Both performance measures compare favorably to all of the mesh trials. Because the datapoints fall on mesh points, the uncontrolled proposal variance between mesh points illustrated in figure~\ref{fig:meshpropose} does not inflate rejection rates. Because $f$ only needs to be evaluated at the four points $x_*=o$ throughout all of the jumps, the amount of computation needed is less than it is in any mesh trial except the length-0 trial and the time required per jump is also relatively low.
+If $f$'s children depend on its value only via its evaluation on the mesh, that is if $x_*$ coincides with the observation locations $o$, then the likelihood terms $p(K|f_p)$ and $p(K|f)$ will cancel. In other words, if the mesh is chosen so that $p(K|f)=p(K|f(x_*))$ then the proposed value of $(f|f(x_*))$ will have no bearing on the acceptance probability of the proposed value of $f(x_*)$ or of the parents $P$. The dots in Figure~\ref{fig:meshchoice} show the rejection rate and time per jump for a modified version of model~\ref{eq:simple-example-model}, in which $o$ is known a priori and $x_*=o$. Both performance measures compare favorably to all of the mesh trials. Because the datapoints fall on mesh points, the uncontrolled proposal variance between mesh points illustrated in Figure~\ref{fig:meshpropose} does not inflate rejection rates. Because $f$ only needs to be evaluated at the four points $x_*=o$ throughout all of the jumps, the amount of computation needed is less than it is in any mesh trial except the length-0 trial and the time required per jump is also relatively low.
 
 \subsection{Gibbs steps} 
 \label{sec:gp-gibbs} 
-If all of $f$'s children, $K$, depend on it as follows:
+If $o$ is known in advance, the mesh $x_*$ is set to $o$, and furthermore $f$'s children $K$ depend on it as follows:
 \begin{equation}
     \label{eq:gibbs-criterion} 
-    K_i|f \stackrel{\textup{\tiny ind}}{\sim} \textup{Normal}(f(x_{*i}),V_i)
+    K_i|f \stackrel{\textup{\tiny ind}}{\sim} \textup{Normal}(f(o_i),V_i)
 \end{equation}
 then the joint full conditional distribution of $f(x_*)$ and $(f|f(x_*))$ is of a standard form and both can be handled by the \code{GPEvaluationGibbs} step method. This step method is used in \code{MCMC.py}:
 \begin{CodeChunk}
@@ -626,7 +624,7 @@ GPSampler.use_step_method(gp.GPEvaluationGibbs, GPSampler.sm, \
 \end{CodeChunk}
 The initialization arguments are the GP submodel that contains $f$, the observation variance of $f$'s children, and the children, in this case the vector-valued normal variable $d$. 
 
-\code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ will be handled by the default \code{GPEvaluationMetropolis} step method, which will provide inferior performance. 
+\code{GPEvaluationGibbs} covers the standard submodel encountered in geostatistics, but there are many conjugate situations to which it does not apply. If necessary, special step methods can be written to handle these situations. If \code{GPEvaluationGibbs} is not assigned manually, $f(x_*)$ and $(f|f(x_*))$ will be handled by the default \code{GPEvaluationMetropolis} step method, which will provide inferior performance. 
 
 
 \section{Example: Duffy negativity prevalence in Africa}
@@ -638,20 +636,20 @@ The original implementation is freely available on the internet \citep{duffy-cod
 
 \subsection{Scientific background and data}
 \label{subsec:duffy-data} 
-The Duffy negativity phenotype, as modelled by \cite{Howes}, is controlled by two genetic loci on chromosome 1. The first contains one of two alleles, known as \emph{FY*A} and \emph{FY*B}. These alleles encode proteins known as Fy$^\textup{a}$ and Fy$^\textup{b}$, respectively. The second locus can contain an allele that prevents expression of these proteins. A person is called `Duffy negative' if they do not express either protein Fy$^\textup{a}$ or Fy$^\textup{b}$, that is if each of their two copies of chromosome 1 contains the silencing allele. 
+The Duffy negativity phenotype, as modelled by \cite{Howes}, is controlled by two genetic loci on human chromosome 1. The first contains one of two alleles, known as \emph{FY*A} and \emph{FY*B}. These alleles encode proteins known as Fy$^\textup{a}$ and Fy$^\textup{b}$, respectively. The second locus may or may not contain an allele that `silences' the first locus, preventing expression of either of these proteins. A person is called `Duffy negative' if they do not express either protein Fy$^\textup{a}$ or Fy$^\textup{b}$, that is if each of their two copies of chromosome 1 contains the silencing allele. 
 
-For clarity, in the remainder of this section the event that \emph{FY*A} is present at the first locus in a particular chromosome will be denoted $a$, and the event that \emph{FY*B} is present by $b$. Events $a$ and $b$ are, for the purposes of this model, mutually exclusive and all-inclusive. Similarly, the event that the silencing allele is present at the second locus will be denoted $s$. The genotype of said chromosome will be denoted by juxtaposing the events at the two loci: $as$, $b\neg s$, etc. The genotype of a person will be denoted as an unordered pair of chromosomal genotypes: $(bs,a \neg s)$, etc.
+For clarity, in the remainder of this section the event that \emph{FY*A} is present at the first locus will be denoted $a$, and the event that \emph{FY*B} is present by $b$. Events $a$ and $b$ are, for the purposes of this model, mutually exclusive and all-inclusive. Similarly, the event that the silencing allele is present at the second locus will be denoted $s$. The genotype of a single copy of chromosome 1 will be denoted by juxtaposing the events at the two loci: $as$, $b\neg s$, etc. The genotype of a person will be denoted by combining the genotypes of their two copies of chromosome 1 in an unordered pair: $(bs,a \neg s)$, etc.
 
-\cite{Howes} collected a comprehensive database of Duffy blood group surveys from the literature. In each survey, data collectors performed a test on a randomly-selected subset of a local population. They reported the test they used, number of individuals surveyed and the number classified into each of the chosen test's output categories. The times, places, and motivations of the surveys, as well as the definitions of a `population', varied. The data and data abstraction protocol are described in detail by \cite{Howes}. 
+\cite{Howes} collected a comprehensive database of Duffy blood group surveys from the literature. To produce each survey in the dataset, data collectors performed a test on a randomly-selected subset of a local population. They reported the test they used, number of individuals surveyed and the number classified into each of the chosen test's output categories, as well as the time and location of the survey. The original motivations of the surveys and the definitions they used of a `population' varied. The data and data abstraction protocol are described in detail by \cite{Howes}. 
 
 Each survey in the database applied one of the following five tests to each participant:
 \begin{description}
-    \item[genotypic] This test determined participants' genotypes, and
+    \item[genotypic] This test determined participants' genotypes directly, and
 could distinguish all ten possible genotypes $(bs,bs)$, $(as,bs)$, $(b\neg s,bs)$, \ldots
-    \item[promoter] This test also examined participants' DNA directly, but only determined whether the silencing variant was present in either or both of each participant's copies of chromosome 1.
+    \item[promoter] This test also determined participants' genotypes directly, but only determined whether the silencing variant was present in either or both of each participant's copies of chromosome 1.
     \item[phenotypic] This test assayed participants' blood for proteins Fy$^\textup{a}$ and Fy$^\textup{b}$, rather than examining their genotypes directly.
     \item[a-phenotypic] This test also assayed participants' blood for proteins, but only determined whether Fy$^\textup{a}$ was expressed.
-    \item[b-phenotypic] These studies only determined whether participants expressed Fy$^\textup{b}$.
+    \item[b-phenotypic] This test only determined whether participants expressed Fy$^\textup{b}$.
 \end{description}
 The respective abilities of the tests to distinguish between the ten possible genotypes are illustrated in table \ref{tab:surveys}.
 
@@ -674,24 +672,22 @@ The respective abilities of the tests to distinguish between the ten possible ge
 \end{table}
 
 \subsection{Statistical model}
-The prevalence of Duffy negativity can be computed directly from \textbf{genotypic}, \textbf{promoter} and \textbf{phenotypic} surveys. If the entire dataset consisted of such observations the standard spatial generalized linear model framework could be applied \citep{diggle}. The other datatypes are not direct observations of the quantity to be predicted, but they are closely related and can be expected to contain valuable information that should be incorporated in the statistical analysis.
+The \textbf{genotypic}, \textbf{promoter} and \textbf{phenotypic} tests distinguished Duffy negative individuals from others. If the entire dataset consisted of such observations the standard spatial generalized linear model framework could be applied \citep{diggle}. The other tests are not direct observations of Duffy negativity, but they are closely related and can be expected to contain valuable information that should be incorporated in the statistical analysis. However, incorporating all of these datatypes in a geostatistical analysis requires a departure from the generalized linear model family. A simplified version of the model for these fields chosen by \cite{Howes}, and implemented in \code{model.py}, is given below. 
 
-However, incorporating all of these datatypes in a geostatistical analysis requires a departure from the generalized linear model family. A simplified version of the model for these fields chosen by \cite{Howes}, and implemented in \code{model.py}, is given below. 
-
-The targets of the inference are $p(b;x)$, the probability that event $b$ occurs in a randomly-chosen copy of chromosome 1 from location $x$; $p(s;x|b)$, the probability that event $s$ occurs in a randomly-chosen copy of chromosome 1 from location $x$ given than event $b$ occurs in the same chromosome; and $p(s;x|a)$, the probability that event $s$ occurs in a randomly-chosen copy of chromosome 1 from location $x$ given that event $a$ occurs in the same chromosome. These quantities are of interest because they can be used to compute the prevalence of the Duffy negativity phenotype,
+The quantity to be predicted is Duffy negativity prevalence at prediction locations $x$, denoted $p(s;x)^2$. Using the Hardy-Weinberg assumption \cite{gillespie} that each individual's two chromosomal genotypes are independent conditional on allele prevalences in the population, this quantity can be written as
 \begin{equation}
     \label{eq:duffy-formula} 
-    p(s;x)=\left[p(s;x|b)p(b;x)+p(s;x|a)(1-p(b;x))\right]^2,
+    p(s;x)^2=\left[p(s;x|b)p(b;x)+p(s;x|a)(1-p(b;x))\right]^2,
 \end{equation}
-which is the quantity of most direct epidemiological interest.
+where $p(b;x)$ is the probability that event $b$ occurs in a randomly-chosen copy of chromosome 1 from location $x$; $p(s;x|b)$ is the probability that event $s$ occurs in a randomly-chosen copy of chromosome 1 from location $x$ given than event $b$ occurs in the same chromosome; and $p(s;x|a)$, the probability that event $s$ occurs in a randomly-chosen copy of chromosome 1 from location $x$ given that event $a$ occurs in the same chromosome. 
 
-Two of these probabilities, $p(b;x)$ and $p(s;x|b)$, are modelled as functions from the Earth's surface to the interval $[0,1]$. Priors for these surfaces are constructed by transforming GP's, as described below. The last, $p(s;x|a)$, is modelled as a simple unknown constant $p_1$ because $s$ is rarely found in conjunction with $a$.
+Two of these probabilities, $p(b;x)$ and $p(s;x|b)$, are modelled as functions from the Earth's surface to the interval $[0,1]$. Priors for these functions are constructed by transforming GP's, as described below. The last, $p(s;x|a)$, is modelled as a simple unknown constant $p_1$ because $s$ is rarely found in conjunction with $a$.
 
-To construct priors for the two unknown surfaces, the model declares two GPs, denoted $f_b$ and $f_s$. `Noisy' versions $\tilde f_b$ and $\tilde f_s$ are generated by adding an iid normal random variate at each location $x$ on the surface of the earth. The variances of these noisy versions are labelled $V_b$ and $V_s$, respectively. A nonlinear inverse logit transformation of $\tilde f_b$ generates $p(b;x)$, and likewise for $\tilde f_s$ and $p(s;x|b)$.
+To construct priors for the two unknown functions, the model declares two GPs, denoted $f_b$ and $f_s$. `Noisy' versions $\tilde f_b$ and $\tilde f_s$ are generated by adding an iid normal random variate at each location $x$ on the surface of the earth. The variances of these normal variates are labelled $V_b$ and $V_s$, respectively. A (nonlinear) inverse logit transformation of $\tilde f_b$ generates $p(b;x)$, and likewise for $\tilde f_s$ and $p(s;x|b)$.
 
-The covariances of the GPs $f_s$ and $f_b$ are are of the exponential form, with distance $d(x,y)$ between locations $x$ and $y$ defined as great-circle distance. This covariance function is positive definite \citep{spherical-validity}. The amplitude parameters are denoted $\phi_s$ and $\phi_b$, respectively, and the scale parameters are denoted $\theta_s$ and $\theta_b$. The mean of $f_s$ is modelled as zero. The mean of $f_b$ is modelled as $\beta\ 1(x\in r)$, where $\beta$ is an unknown scalar coefficient, $1(\cdot)$ is the indicator function and $r$ is the region south of the Sahara. \cite{Howes} chose to use this indicator covariate because the prevalence of $b$ is known to decline sharply north of the Sahara.
+The covariances of the GPs $f_s$ and $f_b$ are are modelled as exponential, with distance $d(x,y)$ between locations $x$ and $y$ defined as great-circle distance. This covariance function is positive definite \citep{spherical-validity}. The amplitude parameters are denoted $\phi_s$ and $\phi_b$, respectively, and the scale parameters are denoted $\theta_s$ and $\theta_b$. The mean of $f_s$ is modelled as zero. The mean of $f_b$ is modelled as $\beta\ 1(x\in r)$, where $\beta$ is an unknown scalar coefficient, $1(\cdot)$ is the indicator function and $r$ is the portion of Africa south of the Sahara. \cite{Howes} chose to use this indicator covariate because the prevalence of $b$ is known to decline sharply north of the Sahara.
 
-The form of the prior $Q$ for the unknown scalar parameters $\phi_b$, $\theta_b$, $\phi_s$, $\theta_s$, $p_1$, $V_b$, $V_s$, $\beta$ does not affect the subsequent discussion, and is suppressed for brevity. The prior is, of course, written out in code in \code{model.py}. As in most Bayesian analyses, all of the unknown parameters are inferred along with the actual targets. 
+The unknown scalar variables $\phi_b$, $\theta_b$, $\phi_s$, $\theta_s$, $p_1$, $V_b$, $V_s$, $\beta$ are assigned prior $Q$ which does not affect the subsequent discussion, and is suppressed in the formula below for brevity. The prior is, of course, written out in code in \code{model.py}. As in most Bayesian analyses, all of the unknown variables in the model are inferred jointly. 
 
 In Bayesian hierarchical notation, the model as described so far is as follows:
 \begin{equation}
@@ -711,8 +707,7 @@ In Bayesian hierarchical notation, the model as described so far is as follows:
     \end{array}
 \end{equation}  
 
-The model is completed by likelihoods that give the probability of each survey outcome given the values of $p(b;o)$, $p(s;o|b)$ and $p(s;o|a)$ at the corresponding survey locations $o$. These likelihoods are described in detail by \cite{Howes}. Briefly, the promoter, a-phenotypic, and b-phenotypic tests all classify each survey participant into one of two categories, so the likelihoods corresponding to surveys that used these tests are binomial. The genotypic and phenotypic tests classify each survey participant into one of several categories, so the likelihoods corresponding to surveys that used them are multinomial. \cite{Howes} modelled the actual classification probabilities as functions of $p(b;o)$, $p(s;o|b)$ and $p(s;o|a)$ using the Hardy-Weinberg model from population genetics \citep{gillespie}, which assumes that an individual's two copies of an allele are chosen independently from a gene pool. 
-The likelihoods are implemented in \code{model.py} using \pkg{PyMC}'s \code{Binomial} and \code{Multinomial} classes.
+The model is completed by likelihoods that give the probability of each survey outcome given the values of $p(b;o)$, $p(s;o|b)$ and $p(s;o|a)$ at the corresponding survey locations $o$. These likelihoods are described in detail by \cite{Howes}. Briefly, the promoter, a-phenotypic, and b-phenotypic tests all classify each survey participant into one of two categories, so the likelihoods corresponding to surveys that used these tests are binomial. The genotypic and phenotypic tests classify each survey participant into one of several categories, so the likelihoods corresponding to surveys that used them are multinomial. \cite{Howes} modelled the actual classification probabilities as functions of $p(b;o)$, $p(s;o|b)$ and $p(s;o|a)$ using the Hardy-Weinberg assumption. The likelihoods are implemented in \code{model.py} using \pkg{PyMC}'s \code{Binomial} and \code{Multinomial} classes.
 
 \subsection{Model fitting and prediction}
 The portion of \code{mcmc.py} that creates the model and runs the sampling loop is quite concise: 
@@ -728,7 +723,7 @@ DuffySampler.use_step_method(pymc.gp.GPEvaluationGibbs, DuffySampler.sp_sub_s, \
 
 DuffySampler.isample(50000,10000,100)    
 \end{CodeInput}
-The first line creates the variables specified in \code{model.py}, and hands them to an MCMC sampler called \code{DuffySampler}. The database backend chosen is \code{hdf5}, so dynamic traces will be stored in an on-disk \pkg{PyTables} database under compression \citep{pymc}. The middle two lines choose the \code{GPEvaluationGibbs} step method, described in Section~\ref{sec:gp-gibbs}, for updating the \code{Gaussian process}es. This jumping strategy is applicable because the observation locations $o$ are known in advance, and because dependence of the children $\tilde f_b(o)$ of $f(o)$ is of the special form~\ref{eq:gibbs-criterion}, and likewise for $\tilde f_s$ and $f_s$. The final line calls for 50k MCMC iterations, with every 100 iterations after the first 10k saved to the database. 
+The first line creates the variables specified in \code{model.py}, and hands them to an MCMC sampler called \code{DuffySampler}. The database backend chosen is \code{hdf5}, so dynamic traces will be stored in an on-disk \pkg{PyTables} database under compression \citep{pymc}. The middle two lines choose the \code{GPEvaluationGibbs} step method, described in Section~\ref{sec:gp-gibbs}, for updating the \code{Gaussian process}es. This jumping strategy can be used because the observation locations $o$ are known in advance, and because dependence of the children $\tilde f_b(o)$ of $f(o)$ is of the special form~\ref{eq:gibbs-criterion}, and likewise for $\tilde f_s$ and $f_s$. The final line calls for 50k MCMC iterations, with every 100 iterations after the first 10k saved to the database. 
 
 While the sampler is running, a special prompt is displayed in the terminal window:
 \begin{tiny}
@@ -769,7 +764,7 @@ the pointwise mean and variance
         \VAR(f_s(x_i)|f_s(o), \phi_s, \theta_s)
     \end{array}
 \end{equation}
-are computed for each pixel $x_i$ in the output map. Using these moments, joint samples for $\tilde f_b(x_i)$ and $\tilde f_s(x_i)$ are obtained for each element $x_i$ of $x$. Equation~\ref{eq:duffy-formula} is used to convert these to posterior predictive samples of the prevalence of the Duffy negativite phenotype, $p(s;x_i)^2$. The posterior predictive mean and standard deviation of Duffy negativity prevalence are estimated from these samples, and these quantities are displayed on a map.
+are computed for each pixel $x_i$ in the output map. Using these moments, samples for $\tilde f_b(x_i)$ and $\tilde f_s(x_i)$ are obtained for each element $x_i$ of $x$. Equation~\ref{eq:duffy-formula} is used to convert these to posterior predictive samples of the prevalence of the Duffy negativite phenotype, $p(s;x_i)^2$. The posterior predictive mean and standard deviation of Duffy negativity prevalence are estimated from these samples, and these quantities are displayed on a map.
 
 \bigskip
 The algorithm just described is implemented simply and conveniently in \code{mcmc.py} using the \code{remember} method of \pkg{PyMC}'s \code{MCMC} objects, and the \code{point_eval} function provided by this package. The \code{remember} method of \code{DuffySampler} is used to reset its constituent variables to each of the $n$ stored samples from the joint posterior distribution:
@@ -795,11 +790,11 @@ The `nugget' variances $V_b$ and $V_s$ are added to the variances in equation~\r
     freq_b = pymc.invlogit(Msurf_b + pymc.rnormal(0,1)*np.sqrt(Vsurf_b))
     freq_s = pymc.invlogit(Msurf_s + pymc.rnormal(0,1)*np.sqrt(Vsurf_s))
 \end{CodeInput}
-Finally, these samples are converted to a posterior predictive sample for Duffy negativity prevalence $p(s;x_i)^2=[p(s;x_i|b)p(b;x_i)+p(s;x_i|a)p(a;x_i)]^2$:
+Finally, these samples and the corresponding samples of $p(a;x|a)=p_1$ are converted to a posterior predictive sample for Duffy negativity prevalence $p(s;x_i)^2=[p(s;x_i|b)p(b;x_i)+p(s;x_i|a)p(a;x_i)]^2$:
 \begin{CodeInput}
     samp_i = (freq_b*freq_s+(1-freq_b)*DuffySampler.p1.value)**2
 \end{CodeInput}
-These samples are accumulated to produce estimates of the first two moments of the posterior predictive distribution of $p(s;x_i)^2$ for each $x_i$, and these moments are used to fill in the maps of the posterior predictive mean and standard deviation shown in Figure~\ref{fig:duffymaps}.
+These samples are accumulated to produce estimates of the first two moments of the posterior predictive distribution of Duffy negativity $p(s;x_i)^2$ for each $x_i$, and these moments are used to fill in the maps of the posterior predictive mean and standard deviation shown in Figure~\ref{fig:duffymaps}.
 
 \begin{figure}
 \begin{center}
@@ -846,11 +841,11 @@ This package is built around the \code{Realization} object, which represents ran
 
 This design choice has concrete advantages that go beyond aesthetics. The Duffy negativity example in Section~\ref{sec:duffy} implements a probability model (model~\ref{eq:duffy-model}) that is not a member of the spatial generalized linear model family, whose nonstandard likelihood function involves transformations of two GPs. It would not be possible to implement in a model-based geostatistics package that specializes to spatial generalized linear models. However, this package focuses on providing a \pkg{Python} representation of GPs that closely resembles the mathematical objects rather than on covering any particular model family. Because model~\ref{eq:duffy-model} is straightforward to express in terms of those mathematical objects, it falls comfortably within this package's scope. The highly declarative implementation in \code{pymc/examples/gp/more_examples/Duffy/model.py} is little more than a transliteration from mathematical notation to \pkg{Python}. 
 
-This package inherits the flexibility of \pkg{PyMC}, as described in Section~\ref{sec:gp-sub}. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, and \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GaussianProcess} objects are function-valued random variables, this package supports construction of a very wide variety of probability models that involve scalar-valued GPs. In keeping with the extensible spirit of \pkg{PyMC}, this package accomodates user-specified mean and covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
+This package inherits the flexibility of \pkg{PyMC} \citep{pymc}, as described in Section~\ref{sec:gp-sub}. Because \pkg{PyMC} allows any \proglang{Python} function to be used to transform variables in probability models, and \proglang{Python} (like all modern programming languages) allows functions to be passed to other functions as arguments, and \code{GaussianProcess} objects are function-valued random variables, this package supports construction of a very wide variety of probability models that involve scalar-valued GPs. In keeping with the extensible spirit of \pkg{PyMC}, this package accomodates user-specified mean and covariance functions, and provides support for automatic combination of covariance functions and distance metrics.
 
 Strenuous efforts at optimization have resulted in good performance for `standard' GP-based analyses such as Bayesian geostatistics. For example, \cite{map} recently used it to conduct a fully Bayesian analysis involving a very expensive covariance function evaluated at 4,291 input locations. The library of covariance functions provided by the package is implemented in Fortran, and can take advantage of SMP systems. The linear algebra functionality is provided by \pkg{NumPy}, which can be configured to make use of optimized, multithreaded \pkg{BLAS} \citep{blas} and \pkg{LAPACK} \citep{lapack}  implementations. 
 
-However, there are many use cases for which this package cannot achieve performance on par with hand-optimized algorithms. For example, in many reversible-jump MCMC applications (e.g. \cite{gramacy}) the set of input locations under consideration changes as the MCMC progresses. It would be possible to create these models and start to fit them using this package, but the acceptance rate would typically be much lower than that enjoyed by a true reversible-jump MCMC algorithm for reasons explained in Section~\ref{sec:step-methods}. It remains to be seen whether this and related performance problems can be overcome without either diluting the conceptual fidelity of the object model or incurring an unmanageable amount of additional complexity.
+For many nonstandard models, the catchall jumping strategy described in section~\ref{sec:step-methods} will not achieve performance on par with more focused strategies. However, \pkg{PyMC}'s modular MCMC implementation can make use of application-specific jumping strategies implemented as \code{StepMethod} objects by users. \cite{pymc}'s instructions for writing step methods apply just as well to models involving GPs.
 
 More tutorial material, as well as documentation of several additional features and the incomplete Cholesky decomposition algorithms, can be found in the full package documentation at \href{http://pymc.googlecode.com/files/GPUserGuide.pdf}{http://pymc.googlecode.com/files/GPUserGuide.pdf}.
 
