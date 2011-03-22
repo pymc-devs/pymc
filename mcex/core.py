@@ -14,8 +14,8 @@ def FreeVariable( name, shape, dtype):
     """creates a TensorVariable of the given shape and type"""
     shape = np.atleast_1d(shape)
     var = TensorType(str(dtype), shape == 1)(name)
-    var.dshape = shape
-    var.dsize = np.prod(shape)
+    var.dshape = tuple(shape)
+    var.dsize = int(np.prod(shape))
     return var
 
 class ModelView(object):

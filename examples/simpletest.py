@@ -2,8 +2,8 @@ from mcex import *
 import numpy as np 
 import theano 
 
-import pydevd 
-pydevd.set_pm_excepthook()
+#import pydevd 
+#pydevd.set_pm_excepthook()
 np.seterr(invalid = 'raise')
 
 data = np.random.normal(size = (3, 20))
