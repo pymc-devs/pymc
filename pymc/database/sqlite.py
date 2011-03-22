@@ -146,22 +146,8 @@ class Trace(base.Trace):
             trace = np.squeeze(trace)
         
         return trace[index]
-
     
     __call__ = gettrace
-
-#    def nchains(self):
-#        """Return the number of existing chains, completed or not."""
-#        try:
-#            self.db.cur.execute('SELECT MAX(trace) FROM %s'%self.name)
-#            trace = self.db.cur.fetchall()[0][0]
-#
-#            if trace is None:
-#                return 0
-#            else:
-#                return trace + 1
-#        except:
-#           return 0
     
     def length(self, chain=-1):
         """Return the sample length of given chain. If chain is None,
@@ -188,13 +174,21 @@ class Database(base.Database):
         
         self.trace_names = []   # A list of sequences of names of the objects to tally.
         self._traces = {} # A dictionary of the Trace objects.
-        self.chains = 0
 
         if os.path.exists(dbname) and dbmode=='w':
             os.remove(dbname)
         
         self.DB = sqlite3.connect(dbname, check_same_thread=False)
         self.cur = self.DB.cursor()
+        
+        existing_tables = get_table_list(self.cur)
+        if existing_tables:
+            # Get number of existing chains
+            self.cur.execute('SELECT MAX(trace) FROM [%s]'%existing_tables[0])
+            self.chains = self.cur.fetchall()[0][0]+1
+            self.trace_names = self.chains * [existing_tables,]
+        else:
+            self.chains = 0
     
     def commit(self):
         """Commit updates to database"""
