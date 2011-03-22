@@ -17,7 +17,7 @@ def FreeVariable( name, shape, dtype):
     var.dsize = np.prod(shape)
     return var
 
-class Model(object):
+class LocalPropertyEval(object):
     """
     encapsulates the probability model
     """
@@ -31,10 +31,46 @@ class Model(object):
             
         self.derivative_vars = derivative_vars 
         
-        self.eval = Evaluation(self, derivative_vars)
-
         
+        logp_calculation = buitin_sum((sum(logp) for logp in logps))
+        
+        self.mapping = VariableMapping(derivative_vars)
+        self.derivative_order = [str(var) for var in derivative_vars]
+        
+        
+        calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
+            
+        self.function = function(free_vars, calculations)
+        
+        
+    def _evaluate(self,d_repr, chain_state):
+        """
+        returns logp, derivative1, derivative2...
+        does not currently do beyond derivative1
+        """
+        results = iter(self.function(**chain_state.values_considered))
+        if self.derivative_vars:
+            return results.next(), d_repr(1, self.derivative_order, results)
+        else :
+            return results.next()
+        
+    def evaluate(self, chain_state):
+        def dict_representation(n, ordering, it):
+            #replaceable with dict comprehensions
+            values = {}
+            for key, value in zip(ordering, it):
+                values[key] = value
+            return values
 
+        return self._evaluate(dict_representation, chain_state)
+         
+    def evaluate_as_vector(self, chain_state):
+        """
+        perhaps needs to be moved out of Evaluate
+        """   
+        def vector_representation(n, ordering, it):
+            return self.mapping.apply(zip(ordering,it))
+        return self._evaluate(vector_representation, chain_state)
 
 class ChainState(object):
     """
@@ -51,50 +87,6 @@ class ChainState(object):
     def reject(self):
         self.values_considered = self.values.copy()
     
-class Evaluation(object):
-    """
-    encapsulates the action of evaluating the state using the model.
-    """
-    def __init__(self, model, derivative_vars = []):
-        self.derivative = len(derivative_vars) > 0 
-        
-        logp_calculation = buitin_sum((sum(logp) for logp in model.logps))
-        
-        self.derivative_order = [str(var) for var in derivative_vars]
-        
-        calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
-            
-        self.function = function(model.free_vars, calculations)
-        
-        
-    def _evaluate(self,d_repr, chain_state):
-        """
-        returns logp, derivative1, derivative2...
-        does not currently do beyond derivative1
-        """
-        results = iter(self.function(**chain_state.values_considered))
-        if self.derivative:
-            return results.next(), d_repr(1, self.derivative_order, results)
-        else :
-            return results.next()
-        
-    def evaluate(self, chain_state):
-        def dict_representation(n, ordering, it):
-            #replaceable with dict comprehensions
-            values = {}
-            for key, value in zip(ordering, it):
-                values[key] = value
-            return values
-
-        return self._evaluate(dict_representation, chain_state)
-         
-    def evaluate_as_vector(self, mapping, chain_state):
-        """
-        perhaps needs to be moved out of Evaluate
-        """   
-        def vector_representation(n, ordering, it):
-            return mapping.apply(zip(ordering,it))
-        return self._evaluate(vector_representation, chain_state)
         
 class VariableMapping(object):
     """encapsulates a mapping between a subset set of variables and a vector
@@ -163,3 +155,6 @@ complex_types = set(['complex64',
                 'complex128'])
 continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
+
+#theano stuff 
+theano.config.warn.sum_div_dimshuffle_bug = False
