@@ -117,3 +117,37 @@ double psi(double x){
     
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
+
+class FactLn(scalar.UnaryScalarOp):
+    """
+    Compute factln(x)
+    """
+    @staticmethod
+    def st_impl(x):
+        return numpy.log(special.factorial(x))
+    def impl(self, x):
+        return FactLn.st_impl(x)
+    
+    #def grad()  no gradient now 
+    
+    def c_support_code(self):
+        return ( 
+        """
+double factln(int n){
+    static double cachedfl[100];
+    
+    if (n < 0) return -1.0; // need to return -inf here at some point
+    if (n <= 1) return 0.0;
+    if (n < 100) return cachedfl[n] ? cachedfl[n] : (cachedfl[n]=lgammln(n + 1.0));
+    else return lgammln(n+1.0);}
+    """ )
+    def c_code(self, node, name, inp, out, sub):
+        x, = inp
+        z, = out
+        if node.inputs[0].type in [scalar.float32, scalar.float64]:
+            return """%(z)s =
+                factln(%(x)s);""" % locals()
+        raise NotImplementedError('only floatingpoint is implemented')
+    
+scalar_factln = Psi(scalar.upgrade_to_float, name='scalar_factln')
+factln = tensor.Elemwise(scalar_factln, name='factln')
