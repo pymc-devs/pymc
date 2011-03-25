@@ -4776,6 +4776,7 @@ C the output.  INDX(N) records the pivoting order.
 
 
       DOUBLE PRECISION A(N,N),C(N),C1
+      INTEGER N
       INTEGER INDX(N)
 
 C Initialize the index

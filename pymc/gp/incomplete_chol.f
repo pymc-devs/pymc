@@ -14,7 +14,7 @@ cf2py intent(inplace) sig
 c
 c The pivot vector is are of size nnew
 cf2py intent(in,out) piv
-        integer nnew, nold, ptemp, ndim,rl,nnewmax
+        integer nnew, nold, ptemp, ndim,rl,nnewmax, itot
         integer i, n, m, mold, piv(n), p(n), j
         double precision rowvec(n), diag(nnew), x(n,ndim)
         double precision sig(rl,n)
