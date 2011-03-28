@@ -57,7 +57,7 @@ Posit a function, :math:`f(x)` which can be evaluated for any value on the suppo
 
 .. _bound:
 
-.. figure:: figs/reject.png
+.. figure:: _images/reject.*
    :alt: Rejection figure.
    :align: center
    :scale: 100
@@ -71,9 +71,9 @@ Posit a function, :math:`f(x)` which can be evaluated for any value on the suppo
 
 This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
 
-.. _unbound:
+.. _envelope:
 
-.. figure:: figs/envelope.png
+.. figure:: _images/envelope.*
    :alt: envelope figure
    :align: center
    :scale: 100
@@ -86,7 +86,7 @@ If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian 
 .. math::
    g(x) \ge  f(x) \qquad\forall x \in (-\infty,\infty)
 
-Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept or reject each of these values based upon :math:`f(x_i)`. Specifically, for each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant (Figure :ref:`unbound <fig:unbound>`). This approach is made more efficient by choosing an enveloping distribution that is "close" to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
+Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept or reject each of these values based upon :math:`f(x_i)`. Specifically, for each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant (Figure :ref:`envelope`). This approach is made more efficient by choosing an enveloping distribution that is "close" to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
 
 Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman_1997]_.
 
@@ -211,8 +211,7 @@ ever call the stationary distribution itself homogeneous?**:
 
 * :math:`n \rightarrow \infty`
 
-* :math:`\pi^{(0)}=\pi` for some :math:`i < k` **Is it meant to be
-  :math:`\pi^(i)`, and **
+* :math:`\pi^{(i)}=\pi` for some :math:`i < k` 
 
 If this chain is homogeneous it is called reversible, because it satisfies the
 **detailed balance equation**:
@@ -367,4 +366,4 @@ produce proposals close to the current parameter value, but may result in chains
 that mix very slowly. Some simulation studies suggest optimal acceptance rates
 in the range of 20-50%. It is often worthwhile to optimize the proposal variance
 by iteratively adjusting its value, according to observed acceptance rates early
-in the MCMC simulation [Gamerman:1997]_.
+in the MCMC simulation [Gamerman_1997]_.

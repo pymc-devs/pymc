@@ -7,7 +7,7 @@ Saving and managing sampling results
 Accessing Sampled Data
 ======================
 
-The recommended way to access data from an MCMC run, irrespective of the database backend, is to use the ```` method::
+The recommended way to access data from an MCMC run, irrespective of the database backend, is to use the ``trace`` method::
 
 	>>> from pymc.examples import disaster_model
 	>>> M = MCMC(disaster_model)
@@ -159,7 +159,7 @@ The ``savestate`` feature is not implemented in the ``mysql`` backend.
 
 
 The ``hdf5`` backend
-----------------
+--------------------
 
 The ``hdf5`` backend uses `pyTables`_ to save data in binary HDF5 format. The ``hdf5`` database is fast and can store huge traces, far larger than the available RAM. Data can be compressed and decompressed on the fly to
 reduce the disk footprint. Another feature of this backends is that it can store arbitrary objects. Whereas the other backends are limited to numerical values, ``hdf5`` can tally any object that can be pickled, opening the door for powerful and exotic applications (see ``pymc.gp``).
