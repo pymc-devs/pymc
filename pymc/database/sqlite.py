@@ -113,7 +113,7 @@ class Trace(base.Trace):
         
         # If chain is None, get the data from all chains.
         if chain is None:
-            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            self.db.cur.execute('SELECT * FROM [%s]' % self.name)
             trace = self.db.cur.fetchall()
         else:
             # Deal with negative chains (starting from the end)
@@ -130,7 +130,7 @@ class Trace(base.Trace):
         chain = self._chain
         
         if chain is None:
-            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            self.db.cur.execute('SELECT * FROM [%s]' % self.name)
             trace = self.db.cur.fetchall()
         else:
             # Deal with negative chains (starting from the end)
