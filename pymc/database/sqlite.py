@@ -113,7 +113,7 @@ class Trace(base.Trace):
         
         # If chain is None, get the data from all chains.
         if chain is None:
-            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            self.db.cur.execute('SELECT * FROM [%s]' % self.name)
             trace = self.db.cur.fetchall()
         else:
             # Deal with negative chains (starting from the end)
@@ -130,7 +130,7 @@ class Trace(base.Trace):
         chain = self._chain
         
         if chain is None:
-            self.db.cur.execute('SELECT * FROM %s' % self.name)
+            self.db.cur.execute('SELECT * FROM [%s]' % self.name)
             trace = self.db.cur.fetchall()
         else:
             # Deal with negative chains (starting from the end)
@@ -264,7 +264,7 @@ def get_table_list(cursor):
 
 def get_shape(cursor, name):
     """Return the shape of the table ``name``."""
-    cursor.execute('select * from %s'% name)
+    cursor.execute('select * from [%s]'% name)
     inds = cursor.description[-1][0][1:].split('_')
     return tuple([int(i) for i in inds])
 
