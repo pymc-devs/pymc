@@ -264,7 +264,7 @@ def get_table_list(cursor):
 
 def get_shape(cursor, name):
     """Return the shape of the table ``name``."""
-    cursor.execute('select * from %s'% name)
+    cursor.execute('select * from [%s]'% name)
     inds = cursor.description[-1][0][1:].split('_')
     return tuple([int(i) for i in inds])
 
