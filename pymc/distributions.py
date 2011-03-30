@@ -1079,11 +1079,11 @@ def exponential_like(x, beta):
     The exponential distribution is a special case of the gamma distribution
     with alpha=1. It often describes the time until an event.
 
-    .. math:: f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
+    .. math:: f(x \mid \beta) = \beta e^{-\beta x}
 
     :Parameters:
       - `x` : x > 0
-      - `beta` : Survival parameter (beta > 0).
+      - `beta` : Scale parameter (beta > 0).
 
     .. note::
       - :math:`E(X) = \beta`
