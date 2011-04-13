@@ -86,7 +86,7 @@ class test_gelman_rubin(TestCase):
         gr = pymc.gelman_rubin(S2)
         
         for i in gr:
-            assert_approx_equal(gr[i], 1., 3)
+            assert_approx_equal(gr[i], 1., 2)
         
         
 class test_iat(TestCase):

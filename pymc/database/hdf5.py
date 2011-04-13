@@ -474,7 +474,10 @@ Error:
         if len(self._chains)==0:
             return {}
         elif hasattr(self._chains[chain],'_state_'):
-            return self._chains[chain]._state_[0]
+            if len(self._chains[chain]._state_)>0:
+                return self._chains[chain]._state_[0]
+            else:
+                return {}
         else:
             return {}
 

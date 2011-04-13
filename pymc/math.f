@@ -9,6 +9,7 @@ C      The hash sums below are the sums of the mantissas of the
 C      coefficients.   They are included for use in checking
 C      transcription.
 C
+      INTEGER IFAULT
       DOUBLE PRECISION ZERO, ONE, HALF, SPLIT1, SPLIT2, CONST1,
      *           CONST2, A0, A1, A2, A3, A4, A5, A6, A7, 
      *           B1, B2, B3, B4, B5, B6, B7,

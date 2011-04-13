@@ -344,7 +344,7 @@ class Metropolis(StepMethod):
     :SeeAlso: StepMethod, Sampler.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=None, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=None, tally=True, check_before_accepting=True):
         # Metropolis class initialization
 
         # Initialize superclass
@@ -354,8 +354,9 @@ class Metropolis(StepMethod):
         self.adaptive_scale_factor = 1.
         self.accepted = 0.
         self.rejected = 0.
-        self._state = ['rejected', 'accepted', 'adaptive_scale_factor', 'proposal_sd', 'proposal_distribution']
+        self._state = ['rejected', 'accepted', 'adaptive_scale_factor', 'proposal_sd', 'proposal_distribution', 'check_before_accepting']
         self._tuning_info = ['adaptive_scale_factor']
+        self.check_before_accepting = check_before_accepting
 
         # Set public attributes
         self.stochastic = stochastic
@@ -364,23 +365,24 @@ class Metropolis(StepMethod):
         else:
             self.verbose = stochastic.verbose
 
-        # Avoid zeros when setting proposal variance
-        if proposal_sd is not None:
-            self.proposal_sd = proposal_sd
-        else:
-            if all(self.stochastic.value != 0.):
-                self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+        if proposal_distribution != "Prior":
+            # Avoid zeros when setting proposal variance
+            if proposal_sd is not None:
+                self.proposal_sd = proposal_sd
             else:
-                self.proposal_sd = ones(shape(self.stochastic.value)) * scale
+                if all(self.stochastic.value != 0.):
+                    self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
+                else:
+                    self.proposal_sd = ones(shape(self.stochastic.value)) * scale
 
-        # Initialize proposal deviate with array of zeros
-        self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
+            # Initialize proposal deviate with array of zeros
+            self.proposal_deviate = zeros(shape(self.stochastic.value), dtype=float)
 
-        # Determine size of stochastic
-        if isinstance(self.stochastic.value, ndarray):
-            self._len = len(self.stochastic.value.ravel())
-        else:
-            self._len = 1
+            # Determine size of stochastic
+            if isinstance(self.stochastic.value, ndarray):
+                self._len = len(self.stochastic.value.ravel())
+            else:
+                self._len = 1
 
         # If no dist argument is provided, assign a proposal distribution automatically.
         if not proposal_distribution:
@@ -446,7 +448,8 @@ class Metropolis(StepMethod):
             if self.proposal_distribution == "Prior":
                 logp_p = self.loglike
                 # Check for weirdness before accepting jump
-                self.stochastic.logp
+                if self.check_before_accepting:
+                    self.stochastic.logp
             else:
                 logp_p = self.logp_plus_loglike
 
@@ -1481,10 +1484,10 @@ class TWalk(StepMethod):
         """
         The competence function for TWalk.
         """
-        if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
-            if np.alen(stochastic.value) >=10:
-                return 2
-            return 1
+        # if stochastic.dtype in float_dtypes and np.alen(stochastic.value) > 4:
+        #             if np.alen(stochastic.value) >=10:
+        #                 return 2
+        #             return 1
         return 0
     
     def walk(self):

@@ -64,7 +64,7 @@ sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 sc_bool_distributions = ['bernoulli']
-sc_discrete_distributions = ['bernoulli', 'binomial', 'geometric', 'poisson',
+sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
                              'negative_binomial', 'categorical', 'hypergeometric',
                              'discrete_uniform', 'truncated_poisson']
 
@@ -142,12 +142,13 @@ def new_dist_class(*new_class_args):
     """
 
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
+
     class new_class(Stochastic):
 
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
             parents=parents_default
-
+            
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
             arg_vals = [None, parents, None, False, None, True, True, None, False, None, None]
@@ -259,7 +260,7 @@ def new_dist_class(*new_class_args):
             elif 'size' in kwds.keys():
                 raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
 
-
+            
             # Call base class initialization method
             if arg_dict_out.pop('debug'):
                 logp = debug_wrapper(logp)
@@ -310,7 +311,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     :SeeAlso:
       new_dist_class
     """  
-    
+
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
     parent_names = args[1:]
     try:
@@ -336,7 +337,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     for parameter, func in logp_partial_gradients.iteritems():
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
-         
+    
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
 						 logp, random, mv, wrapped_logp_partial_gradients)
 
@@ -846,10 +847,10 @@ def categorical_like(x, p):
     """
 
     p = np.atleast_2d(p)
-    if any(np.sum(p, 1)!=1):
-        print "Probabilities may not sum to unity:", p
+    if abs(np.sum(p, 1)-1)>0.00001:
+        print "Probabilities in categorical_like sum to", np.sum(p, 1)
     if np.array(x).dtype != int:
-        print "Non-integer values in categorical_like"
+        #print "Non-integer values in categorical_like"
         return -inf
     return flib.categorical(x, p)
 
@@ -1078,11 +1079,11 @@ def exponential_like(x, beta):
     The exponential distribution is a special case of the gamma distribution
     with alpha=1. It often describes the time until an event.
 
-    .. math:: f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}
+    .. math:: f(x \mid \beta) = \beta e^{-\beta x}
 
     :Parameters:
       - `x` : x > 0
-      - `beta` : Survival parameter (beta > 0).
+      - `beta` : Scale parameter (beta > 0).
 
     .. note::
       - :math:`E(X) = \beta`
@@ -2071,6 +2072,9 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
+    if alpha > 1e10:
+        # Return Poisson when alpha gets very large
+        return flib.poisson(x, mu)
     return flib.negbin2(x, mu, alpha)
 
 negative_binomial_grad_like = {'mu'    : flib.negbin2_gmu,
