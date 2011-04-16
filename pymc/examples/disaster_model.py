@@ -9,7 +9,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
 from pymc import *
-from numpy import array
+from numpy import array, empty
 from numpy.random import randint
 
 __all__ = ['disasters_array', 'switchpoint', 'early_mean', 'late_mean', 'disasters']
@@ -28,11 +28,12 @@ switchpoint = DiscreteUniform('switchpoint',lower=0,upper=110)
 early_mean = Exponential('early_mean',beta=1.)
 late_mean = Exponential('late_mean',beta=1.)
 
-@stochastic(observed=True, dtype=int)
-def disasters(  value = disasters_array,
-                early_mean = early_mean,
-                late_mean = late_mean,
-                switchpoint = switchpoint):
-    """Annual occurences of coal mining disasters."""
-    return poisson_like(value[:switchpoint],early_mean) + poisson_like(value[switchpoint:],late_mean)
+@deterministic(plot=False)
+def rate(s=switchpoint, e=early_mean, l=late_mean):
+    ''' Concatenate Poisson means '''
+    out = empty(len(disasters_array))
+    out[:s] = e
+    out[s:] = l
+    return out
 
+disasters = Poisson('disasters', mu=rate, value=disasters_array, observed=True)
