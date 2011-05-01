@@ -125,7 +125,7 @@ class Model(ObjectContainer):
     def get_node(self, node_name):
         """Retrieve node with passed name"""
         for node in self.nodes:
-            if node.__name__ is node_name:
+            if node.__name__ == node_name:
                 return node 
 
 
