@@ -234,7 +234,7 @@ class TestHDF5(TestPickle):
 
     def test_xdata_attributes(self):
         db = self.load()
-        assert_array_equal(db.D, disaster_model.disasters_array)
+        assert_array_equal(db.disasters, disaster_model.disasters_array)
         db.close()
         del db
 
@@ -260,9 +260,9 @@ class TestHDF5(TestPickle):
     def test_xhdf5_col(self):
         import tables
         db = self.load()
-        col = db.e.hdf5_col()
+        col = db.early_mean.hdf5_col()
         assert col.__class__ == tables.table.Column
-        assert_equal(len(col), len(db.e()))
+        assert_equal(len(col), len(db.early_mean()))
         db.close()
         del db
 
