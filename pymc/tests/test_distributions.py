@@ -911,10 +911,10 @@ class test_skew_normal(TestCase):
         assert_almost_equal(integral, 1, 2)
 
     def test_calling(self):
-        a = skew_normal_like([0,1,2], 2, 1, 5)
-        b = skew_normal_like([0,1,2], [2,2,2], 1, 5)
-        c = skew_normal_like([0,1,2], [2,2,2], [1,1,1], 5)
-        d = skew_normal_like([0,1,2], [2,2,2], [1,1,1], [5,5,5])
+        a = skew_normal_like([1,2,3], 2, 1, 5)
+        b = skew_normal_like([1,2,3], [2,2,2], 1, 5)
+        c = skew_normal_like([1,2,3], [2,2,2], [1,1,1], 5)
+        d = skew_normal_like([1,2,3], [2,2,2], [1,1,1], [5,5,5])
 
         assert_equal(a,b)
         assert_equal(a,c)

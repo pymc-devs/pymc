@@ -48,14 +48,14 @@ class test_Container(TestCase):
 
         for i in range(2):
             for j in range(2):
-                assert(C[i][j] is A[i][j])
-                assert(C.value[i][j] is A[i][j].value)
+                assert(C[i][j] == A[i][j])
+                assert(all(C.value[i][j] == A[i][j].value))
 
-            assert(C[1][2] is A[1][2])
-            assert(C.value[1][2] is A[1][2])
+            assert(C[1][2] == A[1][2])
+            assert(C.value[1][2] == A[1][2])
 
-            assert(C[2] is A[2])
-            assert(C.value[2] is A[2])
+            assert(C[2] == A[2])
+            assert(C.value[2] == A[2])
 
         # Test array container:
 
@@ -67,25 +67,24 @@ class test_Container(TestCase):
 
 
         for i in range(2):
-            assert(D[0,i] is DM.early_mean)
-            assert(D.value[0,i] is DM.early_mean.value)
-
-            assert(D[1,i] is 1.)
-            assert(D.value[1,i] is 1.)
+            assert(D[0,i] == DM.early_mean)
+            assert(D.value[0,i] == DM.early_mean.value)
+            assert(D[1,i] == 1.)
+            assert(D.value[1,i] == 1.)
 
         P = D[2,:]
         Q = D.value[2,:]
 
         for i in range(2):
             for j in range(2):
-                assert(P[i][j] is A[i][j])
-                assert(Q[i][j] is A[i][j].value)
+                assert(P[i][j] == A[i][j])
+                assert(all(Q[i][j] == A[i][j].value))
 
-            assert(P[1][2] is A[1][2])
-            assert(Q[1][2] is A[1][2])
+            assert(P[1][2] == A[1][2])
+            assert(Q[1][2] == A[1][2])
 
-            assert(P[2] is A[2])
-            assert(Q[2] is A[2])
+            assert(P[2] == A[2])
+            assert(Q[2] == A[2])
 
 
 if __name__ == '__main__':
