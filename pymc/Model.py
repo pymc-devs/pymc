@@ -221,6 +221,9 @@ class Sampler(Model):
             self.verbose = verbose
         self.seed()
 
+        # Assign Trace instances to tallyable objects.
+        self.db.connect_model(self)
+
         # Initialize database -> initialize traces.
         if length is None:
             length = iter
@@ -415,10 +418,6 @@ class Sampler(Model):
             self.restore_sampler_state()
         else:   # What is this for? DH. 
             self.db = db.Database(**self._db_args)
-
-        # Assign Trace instances to tallyable objects.
-        self.db.connect_model(self)
-
 
     def pause(self):
         """Pause the sampler. Sampling can be resumed by calling `icontinue`.

@@ -345,7 +345,7 @@ class Database(pickle.Database):
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
-                warnings.warn("Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names))
+                raise RuntimeError, "Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names)
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:
