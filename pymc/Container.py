@@ -136,8 +136,8 @@ def Container(*args):
             return container_class(iterable)
 
     # Wrap mutable objects
-    if hasattr(iterable, '__dict__'):
-        return ObjectContainer(iterable.__dict__)
+    # if hasattr(iterable, '__dict__'):
+    #     return ObjectContainer(iterable.__dict__)
 
     # Otherwise raise an error.
     raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
