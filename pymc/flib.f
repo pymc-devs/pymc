@@ -5224,7 +5224,6 @@ cf2py threadsafe
       END      
 
 c
-
       subroutine stukel_logit(theta,n,ltheta,a1,a2,na1,na2)
 !
 ! Reference: Therese A. Stukel, 'Generalized Logistic Models',
