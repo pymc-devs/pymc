@@ -421,7 +421,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
 
 @plotwrapper
-def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def histogram(data, name, normed=True, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -440,7 +440,7 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
 
         # Generate histogram
-        hist(data.tolist(), nbins)
+        hist(data.tolist(), nbins, normed=normed)
 
         xlim(datarange)
 
@@ -983,8 +983,16 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         
     except AttributeError:
         
-        # Assume an iterable
-        vars = pymc_obj
+        try:
+            
+            # Try a database object
+            vars = pymc_obj._traces
+        
+        except AttributeError:
+            
+            # Assume an iterable
+            vars = pymc_obj
+
     
     # Empty list for y-axis labels
     labels = []
