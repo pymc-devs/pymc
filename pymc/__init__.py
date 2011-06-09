@@ -16,10 +16,9 @@ except ImportError:
 
 # Core modules
 from threadpool import *
-try:
-    import Container_values
-    del Container_values
-except ImportError:
+import os
+import pymc
+if os.getcwd().find(os.path.abspath(os.path.split(os.path.split(pymc.__file__)[0])[0]))>-1:
     raise ImportError, 'You seem to be importing PyMC from inside its source tree. Please change to another directory and try again.'
 from Node import *
 from Container import *

@@ -1,6 +1,6 @@
 """
 pymc.distributions
-
+ 
 A collection of common probability distributions. The objects associated
 with a distribution called 'dist' are:
 
@@ -445,7 +445,7 @@ def randomwrap(func):
     wrapper.__name__ = func.__name__
     return wrapper
 
-def debugwrapper(func, name):
+def debug_wrapper(func, name):
     # Wrapper to debug distributions
 
     import pdb

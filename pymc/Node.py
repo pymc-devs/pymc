@@ -49,35 +49,6 @@ def logp_gradient(variable, calculation_set = None):
     """
     return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children] )
 
-    
-def batchsd(trace, batches=5):
-    """
-    Calculates the simulation standard error, accounting for non-independent
-    samples. The trace is divided into batches, and the standard deviation of
-    the batch means is calculated.
-    """
-
-    if len(np.shape(trace)) > 1:
-
-        dims = np.shape(trace)
-        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
-        ttrace = np.transpose([t.ravel() for t in trace])
-
-        return np.reshape([batchsd(t, batches) for t in ttrace], dims[1:])
-
-    else:
-        if batches == 1: return np.std(trace)/np.sqrt(len(trace))
-
-        try:
-            batched_traces = np.resize(trace, (batches, len(trace)/batches))
-        except ValueError:
-            # If batches do not divide evenly, trim excess samples
-            resid = len(trace) % batches
-            batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
-
-        means = np.mean(batched_traces, 1)
-
-        return np.std(means)/np.sqrt(batches)
 
 class ZeroProbability(ValueError):
     "Log-probability is undefined or negative infinity"
@@ -259,29 +230,7 @@ class Variable(Node):
           The index for which chain to summarize. Defaults to None (all
           chains).
         """
-        from utils import hpd, quantiles
-        from numpy import sqrt
-
-        try:
-            trace = np.squeeze(np.array(self.trace(burn=start, chain=chain), float))
-
-            n = len(trace)
-            if not n:
-                print 'Cannot generate statistics for zero-length trace in', self.__name__
-                return
-
-
-            return {
-                'n': n,
-                'standard deviation': trace.std(0),
-                'mean': trace.mean(0),
-                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
-                'mc error': batchsd(trace, batches),
-                'quantiles': quantiles(trace)
-            }
-        except:
-            print 'Could not generate output statistics for', self.__name__
-            return
+        return self.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
 
 ContainerRegistry = []
 

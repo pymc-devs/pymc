@@ -326,7 +326,7 @@ class Sampler(Model):
         # Loop over nodes
         for variable in variables:
             # Plot object
-            stat_dict[variable.__name__] = variable.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+            stat_dict[variable.__name__] = variable.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
 
         return stat_dict
 

@@ -46,6 +46,7 @@ Some backends require being closed before saving the results. This needs to be
 done explicitly by the user.
 """
 import pymc
+import numpy as np
 import types
 import sys, traceback, warnings
 import copy
@@ -133,6 +134,53 @@ class Trace(object):
           The chain index. If None, returns the combined length of all chains.
         """
         pass
+        
+    def stats(self, alpha=0.05, start=0, batches=100, chain=None):
+        """
+        Generate posterior statistics for node.
+        
+        :Parameters:
+        name : string
+          The name of the tallyable object.
+          
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+          
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+          
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
+        """
+        from pymc.utils import hpd, quantiles
+
+        try:
+            trace = np.squeeze(np.array(self.db.trace(self.name, chain=chain)(), float))[start:]
+            
+            n = len(trace)
+            if not n:
+                print 'Cannot generate statistics for zero-length trace in', self.__name__
+                return
+
+
+            return {
+                'n': n,
+                'standard deviation': trace.std(0),
+                'mean': trace.mean(0),
+                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
+                'mc error': batchsd(trace, batches),
+                'quantiles': quantiles(trace)
+            }
+        except:
+            print 'Could not generate output statistics for', self.name
+            return
 
 
 class Database(object):
@@ -297,6 +345,7 @@ Error:
         trace = copy.copy(self._traces[name])
         trace._chain = chain
         return trace
+        
 
 def load(dbname):
     """Return a Database instance from the traces stored on disk.
@@ -314,3 +363,32 @@ def load(dbname):
     """
     pass
 
+    
+def batchsd(trace, batches=5):
+    """
+    Calculates the simulation standard error, accounting for non-independent
+    samples. The trace is divided into batches, and the standard deviation of
+    the batch means is calculated.
+    """
+
+    if len(np.shape(trace)) > 1:
+
+        dims = np.shape(trace)
+        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
+        ttrace = np.transpose([t.ravel() for t in trace])
+
+        return np.reshape([batchsd(t, batches) for t in ttrace], dims[1:])
+
+    else:
+        if batches == 1: return np.std(trace)/np.sqrt(len(trace))
+
+        try:
+            batched_traces = np.resize(trace, (batches, len(trace)/batches))
+        except ValueError:
+            # If batches do not divide evenly, trim excess samples
+            resid = len(trace) % batches
+            batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
+
+        means = np.mean(batched_traces, 1)
+
+        return np.std(means)/np.sqrt(batches)
