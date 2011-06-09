@@ -57,7 +57,7 @@ def stukel_invlogit(ltheta,a1,a2):
     return flib.stukel_invlogit(ravel(ltheta),a1,a2).reshape(shape(ltheta))
 
 def stukel_logit(theta,a1,a2):
-    return flib.stukel_invlogit(ravel(theta),a1,a2).reshape(shape(theta))
+    return flib.stukel_logit(ravel(theta),a1,a2).reshape(shape(theta))
 
 def check_list(thing, label):
     if thing is not None:
