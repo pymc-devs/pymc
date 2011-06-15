@@ -16,7 +16,7 @@ For most simple models, convergence will occur quickly, sometimes within a the f
 
 .. _mix:
 
-.. figure:: _images/poor_mixing.*
+.. figure:: _images/poormixing.*
    :alt: Poor mixing figure
    :align: center
 

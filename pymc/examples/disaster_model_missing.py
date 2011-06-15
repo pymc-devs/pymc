@@ -32,7 +32,7 @@ early_mean = Exponential('early_mean', beta=1)
 late_mean = Exponential('late_mean', beta=1)
 
 @deterministic(plot=False)
-def rates(s=switch, e=early_mean, l=late_mean):
+def rate(s=switch, e=early_mean, l=late_mean):
     """Allocate appropriate mean to time series"""
     out = np.empty(len(disasters_array))
     # Early mean prior to switchpoint
@@ -50,4 +50,4 @@ def rates(s=switch, e=early_mean, l=late_mean):
 # the value is taken as missing.
 masked_values = masked_array(disasters_array, mask=disasters_array==-999)
 # Pass masked array to data stochastic, and it does the right thing
-disasters = Poisson('disasters', mu=rates, value=masked_values, observed=True)
+disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
