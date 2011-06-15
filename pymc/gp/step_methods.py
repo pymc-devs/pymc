@@ -173,11 +173,11 @@ class GPEvaluationGibbs(pm.Metropolis):
         
         self.children_no_data = copy.copy(self.children)
         if isinstance(eps_p_f, pm.Variable):
-            self.children_no_data.discard(eps_p_f)
+            self.children_no_data.remove(eps_p_f)
             self.eps_p_f = eps_p_f
         else:
             for epf in eps_p_f:
-                self.children_no_data.discard(epf)
+                self.children_no_data.remove(epf)
             self.eps_p_f = pm.Lambda('eps_p_f', lambda e=eps_p_f: np.hstack(e), trace=False)
         
         self.V = pm.Lambda('%s_vect'%V.__name__, lambda V=V: np.resize(V, len(submod.mesh)))
