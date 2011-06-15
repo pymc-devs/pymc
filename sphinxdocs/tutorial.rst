@@ -21,7 +21,7 @@ Occurrences of disasters in the time series is thought to be derived from a Pois
 We represent our conceptual model formally as a statistical model:
 
 .. math::
-    :label: DisasterModel
+    :label: disaster_model
          
          \begin{array}{ccc}  (D_t | s, e, l) \sim\text{Poisson}\left(r_t\right), & r_t=\left\{\begin{array}{lll}             e &\text{if}& t< s\\ l &\text{if}& t\ge s             \end{array}\right.,&t\in[t_l,t_h]\\         s\sim \text{Discrete Uniform}(t_l, t_h)\\         e\sim \text{Exponential}(r_e)\\         l\sim \text{Exponential}(r_l)     \end{array}
 
@@ -41,11 +41,12 @@ Because we have defined :math:`D` by its dependence on :math:`S`, :math:`e` and 
 Two types of variables
 ----------------------
 
-At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`, :math:`rate` and :math:`l` are all random variables. Bayesian "random" variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is *epistemic*, meaning random variable :math:`x`'s probability distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes ``Stochastic`` and ``Deterministic``.
+At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`, ``rate`` and :math:`l` are all random variables. Bayesian "random" variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is *epistemic*, meaning random variable :math:`x`'s probability distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes ``Stochastic`` and ``Deterministic``.
 
-The only ``Deterministic`` in the model is :math:`rate`. If we knew the values of :math:`rate`'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of :math:`rate` exactly. A ``Deterministic`` like :math:`rate` is defined by a mathematical function that returns its value given values for its parents. ``Deterministic`` variables are sometimes called the *systemic* part of the model. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of :math:`rate` are random, :math:`rate` is random also. A more descriptive (though more awkward) name for this class would be ``DeterminedByValuesOfParents``.
+The only ``Deterministic`` in the model is ``rate``. If we knew the values of ``rate``'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of ``rate`` exactly. A ``Deterministic`` like ``rate`` is defined by a mathematical function that returns its value given values for its parents. ``Deterministic`` variables are sometimes called the *systemic* part of the model. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of ``rate`` are random, ``rate`` is random also. A more descriptive (though more awkward) name for this class would be ``DeterminedByValuesOfParents``.
 
-On the other hand, even if the values of the parents of variables :math:`switchpoint`, :math:`disasters` (before observing the data), :math:`early_mean` or :math:`late_mean` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
+On the other hand, even if the values of the parents of variables ``switchpoint``, `disasters` (before observing the data), ``early_mean``
+ or ``late_mean`` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
 
 We can represent model :eq:`disaster_model` in a file called ``disaster_model.py`` (the actual file can be found in ``pymc/examples/``) as follows. First, we import the PyMC and NumPy namespaces::
    
@@ -65,18 +66,20 @@ Next, we enter the actual data values into an array::
                       3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                       0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-Note that you don't have to type in this entire array to follow along; the code is available in the source tree, in :download:`this example script <../pymc/examples/disaster_model.py>`.  Next, we create the switchpoint variable :math:`switchpoint` ::
+Note that you don't have to type in this entire array to follow along; the code is available in the source tree, in :download:`this example script <../pymc/examples/disaster_model.py>`.  Next, we create the switchpoint variable ``switchpoint`` ::
    
    switchpoint = DiscreteUniform('switchpoint', lower=0, upper=110, doc='Switchpoint[year]')
 
 
-``DiscreteUniform`` is a subclass of ``Stochastic`` that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference ``a priori`` regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables :math:`early_mean` and :math:`late_mean` for the early and late Poisson
+``DiscreteUniform`` is a subclass of ``Stochastic`` that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference ``a priori`` regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables ``early_mean``
+ and ``late_mean`` for the early and late Poisson
 rates, respectively::
 	
 	early_mean = Exponential('early_mean',beta=1.)
 	late_mean = Exponential('late_mean',beta=1.)
 
-Next, we define the variable :math:`rate`, which selects the early rate :math:`early_mean` for times before :math:`switchpoint` and the late rate :math:`late_mean` for times after :math:`switchpoint`. We create :math:`rate` using the ``deterministic`` decorator, which converts the ordinary Python function :math:`rate` into a ``Deterministic`` object.::
+Next, we define the variable ``rate``, which selects the early rate ``early_mean``
+ for times before ``switchpoint`` and the late rate ``late_mean`` for times after ``switchpoint``. We create ``rate`` using the ``deterministic`` decorator, which converts the ordinary Python function ``rate`` into a ``Deterministic`` object.::
    
    @deterministic(plot=False)
 	def rate(s=switchpoint, e=early_mean, l=late_mean):
@@ -86,7 +89,8 @@ Next, we define the variable :math:`rate`, which selects the early rate :math:`e
 	    out[s:] = l
 	    return out
 
-The last step is to define the number of disasters ``disasters``. This is a stochastic variable but unlike ``switchpoint``, ``early_mean`` and ``late_mean`` we have observed its value. To express this, we set the argument ``observed`` to ``True`` (it is set to ``False`` by default). This tells PyMC that this object's value should not be changed::
+The last step is to define the number of disasters ``disasters``. This is a stochastic variable but unlike ``switchpoint``, ``early_mean``
+` and ``late_mean`` we have observed its value. To express this, we set the argument ``observed`` to ``True`` (it is set to ``False`` by default). This tells PyMC that this object's value should not be changed::
    
    disasters = Poisson('disasters', mu=rate, value=disasters_array, observed=True)
 
@@ -94,41 +98,44 @@ The last step is to define the number of disasters ``disasters``. This is a stoc
 Why are data and unknown variables represented by the same object?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Since its represented by a ``Stochastic`` object, :math:`disasters` is defined by its dependence on its parent :math:`rate` even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior :math:`p(early_mean,switchpoint,late_mean \mid disasters)` of model :eq:`disaster_model`, we require the likelihood :math:`p(disasters \mid early_mean,switchpoint,late_mean)`. Even though :math:`disasters`'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
+Since its represented by a ``Stochastic`` object, `disasters` is defined by its dependence on its parent ``rate`` even though its value is fixed. This isn't just a quirk of PyMC's syntax; Bayesian hierarchical notation itself makes no distinction between random variables and data. The reason is simple: to use Bayes' theorem to compute the posterior :math:`p(e,s,l \mid D)` of model :eq:`disaster_model`, we require the likelihood :math:`p(D \mid e,s,l)`. Even though `disasters`'s value is known and fixed, we need to formally assign it a probability distribution as if it were a random variable. Remember, the likelihood and the probability function are essentially the same, except that the former is regarded as a function of the parameters and the latter as a function of the data.
 
-This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like :eq:`disaster_model` as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of :math:`disasters`, we could have sampled from its prior predictive distribution :math:`p(disasters)` (*i.e.* the marginal distribution of the data) as follows:
+This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like :eq:`disaster_model` as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of `disasters`, we could have sampled from its prior predictive distribution :math:`p(D)` (*i.e.* the marginal distribution of the data) as follows:
     
-    * Sample :math:`early_mean`, :math:`switchpoint` and :math:`late_mean` from their priors.
-    * Sample :math:`disasters` conditional on these values.
+    * Sample ``early_mean``
+, ``switchpoint`` and ``late_mean`` from their priors.
+    * Sample `disasters` conditional on these values.
 
-Even after we observe the value of :math:`disasters`, we need to use this process model to make inferences about :math:`early_mean`, :math:`switchpoint` and :math:`late_mean` because its the only information we have about how the variables are related.
+Even after we observe the value of `disasters`, we need to use this process model to make inferences about ``early_mean``
+, ``switchpoint`` and ``late_mean`` because its the only information we have about how the variables are related.
 
 
 Parents and children
 --------------------
 
 
-We have above created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run ``disaster_model.py`` and examine :math:`switchpoint`'s ``parents`` attribute from the Python prompt::
+We have above created a PyMC probability model, which is simply a linked collection of variables. To see the nature of the links, import or run ``disaster_model.py`` and examine ``switchpoint``'s ``parents`` attribute from the Python prompt::
    
    >>> from pymc.examples import disaster_model
    >>> disaster_model.switchpoint.parents
    {'lower': 0, 'upper': 110}
 
-The ``parents`` dictionary shows us the distributional parameters of :math:`switchpoint`, which are constants. Now let's examine :math:`disasters`'s parents::
+The ``parents`` dictionary shows us the distributional parameters of ``switchpoint``, which are constants. Now let's examine `disasters`'s parents::
    
    >>> disaster_model.disasters.parents
    {'early_mean': <pymc.distributions.Exponential 'early_mean' at 0x1065acf50>,
 	 'late_mean': <pymc.distributions.Exponential 'late_mean' at 0x1065acfd0>,
 	 'switchpoint': <pymc.distributions.DiscreteUniform 'switchpoint' at 0x1065ace90>}
 
-We are using :math:`rate` as a distributional parameter of :math:`disasters` (*i.e.* :math:`rate` is :math:`disasters`'s parent). :math:`disasters` internally labels :math:`rate` as ``mu``, meaning :math:`rate` plays the role of the rate parameter in :math:`disasters`'s Poisson distribution. Now examine :math:`rate`'s ``children`` attribute::
+We are using ``rate`` as a distributional parameter of `disasters` (*i.e.* ``rate`` is `disasters`'s parent). `disasters` internally labels ``rate`` as ``mu``, meaning ``rate`` plays the role of the rate parameter in `disasters`'s Poisson distribution. Now examine ``rate``'s ``children`` attribute::
    
    >>> disaster_model.rate.children
    set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
 
-Because :math:`disasters` considers :math:`rate` its parent, :math:`rate` considers :math:`disasters` its child. Unlike ``parents``, ``children`` is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the ``parents`` and ``children`` attributes of the other parameters in the model.
+Because `disasters` considers ``rate`` its parent, ``rate`` considers `disasters` its child. Unlike ``parents``, ``children`` is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the ``parents`` and ``children`` attributes of the other parameters in the model.
 
-The following `directed acyclic graph` is a visualization of the parent-child relationships in the model. Unobserved stochastic variables :math:`switchpoint`, :math:`early_mean` and :math:`late_mean` are open ellipses, observed stochastic variable :math:`disasters` is a filled ellipse and deterministic variable :math:`rate` is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section :ref:`graphical` for more details.
+The following `directed acyclic graph` is a visualization of the parent-child relationships in the model. Unobserved stochastic variables ``switchpoint``, ``early_mean``
+ and ``late_mean`` are open ellipses, observed stochastic variable `disasters` is a filled ellipse and deterministic variable ``rate`` is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section :ref:`graphical` for more details.
 
 .. _dag:
 
@@ -137,7 +144,7 @@ The following `directed acyclic graph` is a visualization of the parent-child re
    
    Directed acyclic graph of the relationships in the coal mining disaster model example.
 
-As the examples above have shown, pymc objects need to have a name assigned, such as *switchpoint*, *early_mean* or *late_mean*. These names are used for storage and post-processing:
+As the examples above have shown, pymc objects need to have a name assigned, such as ``switchpoint``, ``early_mean`` or ``late_mean``. These names are used for storage and post-processing:
   
   * as keys in on-disk databases,
   * as node labels in model graphs,
@@ -151,7 +158,7 @@ A model instantiated with variables having identical names raises an error to av
 Variables' values and log-probabilities
 ---------------------------------------
 
-All PyMC variables have an attribute called ``value`` that stores the current value of that variable. Try examining :math:`disasters`'s value, and you'll see the initial value we provided for it::
+All PyMC variables have an attribute called ``value`` that stores the current value of that variable. Try examining `disasters`'s value, and you'll see the initial value we provided for it::
    
    >>> disaster_model.disasters.value
    array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6, 3, 3, 5, 4, 5, 3, 1,
@@ -160,7 +167,7 @@ All PyMC variables have an attribute called ``value`` that stores the current va
           0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2, 3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2,
           0, 0, 1, 4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
-If you check :math:`early_mean`'s, :math:`switchpoint`'s and :math:`late_mean`'s values, you'll see random initial values generated by PyMC::
+If you check the values of ``early_mean``, ``switchpoint`` and ``late_mean``, you'll see random initial values generated by PyMC::
    
    >>> disaster_model.switchpoint.value
    44
@@ -171,7 +178,7 @@ If you check :math:`early_mean`'s, :math:`switchpoint`'s and :math:`late_mean`'s
    >>> disaster_model.late_mean.value
    2.6491936762267811
 
-Of course, since these are ``Stochastic`` elements, your values will be different than these. If you check :math:`rate`'s value, you'll see an array whose first :math:`switchpoint` elements are :math:`early_mean` (here 0.33464706), and whose remaining elements are :math:`late_mean` (here 2.64919368)::
+Of course, since these are ``Stochastic`` elements, your values will be different than these. If you check ``rate``'s value, you'll see an array whose first ``switchpoint`` elements are ``early_mean`` (here 0.33464706), and whose remaining elements are ``late_mean`` (here 2.64919368)::
    
    >>> disaster_model.rate.value
    array([ 0.33464706,  0.33464706,  0.33464706,  0.33464706,  0.33464706,
@@ -197,9 +204,10 @@ Of course, since these are ``Stochastic`` elements, your values will be differen
            2.64919368,  2.64919368,  2.64919368,  2.64919368,  2.64919368,
            2.64919368,  2.64919368,  2.64919368,  2.64919368,  2.64919368])
 
-To compute its value, :math:`rate` calls the function we used to create it, passing in the values of its parents.
+To compute its value, ``rate`` calls the function we used to create it, passing in the values of its parents.
 
-``Stochastic`` objects can evaluate their probability mass or density functions at their current values given the values of their parents. The logarithm of a stochastic object's probability mass or density can be accessed via the ``logp`` attribute. For vector-valued variables like :math:`disasters`, the ``logp`` attribute returns the sum of the logarithms of the joint probability or density of all elements of the value. Try examining :math:`switchpoint`'s and :math:`disasters`'s log-probabilities and :math:`early_mean`'s and :math:`late_mean`'s log-densities::
+``Stochastic`` objects can evaluate their probability mass or density functions at their current values given the values of their parents. The logarithm of a stochastic object's probability mass or density can be accessed via the ``logp`` attribute. For vector-valued variables like `disasters`, the ``logp`` attribute returns the sum of the logarithms of the joint probability or density of all elements of the value. Try examining ``switchpoint``'s and `disasters`'s log-probabilities and ``early_mean``
+'s and ``late_mean``'s log-densities::
    
    >>> disaster_model.switchpoint.logp
    -4.7095302013123339
@@ -213,12 +221,12 @@ To compute its value, :math:`rate` calls the function we used to create it, pass
    >>> disaster_model.late_mean.logp
    -2.6491936762267811
 
-``Stochastic`` objects need to call an internal function to compute their ``logp`` attributes, as :math:`rate` needed to call an internal function to compute its value. Just as we created :math:`rate` by decorating a function that computes its value, it's possible to create custom ``Stochastic`` objects by decorating functions that compute their log-probabilities or densities (see chapter :ref:`chap_modelbuilding`). Users are thus not limited to the set of of statistical distributions provided by PyMC.
+``Stochastic`` objects need to call an internal function to compute their ``logp`` attributes, as ``rate`` needed to call an internal function to compute its value. Just as we created ``rate`` by decorating a function that computes its value, it's possible to create custom ``Stochastic`` objects by decorating functions that compute their log-probabilities or densities (see chapter :ref:`chap_modelbuilding`). Users are thus not limited to the set of of statistical distributions provided by PyMC.
 
 Using Variables as parents of other Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Let's take a closer look at our definition of :math:`rate`::
+Let's take a closer look at our definition of ``rate``::
    
    @deterministic(plot=False)
 	def rate(s=switchpoint, e=early_mean, l=late_mean):
@@ -228,9 +236,9 @@ Let's take a closer look at our definition of :math:`rate`::
 	    out[s:] = l
 	    return out
 
-The arguments :math:`switchpoint`, :math:`early_mean` and :math:`late_mean` are ``Stochastic`` objects, not numbers. If that is so, why aren't errors raised when we attempt to slice array ``out`` up to a ``Stochastic`` object?
+The arguments ``switchpoint``, ``early_mean`` and ``late_mean`` are ``Stochastic`` objects, not numbers. If that is so, why aren't errors raised when we attempt to slice array ``out`` up to a ``Stochastic`` object?
 
-Whenever a variable is used as a parent for a child variable, PyMC replaces it with its ``value`` attribute when the child's value or log-probability is computed. When :math:`rate`'s value is recomputed, ``s.value`` is passed to the function as argument ``switchpoint``. To see the values of the parents of :math:`rate` all together, look at ``rate.parents.value``.
+Whenever a variable is used as a parent for a child variable, PyMC replaces it with its ``value`` attribute when the child's value or log-probability is computed. When ``rate``'s value is recomputed, ``s.value`` is passed to the function as argument ``switchpoint``. To see the values of the parents of ``rate`` all together, look at ``rate.parents.value``.
 
 Fitting the model with MCMC
 ---------------------------
@@ -253,9 +261,9 @@ After a few seconds, you should see that sampling has finished normally. The mod
 What does it mean to fit a model?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`Fitting` a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior :math:`p(s,e,l|D)` by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of :math:`switchpoint`, :math:`early_mean` and :math:`late_mean` according to the Metropolis-Hastings algorithm [Gelman_2004]_ over a specified number of iterations (``iter``).
+`Fitting` a model means characterizing its posterior distribution somehow. In this case, we are trying to represent the posterior :math:`p(s,e,l|D)` by a set of joint samples from it. To produce these samples, the MCMC sampler randomly updates the values of ``switchpoint``, ``early_mean`` and ``late_mean`` according to the Metropolis-Hastings algorithm [Gelman_2004]_ over a specified number of iterations (``iter``).
 
-As the number of samples grows sufficiently large, the MCMC distributions of :math:`switchpoint`, :math:`early_mean` and :math:`late_mean` converge to their joint stationary distribution. In other words, their values can be considered as random draws from the posterior :math:`p(switchpoint,early_mean,late_mean|disasters)`. PyMC assumes that the ``burn`` parameter specifies a `sufficiently large` number of iterations for the algorithm to converge, so it is up to the user to verify that this is the case (see chapter :ref:`chap_modelchecking`). Consecutive values sampled from :math:`switchpoint`, :math:`early_mean` and :math:`late_mean` are always serially dependent, since it is a Markov chain. MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is useful to thin the sample by only retaining every *k* th sample, where :math:`k` is an integer value. This thinning interval is passed to the sampler via the ``thin`` argument.
+As the number of samples grows sufficiently large, the MCMC distributions of ``switchpoint``, ``early_mean`` and ``late_mean`` converge to their joint stationary distribution. In other words, their values can be considered as random draws from the posterior :math:`p(s,e,l|D)`. PyMC assumes that the ``burn`` parameter specifies a `sufficiently large` number of iterations for the algorithm to converge, so it is up to the user to verify that this is the case (see chapter :ref:`chap_modelchecking`). Consecutive values sampled from ``switchpoint``, ``early_mean`` and ``late_mean`` are always serially dependent, since it is a Markov chain. MCMC often results in strong autocorrelation among samples that can result in imprecise posterior inference. To circumvent this, it is useful to thin the sample by only retaining every *k* th sample, where :math:`k` is an integer value. This thinning interval is passed to the sampler via the ``thin`` argument.
 
 If you are not sure ahead of time what values to choose for the ``burn`` and ``thin`` parameters, you may want to retain all the MCMC samples, that is to set ``burn=0`` and ``thin=1``, and then discard the `burn-in period` and thin the samples after examining the traces (the series of samples). See [Gelman_2004]_ for general guidance.
 
@@ -287,7 +295,7 @@ You should see something like this:
 .. figure:: _images/ltrace.*
    :width: 800 px
    
-   Histogram of the marginal posterior probability of parameter :math:`late_mean`.
+   Histogram of the marginal posterior probability of parameter ``late_mean``.
 
 PyMC has its own plotting functionality, via the optional ``matplotlib`` module as noted in the installation notes. The ``Matplot`` module includes a ``plot`` function that takes the model (or a single parameter) as an argument::
    
@@ -299,9 +307,9 @@ For each variable in the model, ``plot`` generates a composite figure, such as t
 .. figure:: _images/spost.*
    :width: 800 px
    
-   Temporal series and histogram of the samples drawn for :math:`switchpoint`.
+   Temporal series and histogram of the samples drawn for ``switchpoint``.
 
-The left-hand pane of this figure shows the temporal series of the samples from :math:`switchpoint`, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see [Gelman_1996]_), while the histogram is useful for visualizing the posterior.
+The left-hand pane of this figure shows the temporal series of the samples from ``switchpoint``, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see [Gelman_1996]_), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call ``M.stats()``.
 
@@ -368,7 +376,7 @@ This masked array, in turn, can then be passed to one of PyMC's data stochastic 
    >>> disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
 
 
-Here :math:`rate` is an array of means for each year of data, allocated according to the location of the switchpoint. Each element in :math:`disasters` is a Poisson Stochastic, irrespective of whether the observation was missing or not. The difference is that actual observations are data Stochastics (``observed=True``), while the missing values are non-data Stochastics. The latter are considered unknown, rather than fixed, and therefore estimated by the MCMC algorithm, just as unknown model parameters.
+Here ``rate`` is an array of means for each year of data, allocated according to the location of the switchpoint. Each element in `disasters` is a Poisson Stochastic, irrespective of whether the observation was missing or not. The difference is that actual observations are data Stochastics (``observed=True``), while the missing values are non-data Stochastics. The latter are considered unknown, rather than fixed, and therefore estimated by the MCMC algorithm, just as unknown model parameters.
 
 The entire model looks very similar to the original model::
    
@@ -427,7 +435,7 @@ MCMC objects handle individual variables via *step methods*, which determine how
 
 The value of ``step_method_dict`` corresponding to a particular variable is a list of the step methods :math:`M` is using to handle that variable.
 
-You can force :math:`M` to use a particular step method by calling ``M.use_step_method`` before telling it to sample. The following call will cause :math:`M` to handle :math:`late_mean` with a standard ``Metropolis`` step method, but with proposal standard deviation equal to :math:`2`::
+You can force :math:`M` to use a particular step method by calling ``M.use_step_method`` before telling it to sample. The following call will cause :math:`M` to handle ``late_mean`` with a standard ``Metropolis`` step method, but with proposal standard deviation equal to :math:`2`::
    
    >>> from pymc import Metropolis
    >>> M.use_step_method(Metropolis, disaster_model.late_mean, proposal_sd=2.)
@@ -454,4 +462,4 @@ Also, be sure to check out the documentation for the Gaussian process extension,
 
 .. _Python documentation: http://www.python.org/doc/
 
-.. [#1] Note that the unknown variables :math:`switchpoint`, :math:`early_mean`, :math:`late_mean` and :math:`rate` will all accrue samples, but :math:`disasters` will not because its value has been observed and is not updated. Hence :math:`disasters` has no trace and calling ``M.trace('disasters')[:]`` will raise an error.
+.. [#1] Note that the unknown variables ``switchpoint``, ``early_mean``, ``late_mean`` and ``rate`` will all accrue samples, but `disasters` will not because its value has been observed and is not updated. Hence `disasters` has no trace and calling ``M.trace('disasters')[:]`` will raise an error.
