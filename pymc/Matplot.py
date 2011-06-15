@@ -12,7 +12,7 @@ except ImportError:
     gridspec = None
 import pymc
 import os
-from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig
+from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, acorr, mlab
 from pylab import figure, subplot, subplots_adjust, gca, scatter, axvline, yticks, xticks
 from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show, text
 from pylab import errorbar
@@ -385,7 +385,9 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             figure(figsize=(10, 6))
 
         # Call trace
-        trace(data, name, datarange=datarange, rows=rows, columns=2, num=num, last=last, fontmap=fontmap)
+        trace(data, name, datarange=datarange, rows=rows*2, columns=2, num=num, last=last, fontmap=fontmap)
+        # Call autocorrelation
+        autocorrelation(data, name, rows=rows*2, columns=2, num=num+2*rows, last=last, fontmap=fontmap)
         # Call histogram
         histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last, fontmap=fontmap)
 
@@ -421,7 +423,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
 
 @plotwrapper
-def histogram(data, name, normed=True, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -440,15 +442,20 @@ def histogram(data, name, normed=True, nbins=None, datarange=(None, None), forma
         nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
 
         # Generate histogram
-        hist(data.tolist(), nbins, normed=normed)
+        hist(data.tolist(), nbins, histtype='stepfilled')
 
         xlim(datarange)
 
         # Plot options
-        if last:
-            xlabel(name, fontsize='x-small')
+        title('\n\n   %s hist'%name, x=0., y=1., ha='left', va='top', fontsize='medium')
 
         ylabel("Frequency", fontsize='x-small')
+
+        # Plot vertical lines for median and 95% UI
+        quant = calc_quantiles(data)
+        axvline(x=quant[50], linewidth=2, color='black')
+        for ui in [2.5, 97.5]:
+            axvline(x=quant[ui], linewidth=2, color='grey', linestyle='dotted')
 
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
@@ -486,9 +493,7 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
     ylim(datarange)
 
     # Plot options
-    if last:
-        xlabel('Iteration', fontsize='x-small')
-    ylabel(name, fontsize='x-small')
+    title('\n\n   %s trace'%name, x=0., y=1., ha='left', va='top', fontsize='small')
 
     # Smaller tick labels
     tlabels = gca().get_xticklabels()
@@ -630,7 +635,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     #close()
 
 @plotwrapper
-def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, num=1, verbose=1):
+def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
     """
     Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
 
@@ -641,7 +646,7 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
         name: string
             The name of the object.
             
-        maxlag (optional): int
+        maxlags (optional): int
             The largest discrete value for the autocorrelation to be calculated (defaults to 100).
 
         format (optional): string
@@ -660,65 +665,50 @@ def autocorrelation(data, name, maxlag=100, format='png', suffix='-acf', path='.
             Level of output verbosity.
             
     """
+    # Internal plotting specification for handling nested arrays
 
-    # If there is only one data array, go ahead and plot it ...
-    if rank(data)==1:
+    # Stand-alone plot or subplot?
+    standalone = rows==1 and columns==1 and num==1
 
+    if standalone:
         if verbose>0:
-            print 'Plotting', name+suffix
+            print 'Plotting', name
+        figure()
 
-        # If new plot, generate new frame
-        if new:
-            figure(figsize=(10, 6))
-
-        subplot(rows, 1, num)
-        x = arange(maxlag)
-        y = [_autocorr(data, lag=i) for i in x]
-
-        bar(x, y)
+    subplot(rows, columns, num)
+    if ndim(data) == 1:
+        acorr(data, detrend=mlab.detrend_mean, maxlags=maxlags)
 
         # Set axis bounds
-        ylim(-1.0, 1.0)
-        xlim(0, len(y))
+        ylim(-.1, 1.1)
+        xlim(-maxlags, maxlags)
 
         # Plot options
-        ylabel(name, fontsize='x-small')
-        tlabels = gca().get_yticklabels()
-        setp(tlabels, 'fontsize', fontmap[rows])
+        title('\n\n   %s acorr'%name, x=0., y=1., ha='left', va='top', fontsize='small')
+
+        # Smaller tick labels
         tlabels = gca().get_xticklabels()
         setp(tlabels, 'fontsize', fontmap[rows])
 
-        if last:
-            # Label X-axis on last subplot
-            xlabel('Lag', fontsize='x-small')
-
-            if not os.path.exists(path):
-                os.mkdir(path)
-            if not path.endswith('/'):
-                path += '/'
-            if rows>4:
-                # Append plot number to suffix, if there will be more than one
-                suffix += '_%i' % i
-            savefig("%s%s%s.%s" % (path, name, suffix, format))
-
+        tlabels = gca().get_yticklabels()
+        setp(tlabels, 'fontsize', fontmap[rows])
+    elif ndim(data) == 2:
+        # generate acorr plot for each dimension
+        rows = data.shape[1]
+        for j in range(rows):
+            autocorrelation(data[:, j], '%s_%d' % (name, j), maxlags, fontmap=fontmap, rows=rows, columns=1, num=j+1)
     else:
-        # ... otherwise plot recursively
-        tdata = swapaxes(data, 0, 1)
+        raise ValueError, 'Only 1- and 2- dimensional functions can be displayed' 
 
-        # How many rows?
-        _rows = min(4, len(tdata))
+    if standalone:
+        if not os.path.exists(path):
+            os.mkdir(path)
+        if not path.endswith('/'):
+            path += '/'
+        # Save to fiel
+        savefig("%s%s%s.%s" % (path, name, suffix, format))
+        #close()
 
-        for i in range(len(tdata)):
-
-            # New plot or adding to existing?
-            _new = not i % _rows
-            # Current subplot number
-            _num = i % _rows + 1
-            # Final subplot of current figure?
-            _last = not _num % _rows or (i==len(tdata)-1)
-
-            autocorrelation(tdata[i], name+'_'+str(i), maxlag=maxlag, format=format, suffix=suffix, path=path, fontmap=fontmap, new=_new, last=_last, rows=_rows, num=_num, verbose=verbose)
-    
 
 # TODO: make sure pair_posterior works.
 def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
