@@ -385,11 +385,11 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             figure(figsize=(10, 6))
 
         # Call trace
-        trace(data, name, datarange=datarange, rows=rows*2, columns=2, num=num, last=last, fontmap=fontmap)
+        trace(data, name, datarange=datarange, rows=rows*2, columns=2, num=num+3*(num-1), last=last, fontmap=fontmap)
         # Call autocorrelation
-        autocorrelation(data, name, rows=rows*2, columns=2, num=num+2*rows, last=last, fontmap=fontmap)
+        autocorrelation(data, name, rows=rows*2, columns=2, num=num+3*(num-1)+2, last=last, fontmap=fontmap)
         # Call histogram
-        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num+1, last=last, fontmap=fontmap)
+        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num*2, last=last, fontmap=fontmap)
 
         if last:
             if not os.path.exists(path):
@@ -415,7 +415,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             # New plot or adding to existing?
             _new = not i % _rows
             # Current subplot number
-            _num = i % _rows * 2 + 1
+            _num = i % _rows + 1
             # Final subplot of current figure?
             _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
 
@@ -497,10 +497,10 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
 
     # Smaller tick labels
     tlabels = gca().get_xticklabels()
-    setp(tlabels, 'fontsize', fontmap[rows])
+    setp(tlabels, 'fontsize', fontmap[rows/2])
 
     tlabels = gca().get_yticklabels()
-    setp(tlabels, 'fontsize', fontmap[rows])
+    setp(tlabels, 'fontsize', fontmap[rows/2])
 
     if standalone:
         if not os.path.exists(path):
@@ -688,10 +688,10 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
-        setp(tlabels, 'fontsize', fontmap[rows])
+        setp(tlabels, 'fontsize', fontmap[rows/2])
 
         tlabels = gca().get_yticklabels()
-        setp(tlabels, 'fontsize', fontmap[rows])
+        setp(tlabels, 'fontsize', fontmap[rows/2])
     elif ndim(data) == 2:
         # generate acorr plot for each dimension
         rows = data.shape[1]
