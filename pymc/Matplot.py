@@ -23,7 +23,7 @@ from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asa
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique
-from utils import autocorr as _autocorr, quantiles as calc_quantiles
+from utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
 import pdb
 from scipy import special
 
@@ -451,11 +451,11 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 
         ylabel("Frequency", fontsize='x-small')
 
-        # Plot vertical lines for median and 95% UI
+        # Plot vertical lines for median and 95% HPD interval
         quant = calc_quantiles(data)
         axvline(x=quant[50], linewidth=2, color='black')
-        for ui in [2.5, 97.5]:
-            axvline(x=quant[ui], linewidth=2, color='grey', linestyle='dotted')
+        for q in hpd(data, 0.05):
+            axvline(x=q, linewidth=2, color='grey', linestyle='dotted')
 
         # Smaller tick labels
         tlabels = gca().get_xticklabels()

@@ -19,3 +19,6 @@ def theta(a=alpha, b=beta, d=dose):
 
 """deaths ~ binomial(n, p)"""
 deaths = Binomial('deaths', n=n, p=theta, value=array([0,1,3,5], dtype=float), observed=True)
+
+# Calculate LD50
+LD50 = Lambda('LD50', lambda a=alpha, b=beta: -a/b)
