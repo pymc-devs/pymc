@@ -172,6 +172,8 @@ The above syntax also assumes that you have gFortran installed and available. Th
 `sudo` command may be required to install PyMC into the Python ``site-packages``
 directory if it has restricted privileges.
 
+In addition, the python2.6-dev package may be required to install PyMC on Linux systems.
+
 
 .. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
 
