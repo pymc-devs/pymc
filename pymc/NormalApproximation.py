@@ -247,7 +247,10 @@ class MAP(Model):
 
         if self.verbose > 0:
             def callback(p):
-                print 'Current log-probability : %f' %self.logp
+                try:
+                    print 'Current log-probability : %f' % self.logp
+                except ZeroProbability:
+                    print 'Current log-probability : %f' % -Inf
         else:
             def callback(p):
                 pass
