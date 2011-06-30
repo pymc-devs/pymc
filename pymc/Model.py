@@ -209,16 +209,14 @@ class Sampler(Model):
 
         return -2*sum([v.get_logp() for v in self.observed_stochastics])
 
-    def sample(self, iter, length=None, verbose=0):
+    def sample(self, iter, length=None, verbose=None):
         """
         Draws iter samples from the posterior.
         """
         self._cur_trace_index=0
         self.max_trace_length = iter
         self._iter = iter
-
-        if verbose>0:
-            self.verbose = verbose
+        self.verbose = verbose or 0
         self.seed()
 
         # Assign Trace instances to tallyable objects.
@@ -475,9 +473,10 @@ class Sampler(Model):
         """
         self._exc_info = None
         out = kwds.pop('out',  sys.stdout)
+        kwds['progress_bar'] = False
         def samp_targ(*args, **kwds):
             try:
-                self.sample(*args, progress_bar=False, **kwds)
+                self.sample(*args, **kwds)
             except:
                 self._exc_info = sys.exc_info()
 
