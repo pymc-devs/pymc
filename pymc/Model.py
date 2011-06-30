@@ -477,7 +477,7 @@ class Sampler(Model):
         out = kwds.pop('out',  sys.stdout)
         def samp_targ(*args, **kwds):
             try:
-                self.sample(*args, **kwds)
+                self.sample(*args, progress_bar=False, **kwds)
             except:
                 self._exc_info = sys.exc_info()
 
