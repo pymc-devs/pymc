@@ -2530,9 +2530,10 @@ def skew_normal_like(x,mu,tau,alpha):
     .. note::
       See http://azzalini.stat.unipd.it/SN/
     """
-    mu = np.asarray(mu)
-    tau = np.asarray(tau)
-    return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+    # mu = np.asarray(mu)
+    # tau = np.asarray(tau)
+    # return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+    return flib.sn_like(x, mu, tau, alpha)
 
 def skew_normal_expval(mu,tau,alpha):
     """skew_normal_expval(mu, tau, alpha)

@@ -302,6 +302,62 @@ cf2py intent(inplace) x
       RETURN 
       end
 
+!       mu = np.asarray(mu)
+!       tau = np.asarray(tau)
+!       return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+
+      SUBROUTINE sn_like(x,nx,mu,tau,alph,nmu,ntau,nalph,like)
+cf2py intent(hide) nmu, ntau, nalph, nx
+cf2py intent(out) like
+cf2py threadsafe
+
+      INTEGER i, nx, nalph, nmu, ntau, tnx
+      DOUBLE PRECISION x(nx), mu(nmu), tau(ntau), alph(nalph)
+      DOUBLE PRECISION mu_now, tau_now, alph_now, d_now, like
+      DOUBLE PRECISION scratch
+      LOGICAL vec_mu, vec_tau, vec_alph
+      DOUBLE PRECISION PI, sqrttwo, infinity
+      PARAMETER (PI=3.141592653589793238462643d0) 
+      PARAMETER (infinity = 1.7976931348623157d308)
+      
+      sqrttwo = dsqrt(2.0D0)
+      like = dlog(2.0D0) * nx
+      
+      vec_mu = (nmu.GT.1)
+      vec_tau = (ntau.GT.1)
+      vec_alph = (nalph.GT.1)
+      
+      alph_now = alph(1)
+      tau_now = tau(1)
+      mu_now = mu(1)
+      
+      do i=1,nx
+         if (vec_mu) then
+             mu_now = mu(i)
+         end if
+         if (vec_alph) then
+             alph_now = alph(i)
+         end if
+         if (vec_tau) then
+             tau_now = tau(i)
+         end if
+         if ((tau_now .LE. 0.0).OR.(dabs(tau_now).GE.infinity)) then
+           like = -infinity
+           RETURN
+         endif
+         
+         like = like - 0.5 * tau_now * (x(i) - mu_now) ** 2
+         like = like + 0.5 * dlog(0.5 * tau_now / PI)
+         
+         scratch = (x(i)-mu_now)*dsqrt(tau_now)*alph_now
+         like = like + dlog(0.5D0*(1.0D0+derf(scratch / sqrttwo)))
+!          print *, scratch, x(i), mu_now, tau_now, alpha_now
+!          print *, 
+         
+      end do
+
+      RETURN
+      END
 
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph, tnx
