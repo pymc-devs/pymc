@@ -397,8 +397,9 @@ def _optimize_binning(x, range, method='Freedman'):
 
 def normcdf(x):
     """Normal cumulative density function."""
-    x = np.atleast_1d(x)
-    return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+    y = np.atleast_1d(x).copy()
+    flib.normcdf(y)
+    return y
     
 def lognormcdf(x, mu, tau):
     """Log-normal cumulative density function"""

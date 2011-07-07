@@ -283,6 +283,25 @@ C Out of range of the table.
       return 
       END
 
+!       def normcdf(x):
+!           """Normal cumulative density function."""
+!           x = np.atleast_1d(x)
+!           return np.array([.5*(1+flib.derf(y/sqrt(2))) for y in x])
+
+      SUBROUTINE normcdf(x, nx)
+cf2py intent(hide) nx
+cf2py intent(inplace) x
+      INTEGER i, nx
+      DOUBLE PRECISION x(nx), sqrttwo
+      
+      sqrttwo = dsqrt(2.0D0)
+      do i=1,nx
+          x(i) = x(i) / sqrttwo
+          x(i) = 0.5D0*(1.0D0 + derf(x(i)))
+      end do
+      RETURN 
+      end
+
 
       SUBROUTINE RSKEWNORM(x,nx,mu,tau,alph,nmu,ntau,nalph,rn,tnx)
 cf2py intent(hide) nmu, ntau, nalph, tnx
@@ -326,6 +345,7 @@ cf2py threadsafe
 
       RETURN
       END
+      
       subroutine uniform_like(x,lower,upper,n,nlower,nupper,like)
         
 c Return the uniform likelihood of x.
