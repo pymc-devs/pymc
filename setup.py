@@ -99,7 +99,7 @@ if __name__ == '__main__':
             #maintainer_email="david.huard@gmail.com",
             author="Christopher Fonnesbeck, Anand Patil and David Huard",
             author_email="fonnesbeck@gmail.com ",
-            url="pymc.googlecode.com",
+            url="github.com/pymc-devs/pymc",
             #download_url="",
             license="Academic Free License",
             classifiers=[
@@ -126,7 +126,7 @@ if __name__ == '__main__':
             ``pymc`` only requires ``NumPy``. All other dependencies such as ``matplotlib``,
             ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
             """,
-            packages=["pymc", "pymc/database", "pymc/examples", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
+            packages=["pymc", "pymc/database", "pymc/examples", "pymc/examples/gp", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
             #cmdclass={'upload2google':upload2google},
             **(config_dict))
 
