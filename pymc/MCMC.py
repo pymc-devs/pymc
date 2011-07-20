@@ -154,6 +154,12 @@ class MCMC(Sampler):
                 if sm.tally:
                     for name in sm._tuning_info:
                         self._funs_to_tally[sm._id+'_'+name] = lambda name=name, sm=sm: getattr(sm, name)
+                        
+        else:
+            # Change verbosity for step methods
+            for sm_key in self.step_method_dict:
+                for sm in self.step_method_dict[sm_key]:
+                    sm.verbose = verbose
         
         self.restore_sm_state()
         self._sm_assigned = True

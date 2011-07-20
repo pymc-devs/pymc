@@ -479,14 +479,14 @@ def gelman_rubin(x):
     ----------
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
-    
-    if len(x) < 2:
+
+    if np.shape(x) < 2:
         raise ValueError, 'Gelman-Rubin diagnostic requires multiple chains.'
-    
+
     try:
         m,n = np.shape(x)
     except ValueError:
-        return [gelman_rubin(y) for y in np.transpose(x)]
+        return [gelman_rubin(np.transpose(y)) for y in np.transpose(x)]
     
     # Calculate between-chain variance
     B_over_n = np.sum((np.mean(x,1) - np.mean(x))**2)/(m-1)
@@ -502,7 +502,7 @@ def gelman_rubin(x):
     
     # Calculate PSRF
     R = V/W
-
+    
     return R
 
 

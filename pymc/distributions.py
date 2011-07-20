@@ -1086,8 +1086,9 @@ def exponential_like(x, beta):
       - `beta` : Scale parameter (beta > 0).
 
     .. note::
-      - :math:`E(X) = \beta`
-      - :math:`Var(X) = \beta^2`
+      - :math:`E(X) = 1/\beta`
+      - :math:`Var(X) = 1/\beta^2`
+      - PyMC's beta is named 'lambda' by Wikipedia, SciPy, Wolfram MathWorld and other sources.
     """
 
     return flib.gamma(x, 1, beta)
@@ -2529,9 +2530,10 @@ def skew_normal_like(x,mu,tau,alpha):
     .. note::
       See http://azzalini.stat.unipd.it/SN/
     """
-    mu = np.asarray(mu)
-    tau = np.asarray(tau)
-    return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+    # mu = np.asarray(mu)
+    # tau = np.asarray(tau)
+    # return  np.sum(np.log(2.) + np.log(pymc.utils.normcdf((x-mu)*np.sqrt(tau)*alpha))) + normal_like(x,mu,tau)
+    return flib.sn_like(x, mu, tau, alpha)
 
 def skew_normal_expval(mu,tau,alpha):
     """skew_normal_expval(mu, tau, alpha)
