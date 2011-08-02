@@ -420,7 +420,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             # Current subplot number
             _num = i % _rows + 1
             # Final subplot of current figure?
-            _last = not (_num + 1) % (_rows * 2) or (i==len(tdata)-1)
+            _last = (_num==_rows) or (i==len(tdata)-1)
 
             plot(tdata[i], name+'_'+str(i), format=format, path=path, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
