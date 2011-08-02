@@ -25,7 +25,10 @@ from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique
 from utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
 import pdb
-from scipy import special
+try:
+    from scipy import special
+except ImportError:
+    special = None
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior', 'summary_plot']
 
