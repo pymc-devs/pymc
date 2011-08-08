@@ -691,10 +691,10 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
-        setp(tlabels, 'fontsize', fontmap[rows/2])
+        setp(tlabels, 'fontsize', fontmap[1])
 
         tlabels = gca().get_yticklabels()
-        setp(tlabels, 'fontsize', fontmap[rows/2])
+        setp(tlabels, 'fontsize', fontmap[1])
     elif ndim(data) == 2:
         # generate acorr plot for each dimension
         rows = data.shape[1]

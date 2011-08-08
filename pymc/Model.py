@@ -327,7 +327,7 @@ class Sampler(Model):
         # Loop over nodes
         for variable in variables:
             # Plot object
-            stat_dict[variable.__name__] = variable.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+            stat_dict[variable.__name__] = self.trace(variable.__name__).stats(alpha=alpha, start=start, batches=batches, chain=chain)
 
         return stat_dict
 
@@ -376,7 +376,7 @@ class Sampler(Model):
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.stochastics | self.deterministics:
-
+            
             if object.trace:
                 self._variables_to_tally.add(object)
                 try:
