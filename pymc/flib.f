@@ -617,7 +617,7 @@ cf2py threadsafe
       DOUBLE PRECISION x(n), z(n), a(na)
       DOUBLE PRECISION c(nc), loc(nloc), scale(nscale)
       INTEGER i, n, na, nc, nloc, nscale
-      DOUBLE PRECISION like
+      DOUBLE PRECISION like, t1
       LOGICAL not_scalar_a, not_scalar_c, not_scalar_scale
       DOUBLE PRECISION aa, cc, sigma, pdf
       DOUBLE PRECISION infinity
@@ -725,8 +725,8 @@ c Compute z
         
         gradlike(i) = (aa - 1d0)/(1d0 - t1) * t1 * 
      & z(i) **(cc -1d0) * cc / sigma
-        gradlike(i) = gradlike(i) + -  z(i) **(cc -1d0)
-     & * cc/sigma - (cc -1d0)/(z(i) *sigma)
+        gradlike(i) = gradlike(i) + (-  z(i) **(cc -1d0)
+     & * cc/sigma) - (cc -1d0)/(z(i) *sigma)
       enddo
       END SUBROUTINE 
       
@@ -794,7 +794,7 @@ c Compute z
                 
         grad = (aa - 1d0)/(1d0 - t1) * t1 * z(i) **(cc -1d0)
      & * cc / sigma
-        grad = grad + -  z(i) **(cc -1d0) * cc/sigma -
+        grad = grad + (-  z(i) **(cc -1d0) * cc/sigma) -
      & (cc -1d0)/(z(i) *sigma)
         grad = -grad
         if (nloc .NE. 1) then 
@@ -865,7 +865,7 @@ c Compute z
 		t2 = -z(i)**cc
         t1 = dexp(t2)
         
-        grad = 1d0/cc  + (aa - 1d0)/(1d0 - t1) * -t1 * -t2 
+        grad = 1d0/cc  + (aa - 1d0)/(1d0 - t1) * (-t1) * (-t2) 
         grad = grad + t2 +1d0
         grad = grad * dlog(z(i))
         
@@ -1011,7 +1011,7 @@ c Compute z
      & t1 * z(i) **(cc - 1d0) *cc 
         grad = grad + z(i) **(cc - 1d0) *cc  
      & + (cc - 1d0)/z(i)
-        grad = grad * -z(i)/sigma
+        grad = grad * (-z(i)/sigma)
         
         if (not_scalar_a) then 
         	gradlike(i) = grad
@@ -2725,7 +2725,7 @@ cf2py threadsafe
       double precision gradalpha
       DOUBLE PRECISION beta_tmp, alpha_tmp
       LOGICAL not_scalar_a, not_scalar_b
-      DOUBLE PRECISION gammln
+      DOUBLE PRECISION gammln, psi
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
@@ -3510,7 +3510,7 @@ cf2py threadsafe
         
         glike = -1D0/btmp 
         glike = glike + 2d0 * (x(i)-atmp)**2/
-     & 		(btmp**3*(1D0+(x(i)-atmp)**2/btmp**2))
+     &    (btmp**3*(1D0+(x(i)-atmp)**2/btmp**2))
         
         if (not_scalar_beta) then 
         	gradlike(i) = glike
@@ -3734,7 +3734,7 @@ cf2py threadsafe
      +  - x(i)/(mu_tmp+a_tmp) 
      
         if (not_scalar_a) then 
-        	gradlike(i) = grad	
+        	gradlike(i) = grad
         else
         	gradlike(1) = gradlike(1) + grad
         endif
@@ -4621,7 +4621,7 @@ cf2py 	  double precision intent(out) :: psi
       
 	      DATA S /1.0e-5/, C /8.5/ S3 /8.333333333e-2/
 	      DATA S4 /8.333333333e-3/, S5 /3.968253968e-3/
-	      DATA D1 /-0.5772156649/	 
+	      DATA D1 /-0.5772156649/
 	      
 	      psi = 0
 	
@@ -4851,7 +4851,7 @@ C matrix plus the pivoting element ratios below the diagonal in
 C the output.  INDX(N) records the pivoting order.
 
 
-      DOUBLE PRECISION A(N,N),C(N),C1
+      DOUBLE PRECISION A(N,N),C(N),C1,PI,PJ,PI1
       INTEGER N
       INTEGER INDX(N)
 
