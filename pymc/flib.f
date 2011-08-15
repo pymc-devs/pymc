@@ -2623,7 +2623,7 @@ cf2py threadsafe
         if (x(i).EQ.0.0) then
 
             if (alpha_tmp.EQ.1.0) then
-                like = like + beta_tmp
+                like = like + dlog(beta_tmp)
             else if (alpha_tmp.LT.1.0) then
                 like = infinity
                 RETURN
