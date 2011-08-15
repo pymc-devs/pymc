@@ -97,6 +97,8 @@ class Node(object):
 
         # Name and docstrings
         self.__doc__ = doc
+        if not isinstance(name, str):
+            raise ValueError, 'The name argument must be a string, but received %s.'%name
         self.__name__ = name
 
         # Level of feedback verbosity
