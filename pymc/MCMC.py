@@ -104,11 +104,15 @@ class MCMC(Sampler):
         """
         Removes a step method.
         """
-        for s in step_method.stochastics:
-            self.step_method_dict[s].remove(step_method)
-        if hasattr(self, "step_methods"):
-            self.step_methods.discard(step_method)
-        self._sm_assigned = False
+        try:
+            for s in step_method.stochastics:
+                self.step_method_dict[s].remove(step_method)
+            if hasattr(self, "step_methods"):
+                self.step_methods.discard(step_method)
+            self._sm_assigned = False
+        except AttributeError:
+            for sm in step_method:
+                self.remove_step_method(sm)
     
     def assign_step_methods(self, verbose=None, draw_from_prior_when_possible = True):
         """
