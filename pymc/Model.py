@@ -367,7 +367,6 @@ class Sampler(Model):
           - `txt` : Traces stored in memory and saved in txt files at end of
                 sampling.
           - `sqlite` : Traces stored in sqlite database.
-          - `mysql` : Traces stored in a mysql database.
           - `hdf5` : Traces stored in an HDF5 file.
         """
         # Objects that are not to be tallied are assigned a no_trace.Trace

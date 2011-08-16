@@ -2,13 +2,12 @@
 Introduction
 ************
 
-:Date: April 6, 2007
+:Date: August 16, 2011
+:Version: 2.1
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
-:Contact: pymc@googlegroups.com
-:Web site: http://code.google.com/p/pymc/
+:Web site: https://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the MIT license.
-:Version: 2.0
 
 
 Purpose
@@ -118,7 +117,7 @@ PyMC began development in 2003, as an effort to generalize the process of buildi
 
 In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development team for PyMC 2.0. This iteration of the software strives for more flexibility, better performance and a better end-user experience than any previous version of PyMC.
 
-PyMC 2.1 has been released in early 2010. It contains numerous bugfixes and optimizations, as well as a few new features. This user guide is written for version 2.1.
+PyMC 2.1 was released in early 2010. It contains numerous bugfixes and optimizations, as well as a few new features. This user guide is written for version 2.1.
 
 
 Relationship to other packages
