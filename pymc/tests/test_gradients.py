@@ -126,12 +126,19 @@ def get_numeric_gradient( stochastic, pvalue ):
     for i in range(i_size):
        
         delta = zeros(i_shape)
-        delta[unravel_index(i,i_shape)] += e
+        
+        try:
+            delta[unravel_index(i,i_shape or (1,))] += e
+        except IndexError:
+            delta += e
         
         pvalue.value = initial_value + delta
         logp = utils.logp_of_set(stochastic)
         
-        numeric_gradient[unravel_index(i,i_shape)] = (logp - initial_logp)/e
+        try:
+            numeric_gradient[unravel_index(i,i_shape or (1,))] = (logp - initial_logp)/e
+        except IndexError:
+            numeric_gradient = (logp - initial_logp)/e
     
     pvalue.value = initial_value
     return numeric_gradient
@@ -294,7 +301,6 @@ class test_gradients(TestCase):
         check_gradients(cauchy)
         
         chi2 = Chi2('chi2', nu = e)
-
         check_gradients(chi2)
         
         exponential = Exponential('expon', beta = d)

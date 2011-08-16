@@ -190,31 +190,6 @@ class TestSqlite(TestPickle):
 
     def test_yrestore_state(self):
         raise nose.SkipTest, "Not implemented."
-"""
-    TODO Create more reliable MySQL backend test
-"""
-# class TestMySQL(TestPickle):
-#     @classmethod
-#     def setUpClass(self):
-#         if 'mysql' not in dir(pymc.database):
-#             raise nose.SkipTest
-#         self.S = pymc.MCMC(disaster_model,
-#                            db='mysql',
-#                            dbname='pymc_test',
-#                            dbuser='pymc',
-#                            dbpass='bayesian',
-#                            dbhost='www.freesql.org',
-#                            dbmode='w')
-#
-#     def load(self):
-#         return pymc.database.mysql.load(dbname='pymc_test',
-#                                         dbuser='pymc',
-#                                         dbpass='bayesian',
-#                                         dbhost='www.freesql.org')
-#
-#     def test_yrestore_state(self):
-#         raise nose.SkipTest, "Not implemented."
-
 
 
 class TestHDF5(TestPickle):
@@ -289,8 +264,7 @@ class testHDF5Objects(TestCase):
         import objectmodel
         self.S = pymc.MCMC(objectmodel,
                            db='hdf5',
-                           dbname=os.path.join(testdir, 'Objects.hdf5'),
-                           dbmode='w')
+                           dbname=os.path.join(testdir, 'Objects.hdf5'))
 
     def load(self):
         return pymc.database.hdf5.load(os.path.join(testdir, 'Objects.hdf5'))
