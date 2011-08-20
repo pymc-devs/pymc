@@ -2956,7 +2956,7 @@ cf2py threadsafe
       double precision gradalpha
       DOUBLE PRECISION beta_tmp, alpha_tmp
       LOGICAL not_scalar_a, not_scalar_b
-      DOUBLE PRECISION gammln
+      DOUBLE PRECISION gammln, psi
       DOUBLE PRECISION infinity
       PARAMETER (infinity = 1.7976931348623157d308)
 
