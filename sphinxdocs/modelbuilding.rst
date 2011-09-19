@@ -8,7 +8,7 @@ Bayesian inference begins with specification of a probability model relating unk
 
 A ``Stochastic`` object represents a variable whose value is not completely determined by its parents, and a ``Deterministic`` object represents a variable that is entirely determined by its parents. In object-oriented programming parlance, ``Stochastic`` and ``Deterministic`` are subclasses of the ``Variable`` class, which only serves as a template for other classes and is never actually implemented in models.
 
-The third basic class, ``Potential``, represents 'factor potentials' ([Lauritzen_1990]_,[Jordan_2004]_), which are *not* variables but simply terms and/or constraints that are multiplied into joint distributions to modify them. ``Potential`` and ``Variable`` are subclasses of ``Node``.
+The third basic class, ``Potential``, represents 'factor potentials' ([Lauritzen_1990]_,[Jordan_2004]_), which are *not* variables but simply log-likelihood terms and/or constraints that are multiplied into joint distributions to modify them. ``Potential`` and ``Variable`` are subclasses of ``Node``.
 
 PyMC probability models are simply linked groups of ``Stochastic``, ``Deterministic`` and ``Potential`` objects. These objects have very limited awareness of the models in which they are embedded and do not themselves possess methods for updating their values in fitting algorithms. Objects responsible for fitting probability models are described in chapter :ref:`chap_modelfitting`.
    
@@ -24,73 +24,46 @@ A stochastic variable has the following primary attributes:
    The variable's current value.
 
 ``logp``:
-   The log-probability of the variable's current value given the values of its
-   parents.
+   The log-probability of the variable's current value given the values of its parents.
 
 A stochastic variable can optionally be endowed with a method called ``random``, which draws a value for the variable given the values of its parents [#]_. Stochastic objects have the following additional attributes:
 
 ``parents``:
-   A dictionary containing the variable's parents. The keys of the dictionary
-   correspond to the names assigned to the variable's parents by the variable, 
-   and the values correspond to the actual parents. For example, the keys of
-   :math:`s`'s parents dictionary in model (:eq:`disastermodel`) would be
-   ``'t_l'`` and ``'t_h'``. Thanks to Python's dynamic typing, the actual 
-   parents (*i.e.* the values of the dictionary) may be of any class or type.
+   A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable,  and the values correspond to the actual parents. For example, the keys of :math:`s`'s parents dictionary in model (:eq:`disastermodel`) would be ``'t_l'`` and ``'t_h'``. Thanks to Python's dynamic typing, the actual  parents (*i.e.* the values of the dictionary) may be of any class or type.
 
 ``children``:
    A set containing the variable's children.
 
 ``extended_parents``:
-   A set containing all the stochastic variables on which the variable depends
-   either directly or via a sequence of deterministic variables. If the value 
-   of any of these variables changes, the variable will need to recompute its 
-   log-probability.
+   A set containing all the stochastic variables on which the variable depends either directly or via a sequence of deterministic variables. If the value  of any of these variables changes, the variable will need to recompute its  log-probability.
 
 ``extended_children``:
-   A set containing all the stochastic variables and potentials that depend on 
-   the variable either directly or via a sequence of deterministic variables. 
-   If the variable's value changes, all of these variables will need to 
-   recompute their log-probabilities.
+   A set containing all the stochastic variables and potentials that depend on  the variable either directly or via a sequence of deterministic variables. If the variable's value changes, all of these variables will need to recompute their log-probabilities.
 
 ``observed``:
-   A flag (boolean) indicating whether the variable's value has been observed 
-   (is fixed).
+   A flag (boolean) indicating whether the variable's value has been observed (is fixed).
 
 ``dtype``:
-   A NumPy dtype object (such as ``numpy.int``) that specifies the type of the
-   variable's value to fitting methods. If this is ``None`` (default) then no 
-   type is enforced.
+   A NumPy dtype object (such as ``numpy.int``) that specifies the type of the variable's value to fitting methods. If this is ``None`` (default) then no  type is enforced.
 
 
 Creation of stochastic variables
 --------------------------------
 
-There are three main ways to create stochastic variables, called the
-**automatic**, **decorator**, and **direct** interfaces.
+There are three main ways to create stochastic variables, called the **automatic**, **decorator**, and **direct** interfaces.
 
 **Automatic**
-   Stochastic variables with standard distributions provided by PyMC (see 
-   chapter :ref:`chap_distributions`) can be created in a single line using 
-   special subclasses of ``Stochastic``. For example, the    
-   uniformly-distributed discrete variable :math:`s` in (:eq:`disastermodel`) 
-   could be created using the automatic interface as follows::
+   Stochastic variables with standard distributions provided by PyMC (see   chapter :ref:`chap_distributions`) can be created in a single line using  special subclasses of ``Stochastic``. For example, the     uniformly-distributed discrete variable :math:`s` in (:eq:`disastermodel`)  could be created using the automatic interface as follows::
 
       import pymc as pm
       s = pymc.DiscreteUniform('s', 1851, 1962, value=1900)
 
-   In addition to the classes in chapter :ref:`chap_distributions`,
-   ``scipy.stats.distributions``' random variable classes are wrapped as
-   ``Stochastic`` subclasses if SciPy is installed. These distributions are in 
-   the submodule ``pymc.SciPyDistributions``.
+   In addition to the classes in chapter :ref:`chap_distributions`, ``scipy.stats.distributions``' random variable classes are wrapped as ``Stochastic`` subclasses if SciPy is installed. These distributions are in  the submodule ``pymc.SciPyDistributions``.
 
-   Users can call the class factory ``stochastic_from_dist`` to produce
-   ``Stochastic`` subclasses of their own from probability distributions not
-   included with PyMC.
+   Users can call the class factory ``stochastic_from_dist`` to produce ``Stochastic`` subclasses of their own from probability distributions not included with PyMC.
 
 **Decorator**
-   Uniformly-distributed discrete stochastic variable :math:`s` in
-   (:eq:`disastermodel`) could alternatively be created from a function that
-   computes its log-probability as follows::
+   Uniformly-distributed discrete stochastic variable :math:`s` in (:eq:`disastermodel`) could alternatively be created from a function that computes its log-probability as follows::
 
       @pymc.stochastic(dtype=int)
       def s(value=1900, t_l=1851, t_h=1962):
