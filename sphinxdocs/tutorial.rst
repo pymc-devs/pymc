@@ -35,18 +35,17 @@ The symbols are defined as:
     * :math:`t_l`, :math:`t_h`: The lower and upper boundaries of year :math:`t`.
     * :math:`r_e`, :math:`r_l`: The rate parameters of the priors of the early and late rates, respectively.
 
-Because we have defined :math:`D` by its dependence on :math:`S`, :math:`e` and :math:`l`, the latter three are known as the "parents" of :math:`D` and :math:`D` is called their "child". Similarly, the parents of :math:`s` are :math:`t_l` and :math:`t_h`, and :math:`s` is the child of :math:`t_l` and :math:`t_h`.
+Because we have defined :math:`D` by its dependence on :math:`s`, :math:`e` and :math:`l`, the latter three are known as the "parents" of :math:`D` and :math:`D` is called their "child". Similarly, the parents of :math:`s` are :math:`t_l` and :math:`t_h`, and :math:`s` is the child of :math:`t_l` and :math:`t_h`.
 
 
 Two types of variables
 ----------------------
 
-At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`, ``rate`` and :math:`l` are all random variables. Bayesian "random" variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is *epistemic*, meaning random variable :math:`x`'s probability distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes ``Stochastic`` and ``Deterministic``.
+At the model-specification stage (before the data are observed), :math:`D`, :math:`s`, :math:`e`, :math:`r` and :math:`l` are all random variables. Bayesian "random" variables have not necessarily arisen from a physical random process. The Bayesian interpretation of probability is *epistemic*, meaning random variable :math:`x`'s probability distribution :math:`p(x)` represents our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate values of :math:`x` for which :math:`p(x)` is high are relatively more probable, given what we know. Random variables are represented in PyMC by the classes ``Stochastic`` and ``Deterministic``.
 
-The only ``Deterministic`` in the model is ``rate``. If we knew the values of ``rate``'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of ``rate`` exactly. A ``Deterministic`` like ``rate`` is defined by a mathematical function that returns its value given values for its parents. ``Deterministic`` variables are sometimes called the *systemic* part of the model. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of ``rate`` are random, ``rate`` is random also. A more descriptive (though more awkward) name for this class would be ``DeterminedByValuesOfParents``.
+The only ``Deterministic`` in the model is :math:`r`. If we knew the values of :math:`r`'s parents (:math:`s`, :math:`l` and :math:`e`), we could compute the value of :math:`r` exactly. A ``Deterministic`` like :math:`r` is defined by a mathematical function that returns its value given values for its parents. ``Deterministic`` variables are sometimes called the *systemic* part of the model. The nomenclature is a bit confusing, because these objects usually represent random variables; since the parents of :math:`r` are random, :math:`r` is random also. A more descriptive (though more awkward) name for this class would be ``DeterminedByValuesOfParents``.
 
-On the other hand, even if the values of the parents of variables ``switchpoint``, `disasters` (before observing the data), ``early_mean``
- or ``late_mean`` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
+On the other hand, even if the values of the parents of variables ``switchpoint``, `disasters` (before observing the data), ``early_mean`` or ``late_mean`` were known, we would still be uncertain of their values. These variables are characterized by probability distributions that express how plausible their candidate values are, given values for their parents. The ``Stochastic`` class represents these variables. A more descriptive name for these objects might be ``RandomEvenGivenValuesOfParents``.
 
 We can represent model :eq:`disaster_model` in a file called ``disaster_model.py`` (the actual file can be found in ``pymc/examples/``) as follows. First, we import the PyMC and NumPy namespaces::
    
@@ -71,26 +70,22 @@ Note that you don't have to type in this entire array to follow along; the code 
    switchpoint = DiscreteUniform('switchpoint', lower=0, upper=110, doc='Switchpoint[year]')
 
 
-``DiscreteUniform`` is a subclass of ``Stochastic`` that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference ``a priori`` regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables ``early_mean``
- and ``late_mean`` for the early and late Poisson
-rates, respectively::
-	
-	early_mean = Exponential('early_mean',beta=1.)
-	late_mean = Exponential('late_mean',beta=1.)
+``DiscreteUniform`` is a subclass of ``Stochastic`` that represents uniformly-distributed discrete variables. Use of this distribution suggests that we have no preference ``a priori`` regarding the location of the switchpoint; all values are equally likely. Now we create the exponentially-distributed variables ``early_mean`` and ``late_mean`` for the early and late Poisson rates, respectively::
+    
+    early_mean = Exponential('early_mean', beta=1.)
+    late_mean = Exponential('late_mean', beta=1.)
 
-Next, we define the variable ``rate``, which selects the early rate ``early_mean``
- for times before ``switchpoint`` and the late rate ``late_mean`` for times after ``switchpoint``. We create ``rate`` using the ``deterministic`` decorator, which converts the ordinary Python function ``rate`` into a ``Deterministic`` object.::
+Next, we define the variable ``rate``, which selects the early rate ``early_mean`` for times before ``switchpoint`` and the late rate ``late_mean`` for times after ``switchpoint``. We create ``rate`` using the ``deterministic`` decorator, which converts the ordinary Python function ``rate`` into a ``Deterministic`` object.::
    
    @deterministic(plot=False)
-	def rate(s=switchpoint, e=early_mean, l=late_mean):
-	    ''' Concatenate Poisson means '''
-	    out = empty(len(disasters_array))
-	    out[:s] = e
-	    out[s:] = l
-	    return out
+   def rate(s=switchpoint, e=early_mean, l=late_mean):
+       ''' Concatenate Poisson means '''
+       out = empty(len(disasters_array))
+       out[:s] = e
+       out[s:] = l
+       return out
 
-The last step is to define the number of disasters ``disasters``. This is a stochastic variable but unlike ``switchpoint``, ``early_mean``
-` and ``late_mean`` we have observed its value. To express this, we set the argument ``observed`` to ``True`` (it is set to ``False`` by default). This tells PyMC that this object's value should not be changed::
+The last step is to define the number of disasters ``disasters``. This is a stochastic variable but unlike ``switchpoint``, ``early_mean`` and ``late_mean`` we have observed its value. To express this, we set the argument ``observed`` to ``True`` (it is set to ``False`` by default). This tells PyMC that this object's value should not be changed::
    
    disasters = Poisson('disasters', mu=rate, value=disasters_array, observed=True)
 
@@ -102,8 +97,7 @@ Since its represented by a ``Stochastic`` object, `disasters` is defined by its 
 
 This point can be counterintuitive at first, as many peoples' instinct is to regard data as fixed a priori and unknown variables as dependent on the data. One way to understand this is to think of statistical models like :eq:`disaster_model` as predictive models for data, or as models of the processes that gave rise to data. Before observing the value of `disasters`, we could have sampled from its prior predictive distribution :math:`p(D)` (*i.e.* the marginal distribution of the data) as follows:
     
-    * Sample ``early_mean``
-, ``switchpoint`` and ``late_mean`` from their priors.
+    * Sample ``early_mean``, ``switchpoint`` and ``late_mean`` from their priors.
     * Sample `disasters` conditional on these values.
 
 Even after we observe the value of `disasters`, we need to use this process model to make inferences about ``early_mean``
@@ -123,19 +117,16 @@ We have above created a PyMC probability model, which is simply a linked collect
 The ``parents`` dictionary shows us the distributional parameters of ``switchpoint``, which are constants. Now let's examine `disasters`'s parents::
    
    >>> disaster_model.disasters.parents
-   {'early_mean': <pymc.distributions.Exponential 'early_mean' at 0x1065acf50>,
-	 'late_mean': <pymc.distributions.Exponential 'late_mean' at 0x1065acfd0>,
-	 'switchpoint': <pymc.distributions.DiscreteUniform 'switchpoint' at 0x1065ace90>}
+   {'mu': <pymc.PyMCObjects.Deterministic 'rate' at 0x10623da50>}
 
 We are using ``rate`` as a distributional parameter of `disasters` (*i.e.* ``rate`` is `disasters`'s parent). `disasters` internally labels ``rate`` as ``mu``, meaning ``rate`` plays the role of the rate parameter in `disasters`'s Poisson distribution. Now examine ``rate``'s ``children`` attribute::
    
    >>> disaster_model.rate.children
-   set([<pymc.distributions.Poisson 'D' at 0x3e51290>])
+   set([<pymc.distributions.Poisson 'disasters' at 0x10623da90>])
 
 Because `disasters` considers ``rate`` its parent, ``rate`` considers `disasters` its child. Unlike ``parents``, ``children`` is a set (an unordered collection of objects); variables do not associate their children with any particular distributional role. Try examining the ``parents`` and ``children`` attributes of the other parameters in the model.
 
-The following `directed acyclic graph` is a visualization of the parent-child relationships in the model. Unobserved stochastic variables ``switchpoint``, ``early_mean``
- and ``late_mean`` are open ellipses, observed stochastic variable `disasters` is a filled ellipse and deterministic variable ``rate`` is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section :ref:`graphical` for more details.
+The following `directed acyclic graph` is a visualization of the parent-child relationships in the model. Unobserved stochastic variables ``switchpoint``, ``early_mean`` and ``late_mean`` are open ellipses, observed stochastic variable `disasters` is a filled ellipse and deterministic variable ``rate`` is a triangle. Arrows point from parent to child and display the label that the child assigns to the parent. See section :ref:`graphical` for more details.
 
 .. _dag:
 
@@ -206,7 +197,7 @@ Of course, since these are ``Stochastic`` elements, your values will be differen
 
 To compute its value, ``rate`` calls the function we used to create it, passing in the values of its parents.
 
-``Stochastic`` objects can evaluate their probability mass or density functions at their current values given the values of their parents. The logarithm of a stochastic object's probability mass or density can be accessed via the ``logp`` attribute. For vector-valued variables like `disasters`, the ``logp`` attribute returns the sum of the logarithms of the joint probability or density of all elements of the value. Try examining ``switchpoint``'s and `disasters`'s log-probabilities and ``early_mean``
+``Stochastic`` objects can evaluate their probability mass or density functions at their current values given the values of their parents. The logarithm of a stochastic object's probability mass or density can be accessed via the ``logp`` attribute. For vector-valued variables like ``disasters``, the ``logp`` attribute returns the sum of the logarithms of the joint probability or density of all elements of the value. Try examining ``switchpoint``'s and ``disasters``'s log-probabilities and ``early_mean``
 's and ``late_mean``'s log-densities::
    
    >>> disaster_model.switchpoint.logp
@@ -228,13 +219,13 @@ Using Variables as parents of other Variables
 
 Let's take a closer look at our definition of ``rate``::
    
-   @deterministic(plot=False)
-	def rate(s=switchpoint, e=early_mean, l=late_mean):
-	    ''' Concatenate Poisson means '''
-	    out = empty(len(disasters_array))
-	    out[:s] = e
-	    out[s:] = l
-	    return out
+    @deterministic(plot=False)
+    def rate(s=switchpoint, e=early_mean, l=late_mean):
+        ''' Concatenate Poisson means '''
+        out = empty(len(disasters_array))
+        out[:s] = e
+        out[s:] = l
+        return out
 
 The arguments ``switchpoint``, ``early_mean`` and ``late_mean`` are ``Stochastic`` objects, not numbers. If that is so, why aren't errors raised when we attempt to slice array ``out`` up to a ``Stochastic`` object?
 
@@ -307,9 +298,9 @@ For each variable in the model, ``plot`` generates a composite figure, such as t
 .. figure:: _images/spost.*
    :width: 800 px
    
-   Temporal series and histogram of the samples drawn for ``switchpoint``.
+   Temporal series, autocorrelation plot and histogram of the samples drawn for ``switchpoint``.
 
-The left-hand pane of this figure shows the temporal series of the samples from ``switchpoint``, while the right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see [Gelman_1996]_), while the histogram is useful for visualizing the posterior.
+The upper left-hand pane of this figure shows the temporal series of the samples from ``switchpoint``, while below is an autocorrelation plot of the samples. The right-hand pane shows a histogram of the trace. The trace is useful for evaluating and diagnosing the algorithm's performance (see [Gelman_1996]_), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call ``M.stats()``.
 
@@ -317,7 +308,7 @@ For a non-graphical summary of the posterior, simply call ``M.stats()``.
 Imputation of Missing Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As with most textbook examples, the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets contain one or more missing values, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in loss of information if an excluded observation contains valid values for other quantities, and can bias results. An alternative is to impute the missing values, based on information in the rest of the model.
+As with most textbook examples, the models we have examined so far assume that the associated data are complete. That is, there are no missing values corresponding to any observations in the dataset. However, many real-world datasets have missing observations, usually due to some logistical problem during the data collection process. The easiest way of dealing with observations that contain missing values is simply to exclude them from the analysis. However, this results in loss of information if an excluded observation contains valid values for other quantities, and can bias results. An alternative is to impute the missing values, based on information in the rest of the model.
 
 For example, consider a survey dataset for some wildlife species:
 
@@ -339,35 +330,35 @@ In a Bayesian modelling framework, missing data are accommodated simply by treat
 This describes additional data :math:`\tilde{y}`, which may either be considered unobserved data or potential future observations. We can use the posterior predictive distribution to model the likely values of missing data.
 
 Consider the coal mining disasters data introduced previously. Assume that two years of data are missing from the time series; we indicate this in the data array by the use of an arbitrary placeholder value, None.::
-	
-	x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-	3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-	2, 2, 3, 4, 2, 1, 3, None, 2, 1, 1, 1, 1, 3, 0, 0,
-	1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-	0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-	3, 3, 1, None, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-	0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    
+    x = numpy.array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+    3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+    2, 2, 3, 4, 2, 1, 3, None, 2, 1, 1, 1, 1, 3, 0, 0,
+    1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+    0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+    3, 3, 1, None, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 
 To estimate these values in PyMC, we generate a masked array. These are specialised NumPy arrays that contain a matching True or False value for each element to indicate if that value should be excluded from any computation. Masked arrays can be generated using NumPy's ``ma.masked_equal`` function::
-	
-	>>> masked_values = numpy.ma.masked_equal(x, value=None)
-	>>> masked_values
-	masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
-	 4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0
-	 1 0 0 0 2 1 0 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1
-	 0 0 1 0 1],
-	 mask = [False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False  True False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False  True
-	 False False False False False False False False False False False False
-	 False False False False False False False False False False False False
-	 False False False],
-	      fill_value=?)
+    
+    >>> masked_values = numpy.ma.masked_equal(x, value=None)
+    >>> masked_values
+    masked_array(data = [4 5 4 0 1 4 3 4 0 6 3 3 4 0 2 6 3 3 5 4 5 3 1 4 4 1 5 5 3
+     4 2 5 2 2 3 4 2 1 3 -- 2 1 1 1 1 3 0 0 1 0 1 1 0 0 3 1 0 3 2 2 0 1 1 1 0 1 0
+     1 0 0 0 2 1 0 0 0 1 1 0 2 3 3 1 -- 2 1 1 1 1 2 4 2 0 0 1 4 0 0 0 1 0 0 0 0 0 1
+     0 0 1 0 1],
+     mask = [False False False False False False False False False False False False
+     False False False False False False False False False False False False
+     False False False False False False False False False False False False
+     False False False  True False False False False False False False False
+     False False False False False False False False False False False False
+     False False False False False False False False False False False False
+     False False False False False False False False False False False  True
+     False False False False False False False False False False False False
+     False False False False False False False False False False False False
+     False False False],
+          fill_value=?)
 
 
 This masked array, in turn, can then be passed to one of PyMC's data stochastic variables, which recognizes the masked array and replaces the missing values with Stochastic variables of the desired type. For the coal mining disasters problem, recall that disaster events were modeled as Poisson variates::
@@ -380,33 +371,34 @@ Here ``rate`` is an array of means for each year of data, allocated according to
 
 The entire model looks very similar to the original model::
    
-   # Switchpoint
-	switch = DiscreteUniform('switch', lower=0, upper=110)
-	# Early mean
-	early_mean = Exponential('early_mean', beta=1)
-	# Late mean
-	late_mean = Exponential('late_mean', beta=1)
+    # Switchpoint
+    switch = DiscreteUniform('switch', lower=0, upper=110)
+    # Early mean
+    early_mean = Exponential('early_mean', beta=1)
+    # Late mean
+    late_mean = Exponential('late_mean', beta=1)
 
-	@deterministic(plot=False)
-	def rate(s=switch, e=early_mean, l=late_mean):
-	    """Allocate appropriate mean to time series"""
-	    out = np.empty(len(disasters_array))
-	    # Early mean prior to switchpoint
-	    out[:s] = e
-	    # Late mean following switchpoint
-	    out[s:] = l
-	    return out
+    @deterministic(plot=False)
+    def rate(s=switch, e=early_mean, l=late_mean):
+        """Allocate appropriate mean to time series"""
+        out = np.empty(len(disasters_array))
+        # Early mean prior to switchpoint
+        out[:s] = e
+        # Late mean following switchpoint
+        out[s:] = l
+        return out
 
 
-	# The inefficient way, using the Impute function:
-	# D = Impute('D', Poisson, disasters_array, mu=r)
+    # The inefficient way, using the Impute function:
+    # D = Impute('D', Poisson, disasters_array, mu=r)
+    #
+    # The efficient way, using masked arrays:
+    # Generate masked array. Where the mask is true, 
+    # the value is taken as missing.
+    masked_values = masked_array(disasters_array, mask=disasters_array==-999)
 
-	# The efficient way, using masked arrays:
-	# Generate masked array. Where the mask is true, 
-	# the value is taken as missing.
-	masked_values = masked_array(disasters_array, mask=disasters_array==-999)
-	# Pass masked array to data stochastic, and it does the right thing
-	disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
+    # Pass masked array to data stochastic, and it does the right thing
+    disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
 
 Here, we have used the ``masked_array`` function, rather than ``masked_equal``, and the value -999 as a placeholder for missing data. The result is the same.
 
@@ -415,7 +407,7 @@ Here, we have used the ``masked_array`` function, rather than ``masked_equal``, 
 .. figure:: _images/missing.*
    :width: 800 px
    
-   Trace and posterior distribution of the missing data points in the example.
+   Trace, autocorrelation plot and posterior distribution of the missing data points in the example.
 
 
 
