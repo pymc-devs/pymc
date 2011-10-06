@@ -44,10 +44,11 @@ def rate(s=switch, e=early_mean, l=late_mean):
 
 # The inefficient way, using the Impute function:
 # D = Impute('D', Poisson, disasters_array, mu=r)
-
+#
 # The efficient way, using masked arrays:
 # Generate masked array. Where the mask is true, 
 # the value is taken as missing.
 masked_values = masked_array(disasters_array, mask=disasters_array==-999)
+
 # Pass masked array to data stochastic, and it does the right thing
 disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
