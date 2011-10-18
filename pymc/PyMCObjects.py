@@ -821,7 +821,7 @@ class Stochastic(StochasticBase):
             raise TypeError, self.__name__ + ': computed log-probability ' + str(logp) + ' cannot be cast to float'
 
         if logp != logp:
-            raise ValueError, self.__name__ + ': computed log-probability is NaN'
+            return -np.inf
 
         if self.verbose > 0:
             print '\t' + self.__name__ + ': Returning log-probability ', logp
