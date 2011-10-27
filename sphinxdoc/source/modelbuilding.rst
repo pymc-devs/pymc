@@ -33,9 +33,9 @@ fitting probability models are described in chapter :ref:`chap:modelfitting`.
    Need a better description of what a Potential is. Given the description
    of Stochastic and Deterministic we have given, its not clear where
    Potential fits in, as it classifies the world into 2 things --
-   completely determined by parents and not. .. 
-   
-   
+   completely determined by parents and not. ..
+
+
 .. _stochastic:
 
 The Stochastic class
@@ -255,11 +255,11 @@ There are three main ways to create stochastic variables, called the
    accepting or rejecting proposed values in the MCMC algorithm. The only
    way a stochastic variable's value should be updated is using
    statements of the following form::
-    
+
       A.value = new_value
-    
+
    The following are in-place updates and should \emph{never} be used::
-   
+
        A.value += 3
        A.value[2,1] = 5
        A.value.attribute = new_attribute_value
@@ -312,7 +312,7 @@ The Deterministic class
 The ``Deterministic`` class represents variables whose values are completely
 determined by the values of their parents. For example, in model
 (:eq:`disastermodel`), :math:`r` is a ``deterministic`` variable. Recall it was
-defined by 
+defined by
 
 .. math::
   :nowrap:
@@ -441,7 +441,7 @@ Containers
 ==========
 
 In some situations it would be inconvenient to assign a unique label to each
-parent of some variable. Consider :math:`y` in the following model: 
+parent of some variable. Consider :math:`y` in the following model:
 
 .. math::
   :nowrap:
@@ -528,7 +528,7 @@ The Potential class
 ===================
 
 The joint density corresponding to model (:eq:`disastermodel`) can be written
-as follows: 
+as follows:
 
 .. math::
   :nowrap:
@@ -544,7 +544,7 @@ are contributed by ``Stochastic`` objects.
 
 In some cases, it's nice to be able to modify the joint density by incorporating
 terms that don't correspond to probabilities of variables conditional on
-parents, for example: 
+parents, for example:
 
 .. math::
   :nowrap:
@@ -557,7 +557,7 @@ parents, for example:
 In other cases we may want to add probability terms to existing models. For
 example, suppose we want to constrain the difference between :math:`e` and
 :math:`l` in (:eq:`disastermodel`) to be less than 1, so that the joint density
-becomes 
+becomes
 
 .. math::
   :nowrap:
@@ -596,7 +596,7 @@ The role of potentials can be confusing, so we will provide another example: we
 have a dataset :math:`t` consisting of the days on which several marked animals
 were recaptured. We believe that the probability :math:`S` that an animal is not
 recaptured on any given day can be explained by a covariate vector :math:`x`. We
-model this situation as follows: 
+model this situation as follows:
 
 .. math::
   :nowrap:
@@ -623,7 +623,7 @@ three options within the strict Bayesian hierarchical framework:
 
 Factor potentials provide a convenient way to incorporate the soft data without
 the need for such major modifications. We can simply modify the joint
-distribution from 
+distribution from
 
 .. math::
   :nowrap:
@@ -633,7 +633,7 @@ distribution from
   \end{eqnarray*}
 
 
-to 
+to
 
 .. math::
   :nowrap:

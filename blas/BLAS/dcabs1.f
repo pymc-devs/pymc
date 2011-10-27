@@ -6,7 +6,7 @@
 *  Purpose
 *  =======
 *
-*  DCABS1 computes absolute value of a double complex number 
+*  DCABS1 computes absolute value of a double complex number
 *
 *     .. Intrinsic Functions ..
       INTRINSIC ABS,DBLE,DIMAG

@@ -10,14 +10,14 @@ Application Programming Interface
 
 
 .. module:: pymc.distributions
-   
+
 
 .. autofunction:: bernoulli_like
-   
+
 .. autofunction:: beta_like
 
- 
- 
-  
+
+
+
 
 

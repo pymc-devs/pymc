@@ -332,7 +332,7 @@
       I4 = ISEED( 4 )
 *
       DO 10 I = 1, MIN( N, LV )
-*	  
+*
   20     CONTINUE
 *
 *        Multiply the seed by i-th power of the multiplier modulo 2**48
@@ -359,11 +359,11 @@
 *           If a real number has n bits of precision, and the first
 *           n bits of the 48-bit integer above happen to be all 1 (which
 *           will occur about once every 2**n calls), then X( I ) will
-*           be rounded to exactly 1.0. 
+*           be rounded to exactly 1.0.
 *           Since X( I ) is not supposed to return exactly 0.0 or 1.0,
 *           the statistically correct thing to do in this situation is
 *           simply to iterate again.
-*           N.B. the case X( I ) = 0.0 should not be possible.	
+*           N.B. the case X( I ) = 0.0 should not be possible.
             I1 = I1 + 2
             I2 = I2 + 2
             I3 = I3 + 2

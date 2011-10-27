@@ -35,7 +35,7 @@ To upload to PyPi::
 
    python setup.py sdist upload
    python setup.py bdist_wininst upload
-   
+
 To simply change the information about the package on the PyPi page (as defined in setup.py)::
 
    python setup.py register

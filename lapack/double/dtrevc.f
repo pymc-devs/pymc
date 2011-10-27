@@ -22,16 +22,16 @@
 *  a real upper quasi-triangular matrix T.
 *  Matrices of this type are produced by the Schur factorization of
 *  a real general matrix:  A = Q*T*Q**T, as computed by DHSEQR.
-*  
+*
 *  The right eigenvector x and the left eigenvector y of T corresponding
 *  to an eigenvalue w are defined by:
-*  
+*
 *     T*x = w*x,     (y**H)*T = w*(y**H)
-*  
+*
 *  where y**H denotes the conjugate transpose of y.
 *  The eigenvalues are not input to this routine, but are read directly
 *  from the diagonal blocks of T.
-*  
+*
 *  This routine returns the matrices X and/or Y of right and left
 *  eigenvectors of T, or the products Q*X and/or Q*Y, where Q is an
 *  input matrix.  If Q is the orthogonal factor that reduces a matrix

@@ -675,10 +675,10 @@ static int __pyx_tp_traverse_4pymc_16Container_values_LCValue(PyObject *o, visit
 static int __pyx_tp_clear_4pymc_16Container_values_LCValue(PyObject *o) {
   struct __pyx_obj_4pymc_16Container_values_LCValue *p = (struct __pyx_obj_4pymc_16Container_values_LCValue *)o;
   PyObject *t;
-  t = p->_value; 
+  t = p->_value;
   p->_value = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->val_obj; 
+  t = p->val_obj;
   p->val_obj = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
   return 0;
@@ -840,10 +840,10 @@ static int __pyx_tp_traverse_4pymc_16Container_values_DCValue(PyObject *o, visit
 static int __pyx_tp_clear_4pymc_16Container_values_DCValue(PyObject *o) {
   struct __pyx_obj_4pymc_16Container_values_DCValue *p = (struct __pyx_obj_4pymc_16Container_values_DCValue *)o;
   PyObject *t;
-  t = p->_value; 
+  t = p->_value;
   p->_value = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->val_obj; 
+  t = p->val_obj;
   p->val_obj = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
   return 0;
@@ -1005,10 +1005,10 @@ static int __pyx_tp_traverse_4pymc_16Container_values_OCValue(PyObject *o, visit
 static int __pyx_tp_clear_4pymc_16Container_values_OCValue(PyObject *o) {
   struct __pyx_obj_4pymc_16Container_values_OCValue *p = (struct __pyx_obj_4pymc_16Container_values_OCValue *)o;
   PyObject *t;
-  t = p->_value; 
+  t = p->_value;
   p->_value = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->val_obj; 
+  t = p->val_obj;
   p->val_obj = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
   return 0;
@@ -1170,10 +1170,10 @@ static int __pyx_tp_traverse_4pymc_16Container_values_ACValue(PyObject *o, visit
 static int __pyx_tp_clear_4pymc_16Container_values_ACValue(PyObject *o) {
   struct __pyx_obj_4pymc_16Container_values_ACValue *p = (struct __pyx_obj_4pymc_16Container_values_ACValue *)o;
   PyObject *t;
-  t = p->_ravelledvalue; 
+  t = p->_ravelledvalue;
   p->_ravelledvalue = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->val_obj; 
+  t = p->val_obj;
   p->val_obj = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
   return 0;
@@ -1506,7 +1506,7 @@ static void __Pyx_AddTraceback(char *funcname) {
     PyObject *empty_string = 0;
     PyCodeObject *py_code = 0;
     PyFrameObject *py_frame = 0;
-    
+
     py_srcfile = PyString_FromString(__pyx_filename);
     if (!py_srcfile) goto bad;
     py_funcname = PyString_FromString(funcname);

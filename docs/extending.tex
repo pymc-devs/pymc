@@ -69,7 +69,7 @@ class TruncatedMetropolis(pymc.Metropolis):
 
 The \code{propose} method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: \code{self.proposal_sd}, which can be set with an input argument to Metropolis, and \code{self.adaptive_scale_factor}. Metropolis step methods' default tuning behavior is to reduce \code{adaptive_scale_factor} if the acceptance rate is too low, and to increase \code{adaptive_scale_factor} if it is too high. By incorporating \code{adaptive_scale_factor} into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use \code{adaptive_scale_factor}.
 
-The \code{hastings_factor} method adjusts for the asymmetric proposal distribution \citep{gelman}. It computes the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero. 
+The \code{hastings_factor} method adjusts for the asymmetric proposal distribution \citep{gelman}. It computes the log of the quotient of the `backward' density and the `forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero.
 
 \medskip
 Having created our custom step method, we need to tell MCMC instances to use it to handle the variable \code{cutoff}. This is done in \file{custom_step.py} with the following line:
@@ -136,7 +136,7 @@ Step methods should also maintain the following attributes:
    \item[\code{_tuning_info}:] A list of strings giving the names of any tuning parameters. For \texttt{Metropolis} instances, this would be \texttt{['adaptive_scale_factor']}. This list is used to keep traces of tuning parameters in order to verify `diminishing tuning' \citep{tuning}.
 \end{description}
 
-All step methods have a property called \code{loglike}, which gives the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio. The \code{logp_plus_loglike} property gives the sum of that and the log-probabilities of \code{self.stochastics}.  
+All step methods have a property called \code{loglike}, which gives the sum of the log-probabilities of the union of the extended children of \code{self.stochastics}. This quantity is one term in the log of the Metropolis-Hastings acceptance ratio. The \code{logp_plus_loglike} property gives the sum of that and the log-probabilities of \code{self.stochastics}.
 
 
 

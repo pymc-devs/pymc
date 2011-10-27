@@ -6,13 +6,13 @@
 PyMC's User Guide
 =================
 
-Table of contents 
+Table of contents
 -----------------
 
 .. toctree::
    :maxdepth: 2
    :numbered:
-   
+
    introduction
    installation
    tutorial

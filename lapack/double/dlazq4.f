@@ -16,7 +16,7 @@
 *  Purpose
 *  =======
 *
-*  DLAZQ4 computes an approximation TAU to the smallest eigenvalue 
+*  DLAZQ4 computes an approximation TAU to the smallest eigenvalue
 *  using values of d from the previous transform.
 *
 *  I0    (input) INTEGER
@@ -97,7 +97,7 @@
          TTYPE = -1
          RETURN
       END IF
-*       
+*
       NN = 4*N0 + PP
       IF( N0IN.EQ.N0 ) THEN
 *
@@ -167,7 +167,7 @@
      $               RETURN
                   B2 = B2*( Z( I4 ) / Z( I4-2 ) )
                   A2 = A2 + B2
-                  IF( HUNDRD*MAX( B2, B1 ).LT.A2 .OR. CNST1.LT.A2 ) 
+                  IF( HUNDRD*MAX( B2, B1 ).LT.A2 .OR. CNST1.LT.A2 )
      $               GO TO 20
    10          CONTINUE
    20          CONTINUE
@@ -208,7 +208,7 @@
      $               RETURN
                   B2 = B2*( Z( I4 ) / Z( I4-2 ) )
                   A2 = A2 + B2
-                  IF( HUNDRD*MAX( B2, B1 ).LT.A2 .OR. CNST1.LT.A2 ) 
+                  IF( HUNDRD*MAX( B2, B1 ).LT.A2 .OR. CNST1.LT.A2 )
      $               GO TO 40
    30          CONTINUE
    40          CONTINUE
@@ -236,7 +236,7 @@
 *
 *        One eigenvalue just deflated. Use DMIN1, DN1 for DMIN and DN.
 *
-         IF( DMIN1.EQ.DN1 .AND. DMIN2.EQ.DN2 ) THEN 
+         IF( DMIN1.EQ.DN1 .AND. DMIN2.EQ.DN2 ) THEN
 *
 *           Cases 7 and 8.
 *
@@ -254,7 +254,7 @@
      $            RETURN
                B1 = B1*( Z( I4 ) / Z( I4-2 ) )
                B2 = B2 + B1
-               IF( HUNDRD*MAX( B1, A2 ).LT.B2 ) 
+               IF( HUNDRD*MAX( B1, A2 ).LT.B2 )
      $            GO TO 60
    50       CONTINUE
    60       CONTINUE
@@ -263,7 +263,7 @@
             GAP2 = HALF*DMIN2 - A2
             IF( GAP2.GT.ZERO .AND. GAP2.GT.B2*A2 ) THEN
                S = MAX( S, A2*( ONE-CNST2*A2*( B2 / GAP2 )*B2 ) )
-            ELSE 
+            ELSE
                S = MAX( S, A2*( ONE-CNST2*B2 ) )
                TTYPE = -8
             END IF
@@ -283,7 +283,7 @@
 *
 *        Cases 10 and 11.
 *
-         IF( DMIN2.EQ.DN2 .AND. TWO*Z( NN-5 ).LT.Z( NN-7 ) ) THEN 
+         IF( DMIN2.EQ.DN2 .AND. TWO*Z( NN-5 ).LT.Z( NN-7 ) ) THEN
             TTYPE = -10
             S = THIRD*DMIN2
             IF( Z( NN-5 ).GT.Z( NN-7 ) )
@@ -307,7 +307,7 @@
      $             SQRT( Z( NN-11 ) )*SQRT( Z( NN-9 ) ) - A2
             IF( GAP2.GT.ZERO .AND. GAP2.GT.B2*A2 ) THEN
                S = MAX( S, A2*( ONE-CNST2*A2*( B2 / GAP2 )*B2 ) )
-            ELSE 
+            ELSE
                S = MAX( S, A2*( ONE-CNST2*B2 ) )
             END IF
          ELSE
@@ -318,7 +318,7 @@
 *
 *        Case 12, more than two eigenvalues deflated. No information.
 *
-         S = ZERO 
+         S = ZERO
          TTYPE = -12
       END IF
 *

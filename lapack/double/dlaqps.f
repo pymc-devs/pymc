@@ -243,9 +243,9 @@
          ITEMP = NINT( VN2( LSTICC ) )
          VN1( LSTICC ) = DNRM2( M-RK, A( RK+1, LSTICC ), 1 )
 *
-*        NOTE: The computation of VN1( LSTICC ) relies on the fact that 
+*        NOTE: The computation of VN1( LSTICC ) relies on the fact that
 *        SNRM2 does not fail on vectors with norm below the value of
-*        SQRT(DLAMCH('S')) 
+*        SQRT(DLAMCH('S'))
 *
          VN2( LSTICC ) = VN1( LSTICC )
          LSTICC = ITEMP

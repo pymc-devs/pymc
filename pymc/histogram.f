@@ -9,7 +9,7 @@ C INDEX i : |        1       | 2 | 3 | 4 | ... | N+1 |      N+2       |
 
 C PARAMETERS
 C ----------
-C X : ARRAY 
+C X : ARRAY
 C BIN0 : LEFT BIN EDGE
 C DELTA : BIN WIDTH
 C N : NUMBER OF BINS
@@ -31,7 +31,7 @@ CF2PY THREADSAFE
       DO i=1,N+2
         H(i) = 0
       ENDDO
-      
+
 C     OUTLIERS INDICES
       UP = N+2
       LOW = 1
@@ -41,10 +41,10 @@ C     OUTLIERS INDICES
           K = INT((X(i)-BIN0)/DELTA)+1
           IF (K <= N) THEN
             H(K+1) = H(K+1) + 1
-          ELSE 
+          ELSE
             H(UP) = H(UP) + 1
           ENDIF
-        ELSE 
+        ELSE
           H(LOW) = H(LOW) + 1
         ENDIF
       ENDDO
@@ -54,7 +54,7 @@ C     OUTLIERS INDICES
 
 
 C*******************************************************************
-C RETURN THE WEIGHTED HISTOGRAM OF ARRAY X, THAT IS, THE SUM OF THE 
+C RETURN THE WEIGHTED HISTOGRAM OF ARRAY X, THAT IS, THE SUM OF THE
 C WEIGHTS OF THE ELEMENTS OF X FALLING INTO EACH BIN.
 C THE BIN ARRAY CONSISTS IN N BINS STARTING AT BIN0 WITH WIDTH DELTA.
 C HISTO H : | LOWER OUTLIERS | 1 | 2 | 3 | ... |  N  | UPPER OUTLIERS |
@@ -64,7 +64,7 @@ C INDEX i : |        1       | 2 | 3 | 4 | ... | N+1 |      N+2       |
 
 C PARAMETERS
 C ----------
-C X : ARRAY 
+C X : ARRAY
 C W : WEIGHTS
 C BIN0 : LEFT BIN EDGE
 C DELTA : BIN WIDTH
@@ -87,7 +87,7 @@ CF2PY THREADSAFE
       DO i=1,N+2
         H(i) = 0.D0
       ENDDO
-      
+
 C     OUTLIERS INDICES
       UP = N+2
       LOW = 1
@@ -97,10 +97,10 @@ C     OUTLIERS INDICES
           K = INT((X(i)-BIN0)/DELTA)+1
           IF (K <= N) THEN
             H(K+1) = H(K+1) + W(i)
-          ELSE 
+          ELSE
             H(UP) = H(UP) + W(i)
           ENDIF
-        ELSE 
+        ELSE
           H(LOW) = H(LOW) + W(i)
         ENDIF
       ENDDO
@@ -116,7 +116,7 @@ C COMPUTE N DIMENSIONAL FLATTENED HISTOGRAM
 C PARAMETERS
 C ----------
 C X : ARRAY (NXD)
-C BIN0 : LEFT BIN EDGES (D)      
+C BIN0 : LEFT BIN EDGES (D)
 C DELTA : BIN WIDTH (D)
 C N : NUMBER OF BINS (D)
 C COUNT : FLATTENED HISTOGRAM (NC)
@@ -158,7 +158,7 @@ C     FIND THE FLATTENED INDEX OF EACH SAMPLE
         k = ORDER(j)
         MULT=MULT*N(k)
 
-        DO i=1, NX 
+        DO i=1, NX
           IF (X(i,k) >= BIN0(k)) THEN
             T = INT((X(i, k)-BIN0(k))/DELTA(k))+1
             IF (T <= N(k)) THEN
@@ -179,11 +179,11 @@ C     COUNT THE NUMBER OF SAMPLES FALLING INTO EACH BIN
         COUNT(INDEX(i)) =  COUNT(INDEX(i)) + 1
       ENDDO
 
-      END SUBROUTINE 
+      END SUBROUTINE
 
 
 C From HDK@psuvm.psu.edu Thu Dec  8 15:27:16 MST 1994
-C 
+C
 C The following was converted from Algol recursive to Fortran iterative
 C by a colleague at Penn State (a long time ago - Fortran 66, please
 C excuse the GoTo's). The following code also corrects a bug in the

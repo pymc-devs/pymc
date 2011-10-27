@@ -31,9 +31,9 @@
 *
 *  If JOB='S', then the Hessenberg-triangular pair (H,T) is
 *  also reduced to generalized Schur form,
-*  
+*
 *     H = Q*S*Z**T,  T = Q*P*Z**T,
-*  
+*
 *  where Q and Z are orthogonal matrices, P is an upper triangular
 *  matrix, and S is a quasi-triangular matrix with 1-by-1 and 2-by-2
 *  diagonal blocks.
@@ -56,7 +56,7 @@
 *  generalized Schur factorization of (A,B):
 *
 *     A = (Q1*Q)*S*(Z1*Z)**T,  B = (Q1*Q)*P*(Z1*Z)**T.
-*  
+*
 *  To avoid overflow, eigenvalues of the matrix pair (H,T) (equivalently,
 *  of (A,B)) are computed as a pair of values (alpha,beta), where alpha is
 *  complex and beta real.
@@ -67,7 +67,7 @@
 *  alternate form of the GNEP
 *     mu*A*y = B*y.
 *  Real eigenvalues can be read directly from the generalized Schur
-*  form: 
+*  form:
 *    alpha = S(i,i), beta = P(i,i).
 *
 *  Ref: C.B. Moler & G.W. Stewart, "An Algorithm for Generalized Matrix
@@ -79,7 +79,7 @@
 *
 *  JOB     (input) CHARACTER*1
 *          = 'E': Compute eigenvalues only;
-*          = 'S': Compute eigenvalues and the Schur form. 
+*          = 'S': Compute eigenvalues and the Schur form.
 *
 *  COMPQ   (input) CHARACTER*1
 *          = 'N': Left Schur vectors (Q) are not computed;

@@ -67,13 +67,13 @@ The following incomplete Cholesky factorization functions are found in the Fortr
     %     \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
     %     \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
     % \end{itemize}
-    % 
+    %
     % \item[\function{dtrmm_wrap(a,b,uplo='U',transa='N',alpha=1.)}:] A wrapper for the BLAS routine \citetitle[http://www.netlib.org/blas/dtrsmf.f]{DTRMM}, which does the triangular matrix multiplication \texttt{$\alpha$a$^{op}$x = b} in-place (that is, \texttt{b} is overwritten by $x$).
     % \begin{itemize}
     %     \item If \texttt{uplo='U'}, \texttt{a} is assumed to be an upper triangle; if \texttt{uplo='L'}, \texttt{a} is assumed to be a lower triangle.
     %     \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x} is computed. If \texttt{transa='N'}, \texttt{$\alpha$a*x} is computed.
     % \end{itemize}
-    % 
+    %
     % \item[\function{info = dpotrf_wrap(a)}:] A wrapper for the LAPACK routine \citetitle[http://www.netlib.org/lapack/double/dpotrf.f]{DPOTRF}, which tries to overwrite positive-definite matrix \texttt{a} with an upper-triangular Cholesky factor in-place. If the return value \texttt{info} is positive, \texttt{a} is not positive definite and the algorithm has failed.
 
     \item[\function{U, m, piv = ichol(diag, reltol, rowfun)}:] An implementation of the incomplete Cholesky decomposition, based on a port of one of the functions in the \citetitle[http://www.kyb.tuebingen.mpg.de/bs/people/seeger/]{chol_incomplete} package by Matthias Seeger.
@@ -182,7 +182,7 @@ On exit, \texttt{U} will be an M-by-\texttt{n} upper-triangular matrix that sati
 %         \item If \texttt{transa='T'}, \texttt{$\alpha$a.T*x = b} is solved. If \texttt{transa='N'}, \texttt{$\alpha$a*x = b} is solved.
 %         \item If \texttt{inplace=True}, \texttt{b} is overwritten with $x$ in-place and returned. If \texttt{inplace=False}, \texttt{b} is not modified.
 %     \end{itemize}
-% 
+%
 %     \item[\function{b = trimult(A,x,uplo='U',transa='N',inplace=False)}:] Does the triangular multiplication \texttt{$\alpha$a$^{op}$x = b} using \function{dtrmm_wrap} and returns \texttt{b}.
 %     \begin{itemize}
 %         \item \texttt{A} is assumed upper-triangular if \code{uplo='U'} and lower-triangular if \code{uplo='L'}.

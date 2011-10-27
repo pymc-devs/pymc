@@ -19,7 +19,7 @@ Accessing Sampled Data
 
 The recommended way to access data from an MCMC run, irrespective of the
 database backend, is to use the ``trace`` method::
-  
+
   >>> from pymc.examples import DisasterModel
   >>> M = pm.MCMC(DisasterModel)
   >>> M.sample(10)
@@ -33,9 +33,9 @@ the tallyable object `e`::
   >>> M.trace('e')
   <pymc.database.ram.Trace object at 0x7fa4877a8b50>
 
-Samples from the trace are obtained using the slice notation ``[]``, 
+Samples from the trace are obtained using the slice notation ``[]``,
 similarly to NumPy arrays. By default, ``trace`` returns the samples from
-the last chain. To return samples from all the chains, set 
+the last chain. To return samples from all the chains, set
 ``chain=None``::
 
   >>> M.sample(5)
@@ -61,21 +61,21 @@ sampler that, instead, writes data to a pickle file::
   >>> M.db.close()
 
 Note that in this particular case, no data is written to disk before the call
-to ``db.close``. The ``close`` method will flush data to disk and 
+to ``db.close``. The ``close`` method will flush data to disk and
 prepare the database for a potential session exit. Closing a Python session
-without calling ``close`` beforehand is likely to corrupt the database, 
-making the data irretrievable. To simply flush data to disk without 
-closing the database, use the ``commit`` method. 
+without calling ``close`` beforehand is likely to corrupt the database,
+making the data irretrievable. To simply flush data to disk without
+closing the database, use the ``commit`` method.
 
-Some backends not only have the ability to store the traces, but also 
-the state of the step methods at the end of sampling. This is particularly 
-useful when long warm-up periods are needed to tune the jump parameters. 
-When the database is loaded in a new session, the step methods query 
+Some backends not only have the ability to store the traces, but also
+the state of the step methods at the end of sampling. This is particularly
+useful when long warm-up periods are needed to tune the jump parameters.
+When the database is loaded in a new session, the step methods query
 the database to fetch the state they were in at the end of the last trace.
 
 .. warning::
 
-  Check that you ``close`` the database before closing the Python session. 
+  Check that you ``close`` the database before closing the Python session.
 
 
 Loading Back a Database
@@ -154,10 +154,10 @@ are created, storing the values of the variable as rows of text::
   3.033672373807017486e+00
   ...
 
-While the ``txt`` backend makes it easy to load data using other 
+While the ``txt`` backend makes it easy to load data using other
 applications and programming languages, it is not optimized for speed nor
-memory efficiency. If you plan on generating and handling large datasets, 
-read on for better options.  
+memory efficiency. If you plan on generating and handling large datasets,
+read on for better options.
 
 
 pickle
@@ -175,17 +175,17 @@ the state of the ``Sampler``'s step methods.
 sqlite
 ------
 
-The ``sqlite`` backend is based on the python module `sqlite3`_ 
+The ``sqlite`` backend is based on the python module `sqlite3`_
 (a Python 2.5 built-in) . It opens an SQL database named ``dbname``,
 and creates one table per tallyable objects. The rows of this table
 store a key, the chain index and the values of the objects::
 
   key (INT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
 
-The key is autoincremented each time a new row is added to the table, 
-that is, each time ``tally`` is called by the sampler. Note that the 
-``savestate`` feature is not implemented, that is, the state of the step 
-methods is not stored internally in the database. 
+The key is autoincremented each time a new row is added to the table,
+that is, each time ``tally`` is called by the sampler. Note that the
+``savestate`` feature is not implemented, that is, the state of the step
+methods is not stored internally in the database.
 
 
 .. _`sqlite3`: http://www.sqlite.org
@@ -214,7 +214,7 @@ These parameters are passed when the ``Sampler`` is instantiated:
 * ``dbmode`` {``a``, ``w``} File mode.  Use ``a`` to append values, and ``w``
   to overwrite an existing database.
 
-The ``savestate`` feature is not implemented in the ``mysql`` backend. 
+The ``savestate`` feature is not implemented in the ``mysql`` backend.
 
 
 .. _`MySQL`:
@@ -233,7 +233,7 @@ The ``hdf5`` database is fast and can store huge traces, far larger than the
 available RAM. Data can be compressed and decompressed on the fly to
 reduce the disk footprint.
 Another feature of this backend is that it can store arbitrary objects.
-Whereas most of the other backends are limited to numerical values, ``hdf5`` 
+Whereas most of the other backends are limited to numerical values, ``hdf5``
 can tally any object that can be pickled, opening the door for powerful and
 exotic applications (see ``pymc.gp``).
 
@@ -281,9 +281,9 @@ look at the ``database.base`` module, which defines barebone ``Database``
 and ``Trace`` classes. This module contains documentation on the methods that
 should be defined to get a working backend.
 
-Testing your new backend should be fairly straightforward, since the 
-``test_database`` module contains a generic test class that can easily 
-be subclassed to check that the basic features required of all backends 
+Testing your new backend should be fairly straightforward, since the
+``test_database`` module contains a generic test class that can easily
+be subclassed to check that the basic features required of all backends
 are implemented and working properly.
 
 

@@ -33,9 +33,9 @@
 *
 *  DD1    (input/output) DOUBLE PRECISION
 *
-*  DD2    (input/output) DOUBLE PRECISION 
+*  DD2    (input/output) DOUBLE PRECISION
 *
-*  DX1    (input/output) DOUBLE PRECISION 
+*  DX1    (input/output) DOUBLE PRECISION
 *
 *  DY1    (input) DOUBLE PRECISION
 *

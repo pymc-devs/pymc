@@ -28,7 +28,7 @@
 *     A * X = B,
 *  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 *
-*  DSGESV first attempts to factorize the matrix in SINGLE PRECISION 
+*  DSGESV first attempts to factorize the matrix in SINGLE PRECISION
 *  and use this factorization within an iterative refinement procedure to
 *  produce a solution with DOUBLE PRECISION normwise backward error
 *  quality (see below). If the approach fails the method switches to a
@@ -37,13 +37,13 @@
 *  The iterative refinement is not going to be a winning strategy if
 *  the ratio SINGLE PRECISION performance over DOUBLE PRECISION performance
 *  is too small. A reasonable strategy should take the number of right-hand
-*  sides and the size of the matrix into account. This might be done with a 
+*  sides and the size of the matrix into account. This might be done with a
 *  call to ILAENV in the future. Up to now, we always try iterative refinement.
 *
 *  The iterative refinement process is stopped if
 *      ITER > ITERMAX
 *  or for all the RHS we have:
-*      RNRM < SQRT(N)*XNRM*ANRM*EPS*BWDMAX 
+*      RNRM < SQRT(N)*XNRM*ANRM*EPS*BWDMAX
 *  where
 *      o ITER is the number of the current iteration in the iterative
 *        refinement process
@@ -80,8 +80,8 @@
 *  IPIV    (output) INTEGER array, dimension (N)
 *          The pivot indices that define the permutation matrix P;
 *          row i of the matrix was interchanged with row IPIV(i).
-*          Corresponds either to the single precision factorization 
-*          (if INFO.EQ.0 and ITER.GE.0) or the double precision 
+*          Corresponds either to the single precision factorization
+*          (if INFO.EQ.0 and ITER.GE.0) or the double precision
 *          factorization (if INFO.EQ.0 and ITER.LT.0).
 *
 *  B       (input) DOUBLE PRECISION array, dimension (LDB,NRHS)
@@ -100,7 +100,7 @@
 *          This array is used to hold the residual vectors.
 *
 *  SWORK   (workspace) REAL array, dimension (N*(N+NRHS))
-*          This array is used to use the single precision matrix and the 
+*          This array is used to use the single precision matrix and the
 *          right-hand sides or solutions in single precision.
 *
 *  ITER    (output) INTEGER
@@ -300,7 +300,7 @@
               IF (RNRM.GT.XNRM*CTE) GOTO 20
           END DO
 *
-*         If we are here, the NRHS normwised backward errors satisfy the 
+*         If we are here, the NRHS normwised backward errors satisfy the
 *         stopping criterion, we are good to exit.
 *
           ITER = IITER

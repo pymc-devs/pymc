@@ -41,7 +41,7 @@
 *  EST    (input/output) DOUBLE PRECISION
 *         On entry with KASE = 1 or 2 and JUMP = 3, EST should be
 *         unchanged from the previous call to DLACON.
-*         On exit, EST is an estimate (a lower bound) for norm(A). 
+*         On exit, EST is an estimate (a lower bound) for norm(A).
 *
 *  KASE   (input/output) INTEGER
 *         On the initial call to DLACON, KASE should be 0.

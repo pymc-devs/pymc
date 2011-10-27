@@ -542,7 +542,7 @@
 *
   160 CONTINUE
 *
-*     12 <= ISPEC <= 16: xHSEQR or one of its subroutines. 
+*     12 <= ISPEC <= 16: xHSEQR or one of its subroutines.
 *
       ILAENV = IPARMQ( ISPEC, NAME, OPTS, N1, N2, N3, N4 )
       RETURN

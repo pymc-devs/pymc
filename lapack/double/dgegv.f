@@ -103,7 +103,7 @@
 *
 *  BETA    (output) DOUBLE PRECISION array, dimension (N)
 *          The scalars beta that define the eigenvalues of GNEP.
-*          
+*
 *          Together, the quantities alpha = (ALPHAR(j),ALPHAI(j)) and
 *          beta = BETA(j) represent the j-th eigenvalue of the matrix
 *          pair (A,B), in one of the forms lambda = alpha/beta or

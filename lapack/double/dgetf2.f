@@ -62,11 +62,11 @@
       PARAMETER          ( ONE = 1.0D+0, ZERO = 0.0D+0 )
 *     ..
 *     .. Local Scalars ..
-      DOUBLE PRECISION   SFMIN 
+      DOUBLE PRECISION   SFMIN
       INTEGER            I, J, JP
 *     ..
 *     .. External Functions ..
-      DOUBLE PRECISION   DLAMCH      
+      DOUBLE PRECISION   DLAMCH
       INTEGER            IDAMAX
       EXTERNAL           DLAMCH, IDAMAX
 *     ..
@@ -98,9 +98,9 @@
       IF( M.EQ.0 .OR. N.EQ.0 )
      $   RETURN
 *
-*     Compute machine safe minimum 
-* 
-      SFMIN = DLAMCH('S')  
+*     Compute machine safe minimum
+*
+      SFMIN = DLAMCH('S')
 *
       DO 10 J = 1, MIN( M, N )
 *
@@ -117,15 +117,15 @@
 *
 *           Compute elements J+1:M of J-th column.
 *
-            IF( J.LT.M ) THEN 
-               IF( ABS(A( J, J )) .GE. SFMIN ) THEN 
-                  CALL DSCAL( M-J, ONE / A( J, J ), A( J+1, J ), 1 ) 
-               ELSE 
-                 DO 20 I = 1, M-J 
-                    A( J+I, J ) = A( J+I, J ) / A( J, J ) 
-   20            CONTINUE 
-               END IF 
-            END IF 
+            IF( J.LT.M ) THEN
+               IF( ABS(A( J, J )) .GE. SFMIN ) THEN
+                  CALL DSCAL( M-J, ONE / A( J, J ), A( J+1, J ), 1 )
+               ELSE
+                 DO 20 I = 1, M-J
+                    A( J+I, J ) = A( J+I, J ) / A( J, J )
+   20            CONTINUE
+               END IF
+            END IF
 *
          ELSE IF( INFO.EQ.0 ) THEN
 *

@@ -43,7 +43,7 @@
 *  INCY   (input) INTEGER
 *         storage spacing between elements of DY
 *
-*  DPARAM (input/output)  DOUBLE PRECISION array, dimension 5 
+*  DPARAM (input/output)  DOUBLE PRECISION array, dimension 5
 *     DPARAM(1)=DFLAG
 *     DPARAM(2)=DH11
 *     DPARAM(3)=DH21

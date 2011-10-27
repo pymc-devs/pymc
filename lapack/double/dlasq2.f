@@ -16,7 +16,7 @@
 *  Purpose
 *  =======
 *
-*  DLASQ2 computes all the eigenvalues of the symmetric positive 
+*  DLASQ2 computes all the eigenvalues of the symmetric positive
 *  definite tridiagonal matrix associated with the qd array Z to high
 *  relative accuracy are computed to high relative accuracy, in the
 *  absence of denormalization, underflow and overflow.
@@ -56,7 +56,7 @@
 *              = 1, a split was marked by a positive value in E
 *              = 2, current block of Z not diagonalized after 30*N
 *                   iterations (in inner while loop)
-*              = 3, termination criterion of outer while loop not met 
+*              = 3, termination criterion of outer while loop not met
 *                   (program created more than N unreduced blocks)
 *
 *  Further Details
@@ -76,7 +76,7 @@
 *     ..
 *     .. Local Scalars ..
       LOGICAL            IEEE
-      INTEGER            I0, I4, IINFO, IPN4, ITER, IWHILA, IWHILB, K, 
+      INTEGER            I0, I4, IINFO, IPN4, ITER, IWHILA, IWHILB, K,
      $                   N0, NBIG, NDIV, NFAIL, PP, SPLT, TTYPE
       DOUBLE PRECISION   D, DESIG, DMIN, DMIN1, DMIN2, DN, DN1, DN2, E,
      $                   EMAX, EMIN, EPS, OLDEMN, QMAX, QMIN, S, SAFMIN,
@@ -94,7 +94,7 @@
       INTRINSIC          ABS, DBLE, MAX, MIN, SQRT
 *     ..
 *     .. Executable Statements ..
-*      
+*
 *     Test the input arguments.
 *     (in case DLASQ2 is not called by DLASQ1)
 *
@@ -134,7 +134,7 @@
          END IF
          Z( 5 ) = Z( 1 ) + Z( 2 ) + Z( 3 )
          IF( Z( 2 ).GT.Z( 3 )*TOL2 ) THEN
-            T = HALF*( ( Z( 1 )-Z( 3 ) )+Z( 2 ) ) 
+            T = HALF*( ( Z( 1 )-Z( 3 ) )+Z( 2 ) )
             S = Z( 3 )*( Z( 2 ) / T )
             IF( S.LE.T ) THEN
                S = Z( 3 )*( Z( 2 ) / ( T*( ONE+SQRT( ONE+S / T ) ) ) )
@@ -203,19 +203,19 @@
          Z( 2*N-1 ) = ZERO
          RETURN
       END IF
-*         
+*
 *     Check whether the machine is IEEE conformable.
-*         
+*
       IEEE = ILAENV( 10, 'DLASQ2', 'N', 1, 2, 3, 4 ).EQ.1 .AND.
-     $       ILAENV( 11, 'DLASQ2', 'N', 1, 2, 3, 4 ).EQ.1      
-*         
+     $       ILAENV( 11, 'DLASQ2', 'N', 1, 2, 3, 4 ).EQ.1
+*
 *     Rearrange data for locality: Z=(q1,qq1,e1,ee1,q2,qq2,e2,ee2,...).
 *
       DO 30 K = 2*N, 2, -2
-         Z( 2*K ) = ZERO 
-         Z( 2*K-1 ) = Z( K ) 
-         Z( 2*K-2 ) = ZERO 
-         Z( 2*K-3 ) = Z( K-1 ) 
+         Z( 2*K ) = ZERO
+         Z( 2*K-1 ) = Z( K )
+         Z( 2*K-2 ) = ZERO
+         Z( 2*K-3 ) = Z( K-1 )
    30 CONTINUE
 *
       I0 = 1
@@ -272,7 +272,7 @@
                D = Z( I4+1 )*( D / Z( I4-2*PP-2 ) )
             END IF
             EMIN = MIN( EMIN, Z( I4-2*PP ) )
-   60    CONTINUE 
+   60    CONTINUE
          Z( 4*N0-PP-2 ) = D
 *
 *        Now find qmax.
@@ -302,14 +302,14 @@
       NDIV = 2*( N0-I0 )
 *
       DO 140 IWHILA = 1, N + 1
-         IF( N0.LT.1 ) 
+         IF( N0.LT.1 )
      $      GO TO 150
 *
-*        While array unfinished do 
+*        While array unfinished do
 *
 *        E(N0) holds the value of SIGMA when submatrix in I0:N0
 *        splits from the rest of the array, but is negated.
-*      
+*
          DESIG = ZERO
          IF( N0.EQ.N ) THEN
             SIGMA = ZERO
@@ -324,7 +324,7 @@
 *        Find last unreduced submatrix's top index I0, find QMAX and
 *        EMIN. Find Gershgorin-type bound if Q's much greater than E's.
 *
-         EMAX = ZERO 
+         EMAX = ZERO
          IF( N0.GT.I0 ) THEN
             EMIN = ABS( Z( 4*N0-5 ) )
          ELSE
@@ -342,7 +342,7 @@
             QMAX = MAX( QMAX, Z( I4-7 )+Z( I4-5 ) )
             EMIN = MIN( EMIN, Z( I4-5 ) )
    90    CONTINUE
-         I4 = 4 
+         I4 = 4
 *
   100    CONTINUE
          I0 = I4 / 4
@@ -357,11 +357,11 @@
 *
 *        Now I0:N0 is unreduced. PP = 0 for ping, PP = 1 for pong.
 *
-         PP = 0 
+         PP = 0
 *
          NBIG = 30*( N0-I0+1 )
          DO 120 IWHILB = 1, NBIG
-            IF( I0.GT.N0 ) 
+            IF( I0.GT.N0 )
      $         GO TO 130
 *
 *           While submatrix unfinished take a good dqds step.
@@ -415,16 +415,16 @@
       INFO = 3
       RETURN
 *
-*     end IWHILA   
+*     end IWHILA
 *
   150 CONTINUE
-*      
+*
 *     Move q's to the front.
-*      
+*
       DO 160 K = 2, N
          Z( K ) = Z( 4*K-3 )
   160 CONTINUE
-*      
+*
 *     Sort and compute sum of eigenvalues.
 *
       CALL DLASRT( 'D', N, Z, IINFO )
@@ -436,7 +436,7 @@
 *
 *     Store trace, sum(eigenvalues) and information on performance.
 *
-      Z( 2*N+1 ) = TRACE 
+      Z( 2*N+1 ) = TRACE
       Z( 2*N+2 ) = E
       Z( 2*N+3 ) = DBLE( ITER )
       Z( 2*N+4 ) = DBLE( NDIV ) / DBLE( N**2 )

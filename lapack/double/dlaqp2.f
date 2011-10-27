@@ -36,7 +36,7 @@
 *
 *  A       (input/output) DOUBLE PRECISION array, dimension (LDA,N)
 *          On entry, the M-by-N matrix A.
-*          On exit, the upper triangle of block A(OFFSET+1:M,1:N) is 
+*          On exit, the upper triangle of block A(OFFSET+1:M,1:N) is
 *          the triangular factor obtained; the elements in block
 *          A(OFFSET+1:M,1:N) below the diagonal, together with the
 *          array TAU, represent the orthogonal matrix Q as a product of

@@ -1,13 +1,13 @@
 c Author: Anand Patil, anand.prabhakar.patil@gmail.com
 
       SUBROUTINE checksymm(X,n,cs)
-c Checks symmetry      
+c Checks symmetry
 cf2py intent(hide) n
 cf2py intent(out) cs
       DOUBLE PRECISION X(n,n)
       INTEGER n,i,j
       LOGICAL cs
-      
+
       cs = .FALSE.
       do j=1,n-1
           do i=j+1,n
@@ -17,8 +17,8 @@ cf2py intent(out) cs
               end if
           end do
       end do
-      
-      return 
+
+      return
       END
 
 
@@ -36,9 +36,9 @@ cf2py threadsafe
       INTEGER n, info, i
       DOUBLE PRECISION twopi_N, log_detC, gd
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
-      PARAMETER (PI=3.141592653589793238462643d0) 
+      PARAMETER (PI=3.141592653589793238462643d0)
 
 
       EXTERNAL DPOTRS
@@ -49,13 +49,13 @@ cf2py threadsafe
 ! DCOPY(N,DX,INCX,DY,INCY) copies x to y
 ! NB DDOT from ATLAS, compiled with gfortran 4.2 on Ubuntu Gutsy,
 ! was producing bad output- hence the manual dot product.
-      
-!     x <- (x-mu)      
+
+!     x <- (x-mu)
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
 
 !       mu <- x
       call DCOPY(n,x,1,mu,1)
-      
+
 !     x <- sig ^-1 * x
       call DPOTRS('L',n,1,sig,n,x,n,info)
 
@@ -63,22 +63,22 @@ cf2py threadsafe
       do i=1,n
           gd=gd+x(i)*mu(i)
       end do
-      
+
 !     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
       like = -0.5D0 * gd
 !       print *, like
-      
+
       twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
 !       print *, twopi_N
-      
+
       log_detC = 0.0D0
       do i=1,n
         log_detC = log_detC + log(sig(i,i))
       enddo
 !       print *, log_detC
-      
+
       like = like - twopi_N - log_detC
-      
+
       return
       END
 
@@ -96,15 +96,15 @@ cf2py threadsafe
       DOUBLE PRECISION C(n,n), x(n), mu(n), like
       INTEGER n, info
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
-      PARAMETER (PI=3.141592653589793238462643d0) 
+      PARAMETER (PI=3.141592653589793238462643d0)
 
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
 
-      
-!     C <- cholesky(C)      
+
+!     C <- cholesky(C)
       call DPOTRF( 'L', n, C, n, info )
 !       print *, C
 
@@ -113,10 +113,10 @@ cf2py threadsafe
          like = -infinity
          RETURN
        endif
-      
+
 !     Call to chol_mvnorm
       call chol_mvnorm(x,mu,C,n,like,info)
-      
+
       return
       END
 
@@ -132,9 +132,9 @@ cf2py threadsafe
       DOUBLE PRECISION tau(n,n), x(n), mu(n), like, gd
       INTEGER n, info, i
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
-      PARAMETER (PI=3.141592653589793238462643d0) 
+      PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION twopi_N, log_dettau
 
       EXTERNAL DPOTRF
@@ -148,12 +148,12 @@ cf2py threadsafe
 
       twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
 
-!     x <- (x-mu)      
+!     x <- (x-mu)
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
-      
+
 !       mu <- x
       call DCOPY(n,x,1,mu,1)
-      
+
 !     mu <- tau * x
       call DSYMV('L',n,1.0D0,tau,n,x,1,0.0D0,mu,1)
 
@@ -165,9 +165,9 @@ cf2py threadsafe
 !     like <- -.5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
       like = -0.5D0 * gd
 
-!      Cholesky factorize tau for the determinant.      
+!      Cholesky factorize tau for the determinant.
        call DPOTRF( 'L', n, tau, n, info )
-      
+
 !      If cholesky failed, puke.
        if (info .GT. 0) then
          like = -infinity
@@ -179,12 +179,12 @@ cf2py threadsafe
        do i=1,n
          log_dettau = log_dettau + dlog(tau(i,i))
        enddo
-            
+
        like = like - twopi_N + log_dettau
-      
+
       return
       END
-      
+
       SUBROUTINE blas_wishart(X,k,n,T,like)
 
 c Wishart log-likelihood function.
@@ -201,14 +201,14 @@ cf2py threadsafe
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
       LOGICAL csx
-      PARAMETER (PI=3.141592653589793238462643d0)      
+      PARAMETER (PI=3.141592653589793238462643d0)
 
       EXTERNAL DCOPY
-! DCOPY(N,DX,INCX,DY,INCY) copies x to y      
+! DCOPY(N,DX,INCX,DY,INCY) copies x to y
       EXTERNAL DSYMM
 ! DSYMM(SIDE,UPLO,M,N,ALPHA,A,LDA,B,LDB,BETA,C,LDC) alpha*A*B + beta*C when side='l'
       EXTERNAL DPOTRF
-! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization      
+! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
 
 c Check X for symmetry
       CALL checksymm(X,k,csx)
@@ -226,31 +226,31 @@ c Cholesky factor T, puke if not pos def.
       if (info .GT. 0) then
         like = -infinity
         RETURN
-      endif 
-      
+      endif
+
 c Cholesky factor X, puke if not pos def.
       call DPOTRF( 'L', k, X, k, info )
       if (info .GT. 0) then
         like = -infinity
         RETURN
-      endif 
-      
+      endif
+
 c Get the trace and log-sqrt-determinants
       tbx = 0.0D0
       dx = 0.0D0
-      db = 0.0D0      
-      
+      db = 0.0D0
+
       do i=1,k
         tbx = tbx + bx(i,i)
         dx = dx + dlog(X(i,i))
         db = db + dlog(T(i,i))
       enddo
-            
+
       if (k .GT. n) then
         like = -infinity
         RETURN
       endif
-      
+
       like = 0.0D0
       like = (n - k - 1) * dx
       like = like + n * db
@@ -262,9 +262,9 @@ c Get the trace and log-sqrt-determinants
         call gamfun(a, g)
         like = like - g
       enddo
-      
+
       like = like - k * (k-1) * 0.25D0 * dlog(PI)
-! 
+!
       return
       END
 
@@ -287,10 +287,10 @@ cf2py threadsafe
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
       LOGICAL csx
-      PARAMETER (PI=3.141592653589793238462643d0)      
+      PARAMETER (PI=3.141592653589793238462643d0)
 c
       EXTERNAL DCOPY
-! DCOPY(N,DX,INCX,DY,INCY) copies x to y      
+! DCOPY(N,DX,INCX,DY,INCY) copies x to y
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
       EXTERNAL DPOTRS
@@ -303,15 +303,15 @@ c Check X for symmetry
           like = -infinity
           return
       end if
-      
+
 c Cholesky factorize sigma, puke if not pos def
-!     V <- cholesky(V)      
+!     V <- cholesky(V)
       call DPOTRF( 'L', k, V, k, info )
       if (info .GT. 0) then
         like = -infinity
         RETURN
       endif
-      
+
 c trace of V^{-1}*X
 !     bx <- X
       call DCOPY(k * k,X,1,bx,1)
@@ -327,16 +327,16 @@ c trace of V^{-1}*X
       tbx = 0.0D0
       do i=1,k
         db = db + dlog(V(i,i))
-        dx = dx + dlog(X(i,i))        
+        dx = dx + dlog(X(i,i))
         tbx = tbx + bx(i,i)
       enddo
-      
+
       if (k .GT. n) then
         like = -infinity
         RETURN
       endif
-      
-      
+
+
       like = (n - k - 1) * dx
       like = like - n * db
       like = like - 0.5D0*tbx
@@ -352,8 +352,8 @@ c trace of V^{-1}*X
 
       return
       END
-      
-      
+
+
       SUBROUTINE blas_inv_wishart(X,k,n,T,like)
 
 c Inverse Wishart log-likelihood function.
@@ -370,12 +370,12 @@ cf2py threadsafe
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
       LOGICAL csx
-      PARAMETER (PI=3.141592653589793238462643d0)      
+      PARAMETER (PI=3.141592653589793238462643d0)
 
       EXTERNAL DCOPY
-! DCOPY(N,DX,INCX,DY,INCY) copies x to y      
+! DCOPY(N,DX,INCX,DY,INCY) copies x to y
       EXTERNAL DPOTRF
-! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization     
+! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
       EXTERNAL DTRMM
 ! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB) B := alpha*B*op( A )
 
@@ -397,31 +397,31 @@ c Cholesky factor T, puke if not pos def.
       if (info .GT. 0) then
         like = -infinity
         RETURN
-      endif 
-      
+      endif
+
 c Cholesky factor X, puke if not pos def.
       call DPOTRF( 'L', k, X, k, info )
       if (info .GT. 0) then
         like = -infinity
         RETURN
-      endif 
-      
+      endif
+
 c Get the trace and log-sqrt-determinants
       tbx = 0.0D0
       dx = 0.0D0
-      db = 0.0D0      
-      
+      db = 0.0D0
+
       do i=1,k
         tbx = tbx + TX(i,i)
         dx = dx + dlog(X(i,i))
         db = db + dlog(T(i,i))
       enddo
-            
+
       if (k .GT. n) then
         like = -infinity
         RETURN
       endif
-      
+
       like = -1.0D0*(n + k + 1) * dx
       like = like + n * db
       like = like - 0.5D0 * tbx
@@ -432,8 +432,8 @@ c Get the trace and log-sqrt-determinants
         call gamfun(a, g)
         like = like - g
       enddo
-      
+
       like = like - k * (k-1) * 0.25D0 * dlog(PI)
-! 
+!
       return
       END

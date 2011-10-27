@@ -1,15 +1,15 @@
 ~~~~~~~~~~
 References
 ~~~~~~~~~~
-            
-.. [Akaike:1973] H. Akaike. Information theory as an extension of the maximum likelihood principle. 
-   In B.N. Petrov and F. Csaki, editors, *Second International  Symposium on 
+
+.. [Akaike:1973] H. Akaike. Information theory as an extension of the maximum likelihood principle.
+   In B.N. Petrov and F. Csaki, editors, *Second International  Symposium on
    Information Theory*, 267-281, Akademiai Kiado, Budapest, 1973.
 
-.. [Brooks:2000] S.P. Brooks, E.A. Catchpole, and B.J.T. Morgan. Bayesian animal survival 
+.. [Brooks:2000] S.P. Brooks, E.A. Catchpole, and B.J.T. Morgan. Bayesian animal survival
    estimation. *Statistical Science*, 15:0, 357-376, 2000.
 
-.. [Burnham:2002] K.P. Burnham and D.R. Anderson. *Model Selection and Multi-Model Inference: A 
+.. [Burnham:2002] K.P. Burnham and D.R. Anderson. *Model Selection and Multi-Model Inference: A
    Practical,  Information-theoretic Approach*. Springer, New York, 2002.
 
 .. [Christakos:2002] G. Christakos. On the assimilation of uncertain physical knowledge bases: Bayesian and non-Bayesian techniques.
@@ -37,17 +37,17 @@ References
 
 .. [Jarrett:1979] R.G. Jarrett. A note on the intervals between coal
    mining disasters. *Biometrika*, 66, 191-193, 1979.
-                 
+
 .. [Jordan:2004] Michael I. Jordan. Graphical models. *Statist. Sci.*, 19(1):140–155, 2004.
 
 .. [Kerman:2004] Kerman, J. and Gelman, A., *Fully Bayesian computing*,
-   Available at SSRN: http://ssrn.com/abstract=1010387, 2004. 
+   Available at SSRN: http://ssrn.com/abstract=1010387, 2004.
 
 .. [Lauritzen:1990] S. L. Lauritzen, A.P. Dawid, B. N. Larsen, and H. G. Leimer.
-   Independence properties of directed {M}arkov fields. *Networks*, 
+   Independence properties of directed {M}arkov fields. *Networks*,
    20:0, 491-505, 1990.
 
-.. [Levine:2005] Richard A. Levine, Zhaoxia Yu, William G. Hanley, and John J.Nitao. 
+.. [Levine:2005] Richard A. Levine, Zhaoxia Yu, William G. Hanley, and John J.Nitao.
    Implementing componentwise hastings algorithms.
    *Computational statistics & data analysis*, 48:0, 363-389, 2005.
 
@@ -59,14 +59,14 @@ References
 .. [Roberts:2007] Roberts, Gareth O. and Rosenthal, Jeffrey S..
    Implementing componentwise Hastings algorithms, *Journal of Applied
    Probability*, 44(2), 458-475, 2007.
-	
+
 .. [Schwarz:1978] Gideon Schwarz. Estimating the dimension of a model. *The Annals of Statistics*,
-   60(2):0, 461-464, 1978. 
+   60(2):0, 461-464, 1978.
 
 .. [West:1997] West, M. and Harrison, J., *Bayesian forecasting and
    dynamic models*, Springer, 1997.
-   
+
 .. [Wilkinson:2004] Wilkinson, D.J. and Yeung, S.K.H., A sparse matrix
    approach to Bayesian computation in large linear models, *Computational
-   statistics \& data analysis*, 44, 493-516, 2004. 
+   statistics \& data analysis*, 44, 493-516, 2004.
 

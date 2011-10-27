@@ -73,7 +73,7 @@ propose illegal values occasionally, but these will be rejected.
 
 Suppose we want to handle ``cutoff`` with a smarter step method that doesn't
 propose illegal values. Specifically, we want to use the nonsymmetric proposal
-distribution 
+distribution
 
 .. math::
   :nowrap:

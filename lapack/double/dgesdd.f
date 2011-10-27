@@ -117,7 +117,7 @@
 *          If JOBZ = 'N',
 *            LWORK >= 3*min(M,N) + max(max(M,N),7*min(M,N)).
 *          If JOBZ = 'O',
-*            LWORK >= 3*min(M,N)*min(M,N) + 
+*            LWORK >= 3*min(M,N)*min(M,N) +
 *                     max(max(M,N),5*min(M,N)*min(M,N)+4*min(M,N)).
 *          If JOBZ = 'S' or 'A'
 *            LWORK >= 3*min(M,N)*min(M,N) +

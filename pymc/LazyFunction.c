@@ -1441,19 +1441,19 @@ static int __pyx_tp_traverse_4pymc_12LazyFunction_LazyFunction(PyObject *o, visi
 static int __pyx_tp_clear_4pymc_12LazyFunction_LazyFunction(PyObject *o) {
   struct __pyx_obj_4pymc_12LazyFunction_LazyFunction *p = (struct __pyx_obj_4pymc_12LazyFunction_LazyFunction *)o;
   PyObject *t;
-  t = p->arguments; 
+  t = p->arguments;
   p->arguments = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->fun; 
+  t = p->fun;
   p->fun = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->argument_values; 
+  t = p->argument_values;
   p->argument_values = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->ultimate_args; 
+  t = p->ultimate_args;
   p->ultimate_args = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
-  t = p->cached_values; 
+  t = p->cached_values;
   p->cached_values = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(t);
   return 0;
@@ -1748,7 +1748,7 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t) {
 static int __Pyx_SetVtable(PyObject *dict, void *vtable) {
     PyObject *pycobj = 0;
     int result;
-    
+
     pycobj = PyCObject_FromVoidPtr(vtable, 0);
     if (!pycobj)
         goto bad;
@@ -1809,7 +1809,7 @@ static void __Pyx_AddTraceback(char *funcname) {
     PyObject *empty_string = 0;
     PyCodeObject *py_code = 0;
     PyFrameObject *py_frame = 0;
-    
+
     py_srcfile = PyString_FromString(__pyx_filename);
     if (!py_srcfile) goto bad;
     py_funcname = PyString_FromString(funcname);

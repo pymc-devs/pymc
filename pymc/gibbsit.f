@@ -57,7 +57,7 @@
 *    ftp> quit                                                         *
 *                                                                      *
 ************************************************************************
- 
+
 ************************************************************************
 *                                                                      *
 *  Input:                                                              *
@@ -112,7 +112,7 @@
 *  grant 5R01HD26330.                                                  *
 *                                                                      *
 ************************************************************************
- 
+
 ************************************************************************
 *                                                                      *
 *  Development history:                                                *
@@ -162,7 +162,7 @@
 
       integer   wasize
       parameter (wasize=maxiterates*2)
- 
+
 ************************************************************************
 *                                                                      *
 *  The following variables hold various temporary values used in this  *
@@ -224,7 +224,7 @@
       integer   q1
       integer   v1
       integer   rc
- 
+
 ************************************************************************
 *                                                                      *
 *  Process whatever command line arguments were passed to gibbsit.     *
@@ -262,7 +262,7 @@
         write (0,*) 'matinput exited with a nonzero error code of', rc
         go to 900
       end if
- 
+
 ************************************************************************
 *                                                                      *
 *  The main program loop follows.  To begin each loop, get the input   *
@@ -298,7 +298,7 @@
         write (0,*) 'vecinput exited with a nonzero error code of', rc
         go to 900
       end if
- 
+
 ************************************************************************
 *                                                                      *
 *  Loop through the vector of quantiles, calculating nmin, kthin,      *
@@ -361,7 +361,7 @@
 
   900 stop
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  matinput                                                  11-04-94  *
@@ -423,7 +423,7 @@
 *               altered by this subroutine.                            *
 *                                                                      *
 ************************************************************************
- 
+
 ************************************************************************
 *                                                                      *
 *  Outputs (continued):                                                *
@@ -476,14 +476,14 @@
 
       character curterms(20)*24
       character currecrd*512
-      character delimit*1 
+      character delimit*1
       data delimit/' '/
 
       integer   collimit
       integer   curcnt
       integer   c1
       integer   rc
- 
+
 ************************************************************************
 *                                                                      *
 *  Make sure that the external unit identifier of the input file is a  *
@@ -536,7 +536,7 @@
 ************************************************************************
 
       rowused = 0
- 
+
 ************************************************************************
 *                                                                      *
 *  Read the next record from the input file as a character string.  If *
@@ -596,7 +596,7 @@
 ************************************************************************
 
       if (curcnt.lt.colused) colused = curcnt
- 
+
 ************************************************************************
 *                                                                      *
 *  Increment the number of rows used in the output matrix.             *
@@ -646,7 +646,7 @@
   600 r15 = 0
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  vecinput                                                  12-07-94  *
@@ -692,7 +692,7 @@
 *               of elements used is returned in the vecused argument.  *
 *                                                                      *
 ************************************************************************
- 
+
 ************************************************************************
 *                                                                      *
 *  Outputs:                                                            *
@@ -732,7 +732,7 @@
       double precision vecout(vecmax)
       integer   vecused
       integer   r15
- 
+
 ************************************************************************
 *                                                                      *
 *  The following variables hold various temporary values used in this  *
@@ -748,7 +748,7 @@
 
       character septerms(20)*24
       character charinpt*512
-      character delimit*1 
+      character delimit*1
       data delimit /' '/
 
       integer   veclimit
@@ -782,7 +782,7 @@
       else
         veclimit = 20
       end if
- 
+
 ************************************************************************
 *                                                                      *
 *  Read a single line from the input file as a character string.  If   *
@@ -827,7 +827,7 @@
 
       r15 = 0
       return
- 
+
 ************************************************************************
 *                                                                      *
 *  An end-of-data or an end-of-file occurred when we attempted to read *
@@ -850,7 +850,7 @@
   500 r15 = 12
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  oneparse                                                   2-17-94  *
@@ -909,7 +909,7 @@
       character tokens(maxtok)*(*)
       integer   tokcnt
       integer   r15
- 
+
 ************************************************************************
 *                                                                      *
 *  The following variables hold various temporary values used in this  *
@@ -966,7 +966,7 @@
       tokcnt = tn
       r15 = 0
       return
- 
+
 ************************************************************************
 *                                                                      *
 *  The beginning of the next token has been located.  Increment the    *
@@ -1018,7 +1018,7 @@
       go to 400
 
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  gibbmain                                                   1-09-95  *
@@ -1066,7 +1066,7 @@
 *               least (iteracnt * 2) elements in this vector.          *
 *                                                                      *
 ************************************************************************
- 
+
 ************************************************************************
 *                                                                      *
 *  Outputs:                                                            *
@@ -1181,7 +1181,7 @@ CF2PY THREADSAFE
       integer   thincnt
       integer   i1
       integer   rc
- 
+
 ************************************************************************
 *                                                                      *
 *  If the q argument is a postive number, interpret it as the quantile *
@@ -1243,7 +1243,7 @@ CF2PY THREADSAFE
         qhat = qhat / dble( iteracnt )
 
       end if
- 
+
 ************************************************************************
 *                                                                      *
 *  Find kthin, the degree of thinning at which the indicator series is *
@@ -1287,7 +1287,7 @@ CF2PY THREADSAFE
       if (bic.le.0.0d0) go to 800
       kmind = kmind + 1
       go to 700
- 
+
 ************************************************************************
 *                                                                      *
 *  Estimate the first-order Markov chain parameters and find the       *
@@ -1323,7 +1323,7 @@ CF2PY THREADSAFE
       r15 = 0
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  empquant                                                   9-13-94  *
@@ -1385,7 +1385,7 @@ CF2PY THREADSAFE
       integer   low
       integer   high
       integer   i1
- 
+
 ************************************************************************
 *                                                                      *
 *  Copy the input series of double precision numbers into the work     *
@@ -1423,7 +1423,7 @@ CF2PY THREADSAFE
 
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  dichot                                                     9-13-94  *
@@ -1476,7 +1476,7 @@ CF2PY THREADSAFE
 ************************************************************************
 
       integer   i1
- 
+
 ************************************************************************
 *                                                                      *
 *  If the entry in the input data vector is less than or equal to the  *
@@ -1495,7 +1495,7 @@ CF2PY THREADSAFE
 
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  thin                                                       9-13-94  *
@@ -1550,7 +1550,7 @@ CF2PY THREADSAFE
       integer   kthin
       integer   result(iteracnt)
       integer   thincnt
- 
+
 ************************************************************************
 *                                                                      *
 *  The following variables hold various temporary values used in this  *
@@ -1586,7 +1586,7 @@ CF2PY THREADSAFE
   600 thincnt = i1 - 1
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  mctest                                                    12-05-94  *
@@ -1650,7 +1650,7 @@ CF2PY THREADSAFE
       integer   i1
       integer   i2
       integer   i3
- 
+
 ************************************************************************
 *                                                                      *
 *  Initialize the transition counts array to all zeroes.               *
@@ -1712,7 +1712,7 @@ CF2PY THREADSAFE
       bic = g2 - dlog( dble(datacnt-2) ) * 2.0d0
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  indtest                                                    11-23-94 *
@@ -1776,7 +1776,7 @@ CF2PY THREADSAFE
       integer   tran(2,2)
       integer   i1
       integer   i2
- 
+
 ************************************************************************
 *                                                                      *
 *  Initialize the transition counts array to all zeroes.               *
@@ -1835,7 +1835,7 @@ CF2PY THREADSAFE
       bic = g2 - dlog( dcm1 )
       return
       end
- 
+
 ************************************************************************
 *                                                                      *
 *  mcest                                                     12-05-94  *
@@ -1890,7 +1890,7 @@ CF2PY THREADSAFE
       integer   tran(2,2)
       integer   i1
       integer   i2
- 
+
 ************************************************************************
 *                                                                      *
 *  Initialize the transition counts array to all zeroes.               *
@@ -1928,7 +1928,7 @@ CF2PY THREADSAFE
 
       return
       end
- 
+
         REAL FUNCTION PPND7(P,IFAULT)
 
 *       ALGORITHM AS241 APPL. STATIST. (1988) VOL. 37, NO. 3, 477-
@@ -2003,7 +2003,7 @@ CF2PY THREADSAFE
           RETURN
         END IF
         END
- 
+
       SUBROUTINE SSORT(X,Y,N,KFLAG)
 ****BEGIN PROLOGUE   SSORT
 ****REVISION  OCTOBER 1,1980
