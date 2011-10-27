@@ -77,13 +77,13 @@
 *
       SAFMIN = DLAMCH( 'Safe minimum' )
       J4 = 4*I0 + PP - 3
-      EMIN = Z( J4+4 ) 
+      EMIN = Z( J4+4 )
       D = Z( J4 )
       DMIN = D
 *
       IF( PP.EQ.0 ) THEN
          DO 10 J4 = 4*I0, 4*( N0-3 ), 4
-            Z( J4-2 ) = D + Z( J4-1 ) 
+            Z( J4-2 ) = D + Z( J4-1 )
             IF( Z( J4-2 ).EQ.ZERO ) THEN
                Z( J4 ) = ZERO
                D = Z( J4+1 )
@@ -94,7 +94,7 @@
                TEMP = Z( J4+1 ) / Z( J4-2 )
                Z( J4 ) = Z( J4-1 )*TEMP
                D = D*TEMP
-            ELSE 
+            ELSE
                Z( J4 ) = Z( J4+1 )*( Z( J4-1 ) / Z( J4-2 ) )
                D = Z( J4+1 )*( D / Z( J4-2 ) )
             END IF
@@ -103,7 +103,7 @@
    10    CONTINUE
       ELSE
          DO 20 J4 = 4*I0, 4*( N0-3 ), 4
-            Z( J4-3 ) = D + Z( J4 ) 
+            Z( J4-3 ) = D + Z( J4 )
             IF( Z( J4-3 ).EQ.ZERO ) THEN
                Z( J4-1 ) = ZERO
                D = Z( J4+2 )
@@ -114,7 +114,7 @@
                TEMP = Z( J4+2 ) / Z( J4-3 )
                Z( J4-1 ) = Z( J4 )*TEMP
                D = D*TEMP
-            ELSE 
+            ELSE
                Z( J4-1 ) = Z( J4+2 )*( Z( J4 ) / Z( J4-3 ) )
                D = Z( J4+2 )*( D / Z( J4-3 ) )
             END IF
@@ -123,7 +123,7 @@
    20    CONTINUE
       END IF
 *
-*     Unroll last two steps. 
+*     Unroll last two steps.
 *
       DNM2 = D
       DMIN2 = DMIN

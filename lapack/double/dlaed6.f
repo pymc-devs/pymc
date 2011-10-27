@@ -97,7 +97,7 @@
       INTEGER            I, ITER, NITER
       DOUBLE PRECISION   A, B, BASE, C, DDF, DF, EPS, ERRETM, ETA, F,
      $                   FC, SCLFAC, SCLINV, SMALL1, SMALL2, SMINV1,
-     $                   SMINV2, TEMP, TEMP1, TEMP2, TEMP3, TEMP4, 
+     $                   SMINV2, TEMP, TEMP1, TEMP2, TEMP3, TEMP4,
      $                   LBD, UBD
 *     ..
 *     .. Intrinsic Functions ..
@@ -117,7 +117,7 @@
       IF( FINIT .LT. ZERO )THEN
          LBD = ZERO
       ELSE
-         UBD = ZERO 
+         UBD = ZERO
       END IF
 *
       NITER = 1
@@ -285,7 +285,7 @@
 *
          TAU = TAU + ETA
          IF( TAU .LT. LBD .OR. TAU .GT. UBD )
-     $      TAU = ( LBD + UBD )/TWO 
+     $      TAU = ( LBD + UBD )/TWO
 *
          FC = ZERO
          ERRETM = ZERO

@@ -8,7 +8,7 @@ An example statistical model
 ============================
 
 Consider the following dataset, which is a time series of recorded coal
-mining disasters in the UK from 1851 to 1962 [Jarrett:1979]_. 
+mining disasters in the UK from 1851 to 1962 [Jarrett:1979]_.
 
 .. _disastersts:
 
@@ -17,7 +17,7 @@ mining disasters in the UK from 1851 to 1962 [Jarrett:1979]_.
    :scale: 100
    :align: center
 
-   Number of mining disasters each year in the UK. 
+   Number of mining disasters each year in the UK.
 
 Occurrences of disasters in the time series is thought to be derived from
 a Poisson process with a large rate parameter in the early part of the
@@ -38,7 +38,7 @@ We represent our conceptual model formally as a statistical model:
            e\sim \textup{Exponential}(r_e)\\
            l\sim \textup{Exponential}(r_l)
        \end{array}
-       
+
 The symbols are defined as:
 
 * :math:`D_t`: The number of disasters in year :math:`t`.
@@ -218,7 +218,7 @@ See section :ref:`graphical` for more details.
 .. warning::
 
    Missing image.
-   
+
 .. figure:: figs/DisasterModel2.png
    :alt: Disasters time series.
    :scale: 30
@@ -459,7 +459,7 @@ impute the missing values, based on information in the rest of the model.
 
 For example, consider a survey dataset for some wildlife species:
 
-=====  ====  ========  ===========  
+=====  ====  ========  ===========
 Count  Site  Observer  Temperature
 =====  ====  ========  ===========
 15       1       1          15
@@ -481,7 +481,7 @@ treating them as unknown model parameters. Values for the missing data
 :math:`\tilde{y}` are estimated naturally, using the posterior predictive
 distribution:
 
-   
+
 .. math::
    	p(\tilde{y}|y) = \int p(\tilde{y}|\theta) f(\theta|y) d\theta
 
@@ -579,7 +579,7 @@ increases from 4 to 113. This significantly slows the rate of sampling, due to t
 .. _fig:missing:
 
 .. figure:: figs/missing.png
-   :alt: Trace and posterior distribution figure. 
+   :alt: Trace and posterior distribution figure.
    :scale: 70
    :align: center
 

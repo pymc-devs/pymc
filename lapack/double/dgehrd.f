@@ -99,7 +99,7 @@
 *
 *  This file is a slight modification of LAPACK-3.0's DGEHRD
 *  subroutine incorporating improvements proposed by Quintana-Orti and
-*  Van de Geijn (2005). 
+*  Van de Geijn (2005).
 *
 *  =====================================================================
 *
@@ -107,7 +107,7 @@
       INTEGER            NBMAX, LDT
       PARAMETER          ( NBMAX = 64, LDT = NBMAX+1 )
       DOUBLE PRECISION  ZERO, ONE
-      PARAMETER          ( ZERO = 0.0D+0, 
+      PARAMETER          ( ZERO = 0.0D+0,
      $                     ONE = 1.0D+0 )
 *     ..
 *     .. Local Scalars ..
@@ -234,7 +234,7 @@
 *
             EI = A( I+IB, I+IB-1 )
             A( I+IB, I+IB-1 ) = ONE
-            CALL DGEMM( 'No transpose', 'Transpose', 
+            CALL DGEMM( 'No transpose', 'Transpose',
      $                  IHI, IHI-I-IB+1,
      $                  IB, -ONE, WORK, LDWORK, A( I+IB, I ), LDA, ONE,
      $                  A( 1, I+IB ), LDA )

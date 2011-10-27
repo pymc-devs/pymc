@@ -21,7 +21,7 @@
 *  Q' * A * Q. The routine returns the matrices V and T which determine
 *  Q as a block reflector I - V*T*V', and also the matrix Y = A * V * T.
 *
-*  This is an OBSOLETE auxiliary routine. 
+*  This is an OBSOLETE auxiliary routine.
 *  This routine will be 'deprecated' in a  future release.
 *  Please use the new routine DLAHR2 instead.
 *

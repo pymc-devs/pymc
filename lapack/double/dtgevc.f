@@ -30,20 +30,20 @@
 *
 *  The right eigenvector x and the left eigenvector y of (S,P)
 *  corresponding to an eigenvalue w are defined by:
-*  
+*
 *     S*x = w*P*x,  (y**H)*S = w*(y**H)*P,
-*  
+*
 *  where y**H denotes the conjugate tranpose of y.
 *  The eigenvalues are not input to this routine, but are computed
 *  directly from the diagonal blocks of S and P.
-*  
+*
 *  This routine returns the matrices X and/or Y of right and left
 *  eigenvectors of (S,P), or the products Z*X and/or Q*Y,
 *  where Z and Q are input matrices.
 *  If Q and Z are the orthogonal factors from the generalized Schur
 *  factorization of a matrix pair (A,B), then Z*X and Q*Y
 *  are the matrices of right and left eigenvectors of (A,B).
-* 
+*
 *  Arguments
 *  =========
 *
@@ -126,7 +126,7 @@
 *          A complex eigenvector corresponding to a complex eigenvalue
 *          is stored in two consecutive columns, the first holding the
 *          real part and the second the imaginary part.
-*          
+*
 *          Not referenced if SIDE = 'L'.
 *
 *  LDVR    (input) INTEGER

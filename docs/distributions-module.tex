@@ -31,10 +31,10 @@ failures (x=0).
 \begin{split}f(x \mid p) = p^{x} (1-p)^{1-x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Series of successes (1) and failures (0). $x=0,1$
 
-\item {} 
+\item {}
 \emph{p} : Probability of success. $0 < p < 1$.
 
 \end{itemize}
@@ -48,10 +48,10 @@ failures (x=0).
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(x)= p$
 
-\item {} 
+\item {}
 $Var(x)= p(1-p)$
 
 \end{itemize}
@@ -67,13 +67,13 @@ each of which yields success with probability p.
 \begin{split}f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} Number of successes, \textgreater{} 0.
 
-\item {} 
+\item {}
 \emph{n} : {[}int{]} Number of Bernoulli trials, \textgreater{} x.
 
-\item {} 
+\item {}
 \emph{p} : Probability of success in each trial, $p \in [0,1]$.
 
 \end{itemize}
@@ -81,10 +81,10 @@ each of which yields success with probability p.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X)=np$
 
-\item {} 
+\item {}
 $Var(X)=np(1-p)$
 
 \end{itemize}
@@ -100,10 +100,10 @@ Categorical log-likelihood. The most general discrete distribution.
 for $i \in 0 \ldots k-1$.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} $x \in 0\ldots k-1$
 
-\item {} 
+\item {}
 \emph{p} : {[}float{]} $p > 0$, $\sum p = 1$
 
 \end{itemize}
@@ -118,13 +118,13 @@ Discrete uniform log-likelihood.
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} $lower \leq x \leq upper$
 
-\item {} 
+\item {}
 \emph{lower} : Lower limit.
 
-\item {} 
+\item {}
 \emph{upper} : Upper limit (upper \textgreater{} lower).
 
 \end{itemize}
@@ -140,10 +140,10 @@ sequence of Bernoulli trials occurs on the x'th trial.
 \begin{split}f(x \mid p) = p(1-p)^{x-1}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} Number of trials before first success (x \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{p} : Probability of success on an individual trial, $p \in [0,1]$
 
 \end{itemize}
@@ -151,10 +151,10 @@ sequence of Bernoulli trials occurs on the x'th trial.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X)=1/p$
 
-\item {} 
+\item {}
 $Var(X)=\frac{1-p}{p^2}$
 
 \end{itemize}
@@ -170,16 +170,16 @@ population without replacement.
 \begin{split}f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} Number of successes in a sample drawn from a population.
 
-\item {} 
+\item {}
 \emph{n} : {[}int{]} Size of sample drawn from the population.
 
-\item {} 
+\item {}
 \emph{m} : {[}int{]} Number of successes in the population.
 
-\item {} 
+\item {}
 \emph{N} : {[}int{]} Total number of units in the population.
 
 \end{itemize}
@@ -200,13 +200,13 @@ parameterization is based on this mixture interpretation.
 \begin{split}f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data (x \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{mu} : mu \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{alpha} : alpha \textgreater{} 0
 
 \end{itemize}
@@ -214,10 +214,10 @@ parameterization is based on this mixture interpretation.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E[x]=\mu$
 
-\item {} 
+\item {}
 In Wikipedia's parameterization,
 $r=\alpha$
 $p=\alpha/(\mu+\alpha)$
@@ -237,10 +237,10 @@ distribution can be derived as a limiting case of the binomial distribution.
 \begin{split}f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int{]} $x \in {0,1,2,...}$
 
-\item {} 
+\item {}
 \emph{mu} : Expected number of occurrences during the given interval, $\mu \geq 0$.
 
 \end{itemize}
@@ -248,10 +248,10 @@ distribution can be derived as a limiting case of the binomial distribution.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(x)=\mu$
 
-\item {} 
+\item {}
 $Var(x)=\mu$
 
 \end{itemize}
@@ -268,13 +268,13 @@ Beta log-likelihood. The conjugate prior for the parameter :math: \emph{p} of th
 \begin{split}f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : 0 \textless{} x \textless{} 1
 
-\item {} 
+\item {}
 \emph{alpha} : alpha \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{beta} : beta \textgreater{} 0
 
 \end{itemize}
@@ -288,10 +288,10 @@ Beta log-likelihood. The conjugate prior for the parameter :math: \emph{p} of th
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X)=\frac{\alpha}{\alpha+\beta}$
 
-\item {} 
+\item {}
 $Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$
 
 \end{itemize}
@@ -306,10 +306,10 @@ Lorentz or the Breit-Wigner distribution.
 \begin{split}f(x \mid \alpha, \beta) = \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{alpha} : Location parameter.
 
-\item {} 
+\item {}
 \emph{beta} : Scale parameter \textgreater{} 0.
 
 \end{itemize}
@@ -317,7 +317,7 @@ Lorentz or the Breit-Wigner distribution.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 Mode and median are at alpha.
 
 \end{itemize}
@@ -331,10 +331,10 @@ Chi-squared $\chi^2$ log-likelihood.
 \begin{split}f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{nu} : {[}int{]} Degrees of freedom ( nu \textgreater{} 0 )
 
 \end{itemize}
@@ -342,10 +342,10 @@ Chi-squared $\chi^2$ log-likelihood.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X)=\nu$
 
-\item {} 
+\item {}
 $Var(X)=2\nu$
 
 \end{itemize}
@@ -359,10 +359,10 @@ Degenerate log-likelihood.
 \begin{split}f(x \mid k) = \left\{ \begin{matrix} 1 \text{ if } x = k \\ 0 \text{ if } x \ne k\end{matrix} \right.\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input value.
 
-\item {} 
+\item {}
 \emph{k} : Degenerate value.
 
 \end{itemize}
@@ -380,10 +380,10 @@ with alpha=1. It often describes the time until an event.
 \begin{split}f(x \mid \beta) = \frac{1}{\beta}e^{-x/\beta}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : x \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{beta} : Survival parameter (beta \textgreater{} 0).
 
 \end{itemize}
@@ -391,10 +391,10 @@ with alpha=1. It often describes the time until an event.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \beta$
 
-\item {} 
+\item {}
 $Var(X) = \beta^2$
 
 \end{itemize}
@@ -413,19 +413,19 @@ failure rates.
 z & = \frac{x-loc}{scale}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : x \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{alpha} : Shape parameter
 
-\item {} 
+\item {}
 \emph{k} : k \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{loc} : Location parameter
 
-\item {} 
+\item {}
 \emph{scale} : Scale parameter (scale \textgreater{} 0).
 
 \end{itemize}
@@ -443,13 +443,13 @@ of which has mean beta.
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : math:\emph{x ge 0}
 
-\item {} 
+\item {}
 \emph{alpha} : Shape parameter (alpha \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{beta} : Scale parameter (beta \textgreater{} 0).
 
 \end{itemize}
@@ -457,10 +457,10 @@ of which has mean beta.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \frac{\alpha}{\beta}$
 
-\item {} 
+\item {}
 $Var(X) = \frac{\alpha}{\beta^2}$
 
 \end{itemize}
@@ -475,10 +475,10 @@ to the domain $x \in [0, \infty)$.
 \begin{split}f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : $x \ge 0$
 
-\item {} 
+\item {}
 \emph{tau} : tau \textgreater{} 0
 
 \end{itemize}
@@ -493,13 +493,13 @@ Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 \begin{split}f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : x \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{alpha} : Shape parameter (alpha \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{beta} : Scale parameter (beta \textgreater{} 0).
 
 \end{itemize}
@@ -523,13 +523,13 @@ events. It is often used as a heavier-tailed alternative to the normal.
 \begin{split}f(x \mid \mu, \tau) = \frac{\tau}{2}e^{-\tau |x-\mu|}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : $-\infty < x < \infty$
 
-\item {} 
+\item {}
 \emph{mu} : Location parameter :math: \emph{-infty \textless{} mu \textless{} infty}
 
-\item {} 
+\item {}
 \emph{tau} : Scale parameter $\tau > 0$
 
 \end{itemize}
@@ -537,10 +537,10 @@ events. It is often used as a heavier-tailed alternative to the normal.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = \frac{2}{\tau^2}$
 
 \end{itemize}
@@ -557,13 +557,13 @@ populations, markets. Resembles a heavy-tailed normal distribution.
 \begin{split}f(x \mid \mu, tau) = \frac{\tau \exp(-\tau[x-\mu])}{[1 + \exp(-\tau[x-\mu])]^2}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : $-\infty < x < \infty$
 
-\item {} 
+\item {}
 \emph{mu} : Location parameter $-\infty < mu < \infty$
 
-\item {} 
+\item {}
 \emph{tau} : Scale parameter (tau \textgreater{} 0)
 
 \end{itemize}
@@ -571,10 +571,10 @@ populations, markets. Resembles a heavy-tailed normal distribution.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = \frac{\pi^2}{3\tau^2}$
 
 \end{itemize}
@@ -592,13 +592,13 @@ small independent factors.
 \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : x \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{mu} : Location parameter.
 
-\item {} 
+\item {}
 \emph{tau} : Scale parameter (tau \textgreater{} 0).
 
 \end{itemize}
@@ -618,13 +618,13 @@ Normal log-likelihood.
 \begin{split}f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}} \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data.
 
-\item {} 
+\item {}
 \emph{mu} : Mean of the distribution.
 
-\item {} 
+\item {}
 \emph{tau} : Precision of the distribution, which corresponds to $1/\sigma^2$ (tau \textgreater{} 0).
 
 \end{itemize}
@@ -632,10 +632,10 @@ Normal log-likelihood.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
-\item {} 
+\item {}
 $Var(X) = 1/\tau$
 
 \end{itemize}
@@ -651,16 +651,16 @@ Azzalini's skew-normal log-likelihood
 where :math: Phi is the normal CDF and :math: phi is the normal PDF.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data.
 
-\item {} 
+\item {}
 \emph{mu} : Mean of the distribution.
 
-\item {} 
+\item {}
 \emph{tau} : Precision of the distribution (\textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{alpha} : Shape parameter of the distribution.
 
 \end{itemize}
@@ -681,10 +681,10 @@ random variables divided by their sample standard deviation.
 \begin{split}f(x \mid \nu) = \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\frac{\nu}{2}) \sqrt{\nu\pi}} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data.
 
-\item {} 
+\item {}
 \emph{nu} : Degrees of freedom.
 
 \end{itemize}
@@ -701,19 +701,19 @@ Truncated normal log-likelihood.
 where $\sigma^2=1/\tau$, \emph{phi} is the standard normal PDF and \emph{Phi} is the standard normal CDF.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data.
 
-\item {} 
+\item {}
 \emph{mu} : Mean of the distribution.
 
-\item {} 
+\item {}
 \emph{tau} : Precision of the distribution, which corresponds to 1/sigma**2 (tau \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{a} : Left bound of the distribution.
 
-\item {} 
+\item {}
 \emph{b} : Right bound of the distribution.
 
 \end{itemize}
@@ -728,13 +728,13 @@ Uniform log-likelihood.
 \begin{split}f(x \mid lower, upper) = \frac{1}{upper-lower}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : $lower \leq x \leq upper$
 
-\item {} 
+\item {}
 \emph{lower} : Lower limit.
 
-\item {} 
+\item {}
 \emph{upper} : Upper limit (upper \textgreater{} lower).
 
 \end{itemize}
@@ -751,13 +751,13 @@ von Mises log-likelihood.
 where \emph{I\_0} is the modified Bessel function of order 0.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : Input data.
 
-\item {} 
+\item {}
 \emph{mu} : Mean of the distribution.
 
-\item {} 
+\item {}
 \emph{kappa} : Dispersion of the distribution
 
 \end{itemize}
@@ -765,7 +765,7 @@ where \emph{I\_0} is the modified Bessel function of order 0.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X) = \mu$
 
 \end{itemize}
@@ -780,13 +780,13 @@ Weibull log-likelihood
 \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : $x \ge 0$
 
-\item {} 
+\item {}
 \emph{alpha} : alpha \textgreater{} 0
 
-\item {} 
+\item {}
 \emph{beta} : beta \textgreater{} 0
 
 \end{itemize}
@@ -794,10 +794,10 @@ Weibull log-likelihood
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(x)=\beta \Gamma(1+\frac{1}{\alpha})$
 
-\item {} 
+\item {}
 $Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)$
 
 \end{itemize}
@@ -818,10 +818,10 @@ given by m.
 where $N = \sum_i m_i$ and $n = \sum_i x_i$.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : {[}int sequence{]} Number of draws from each category, (x \textless{} m).
 
-\item {} 
+\item {}
 \emph{m} : {[}int sequence{]} Number of items in each categoy.
 
 \end{itemize}
@@ -841,7 +841,7 @@ of times outcome number i was observed over the n trials.
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{description}
 \item[x] \leavevmode{[}(ns, k) int{]}
-Random variable indicating the number of time outcome i is 
+Random variable indicating the number of time outcome i is
 observed. $\sum_{i=1}^k x_i=n$, $x_i \ge 0$.
 
 \item[n] \leavevmode{[}int{]}
@@ -856,13 +856,13 @@ $\sum_{i=1}^k p_i = 1)$, $p_i \ge 0$.
 \end{description}
 
 \begin{notice}{note}{Note:}\begin{itemize}
-\item {} 
+\item {}
 $E(X_i)=n p_i$
 
-\item {} 
+\item {}
 $Var(X_i)=n p_i(1-p_i)$
 
-\item {} 
+\item {}
 $Cov(X_i,X_j) = -n p_i p_j$
 
 \end{itemize}
@@ -882,8 +882,8 @@ This is a multivariate continuous distribution.
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{description}
 \item[x] \leavevmode{[}(n, k-1) array {]}
-Array of shape (n, k-1) where \emph{n} is the number of samples 
-and \emph{k} the dimension. 
+Array of shape (n, k-1) where \emph{n} is the number of samples
+and \emph{k} the dimension.
 $0 < x_i < 1$,  $\sum_{i=1}^{k-1} x_i < 1$
 \item[theta] \leavevmode{[}array{]}
 An (n,k) or (1,k) array \textgreater{} 0.
@@ -908,13 +908,13 @@ prior for the covariance matrix of a multivariate normal distribution.
 where $k$ is the rank of X.
 \begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{X} : Symmetric, positive definite matrix.
 
-\item {} 
+\item {}
 \emph{n} : {[}int{]} Degrees of freedom (n \textgreater{} 0).
 
-\item {} 
+\item {}
 \emph{Tau} : Symmetric and positive definite matrix.
 
 \end{itemize}
@@ -933,13 +933,13 @@ Multivariate normal log-likelihood
 \begin{split}f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : (n,k)
 
-\item {} 
+\item {}
 \emph{mu} : (k) Location parameter sequence.
 
-\item {} 
+\item {}
 \emph{Tau} : (k,k) Positive definite precision matrix.
 
 \end{itemize}
@@ -962,13 +962,13 @@ Multivariate normal log-likelihood.
 \begin{split}f(x \mid \pi, \sigma) = \frac{1}{(2\pi)^{1/2}|\sigma|)} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}(\sigma \sigma^{\prime})^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : (n,k)
 
-\item {} 
+\item {}
 \emph{mu} : (k) Location parameter.
 
-\item {} 
+\item {}
 \emph{sigma} : (k,k) Lower triangular matrix.
 
 \end{itemize}
@@ -986,19 +986,19 @@ Multivariate normal log-likelihood.
 \index{mv\_normal\_cov\_like() (in module pymc.distributions)}
 
 \hypertarget{pymc.distributions.mv_normal_cov_like}{}\begin{funcdesc}{mv\_normal\_cov\_like}{x, mu, C}
-Multivariate normal log-likelihood parameterized by a covariance 
+Multivariate normal log-likelihood parameterized by a covariance
 matrix.
 \begin{gather}
 \begin{split}f(x \mid \pi, C) = \frac{1}{(2\pi|C|)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}C^{-1}(x-\mu) \right\}\end{split}\notag\\\begin{split}\end{split}\notag
 \end{gather}\begin{description}
 \item[Parameters] \leavevmode\begin{itemize}
-\item {} 
+\item {}
 \emph{x} : (n,k)
 
-\item {} 
+\item {}
 \emph{mu} : (k) Location parameter.
 
-\item {} 
+\item {}
 \emph{C} : (k,k) Positive definite covariance matrix.
 
 \end{itemize}

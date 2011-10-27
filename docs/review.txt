@@ -62,8 +62,8 @@ p. xvi, line -6: "iterates over each node at every iteration" seems like awkward
 
 p. xxvii: you could consider removing all explanation of "direct" creation modes, since they are never preferred to decorator syntax.  This could simplify the exposition.
 
-	DH: The suggestion was thought over, but the developpers preferred having this option propertly documented. 
-	
+	DH: The suggestion was thought over, but the developpers preferred having this option propertly documented.
+
 p. xxx:  consider merging section 5.1 and 5.6
 
 	AP: Done
@@ -125,7 +125,7 @@ p. lxiv, lines 9-13: typos/leftover notes
 
 There are several figures which are very pixilated, which could be re-rendered more beautifully.  Also, there are many cross-references that came up as '??' in the pdf you sent me.  I'm sure that this will be corrected in the final version
 
-   DH: Some figures were redrawn. Thanks for pointing this out. 
+   DH: Some figures were redrawn. Thanks for pointing this out.
 
 
 --------

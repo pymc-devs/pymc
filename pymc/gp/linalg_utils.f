@@ -16,7 +16,7 @@ cf2py threadsafe
       INTEGER Nu
       DOUBLE PRECISION x(N,Nd), xu(N,Nd)
       LOGICAL match
-      
+
       Nr = 0
       Nu = 1
       do k=1,Nd
@@ -48,12 +48,12 @@ cf2py threadsafe
           end do
         end if
       end do
-          
+
       RETURN
       END
 
 
-      SUBROUTINE check_repeats(x, x_sofar, f_sofar, N, N_dim, N_sofar, 
+      SUBROUTINE check_repeats(x, x_sofar, f_sofar, N, N_dim, N_sofar,
      +f, new_indices, N_new_indices)
 cf2py double precision dimension(N,N_dim), intent(in) :: x
 cf2py double precision dimension(N_sofar, N_dim), intent(in) :: x_sofar
@@ -70,7 +70,7 @@ cf2py threadsafe
       DOUBLE PRECISION x(N,N_dim), x_sofar(N_sofar, N_dim),
      +f(N), f_sofar(N_sofar)
       LOGICAL match
-      
+
       N_new_indices = 0
       match=.FALSE.
       do i=1,N
@@ -87,15 +87,15 @@ cf2py threadsafe
             endif
           enddo
 
-   10     continue  
-        
+   10     continue
+
           if (match) then
             GO TO 20
-          endif        
+          endif
         enddo
 
    20   continue
-   
+
         if (match) then
           f(i) = f_sofar(j)
         else
@@ -104,7 +104,7 @@ cf2py threadsafe
         endif
 
       enddo
-          
+
       RETURN
       END
 
@@ -118,7 +118,7 @@ cf2py intent(out) V
         external cov_fun
 cf2py double precision q
 cf2py q = cov_fun(xe,ndim)
-        
+
         do i=1,n
              do j=1,ndim
                  xe(1,j) = x(i,j)
@@ -127,9 +127,9 @@ cf2py q = cov_fun(xe,ndim)
             V(i) = cov_fun(xe,ndim)
 !             print *,xe,cov_fun(xe,ndim)
         enddo
-        
+
         return
-        END 
+        END
 
       SUBROUTINE basis_diag_call(basis_x, V, n, nbas)
 cf2py intent(hide) n
@@ -137,17 +137,17 @@ cf2py intent(hide) nbas
 cf2py intent(out) V
         integer n, i, j
         double precision V(n), basis_x(nbas,n)
-        
+
         do i=1,n
             V(i) = 0
             do j=1,nbas
                 V(i) = V(i) + basis_x(j,i) ** 2
             enddo
         enddo
-        
+
         return
         END
-        
+
       SUBROUTINE gp_array_logp(x, mu, sig, n, like, info)
 
 cf2py intent(copy) x, mu
@@ -160,7 +160,7 @@ cf2py threadsafe
       INTEGER n, info, i
       DOUBLE PRECISION twopi_N, log_detC, gd
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
 
@@ -174,13 +174,13 @@ cf2py threadsafe
 ! DCOPY(N,DX,INCX,DY,INCY) copies x to y
 ! NB DDOT from ATLAS, compiled with gfortran 4.2 on Ubuntu Gutsy,
 ! was producing bad output- hence the manual dot product.
-      
-!     x <- (x-mu)      
+
+!     x <- (x-mu)
       call DAXPY(n, -1.0D0, mu, 1, x, 1)
 
 !       mu <- x
 !       call DCOPY(n,x,1,mu,1)
-      
+
 !     x <- sig ^-1 * x
 !       call DPOTRS('L',n,1,sig,n,x,n,info)
       call DTRSV('U','T','N',n,sig,n,x,1)
@@ -189,22 +189,22 @@ cf2py threadsafe
       do i=1,n
           gd=gd+x(i)*x(i)
       end do
-      
+
 !     like <- .5 dot(x,mu) (.5 (x-mu) C^{-1} (x-mu)^T)
       like = -0.5D0 * gd
 !       print *, like
-      
+
       twopi_N = 0.5D0 * N * dlog(2.0D0*PI)
 !       print *, twopi_N
-      
+
       log_detC = 0.0D0
       do i=1,n
         log_detC = log_detC + log(sig(i,i))
       enddo
 !       print *, log_detC
-      
+
       like = like - twopi_N - log_detC
-      
+
       return
       END
 

@@ -17,7 +17,7 @@ cf2py threadsafe
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm
 
       if(symm) then
 
@@ -41,8 +41,8 @@ cf2py threadsafe
               dist = dist + dev*dev
             enddo
             D(i,j) = dsqrt(dist)
-          enddo    
-        enddo  
+          enddo
+        enddo
       endif
       RETURN
       END
@@ -64,7 +64,7 @@ cf2py threadsafe
       integer nx,ny,j,i,i_hi,cmin,cmax
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
@@ -72,12 +72,12 @@ cf2py threadsafe
       do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
         if(symm) then
-            D(j,j)=0.0D0            
+            D(j,j)=0.0D0
             i_hi = j-1
-        else 
+        else
             i_hi = nx
         endif
-        
+
         do i=1,i_hi
             clat1 = dcos(x(i,2))
             dlat = (x(i,2)-y(j,2))*0.5D0
@@ -85,16 +85,16 @@ cf2py threadsafe
             a=dsin(dlat)**2 + clat1*clat2*dsin(dlon)**2
             sterm = dsqrt(a)
             cterm = dsqrt(1.0D0-a)
-            D(i,j) = 2.0D0*DATAN2(sterm,cterm)    
-!             if(symm) then                  
+            D(i,j) = 2.0D0*DATAN2(sterm,cterm)
+!             if(symm) then
 !                 D(j,i) = D(i,j)
 !             end if
-        enddo          
+        enddo
       enddo
       RETURN
       END
 
-      
+
       SUBROUTINE paniso_geo_rad(D,x,y,nx,ny,cmin,cmax
      *,ctrs,scals,na,symm)
 
@@ -104,19 +104,19 @@ cf2py integer intent(optional) :: cmin=0
 cf2py integer intent(optional) :: cmax=-1
 cf2py intent(hide) na, nx, ny
 cf2py threadsafe
-      
-      DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)   
-      DOUBLE PRECISION ctrs(na), scals(na), w       
-      integer nx,ny,i,j,na,i_hi,cmin,cmax                 
-      LOGICAL symm                                  
+
+      DOUBLE PRECISION D(nx,ny), x(nx,2), y(ny,2)
+      DOUBLE PRECISION ctrs(na), scals(na), w
+      integer nx,ny,i,j,na,i_hi,cmin,cmax
+      LOGICAL symm
       DOUBLE PRECISION a,pi,da,dlon,dlat
-      PARAMETER (pi=3.141592653589793238462643d0)   
-      
+      PARAMETER (pi=3.141592653589793238462643d0)
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
 
-      CALL geographic(D,x,y,nx,ny,cmin,cmax,symm)      
+      CALL geographic(D,x,y,nx,ny,cmin,cmax,symm)
       w = 0.5D0/real(na)
       do k=1,na
           ctrs(k) = ctrs(k)/pi
@@ -124,11 +124,11 @@ cf2py threadsafe
 
       do j=cmin+1,cmax
         if(symm) then
-            D(j,j)=0.0D0            
+            D(j,j)=0.0D0
             i_hi = j-1
-        else 
+        else
             i_hi = nx
-        endif          
+        endif
         do i = 1,i_hi
             if (D(i,j).GT.0.0D0) then
                 dlat = (x(i,2)-y(j,2))
@@ -151,17 +151,17 @@ cf2py threadsafe
                     end if
                 enddo
 
-  1         continue        
+  1         continue
             end if
-!             if(symm) then                  
+!             if(symm) then
 !                 D(j,i) = D(i,j)
-!             end if  
+!             end if
         enddo
-      enddo  
-           
+      enddo
+
       RETURN
       END
-      
+
 
 c
       SUBROUTINE aniso_geo_rad(D,x,y,nx,ny,cmin,cmax,inc,ecc,symm)
@@ -181,17 +181,17 @@ cf2py threadsafe
       LOGICAL symm
       DOUBLE PRECISION clat1, clat2, dlat, dlon, a, sterm, cterm
       DOUBLE PRECISION slat1, slat2, inc, ecc, theta, dtheta
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
 
       if (symm) then
-          
+
       do j=cmin+1,cmax
         clat2 = dcos(y(j,2))
         slat2 = dsin(y(j,2))
-        D(j,j)=0.0D0            
+        D(j,j)=0.0D0
 
         do i=1,j-1
             clat1 = dcos(x(i,2))
@@ -208,22 +208,22 @@ cf2py threadsafe
 
                 a=dsqrt(dlon*dlon+dlat*dlat)
                 theta = DATAN2(dlat/a,dlon/a)
-                
-                dtheta = theta-inc                
-                dtheta = dcos(dtheta)              
+
+                dtheta = theta-inc
+                dtheta = dcos(dtheta)
                 dtheta=ecc*ecc*dtheta*dtheta
                 D(i,j)=D(i,j)*dsqrt(1.0D0 - dtheta)
 
             end if
-            
+
 !             D(j,i) = D(i,j)
-        enddo          
+        enddo
       enddo
-      
+
       else
-      
+
       do j=cmin+1,cmax
-         
+
         clat2 = dcos(y(j,2))
         slat2 = dsin(y(j,2))
 
@@ -243,15 +243,15 @@ cf2py threadsafe
 
                 a=dsqrt(dlon*dlon+dlat*dlat)
                 theta = DATAN2(dlat/a,dlon/a)
-                
-                dtheta = theta-inc                
-                dtheta = dcos(dtheta)              
+
+                dtheta = theta-inc
+                dtheta = dcos(dtheta)
                 dtheta=ecc*ecc*dtheta*dtheta
                 D(i,j)=D(i,j)*dsqrt(1.0D0 - dtheta)
 
             end if
 
-        enddo          
+        enddo
       enddo
 
       endif

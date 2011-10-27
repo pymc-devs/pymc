@@ -37,13 +37,13 @@ and useful because:
 
      .. math::
      \hat{I} \rightarrow I   \mbox{   with probability 1}
-     
+
 * Simulation error can be measured and controlled:
 
      .. math::  :nowrap:
 
      \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\end{equation}
-     
+
 Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})`
 with a posterior, :math:`f(\theta|d)` and make :math:`h(\theta)` an interesting
 function of the unknown parameter, the resulting expectation is that of the
@@ -81,7 +81,7 @@ fall under the curve (Figure :ref:`rejection <fig:bound>`).
    :alt: Rejection figure.
    :align: center
    :scale: 100
-   
+
    Rejection sampling of a bounded form. Area is estimated by the ratio of
    accepted (open squares) to total points, multiplied by the rectangle
    area.
@@ -97,7 +97,7 @@ posterior distributions.
    :alt: envelope figure
    :align: center
    :scale: 100
-   
+
    Rejection sampling of an unbounded form using an enveloping distribution.
 
 If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian
@@ -180,7 +180,7 @@ help us decide whether MCMC is producing a useful sample from the posterior.
 
         .. math::
       {\bf \pi P} = {\bf \pi}
-     
+
   for Markov chain :math:`\pi`. Thus, :math:`\pi` is no longer subscripted, and is
   referred to as the *limiting distribution* of the chain. In MCMC, the chain
   explores the state space according to its limiting marginal distribution.
@@ -228,7 +228,7 @@ Forward and reverse transition probabilities may be related through Bayes
 theorem:
 
 .. math::
-   
+
 .. \begin{eqnarray}
 .. Pr(\theta^{(k)}=y \mid \theta^{(k+1)}=x) &=& \frac{Pr(\theta^{(k+1)}=x \mid \theta^{(k)}=y) Pr(\theta^{(k)}=y)}{Pr(\theta^{(k+1)}=x)}  \\
 .. &=& \frac{Pr(\theta^{(k+1)}=x \mid \theta^{(k)}=y) \pi^{(k)}(y)}{\pi^{(k+1)}(x)}
@@ -286,7 +286,7 @@ at a geometric rate.
 
    .. math::
       :nowrap:
-   
+
       \begin{eqnarray*}
       \theta_1^{(j)} &\sim& \pi(\theta_1 | \theta_2^{(j-1)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) \\
       \theta_2^{(j)} &\sim& \pi(\theta_2 | \theta_1^{(j)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) \\

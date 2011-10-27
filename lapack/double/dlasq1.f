@@ -52,7 +52,7 @@
 *             = 1, a split was marked by a positive value in E
 *             = 2, current block of Z not diagonalized after 30*N
 *                  iterations (in inner while loop)
-*             = 3, termination criterion of outer while loop not met 
+*             = 3, termination criterion of outer while loop not met
 *                  (program created more than N unreduced blocks)
 *
 *  =====================================================================
@@ -124,7 +124,7 @@
       CALL DCOPY( N-1, E, 1, WORK( 2 ), 2 )
       CALL DLASCL( 'G', 0, 0, SIGMX, SCALE, 2*N-1, 1, WORK, 2*N-1,
      $             IINFO )
-*         
+*
 *     Compute the q's and e's.
 *
       DO 30 I = 1, 2*N - 1

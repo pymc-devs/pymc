@@ -167,19 +167,19 @@ The following `directed acyclic graph' is a visualization of the parent-child re
 \end{center}
 \end{figure}
 
-As the examples above have shown, pymc objects need to have a name 
-assigned, such as \emph{lower}, \emph{upper} or \emph{e}. These names 
+As the examples above have shown, pymc objects need to have a name
+assigned, such as \emph{lower}, \emph{upper} or \emph{e}. These names
 are used for storage and post-processing:
 \begin{itemize}
  \item as keys in on-disk databases,
  \item as node labels in model graphs,
- \item as axis labels in plots of traces, 
- \item as table labels in summary statistics. 
+ \item as axis labels in plots of traces,
+ \item as table labels in summary statistics.
 \end{itemize}
 A model instantiated with variables having identical names raises an
 error to avoid name conflicts in the database storing the traces. In
-general however, pymc uses references to the objects themselves, not 
-their names, to identify variables. 
+general however, pymc uses references to the objects themselves, not
+their names, to identify variables.
 
 
 

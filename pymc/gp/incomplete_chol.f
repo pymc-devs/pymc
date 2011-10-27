@@ -1,6 +1,6 @@
 ! Copyright (c) Anand Patil, 2007
 
-      subroutine ichol_continue      
+      subroutine ichol_continue
      *(n,nnew,sig,m,diag,piv,reltol,x,ndim,rowfun,rl,mold)
 cf2py intent(hide) nnew,n,ndim,rl
 cf2py intent(copy) x
@@ -8,7 +8,7 @@ c
 c m is the total rank of the matrix
 cf2py intent(out) m
 c
-c sig will be updated in-place. 
+c sig will be updated in-place.
 c The first mold rows should be filled in on input.
 cf2py intent(inplace) sig
 c
@@ -27,7 +27,7 @@ c rowfun is the 'get-row' function.
         PARAMETER (zero=0.0D0)
         PARAMETER (one=1.0D0)
         PARAMETER (negone = -1.0D0)
-        
+
         EXTERNAL DGEMV
 *       DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
 *       Purpose
@@ -59,23 +59,23 @@ c rowfun is the 'get-row' function.
         do i=1,n
             p(i) = piv(i) + 1
         enddo
-        
+
         maxdiag = diag(idamax(nnew,diag,1))
-      
+
         tol = maxdiag * reltol
 
 
 !       Main loop
         do i=1,nnewmax
-          
-          
+
+
 !         Find maximum remaining pivot
             l = idamax(nnew-i+1,diag(i),1)+i-1
             maxdiag = diag(l)
-        
+
             itot = i+mold
             ltot = l+mold
-         
+
 !         Early return if there are no big pivots left
             if (maxdiag .LE. tol) then
                 do j=1,n
@@ -91,15 +91,15 @@ c rowfun is the 'get-row' function.
                 ptemp = p(itot)
                 p(itot) = p(ltot)
                 p(ltot) = ptemp
-        
+
                 dtemp = diag(i)
                 diag(i) = diag(l)
                 diag(l) = dtemp
-        
+
 !                 Swap the i and lth columns of sig
 
                 CALL DSWAP(itot,sig(1,itot),1,sig(1,ltot),1)
-!                 Also swap ith and lth rows of x  
+!                 Also swap ith and lth rows of x
                 CALL DSWAP(ndim,x(itot,1),n,x(ltot,1),n)
 
 !                 do j=1,ndim
@@ -107,25 +107,25 @@ c rowfun is the 'get-row' function.
 !                     x(itot,j) = x(ltot,j)
 !                     x(ltot,j) = tmp
 !                 enddo
-                    
+
             endif
-        
+
 !             Write diagonal element
             sig(itot,itot) = dsqrt(diag(i))
 
 !             Assemble the row vector
 !               Try this: rowfun(itot, x, rowvec, n, ndim)
-            if (itot.LT.n) then                
+            if (itot.LT.n) then
                 call rowfun(itot,x,rowvec,n,ndim)
             endif
 
 
-!               BLAS-less DGEMV might be useful if you ever do the sparse version.              
+!               BLAS-less DGEMV might be useful if you ever do the sparse version.
 !               do j=itot+1,n
 !                 do k=1,itot-1
 !                   rowvec(j)=rowvec(j)-sig(k,j)*sig(k,itot)
 !                 enddo
-!               enddo              
+!               enddo
 
 !         Implement Cholesky algorithm.
         CALL DGEMV('T',itot-1,n-itot,negone,sig(1,itot+1),
@@ -141,17 +141,17 @@ c rowfun is the 'get-row' function.
             jtot = j+mold
             diag(j) = diag(j) - sig(itot,jtot)*sig(itot,jtot)
           enddo
-          
+
         endif
-        
+
         enddo
-        
-      
+
+
         do i=1,n
             piv(i)=p(i)-1
-        enddo        
+        enddo
 
-        
+
         m = rl
         return
         end
@@ -167,14 +167,14 @@ cf2py intent(in) rl
         double precision rowvec(n), diag(n), sig(rl,n), x(n,ndim)
 c rowfun is the get-row function
         external rowfun
-        
+
         DOUBLE PRECISION maxdiag, tol, dtemp
 
         DOUBLE PRECISION ZERO, ONE, RELTOL, NEGONE
         PARAMETER (zero=0.0D0)
         PARAMETER (one=1.0D0)
         PARAMETER (negone = -1.0D0)
-        
+
         EXTERNAL DGEMV
 *       DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
 *       Purpose
@@ -192,14 +192,14 @@ c rowfun is the get-row function
 
         EXTERNAL IDAMAX
 *       IDAMAX(N,DX,INCX)
-        
+
 !       Make diagonal and index vectors
         do i=1,n
             p(i)=i
         enddo
-      
+
         maxdiag = diag(idamax(n,diag,1))
-      
+
         tol = maxdiag * reltol
         m = rl
 
@@ -209,7 +209,7 @@ c rowfun is the get-row function
 !         Find maximum remaining pivot
             l = idamax(n-i+1,diag(i),1)+i-1
             maxdiag = diag(l)
-        
+
 
 !         Early return if there are no big pivots left
             if (maxdiag .LE. tol) then
@@ -219,7 +219,7 @@ c rowfun is the get-row function
                 m = i-1
                 return
             endif
-            
+
 
             if (i .NE. l) then
 !         Swap p and diag's elements i and l
@@ -227,14 +227,14 @@ c rowfun is the get-row function
             ptemp = p(i)
             p(i) = p(l)
             p(l) = ptemp
-        
+
             dtemp = diag(i)
             diag(i) = diag(l)
             diag(l) = dtemp
-        
+
 !         Swap the i and lth columns of sig
             CALL DSWAP(i,sig(1,i),1,sig(1,l),1)
-            
+
 !         Swap the i and lth rows of x
 *       DSWAP(N,DX,INCX,DY,INCY)
             CALL DSWAP(ndim,x(i,1),n,x(l,1),n)
@@ -251,18 +251,18 @@ c rowfun is the get-row function
 
 !             do j=i+1,n
 !               rowvec(j) = c(p(i),p(j))
-!             enddo   
+!             enddo
 
         endif
 
         if (i.GT.1) then
 
-!               BLAS-less DGEMV might be useful if you ever do the sparse version.              
+!               BLAS-less DGEMV might be useful if you ever do the sparse version.
 !               do j=i+1,n
 !                 do k=1,i-1
 !                   rowvec(j)=rowvec(j)-sig(k,j)*sig(k,i)
 !                 enddo
-!               enddo              
+!               enddo
 
 !         Implement Cholesky algorithm.
         CALL DGEMV('T',i-1,n-i,negone,sig(1,i+1),
@@ -281,7 +281,7 @@ c rowfun is the get-row function
         endif
 
       enddo
-      
+
       do i=1,n
         piv(i)=p(i)-1
       enddo
@@ -289,7 +289,7 @@ c rowfun is the get-row function
 
       return
       end
-      
+
       subroutine ichol_basis(basis,nb,n_nug,n,sig,p,m,nug,reltol)
 
 c Incomplete cholesky factorization
@@ -311,13 +311,13 @@ cf2py intent(hide) n
       DOUBLE PRECISION rowvec(n)
       integer p(n), n, m, nb, i, j
       DOUBLE PRECISION maxdiag, tol, dtemp
-      
+
       EXTERNAL DGEMV
       DOUBLE PRECISION ZERO, ONE, RELTOL, NEGONE
       PARAMETER (zero=0.0D0)
       PARAMETER (one=1.0D0)
       PARAMETER (negone = -1.0D0)
-      
+
 * DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
 *  Purpose
 *  =======
@@ -347,19 +347,19 @@ cf2py intent(hide) n
           enddo
         p(i)=i
       enddo
-      
+
       maxdiag = diag(idamax(n,diag,1))
-      
+
       tol = maxdiag * reltol
       m = n
 !       Main loop
       do i=1,n
-          
+
 !         Find maximum remaining pivot
         l = idamax(n-i+1,diag(i),1)+i-1
         maxdiag = diag(l)
-        
-        
+
+
 !         Early return if there are no big pivots left
         if (maxdiag .LE. tol) then
           do j=1,n
@@ -375,18 +375,18 @@ cf2py intent(hide) n
           itemp = p(i)
           p(i) = p(l)
           p(l) = itemp
-        
+
           dtemp = diag(i)
           diag(i) = diag(l)
           diag(l) = dtemp
-        
+
 !         Swap the i and lth columns of sig
           CALL DSWAP(i,sig(1,i),1,sig(1,l),1)
-          
+
 !           Swap ith and lth columns of the basis
           CALL DSWAP(nb,basis(1,i),1,basis(1,l),1)
         endif
-        
+
 !       Write diagonal element
         sig(i,i) = dsqrt(diag(i))
 
@@ -411,12 +411,12 @@ cf2py intent(hide) n
 
           if (i.GT.1) then
 
-!               BLAS-less DGEMV might be useful if you ever do the sparse version.              
+!               BLAS-less DGEMV might be useful if you ever do the sparse version.
 !               do j=i+1,n
 !                 do k=1,i-1
 !                   rowvec(j)=rowvec(j)-sig(k,j)*sig(k,i)
 !                 enddo
-!               enddo              
+!               enddo
 
 !         Implement Cholesky algorithm.
             CALL DGEMV('T',i-1,n-i,negone,sig(1,i+1),
@@ -434,14 +434,14 @@ cf2py intent(hide) n
         endif
 
       enddo
-      
+
       do i=1,n
         p(i)=p(i)-1
       enddo
-      
+
       return
       end
-      
+
 
 
 
@@ -467,13 +467,13 @@ cf2py threadsafe
       DOUBLE PRECISION rowvec(n)
       integer p(n), n, m, i, j
       DOUBLE PRECISION maxdiag, tol, dtemp
-      
+
       EXTERNAL DGEMV
       DOUBLE PRECISION ZERO, ONE, RELTOL, NEGONE
       PARAMETER (zero=0.0D0)
       PARAMETER (one=1.0D0)
       PARAMETER (negone = -1.0D0)
-      
+
 * DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
 *  Purpose
 *  =======
@@ -496,19 +496,19 @@ cf2py threadsafe
         diag(i) = c(i,i)
         p(i)=i
       enddo
-      
+
       maxdiag = diag(idamax(n,diag,1))
-      
+
       tol = maxdiag * reltol
       m = n
 !       Main loop
       do i=1,n
-          
+
 !         Find maximum remaining pivot
         l = idamax(n-i+1,diag(i),1)+i-1
         maxdiag = diag(l)
-        
-        
+
+
 !         Early return if there are no big pivots left
         if (maxdiag .LE. tol) then
           do j=1,n
@@ -524,15 +524,15 @@ cf2py threadsafe
           itemp = p(i)
           p(i) = p(l)
           p(l) = itemp
-        
+
           dtemp = diag(i)
           diag(i) = diag(l)
           diag(l) = dtemp
-        
+
 !         Swap the i and lth columns of sig
           CALL DSWAP(i,sig(1,i),1,sig(1,l),1)
         endif
-        
+
 !       Write diagonal element
         sig(i,i) = dsqrt(diag(i))
 
@@ -540,17 +540,17 @@ cf2py threadsafe
         if (i.LT.n) then
             do j=i+1,n
               rowvec(j) = c(p(i),p(j))
-            enddo   
+            enddo
         endif
 
           if (i.GT.1) then
 
-!               BLAS-less DGEMV might be useful if you ever do the sparse version.              
+!               BLAS-less DGEMV might be useful if you ever do the sparse version.
 !               do j=i+1,n
 !                 do k=1,i-1
 !                   rowvec(j)=rowvec(j)-sig(k,j)*sig(k,i)
 !                 enddo
-!               enddo              
+!               enddo
 
 !         Implement Cholesky algorithm.
             CALL DGEMV('T',i-1,n-i,negone,sig(1,i+1),
@@ -568,11 +568,11 @@ cf2py threadsafe
         endif
 
       enddo
-      
+
       do i=1,n
         p(i)=p(i)-1
       enddo
-      
+
       return
       end
-      
+

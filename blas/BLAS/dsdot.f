@@ -8,7 +8,7 @@
 *
 *  AUTHORS
 *  =======
-*  Lawson, C. L., (JPL), Hanson, R. J., (SNLA), 
+*  Lawson, C. L., (JPL), Hanson, R. J., (SNLA),
 *  Kincaid, D. R., (U. of Texas), Krogh, F. T., (JPL)
 *
 *  Purpose
@@ -44,7 +44,7 @@
 *
 *  REFERENCES
 *  ==========
-*      
+*
 *  C. L. Lawson, R. J. Hanson, D. R. Kincaid and F. T.
 *  Krogh, Basic linear algebra subprograms for Fortran
 *  usage, Algorithm No. 539, Transactions on Mathematical

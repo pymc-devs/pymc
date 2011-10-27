@@ -18,7 +18,7 @@ cf2py integer intent(hide)::M
 cf2py integer intent(hide)::N
 cf2py threadsafe
 
-      
+
 *     .. Scalar Arguments ..
       DOUBLE PRECISION ALPHA
       INTEGER LDA,LDB,M,N
@@ -26,19 +26,19 @@ cf2py threadsafe
 *     ..
 *     .. Array Arguments ..
       DOUBLE PRECISION A(M,M),B(M,N)
-      
+
       EXTERNAL DTRMM
 ! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
 *     X = alpha*op( A )*B,   or   X = alpha*B*op( A ),
-      
+
       DIAG = 'N'
       LDA = M
       LDB = M
 
-      
+
       CALL DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
       RETURN
-      END      
+      END
 
 
       SUBROUTINE dtrsm_wrap(M,N,A,B,SIDE,TRANSA,UPLO,ALPHA)
@@ -46,7 +46,7 @@ cf2py intent(inplace)::B
 cf2py integer intent(hide)::M
 cf2py integer intent(hide)::N
 cf2py threadsafe
-      
+
 *     .. Scalar Arguments ..
       DOUBLE PRECISION ALPHA
       INTEGER LDA,LDB,M,N
@@ -54,15 +54,15 @@ cf2py threadsafe
 *     ..
 *     .. Array Arguments ..
       DOUBLE PRECISION A(M,M),B(M,N)
-      
+
       EXTERNAL DTRSM
 ! DTRSM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
 *     op( A )*X = alpha*B,   or   X*op( A ) = alpha*B,
-      
+
       DIAG = 'N'
       LDA = M
       LDB = M
-      
+
       CALL DTRSM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB)
       RETURN
       END
@@ -80,15 +80,15 @@ cf2py threadsafe
 
       EXTERNAL DPOTRF
 ! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
-      
-!     C <- cholesky(C)      
+
+!     C <- cholesky(C)
       call DPOTRF( 'U', n, A, n, info )
       do i=2,n
         do j=1,i-1
           A(i,j)=0.0D0
         enddo
       enddo
-      
+
       return
       END
 
@@ -97,13 +97,13 @@ cf2py threadsafe
 
 cf2py intent(inplace) a
 cf2py intent(hide) p
-cf2py intent(hide) work       
+cf2py intent(hide) work
 cf2py intent(out) piv
 cf2py intent(out) info
 cf2py threadsafe
 
       integer lda,p,piv(p),job,info
-      double precision a(p,p),work(p)      
+      double precision a(p,p),work(p)
 
 c
 c     dchdc computes the cholesky decomposition of a positive definite
@@ -122,7 +122,7 @@ c         lda    integer.
 c                lda is the leading dimension of the array a.
 c
 c         Since f2py will make sure that a is column-major contiguous,
-c         lda is set to p in this wrapper. 
+c         lda is set to p in this wrapper.
 c
 c         p      integer.
 c                p is the order of the matrix.
@@ -341,8 +341,8 @@ c
   260    continue
   270 continue
   280 continue
-  
-C Zero the lower triangle 
+
+C Zero the lower triangle
       do i=2,info
         do j=1,i-1
           a(i,j) = 0.0D0
@@ -369,13 +369,13 @@ cf2py threadsafe
 
       DOUBLE PRECISION chol_fac(n,n), b(n,m)
       INTEGER n, info,m
-      
+
       CHARACTER uplo
 
       EXTERNAL DPOTRS
 ! DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO ) Solves triangular system
 
       call DPOTRS(uplo,n,m,chol_fac,n,b,n,info)
-      
+
       return
       END

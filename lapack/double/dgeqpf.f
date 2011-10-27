@@ -204,11 +204,11 @@
 *
 *                 NOTE: The following 4 lines follow from the analysis in
 *                 Lapack Working Note 176.
-*                 
+*
                   TEMP = ABS( A( I, J ) ) / WORK( J )
                   TEMP = MAX( ZERO, ( ONE+TEMP )*( ONE-TEMP ) )
                   TEMP2 = TEMP*( WORK( J ) / WORK( N+J ) )**2
-                  IF( TEMP2 .LE. TOL3Z ) THEN 
+                  IF( TEMP2 .LE. TOL3Z ) THEN
                      IF( M-I.GT.0 ) THEN
                         WORK( J ) = DNRM2( M-I, A( I+1, J ), 1 )
                         WORK( N+J ) = WORK( J )

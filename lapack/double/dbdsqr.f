@@ -21,9 +21,9 @@
 *  left singular vectors from the singular value decomposition (SVD) of
 *  a real N-by-N (upper or lower) bidiagonal matrix B using the implicit
 *  zero-shift QR algorithm.  The SVD of B has the form
-* 
+*
 *     B = Q * S * P**T
-* 
+*
 *  where S is the diagonal matrix of singular values, Q is an orthogonal
 *  matrix of left singular vectors, and P is an orthogonal matrix of
 *  right singular vectors.  If left singular vectors are requested, this
@@ -73,7 +73,7 @@
 *
 *  E       (input/output) DOUBLE PRECISION array, dimension (N-1)
 *          On entry, the N-1 offdiagonal elements of the bidiagonal
-*          matrix B. 
+*          matrix B.
 *          On exit, if INFO = 0, E is destroyed; if INFO > 0, D and E
 *          will contain the diagonal and superdiagonal elements of a
 *          bidiagonal matrix orthogonally equivalent to the one given

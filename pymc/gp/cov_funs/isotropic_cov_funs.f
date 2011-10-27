@@ -1,7 +1,7 @@
 ! Copyright (c) Anand Patil, 2007
 
 c A collection of covariance functions for Gaussian processes.
-c By convention, the first dimension of each input array iterates over points, and 
+c By convention, the first dimension of each input array iterates over points, and
 c subsequent dimensions iterate over spatial dimensions.
 
       SUBROUTINE imul(C,a,nx,ny,cmin,cmax,symm)
@@ -24,8 +24,8 @@ cf2py threadsafe
           cmax = ny
       end if
 
-      if (symm) then           
-       
+      if (symm) then
+
         do j=cmin+1,cmax
             do i=1,j
                 C(i,j) = C(i,j) * a
@@ -41,7 +41,7 @@ cf2py threadsafe
             end do
  !          CALL DSCAL(nx,a,C(1,j),1)
         enddo
-      endif  
+      endif
 
 
       RETURN
@@ -60,7 +60,7 @@ cf2py threadsafe
 
       DOUBLE PRECISION C(nx,nx)
       INTEGER nx, i, j, cmin, cmax
-      
+
       if (cmax.EQ.-1) then
           cmax = nx
       end if
@@ -95,24 +95,24 @@ cf2py threadsafe
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
 
-!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+!       print *,diff_degree,nx,ny,cmin,cmax,symm,N
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-      
+
       if (diff_degree.GE. 0.01) then
           far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
       else
           far = infinity
       end if
-      
+
       if (diff_degree .GT. 10.0D0) then
         call gaussian(C,nx,ny,cmin,cmax,symm)
         return
       endif
-      
+
 
       if (diff_degree .EQ. 1.0D0) then
           prefac = 1.0D0
@@ -124,15 +124,15 @@ cf2py threadsafe
       fl = DINT(diff_degree)
       rem = diff_degree - fl
 
-      if (symm) then           
-       
+      if (symm) then
+
         do j=cmin+1,cmax
           C(j,j) = 1.0D0
           do i=1,j-1
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=1.0D0
-            else  
-              ! Asymptotic form for large distances, to avoid numerical problems           
+            else
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -153,7 +153,7 @@ cf2py threadsafe
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=1.0D0
             else
-              ! Asymptotic form for large distances, to avoid numerical problems           
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -165,7 +165,7 @@ cf2py threadsafe
             endif
           enddo
         enddo
-      endif  
+      endif
 
 
       RETURN
@@ -192,40 +192,40 @@ cf2py threadsafe
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
+      PARAMETER (infinity = 1.7976931348623157d308)
 
 
 ! N should be floor of diff_degree everywhere.
-!       print *,diff_degree,nx,ny,cmin,cmax,symm,N      
+!       print *,diff_degree,nx,ny,cmin,cmax,symm,N
       if (cmax.EQ.-1) then
           cmax = ny
-      end if      
+      end if
 
-      if (symm) then           
-       
+      if (symm) then
+
         do j=cmin+1,cmax
           C(j,j) = hx(j)*hx(j)
           do i=1,j-1
-            h=hx(i)*hy(j)              
+            h=hx(i)*hy(j)
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=h
             else
 !             Nonstationary part
               diff_degree = (ddx(i)+ddy(j))*0.5D0
               N = floor(diff_degree)
-              
+
               if (diff_degree.GE. 0.01) then
                   far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
               else
                   far = infinity
               end if
-              
+
               if (diff_degree .GT. 10.0D0) then
                 call gaussian(C,nx,ny,cmin,cmax,symm)
                 return
               endif
-              
-              
+
+
               if (diff_degree .EQ. 1.0D0) then
                   prefac = 1.0D0
               else
@@ -235,8 +235,8 @@ cf2py threadsafe
               snu = DSQRT(diff_degree) * 2.0D0
               fl = DINT(diff_degree)
               rem = diff_degree - fl
-            
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -254,28 +254,28 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           do i=1,nx
-            h=hx(i)*hy(j)                            
+            h=hx(i)*hy(j)
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=h
             else
 !             Nonstationary part
               diff_degree = (ddx(i)+ddy(j))*0.5D0
-              N = floor(diff_degree)              
-              
+              N = floor(diff_degree)
+
               h=hx(i)*hy(j)
-              
+
               if (diff_degree.GE. 0.01) then
                   far = dabs((diff_degree+2.0D0)**2-0.25D0)*10.0D0
               else
                   far = infinity
               end if
-              
+
               if (diff_degree .GT. 10.0D0) then
                 call gaussian(C,nx,ny,cmin,cmax,symm)
                 return
               endif
-              
-              
+
+
               if (diff_degree .EQ. 1.0D0) then
                   prefac = 1.0D0
               else
@@ -285,8 +285,8 @@ cf2py threadsafe
               snu = DSQRT(diff_degree) * 2.0D0
               fl = DINT(diff_degree)
               rem = diff_degree - fl
-            
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -299,7 +299,7 @@ cf2py threadsafe
 
           enddo
         enddo
-      endif  
+      endif
 
 
       RETURN
@@ -328,26 +328,26 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
-      
-      
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-      
-      if (symm) then           
-       
+
+      if (symm) then
+
         do j=cmin+1,cmax
-          
+
           C(j,j) = 1.0D0
-          
+
           do i=1,j-1
-                        
+
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
             dd_here=Gt(i,j)
-            
+
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
             else
@@ -361,7 +361,7 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
               if (dd_here .GT. 5.0D0) then
                   C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
                   goto 1
-              endif      
+              endif
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
@@ -370,8 +370,8 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
               fl = INT(dd_here)
               rem = dd_here - fl
               N = fl
-              
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -380,10 +380,10 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
               C(i,j)=prefac*(C(i,j)**dd_here)*BK(fl+1)
-                            
+
 
             endif
-    1 continue        
+    1 continue
 !     1       C(j,i)=C(i,j)
           enddo
         enddo
@@ -392,25 +392,25 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
 
         do j=cmin+1,cmax
           do i=1,nx
-              
+
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
             dd_here=Gt(i,j)
-            
+
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
             else
                 far = infinity
-            end if            
-            
+            end if
+
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=origin_val / dd_here
             else
               if (dd_here .GT. 5.0D0) then
                 C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val
                 goto 2
-              endif      
+              endif
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
@@ -419,8 +419,8 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
               fl = INT(dd_here)
               rem = dd_here - fl
               N=fl
-              
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -429,11 +429,11 @@ cf2py double precision intent(in),check(origin_val>0)::origin_val
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
               C(i,j)=prefac*(C(i,j)**dd_here)*BK(fl+1)
-                            
+
             endif
     2     enddo
         enddo
-      endif     
+      endif
 
 
       RETURN
@@ -462,26 +462,26 @@ cf2py logical intent(in), optional:: symm=0
       DOUBLE PRECISION PI
       PARAMETER (PI=3.141592653589793238462643d0)
       DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)      
-      
-      
+      PARAMETER (infinity = 1.7976931348623157d308)
+
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-      
-      if (symm) then           
-       
+
+      if (symm) then
+
         do j=cmin+1,cmax
-          
+
           C(j,j) = hx(j)*hy(j)
-          
+
           do i=1,j-1
-                        
+
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
             dd_here=Gt(i,j)
-            
+
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
             else
@@ -495,7 +495,7 @@ cf2py logical intent(in), optional:: symm=0
               if (dd_here .GT. 5.0D0) then
                   C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
                   goto 1
-              endif      
+              endif
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
@@ -504,8 +504,8 @@ cf2py logical intent(in), optional:: symm=0
               fl = INT(dd_here)
               rem = dd_here - fl
               N = fl
-              
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -514,10 +514,10 @@ cf2py logical intent(in), optional:: symm=0
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
               C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
-                            
+
 
             endif
-    1 continue        
+    1 continue
 !     1       C(j,i)=C(i,j)
           enddo
         enddo
@@ -526,25 +526,25 @@ cf2py logical intent(in), optional:: symm=0
 
         do j=cmin+1,cmax
           do i=1,nx
-              
+
 ! ================================
 ! = gamma(t) can be changed here =
 ! ================================
             dd_here=Gt(i,j)
-            
+
             if (dd_here.GE. 0.01) then
                 far = dabs((dd_here+2.0D0)**2-0.25D0)*10.0D0
             else
                 far = infinity
-            end if            
-            
+            end if
+
             if (C(i,j) .EQ. 0.0D0) then
               C(i,j)=origin_val(i,j) / dd_here
             else
               if (dd_here .GT. 5.0D0) then
                 C(i,j)=dexp(-C(i,j)**2)/dd_here*origin_val(i,j)
                 goto 2
-              endif      
+              endif
 
               GA = DGAMMA(dd_here+1.0D0)
               prefac = 0.5D0 ** (dd_here-1.0D0) / GA
@@ -553,8 +553,8 @@ cf2py logical intent(in), optional:: symm=0
               fl = INT(dd_here)
               rem = dd_here - fl
               N=fl
-              
-              ! Asymptotic form for large distances, to avoid numerical problems           
+
+              ! Asymptotic form for large distances, to avoid numerical problems
               if (C(i,j) .GT. far) then
                  C(i,j) = C(i,j) * snu
                  BK(fl+1) = dsqrt(PI/2.0D0/C(i,j))*dexp(-C(i,j))
@@ -563,17 +563,17 @@ cf2py logical intent(in), optional:: symm=0
                 CALL RKBESL(C(i,j),rem,fl+1,1,BK,N)
               end if
               C(i,j)=hx(i)*hy(j)*prefac*(C(i,j)**dd_here)*BK(fl+1)
-                            
+
             endif
     2     enddo
         enddo
-      endif     
+      endif
 
 
       RETURN
       END
 
-            
+
       SUBROUTINE gaussian(C,nx,ny,cmin,cmax,symm)
 
 cf2py intent(inplace) C
@@ -586,8 +586,8 @@ cf2py threadsafe
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       LOGICAL symm
-      
-      
+
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
@@ -597,7 +597,7 @@ cf2py threadsafe
         do j=cmin+1,cmax
           C(j,j) = 1.0D0
           do i=1,j-1
-            C(i,j) = dexp(-C(i,j)*C(i,j)) 
+            C(i,j) = dexp(-C(i,j)*C(i,j))
           enddo
         enddo
 
@@ -605,7 +605,7 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           do i=1,nx
-            C(i,j) = dexp(-C(i,j)*C(i,j)) 
+            C(i,j) = dexp(-C(i,j)*C(i,j))
           enddo
         enddo
 
@@ -629,16 +629,16 @@ cf2py threadsafe
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny)
       LOGICAL symm
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
 
 
       if(symm) then
-          
+
         do j=cmin+1,cmax
-          C(j,j)=1.0D0         
+          C(j,j)=1.0D0
           do i=1,j-1
             C(i,j) = dexp(-dabs(C(i,j)))
 !             C(j,i) = C(i,j)
@@ -649,12 +649,12 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           do i=1,nx
-            C(i,j) = dexp(-dabs(C(i,j))) 
+            C(i,j) = dexp(-dabs(C(i,j)))
           enddo
         enddo
 
       endif
-      
+
 
       return
       END
@@ -678,7 +678,7 @@ cf2py threadsafe
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm
 
       if(symm) then
 
@@ -688,7 +688,7 @@ cf2py threadsafe
               devy = y(j,k)
               ampy = ampy + devy*devy
           end do
-          sampy = dsqrt(ampy)          
+          sampy = dsqrt(ampy)
           C(j,j)=sampy
           do i=1,j-1
             ampx = 0.0D0
@@ -709,7 +709,7 @@ cf2py threadsafe
               devy = y(j,k)
               ampy = ampy + devy*devy
           end do
-          sampy = dsqrt(ampy)          
+          sampy = dsqrt(ampy)
           do i=1,nx
             ampx = 0.0D0
             ampd = 0.0D0
@@ -717,11 +717,11 @@ cf2py threadsafe
                 devx = x(i,k)
                 ampx = ampx + devx*devx
                 devd = x(i,k)-y(j,k)
-                ampd = ampd + devd*devd                
+                ampd = ampd + devd*devd
             enddo
             C(i,j) = 0.5D0*(sampy + dsqrt(ampx) - dsqrt(ampd))
-          enddo    
-        enddo  
+          enddo
+        enddo
       endif
       RETURN
       END
@@ -745,7 +745,7 @@ cf2py threadsafe
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-!       print *,nx,ny,ndx,ndy,cmin,cmax,symm      
+!       print *,nx,ny,ndx,ndy,cmin,cmax,symm
 
       if(symm) then
 
@@ -755,7 +755,7 @@ cf2py threadsafe
               devy = y(j,k)
               ampy = ampy + devy*devy
           end do
-          sampy = ampy**h       
+          sampy = ampy**h
           C(j,j)=sampy
           do i=1,j-1
             ampx = 0.0D0
@@ -776,7 +776,7 @@ cf2py threadsafe
               devy = y(j,k)
               ampy = ampy + devy*devy
           end do
-          sampy = ampy**h       
+          sampy = ampy**h
           do i=1,nx
             ampx = 0.0D0
             ampd = 0.0D0
@@ -784,11 +784,11 @@ cf2py threadsafe
                 devx = x(i,k)
                 ampx = ampx + devx*devx
                 devd = x(i,k)-y(j,k)
-                ampd = ampd + devd*devd                
+                ampd = ampd + devd*devd
             enddo
             C(i,j) = 0.5D0*(sampy + ampx**h - ampd**h)
-          enddo    
-        enddo  
+          enddo
+        enddo
       endif
       RETURN
       END
@@ -807,16 +807,16 @@ cf2py threadsafe
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION pow
       LOGICAL symm
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
 
 
       if(symm) then
-          
+
         do j=cmin+1,cmax
-          C(j,j)=1.0D0         
+          C(j,j)=1.0D0
           do i=1,j-1
             C(i,j) = dexp(-dabs(C(i,j))**pow)
 !             C(j,i) = C(i,j)
@@ -827,16 +827,16 @@ cf2py threadsafe
 
         do j=cmin+1,cmax
           do i=1,nx
-            C(i,j) = dexp(-dabs(C(i,j))**pow) 
+            C(i,j) = dexp(-dabs(C(i,j))**pow)
           enddo
         enddo
 
       endif
-      
+
 
       return
       END
-      
+
 
       SUBROUTINE sphere(C,nx,ny,cmin,cmax,symm)
 
@@ -850,7 +850,7 @@ cf2py threadsafe
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
       LOGICAL symm
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
@@ -858,7 +858,7 @@ cf2py threadsafe
 
       if(symm) then
         do j=cmin+1,cmax
-          C(j,j)=1.0D0         
+          C(j,j)=1.0D0
           do i=1,j-1
             t = C(i,j)
             if (t .LT. 1.0D0) then
@@ -888,7 +888,7 @@ cf2py threadsafe
 
       return
       END
-            
+
 
       SUBROUTINE quadratic(C,phi,nx,ny,cmin,cmax,symm)
 
@@ -904,15 +904,15 @@ cf2py threadsafe
       DOUBLE PRECISION C(nx,ny)
       DOUBLE PRECISION phi, t
       LOGICAL symm
-      
+
       if (cmax.EQ.-1) then
           cmax = ny
       end if
 
       if(symm) then
-          
+
         do j=cmin+1,cmax
-          C(j,j)=1.0D0         
+          C(j,j)=1.0D0
           do i=1,j-2
             t=C(i,j)**2
             C(i,j) = 1.0D0-t/(1.0D0+phi*t)
@@ -1029,8 +1029,8 @@ C
 C----------------------------------------------------------------------
       INTEGER I,N
       LOGICAL PARITY
-CS    REAL 
-      DOUBLE PRECISION 
+CS    REAL
+      DOUBLE PRECISION
      1    C,CONV,EPS,FACT,HALF,ONE,P,PI,Q,RES,SQRTPI,SUM,TWELVE,
      2    TWO,X,XBIG,XDEN,XINF,XMININ,XNUM,Y,Y1,YSQ,Z,ZERO
       DIMENSION C(7),P(8),Q(8)
@@ -1206,11 +1206,11 @@ C X     - Working precision non-negative real argument for which
 C         K's or exponentially scaled K's (K*EXP(X))
 C         are to be calculated.  If K's are to be calculated,
 C         X must not be greater than XMAX (see below).
-C ALPHA - Working precision fractional part of order for which 
+C ALPHA - Working precision fractional part of order for which
 C         K's or exponentially scaled K's (K*EXP(X)) are
 C         to be calculated.  0 .LE. ALPHA .LT. 1.0.
 C NB    - Integer number of functions to be calculated, NB .GT. 0.
-C         The first function calculated is of order ALPHA, and the 
+C         The first function calculated is of order ALPHA, and the
 C         last is of order (NB - 1 + ALPHA).
 C IZE   - Integer type.  IZE = 1 if unscaled K's are to be calculated,
 C         and 2 if exponentially scaled K's are to be calculated.
@@ -1222,7 +1222,7 @@ C         If (0 .LT. NCALC .LT. NB), BK(I) contains correct function
 C         values for I .LE. NCALC, and contains the ratios
 C         K(ALPHA+I-1,X)/K(ALPHA+I-2,X) for the rest of the array.
 C NCALC - Integer output variable indicating possible errors.
-C         Before using the vector BK, the user should check that 
+C         Before using the vector BK, the user should check that
 C         NCALC=NB, i.e., all orders have been calculated to
 C         the desired accuracy.  See error returns below.
 C
@@ -1235,9 +1235,9 @@ C
 C   beta   = Radix for the floating-point system
 C   minexp = Smallest representable power of beta
 C   maxexp = Smallest power of beta that overflows
-C   EPS    = The smallest positive floating-point number such that 
+C   EPS    = The smallest positive floating-point number such that
 C            1.0+EPS .GT. 1.0
-C   XMAX   = Upper limit on the magnitude of X when IZE=1;  Solution 
+C   XMAX   = Upper limit on the magnitude of X when IZE=1;  Solution
 C            to equation:
 C               W(X) * (1-1/8X+9/128X**2) = beta**minexp
 C            where  W(X) = EXP(-X)*SQRT(PI/2X)
@@ -1253,7 +1253,7 @@ C
 C                          beta       minexp      maxexp      EPS
 C
 C  CRAY-1        (S.P.)      2        -8193        8191    7.11E-15
-C  Cyber 180/185 
+C  Cyber 180/185
 C    under NOS   (S.P.)      2         -975        1070    3.55E-15
 C  IEEE (IBM/XT,
 C    SUN, etc.)  (S.P.)      2         -126         128    1.19E-7
@@ -1293,7 +1293,7 @@ C       XMAX.  In this case, the B-vector is not calculated,
 C       and NCALC is set to MIN0(NB,0)-2  so that NCALC .NE. NB.
 C  NCALC = -1:  Either  K(ALPHA,X) .GE. XINF  or
 C       K(ALPHA+NB-1,X)/K(ALPHA+NB-2,X) .GE. XINF.  In this case,
-C       the B-vector is not calculated.  Note that again 
+C       the B-vector is not calculated.  Note that again
 C       NCALC .NE. NB.
 C
 C  0 .LT. NCALC .LT. NB: Not all requested function values could
@@ -1335,7 +1335,7 @@ C
 C-------------------------------------------------------------------
       INTEGER I,IEND,ITEMP,IZE,J,K,M,MPLUS1,NB,NCALC
 CS    REAL
-      DOUBLE PRECISION  
+      DOUBLE PRECISION
      1    A,ALPHA,BLPHA,BK,BK1,BK2,C,D,DM,D1,D2,D3,ENU,EPS,ESTF,ESTM,
      2    EX,FOUR,F0,F1,F2,HALF,ONE,P,P0,Q,Q0,R,RATIO,S,SQXMIN,T,TINYX,
      3    TWO,TWONU,TWOX,T1,T2,WMINF,X,XINF,XMAX,XMIN,X2BY4,ZERO
@@ -1447,7 +1447,7 @@ C---------------------------------------------------------------------
                   F1 = ENU*F0
                   P0 = EXP(F1)
 C---------------------------------------------------------------------
-C  Calculation of F0 = 
+C  Calculation of F0 =
 C---------------------------------------------------------------------
                   D1 = R(5)
                   T1 = ONE
@@ -1643,7 +1643,7 @@ C--------------------------------------------------------------------
                IF (EX .LT. ONE) THEN
                      IF (BK1 .GE. (XINF/TWONU)*EX) GO TO 195
                      GO TO 187
-                  ELSE 
+                  ELSE
                      IF (BK1/EX .GE. XINF/TWONU) GO TO 195
                END IF
   187          CONTINUE

@@ -199,7 +199,7 @@
                HSWORK = WORK( 1 )
                MAXWRK = MAX( MAXWRK, N + 1, N + HSWORK )
                MAXWRK = MAX( MAXWRK, 4*N )
-            ELSE 
+            ELSE
                MINWRK = 3*N
                CALL DHSEQR( 'E', 'N', N, 1, N, A, LDA, WR, WI, VR, LDVR,
      $                WORK, -1, INFO )

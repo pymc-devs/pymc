@@ -282,7 +282,7 @@
 *     .. External Subroutines ..
       EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLABAD,
      $                   DLACPY, DLASCL, DLASET, DORGQR, DORMQR, DTGEVC,
-     $                   DTGSNA, XERBLA 
+     $                   DTGSNA, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
