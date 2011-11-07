@@ -21,11 +21,19 @@ from utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
 try:
-    from scipy.optimize import fmin_ncg, fmin, fmin_powell, fmin_cg, fmin_bfgs, fmin_ncg, fmin_l_bfgs_b
+    from scipy.optimize import (fmin_ncg, fmin, fmin_powell, fmin_cg,
+                                fmin_bfgs, fmin_ncg, fmin_l_bfgs_b)
+except ImportError:
+    scipy_imported = False
+try:
     from scipy import derivative
     scipy_imported = True
 except ImportError:
-    scipy_imported = False
+    try:
+        from scipy.misc import derivative
+        scipy_imported = True
+    except ImportError:
+        scipy_imported = False
 
 class NormApproxMu(object):
     """
