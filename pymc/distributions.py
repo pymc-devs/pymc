@@ -64,11 +64,11 @@ sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'weibull', 'skew_normal', 'truncated_normal',
                                'von_mises']
 sc_bool_distributions = ['bernoulli']
-sc_discrete_distributions = ['binomial', 'geometric', 'poisson',
+sc_discrete_distributions = ['binomial', 'betabin', 'geometric', 'poisson',
                              'negative_binomial', 'categorical', 'hypergeometric',
                              'discrete_uniform', 'truncated_poisson']
 
-sc_nonnegative_distributions = ['bernoulli', 'beta', 'chi2', 'exponential',
+sc_nonnegative_distributions = ['bernoulli', 'beta', 'betabin', 'binomial', 'chi2', 'exponential',
                                 'exponweib', 'gamma', 'half_normal',
                                 'hypergeometric', 'inverse_gamma', 'lognormal',
                                 'weibull']
@@ -373,7 +373,7 @@ def randomwrap(func):
       np.asarray([[0, 1],
              [0, 1]])
     """
-
+    
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
     #vfunc = np.vectorize(self.func)
@@ -395,7 +395,7 @@ def randomwrap(func):
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
-
+        
         r = [];s=[];largs=[];nr = args[-1]
         length = [np.atleast_1d(a).shape[0] for a in args]
         dimension = [np.atleast_1d(a).ndim for a in args]
@@ -728,8 +728,8 @@ def rbinomial(n, p, size=None):
 
     Random binomial variates.
     """
-
-    return np.random.binomial(n,p,size)
+    # return np.random.binomial(n,p,size)
+    return np.random.binomial(np.ravel(n),np.ravel(p),size)
 
 def binomial_expval(n, p):
     """
@@ -2073,7 +2073,7 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
-    if alpha > 1e10:
+    if any(alpha > 1e10):
         # Return Poisson when alpha gets very large
         return flib.poisson(x, mu)
     return flib.negbin2(x, mu, alpha)
@@ -2630,6 +2630,48 @@ def t_grad_setup(x, nu, f):
 t_grad_like = {'value'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
                'nu' : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_nu)}
 
+# Half-non-central t-----------------------------------------------
+@randomwrap
+def rhalf_noncentral_t(mu, lam, nu, size=None):
+    """rhalf_noncentral_t(mu, lam, nu, size=1)
+
+    Half-non-central Student's t random variates.
+    """
+    return abs(rnoncentral_t(mu, lam, nu, size=size))
+    
+def noncentral_t_like(x, mu, lam, nu):
+    R"""noncentral_t_like(x, mu, lam, nu)
+
+    Non-central Student's T log-likelihood. Describes a normal variable
+    whose precision is gamma distributed.
+
+    .. math::
+        f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu +
+        1}{2})}{\Gamma(\frac{\nu}{2})}
+        \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+        \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
+
+    :Parameters:
+      - `x` : Input data.
+      - `mu` : Location parameter.
+      - `lambda` : Scale parameter. 
+      - `nu` : Degrees of freedom.
+
+    """
+    mu = np.asarray(mu)
+    lam = np.asarray(lam)
+    nu = np.asarray(nu)
+    return flib.nct(x, mu, lam, nu)
+
+def noncentral_t_expval(mu, lam, nu):
+    """noncentral_t_expval(mu, lam, nu)
+
+    Expectation of non-central Student's t random variables. Only defined
+    for nu>1.
+    """
+    if nu>1:
+        return mu
+    return inf
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap
