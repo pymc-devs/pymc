@@ -308,7 +308,10 @@ class ThreadPool:
 try:
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 except:
-    import multiprocessing
+    try:
+        import multiprocessing
+    except ImportError:
+        raise ImportError, 'The multiprocessing module is not available. If you are using Python 2.5, please install the backport of multiprocessing before continuing.'
     __PyMCThreadPool__ = ThreadPool(multiprocessing.cpu_count())
 
 class CountDownLatch(object):
