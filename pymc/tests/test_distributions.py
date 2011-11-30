@@ -1150,7 +1150,17 @@ True, value = data)
 
 
 if __name__ == '__main__':
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', DeprecationWarning)
+    
+    original_filters = warnings.filters[:]
+    warnings.simplefilter("ignore")
+    try:
         import nose
         nose.runmodule()
+    finally:
+        warnings.filters = original_filters
+    
+    # TODO: Restore in 2.2
+    # with warnings.catch_warnings():
+    #         warnings.simplefilter('ignore', DeprecationWarning)
+    #         import nose
+    #         nose.runmodule()
