@@ -12,5 +12,7 @@ except ImportError:
     warnings.warn('NumPy 1.2 and nose are required to run the test suite.', ImportWarning)
     def test():
         return "Please install nose to run the test suite."
+except AttributeError:
+    warnings.warn('Python 2.6 or greater is required to run the test suite.', AttributeError)
 
 
