@@ -129,26 +129,54 @@ class TestPickle(TestRam):
         db.close()
 
     def test_yconnect_and_sample(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')        
+        
+        original_filters = warnings.filters[:]
+        warnings.simplefilter("ignore")
+        try:
             db = self.load()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')            
             S = pymc.MCMC(disaster_model, db=db)
             S.use_step_method(pymc.Metropolis, S.early_mean, tally=True)
             S.sample(5, progress_bar=0)
             assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (5,))
             assert_array_equal(db.trace('early_mean', chain=None)[:].shape, (20,))
             db.close()
-
+        finally:
+            warnings.filters = original_filters
+        
+        # TODO: Restore in 2.2
+        # with warnings.catch_warnings():
+        #             warnings.simplefilter('ignore')        
+        #             db = self.load()
+        #         with warnings.catch_warnings():
+        #             warnings.simplefilter('ignore')            
+        #             S = pymc.MCMC(disaster_model, db=db)
+        #             S.use_step_method(pymc.Metropolis, S.early_mean, tally=True)
+        #             S.sample(5, progress_bar=0)
+        #             assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (5,))
+        #             assert_array_equal(db.trace('early_mean', chain=None)[:].shape, (20,))
+        #             db.close()
+        
     def test_yrestore_state(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+        
+        original_filters = warnings.filters[:]
+        warnings.simplefilter("ignore")
+        try:
             db = self.load()
             S = pymc.MCMC(disaster_model, db=db)
             S.sample(10, progress_bar=0)
             sm = S.step_methods.pop()
             assert_equal(sm.accepted+sm.rejected, 75)
+        finally:
+            warnings.filters = original_filters
+            
+        # TODO: Restore in 2.2
+        # with warnings.catch_warnings():
+        #             warnings.simplefilter('ignore')
+        #             db = self.load()
+        #             S = pymc.MCMC(disaster_model, db=db)
+        #             S.sample(10, progress_bar=0)
+        #             sm = S.step_methods.pop()
+        #             assert_equal(sm.accepted+sm.rejected, 75)
 
     def test_nd(self):
         M = MCMC([self.NDstoch()], db=self.name, dbname=os.path.join(testdir, 'ND.'+self.name), dbmode='w')
@@ -242,8 +270,10 @@ class TestHDF5(TestPickle):
         del db
 
     def test_zcompression(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+        
+        original_filters = warnings.filters[:]
+        warnings.simplefilter("ignore")
+        try:
             db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
                                              dbmode='w',
                                              dbcomplevel=5)                                 
@@ -253,7 +283,22 @@ class TestHDF5(TestPickle):
             S.db.close()
             db.close()
             del S
-
+        finally:
+            warnings.filters = original_filters
+        
+        # TODO: Restore in 2.2
+        # with warnings.catch_warnings():
+        #             warnings.simplefilter('ignore')
+        #             db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
+        #                                              dbmode='w',
+        #                                              dbcomplevel=5)                                 
+        #             S = MCMC(disaster_model, db=db)
+        #             S.sample(45,10,1, progress_bar=0)
+        #             assert_array_equal(S.trace('early_mean')[:].shape, (35,))
+        #             S.db.close()
+        #             db.close()
+        #             del S
+        
 
 
 class testHDF5Objects(TestCase):
@@ -347,6 +392,20 @@ def test_interactive():
 
 if __name__ == '__main__':
     
+    original_filters = warnings.filters[:]
+    warnings.simplefilter("ignore")
+    try:
+        C =nose.config.Config(verbosity=3)
+        nose.runmodule(config=C)
+        try:
+            S.db.close()
+        except:
+            pass
+       
+    finally:
+        warnings.filters = original_filters
+    
+    # TODO: Restore in 2.2
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         C =nose.config.Config(verbosity=3)

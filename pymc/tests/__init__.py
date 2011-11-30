@@ -6,7 +6,7 @@ try:
     import numpy
     numpy.seterr(divide = 'raise', invalid = 'raise')
     
-    # Restore this implementation in 2.2, when minimum requirements are changed to Python 2.6
+    # TODO: Restore this implementation in 2.2, when minimum requirements are changed to Python 2.6
     # with warnings.catch_warnings():
     #         warnings.simplefilter('ignore')
     #         test = Tester().test

@@ -15,6 +15,16 @@ def test_square():
 
 
 if __name__ == '__main__':
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore',  FutureWarning)
+    
+    original_filters = warnings.filters[:]
+    warnings.simplefilter("ignore")
+    try:
         nose.runmodule()
+    finally:
+        warnings.filters = original_filters
+    
+    # TODO: Restore this implementation in 2.2    
+    # with warnings.catch_warnings():
+    #         warnings.simplefilter('ignore',  FutureWarning)
+    #         nose.runmodule()
+    
