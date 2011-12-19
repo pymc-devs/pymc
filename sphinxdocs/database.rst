@@ -131,33 +131,6 @@ The key is autoincremented each time a new row is added to the table, that is, e
 .. _`sqlite3`: http://www.sqlite.org
 
 
-The mysql backend
------------------
-
-The ``mysql`` backend depends on the `MySQL`_ library and its python wrapper `MySQLdb`_. Like the ``sqlite`` backend, it creates an SQL database containing one table per tallyable object. The main difference compared to ``sqlite`` is that it can connect to a remote database, provided the url and port of the host server is given, along with a valid user name and password. These parameters are passed when the ``Sampler`` is instantiated:
-
-* ``dbname`` (`string`) The name of the database file.
-
-* ``dbuser`` (`string`) The database user name.
-
-* ``dbpass`` (`string`) The user password for this database.
-
-* ``dbhost`` (`string`) The location of the database host.
-
-* ``dbport`` (`int`)    The port number to use to reach the database host.
-
-* ``dbmode`` {``a``, ``w``} File mode.  Use ``a`` to append values, and ``w`` to overwrite an existing database.
-
-The ``savestate`` feature is not implemented in the ``mysql`` backend.
-
-.. _`MySQL`:
-   http://www.mysql.com/downloads/
-
-.. _`MySQLdb`:
-   http://sourceforge.net/projects/mysql-python
-
-
-
 The ``hdf5`` backend
 --------------------
 
