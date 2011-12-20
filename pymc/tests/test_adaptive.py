@@ -1,9 +1,10 @@
+from __future__ import with_statement
+
 """Test AdaptiveMetropolis."""
 import pymc
 import numpy as np
 from numpy.testing import *
 import nose, warnings
-from __future__ import with_statement
 
 def test_square():
     iw = pymc.InverseWishart("A", n = 2, C = np.eye(2))

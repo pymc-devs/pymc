@@ -2482,9 +2482,8 @@ def truncated_normal_like(x, mu, tau, a=None, b=None):
     else:
         n = len(x)
         phi = normal_like(x, mu, tau)
-        # It would be nice to replace these with log-error function calls.
-        lPhia = np.log(pymc.utils.normcdf((a-mu)/sigma))
-        lPhib = np.log(pymc.utils.normcdf((b-mu)/sigma))
+        lPhia = pymc.utils.normcdf((a-mu)/sigma, log=True)
+        lPhib = pymc.utils.normcdf((b-mu)/sigma, log=True)
         try:
             d = utils.log_difference(lPhib, lPhia)
         except ValueError:
