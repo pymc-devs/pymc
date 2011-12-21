@@ -16,26 +16,24 @@ The recommended way to access data from an MCMC run, irrespective of the databas
 	array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
 	        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])
 
-``M.trace('early_mean')`` returns a copy of the ``Trace`` instance associated with the tallyable
-object `early_mean`::
+``M.trace('early_mean')`` returns a copy of the ``Trace`` instance associated with the tallyable object `early_mean`::
 
 	>>> M.trace('early_mean')
 	<pymc.database.ram.Trace object at 0x7fa4877a8b50>
 
-Samples from the trace are obtained using the slice notation ``[]``, similar to NumPy arrays. By default, ``trace`` returns the samples from the last chain. To return the samples from all the chains, use ``chain=None``::
+Particular subsamples from the trace are obtained using the slice notation ``[]``, similar to NumPy arrays. By default, ``trace`` returns the samples from the last chain. To return the samples from all the chains, use ``chain=None``::
 
-  >>> M.sample(5)
-  >>> M.trace('early_mean', chain=None)[:]
-  array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+    >>> M.sample(5)
+    >>> M.trace('early_mean', chain=None)[:]
+    array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
           2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,
           3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])
-
 
 
 Saving Data to Disk
 ===================
 
-By default, the database backend selected by the ``MCMC`` sampler is the ``ram`` backend, which simply holds the data in RAM memory. Now, we will create a sampler that, instead, will write data to a pickle file::
+By default, the database backend selected by the ``MCMC`` sampler is the ``ram`` backend, which simply holds the data in memory. Now, we will create a sampler that instead will write data to a pickle file::
 
 	>>> M = MCMC(disaster_model, db='pickle', dbname='Disaster.pickle')
 	>>> M.db
@@ -48,17 +46,16 @@ Note that in this particular case, no data is written to disk before the call to
 	
 Some backends not only have the ability to store the traces, but also the state of the step methods at the end of sampling. This is particularly useful when long warm-up periods are needed to tune the jump parameters. When the database is loaded in a new session, the step methods query the database to fetch the state they were in at the end of the last trace.
 	
-Check that you ``close`` the database before closing the `Python` session.
+Check that you ``close()`` the database before closing the Python session.
 
 
-Loading Back a Database
-=======================
+Reloading a Database
+====================
 
-To load a file created in a previous session, use the ``load`` function
-from the backend::
+To load a file created in a previous session, use the ``load`` function from the backend::
 
 	>>> db = pymc.database.pickle.load('Disaster.pickle')
-	>>> len(db.trace('e')[:])
+	>>> len(db.trace('early_mean')[:])
 	10
 
 The ``db`` object also has a ``trace`` method identical to that of ``Sampler``. You can hence inspect the results of a model, even when you don't have the model around.
@@ -118,11 +115,10 @@ The ``pickle`` backend
 The ``pickle`` database relies on the ``cPickle`` module to save the traces. Use of this backend is appropriate for small-scale, short-lived projects. For longer term or larger projects, the ``pickle`` backend should be avoided since generated files might be unreadable across different Python versions. The `pickled` file is a simple dump of a dictionary containing the NumPy arrays storing the traces, as well as the state of the ``Sampler``'s step methods.
 
 
-
 The ``sqlite`` backend
 ----------------------
 
-The ``sqlite`` backend is based on the python module `sqlite3`_ (a Python built-in in versions greater than 2.4) . It opens an SQL database named ``dbname``, and creates one table per tallyable objects. The rows of this table store a key, the chain index and the values of the objects::
+The ``sqlite`` backend is based on the python module `sqlite3`_ (built-in to Python versions greater than 2.4) . It opens an SQL database named ``dbname``, and creates one table per tallyable objects. The rows of this table store a key, the chain index and the values of the objects::
 
 	key (INTT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
 
@@ -134,8 +130,7 @@ The key is autoincremented each time a new row is added to the table, that is, e
 The ``hdf5`` backend
 --------------------
 
-The ``hdf5`` backend uses `pyTables`_ to save data in binary HDF5 format. The ``hdf5`` database is fast and can store huge traces, far larger than the available RAM. Data can be compressed and decompressed on the fly to
-reduce the disk footprint. Another feature of this backends is that it can store arbitrary objects. Whereas the other backends are limited to numerical values, ``hdf5`` can tally any object that can be pickled, opening the door for powerful and exotic applications (see ``pymc.gp``).
+The ``hdf5`` backend uses `pyTables`_ to save data in binary HDF5 format. The ``hdf5`` database is fast and can store huge traces, far larger than the available RAM. Data can be compressed and decompressed on the fly to reduce the disk footprint. Another feature of this backends is that it can store arbitrary objects. Whereas the other backends are limited to numerical values, ``hdf5`` can tally any object that can be pickled, opening the door for powerful and exotic applications (see ``pymc.gp``).
 
 The internal structure of an HDF5 file storing both numerical values and arbitrary objects is as follows::
 
@@ -155,10 +150,9 @@ The ``hdf5`` Database takes the following parameters:
 
 * ``dbname`` (`string`) Name of the hdf5 file.
 
-* ``dbmode`` {`string`} File mode: ``a``: append, ``w``: overwrite,
-  ``r``: read-only.
+* ``dbmode`` (`string`) File mode: ``a``: append, ``w``: overwrite, ``r``: read-only.
 
-* ``dbcomplevel`` : (`int` (0-9)) Compression level, 0: no compression.
+* ``dbcomplevel`` (`int` (0-9)) Compression level, 0: no compression.
 
 * ``dbcomplib`` (`string`) Compression library (``zlib``, ``bzip2``, ``lzo``)
 
