@@ -53,20 +53,19 @@ Creation of stochastic variables
 There are three main ways to create stochastic variables, called the **automatic**, **decorator**, and **direct** interfaces.
 
 **Automatic**
-   Stochastic variables with standard distributions provided by PyMC (see   chapter :ref:`chap_distributions`) can be created in a single line using  special subclasses of ``Stochastic``. For example, the     uniformly-distributed discrete variable :math:`s` in (:eq:`disastermodel`)  could be created using the automatic interface as follows::
+   Stochastic variables with standard distributions provided by PyMC (see   chapter :ref:`chap_distributions`) can be created in a single line using  special subclasses of ``Stochastic``. For example, the uniformly-distributed discrete variable :math:`switchpoint` in (:eq:`disaster_model`) is created using the automatic interface as follows::
 
-      import pymc as pm
-      s = pymc.DiscreteUniform('s', 1851, 1962, value=1900)
+      switchpoint = DiscreteUniform('switchpoint', lower=0, upper=110, doc='Switchpoint[year]')
 
    In addition to the classes in chapter :ref:`chap_distributions`, ``scipy.stats.distributions``' random variable classes are wrapped as ``Stochastic`` subclasses if SciPy is installed. These distributions are in  the submodule ``pymc.SciPyDistributions``.
 
    Users can call the class factory ``stochastic_from_dist`` to produce ``Stochastic`` subclasses of their own from probability distributions not included with PyMC.
 
 **Decorator**
-   Uniformly-distributed discrete stochastic variable :math:`s` in (:eq:`disastermodel`) could alternatively be created from a function that computes its log-probability as follows::
+   Uniformly-distributed discrete stochastic variable :math:`switchpoint` in (:eq:`disaster_model`) could alternatively be created from a function that computes its log-probability as follows::
 
       @pymc.stochastic(dtype=int)
-      def s(value=1900, t_l=1851, t_h=1962):
+      def switchpoint(value=1900, t_l=1851, t_h=1962):
           """The switchpoint for the rate of disaster occurrence."""
           if value > t_h or value < t_l:
               # Invalid values
@@ -75,34 +74,16 @@ There are three main ways to create stochastic variables, called the **automatic
               # Uniform log-likelihood
               return -numpy.log(t_h - t_l + 1)
 
-   Note that this is a simple Python function preceded by a Python expression
-   called a **decorator** [vanRossum_2010]_, here called ``@stochastic``.    
-   Generally, decorators enhance functions with additional properties or 
-   functionality. The ``Stochastic`` object produced by the ``@stochastic``    
-   decorator will evaluate its log-probability using the function :math:`s`.    
-   The ``value`` argument, which is required, provides an initial value for 
-   the variable. The remaining arguments will be assigned as parents of    
-   :math:`s` (*i.e.* they will populate the ``parents`` dictionary).
+   Note that this is a simple Python function preceded by a Python expression called a **decorator** [vanRossum_2010]_, here called ``@stochastic``. Generally, decorators enhance functions with additional properties or functionality. The ``Stochastic`` object produced by the ``@stochastic`` decorator will evaluate its log-probability using the function :math:`switchpoint`. The ``value`` argument, which is required, provides an initial value for the variable. The remaining arguments will be assigned as parents of :math:`switchpoint` (*i.e.* they will populate the ``parents`` dictionary).
 
-   To emphasize, the Python function decorated by ``@stochastic`` should 
-   compute the *log*-density or *log*-probability of the variable. That is why 
-   the return value in the example above is :math:`-\log(t_h-t_l+1)` rather 
-   than :math:`1/(t_h-t_l+1)`.
+   To emphasize, the Python function decorated by ``@stochastic`` should compute the *log*-density or *log*-probability of the variable. That is why the return value in the example above is :math:`-\log(t_h-t_l+1)` rather than :math:`1/(t_h-t_l+1)`.
 
-   The ``value`` and parents of stochastic variables may be any objects, 
-   provided the log-probability function returns a real number (``float``). 
-   PyMC and SciPy both provide implementations of several standard probability 
-   distributions that may be helpful for creating custom stochastic variables. 
+   The ``value`` and parents of stochastic variables may be any objects, provided the log-probability function returns a real number (``float``). PyMC and SciPy both provide implementations of several standard probability distributions that may be helpful for creating custom stochastic variables. 
 
-   The decorator stochastic can take any of the arguments 
-   ``Stochastic.__init__`` takes except ``parents``, ``logp``, ``random``, ``doc`` and ``value``. These arguments include ``trace``, ``plot``, ``verbose``, ``dtype``, ``rseed`` and ``name``.
-
-   The decorator interface has a slightly more complex implementation which 
-   allows you to specify a ``random`` method for sampling the stochastic 
-   variable's value conditional on its parents.  ::
+   The decorator stochastic can take any of the arguments ``Stochastic.__init__`` takes except ``parents``, ``logp``, ``random``, ``doc`` and ``value``. These arguments include ``trace``, ``plot``, ``verbose``, ``dtype``, ``rseed`` and ``name``. The decorator interface has a slightly more complex implementation which allows you to specify a ``random`` method for sampling the stochastic variable's value conditional on its parents.  ::
 
       @pymc.stochastic(dtype=int)
-      def s(value=1900, t_l=1851, t_h=1962):
+      def switchpoint(value=1900, t_l=1851, t_h=1962):
           """The switchpoint for the rate of disaster occurrence."""
 
           def logp(value, t_l, t_h):
@@ -115,29 +96,25 @@ There are three main ways to create stochastic variables, called the **automatic
               return numpy.round( (t_l - t_h) * random() ) + t_l
 
 
-   The stochastic variable again gets its name, docstring and parents from 
-   function :math:`s`, but in this case it will evaluate its log-probability 
-   using the ``logp`` function. The ``random`` function will be used when 
-   ``s.random()`` is called. Note that ``random`` doesn't take a ``value`` 
-   argument, as it generates values itself.
+   The stochastic variable again gets its name, docstring and parents from function :math:`switchpoint`, but in this case it will evaluate its log-probability using the ``logp`` function. The ``random`` function will be used when ``switchpoint.random()`` is called. Note that ``random`` doesn't take a ``value`` argument, as it generates values itself.
 
 **Direct**
    It's possible to instantiate ``Stochastic`` directly::
 
-      def s_logp(value, t_l, t_h):
+      def switchpoint_logp(value, t_l, t_h):
           if value > t_h or value < t_l:
               return -numpy.inf
           else:
               return -numpy.log(t_h - t_l + 1)
 
-      def s_rand(t_l, t_h):
+      def switchpoint_rand(t_l, t_h):
           return numpy.round( (t_l - t_h) * random() ) + t_l
 
-      s = Stochastic( logp = s_logp,
+      switchpoint = Stochastic( logp = switchpoint_logp,
                       doc = 'The switchpoint for the rate of disaster occurrence.',
-                      name = 's',
+                      name = 'switchpoint',
                       parents = {'t_l': 1851, 't_h': 1962},
-                      random = s_rand,
+                      random = switchpoint_rand,
                       trace = True,
                       value = 1900,
                       dtype=int,
@@ -147,35 +124,24 @@ There are three main ways to create stochastic variables, called the **automatic
                       plot=True,
                       verbose = 0)
 
-   Notice that the log-probability and random variate functions are specified
-   externally and passed to ``Stochastic`` as arguments. This is a rather 
-   awkward way to instantiate a stochastic variable; consequently, such 
-   implementations should be rare.
+   Notice that the log-probability and random variate functions are specified externally and passed to ``Stochastic`` as arguments. This is a rather awkward way to instantiate a stochastic variable; consequently, such implementations should be rare.
 
 
 .. _warning:
 
-A Warning: Don't update stochastic variables' values in-place
-=============================================================
+.. topic:: A Warning: Don't update stochastic variables' values in-place
 
-``Stochastic`` objects' values should not be updated in-place. This
-confuses PyMC's caching scheme and corrupts the process used for
-accepting or rejecting proposed values in the MCMC algorithm. The only
-way a stochastic variable's value should be updated is using
-statements of the following form::
+    ``Stochastic`` objects' values should not be updated in-place. This confuses PyMC's caching scheme and corrupts the process used for accepting or rejecting proposed values in the MCMC algorithm. The only way a stochastic variable's value should be updated is using statements of the following form::
  
-	A.value = new_value
+    	A.value = new_value
  
-The following are in-place updates and should _never_ be used::
+    The following are in-place updates and should _never_ be used::
 
-* ``A.value += 3``
-* ``A.value[2,1] = 5``
-* ``A.value.attribute = new_attribute_value``
+    * ``A.value += 3``
+    * ``A.value[2,1] = 5``
+    * ``A.value.attribute = new_attribute_value``
 
-This restriction becomes onerous if a step method proposes values for
-the elements of an array-valued variable separately. In this case, it
-may be preferable to partition the variable into several scalar-valued
-variables stored in an array or list.
+    This restriction becomes onerous if a step method proposes values for the elements of an array-valued variable separately. In this case, it may be preferable to partition the variable into several scalar-valued variables stored in an array or list.
 
 
 .. _data:
@@ -199,8 +165,8 @@ In the other interfaces, the ``observed=True`` argument is added to the instanti
 
 Alternatively, in the decorator interface only, a ``Stochastic`` object's ``observed`` flag can be set to true by stacking an ``@observed`` decorator on top of the ``@stochastic`` decorator::
 
-   @pymc.observed(dtype=int)
-	def ...
+    @pymc.observed(dtype=int)
+    def ...
 
 
 .. _deterministic:
@@ -208,7 +174,7 @@ Alternatively, in the decorator interface only, a ``Stochastic`` object's ``obse
 The Deterministic class
 =======================
 
-The ``Deterministic`` class represents variables whose values are completely determined by the values of their parents. For example, in model (:eq:`disastermodel`), :math:`r` is a ``deterministic`` variable. Recall it was defined by 
+The ``Deterministic`` class represents variables whose values are completely determined by the values of their parents. For example, in model (:eq:`disaster_model`), :math:`rate` is a ``deterministic`` variable. Recall it was defined by 
 
 .. math::
   :nowrap:
@@ -219,16 +185,14 @@ The ``Deterministic`` class represents variables whose values are completely det
           \end{array}\right.,
   \end{eqnarray*}
 
-so :math:`r`'s value can be computed exactly from the values of its parents :math:`e`, :math:`l` and :math:`s`.
+so :math:`rate`'s value can be computed exactly from the values of its parents :math:`early_mean`, :math:`late_mean` and :math:`switchpoint`.
 
 A ``deterministic`` variable's most important attribute is ``value``, which gives the current value of the variable given the values of its parents. Like ``Stochastic``'s ``logp`` attribute, this attribute is computed on-demand and cached for efficiency.
 
 A Deterministic variable has the following additional attributes:
 
 ``parents``:
-   A dictionary containing the variable's parents. The keys of the dictionary
-   correspond to the names assigned to the variable's parents by the variable, 
-	and the values correspond to the actual parents.
+   A dictionary containing the variable's parents. The keys of the dictionary correspond to the names assigned to the variable's parents by the variable, and the values correspond to the actual parents.
 
 ``children``:
    A set containing the variable's children, which must be nodes.
@@ -242,43 +206,33 @@ Creation of deterministic variables
 Deterministic variables are less complicated than stochastic variables, and have similar **automatic**, **decorator**, and **direct** interfaces:
 
 **Automatic**
-   A handful of common functions have been wrapped in Deterministic objects. 
-	These are brief enough to list:
+    A handful of common functions have been wrapped in Deterministic objects. These are brief enough to list:
 
-   ``LinearCombination``:
-      Has two parents :math:`x` and :math:`y`, both of which must be iterable (*i.e.*
-      vector-valued). This function returns:
+    ``LinearCombination``:
+        Has two parents :math:`x` and :math:`y`, both of which must be iterable (*i.e.* vector-valued). This function returns:
 
-      .. math: \sum_i x_i^T y_i.
+        .. math: \sum_i x_i^T y_i.
 
-   ``Index``:
-      Has two parents :math:`x` and ``index``. :math:`x` must be iterables, 
-		``index`` must be valued as an integer. The value of an ``index`` is:
+    ``Index``:
+        Has two parents :math:`x` and ``index``. :math:`x` must be iterables, ``index`` must be valued as an integer. The value of an ``index`` is:
 		
 		.. math: x[\mathtt{index}]^T y[\mathtt{index}].
 		
-		``Index`` is useful for implementing dynamic models, in which the 
-		parent-child connections change.
+		``Index`` is useful for implementing dynamic models, in which the parent-child connections change.
 
-   ``Lambda``:
-      Converts an anonymous function (in Python, called **lambda functions**) 
-		to a ``Deterministic`` instance on a single line.
+    ``Lambda``:
+        Converts an anonymous function (in Python, called **lambda functions**) to a ``Deterministic`` instance on a single line.
 
-   ``CompletedDirichlet``:
-      PyMC represents Dirichlet variables of length :math:`k` by the first 
-		:math:`k-1` elements; since they must sum to 1, the :math:`k^{th}` 
-		element is determined by the others. ``CompletedDirichlet`` appends the 
-		:math:`k^{th}` element to the value of its parent :math:`D`.
+    ``CompletedDirichlet``:
+        PyMC represents Dirichlet variables of length :math:`k` by the first :math:`k-1` elements; since they must sum to 1, the :math:`k^{th}` element is determined by the others. ``CompletedDirichlet`` appends the :math:`k^{th}` element to the value of its parent :math:`D`.
 
-   ``Logit``, ``InvLogit``, ``StukelLogit``, ``StukelInvLogit``:
-      Common link functions for generalized linear models, and their inverses.
+    ``Logit``, ``InvLogit``, ``StukelLogit``, ``StukelInvLogit``:
+        Common link functions for generalized linear models, and their inverses.
 
-   It’s a good idea to use these classes when feasible in order to give hints 
-	to step methods.
+    It’s a good idea to use these classes when feasible in order to give hints to step methods.
 	
 **Elementary operations on variables** 
-	Certain elementary operations on variables create deterministic variables. 
-	For example::
+	Certain elementary operations on variables create deterministic variables. For example::
 	
 		>>> x = pymc.MvNormalCov('x',numpy.ones(3),numpy.eye(3)) 
 		>>> y = pymc.MvNormalCov('y',numpy.ones(3),numpy.eye(3)) 
@@ -289,45 +243,35 @@ Deterministic variables are less complicated than stochastic variables, and have
 		>>> print x[1]+y[2] 
 		<pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
 		
-	All the objects thus created have ``trace=False`` and ``plot=False`` by 
-	default. This conve- nient method of generating simple deterministics was 
-	inspired by [Kerman_2004]_.
+	All the objects thus created have ``trace=False`` and ``plot=False`` by default. This convenient method of generating simple deterministics was inspired by [Kerman_2004]_.
 
 **Decorator**
-   A deterministic variable can be created via a decorator in a way very similar to
-   ``Stochastic``'s decorator interface::
+    A deterministic variable can be created via a decorator in a way very similar to ``Stochastic``'s decorator interface::
 
-      @pymc.deterministic
-      def r(switchpoint = s, early_rate = e, late_rate = l):
-          """The rate of disaster occurrence."""
-          value = zeros(N)
-          value[:switchpoint] = early_rate
-          value[switchpoint:] = late_rate
-          return value
+        @deterministic(plot=False)
+        def rate(s=switchpoint, e=early_mean, l=late_mean):
+            ''' Concatenate Poisson means '''
+            out = empty(len(disasters_array))
+            out[:s] = e
+            out[s:] = l
+            return out
 
-   Notice that rather than returning the log-probability, as is the case for
-   ``Stochastic`` objects, the function returns the value of the deterministic
-   object, given its parents. This return value may be of any type, as is 
-	suitable for the problem at hand. Also notice that, unlike for 
-	``Stochastic`` objects, there is no ``value`` argument passed, since the 
-	value is calculated deterministically by the function itself. Arguments' 
-	keys and values are converted into a parent dictionary as with 
-	``Stochastic``'s short interface. The ``deterministic`` decorator can take 
-	``trace``, ``verbose`` and ``plot`` arguments, like the ``stochastic`` 
-	decorator [#]_.
+    Notice that rather than returning the log-probability, as is the case for ``Stochastic`` objects, the function returns the value of the deterministic object, given its parents. This return value may be of any type, as is suitable for the problem at hand. Also notice that, unlike for ``Stochastic`` objects, there is no ``value`` argument passed, since the value is calculated deterministically by the function itself. Arguments' keys and values are converted into a parent dictionary as with ``Stochastic``'s short interface. The ``deterministic`` decorator can take ``trace``, ``verbose`` and ``plot`` arguments, like the ``stochastic`` decorator [#]_.
 
 **Direct**
-   ``Deterministic`` objects can also be instantiated directly::
+    ``Deterministic`` objects can also be instantiated directly::
 
-      def r_eval(switchpoint = s, early_rate = e, late_rate = l):
-          value = zeros(N)
-          value[:switchpoint] = early_rate
-          value[switchpoint:] = late_rate
-          return value
+        def rate_eval(switchpoint = s, early_rate = e, late_rate = l):
+            value = zeros(N)
+            value[:switchpoint] = early_rate
+            value[switchpoint:] = late_rate
+            return value
 
-      r = pymc.Deterministic(  eval = r_eval,
-                          name = 'r',
-                          parents = {'switchpoint': s, 'early_rate': e, 'late_rate': l}),
+        rate = pymc.Deterministic(eval = rate_eval,
+                          name = 'rate',
+                          parents = {'switchpoint': switchpoint, 
+                                  'early_mean': early_mean, 
+                                  'late_mean': late_mean}),
                           doc = 'The rate of disaster occurrence.',
                           trace = True,
                           verbose = 0,
