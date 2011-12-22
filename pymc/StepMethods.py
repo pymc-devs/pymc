@@ -351,7 +351,7 @@ class Metropolis(StepMethod):
         StepMethod.__init__(self, [stochastic], tally=tally)
 
         # Initialize hidden attributes
-	self.proposal_sd=proposal_sd
+        self.proposal_sd = proposal_sd
 
         self.adaptive_scale_factor = 1.
         self.accepted = 0.
@@ -385,7 +385,7 @@ class Metropolis(StepMethod):
                 self._len = 1
 
         #else: self.proposal_sd = None # Probably unnecessary
-	# If no dist argument is provided, assign a proposal distribution automatically.
+        # If no dist argument is provided, assign a proposal distribution automatically.
         if not proposal_distribution:
 
             # Pick Gaussian by default
