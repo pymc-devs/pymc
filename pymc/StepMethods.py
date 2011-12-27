@@ -359,6 +359,7 @@ class Metropolis(StepMethod):
         self._state = ['rejected', 'accepted', 'adaptive_scale_factor', 'proposal_sd', 'proposal_distribution', 'check_before_accepting']
         self._tuning_info = ['adaptive_scale_factor']
         self.check_before_accepting = check_before_accepting
+        self.proposal_sd=proposal_sd
 
         # Set public attributes
         self.stochastic = stochastic
@@ -369,7 +370,7 @@ class Metropolis(StepMethod):
 
         if proposal_distribution != "Prior":
             # Avoid zeros when setting proposal variance
-            if self.proposal_sd is None:
+            if proposal_sd is None:
                 if all(self.stochastic.value != 0.):
                     self.proposal_sd = ones(shape(self.stochastic.value)) * abs(self.stochastic.value) * scale
                 else:
