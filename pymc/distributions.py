@@ -1083,7 +1083,7 @@ def exponential_like(x, beta):
 
     :Parameters:
       - `x` : x > 0
-      - `beta` : Scale parameter (beta > 0).
+      - `beta` : Rate parameter (beta > 0).
 
     .. note::
       - :math:`E(X) = 1/\beta`
@@ -1203,7 +1203,7 @@ def gamma_like(x, alpha, beta):
     :Parameters:
       - `x` : math:`x \ge 0`
       - `alpha` : Shape parameter (alpha > 0).
-      - `beta` : Scale parameter (beta > 0).
+      - `beta` : Rate parameter (beta > 0).
 
     .. note::
        - :math:`E(X) = \frac{\alpha}{\beta}`
