@@ -283,8 +283,7 @@ Deterministic variables are less complicated than stochastic variables, and have
 Containers
 ==========
 
-In some situations it would be inconvenient to assign a unique label to each
-parent of some variable. Consider :math:`y` in the following model: 
+In some situations it would be inconvenient to assign a unique label to each parent of some variable. Consider :math:`y` in the following model: 
 
 .. math::
   :nowrap:
@@ -292,37 +291,34 @@ parent of some variable. Consider :math:`y` in the following model:
   \begin{align*}
       x_0 &\sim N (0,\tau_x)\\
       x_{i+1}|x_i &\sim \text{N}(x_i, \tau_x)\\
-      &&i=0,\ldots, N-2\\
+      &i=0,\ldots, N-2\\
       y|x &\sim N \left(\sum_{i=0}^{N-1}x_i^2,\tau_y\right)
   \end{align*}
 
 
-Here, :math:`y` depends on every element of the Markov chain :math:`x`, but we
-wouldn't want to manually enter :math:`N` parent labels ```x_0'``, ```x_1'``,
-etc.
+Here, :math:`y` depends on every element of the Markov chain :math:`x`, but we wouldn't want to manually enter :math:`N` parent labels ```x_0'``, ```x_1'``, etc.
 
 This situation can be handled naturally in PyMC::
 
 	N = 10
-   x_0 = pymc.Normal(`x_0', mu=0, tau=1)
+    x_0 = pymc.Normal(`x_0', mu=0, tau=1)
+    
+    x = numpy.empty(N, dtype=object)
+    x[0] = x_0
+    
+    for i in range(1, N):
+    
+        xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+    
+    @pymc.observed
+    def y(value=1, mu=x, tau=100):
+        return pymc.normal_like(value, numpy.sum(mu**2), tau)
 
-   x = numpy.empty(N, dtype=object)
-   x[0] = x_0
-
-   for i in range(1, N):
-
-      xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
-
-   @pymc.observed
-   def y(value=1, mu=x, tau=100):
-       return pymc.normal_like(value, numpy.sum(mu**2), tau)
-
-PyMC automatically wraps array :math:`x` in an appropriate ``Container`` class. The expression ``'x_%i' % i`` labels each ``Normal`` object in the container with the appropriate index :math:`i`; so if ``i=1``, the name of the
-corresponding element becomes ```x_1'``.
+PyMC automatically wraps array :math:`x` in an appropriate ``Container`` class. The expression ``'x_%i' % i`` labels each ``Normal`` object in the container with the appropriate index :math:`i`. For example, if ``i=1``, the name of the corresponding element becomes ```x_1'``.
 
 Containers, like variables, have an attribute called ``value``. This attribute returns a copy of the (possibly nested) iterable that was passed into the container function, but with each variable inside replaced with its corresponding value.
 
-Containers can currently be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets or any object with a ``__dict__`` attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested [#]_. Containers attempt to behave like the objects they wrap. All containers are subclasses of ``ContainerBase``.
+Containers can be constructed from lists, tuples, dictionaries, Numpy arrays, modules, sets or any object with a ``__dict__`` attribute. Variables and non-variables can be freely mixed in these containers, and different types of containers can be nested [#]_. Containers attempt to behave like the objects they wrap. All containers are subclasses of ``ContainerBase``.
 
 Containers have the following useful attributes in addition to ``value``:
 
@@ -333,8 +329,7 @@ Containers have the following useful attributes in addition to ``value``:
 * ``data_stochastics``
 * ``step_methods``.
 
-Each of these attributes is a set containing all the objects of each type in a
-container, and within any containers in the container.
+Each of these attributes is a set containing all the objects of each type in a container, and within any containers in the container.
 
 
 .. _potential:
@@ -342,8 +337,7 @@ container, and within any containers in the container.
 The Potential class
 ===================
 
-The joint density corresponding to model (:eq:`disastermodel`) can be written
-as follows: 
+The joint density corresponding to model (:eq:`disastermodel`) can be written as follows: 
 
 .. math::
   :nowrap:
@@ -376,7 +370,7 @@ In other cases we may want to add probability terms to existing models. For exam
 
 Its possible to express this constraint by adding variables to the model, or by grouping :math:`e` and :math:`l` to form a vector-valued variable, but it's uncomfortable to do so.
 
-Arbitrary factors such as :math:`\psi` and the indicator function :math:`I(|e-l|<1)` are implemented by objects of class ``Potential`` ([Lauritzen_1990]_ and [Jordan_2004]_ call these terms 'factor potentials'). Bayesian hierarchical notation (cf model (:eq:`disastermodel`)) doesn't accomodate these potentials. They are often used in cases where there is no natural dependence hierarchy, such as the first example above (which is known as a Markov random field). They are also useful for expressing 'soft data' [Christakos_2002]_ as in the second example below.
+Arbitrary factors such as :math:`\psi` and the indicator function :math:`I(|e-l|<1)` are implemented by objects of class ``Potential`` (from [Lauritzen_1990]_ and [Jordan_2004]_, who call these terms 'factor potentials'). Bayesian hierarchical notation (cf model (:eq:`disastermodel`)) doesn't accomodate these potentials. They are often used in cases where there is no natural dependence hierarchy, such as the first example above (which is known as a Markov random field). They are also useful for expressing 'soft data' [Christakos_2002]_ as in the second example below.
 
 Potentials have one important attribute, ``logp``, the log of their current probability or probability density value given the values of their parents. The only other additional attribute of interest is ``parents``, a dictionary containing the potential's parents. Potentials have no methods. They have no ``trace`` attribute, because they are not variables. They cannot serve as parents of variables (for the same reason), so they have no ``children`` attribute.
 
@@ -396,9 +390,9 @@ The role of potentials can be confusing, so we will provide another example: we 
   \end{eqnarray*}
 
 
-So far, so good. Now suppose we have some knowledge of other related experiments and we have a good idea of what :math:`S` will be independent of the value of :math:`\beta`. It's not obvious how to work this 'soft data', because as we've written the model :math:`S` is completely determined by :math:`\beta`. There are three options within the strict Bayesian hierarchical framework:
+Now suppose we have some knowledge of other related experiments and we have a good idea of what :math:`S` will be independent of the value of :math:`\beta`. It's not obvious how to work this 'soft data', because as we've written the model :math:`S` is completely determined by :math:`\beta`. There are three options within the strict Bayesian hierarchical framework:
 
-* Work the soft data into the prior on :math:`\beta`.
+* Express the soft data as an informative prior on :math:`\beta`.
 
 * Incorporate the data from the previous experiments explicitly into the model.
 
@@ -436,18 +430,14 @@ Creation of Potentials
 There are two ways to create potentials:
 
 **Decorator**
-   A potential can be created via a decorator in a way very similar to
-   ``Deterministic``'s decorator interface::
+   A potential can be created via a decorator in a way very similar to ``Deterministic``'s decorator interface::
 
       @pymc.potential
       def psi_i(x_lo = x[i], x_hi = x[i+1]):
           """A pair potential"""
           return -(xlo - xhi)**2
 
-   The function supplied should return the potential's current 
-	*log*-probability or *log*-density as a Numpy ``float``. The ``potential`` 
-	decorator can take ``verbose`` and ``cache_depth`` arguments like the 
-	``stochastic`` decorator.
+   The function supplied should return the potential's current *log*-probability or *log*-density as a Numpy ``float``. The ``potential`` decorator can take ``verbose`` and ``cache_depth`` arguments like the ``stochastic`` decorator.
 
 **Direct**
    The same potential could be created directly as follows::
@@ -455,7 +445,7 @@ There are two ways to create potentials:
       def psi_i_logp(x_lo = x[i], x_hi = x[i+1]):
           return -(xlo - xhi)**2
 
-      psi_i = pymc.Potential(  logp = psi_i_logp,
+      psi_i = pymc.Potential(logp = psi_i_logp,
                           name = 'psi_i',
                           parents = {'xlo': x[i], 'xhi': x[i+1]},
                           doc = 'A pair potential',
@@ -468,16 +458,13 @@ There are two ways to create potentials:
 Graphing models
 ===============
 
-The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical representations of ``Model`` (Chapter :ref:`chap_modelfitting`) instances using **GraphViz** via the Python package **PyDot**. See [Lauritzen_1990]_ and [Jordan_2004]_ for more discussion of useful information that can be read off of graphical models. Note that these authors do not consider deterministic variables.
+The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical representations of ``Model`` (Chapter :ref:`chap_modelfitting`) instances using
+`GraphViz <http://www.graphviz.org/>`_ via the Python package 
+`PyDot <http://code.google.com/p/pydot/>`_. See [Lauritzen_1990]_ and [Jordan_2004]_ for more discussion of useful information that can be read off of graphical models [#]_.
 
 The symbol for stochastic variables is an ellipse. Parent-child relationships are indicated by arrows. These arrows point from parent to child and are labeled with the names assigned to the parents by the children. PyMC's symbol for deterministic variables is a downward-pointing triangle. A graphical representation of model :eq:`disastermodel` is shown in :ref:`dag`. Note that  :math:`D` is shaded because it is flagged as data.
 
-The symbol for factor potentials is a rectangle, as in the following model.
-Factor potentials are usually associated with *undirected* grahical models. In
-undirected representations, each parent of a potential is connected to every
-other parent by an undirected edge. The undirected representation of the model
-pictured above is much more compact: Directed or mixed graphical models can be
-represented in an undirected form by 'moralizing', which is done by the function ``pymc.graph.moral_graph``.
+The symbol for factor potentials is a rectangle, as in the following model. Factor potentials are usually associated with *undirected* grahical models. In undirected representations, each parent of a potential is connected to every other parent by an undirected edge. The undirected representation of the model pictured above is much more compact: Directed or mixed graphical models can be represented in an undirected form by 'moralizing', which is done by the function ``pymc.graph.moral_graph``.
 
 .. _pot:
 
@@ -512,16 +499,11 @@ Lazy functions are implemented in C using Pyrex, a language for writing Python e
 
 .. rubric:: Footnotes
 
-.. [#] Note that the ``random`` method does not provide a Gibbs sample unless the
-   variable has no children.
+.. [#] Note that the ``random`` method does not provide a Gibbs sample unless the variable has no children.
 
-.. [#] Note that deterministic variables have no ``observed`` flag. If a deterministic
-   variable's value were known, its parents would be restricted to the inverse
-   image of that value under the deterministic variable's evaluation function. This
-   usage would be extremely difficult to support in general, but it can be
-   implemented for particular applications at the ``StepMethod`` level.
+.. [#] Note that deterministic variables have no ``observed`` flag. If a deterministic variable's value were known, its parents would be restricted to the inverse image of that value under the deterministic variable's evaluation function. This usage would be extremely difficult to support in general, but it can be implemented for particular applications at the ``StepMethod`` level.
 
-.. [#] Nodes whose parents are containers make private shallow copies of those
-   containers. This is done for technical reasons rather than to protect users from
-   accidental misuse.
+.. [#] Nodes whose parents are containers make private shallow copies of those containers. This is done for technical reasons rather than to protect users from accidental misuse.
+   
+.. [#] Note that these authors do not consider deterministic variables.
 
