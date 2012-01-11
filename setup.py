@@ -43,7 +43,7 @@ if not lapack_info or dist in ['bdist', 'sdist']:
     config.add_extension(name='flib',sources=f_sources)
 
 
-
+# TODO Convert Pyrex to Cython
 # ============================
 # = Compile Pyrex extensions =
 # ============================
