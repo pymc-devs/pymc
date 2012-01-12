@@ -60,6 +60,8 @@ import traceback
 import os
 import numpy as np
 
+from . import six
+
 # exceptions
 class NoResultsPending(Exception):
     """All work requests have been processed."""
@@ -77,7 +79,7 @@ def _handle_thread_exception(request, exc_info):
     This just prints the exception info via ``traceback.print_exception``.
 
     """
-    print exc_info
+    #print exc_info
     traceback.print_exception(*exc_info)
 
 
@@ -311,7 +313,7 @@ except:
     try:
         import multiprocessing
     except ImportError:
-        raise ImportError, 'The multiprocessing module is not available. If you are using Python 2.5, please install the backport of multiprocessing before continuing.'
+        raise ImportError('The multiprocessing module is not available. If you are using Python 2.5, please install the backport of multiprocessing before continuing.')
     __PyMCThreadPool__ = ThreadPool(multiprocessing.cpu_count())
 
 class CountDownLatch(object):
@@ -364,8 +366,7 @@ def map_noreturn(targ, argslist):
     done_lock.await()
 
     if exceptions:
-        a, b, c = exceptions[0]
-        raise a, b, c
+        six.reraise(*exceptions[0])
 
 
 def set_threadpool_size(n):

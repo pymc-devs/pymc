@@ -12,6 +12,8 @@ import sys, time, pdb
 import numpy as np
 from utils import crawl_dataless
 
+from .six import print_
+
 from progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
 
 GuiInterrupt = 'Computation halt'
@@ -89,12 +91,12 @@ class MCMC(Sampler):
         
         new_method = step_method_class(*args, **kwds)
         if self.verbose > 1:
-            print 'Using step method %s. Stochastics: ' % step_method_class.__name__
+            print_('Using step method %s. Stochastics: ' % step_method_class.__name__)
         
         for s in new_method.stochastics:
             self.step_method_dict[s].append(new_method)
             if self.verbose > 1:
-                print '\t'+s.__name__
+                print_('\t'+s.__name__)
         if self._sm_assigned:
             self.step_methods.add(new_method)
         
@@ -139,7 +141,7 @@ class MCMC(Sampler):
                         if not d.observed:
                             self.step_method_dict[d].append(new_method)
                             if self.verbose > 1:
-                                print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__)
+                                print_('Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, d.__name__))
             
             for s in self.stochastics:
                 # If not handled by any step method, make it a new step method using the registry
@@ -148,7 +150,7 @@ class MCMC(Sampler):
                     setattr(new_method, '_model', self)
                     self.step_method_dict[s].append(new_method)
                     if self.verbose > 1:
-                        print 'Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, s.__name__)
+                        print_('Assigning step method %s to stochastic %s' % (new_method.__class__.__name__, s.__name__))
             
             self.step_methods = set()
             for s in self.stochastics:
@@ -194,7 +196,7 @@ class MCMC(Sampler):
         self.assign_step_methods(verbose=verbose)
         
         if burn >= iter:
-            raise ValueError, 'Burn interval must be smaller than specified number of iterations.'
+            raise ValueError('Burn interval must be smaller than specified number of iterations.')
         self._iter = int(iter)
         self._burn = int(burn)
         self._thin = int(thin)
@@ -242,14 +244,14 @@ class MCMC(Sampler):
                 # Manage burn-in
                 if i == self._burn:
                     if self.verbose>0:
-                        print '\nBurn-in interval complete'
+                        print_('\nBurn-in interval complete')
                     if not self._tune_throughout:
                         self._tuning = False
                 
                 # Tell all the step methods to take a step
                 for step_method in self.step_methods:
                     if self.verbose > 2:
-                        print 'Step method %s stepping' % step_method._id
+                        print_('Step method %s stepping' % step_method._id)
                     # Step the step method
                     step_method.step()
                 
@@ -297,7 +299,7 @@ class MCMC(Sampler):
         #     return
         
         if self.verbose > 0:
-            print '\tTuning at iteration', self._current_iter
+            print_('\tTuning at iteration', self._current_iter)
         
         # Initialize counter for number of tuning stochastics
         tuning_count = 0
@@ -309,7 +311,7 @@ class MCMC(Sampler):
             # Tune step methods
             tuning_count += step_method.tune(verbose=self.verbose)
             if verbose > 1:
-                print '\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count)
+                print_('\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count))
                 sys.stdout.flush()
         
         if not self._tune_throughout:
@@ -322,7 +324,7 @@ class MCMC(Sampler):
             
             # 5 consecutive clean intervals removed tuning
             if self._tuned_count == 5:
-                if self.verbose > 0: print '\nFinished tuning'
+                if self.verbose > 0: print_('\nFinished tuning')
                 self._tuning = False
 
     
@@ -373,7 +375,7 @@ class MCMC(Sampler):
                 stochastic.value = mean_value
             
             except KeyError:
-                print "No trace available for %s. DIC value may not be valid." % stochastic.__name__
+                print_("No trace available for %s. DIC value may not be valid." % stochastic.__name__)
         
         # Return twice deviance minus deviance at means
         return 2*mean_deviance - self.deviance

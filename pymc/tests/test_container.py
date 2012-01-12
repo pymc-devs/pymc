@@ -18,7 +18,7 @@ class test_Container(TestCase):
         A = Normal('A',0,1)
         try:
             Container(([A],))
-            raise AssertionError, 'A NotImplementedError should have resulted.'
+            raise AssertionError('A NotImplementedError should have resulted.')
         except NotImplementedError:
             pass
 

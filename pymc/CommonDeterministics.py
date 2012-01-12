@@ -23,6 +23,8 @@ from copy import copy
 import sys
 import operator, __builtin__
 
+from . import six
+
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',
             'pfunc']#+['iter_','complex_','int_','long_','float_','oct_','hex_']
@@ -60,10 +62,10 @@ class Lambda(pm.Deterministic):
             if junk0 is not None \
               or junk1 is not None \
               or parent_values is None:
-                raise ValueError, '%s: All arguments to lam_fun must have default values.' % name
+                raise ValueError('%s: All arguments to lam_fun must have default values.' % name)
 
             if not len(parent_names) == len(parent_values):
-                raise ValueError, '%s: All arguments to lam_fun must have default values.' % name
+                raise ValueError('%s: All arguments to lam_fun must have default values.' % name)
 
             parents = dict(zip(parent_names[-len(parent_values):], parent_values))
 
@@ -284,7 +286,7 @@ class LinearCombination(pm.Deterministic):
         self.N = len(self.x)
 
         if not len(self.y)==len(self.x):
-            raise ValueError, 'Arguments x and y must be same length.'
+            raise ValueError('Arguments x and y must be same length.')
 
         def eval_fun(x, y):
             out = np.dot(x[0], y[0])
@@ -314,7 +316,7 @@ class LinearCombination(pm.Deterministic):
             if isinstance(x[i], pm.Stochastic):
 
                 if x[i] is y[i]:
-                    raise ValueError, 'Stochastic %s multiplied by itself in LinearCombination %s.' %(x[i], self)
+                    raise ValueError('Stochastic %s multiplied by itself in LinearCombination %s.' %(x[i], self))
 
                 stochastic_elem = x[i]
                 self.sides[stochastic_elem].append('L')
@@ -392,7 +394,7 @@ def pufunc(func):
     """
     def dtrm_generator(*args):
         if len(args) != func.nin:
-            raise ValueError, 'invalid number of arguments'
+            raise ValueError('invalid number of arguments')
         name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args)])+')'
         doc_str = 'A deterministic returning %s(%s)'%(func.__name__, ', '.join([str(arg) for arg in args]))
         parents = {}
@@ -434,13 +436,13 @@ def pfunc(func):
         return pufunc(func)
     elif not inspect.isfunction(func):
         if func.__name__ == '__call__':
-            raise ValueError, 'Cannot get argspec of call method. Is it builtin?'
+            raise ValueError('Cannot get argspec of call method. Is it builtin?')
         try:
             return pfunc(func.__call__)
         except:
             cls, inst, tb = sys.exc_info()
             inst = cls('Failed to create pfunc wrapper from object %s. Original error message:\n\n%s'%(func, inst.message))
-            raise cls, inst, tb
+            six.reraise(cls, inst, tb)
     fargs, fvarargs, fvarkw, fdefaults = inspect.getargspec(func)
     n_fargs = len(fargs)
 
@@ -503,7 +505,7 @@ def create_uni_method(op_name, klass, jacobians = None):
     def new_method(self):
         # This code creates a Deterministic object.
         if not check_special_methods():
-            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+            raise NotImplementedError('Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self)))
             
         jacobian_formats = {'self' : 'transformation_operation'}
         return pm.Deterministic(op_function,
@@ -527,7 +529,7 @@ def create_casting_method(op, klass):
     # This function will become the actual method.
     def new_method(self, op=op):
         if not check_special_methods():
-            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+            raise NotImplementedError('Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self)))
         return op(self.value)
     # Make the function into a method for klass.
     new_method.__name__ = '__'+op.__name__+'__'
@@ -557,7 +559,7 @@ def create_rl_bin_method(op_name, klass,  jacobians = {}):
             
         def new_method(self, other, prefix=prefix):
             if not check_special_methods():
-                raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+                raise NotImplementedError('Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self)))
             # This code will create one of two Deterministic objects.
             if prefix == 'r':
                 parents = {'a':other, 'b':self}
@@ -589,7 +591,7 @@ def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
     # This function will became the methods.
     def new_method(self, other, x_roles=x_roles, y_roles=y_roles):
         if not check_special_methods():
-            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+            raise NotImplementedError('Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self)))
         x = []
         y = []
         for xr in x_roles:
@@ -621,7 +623,7 @@ def create_bin_method(op_name, klass):
     # This function will become the method.
     def new_method(self, other):
         if not check_special_methods():
-            raise NotImplementedError, 'Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self))
+            raise NotImplementedError('Special method %s called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%(op_name, str(self)))
         # This code creates a Deterministic object.
         def eval_fun(self, other, op):
             return getattr(self, op)(other)
@@ -640,7 +642,7 @@ def create_nonimplemented_method(op_name, klass):
     Creates a new method that raises NotImplementedError.
     """
     def new_method(self, *args):
-        raise NotImplementedError, 'Special method %s has not been implemented for PyMC variables.'%op_name
+        raise NotImplementedError('Special method %s has not been implemented for PyMC variables.'%op_name)
     new_method.__name__ = '__'+op_name+'__'
     setattr(klass, new_method.__name__, UnboundMethodType(new_method, None, klass))
 
@@ -736,7 +738,7 @@ def getitem_jacobian(self, index):
 # Create __getitem__ method.
 def __getitem__(self, index):
     if not check_special_methods():
-        raise NotImplementedError, 'Special method __index__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self)
+        raise NotImplementedError('Special method __index__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self))
     # If index is number or number-valued variable, make an Index object
     name = '%s[%s]'%(self.__name__, str(index))
     if np.isscalar(value(index)) and len(np.shape(self.value)) < 2:
@@ -761,7 +763,7 @@ Variable.__getitem__ = UnboundMethodType(__getitem__, None, Variable)
 # Create __call__ method for Variable.
 def __call__(self, *args, **kwargs):
     if not check_special_methods():
-        raise NotImplementedError, 'Special method __call__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self)
+        raise NotImplementedError('Special method __call__ called on %s, but special methods have been disabled. Set pymc.special_methods_available to True to enable them.'%str(self))
     def eval_fun(self, args=args, kwargs=kwargs):
         return self(*args, **kwargs)
     return pm.Deterministic(eval_fun,

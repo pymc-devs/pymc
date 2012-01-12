@@ -120,7 +120,7 @@ class covariance_wrapper(object):
     def __call__(self,x,y,amp=1.,scale=1.,symm=None,*args,**kwargs):
 
         if amp<0. or scale<0.:
-            raise ValueError, 'The amp and scale parameters must be positive.'
+            raise ValueError('The amp and scale parameters must be positive.')
 
         if symm is None:
             symm = (x is y)

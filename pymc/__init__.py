@@ -12,14 +12,14 @@ __version__ = '2.2grad'
 try:
     import numpy
 except ImportError:
-    raise ImportError, 'NumPy does not seem to be installed. Please see the user guide.'
+    raise ImportError('NumPy does not seem to be installed. Please see the user guide.')
 
 # Core modules
 from threadpool import *
 import os
 import pymc
 if os.getcwd().find(os.path.abspath(os.path.split(os.path.split(pymc.__file__)[0])[0]))>-1:
-    raise ImportError, 'You seem to be importing PyMC from inside its source tree. Please change to another directory and try again.'
+    raise ImportError('You seem to be importing PyMC from inside its source tree. Please change to another directory and try again.')
 from Node import *
 from Container import *
 from PyMCObjects import *

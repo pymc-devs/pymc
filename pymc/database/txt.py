@@ -26,6 +26,8 @@ import numpy as np
 from numpy import array
 import string
 
+from ..six import print_
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -59,11 +61,10 @@ class Trace(ram.Trace):
         arr = self.gettrace(chain=chain)
         
         with open(path, 'w') as f:
-            print >> f, '# Variable: %s' % self.name
-            print >> f, '# Sample shape: %s' % str(arr.shape)
-            print >> f, '# Date: %s' % datetime.datetime.now()
+            print_('# Variable: %s' % self.name, file=f)
+            print_('# Sample shape: %s' % str(arr.shape), file=f)
+            print_('# Date: %s' % datetime.datetime.now(), file=f)
             np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
-            f.close()
 
 class Database(base.Database):
     """Txt Database class."""
@@ -121,8 +122,7 @@ class Database(base.Database):
         np.set_printoptions(threshold=1e6)
         try:
             with open(os.path.join(self._directory, 'state.txt'), 'w') as f:
-                print >> f, state
-                f.close()
+                print_(state, file=f)
         finally:
             np.set_printoptions(**oldstate)
 
@@ -131,7 +131,7 @@ class Database(base.Database):
 def load(dirname):
     """Create a Database instance from the data stored in the directory."""
     if not os.path.exists(dirname):
-        raise AttributeError, 'No txt database named %s'%dirname
+        raise AttributeError('No txt database named %s'%dirname)
 
     db = Database(dirname, dbmode='a')
     chain_folders = [os.path.join(dirname, c) for c in db.get_chains()]

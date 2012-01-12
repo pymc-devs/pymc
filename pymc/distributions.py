@@ -39,6 +39,8 @@ import pdb
 import utils
 import warnings
 
+from pymc.six import print_
+
 def poiscdf(a, x):
     x = np.atleast_1d(x)
     a = np.resize(a, x.shape)
@@ -175,7 +177,7 @@ def new_dist_class(*new_class_args):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed))
 
 
             # Sort keyword arguments
@@ -187,7 +189,7 @@ def new_dist_class(*new_class_args):
                         if k in parents_default:
                             parents[k] = parents_default[k]
                         else:
-                            raise ValueError, 'No value given for parent ' + k
+                            raise ValueError('No value given for parent ' + k)
                 elif k in arg_dict_out.keys():
                     try:
                         arg_dict_out[k] = kwds.pop(k)
@@ -196,7 +198,7 @@ def new_dist_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError, 'Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed)
+                raise TypeError('Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
 
         # Determine size desired for scalar variables.
         # Notes
@@ -237,7 +239,7 @@ def new_dist_class(*new_class_args):
                     parents_shape = None
 
                 def shape_error():
-                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape)
+                    raise ValueError('Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape))
 
                 if init_val_shape is not None and shape is not None and init_val_shape != shape:
                     shape_error()
@@ -258,7 +260,7 @@ def new_dist_class(*new_class_args):
 
 
             elif 'size' in kwds.keys():
-                raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
+                raise ValueError('No size argument allowed for multivariate stochastic variables.')
 
             
             # Call base class initialization method
@@ -401,7 +403,7 @@ def randomwrap(func):
         dimension = [np.atleast_1d(a).ndim for a in args]
         N = max(length)
         if len(set(dimension))>2:
-            raise 'Dimensions do not agree.'
+            raise('Dimensions do not agree.')
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
 
@@ -413,11 +415,11 @@ def randomwrap(func):
             elif s == N:
                 arr = np.asarray(arg)
             else:
-                raise RuntimeError, 'Arguments size not allowed: %s.' % s
+                raise RuntimeError('Arguments size not allowed: %s.' % s)
             largs.append(arr)
 
         if mv and N >1 and max(dimension)>1 and nr>1:
-            raise 'Multivariate distributions cannot take s>1 and multiple values.'
+            raise ValueError('Multivariate distributions cannot take s>1 and multiple values.')
 
         if mv:
             for i, arg in enumerate(largs[:-1]):
@@ -452,9 +454,9 @@ def debug_wrapper(func, name):
 
     def wrapper(*args, **kwargs):
 
-        print 'Debugging inside %s:' % name
-        print '\tPress \'s\' to step into function for debugging'
-        print '\tCall \'args\' to list function arguments'
+        print_('Debugging inside %s:' % name)
+        print_('\tPress \'s\' to step into function for debugging')
+        print_('\tCall \'args\' to list function arguments')
 
         # Set debugging trace
         pdb.set_trace()
@@ -848,9 +850,9 @@ def categorical_like(x, p):
     
     p = np.atleast_2d(p)
     if any(abs(np.sum(p, 1)-1)>0.0001):
-        print "Probabilities in categorical_like sum to", np.sum(p, 1)
+        print_("Probabilities in categorical_like sum to", np.sum(p, 1))
     if np.array(x).dtype != int:
-        #print "Non-integer values in categorical_like"
+        #print_("Non-integer values in categorical_like")
         return -inf
     return flib.categorical(x, p)
 
@@ -1047,7 +1049,7 @@ def dirichlet_like(x, theta):
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
     if (np.shape(x)[-1]+1) != np.shape(theta)[-1]:
-        raise ValueError, 'The dimension of x in dirichlet_like must be k-1.'
+        raise ValueError('The dimension of x in dirichlet_like must be k-1.')
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------
@@ -2339,7 +2341,7 @@ def rtruncated_poisson(mu, k, size=None):
     try:
         k=k-1
         m = max(0, np.floor(k+1-mu))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         # More than one mu
         k=np.array(k)-1
         return np.array([rtruncated_poisson(x, i, size)
@@ -2936,7 +2938,7 @@ def name_to_funcs(name, module):
     try:
        logp = module[name+"_like"]
     except:
-        raise "No likelihood found with this name ", name+"_like"
+        raise KeyError("No likelihood found with this name ", name+"_like")
 
     try:
         random = module['r'+name]

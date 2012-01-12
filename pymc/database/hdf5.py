@@ -334,7 +334,7 @@ class Database(pickle.Database):
         if isinstance(model, pymc.Model):
             self.model = model
         else:
-            raise AttributeError, 'Not a Model instance.'
+            raise AttributeError('Not a Model instance.')
 
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
@@ -345,7 +345,7 @@ class Database(pickle.Database):
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
-                raise RuntimeError, "Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names)
+                raise RuntimeError("Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names))
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:
@@ -510,7 +510,7 @@ Error:
             for k,v in self._model_trace_description():
                 assert(stored_descr[k][0]==v[0])
         except:
-            raise "The objects to tally are incompatible with the objects stored in the file."
+            raise ValueError("The objects to tally are incompatible with the objects stored in the file.")
 
     def _gettables(self):
         """Return a list of hdf5 tables name PyMCsamples.
@@ -533,7 +533,7 @@ Error:
         """
 
         if not np.isscalar(chain):
-            raise TypeError, "chain must be a scalar integer."
+            raise TypeError("chain must be a scalar integer.")
 
         table = self._tables[chain]
 
@@ -563,7 +563,7 @@ def load(dbname, dbmode='a'):
         File mode : 'a': append, 'r': read-only.
     """
     if dbmode == 'w':
-        raise AttributeError, "dbmode='w' not allowed for load."
+        raise AttributeError("dbmode='w' not allowed for load.")
     db = Database(dbname, dbmode=dbmode)
 
     return db

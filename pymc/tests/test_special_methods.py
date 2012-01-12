@@ -27,7 +27,7 @@ for dnim in do_not_implement_methods:
     def meth(self, dnim=dnim):
         for y in x:
             if hasattr(y, '__%s__'%dnim):
-                raise AssertionError, 'Method %s implemented in class %s'%(dnim, y.__class__)
+                raise AssertionError('Method %s implemented in class %s'%(dnim, y.__class__))
     setattr(test_special_methods, 'test_'+dnim, UnboundMethodType(meth, None, test_special_methods))
 
 for dnim in uni_methods:

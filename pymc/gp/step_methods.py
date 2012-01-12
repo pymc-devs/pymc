@@ -9,6 +9,7 @@ import types
 import numpy as np
 from gp_submodel import *
 import warnings
+from pymc.six import print_
 
 from Realization import Realization
 from Mean import Mean
@@ -218,7 +219,7 @@ class GPEvaluationGibbs(pm.Metropolis):
     def reject(self):
         self.rejected += 1
         if self.verbose:
-            print self._id + ' rejecting'
+            print_(self._id + ' rejecting')
         # Revert the field evaluation and the rest of the field.
         self.f_eval.revert()
         self.f.revert()
@@ -229,7 +230,7 @@ class GPEvaluationGibbs(pm.Metropolis):
     def propose(self):
 
         if self.verbose:
-            print self._id + ' proposing'
+            print_(self._id + ' proposing')
 
         fc = pm.gp.fast_matrix_copy
 

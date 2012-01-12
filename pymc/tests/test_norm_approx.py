@@ -19,7 +19,7 @@ class test_norm_approx(TestCase):
         try:
             import scipy
         except:
-            raise nose.SkipTest,"SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
     def test_fmin(self):
         N = NormApprox(model)
         N.fit('fmin')

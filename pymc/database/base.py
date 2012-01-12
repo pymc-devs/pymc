@@ -52,6 +52,8 @@ import sys, traceback, warnings
 import copy
 __all__=['Trace', 'Database']
 
+from ..six import print_
+
 class Trace(object):
     """Base class for Trace objects.
 
@@ -166,7 +168,7 @@ class Trace(object):
             
             n = len(trace)
             if not n:
-                print 'Cannot generate statistics for zero-length trace in', self.__name__
+                print_('Cannot generate statistics for zero-length trace in', self.__name__)
                 return
 
 
@@ -179,7 +181,7 @@ class Trace(object):
                 'quantiles': quantiles(trace)
             }
         except:
-            print 'Could not generate output statistics for', self.name
+            print_('Could not generate output statistics for', self.name)
             return
 
 
@@ -281,7 +283,7 @@ Error:
         if isinstance(model, pymc.Model):
             self.model = model
         else:
-            raise AttributeError, 'Not a Model instance.'
+            raise AttributeError('Not a Model instance.')
 
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
@@ -292,7 +294,7 @@ Error:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
             # if len(names) > 0:
-            #     print "Some objects from the database have not been assigned a getfunc", names
+            #     print_("Some objects from the database have not been assigned a getfunc", names)
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.

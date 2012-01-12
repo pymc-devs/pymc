@@ -140,7 +140,7 @@ def Container(*args):
     #     return ObjectContainer(iterable.__dict__)
 
     # Otherwise raise an error.
-    raise ValueError, 'No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.'
+    raise ValueError('No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.')
 
 def file_items(container, iterable):
     """
@@ -342,10 +342,10 @@ class TupleContainer(ContainerBase, tuple):
     def __init__(self, iterable):
         new_tup = file_items(self, iterable)
         if len(self.containers)>0:
-            raise NotImplementedError, """We have not figured out how to satisfactorily implement nested TupleContainers.
+            raise NotImplementedError("""We have not figured out how to satisfactorily implement nested TupleContainers.
 The reason is there is no way to change an element of a tuple after it has been created.
 Even the Python-C API makes this impossible by checking that a tuple is new
-before allowing you to change one of its elements."""
+before allowing you to change one of its elements.""")
         ContainerBase.__init__(self, iterable)
         file_items(self, iterable)
         self._value = list(self)
@@ -609,7 +609,7 @@ class ArrayContainer(ContainerBase, ndarray):
     containing_classes = [ndarray]
     def __new__(subtype, array_in):
         if not array_in.dtype == dtype('object'):
-            raise ValueError, 'Cannot create container from array whose dtype is not object.'
+            raise ValueError('Cannot create container from array whose dtype is not object.')
 
         C = array(array_in, copy=True).view(subtype)
         C_ravel = C.ravel()

@@ -144,7 +144,7 @@ class StandardRealization(object):
 
         if regularize:
             if any(isnan(x)):
-                raise ValueError, 'Input argument to Realization contains NaNs.'
+                raise ValueError('Input argument to Realization contains NaNs.')
             x = regularize_array(x)
 
         if x is self.x_sofar:

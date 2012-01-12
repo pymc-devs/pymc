@@ -103,7 +103,7 @@ def new_deterministic_class(*new_class_args):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed))
 
 
             # Sort keyword arguments
@@ -115,7 +115,7 @@ def new_deterministic_class(*new_class_args):
                         if k in parents_default:
                             parents[k] = parents_default[k]
                         else:
-                            raise ValueError, 'No value given for parent ' + k
+                            raise ValueError('No value given for parent ' + k)
                 elif k in arg_dict_out.keys():
                     try:
                         arg_dict_out[k] = kwds.pop(k)
@@ -124,7 +124,7 @@ def new_deterministic_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError, 'Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed)
+                raise TypeError('Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
 
             # Call base class initialization method
             if arg_dict_out.pop('debug'):

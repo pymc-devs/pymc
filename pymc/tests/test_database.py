@@ -217,7 +217,7 @@ class TestSqlite(TestPickle):
         return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
 
     def test_yrestore_state(self):
-        raise nose.SkipTest, "Not implemented."
+        raise nose.SkipTest("Not implemented.")
 
 
 class TestHDF5(TestPickle):

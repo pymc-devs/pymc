@@ -9,6 +9,7 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 import os, sys, pdb
 import numpy as np
 import types
+from . import six
 
 
 def logp_of_set(s):
@@ -17,16 +18,15 @@ def logp_of_set(s):
     for obj in s:
         try:
             logp += obj.logp
+        except ZeroProbability:
+            raise
         except:
-            cls, inst, tb = sys.exc_info()
-            if cls is ZeroProbability:
-                raise cls, inst, tb
-            elif exc is None:
-                exc = (cls, inst, tb)
+            if exc is None:
+                exc = sys.exc_info()
     if exc is None:
         return logp
     else:
-        raise exc[0], exc[1], exc[2]
+        six.reraise(*exc)
 
 def logp_gradient_of_set(variable_set, calculation_set = None):
     """
@@ -98,7 +98,7 @@ class Node(object):
         # Name and docstrings
         self.__doc__ = doc
         if not isinstance(name, str):
-            raise ValueError, 'The name argument must be a string, but received %s.'%name
+            raise ValueError('The name argument must be a string, but received %s.'%name)
         self.__name__ = name
 
         # Level of feedback verbosity
@@ -241,7 +241,7 @@ class ContainerMeta(type):
         type.__init__(cls, name, bases, dict)
 
         def change_method(self, *args, **kwargs):
-            raise NotImplementedError, name + ' instances cannot be changed.'
+            raise NotImplementedError(name + ' instances cannot be changed.')
 
         if cls.register:
             ContainerRegistry.append((cls, cls.containing_classes))

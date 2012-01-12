@@ -20,6 +20,8 @@ def enable_special_methods(sma=special_methods_available):
 def check_special_methods(sma=special_methods_available):
     return sma[0]
 
+from . import six
+
 def _extract(__func__, kwds, keys, classname, probe=True):
     """
     Used by decorators stochastic and deterministic to inspect declarations
@@ -85,7 +87,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
             err_str +=  " " + args[i + ('value' in args)]
             if i < arg_deficit-1:
                 err_str += ','
-        raise ValueError, err_str
+        raise ValueError(err_str)
 
     # Fill in parent dictionary
     try:
@@ -303,12 +305,12 @@ def robust_init(stochclass, tries, *args, **kwds):
         try:
             return stochclass(*args, **kwds)
         except ZeroProbability:
-            a,b,c=sys.exc_info()
+            exc = sys.exc_info()
             for parent in random_parents:
                 try:
                     parent.random()
                 except:
-                    raise a,b,c
+                    six.reraise(*exc)
 
-    raise a,b,c
+    six.reraise(*exc)
 

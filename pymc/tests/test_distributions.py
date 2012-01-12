@@ -32,7 +32,7 @@ import numpy as np
 import numpy.random as _npr
 
 from pymc.distributions import *
-from pymc import flib, utils
+from pymc import flib, utils, six
 
 PLOT=True
 DIR = 'testresults'
@@ -53,7 +53,7 @@ except:
 try:
     import pylab as P
 except:
-    print 'Plotting disabled'
+    six.print_('Plotting disabled')
     PLOT = False
 
 
@@ -286,7 +286,7 @@ class test_arlognormal(TestCase):
 
     def test_consistency(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         # 1D case
         a = 1
         rho =.8
@@ -453,7 +453,7 @@ class test_dirichlet(TestCase):
 
     def test_like(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         theta = np.array([2.,3.,5.])
         x = np.array([.4,.2,.4])
         l = flib.dirichlet(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
@@ -546,7 +546,7 @@ class test_exponweib(TestCase):
 
     def test_with_scipy(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         parameters = {'alpha':2, 'k':.3, 'loc':1, 'scale':3}
         r = rexponweib(size=10, **parameters)
         a = exponweib.pdf(r, 2,.3, 1, 3)
@@ -593,7 +593,7 @@ class test_gev(TestCase):
 
     def test_with_scipy(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         x = [1,2,3,4]
         scipy_y = log(genextreme.pdf(x, -.3, 4, 2))
         flib_y = []
@@ -713,7 +713,7 @@ class test_multinomial(TestCase):
 
     def test_consistency(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         p = array([.2,.3,.5])
         n = 10
         x = rmultinomial(n, p, size=5)
@@ -738,7 +738,7 @@ class test_multivariate_hypergeometric(TestCase):
 
     def test_likelihood(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         m = [10,15]
         x = [3,4]
         a = multivariate_hypergeometric_like(x, m)
@@ -937,7 +937,7 @@ class test_truncnorm(TestCase):
 
     def test_against_scipy(self):
         if not SP:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
         mu = 3.
         sigma = 2.
         tau = 1./sigma**2
@@ -1011,7 +1011,7 @@ class test_wishart(TestCase):
         try:
             from scipy.special import gammaln
         except:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
 
         W_test = rwishart(100,self.Tau_test)
 
@@ -1074,7 +1074,7 @@ class test_inverse_wishart(TestCase):
         try:
             from scipy.special import gammaln
         except:
-            raise nose.SkipTest, "SciPy not installed."
+            raise nose.SkipTest("SciPy not installed.")
 
         IW_test = rinverse_wishart(100,self.C_test)
 
