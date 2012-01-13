@@ -6,9 +6,9 @@ __all__ = ['FullRankCovariance']
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 from linalg_utils import dpotrf_wrap
-from Covariance import Covariance
+from .Covariance import Covariance
 from incomplete_chol import ichol, ichol_continue
 
 

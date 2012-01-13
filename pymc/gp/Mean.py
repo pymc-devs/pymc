@@ -3,7 +3,7 @@
 __docformat__='reStructuredText'
 
 from numpy import *
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 
 __all__ = ['Mean','zero_fn']
 

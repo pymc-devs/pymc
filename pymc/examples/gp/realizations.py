@@ -1,6 +1,6 @@
 # Import the mean and covariance
-from mean import M
-from cov import C
+from .mean import M
+from .cov import C
 from pymc.gp import *
 
 # Generate realizations

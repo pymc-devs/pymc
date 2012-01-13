@@ -3,10 +3,10 @@ pymc.NumpyDeterministics
 """
 
 __docformat__='reStructuredText'
-import PyMCObjects as pm
+from . import PyMCObjects as pm
 import numpy as np
 from numpy import sum, ones, zeros, ravel, shape, size, newaxis
-from utils import find_element
+from .utils import find_element
 import inspect
 
 #accumulations 

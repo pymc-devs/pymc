@@ -1,6 +1,6 @@
 import pymc
 from pymc import six
-import simple_von_mises
+from . import simple_von_mises
 
 model=pymc.MCMC(simple_von_mises)
 model.sample(iter=1000, burn=500, thin=2)

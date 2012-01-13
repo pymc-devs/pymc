@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 from pymc import Stochastic
 from copy import copy
-from distributions import *
+from .distributions import *
 
 """
 Wraps a SciPy rv object in a PyMC random variable object.

@@ -14,7 +14,7 @@ We would need to catch MemoryError exceptions though.
 
 import pymc
 from numpy import zeros,shape,concatenate, ndarray,dtype
-import base
+from . import base
 import warnings
 import numpy as np
 

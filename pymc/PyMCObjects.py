@@ -8,14 +8,14 @@ import __builtin__
 from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN, asanyarray
 import numpy as np
 from numpy import shape, size, ravel, zeros, ones, reshape, newaxis, broadcast, ndim, expand_dims 
-from Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
-import Container
-from Container import DictContainer, ContainerBase, file_items, ArrayContainer
+from .Node import Node, ZeroProbability, Variable, PotentialBase, StochasticBase, DeterministicBase
+from . import Container
+from .Container import DictContainer, ContainerBase, file_items, ArrayContainer
 import sys
 import pdb
-import calc_utils
+from . import calc_utils
 
-import datatypes
+from . import datatypes
 
 from . import six
 from .six import print_

@@ -20,7 +20,7 @@ Oct. 1, 2009: Added support for multidimensional arrays.
 """
 
 
-import base, ram
+from . import base, ram
 import os, datetime, shutil, re
 import numpy as np
 from numpy import array

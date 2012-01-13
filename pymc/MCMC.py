@@ -4,17 +4,17 @@ Class MCMC, which fits probability models using Markov Chain Monte Carlo, is def
 
 __all__ = ['MCMC']
 
-from Model import Sampler
-from Node import ZeroProbability
-from StepMethods import StepMethodRegistry, assign_method, DrawFromPrior
-from distributions import absolute_loss, squared_loss, chi_square_loss
+from .Model import Sampler
+from .Node import ZeroProbability
+from .StepMethods import StepMethodRegistry, assign_method, DrawFromPrior
+from .distributions import absolute_loss, squared_loss, chi_square_loss
 import sys, time, pdb
 import numpy as np
-from utils import crawl_dataless
+from .utils import crawl_dataless
 
 from .six import print_
 
-from progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
+from .progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'

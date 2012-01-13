@@ -6,10 +6,10 @@ __all__ = ['NearlyFullRankCovariance']
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 from linalg_utils import diag_call
 from incomplete_chol import ichol_full
-from Covariance import Covariance
+from .Covariance import Covariance
 
 
 class NearlyFullRankCovariance(Covariance):

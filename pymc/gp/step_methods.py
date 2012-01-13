@@ -7,14 +7,14 @@ import linalg_utils
 import copy
 import types
 import numpy as np
-from gp_submodel import *
+from .gp_submodel import *
 import warnings
 from pymc.six import print_
 
-from Realization import Realization
-from Mean import Mean
-from Covariance import Covariance
-from GPutils import observe, regularize_array
+from .Realization import Realization
+from .Mean import Mean
+from .Covariance import Covariance
+from .GPutils import observe, regularize_array
 
 __all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis', 'MeshlessGPMetropolis']
 

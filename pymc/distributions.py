@@ -30,13 +30,13 @@ __docformat__='reStructuredText'
 import flib
 import pymc
 import numpy as np
-from Node import ZeroProbability
-from PyMCObjects import Stochastic, Deterministic
-from CommonDeterministics import Lambda
+from .Node import ZeroProbability
+from .PyMCObjects import Stochastic, Deterministic
+from .CommonDeterministics import Lambda
 from numpy import pi, inf
 import itertools
 import pdb
-import utils
+from . import utils
 import warnings
 
 from pymc.six import print_

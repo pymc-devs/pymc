@@ -1,6 +1,6 @@
 import pymc
 from pymc import six
-import simple
+from . import simple
 from numpy import mean
 
 model=pymc.MCMC(simple)

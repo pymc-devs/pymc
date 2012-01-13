@@ -7,15 +7,15 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
+from .PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
                          ZeroProbability)
 import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from Node import logp_of_set, logp_gradient_of_set
+from .Node import logp_of_set, logp_gradient_of_set
 import types
-from datatypes import * 
+from .datatypes import * 
 from collections import defaultdict
 
 from .six import print_

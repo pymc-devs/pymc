@@ -15,44 +15,44 @@ except ImportError:
     raise ImportError('NumPy does not seem to be installed. Please see the user guide.')
 
 # Core modules
-from threadpool import *
+from .threadpool import *
 import os
 import pymc
 if os.getcwd().find(os.path.abspath(os.path.split(os.path.split(pymc.__file__)[0])[0]))>-1:
     raise ImportError('You seem to be importing PyMC from inside its source tree. Please change to another directory and try again.')
-from Node import *
-from Container import *
-from PyMCObjects import *
-from InstantiationDecorators import *
-from CommonDeterministics import *
-from NumpyDeterministics import *
-from distributions import *
-from Model import *
-from StepMethods import *
-from MCMC import *
-from NormalApproximation import *
+from .Node import *
+from .Container import *
+from .PyMCObjects import *
+from .InstantiationDecorators import *
+from .CommonDeterministics import *
+from .NumpyDeterministics import *
+from .distributions import *
+from .Model import *
+from .StepMethods import *
+from .MCMC import *
+from .NormalApproximation import *
 
 
 
-from tests import test
+from .tests import test
 
 # Utilities modules
-import utils
+from . import utils
 append = utils.append
-import CommonDeterministics
-import NumpyDeterministics
-from CircularStochastic import *
-import distributions
-import gp
+from . import CommonDeterministics
+from . import NumpyDeterministics
+from .CircularStochastic import *
+from . import distributions
+from . import gp
 
 # Optional modules
 try:
-    from diagnostics import *
+    from .diagnostics import *
 except ImportError:
     pass
 
 try:
-    import ScipyDistributions
+    from . import ScipyDistributions
 except ImportError:
     pass
 
@@ -62,17 +62,17 @@ except ImportError:
     pass
 
 try:
-    import sandbox
+    from . import sandbox
 except ImportError:
     pass
 
 try:
-    import graph
+    from . import graph
 except ImportError:
     pass
 
 try:
-    import Matplot
+    from . import Matplot
 except:
     pass
 

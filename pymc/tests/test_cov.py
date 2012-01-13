@@ -3,7 +3,7 @@ from pymc.gp import *
 from pymc.gp.cov_funs import matern
 from numpy import *
 from copy import copy
-from test_mean import x, y
+from .test_mean import x, y
 
 C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
 D = copy(C)

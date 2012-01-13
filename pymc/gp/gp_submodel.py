@@ -7,7 +7,7 @@ __all__ = ['GaussianProcess','GPEvaluation','GPSubmodel']
 import pymc as pm
 import copy
 import numpy as np
-from Realization import Realization
+from .Realization import Realization
 
 
 __all__ = ['GaussianProcess', 'GPEvaluation', 'GPSubmodel']

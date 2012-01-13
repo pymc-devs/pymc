@@ -11,13 +11,13 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 __all__ = ['NormApproxMu', 'NormApproxC', 'MAP', 'NormApprox']
 
-from PyMCObjects import Stochastic, Potential
-from Node import ZeroProbability
-from Model import Model, Sampler
+from .PyMCObjects import Stochastic, Potential
+from .Node import ZeroProbability
+from .Model import Model, Sampler
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type, round_array, logp_of_set
+from .utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
 from .six import print_

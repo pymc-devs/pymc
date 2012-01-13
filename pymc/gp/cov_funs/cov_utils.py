@@ -1,7 +1,7 @@
 # Copyright (c) Anand Patil, 2007
 
 import numpy as np
-import wrapped_distances
+from . import wrapped_distances
 import inspect
 import imp
 import pickle

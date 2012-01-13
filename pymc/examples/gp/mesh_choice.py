@@ -1,4 +1,4 @@
-import PyMCmodel
+from . import PyMCmodel
 import pymc as pm
 from pymc import six
 import numpy as np

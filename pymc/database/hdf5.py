@@ -577,7 +577,7 @@ def save_sampler(sampler):
     """
     db = sampler.db
     fnode = tables.filenode.newnode(db._h5file, where='/', name='__sampler__')
-    import pickle
+    from . import pickle
     pickle.dump(sampler, fnode)
 
 
@@ -587,7 +587,7 @@ def restore_sampler(fname):
     """
     hf = tables.openFile(fname)
     fnode = hf.root.__sampler__
-    import pickle
+    from . import pickle
     sampler = pickle.load(fnode)
     return sampler
 

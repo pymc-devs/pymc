@@ -23,7 +23,7 @@ from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asa
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique
-from utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
+from .utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
 import pdb
 try:
     from scipy import special
@@ -1144,7 +1144,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
 
-        from diagnostics import gelman_rubin
+        from .diagnostics import gelman_rubin
         
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])

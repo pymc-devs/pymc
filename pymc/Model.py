@@ -14,16 +14,16 @@ __all__ = ['Model', 'Sampler']
 from numpy import zeros, floor
 from numpy.random import randint
 from pymc import database
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
-from Container import Container, ObjectContainer
+from .PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
+from .Container import Container, ObjectContainer
 import sys,os
 from copy import copy
 from threading import Thread
 import thread
-from Node import ContainerBase
+from .Node import ContainerBase
 from time import sleep
 import pdb
-import utils
+from . import utils
 import warnings, exceptions, traceback
 
 from .six import print_, reraise

@@ -10,14 +10,14 @@ equivalent functionality.
 
 __docformat__='reStructuredText'
 
-import PyMCObjects as pm
-from Node import Variable
-from Container import Container
-from InstantiationDecorators import deterministic, check_special_methods
+from . import PyMCObjects as pm
+from .Node import Variable
+from .Container import Container
+from .InstantiationDecorators import deterministic, check_special_methods
 import numpy as np
 from numpy import sum, shape,size, ravel, sign, zeros, ones, broadcast, newaxis
 import inspect, types
-from utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value, find_element
+from .utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value, find_element
 from types import UnboundMethodType
 from copy import copy
 import sys

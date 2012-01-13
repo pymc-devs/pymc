@@ -7,9 +7,9 @@ __all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', '
 
 import sys, inspect, pdb
 from imp import load_dynamic
-from PyMCObjects import Stochastic, Deterministic, Potential
-from Node import ZeroProbability, ContainerBase, Node, StochasticMeta
-from Container import Container
+from .PyMCObjects import Stochastic, Deterministic, Potential
+from .Node import ZeroProbability, ContainerBase, Node, StochasticMeta
+from .Container import Container
 import numpy as np
 
 special_methods_available = [True]

@@ -1,10 +1,10 @@
-from PyMCObjects import Stochastic
-from Container import Container
-from InstantiationDecorators import stochastic
+from .PyMCObjects import Stochastic
+from .Container import Container
+from .InstantiationDecorators import stochastic
 from flib import mod_to_circle
-from distributions import rvon_mises, von_mises_like
+from .distributions import rvon_mises, von_mises_like
 import numpy as np
-from distributions import valuewrapper
+from .distributions import valuewrapper
 
 __all__ = ['CircularStochastic', 'CircVonMises']
 

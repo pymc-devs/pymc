@@ -1,20 +1,20 @@
 from __future__ import division
 
 import numpy as np
-from utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize, logp_gradient_of_set
+from .utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize, logp_gradient_of_set
 from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri, pi
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from numpy.random import poisson as rpoisson
-from PyMCObjects import Stochastic, Potential, Deterministic
-from Container import Container
-from Node import ZeroProbability, Node, Variable, StochasticBase
+from .PyMCObjects import Stochastic, Potential, Deterministic
+from .Container import Container
+from .Node import ZeroProbability, Node, Variable, StochasticBase
 from pymc.decorators import prop
-import distributions
+from . import distributions
 from copy import copy
-from InstantiationDecorators import deterministic
+from .InstantiationDecorators import deterministic
 import pdb, warnings, sys
 import inspect
 

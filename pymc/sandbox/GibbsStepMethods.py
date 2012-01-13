@@ -39,7 +39,7 @@ __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma',
 
 # Wrapped in try block bc NormalSubmodel requires cvxopt.
 try:
-    from NormalSubmodel import NormalSubmodel, crawl_normal_submodel, normal_classes
+    from .NormalSubmodel import NormalSubmodel, crawl_normal_submodel, normal_classes
 
     __all__.append('NormalNormal')
 

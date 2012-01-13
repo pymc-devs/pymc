@@ -351,7 +351,7 @@ class test_gradients(TestCase):
     
         
     def test_model(self):
-        import model1
+        from . import model1
 
         model = model1.model()
         model[0].value = 55.0

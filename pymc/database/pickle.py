@@ -10,7 +10,7 @@ versions. Users should use this backend only for shortlived projects.
 
 """
 
-import ram, no_trace, base
+from . import ram, no_trace, base
 import os, datetime, numpy
 import string, cPickle
 

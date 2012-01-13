@@ -35,7 +35,7 @@ following sets: stochastics, deterministics, variables, nodes, containers, data,
 These flattened representations are useful for things like cache checking.
 """
 
-from Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
+from .Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
 from pymc.Container_values import LCValue, DCValue, ACValue, OCValue
