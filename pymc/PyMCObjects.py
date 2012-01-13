@@ -235,8 +235,11 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, logp_partial_gradients = {}):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, logp_partial_gradients=None):
 
+        if logp_partial_gradients is None:
+            logp_partial_gradients = {}
+            
         self.ParentDict = ParentDict
 
         # This function gets used to evaluate self's value.
@@ -378,7 +381,12 @@ class Deterministic(DeterministicBase):
     """
     __array_priority__ =1000
 
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians = {}, jacobian_formats = {}):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians=None, jacobian_formats=None):
+        if jacobians is None:
+            jacobians = {}
+        if jacobian_formats is None:
+            jacobian_formats = {}
+            
         self.ParentDict = ParentDict
 
         
@@ -595,14 +603,14 @@ class Stochastic(StochasticBase):
 
     :SeeAlso: Deterministic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    __array_priority__ =1000
+    __array_priority__ = 1000
 
     def __init__(   self,
                     logp,
                     doc,
                     name,
                     parents,
-                    random = None,
+                    random=None,
                     trace=True,
                     value=None,
                     dtype=None,
@@ -610,11 +618,14 @@ class Stochastic(StochasticBase):
                     observed=False,
                     cache_depth=2,
                     plot=None,
-                    verbose = None,
+                    verbose=None,
                     isdata=None, 
                     check_logp=True,
-                    logp_partial_gradients = {}):
+                    logp_partial_gradients=None):
 
+        if logp_partial_gradients is None:
+            logp_partial_gradients = {}
+            
         self.counter = Counter()
         self.ParentDict = ParentDict
         
