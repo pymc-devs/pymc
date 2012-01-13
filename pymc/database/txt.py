@@ -26,7 +26,8 @@ import numpy as np
 from numpy import array
 import string
 
-from ..six import print_
+from pymc import six
+from pymc.six import print_
 
 
 __all__ = ['Trace', 'Database', 'load']
@@ -154,7 +155,7 @@ def load(dirname):
 
 
     # Create the Traces.
-    for name, values in data.iteritems():
+    for name, values in six.iteritems(data):
         db._traces[name] = Trace(name=name, value=values, db=db)
         setattr(db, name, db._traces[name])
 

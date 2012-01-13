@@ -30,6 +30,7 @@ try:
 except ImportError:
     special = None
 
+from . import six
 from .six import print_
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior', 'summary_plot']
@@ -1131,7 +1132,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         ticks.tick1On = False
         ticks.tick2On = False
     
-    for loc, spine in interval_plot.spines.iteritems():
+    for loc, spine in six.iteritems(interval_plot.spines):
         if loc in ['bottom','top']:
             pass
             #spine.set_position(('outward',10)) # outward by 10 points
@@ -1198,7 +1199,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             ticks.tick1On = False
             ticks.tick2On = False
         
-        for loc, spine in rhat_plot.spines.iteritems():
+        for loc, spine in six.iteritems(rhat_plot.spines):
             if loc in ['bottom','top']:
                 pass
                 #spine.set_position(('outward',10)) # outward by 10 points

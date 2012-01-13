@@ -278,7 +278,7 @@ class Potential(PotentialBase):
         self._logp.force_compute()
 
         self._logp_partial_gradients= {}
-        for parameter, function in self._logp_partial_gradients_functions.iteritems():
+        for parameter, function in six.iteritems(self._logp_partial_gradients_functions):
             lazy_logp_partial_gradients = LazyFunction(fun = function,
                                             arguments = self.parents,
                                             ultimate_args = self.extended_parents,
@@ -322,7 +322,7 @@ class Potential(PotentialBase):
             if not datatypes.is_continuous(variable):
                 return zeros(shape(variable.value))
             
-            for parameter, value in self.parents.iteritems():
+            for parameter, value in six.iteritems(self.parents):
 
                 if value is variable:
                     try :
@@ -418,7 +418,7 @@ class Deterministic(DeterministicBase):
         self._value.force_compute()
 
         self._jacobians = {}
-        for parameter, function in self._jacobian_functions.iteritems():
+        for parameter, function in six.iteritems(self._jacobian_functions):
             lazy_jacobian = LazyFunction(fun = function,
                                             arguments = self.parents,
                                             ultimate_args = self.extended_parents,
@@ -472,7 +472,7 @@ class Deterministic(DeterministicBase):
         gradient = builtins.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children ])
 
         totalGradient = 0
-        for parameter, value in self.parents.iteritems():
+        for parameter, value in six.iteritems(self.parents):
             if value is variable:
                     
                 totalGradient += self.apply_jacobian(parameter, variable, gradient )
@@ -738,7 +738,7 @@ class Stochastic(StochasticBase):
 
         
         self._logp_partial_gradients = {}
-        for parameter, function in self._logp_partial_gradient_functions.iteritems():
+        for parameter, function in six.iteritems(self._logp_partial_gradient_functions):
             lazy_logp_partial_gradient = LazyFunction(fun = function,
                                             arguments = arguments,
                                             ultimate_args = self.extended_parents | set([self]),
@@ -877,7 +877,7 @@ class Stochastic(StochasticBase):
                 
                 gradient = np.reshape(gradient_func.get(), np.shape(variable.value))
             else:
-                gradient = builtins.sum([self._pgradient(variable, parameter, value) for parameter, value in self.parents.iteritems()])
+                gradient = builtins.sum([self._pgradient(variable, parameter, value) for parameter, value in six.iteritems(self.parents)])
         
             return gradient
         else:

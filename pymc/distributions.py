@@ -39,6 +39,7 @@ import pdb
 from . import utils
 import warnings
 
+from pymc import six
 from pymc.six import print_
 
 def poiscdf(a, x):
@@ -337,7 +338,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     wrapped_logp_partial_gradients = {}
 
-    for parameter, func in logp_partial_gradients.iteritems():
+    for parameter, func in six.iteritems(logp_partial_gradients):
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
     
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
@@ -2973,7 +2974,7 @@ Decorate the likelihoods
 
 snapshot = locals().copy()
 likelihoods = {}
-for name, obj in snapshot.iteritems():
+for name, obj in six.iteritems(snapshot):
     if name[-5:] == '_like' and name[:-5] in availabledistributions:
         likelihoods[name[:-5]] = snapshot[name]
 
@@ -2982,7 +2983,7 @@ def local_decorated_likelihoods(obj):
     New interface likelihoods
     """
 
-    for name, like in likelihoods.iteritems():
+    for name, like in six.iteritems(likelihoods):
         obj[name+'_like'] = gofwrapper(like, snapshot)
 
 
@@ -3296,7 +3297,7 @@ def Impute(name, dist_class, imputable, **parents):
         # Dictionary to hold parents
         these_parents = {}
         # Parse parents
-        for key, parent in parents.iteritems():
+        for key, parent in six.iteritems(parents):
 
             try:
                 # If parent is a PyMCObject

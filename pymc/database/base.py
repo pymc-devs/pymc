@@ -52,7 +52,8 @@ import sys, traceback, warnings
 import copy
 __all__=['Trace', 'Database']
 
-from ..six import print_
+from pymc import six
+from pymc.six import print_
 
 class Trace(object):
     """Base class for Trace objects.
@@ -227,7 +228,7 @@ class Database(object):
           to preallocate memory.
         """
 
-        for name, fun in funs_to_tally.iteritems():
+        for name, fun in six.iteritems(funs_to_tally):
             if not self._traces.has_key(name):
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
@@ -289,7 +290,7 @@ Error:
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
             names = set(reduce(list.__add__, self.trace_names, []))
-            for name, fun in model._funs_to_tally.iteritems():
+            for name, fun in six.iteritems(model._funs_to_tally):
                 if self._traces.has_key(name):
                     self._traces[name]._getfunc = fun
                     names.discard(name)
@@ -299,7 +300,7 @@ Error:
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
         else:
-            for name, fun in model._funs_to_tally.iteritems():
+            for name, fun in six.iteritems(model._funs_to_tally):
                 if not self._traces.has_key(name):
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 

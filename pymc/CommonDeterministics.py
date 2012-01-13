@@ -457,11 +457,11 @@ def pfunc(func):
 
     def dtrm_generator(*args, **kwds):
         name = func.__name__ + '('+'_'.join([str(arg) for arg in list(args) + kwds.values()])+')'
-        doc_str = 'A deterministic returning %s(%s, %s)'%(func.__name__, ', '.join([str(arg) for arg in args]), ', '.join(['%s=%s'%(key, str(val)) for key, val in kwds.iteritems()]))
+        doc_str = 'A deterministic returning %s(%s, %s)'%(func.__name__, ', '.join([str(arg) for arg in args]), ', '.join(['%s=%s'%(key, str(val)) for key, val in six.iteritems(kwds)]))
 
         parents = {}
         varargs = []
-        for kwd, val in kwds.iteritems():
+        for kwd, val in six.iteritems(kwds):
             parents[kwd] = val
         for i in xrange(len(args)):
             if i < n_fargs:

@@ -42,11 +42,13 @@ from pymc.Container_values import LCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 import pdb
 
+from pymc import six
+
 __all__ = ['Container', 'DictContainer', 'TupleContainer', 'ListContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
 
 def filter_dict(obj):
     filtered_dict = {}
-    for item in obj.__dict__.iteritems():
+    for item in six.iteritems(obj.__dict__):
         if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
@@ -459,7 +461,7 @@ class DictContainer(ContainerBase, dict):
         self.nonval_keys = []
         self.nonval_obj = []
         self._value = {}
-        for key, obj in self.iteritems():
+        for key, obj in six.iteritems(self):
             if isinstance(obj, Variable) or isinstance(obj, ContainerBase):
                 self.val_keys.append(key)
                 self.val_obj.append(obj)

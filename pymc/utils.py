@@ -18,6 +18,7 @@ import types
 from .datatypes import * 
 from collections import defaultdict
 
+from . import six
 from .six import print_
 
 from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
@@ -514,7 +515,7 @@ def draw_random(obj, **kwds):
     R.next()
     """
     while True:
-        for k,v in kwds.iteritems():
+        for k,v in six.iteritems(kwds):
             obj.parents[k] = v.next()
         yield obj.random()
 
