@@ -19,7 +19,6 @@ from .Container import Container, ObjectContainer
 import sys,os
 from copy import copy
 from threading import Thread
-import thread
 from .Node import ContainerBase
 from time import sleep
 import pdb

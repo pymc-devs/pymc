@@ -12,7 +12,12 @@ versions. Users should use this backend only for shortlived projects.
 
 from . import ram, no_trace, base
 import os, datetime, numpy
-import string, cPickle
+import string
+
+try:
+    import cPickle as std_pickle
+except ImportError:
+    import pickle as std_pickle   # In Python 3, cPickle is folded into pickle
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -55,7 +60,7 @@ class Database(base.Database):
             container['_state_'] = self._state_
 
             file = open(self.filename, 'w')
-            cPickle.dump(container, file)
+            std_pickle.dump(container, file)
             file.close()
         except AttributeError:
             pass
@@ -67,7 +72,7 @@ def load(filename):
     Return a Database instance.
     """
     file = open(filename, 'r')
-    container = cPickle.load(file)
+    container = std_pickle.load(file)
     file.close()
     db = Database(file.name)
     chains = 0

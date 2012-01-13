@@ -21,7 +21,11 @@ from .utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, val
 from types import UnboundMethodType
 from copy import copy
 import sys
-import operator, __builtin__
+import operator
+try:
+    import builtins    # Python 3
+except ImportError:
+    import __builtin__ as builtins  # Python 2
 
 from . import six
 
@@ -494,7 +498,7 @@ def create_uni_method(op_name, klass, jacobians = None):
     for target class. The method is called __op_name__.
     """
     # This function will become the actual method.
-    op_modules = [operator, __builtin__]
+    op_modules = [operator, builtins]
     op_names = [ op_name, op_name + '_']
 
     op_function_base = find_element( op_names,op_modules, error_on_fail = True)
@@ -549,7 +553,7 @@ def create_rl_bin_method(op_name, klass,  jacobians = {}):
     # Make left and right versions.
     for prefix in ['r','']:
         # This function will became the methods.
-        op_modules = [operator, __builtin__]
+        op_modules = [operator, builtins]
         op_names = [ op_name, op_name + '_']
 
         op_function_base = find_element( op_names, op_modules, error_on_fail = True)

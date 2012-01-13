@@ -55,7 +55,10 @@ __license__ = 'MIT license'
 # standard library modules
 import sys
 import threading
-import Queue
+try:
+    import queue    # Python 3
+except ImportError:
+    import Queue as queue # Python 2
 import traceback
 import os
 import numpy as np
@@ -266,8 +269,8 @@ class ThreadPool:
             To prevent this, always set ``timeout > 0`` when calling
             ``ThreadPool.putRequest()`` and catch ``Queue.Full`` exceptions.
         """
-        self._requests_queue = Queue.Queue(q_size)
-        # self._results_queue = Queue.Queue(resq_size)
+        self._requests_queue = queue.Queue(q_size)
+        # self._results_queue = queue.Queue(resq_size)
         self.workers = []
         self.workRequests = {}
         self.createWorkers(num_workers)

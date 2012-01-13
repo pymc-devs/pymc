@@ -4,7 +4,10 @@ __all__ = ['extend_children', 'extend_parents', 'ParentDict', 'Stochastic', 'Det
 
 
 from copy import copy
-import __builtin__
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
 from numpy import array, ndarray, reshape, Inf, asarray, dot, sum, float, isnan, size, NaN, asanyarray
 import numpy as np
 from numpy import shape, size, ravel, zeros, ones, reshape, newaxis, broadcast, ndim, expand_dims 
@@ -466,7 +469,7 @@ class Deterministic(DeterministicBase):
                 return zeros(shape(variable.value))
 
         # loop through all the parameters and add up all the gradients of log p with respect to the approrpiate variable
-        gradient = __builtin__.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children ])
+        gradient = builtins.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children ])
 
         totalGradient = 0
         for parameter, value in self.parents.iteritems():
@@ -852,7 +855,7 @@ class Stochastic(StochasticBase):
         """
         #NEED some sort of check to see if the log p calculation has recently failed, in which case not to continue
             
-        return self.logp_partial_gradient(self, calculation_set) + __builtin__.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children] )
+        return self.logp_partial_gradient(self, calculation_set) + builtins.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children] )
 
 
     def logp_partial_gradient(self, variable, calculation_set = None):
@@ -874,7 +877,7 @@ class Stochastic(StochasticBase):
                 
                 gradient = np.reshape(gradient_func.get(), np.shape(variable.value))
             else:
-                gradient = __builtin__.sum([self._pgradient(variable, parameter, value) for parameter, value in self.parents.iteritems()])
+                gradient = builtins.sum([self._pgradient(variable, parameter, value) for parameter, value in self.parents.iteritems()])
         
             return gradient
         else:
