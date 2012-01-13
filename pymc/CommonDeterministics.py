@@ -18,7 +18,6 @@ import numpy as np
 from numpy import sum, shape,size, ravel, sign, zeros, ones, broadcast, newaxis
 import inspect, types
 from .utils import safe_len, stukel_logit, stukel_invlogit, logit, invlogit, value, find_element
-from types import UnboundMethodType
 from copy import copy
 import sys
 import operator
@@ -26,6 +25,12 @@ try:
     import builtins    # Python 3
 except ImportError:
     import __builtin__ as builtins  # Python 2
+try:
+    from types import UnboundMethodType
+except ImportError:
+    # On Python 3, unbound methods are just functions.
+    def UnboundMethodType(func, inst, cls):
+        return func
 
 from . import six
 
@@ -678,8 +683,13 @@ pow_jacobians = {'a' : lambda a, b: b * a**(b - 1.0),
                 'b' : lambda a, b: np.log(a) * a**b}  
 
 
-for op in ['div', 'truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
+for op in ['truediv', 'floordiv', 'mod', 'divmod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or']:
     create_rl_bin_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
+
+try:
+    create_rl_bin_method('div', Variable, jacobians = op_to_jacobians('div', locals()))
+except NameError:
+    pass    # Python 3 has only truediv and floordiv
 
 # Binary operators eq not part of this set because it messes up having stochastics in lists 
 for op in ['lt', 'le', 'ne', 'gt', 'ge']:
@@ -705,8 +715,13 @@ for op in ['neg','abs','invert']: # no need for pos and __index__ seems to cause
     create_uni_method(op, Variable, jacobians = op_to_jacobians(op, locals()))
 
 # Casting operators
-for op in [iter,complex,int,long,float,oct,hex]:
+for op in [iter,complex,int,float,oct,hex]:
     create_casting_method(op, Variable)
+
+try:
+    create_casting_method(long, Variable)
+except NameError:
+    pass    # No long in Python 3
 
 # Addition, subtraction, multiplication
 # TODO: Uncomment once LinearCombination issues are ironed out.

@@ -1,7 +1,7 @@
 from .PyMCObjects import Stochastic
 from .Container import Container
 from .InstantiationDecorators import stochastic
-from flib import mod_to_circle
+from .flib import mod_to_circle
 from .distributions import rvon_mises, von_mises_like
 import numpy as np
 from .distributions import valuewrapper

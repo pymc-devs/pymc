@@ -27,7 +27,7 @@ with a distribution called 'dist' are:
 
 __docformat__='reStructuredText'
 
-import flib
+from . import flib
 import pymc
 import numpy as np
 from .Node import ZeroProbability

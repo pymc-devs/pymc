@@ -9,7 +9,7 @@ import sys, inspect, select, os,  time
 from copy import copy
 from .PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
                          ZeroProbability)
-import flib
+from . import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
@@ -91,7 +91,7 @@ def round_array(array_in):
         return int(np.round(array_in))
 
 try:
-    from flib import dchdc_wrap
+    from .flib import dchdc_wrap
     def msqrt(C):
         """
         U=incomplete_chol(C)

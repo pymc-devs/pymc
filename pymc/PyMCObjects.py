@@ -26,7 +26,7 @@ from .six import print_
 d_neg_inf = float(-1.7976931348623157e+308)
 
 # from PyrexLazyFunction import LazyFunction
-from LazyFunction import LazyFunction, Counter
+from .LazyFunction import LazyFunction, Counter
 
 def extend_children(children):
     """

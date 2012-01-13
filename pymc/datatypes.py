@@ -5,10 +5,14 @@ from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
 from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
-integer_dtypes = [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
-float_dtypes = [float, single, float_, longfloat]
-complex_dtypes = [complex, csingle, complex_, clongfloat]
-bool_dtypes = [bool, bool_]
+integer_dtypes = set([int, uint, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp])
+try:
+    integer_dtypes.add(long)
+except NameError:
+    pass       # long is just int for Python 3
+float_dtypes = set([float, single, float_, longfloat])
+complex_dtypes = set([complex, csingle, complex_, clongfloat])
+bool_dtypes = set([bool, bool_])
 
 def check_type(stochastic):
     """
