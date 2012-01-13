@@ -147,6 +147,7 @@ def new_dist_class(*new_class_args):
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
 
     class new_class(Stochastic):
+        __doc__ = docstr
 
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
@@ -155,7 +156,7 @@ def new_dist_class(*new_class_args):
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
             arg_vals = [None, parents, None, False, None, True, True, None, False, None, None]
-            if kwds.has_key('isdata'):
+            if 'isdata' in kwds:
                 warnings.warn('"isdata" is deprecated, please use "observed" instead.')
                 kwds['observed'] = kwds['isdata']
                 pass
@@ -275,7 +276,6 @@ def new_dist_class(*new_class_args):
     new_class.parent_names = parent_names
     new_class.parents_default = parents_default
     new_class.dtype = dtype
-    new_class.__doc__ = docstr
     new_class.mv = mv
     new_class.raw_fns = {'logp': logp, 'random': random}
 
