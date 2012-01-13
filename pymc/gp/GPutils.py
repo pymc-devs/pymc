@@ -10,7 +10,7 @@ __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', '
 from numpy import *
 from numpy.linalg import solve, cholesky, eigh
 from numpy.linalg.linalg import LinAlgError
-from linalg_utils import *
+from .linalg_utils import *
 from threading import Thread, Lock
 import sys
 from pymc import thread_partition_array, map_noreturn

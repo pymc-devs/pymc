@@ -1,4 +1,4 @@
-import isotropic_cov_funs
+from . import isotropic_cov_funs
 import numpy as np
 
 

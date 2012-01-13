@@ -11,7 +11,7 @@ from .Covariance import Covariance
 from .BasisCovariance import BasisCovariance
 from .Mean import Mean
 from .GPutils import observe, trisolve, regularize_array, caching_call
-from linalg_utils import check_repeats, remove_duplicates
+from .linalg_utils import check_repeats, remove_duplicates
 import copy
 
 

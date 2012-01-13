@@ -3,7 +3,7 @@
 __docformat__ = 'reStructuredText'
 
 import pymc as pm
-import linalg_utils
+from . import linalg_utils
 import copy
 import types
 import numpy as np

@@ -1,8 +1,8 @@
-from isotropic_cov_funs import *
+from .isotropic_cov_funs import *
 from .cov_utils import *
 from .bases import *
 from .wrapped_distances import *
-import isotropic_cov_funs
+from . import isotropic_cov_funs
 from .brownian import *
 from .nsmatern import *
 

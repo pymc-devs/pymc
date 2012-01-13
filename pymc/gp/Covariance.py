@@ -7,8 +7,8 @@ __all__ = ['Covariance']
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
 from .GPutils import regularize_array, trisolve, square_and_sum
-from linalg_utils import diag_call, dpotrf_wrap
-from incomplete_chol import ichol, ichol_continue
+from .linalg_utils import diag_call, dpotrf_wrap
+from .incomplete_chol import ichol, ichol_continue
 
 class Covariance(object):
 

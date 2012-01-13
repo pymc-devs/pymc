@@ -5,7 +5,7 @@ from . import wrapped_distances
 import inspect
 import imp
 import pickle
-from isotropic_cov_funs import symmetrize, imul
+from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 import sys,os
 from pymc import get_threadpool_size, map_noreturn
