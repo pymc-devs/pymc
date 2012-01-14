@@ -34,9 +34,9 @@ import numpy as np
 from numpy import zeros, shape, squeeze, transpose
 import sqlite3
 from sqlite3 import OperationalError
-import base, pickle, ram, pymc
-import pdb,os, warnings
-from pymc.database import base
+import pymc
+from pymc.database import base, pickle, ram
+import pdb, os, warnings
 
 __all__ = ['Trace', 'Database', 'load']
 

@@ -7,9 +7,9 @@ __all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', '
 
 import sys, inspect, pdb
 from imp import load_dynamic
-from PyMCObjects import Stochastic, Deterministic, Potential
-from Node import ZeroProbability, ContainerBase, Node, StochasticMeta
-from Container import Container
+from .PyMCObjects import Stochastic, Deterministic, Potential
+from .Node import ZeroProbability, ContainerBase, Node, StochasticMeta
+from .Container import Container
 import numpy as np
 
 special_methods_available = [True]
@@ -20,6 +20,8 @@ def enable_special_methods(sma=special_methods_available):
 def check_special_methods(sma=special_methods_available):
     return sma[0]
 
+from . import six
+
 def _extract(__func__, kwds, keys, classname, probe=True):
     """
     Used by decorators stochastic and deterministic to inspect declarations
@@ -27,7 +29,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
 
     # Add docs and name
     kwds['doc'] = __func__.__doc__
-    if not kwds.has_key('name'):
+    if not 'name' in kwds:
         kwds['name'] = __func__.__name__
     # kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
 
@@ -63,7 +65,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
             enable_special_methods()
 
     for key in keys:
-        if not kwds.has_key(key):
+        if not key in kwds:
             kwds[key] = None
 
     for key in ['logp', 'eval']:
@@ -85,7 +87,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
             err_str +=  " " + args[i + ('value' in args)]
             if i < arg_deficit-1:
                 err_str += ','
-        raise ValueError, err_str
+        raise ValueError(err_str)
 
     # Fill in parent dictionary
     try:
@@ -93,10 +95,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
     except TypeError:
         pass
 
-    if parents.has_key('value'):
-        value = parents.pop('value')
-    else:
-        value = None
+    value = parents.pop('value', None)
 
     return (value, parents)
 
@@ -303,12 +302,12 @@ def robust_init(stochclass, tries, *args, **kwds):
         try:
             return stochclass(*args, **kwds)
         except ZeroProbability:
-            a,b,c=sys.exc_info()
+            exc = sys.exc_info()
             for parent in random_parents:
                 try:
                     parent.random()
                 except:
-                    raise a,b,c
+                    six.reraise(*exc)
 
-    raise a,b,c
+    six.reraise(*exc)
 

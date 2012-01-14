@@ -92,7 +92,7 @@ class test_instantiation(TestCase):
         except TypeError:
             pass
         else:
-            raise AssertionError, 'Instantiation should fail.'
+            raise AssertionError('Instantiation should fail.')
 
 
 class test_out_of_bound_initialization(TestCase):

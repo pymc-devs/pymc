@@ -3,6 +3,9 @@ from numpy import arange, ones, eye, sum, zeros, exp, concatenate
 from numpy.random import normal
 from pymc import normal_like,  uniform_like, JointMetropolis, DiscreteMetropolis
 
+from pymc import six
+xrange = six.moves.xrange
+
 # Generate data
 K_true = 5
 T=20

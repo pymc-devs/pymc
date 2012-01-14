@@ -14,11 +14,13 @@ __all__ = ['BasisCovariance', 'SeparableBasisCovariance']
 
 from numpy import *
 from numpy.linalg import eigh, solve, cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
-from linalg_utils import basis_diag_call
-from incomplete_chol import ichol_basis, ichol_full
-from Covariance import Covariance
+from .GPutils import regularize_array, trisolve
+from .linalg_utils import basis_diag_call
+from .incomplete_chol import ichol_basis, ichol_full
+from .Covariance import Covariance
 
+from pymc import six
+xrange = six.moves.xrange
 
 class BasisCovariance(Covariance):
 
@@ -74,7 +76,7 @@ class BasisCovariance(Covariance):
         elif coef_cov.shape == self.shape*2:
             self.coef_cov = asmatrix(coef_cov.reshape((self.n, self.n)))
         else:
-            raise ValueError, "Covariance tensor's shape must be basis.shape or basis.shape*2 (using tuple multiplication)."
+            raise ValueError("Covariance tensor's shape must be basis.shape or basis.shape*2 (using tuple multiplication).")
 
         # Cholesky factor the covariance matrix of the coefficients.
         U, m, piv = ichol_full(c=self.coef_cov, reltol=relative_precision)
@@ -191,7 +193,7 @@ class BasisCovariance(Covariance):
 
         if self.ndim is not None:
             if not ndim==self.ndim:
-                raise ValueError, "Dimension of observation mesh is not equal to dimension of base mesh."
+                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 
@@ -241,7 +243,7 @@ class BasisCovariance(Covariance):
         if output_type=='s':
             return U_eval, C_eval, basis_o
             
-        raise ValueError, 'Output type not recognized.'
+        raise ValueError('Output type not recognized.')
 
 
     def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
@@ -266,7 +268,7 @@ class BasisCovariance(Covariance):
         # Safety.
         if self.ndim is not None:
             if not self.ndim == ndimx:
-                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Covariance instance's base mesh."
+                raise ValueError("The number of spatial dimensions of x does not match the number of spatial dimensions of the Covariance instance's base mesh.")
 
         # Evaluate the Cholesky factor of self's evaluation on x.
         # Will be observed or not depending on which version of coef_U
@@ -309,7 +311,7 @@ class BasisCovariance(Covariance):
             leny = y.shape[0]
 
             if not ndimx==ndimy:
-                raise ValueError, 'The last dimension of x and y (the number of spatial dimensions) must be the same.'
+                raise ValueError('The last dimension of x and y (the number of spatial dimensions) must be the same.')
 
             # Evaluate the Cholesky factor of self's evaluation on y.
             # Will be observed or not depending on which version of coef_U

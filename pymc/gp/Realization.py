@@ -7,11 +7,11 @@ __all__ = ['Realization', 'StandardRealization', 'BasisRealization']
 from numpy import *
 from numpy.random import normal
 from numpy.linalg import cholesky, eigh, solve
-from Covariance import Covariance
-from BasisCovariance import BasisCovariance
-from Mean import Mean
-from GPutils import observe, trisolve, regularize_array, caching_call
-from linalg_utils import check_repeats, remove_duplicates
+from .Covariance import Covariance
+from .BasisCovariance import BasisCovariance
+from .Mean import Mean
+from .GPutils import observe, trisolve, regularize_array, caching_call
+from .linalg_utils import check_repeats, remove_duplicates
 import copy
 
 
@@ -144,7 +144,7 @@ class StandardRealization(object):
 
         if regularize:
             if any(isnan(x)):
-                raise ValueError, 'Input argument to Realization contains NaNs.'
+                raise ValueError('Input argument to Realization contains NaNs.')
             x = regularize_array(x)
 
         if x is self.x_sofar:

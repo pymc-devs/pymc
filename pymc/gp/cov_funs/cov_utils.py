@@ -1,15 +1,19 @@
 # Copyright (c) Anand Patil, 2007
 
 import numpy as np
-import wrapped_distances
+from . import wrapped_distances
 import inspect
 import imp
 import pickle
-from isotropic_cov_funs import symmetrize, imul
+from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 import sys,os
 from pymc import get_threadpool_size, map_noreturn
 import pymc
+
+from pymc import six
+xrange = six.moves.xrange
+
 mod_search_path = [pymc.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
 
 
@@ -44,19 +48,20 @@ def regularize_array(A):
     else:
         return A
 
-def import_nested_module(name):
+def import_item(name):
     """
     Useful for importing nested modules such as pymc.gp.cov_funs.isotropic_cov_funs.
+    
+    Updated with code copied from IPython under a BSD license.
     """
-    tree = name.split('.')
-    root = tree[0]
-    submods = tree[1:]
-    mod = imp.load_module(root, *imp.find_module(root, mod_search_path))
-
-    for name in submods:
-        mod = getattr(mod,name)
-
-    return mod
+    package = '.'.join(name.split('.')[0:-1])
+    obj = name.split('.')[-1]
+    
+    if package:
+        module = __import__(package,fromlist=[obj])
+        return module.__dict__[obj]
+    else:
+        return __import__(obj)
 
 
 class covariance_wrapper(object):
@@ -83,36 +88,42 @@ class covariance_wrapper(object):
         self.cov_fun_name = cov_fun_name
         self.distance_fun_name = distance_fun_name
 
-        cov_fun_module = import_nested_module(cov_fun_module)
-        cov_fun = getattr(cov_fun_module, cov_fun_name)
+        try:
+            cov_fun = import_item(cov_fun_module + "." + cov_fun_name)
+        except ImportError:
+            cov_fun_module = 'pymc.gp.cov_funs.' + cov_fun_module
+            cov_fun = import_item(cov_fun_module + "." + cov_fun_name)
 
-        distance_fun_module = import_nested_module(distance_fun_module)
-        distance_fun = getattr(distance_fun_module, distance_fun_name)
+        try:
+            distance_fun = import_item(distance_fun_module+"."+distance_fun_name)
+        except ImportError:
+            distance_fun_module = 'pymc.gp.cov_funs.' + distance_fun_module
+            distance_fun = import_item(distance_fun_module+"."+distance_fun_name)
 
-        self.cov_fun_module = cov_fun_module
+        self.cov_fun_module = sys.modules[cov_fun_module]
         self.cov_fun = cov_fun
-        self.distance_fun_module = distance_fun_module
+        self.distance_fun_module = sys.modules[distance_fun_module]
         self.distance_fun = distance_fun
         self.extra_cov_params = extra_cov_params
         self.__doc__ = cov_fun_name + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
         self.with_x = with_x
 
         # Add covariance parameters to function signature
-        for parameter in extra_cov_params.iterkeys():
+        for parameter in extra_cov_params:
             self.__doc__ += ', ' + parameter
         # Add distance parameters to function signature
         if hasattr(distance_fun,'extra_parameters'):
             self.extra_distance_params = distance_fun.extra_parameters
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in self.extra_distance_params:
                 self.__doc__ += ', ' + parameter
         # Document covariance parameters
         self.__doc__ += covariance_wrapperdoc[1]
         if hasattr(cov_fun, 'extra_parameters'):
-            for parameter in extra_cov_params.iterkeys():
+            for parameter in extra_cov_params:
                 self.__doc__ += "\n\n    - " + parameter + ": " + extra_cov_params[parameter]
         # Document distance parameters.
         if hasattr(distance_fun,'extra_parameters'):
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in self.extra_distance_params:
                 self.__doc__ += "\n\n    - " + parameter + ": " + self.extra_distance_params[parameter]
 
         self.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
@@ -120,7 +131,7 @@ class covariance_wrapper(object):
     def __call__(self,x,y,amp=1.,scale=1.,symm=None,*args,**kwargs):
 
         if amp<0. or scale<0.:
-            raise ValueError, 'The amp and scale parameters must be positive.'
+            raise ValueError('The amp and scale parameters must be positive.')
 
         if symm is None:
             symm = (x is y)
@@ -139,7 +150,7 @@ class covariance_wrapper(object):
         # Split off the distance arguments
         distance_arg_dict = {}
         if hasattr(self.distance_fun, 'extra_parameters'):
-            for key in self.extra_distance_params.iterkeys():
+            for key in self.extra_distance_params:
                 if key in kwargs.keys():
                     distance_arg_dict[key] = kwargs.pop(key)
 

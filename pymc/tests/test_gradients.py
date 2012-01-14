@@ -4,19 +4,20 @@ from numpy.testing import *
 import nose
 import sys
 from pymc import utils
+from pymc import six
 import pymc 
 
 float_dtypes = [float, single, float_, longfloat]
 
 def find_variable_set(stochastic):
     set = [stochastic]
-    for parameter, variable in stochastic.parents.iteritems():
+    for parameter, variable in six.iteritems(stochastic.parents):
         if isinstance(variable, Variable):
             set.append(variable)
     return set
 
 def check_jacobians( deterministic):
-    for parameter, pvalue in deterministic.parents.iteritems():
+    for parameter, pvalue in six.iteritems(deterministic.parents):
         
         if isinstance(pvalue, Variable): 
             
@@ -102,7 +103,7 @@ def check_gradients( stochastic):
     stochastics = find_variable_set(stochastic)
     gradients = utils.logp_gradient_of_set(stochastics, stochastics)
     
-    for s, analytic_gradient in gradients.iteritems():
+    for s, analytic_gradient in six.iteritems(gradients):
     
             numeric_gradient = get_numeric_gradient(stochastics, s)
             
@@ -351,7 +352,7 @@ class test_gradients(TestCase):
     
         
     def test_model(self):
-        import model1
+        from . import model1
 
         model = model1.model()
         model[0].value = 55.0

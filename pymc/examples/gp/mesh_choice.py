@@ -1,5 +1,6 @@
-import PyMCmodel
+from . import PyMCmodel
 import pymc as pm
+from pymc import six
 import numpy as np
 import matplotlib.pyplot as pl
 import matplotlib
@@ -12,7 +13,7 @@ rej = []
 times = []
 mesh_sizes = [0,1,2,4,8,16,32,64,128,256,512]
 for mesh_size in [0,1,2,4,8,16,32,64,128,256,512]:
-    print mesh_size
+    six.print_(mesh_size)
     m = PyMCmodel.make_model(mesh_size, False)
     if mesh_size==0:
         sm = pm.gp.MeshlessGPMetropolis(m['sm'].f)

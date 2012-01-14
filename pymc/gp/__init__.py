@@ -17,19 +17,19 @@ __modules__ = [ 'GPutils',
 
 __optmodules__ = ['gpplots']
 
-from GPutils import *
-from Mean import *
-from Covariance import *
-from BasisCovariance import *
-from FullRankCovariance import *
-from NearlyFullRankCovariance import *
-from Realization import *
-from cov_funs import *
-from gp_submodel import *
-from step_methods import *
+from .GPutils import *
+from .Mean import *
+from .Covariance import *
+from .BasisCovariance import *
+from .FullRankCovariance import *
+from .NearlyFullRankCovariance import *
+from .Realization import *
+from .cov_funs import *
+from .gp_submodel import *
+from .step_methods import *
 
 try:
-    import gpplots
+    from . import gpplots
 except ImportError:
     pass
 

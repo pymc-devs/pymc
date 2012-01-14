@@ -23,12 +23,15 @@ from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asa
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique
-from utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
+from .utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
 import pdb
 try:
     from scipy import special
 except ImportError:
     special = None
+
+from . import six
+from .six import print_
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior', 'summary_plot']
 
@@ -55,7 +58,7 @@ def get_index_list(shape, j):
             prodshape=0
         index_list[i] = int(floor(j/prodshape))
         if index_list[i]>shape[i]:
-            raise IndexError, 'Requested index too large'
+            raise IndexError('Requested index too large')
         j %= prodshape
 
     return index_list
@@ -82,7 +85,7 @@ def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
         func_stacks = node
 
     if any(qlist<0.) or any(qlist>1.):
-        raise TypeError, 'The elements of qlist must be between 0 and 1'
+        raise TypeError('The elements of qlist must be between 0 and 1')
 
     func_stacks = func_stacks.copy()
 
@@ -212,7 +215,7 @@ class func_sd_envelope(object):
                 ylabel(ylab)
             colorbar()
         else:
-            raise ValueError, 'Only 1- and 2- dimensional functions can be displayed'
+            raise ValueError('Only 1- and 2- dimensional functions can be displayed')
         savefig("%s%s%s.%s" % (self._plotpath,self.name,self.suffix,self._format))
 
 class centered_envelope(object):
@@ -233,7 +236,7 @@ class centered_envelope(object):
     """
     def __init__(self, sorted_func_stack, mass):
         if mass<0 or mass>1:
-            raise ValueError, 'mass must be between 0 and 1'
+            raise ValueError('mass must be between 0 and 1')
         N_samp = shape(sorted_func_stack)[0]
         self.mass = mass
         self.ndim = len(sorted_func_stack.shape)-1
@@ -290,7 +293,7 @@ def plotwrapper(f):
     def wrapper(pymc_obj, *args, **kwargs):
 
         start = 0
-        if kwargs.has_key('start'):
+        if 'start' in kwargs:
             start = kwargs.pop('start')
 
         # Figure out what type of object it is
@@ -337,7 +340,7 @@ def plotwrapper(f):
                 data = pymc_obj[i][start:]
                 if args:
                     i = '%s_%s' % (args[0], i)
-                elif kwargs.has_key('name'):
+                elif 'name' in kwargs:
                     i = '%s_%s' % (kwargs.pop('name'), i)
                 f(data, i, *args, **kwargs)
             return
@@ -380,7 +383,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
     if rank(data)==1:
 
         if verbose>0:
-            print 'Plotting', name
+            print_('Plotting', name)
 
         # If new plot, generate new frame
         if new:
@@ -435,7 +438,7 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         standalone = rows==1 and columns==1 and num==1
         if standalone:
             if verbose>0:
-                print 'Generating histogram of', name
+                print_('Generating histogram of', name)
             figure()
 
         subplot(rows, columns, num)
@@ -476,7 +479,7 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
             #close()
 
     except OverflowError:
-        print '... cannot generate histogram'
+        print_('... cannot generate histogram')
 
 
 @plotwrapper
@@ -488,7 +491,7 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
 
     if standalone:
         if verbose>0:
-            print 'Plotting', name
+            print_('Plotting', name)
         figure()
 
     subplot(rows, columns, num)
@@ -519,7 +522,7 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
 
     # Generate Geweke (1992) diagnostic plots
 
-    # print 'Plotting', name+suffix
+    # print_('Plotting', name+suffix)
 
     # Generate new scatter plot
     figure()
@@ -550,7 +553,7 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
 def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
-        print 'Plotting', name+suffix
+        print_('Plotting', name+suffix)
 
     # Generate new scatter plot
     figure()
@@ -604,7 +607,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
         return
         
     if verbose>0:
-        print 'Plotting', (name or 'MCMC') + suffix
+        print_('Plotting', (name or 'MCMC') + suffix)
 
     figure()
 
@@ -675,7 +678,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
     if standalone:
         if verbose>0:
-            print 'Plotting', name
+            print_('Plotting', name)
         figure()
 
     subplot(rows, columns, num)
@@ -701,7 +704,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
         for j in range(rows):
             autocorrelation(data[:, j], '%s_%d' % (name, j), maxlags, fontmap=fontmap, rows=rows, columns=1, num=j+1)
     else:
-        raise ValueError, 'Only 1- and 2- dimensional functions can be displayed' 
+        raise ValueError('Only 1- and 2- dimensional functions can be displayed')
 
     if standalone:
         if not os.path.exists(path):
@@ -826,7 +829,7 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
                         H, x, y = histogram2d(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i])
                         contourf(x,y,H,cmap=cm.bone)
                     except:
-                        print 'Unable to plot histogram for ('+titles[p1][l]+','+titles[p0][j]+'):'
+                        print_('Unable to plot histogram for ('+titles[p1][l]+','+titles[p0][j]+'):')
                         pyplot(ravelledtrace[p1][:,p1_i],ravelledtrace[p0][:,p0_i],'k.',markersize=1.)
                         axis('tight')
 
@@ -847,7 +850,7 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3
     diagnostics.validate()."""
 
     if verbose:
-        print '\nGenerating model validation plot'
+        print_('\nGenerating model validation plot')
 
     x,y,labels = [],[],[]
 
@@ -949,7 +952,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     """
     
     if not gridspec:
-        print '\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.'
+        print_('\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.')
         return
     
     # Quantiles to be calculated
@@ -994,7 +997,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     
     # Make sure there is something to print
     if all([v._plot==False for v in vars]):
-        print 'No variables to plot'
+        print_('No variables to plot')
         return
     
     for variable in vars:
@@ -1129,7 +1132,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         ticks.tick1On = False
         ticks.tick2On = False
     
-    for loc, spine in interval_plot.spines.iteritems():
+    for loc, spine in six.iteritems(interval_plot.spines):
         if loc in ['bottom','top']:
             pass
             #spine.set_position(('outward',10)) # outward by 10 points
@@ -1142,7 +1145,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
 
-        from diagnostics import gelman_rubin
+        from .diagnostics import gelman_rubin
         
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
@@ -1196,7 +1199,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             ticks.tick1On = False
             ticks.tick2On = False
         
-        for loc, spine in rhat_plot.spines.iteritems():
+        for loc, spine in six.iteritems(rhat_plot.spines):
             if loc in ['bottom','top']:
                 pass
                 #spine.set_position(('outward',10)) # outward by 10 points

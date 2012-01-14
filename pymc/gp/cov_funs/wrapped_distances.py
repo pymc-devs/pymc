@@ -4,8 +4,8 @@ import pymc
 mod_search_path = [pymc.__path__[0]+'/gp/cov_funs']
 imp.load_module('distances', *imp.find_module('distances',mod_search_path))
 
-from distances import euclidean, aniso_geo_rad, paniso_geo_rad
-from distances import geographic as geo_rad
+from .distances import euclidean, aniso_geo_rad, paniso_geo_rad
+from .distances import geographic as geo_rad
 
 
 __all__ = ['euclidean', 'geo_rad', 'geo_deg', 'aniso_geo_rad', 'aniso_geo_deg', 'partition_aniso_geo_rad', 'partition_aniso_geo_deg']

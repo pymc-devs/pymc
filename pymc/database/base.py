@@ -52,6 +52,9 @@ import sys, traceback, warnings
 import copy
 __all__=['Trace', 'Database']
 
+from pymc import six
+from pymc.six import print_
+
 class Trace(object):
     """Base class for Trace objects.
 
@@ -166,7 +169,7 @@ class Trace(object):
             
             n = len(trace)
             if not n:
-                print 'Cannot generate statistics for zero-length trace in', self.__name__
+                print_('Cannot generate statistics for zero-length trace in', self.__name__)
                 return
 
 
@@ -179,7 +182,7 @@ class Trace(object):
                 'quantiles': quantiles(trace)
             }
         except:
-            print 'Could not generate output statistics for', self.name
+            print_('Could not generate output statistics for', self.name)
             return
 
 
@@ -225,8 +228,8 @@ class Database(object):
           to preallocate memory.
         """
 
-        for name, fun in funs_to_tally.iteritems():
-            if not self._traces.has_key(name):
+        for name, fun in six.iteritems(funs_to_tally):
+            if name not in self._traces:
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
             self._traces[name]._initialize(self.chains, length)
@@ -281,24 +284,24 @@ Error:
         if isinstance(model, pymc.Model):
             self.model = model
         else:
-            raise AttributeError, 'Not a Model instance.'
+            raise AttributeError('Not a Model instance.')
 
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
             names = set(reduce(list.__add__, self.trace_names, []))
-            for name, fun in model._funs_to_tally.iteritems():
-                if self._traces.has_key(name):
+            for name, fun in six.iteritems(model._funs_to_tally):
+                if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
             # if len(names) > 0:
-            #     print "Some objects from the database have not been assigned a getfunc", names
+            #     print_("Some objects from the database have not been assigned a getfunc", names)
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
         else:
-            for name, fun in model._funs_to_tally.iteritems():
-                if not self._traces.has_key(name):
+            for name, fun in six.iteritems(model._funs_to_tally):
+                if name not in self._traces:
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
     def _finalize(self, chain=-1):
