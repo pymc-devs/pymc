@@ -156,7 +156,7 @@ def new_dist_class(*new_class_args):
             
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [None, parents, None, False, None, True, True, None, False, None, None]
+            arg_vals = [None, parents, None, False, None, True, True, None, False, None, -1]
             if 'isdata' in kwds:
                 warnings.warn('"isdata" is deprecated, please use "observed" instead.')
                 kwds['observed'] = kwds['isdata']
@@ -329,7 +329,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, observed=False,'
     if not mv:
         docstr += ' size=1,'
-    docstr += ' trace=True, rseed=True, doc=None, verbose=None, debug=False)\n\n'
+    docstr += ' trace=True, rseed=True, doc=None, verbose=-1, debug=False)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     docstr += logp.__doc__
@@ -3143,7 +3143,7 @@ Docstring of categorical_like (case where P is a Dirichlet):
 
     def __init__(self, name, p, value=None, dtype=np.int, observed=False,
                  size=None, trace=True, rseed=False, cache_depth=2, plot=None,
-                 verbose=None,**kwds):
+                 verbose=-1,**kwds):
 
         if value is not None:
             if np.isscalar(value):
@@ -3237,7 +3237,7 @@ Otherwise parent p's value should sum to 1.
     parent_names = ['n', 'p']
 
     def __init__(self, name, n, p, trace=True, value=None, rseed=False,
-                 observed=False, cache_depth=2, plot=None, verbose=None,
+                 observed=False, cache_depth=2, plot=None, verbose=-1,
                  **kwds):
 
         if isinstance(p, Dirichlet):

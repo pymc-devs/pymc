@@ -241,7 +241,7 @@ class Potential(PotentialBase):
 
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=None, logp_partial_gradients = {}):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=-1, logp_partial_gradients = {}):
 
         self.ParentDict = ParentDict
 
@@ -384,7 +384,7 @@ class Deterministic(DeterministicBase):
     """
     __array_priority__ =1000
 
-    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=None, jacobians = {}, jacobian_formats = {}):
+    def __init__(self, eval,  doc, name, parents, dtype=None, trace=True, cache_depth=2, plot=None, verbose=-1, jacobians = {}, jacobian_formats = {}):
         self.ParentDict = ParentDict
 
         
@@ -616,7 +616,7 @@ class Stochastic(StochasticBase):
                     observed=False,
                     cache_depth=2,
                     plot=None,
-                    verbose = None,
+                    verbose = -1,
                     isdata=None, 
                     check_logp=True,
                     logp_partial_gradients = {}):

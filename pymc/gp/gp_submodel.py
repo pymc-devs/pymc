@@ -44,7 +44,7 @@ class GaussianProcess(pm.Stochastic):
     """
     
     def __init__(self,name,submodel,trace=True,value=None,rseed=False,
-                    observed=False,cache_depth=2,plot=None,verbose=None,isdata=None):
+                    observed=False,cache_depth=2,plot=None,verbose=-1,isdata=None):
                 
         self.submodel = submodel
         

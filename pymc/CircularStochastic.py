@@ -47,7 +47,7 @@ class CircVonMises(CircularStochastic):
                     cache_depth=2,
                     rseed=True,
                     plot=None,
-                    verbose=None):
+                    verbose=-1):
 
         if value is None:
             arg_eval = Container([mu, kappa]).value

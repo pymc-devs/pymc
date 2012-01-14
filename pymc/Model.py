@@ -71,7 +71,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, name=None, verbose=0):
+    def __init__(self, input=None, name=None, verbose=-1):
         """Initialize a Model instance.
 
         :Parameters:
@@ -210,7 +210,7 @@ class Sampler(Model):
 
         return -2*sum([v.get_logp() for v in self.observed_stochastics])
 
-    def sample(self, iter, length=None, verbose=None):
+    def sample(self, iter, length=None, verbose=0):
         """
         Draws iter samples from the posterior.
         """

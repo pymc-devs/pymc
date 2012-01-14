@@ -93,7 +93,7 @@ class Node(object):
          The base class for :class:`Stochastics` and :class:`Deterministics`.
 
     """
-    def __init__(self, doc, name, parents, cache_depth, verbose=None):
+    def __init__(self, doc, name, parents, cache_depth, verbose=-1):
 
         # Name and docstrings
         self.__doc__ = doc
@@ -182,7 +182,7 @@ class Variable(Node):
     
     __array_priority__ = 10
     
-    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=None):
+    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=-1):
 
         self.dtype=dtype
         self.trace=trace

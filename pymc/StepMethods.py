@@ -77,7 +77,7 @@ def pick_best_methods(stochastic):
     # print_(s.__name__ + ': ', best_candidates, ' ', max_competence)
     return best_candidates
 
-def assign_method(stochastic, scale=None, verbose=None):
+def assign_method(stochastic, scale=None, verbose=-1):
     """
     Returns a step method instance to handle a
     variable. If several methods have the same competence,
@@ -139,7 +139,7 @@ class StepMethod(object):
             Collection of PyMCObjects
 
           - verbose (optional) : integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to none (Default) allows verbosity to be set by sampler.
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to -1 (Default) allows verbosity to be set by sampler.
 
     Externally-accessible attributes:
       stochastics:   The Stochastics over which self has jurisdiction which have observed = False.
@@ -166,7 +166,7 @@ class StepMethod(object):
 
     __metaclass__ = StepMethodMeta
 
-    def __init__(self, variables, verbose=None, tally=False):
+    def __init__(self, variables, verbose=-1, tally=False):
         # StepMethod initialization
 
         if not iterable(variables) or isinstance(variables, Node):
@@ -341,13 +341,13 @@ class Metropolis(StepMethod):
             'Prior' or None. If None is provided, a proposal distribution is chosen
             by examining P.value's type.
 
-    - verbose (optional) : None or integer
-            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to none allows verbosity to be turned on by sampler.
+    - verbose (optional) : integer
+            Level of output verbosity: 0=none, 1=low, 2=medium, 3=high. Setting to -1 (default) allows verbosity to be turned on by sampler.
 
     :SeeAlso: StepMethod, Sampler.
     """
 
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=None, tally=True, check_before_accepting=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution=None, verbose=-1, tally=True, check_before_accepting=True):
         # Metropolis class initialization
 
         # Initialize superclass
@@ -364,7 +364,7 @@ class Metropolis(StepMethod):
 
         # Set public attributes
         self.stochastic = stochastic
-        if verbose is not None:
+        if verbose > -1:
             self.verbose = verbose
         else:
             self.verbose = stochastic.verbose
@@ -534,10 +534,7 @@ class Metropolis(StepMethod):
         May be overridden in subclasses.
         """
 
-        if self.verbose is not None:
-            verbose = self.verbose
-
-        if self.verbose is not None:
+        if self.verbose > -1:
             verbose = self.verbose
 
         # Verbose feedback
@@ -590,7 +587,7 @@ class Metropolis(StepMethod):
 
 class PDMatrixMetropolis(Metropolis):
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
-    def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=None, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, verbose=-1, tally=True):
         Metropolis.__init__(self, stochastic, scale=scale, proposal_sd=proposal_sd, proposal_distribution="Normal", verbose=verbose, tally=tally)
 
     @staticmethod
@@ -626,7 +623,7 @@ class Gibbs(Metropolis):
     """
     Base class for the Gibbs step methods
     """
-    def __init__(self, stochastic, verbose=None):
+    def __init__(self, stochastic, verbose=-1):
         Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
     # Override Metropolis's competence.
@@ -659,7 +656,7 @@ class DrawFromPrior(StepMethod):
     """
     Handles dataless submodels.
     """
-    def __init__(self, variables, generations, verbose=None):
+    def __init__(self, variables, generations, verbose=-1):
         StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
 
@@ -721,7 +718,7 @@ class DiscreteMetropolis(Metropolis):
     Just like Metropolis, but rounds the variable's value.
     Good for discrete stochastics.
     """
-    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution="Poisson", positive=False, verbose=None, tally=True):
+    def __init__(self, stochastic, scale=1., proposal_sd=None, proposal_distribution="Poisson", positive=False, verbose=-1, tally=True):
         # DiscreteMetropolis class initialization
 
         # Initialize superclass
@@ -778,7 +775,7 @@ class BinaryMetropolis(Metropolis):
 
     """
 
-    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=None, tally=True):
+    def __init__(self, stochastic, p_jump=.1, proposal_distribution=None, verbose=-1, tally=True):
         # BinaryMetropolis class initialization
 
         # Initialize superclass
@@ -935,7 +932,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
-    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, scales=None, verbose=None, tally=False):
+    def __init__(self, stochastic, cov=None, delay=1000, interval=200, greedy=True, shrink_if_necessary=False, scales=None, verbose=-1, tally=False):
 
         # Verbosity flag
         self.verbose = verbose
@@ -1416,7 +1413,7 @@ class TWalk(StepMethod):
       - tally (optional) : bool
           Flag for recording values for trace (Defaults to True).
     """
-    def __init__(self, stochastic, inits=None, kernel_probs=[0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, support=lambda x: True, verbose=None, tally=True):
+    def __init__(self, stochastic, inits=None, kernel_probs=[0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, support=lambda x: True, verbose=-1, tally=True):
         
         # Initialize superclass
         StepMethod.__init__(self, [stochastic], verbose=verbose, tally=tally)
@@ -1438,7 +1435,7 @@ class TWalk(StepMethod):
         
         # Set public attributes
         self.stochastic = stochastic
-        if verbose is not None:
+        if verbose > -1:
             self.verbose = verbose
         else:
             self.verbose = stochastic.verbose

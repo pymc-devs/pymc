@@ -238,7 +238,7 @@ class CompletedDirichlet(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Index, LinearCombination
     """
-    def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=None, verbose=None):
+    def __init__(self, name, D, doc=None, trace=True, cache_depth=2, plot=None, verbose=-1):
 
         def eval_fun(D):
             N = len(D)
