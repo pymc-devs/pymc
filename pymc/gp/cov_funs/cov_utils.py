@@ -98,21 +98,21 @@ class covariance_wrapper(object):
         self.with_x = with_x
 
         # Add covariance parameters to function signature
-        for parameter in extra_cov_params.iterkeys():
+        for parameter in extra_cov_params:
             self.__doc__ += ', ' + parameter
         # Add distance parameters to function signature
         if hasattr(distance_fun,'extra_parameters'):
             self.extra_distance_params = distance_fun.extra_parameters
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in self.extra_distance_params:
                 self.__doc__ += ', ' + parameter
         # Document covariance parameters
         self.__doc__ += covariance_wrapperdoc[1]
         if hasattr(cov_fun, 'extra_parameters'):
-            for parameter in extra_cov_params.iterkeys():
+            for parameter in extra_cov_params:
                 self.__doc__ += "\n\n    - " + parameter + ": " + extra_cov_params[parameter]
         # Document distance parameters.
         if hasattr(distance_fun,'extra_parameters'):
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in self.extra_distance_params:
                 self.__doc__ += "\n\n    - " + parameter + ": " + self.extra_distance_params[parameter]
 
         self.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
@@ -139,7 +139,7 @@ class covariance_wrapper(object):
         # Split off the distance arguments
         distance_arg_dict = {}
         if hasattr(self.distance_fun, 'extra_parameters'):
-            for key in self.extra_distance_params.iterkeys():
+            for key in self.extra_distance_params:
                 if key in kwargs.keys():
                     distance_arg_dict[key] = kwargs.pop(key)
 

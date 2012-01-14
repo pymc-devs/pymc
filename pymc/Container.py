@@ -492,7 +492,7 @@ class DictContainer(ContainerBase, dict):
     value = property(fget = get_value, doc=value_doc)
 
 def conservative_update(obj, dict):
-    for k in dict.iterkeys():
+    for k in dict:
         if not hasattr(obj, k):
             try:
                 setattr(obj, k, dict[k])

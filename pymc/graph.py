@@ -195,7 +195,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
         else:
             parent_dict = node.parents
 
-        for key in parent_dict.iterkeys():
+        for key in parent_dict:
             key_val = parent_dict[key]
             label = label_edges*key or ''
 

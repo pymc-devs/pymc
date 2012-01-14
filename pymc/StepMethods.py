@@ -194,7 +194,7 @@ class StepMethod(object):
         # Find children, no need to find parents; each variable takes care of those.
         for variable in variables:
             self.children |= variable.children
-            for parent in variable.parents.itervalues():
+            for parent in six.itervalues(variable.parents):
                 if isinstance(parent, Variable):
                     self.parents.add(parent)
 

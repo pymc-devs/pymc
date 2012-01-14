@@ -106,7 +106,7 @@ class ParentDict(DictContainer):
             self.has_logp = False
 
     def detach_parents(self):
-        for parent in self.itervalues():
+        for parent in six.itervalues(self):
             if isinstance(parent, Variable):
                 parent.children.discard(self.owner)
             elif isinstance(parent, ContainerBase):
@@ -124,7 +124,7 @@ class ParentDict(DictContainer):
 
 
     def attach_parents(self):
-        for parent in self.itervalues():
+        for parent in six.itervalues(self):
             if isinstance(parent, Variable):
                 parent.children.add(self.owner)
             elif isinstance(parent, ContainerBase):
@@ -155,13 +155,13 @@ class ParentDict(DictContainer):
 
             if isinstance(old_parent, Variable):
                 # See if owner only claims the old parent via this key.
-                if sum([parent is old_parent for parent in self.itervalues()]) == 1:
+                if sum([parent is old_parent for parent in six.itervalues(self)]) == 1:
                     old_parent.children.remove(self.owner)
 
 
             if isinstance(old_parent, ContainerBase):
                 for variable in old_parent.variables:
-                    if sum([parent is variable for parent in self.itervalues()]) == 1:
+                    if sum([parent is variable for parent in six.itervalues(self)]) == 1:
                         variable.children.remove(self.owner)
 
 

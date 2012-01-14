@@ -17,7 +17,7 @@ extra_parameters = {'gaussian': {'': ''},
                 'exponential': {'': ''}}
 
 
-for name in extra_parameters.iterkeys():
+for name in extra_parameters:
     locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name], ampsq_is_diag=True)
 
 nsmatern_extra_params = {'diff_degree': 'A function giving the local degree of differentiability.',
