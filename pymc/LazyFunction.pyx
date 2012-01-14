@@ -122,7 +122,7 @@ cdef class LazyFunction:
         self.cache_depth = cache_depth
 
         # Populate argument iterables
-        for name in arguments.iterkeys():
+        for name in arguments:
             # This object is arg.
             arg = arguments[name]
 
