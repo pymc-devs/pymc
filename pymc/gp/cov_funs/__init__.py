@@ -22,7 +22,8 @@ for name in extra_parameters:
 
 nsmatern_extra_params = {'diff_degree': 'A function giving the local degree of differentiability.',
                          'h': 'A function giving the local relative amplitude.'}
-nsmatern = covariance_function_bundle('nsmatern','nsmatern',nsmatern_extra_params,ampsq_is_diag=False,with_x=True)
+nsmatern = covariance_function_bundle('nsmatern', 'nsmatern',
+                        nsmatern_extra_params, ampsq_is_diag=False, with_x=True)
 for w in nsmatern.wrappers:
     w.diag_call = nsmatern_diag
 

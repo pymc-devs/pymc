@@ -44,19 +44,20 @@ def regularize_array(A):
     else:
         return A
 
-def import_nested_module(name):
+def import_item(name):
     """
     Useful for importing nested modules such as pymc.gp.cov_funs.isotropic_cov_funs.
+    
+    Updated with code copied from IPython under a BSD license.
     """
-    tree = name.split('.')
-    root = tree[0]
-    submods = tree[1:]
-    mod = imp.load_module(root, *imp.find_module(root, mod_search_path))
-
-    for name in submods:
-        mod = getattr(mod,name)
-
-    return mod
+    package = '.'.join(name.split('.')[0:-1])
+    obj = name.split('.')[-1]
+    
+    if package:
+        module = __import__(package,fromlist=[obj])
+        return module.__dict__[obj]
+    else:
+        return __import__(obj)
 
 
 class covariance_wrapper(object):
@@ -83,15 +84,21 @@ class covariance_wrapper(object):
         self.cov_fun_name = cov_fun_name
         self.distance_fun_name = distance_fun_name
 
-        cov_fun_module = import_nested_module(cov_fun_module)
-        cov_fun = getattr(cov_fun_module, cov_fun_name)
+        try:
+            cov_fun = import_item(cov_fun_module + "." + cov_fun_name)
+        except ImportError:
+            cov_fun_module = 'pymc.gp.cov_funs.' + cov_fun_module
+            cov_fun = import_item(cov_fun_module + "." + cov_fun_name)
 
-        distance_fun_module = import_nested_module(distance_fun_module)
-        distance_fun = getattr(distance_fun_module, distance_fun_name)
+        try:
+            distance_fun = import_item(distance_fun_module+"."+distance_fun_name)
+        except ImportError:
+            distance_fun_module = 'pymc.gp.cov_funs.' + distance_fun_module
+            distance_fun = import_item(distance_fun_module+"."+distance_fun_name)
 
-        self.cov_fun_module = cov_fun_module
+        self.cov_fun_module = sys.modules[cov_fun_module]
         self.cov_fun = cov_fun
-        self.distance_fun_module = distance_fun_module
+        self.distance_fun_module = sys.modules[distance_fun_module]
         self.distance_fun = distance_fun
         self.extra_cov_params = extra_cov_params
         self.__doc__ = cov_fun_name + '.' + distance_fun.__name__+ covariance_wrapperdoc[0]
