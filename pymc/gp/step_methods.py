@@ -32,6 +32,9 @@ def wrap_metropolis_for_gp_parents(metro_class):
     Gaussian processes.
     """
     class wrapper(metro_class):
+        __doc__ = """A modified version of class %s that handles parents of Gaussian processes.
+Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metro_class.__doc__)
+        
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
@@ -82,8 +85,6 @@ def wrap_metropolis_for_gp_parents(metro_class):
         
     wrapper.__name__ = 'GPParent%s'%metro_class.__name__
     wrapper.metro_class = metro_class
-    wrapper.__doc__ = """A modified version of class %s that handles parents of Gaussian processes.
-Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metro_class.__doc__)
             
     return wrapper
 
