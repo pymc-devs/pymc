@@ -11,6 +11,13 @@ import numpy as np
 import types
 from . import six
 
+try:
+    from types import UnboundMethodType
+except ImportError:
+    # On Python 3, unbound methods are just functions.
+    def UnboundMethodType(func, inst, cls):
+        return func
+
 
 def logp_of_set(s):
     exc = None
@@ -247,7 +254,7 @@ class ContainerMeta(type):
             ContainerRegistry.append((cls, cls.containing_classes))
 
             for meth in cls.change_methods:
-                setattr(cls, meth, types.UnboundMethodType(change_method, None, cls))
+                setattr(cls, meth, UnboundMethodType(change_method, None, cls))
         cls.register=False
 
 
