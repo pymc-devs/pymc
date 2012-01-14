@@ -103,7 +103,13 @@ Error message: """%(method.__name__, stochastic.__name__, method.__name__)
             out = method(stochastic, verbose=verbose)
     except:
         a,b,c = sys.exc_info()
-        six.reraise(a, failure_header + b.message, c)
+        try:
+            args = list(b.args)
+        except AttributeError:
+            args = []
+        args.append(failure_header)
+        b.args = args
+        six.reraise(a, b, c)
     return out
 
 
