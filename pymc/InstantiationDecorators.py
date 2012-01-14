@@ -29,7 +29,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
 
     # Add docs and name
     kwds['doc'] = __func__.__doc__
-    if not kwds.has_key('name'):
+    if not 'name' in kwds:
         kwds['name'] = __func__.__name__
     # kwds.update({'doc':__func__.__doc__, 'name':__func__.__name__})
 
@@ -65,7 +65,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
             enable_special_methods()
 
     for key in keys:
-        if not kwds.has_key(key):
+        if not key in kwds:
             kwds[key] = None
 
     for key in ['logp', 'eval']:
@@ -95,10 +95,7 @@ def _extract(__func__, kwds, keys, classname, probe=True):
     except TypeError:
         pass
 
-    if parents.has_key('value'):
-        value = parents.pop('value')
-    else:
-        value = None
+    value = parents.pop('value', None)
 
     return (value, parents)
 

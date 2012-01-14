@@ -255,10 +255,10 @@ class Database(pickle.Database):
 
         # Deprecation of complevel and complib
         # Remove in V2.1
-        if kwds.has_key('complevel'):
+        if 'complevel' in kwds:
             warnings.warn('complevel has been replaced with dbcomplevel.', DeprecationWarning)
             dbcomplevel = kwds.get('complevel')
-        if kwds.has_key('complib'):
+        if 'complib' in kwds:
             warnings.warn('complib has been replaced with dbcomplib.', DeprecationWarning)
             dbcomplib = kwds.get('complib')
         
@@ -343,7 +343,7 @@ class Database(pickle.Database):
         if hasattr(self, '_state_'):
             names = set(reduce(list.__add__, self.trace_names))
             for name, fun in six.iteritems(model._funs_to_tally):
-                if self._traces.has_key(name):
+                if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
@@ -420,7 +420,7 @@ class Database(pickle.Database):
 
        # Make sure the variables have a corresponding Trace instance.
         for name, fun in six.iteritems(funs_to_tally):
-            if not self._traces.has_key(name):
+            if name not in self._traces:
                 if np.array(fun()).dtype is np.dtype('object'):
                     self._traces[name] = TraceObject(name, getfunc=fun, db=self)
                 else:

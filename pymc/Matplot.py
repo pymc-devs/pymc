@@ -293,7 +293,7 @@ def plotwrapper(f):
     def wrapper(pymc_obj, *args, **kwargs):
 
         start = 0
-        if kwargs.has_key('start'):
+        if 'start' in kwargs:
             start = kwargs.pop('start')
 
         # Figure out what type of object it is
@@ -340,7 +340,7 @@ def plotwrapper(f):
                 data = pymc_obj[i][start:]
                 if args:
                     i = '%s_%s' % (args[0], i)
-                elif kwargs.has_key('name'):
+                elif 'name' in kwargs:
                     i = '%s_%s' % (kwargs.pop('name'), i)
                 f(data, i, *args, **kwargs)
             return

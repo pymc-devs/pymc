@@ -229,7 +229,7 @@ class Database(object):
         """
 
         for name, fun in six.iteritems(funs_to_tally):
-            if not self._traces.has_key(name):
+            if name not in self._traces:
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
             self._traces[name]._initialize(self.chains, length)
@@ -291,7 +291,7 @@ Error:
         if hasattr(self, '_state_'):
             names = set(reduce(list.__add__, self.trace_names, []))
             for name, fun in six.iteritems(model._funs_to_tally):
-                if self._traces.has_key(name):
+                if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
             # if len(names) > 0:
@@ -301,7 +301,7 @@ Error:
         # We will be able to remove this when we deprecate traces on objects.
         else:
             for name, fun in six.iteritems(model._funs_to_tally):
-                if not self._traces.has_key(name):
+                if name not in self._traces:
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
     def _finalize(self, chain=-1):

@@ -118,7 +118,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     def get_obj_names(obj, key):
 
         if isinstance(obj, pm.Stochastic):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             if obj.observed:
                 datum = obj
@@ -136,7 +136,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
                 obj_substitute_names[s] = [s.__name__]
     
         elif isinstance(obj, pm.Deterministic):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             d = obj
             # Deterministics are downward-pointing triangles
@@ -149,7 +149,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
                 obj_substitute_names[d] = []
                     
         elif isinstance(obj, pm.Potential):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             potential = obj
             # Potentials are squares
@@ -163,7 +163,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
 
 
         elif consts:
-            if obj_substitute_names.has_key(key):
+            if key in obj_substitute_names:
                 return
             else:
                 obj_substitute_names[key] = [key]

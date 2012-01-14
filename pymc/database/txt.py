@@ -145,7 +145,7 @@ def load(dirname):
         db.trace_names.append(funnames)
         for file in files:
             name = funname(file)
-            if not data.has_key(name):
+            if name not in data:
                 data[name] = {} # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
             # Read the shape information
             with open(os.path.join(folder, file)) as f:

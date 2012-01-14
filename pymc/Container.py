@@ -552,7 +552,7 @@ class ObjectContainer(ContainerBase):
             # self.__dict__.update(input_to_file)
         
         dictpop = copy(self.__dict__)
-        if dictpop.has_key('self'):
+        if 'self' in dictpop:
             dictpop.pop('self')
         
         self._dict_container = DictContainer(dictpop)
