@@ -61,10 +61,15 @@ class Trace(ram.Trace):
         path = os.path.join(self.db._directory, self.db.get_chains()[chain], self.name+'.txt')
         arr = self.gettrace(chain=chain)
         
-        with open(path, 'w') as f:
-            print_('# Variable: %s' % self.name, file=f)
-            print_('# Sample shape: %s' % str(arr.shape), file=f)
-            print_('# Date: %s' % datetime.datetime.now(), file=f)
+        # Following numpy's example.
+        if six.PY3:
+            mode = 'wb'
+        else:
+            mode = 'w'
+        with open(path, mode) as f:
+            f.write(six.b('# Variable: %s\n' % self.name))
+            f.write(six.b('# Sample shape: %s\n' % str(arr.shape)))
+            f.write(six.b('# Date: %s\n' % datetime.datetime.now()))
             np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
 
 class Database(base.Database):

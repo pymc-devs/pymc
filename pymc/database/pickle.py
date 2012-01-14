@@ -61,7 +61,7 @@ class Database(base.Database):
                 container[name] = self._traces[name]._trace
             container['_state_'] = self._state_
 
-            file = open(self.filename, 'w')
+            file = open(self.filename, 'wb')
             std_pickle.dump(container, file)
             file.close()
         except AttributeError:
@@ -73,7 +73,7 @@ def load(filename):
 
     Return a Database instance.
     """
-    file = open(filename, 'r')
+    file = open(filename, 'rb')
     container = std_pickle.load(file)
     file.close()
     db = Database(file.name)
