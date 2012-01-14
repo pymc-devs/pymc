@@ -3,6 +3,9 @@ from numpy.testing import *
 import numpy as np
 import nose
 
+from pymc import six
+xrange = six.moves.xrange
+
 DIR = 'testresults'
 
 def mymodel():

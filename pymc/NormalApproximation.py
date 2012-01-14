@@ -20,7 +20,9 @@ from numpy.linalg import solve
 from .utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
-from .six import print_
+from pymc import six
+from pymc.six import print_
+xrange = six.moves.xrange
 
 try:
     from scipy.optimize import fmin_ncg, fmin, fmin_powell, fmin_cg, fmin_bfgs, fmin_ncg, fmin_l_bfgs_b

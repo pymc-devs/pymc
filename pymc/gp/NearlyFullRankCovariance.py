@@ -11,6 +11,8 @@ from .linalg_utils import diag_call
 from .incomplete_chol import ichol_full
 from .Covariance import Covariance
 
+from pymc import six
+xrange = six.moves.xrange
 
 class NearlyFullRankCovariance(Covariance):
 

@@ -43,6 +43,7 @@ from types import ModuleType
 import pdb
 
 from pymc import six
+xrange = six.moves.xrange
 
 __all__ = ['Container', 'DictContainer', 'TupleContainer', 'ListContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
 

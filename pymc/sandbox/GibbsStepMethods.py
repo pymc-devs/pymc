@@ -23,6 +23,9 @@ from pymc import *
 from pymc.utils import safe_len
 import numpy as np
 
+from pymc import six
+xrange = six.moves.xrange
+
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
 __all__ = ['GammaNormal', 'GammaPoisson', 'GammaExponential', 'GammaGamma',

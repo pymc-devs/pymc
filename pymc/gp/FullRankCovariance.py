@@ -11,6 +11,9 @@ from .linalg_utils import dpotrf_wrap
 from .Covariance import Covariance
 from .incomplete_chol import ichol, ichol_continue
 
+from pymc import six
+xrange = six.moves.xrange
+
 
 class FullRankCovariance(Covariance):
 

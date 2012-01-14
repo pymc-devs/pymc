@@ -19,6 +19,8 @@ from .linalg_utils import basis_diag_call
 from .incomplete_chol import ichol_basis, ichol_full
 from .Covariance import Covariance
 
+from pymc import six
+xrange = six.moves.xrange
 
 class BasisCovariance(Covariance):
 

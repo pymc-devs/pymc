@@ -10,6 +10,9 @@ try:
 except:
     pass
 
+from pymc import six
+xrange = six.moves.xrange
+
 class test_Gibbs(NumpyTestCase):
 
     def check_BetaBinomial(self):

@@ -28,7 +28,8 @@ to be swigged.
 import numpy as np
 from copy import copy
 from pymc import *
-
+from pymc import six
+xrange = six.moves.xrange
 
 
 def draws_to_atoms(draws):

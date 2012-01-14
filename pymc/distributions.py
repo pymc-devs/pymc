@@ -41,6 +41,7 @@ import warnings
 
 from pymc import six
 from pymc.six import print_
+xrange = six.moves.xrange
 
 def poiscdf(a, x):
     x = np.atleast_1d(x)

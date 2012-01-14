@@ -9,7 +9,10 @@ import types
 import numpy as np
 from .gp_submodel import *
 import warnings
+
+from pymc import six
 from pymc.six import print_
+xrange = six.moves.xrange
 
 from .Realization import Realization
 from .Mean import Mean

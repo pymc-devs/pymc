@@ -5,7 +5,9 @@ from pymc.utils import autocorr, autocov
 from copy import copy
 import pdb
 
+from pymc import six
 from pymc.six import print_
+xrange = six.moves.xrange
 
 __all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
 

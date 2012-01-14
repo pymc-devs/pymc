@@ -10,6 +10,10 @@ from copy import copy
 import sys,os
 from pymc import get_threadpool_size, map_noreturn
 import pymc
+
+from pymc import six
+xrange = six.moves.xrange
+
 mod_search_path = [pymc.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
 
 

@@ -9,6 +9,9 @@ from numpy import sum, ones, zeros, ravel, shape, size, newaxis
 from .utils import find_element
 import inspect
 
+from pymc import six
+xrange = six.moves.xrange
+
 #accumulations 
 _boolean_accumulation_deterministics = ['any' , 'all']
 _accumulation_deterministics = ['sum']#['sum', 'prod']

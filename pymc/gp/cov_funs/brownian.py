@@ -4,6 +4,9 @@ from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 from pymc import get_threadpool_size, map_noreturn
 
+from pymc import six
+xrange = six.moves.xrange
+
 __all__ = ['brownian']
 
 def brownian_targ(C,x,y,h,amp,cmin, cmax,symm):

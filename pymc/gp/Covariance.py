@@ -10,6 +10,9 @@ from .GPutils import regularize_array, trisolve, square_and_sum
 from .linalg_utils import diag_call, dpotrf_wrap
 from .incomplete_chol import ichol, ichol_continue
 
+from pymc import six
+xrange = six.moves.xrange
+
 class Covariance(object):
 
     """

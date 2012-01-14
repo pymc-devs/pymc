@@ -33,6 +33,7 @@ import numpy.random as _npr
 
 from pymc.distributions import *
 from pymc import flib, utils, six
+xrange = six.moves.xrange
 
 PLOT=True
 DIR = 'testresults'

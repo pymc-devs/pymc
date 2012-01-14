@@ -16,7 +16,10 @@ import sys
 from pymc import thread_partition_array, map_noreturn
 from pymc.gp import chunksize
 import pymc
+
+from pymc import six
 from pymc.six import print_
+xrange = six.moves.xrange
 
 try:
     from PyMC2 import ZeroProbability

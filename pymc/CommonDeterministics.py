@@ -33,6 +33,7 @@ except ImportError:
         return func
 
 from . import six
+xrange = six.moves.xrange
 
 __all__ = ['CompletedDirichlet', 'LinearCombination', 'Index', 'Lambda', 'lambda_deterministic', 'lam_dtrm',
             'logit', 'invlogit', 'stukel_logit', 'stukel_invlogit', 'Logit', 'InvLogit', 'StukelLogit', 'StukelInvLogit',

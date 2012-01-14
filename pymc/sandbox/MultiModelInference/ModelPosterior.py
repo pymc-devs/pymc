@@ -3,6 +3,9 @@
 from pymc import *
 from numpy import mean, exp, Inf, zeros
 
+from pymc import six
+xrange = six.moves.xrange
+
 __all__ = ['sample_likelihood', 'weight']
 
 def sample_likelihood(model, iter, verbose=0):
