@@ -286,7 +286,8 @@ def robust_init(stochclass, tries, *args, **kwds):
     >>> pymc.robust_init(pymc.Uniform, 100, 'data', lower=lower, upper=5, value=[1,2,3,4], observed=True)
     """
     # Find the direct parents
-    stochs = [arg for arg in (list(args) + kwds.values()) if getattr(arg, '__metaclass__', None) == StochasticMeta]
+    stochs = [arg for arg in (list(args) + list(kwds.values())) \
+                    if getattr(arg, '__metaclass__', None) == StochasticMeta]
 
     # Find the extended parents
     parents = stochs
