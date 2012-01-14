@@ -92,7 +92,7 @@ def new_deterministic_class(*new_class_args):
 
             # Figure out what argument names are needed.
             arg_keys = [ 'parents',  'trace', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [ parents,  False, True, None, False, None, None]
+            arg_vals = [ parents,  False, True, None, False, None, -1]
 
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed =  parent_names + arg_keys[2:]
