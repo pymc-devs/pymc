@@ -287,7 +287,7 @@ def robust_init(stochclass, tries, *args, **kwds):
     """
     # Find the direct parents
     stochs = [arg for arg in (list(args) + list(kwds.values())) \
-                    if getattr(arg, '__metaclass__', None) == StochasticMeta]
+                                if isinstance(arg.__class__, StochasticMeta)]
 
     # Find the extended parents
     parents = stochs

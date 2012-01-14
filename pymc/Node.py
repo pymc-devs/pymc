@@ -266,7 +266,6 @@ class ContainerBase(object):
       ListContainer, SetContainer, DictContainer, TupleContainer, ArrayContainer
     """
     register = False
-    __metaclass__ = ContainerMeta
     change_methods = []
     containing_classes = []
 
@@ -300,44 +299,43 @@ class ContainerBase(object):
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
+ContainerBase = six.with_metaclass(ContainerMeta, ContainerBase)
+
 StochasticRegistry = []
 class StochasticMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         StochasticRegistry.append(cls)
-class StochasticBase(Variable):
+class StochasticBase(six.with_metaclass(StochasticMeta, Variable)):
     """
     Abstract base class.
 
     :SeeAlso:
       Stochastic, Variable
     """
-    __metaclass__ = StochasticMeta
 
 DeterministicRegistry = []
 class DeterministicMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         DeterministicRegistry.append(cls)
-class DeterministicBase(Variable):
+class DeterministicBase(six.with_metaclass(DeterministicMeta, Variable)):
     """
     Abstract base class.
 
     :SeeAlso:
       Deterministic, Variable
     """
-    __metaclass__ = DeterministicMeta
 
 PotentialRegistry = []
 class PotentialMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         PotentialRegistry.append(cls)
-class PotentialBase(Node):
+class PotentialBase(six.with_metaclass(PotentialMeta, Node)):
     """
     Abstract base class.
 
     :SeeAlso:
       Potential, Variable
     """
-    __metaclass__ = PotentialMeta

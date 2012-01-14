@@ -164,8 +164,6 @@ class StepMethod(object):
     :SeeAlso: Metropolis, Sampler.
     """
 
-    __metaclass__ = StepMethodMeta
-
     def __init__(self, variables, verbose=-1, tally=False):
         # StepMethod initialization
 
@@ -303,6 +301,8 @@ class StepMethod(object):
         def fget(self):
             return self.accepted/(self.accepted + self.rejected)
         return locals()
+
+StepMethod = six.with_metaclass(StepMethodMeta, StepMethod)
 
 class NoStepper(StepMethod):
     """

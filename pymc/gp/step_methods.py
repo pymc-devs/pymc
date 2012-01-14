@@ -94,7 +94,7 @@ Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metr
 
 # Wrap all registered Metropolis step methods to use GP parents.
 new_sm_dict = {}
-filtered_registry = filter(lambda x: issubclass(x, pm.Metropolis), pm.StepMethodRegistry)
+filtered_registry = [sm for sm in pm.StepMethodRegistry if issubclass(sm, pm.Metropolis)]
 for sm in filtered_registry:
     wrapped_method = wrap_metropolis_for_gp_parents(sm)
     new_sm_dict[wrapped_method.__name__] = wrapped_method
