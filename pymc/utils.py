@@ -776,7 +776,10 @@ def crawl_dataless(sofar, gens):
     matter that there won't be one contiguous group.
     """
     new_gen = set([])
-    all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
+    all_ext_parents = set()
+    for s in gens[-1]:
+        all_ext_parents.update(s.extended_parents)
+
     for p in all_ext_parents:
         if p._random is not None and not p.observed:
             if len(p.extended_children-sofar) == 0:
