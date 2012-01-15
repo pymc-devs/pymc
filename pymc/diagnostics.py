@@ -484,7 +484,7 @@ def gelman_rubin(x):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    if np.shape(x) < 2:
+    if np.shape(x) < (2,):
         raise ValueError('Gelman-Rubin diagnostic requires multiple chains.')
 
     try:
@@ -571,7 +571,7 @@ def iat(x, maxlag=None):
     acr = [autocorr(x, lag) for lag in range(1, maxlag+1)]
     
     # Calculate gamma values
-    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag/2)]
+    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag//2)]
     
     cut = _cut_time(gammas)
     
