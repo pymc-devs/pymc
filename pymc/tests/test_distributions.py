@@ -44,7 +44,8 @@ if PLOT is True:
         pass
 try:
     import scipy.stats
-    from scipy import integrate, special, factorial, comb
+    from scipy import integrate, special
+    from scipy.misc import factorial, comb
     from scipy.stats import genextreme, exponweib
     from scipy.optimize import fmin
     SP = True
