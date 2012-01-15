@@ -20,6 +20,7 @@ from collections import defaultdict
 
 from . import six
 from .six import print_
+reduce = six.moves.reduce
 
 from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    pi, asarray, ones, atleast_1d, iterable, linspace, diff,

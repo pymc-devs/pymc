@@ -341,7 +341,9 @@ class Database(pickle.Database):
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.trace_names))
+            names = set()
+            for morenames in self.trace_names:
+                names.update(morenames)
             for name, fun in six.iteritems(model._funs_to_tally):
                 if name in self._traces:
                     self._traces[name]._getfunc = fun

@@ -233,7 +233,9 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     if collapse_potentials:
         for potential in model.potentials:
             if collapse_deterministics:
-                potential_parents = reduce(lambda x,y: x.union(set(y)), [get_obj_names(p,None) for p in potential.extended_parents], set())
+                potential_parents = set()
+                for p in potential.extended_parents:
+                    potential_parents.update(get_obj_names(p,None))
             else:
                 potential_parents=set()
                 for parent in potential.parents.values():
