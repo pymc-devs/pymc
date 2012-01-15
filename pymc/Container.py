@@ -145,6 +145,11 @@ def Container(*args):
     # Otherwise raise an error.
     raise ValueError('No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.')
 
+class _A(object):
+    pass
+dict_proxy_type = type(_A.__dict__)
+del _A
+
 def file_items(container, iterable):
     """
     Files away objects into the appropriate attributes of the container.
@@ -167,7 +172,7 @@ def file_items(container, iterable):
     for item in iterable:
 
         # If this is a dictionary, switch from key to item.
-        if isinstance(iterable, dict):
+        if isinstance(iterable, (dict, dict_proxy_type)):
             key = item
             item = iterable[key]
         # Item counter
