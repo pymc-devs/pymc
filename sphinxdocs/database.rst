@@ -10,8 +10,10 @@ Accessing Sampled Data
 The recommended way to access data from an MCMC run, irrespective of the database backend, is to use the ``trace`` method::
 
 	>>> from pymc.examples import disaster_model
+    >>> from pymc import MCMC
 	>>> M = MCMC(disaster_model)
 	>>> M.sample(10)
+    Sampling: 100% [00000000000000000000000000000000000000000000000000] Iterations: 10
 	>>> M.trace('early_mean')[:]
 	array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
 	        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])
@@ -24,6 +26,7 @@ The recommended way to access data from an MCMC run, irrespective of the databas
 Particular subsamples from the trace are obtained using the slice notation ``[]``, similar to NumPy arrays. By default, ``trace`` returns the samples from the last chain. To return the samples from all the chains, use ``chain=None``::
 
     >>> M.sample(5)
+    Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5
     >>> M.trace('early_mean', chain=None)[:]
     array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
           2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,
@@ -38,7 +41,6 @@ By default, the database backend selected by the ``MCMC`` sampler is the ``ram``
 	>>> M = MCMC(disaster_model, db='pickle', dbname='Disaster.pickle')
 	>>> M.db
 	<pymc.database.pickle.Database object at 0x7fa486623d90>
-
 	>>> M.sample(10)
 	>>> M.db.close()
 
@@ -64,6 +66,7 @@ To add a new trace to this file, we need to create an MCMC instance. This time, 
 
 	>>> M = MCMC(disaster_model, db=db)
 	>>> M.sample(5)
+    Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5
 	>>> len(M.trace('early_model', chain=None)[:])
 	15
 	>>> M.db.close()
