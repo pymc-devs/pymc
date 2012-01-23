@@ -328,8 +328,9 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     docstr += ' trace=True, rseed=True, doc=None, verbose=None, debug=False)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
-    docstr += logp.__doc__
-
+    try: docstr += logp.__doc__
+    except TypeError: pass  # This will happen when logp doesn't have a docstring
+    
     logp=valuewrapper(logp)
     distribution_arguments = logp.__dict__
 
