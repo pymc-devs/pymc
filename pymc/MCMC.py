@@ -170,7 +170,7 @@ class MCMC(Sampler):
     
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0, progress_bar=True):
         """
-        sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose)
+        sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose, progress_bar)
         
         Initialize traces, run sampling loop, clean up afterward. Calls _loop.
         
@@ -189,6 +189,8 @@ class MCMC(Sampler):
           - save_interval : int or None
             If given, the model state will be saved at intervals of this many iterations
           - verbose : boolean
+          - progress_bar : boolean
+            Display progress bar while sampling.
         """
         
         self.assign_step_methods(verbose=verbose)
