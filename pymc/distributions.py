@@ -1343,7 +1343,7 @@ def half_cauchy_like(x, alpha, beta):
 
     x = np.atleast_1d(x)
     if sum(x<0): return -inf
-    return flib.cauchy(x,alpha,beta) + len(x)*log(2)
+    return flib.cauchy(x,alpha,beta) + len(x)*np.log(2)
 
 # Half-normal----------------------------------------------
 @randomwrap
