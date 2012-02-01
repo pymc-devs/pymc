@@ -203,6 +203,11 @@ class Sampler(Model):
         self._iter = None
 
         self._state = ['status', '_current_iter', '_iter']
+        
+        if hasattr(db, '_traces'):
+            # Put traces on objects
+            for v in self._variables_to_tally:
+                v.trace = self.db._traces[v.__name__]
 
     def _sum_deviance(self):
         # Sum deviance from all stochastics

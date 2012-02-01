@@ -8,7 +8,7 @@ Development team
 * Christopher Fonnesbeck
 * David Huard
 * Anand Patil
-
+* John Salvatier
 
 Contributors
 ============
