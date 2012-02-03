@@ -17,7 +17,7 @@ parlance, ``Stochastic`` and ``Deterministic`` are subclasses of the
 never actually implemented in models.
 
 The third basic class, ``Potential``, represents 'factor potentials' 
-([Lauritzen_1990]_,[Jordan_2004]_), which are *not* variables but simply 
+([Lauritzen1990]_,[Jordan2004]_), which are *not* variables but simply 
 log-likelihood terms and/or constraints that are multiplied into joint 
 distributions to modify them. ``Potential`` and ``Variable`` are subclasses of 
 ``Node``.
@@ -119,7 +119,7 @@ There are three main ways to create stochastic variables, called the
               return -numpy.log(t_h - t_l + 1)
 
    Note that this is a simple Python function preceded by a Python expression 
-   called a **decorator** [vanRossum_2010]_, here called ``@stochastic``. 
+   called a **decorator** [vanRossum2010]_, here called ``@stochastic``. 
    Generally, decorators enhance functions with additional properties or 
    functionality. The ``Stochastic`` object produced by the ``@stochastic`` 
    decorator will evaluate its log-probability using the function 
@@ -345,7 +345,7 @@ have similar **automatic**, **decorator**, and **direct** interfaces:
 		
     All the objects thus created have ``trace=False`` and ``plot=False`` by 
     default. This convenient method of generating simple deterministics was 
-    inspired by [Kerman_2004]_.
+    inspired by [Kerman2004]_.
 
 **Decorator**
     A deterministic variable can be created via a decorator in a way very 
@@ -507,12 +507,12 @@ uncomfortable to do so.
 
 Arbitrary factors such as :math:`\psi` and the indicator function 
 :math:`I(|e-l|<1)` are implemented by objects of class ``Potential`` (from 
-[Lauritzen_1990]_ and [Jordan_2004]_, who call these terms 'factor 
+[Lauritzen1990]_ and [Jordan2004]_, who call these terms 'factor 
 potentials'). Bayesian hierarchical notation (cf model (:eq:`disastermodel`)) 
 doesn't accomodate these potentials. They are often used in cases where there 
 is no natural dependence hierarchy, such as the first example above (which is 
 known as a Markov random field). They are also useful for expressing 'soft 
-data' [Christakos_2002]_ as in the second example below.
+data' [Christakos2002]_ as in the second example below.
 
 Potentials have one important attribute, ``logp``, the log of their current 
 probability or probability density value given the values of their parents. The 
@@ -625,7 +625,7 @@ Graphing models
 The function ``dag`` (or ``graph``) in ``pymc.graph`` draws graphical 
 representations of ``Model`` (Chapter :ref:`chap_modelfitting`) instances using 
 `GraphViz <http://www.graphviz.org/>`_ via the Python package `PyDot 
-<http://code.google.com/p/pydot/>`_. See [Lauritzen_1990]_ and [Jordan_2004]_ 
+<http://code.google.com/p/pydot/>`_. See [Lauritzen1990]_ and [Jordan2004]_ 
 for more discussion of useful information that can be read off of graphical 
 models [#]_.
 

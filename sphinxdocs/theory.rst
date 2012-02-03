@@ -88,7 +88,7 @@ If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian 
 
 Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept or reject each of these values based upon :math:`f(x_i)`. Specifically, for each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant (Figure :ref:`envelope`). This approach is made more efficient by choosing an enveloping distribution that is "close" to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
 
-Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman_1997]_.
+Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman1997]_.
 
 
 Markov Chains
@@ -366,4 +366,4 @@ produce proposals close to the current parameter value, but may result in chains
 that mix very slowly. Some simulation studies suggest optimal acceptance rates
 in the range of 20-50%. It is often worthwhile to optimize the proposal variance
 by iteratively adjusting its value, according to observed acceptance rates early
-in the MCMC simulation [Gamerman_1997]_.
+in the MCMC simulation [Gamerman1997]_.
