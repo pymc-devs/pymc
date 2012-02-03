@@ -3,15 +3,15 @@ Tutorial
 ********
 
 This tutorial will guide you through a typical PyMC application. Familiarity 
-with Python is assumed, so if you are new to Python, books such as [Lutz_2007]_ 
-or [Langtangen_2009]_ are the place to start. Plenty of online documentation 
+with Python is assumed, so if you are new to Python, books such as [Lutz2007]_ 
+or [Langtangen2009]_ are the place to start. Plenty of online documentation 
 can also be found on the `Python documentation`_ page.
 
 An example statistical model
 ----------------------------
 
 Consider the following dataset, which is a time series of recorded coal mining 
-disasters in the UK from 1851 to 1962 [Jarrett_1979]_.
+disasters in the UK from 1851 to 1962 [Jarrett1979]_.
 
 .. _disasters_figure:
 
@@ -58,7 +58,7 @@ At the model-specification stage (before the data are observed), :math:`D`,
 Bayesian "random" variables have not necessarily arisen from a physical random 
 process. The Bayesian interpretation of probability is *epistemic*, meaning 
 random variable :math:`x`'s probability distribution :math:`p(x)` represents 
-our knowledge and uncertainty about :math:`x`'s value [Jaynes_2003]_. Candidate 
+our knowledge and uncertainty about :math:`x`'s value [Jaynes2003]_. Candidate 
 values of :math:`x` for which :math:`p(x)` is high are relatively more 
 probable, given what we know. Random variables are represented in PyMC by the 
 classes ``Stochastic`` and ``Deterministic``.
@@ -350,7 +350,7 @@ Fitting the model with MCMC
 
 PyMC provides several objects that fit probability models (linked collections 
 of variables) like ours. The primary such object, ``MCMC``, fits models with a 
-Markov chain Monte Carlo algorithm [Gamerman_1997]_. To create an ``MCMC`` 
+Markov chain Monte Carlo algorithm [Gamerman1997]_. To create an ``MCMC`` 
 object to handle our model, import ``disaster_model.py`` and use it as an 
 argument for ``MCMC``::
    
@@ -378,7 +378,7 @@ What does it mean to fit a model?
 this case, we are trying to represent the posterior :math:`p(s,e,l|D)` by a set 
 of joint samples from it. To produce these samples, the MCMC sampler randomly 
 updates the values of ``switchpoint``, ``early_mean`` and ``late_mean`` 
-according to the Metropolis-Hastings algorithm [Gelman_2004]_ over a specified 
+according to the Metropolis-Hastings algorithm [Gelman2004]_ over a specified 
 number of iterations (``iter``).
 
 As the number of samples grows sufficiently large, the MCMC distributions of 
@@ -399,7 +399,7 @@ If you are not sure ahead of time what values to choose for the ``burn`` and
 ``thin`` parameters, you may want to retain all the MCMC samples, that is to 
 set ``burn=0`` and ``thin=1``, and then discard the `burn-in period` and thin 
 the samples after examining the traces (the series of samples). See 
-[Gelman_2004]_ for general guidance.
+[Gelman2004]_ for general guidance.
 
 Accessing the samples
 ~~~~~~~~~~~~~~~~~~~~~
@@ -458,7 +458,7 @@ The upper left-hand pane of this figure shows the temporal series of the
 samples from ``switchpoint``, while below is an autocorrelation plot of the 
 samples. The right-hand pane shows a histogram of the trace. The trace is 
 useful for evaluating and diagnosing the algorithm's performance (see 
-[Gelman_1996]_), while the histogram is useful for visualizing the posterior.
+[Gelman1996]_), while the histogram is useful for visualizing the posterior.
 
 For a non-graphical summary of the posterior, simply call ``M.stats()``.
 

@@ -12,7 +12,7 @@ PyMC provides three objects that fit models:
 
 * ``MAP``, which computes maximum *a posteriori* estimates.
 
-* ``NormApprox``, which computes the 'normal approximation' [Gelman_2004]_: the 
+* ``NormApprox``, which computes the 'normal approximation' [Gelman2004]_: the 
   joint distribution of all stochastic variables in a model is approximated as 
   normal using local information at the maximum *a posteriori* estimate.
 
@@ -104,7 +104,7 @@ Models' useful methods are:
    attribute is not ``None`` are changed.
 
 As introduced in the previous chapter, the helper function ``graph.dag`` 
-produces graphical representations of models (see [Jordan_2004]_).
+produces graphical representations of models (see [Jordan2004]_).
 
 Models have the following important attributes:
 
@@ -194,10 +194,10 @@ The useful attributes of ``MAP`` are:
 
 ``AIC``:
    Akaike's information criterion for this model 
-   ([Akaike_1973]_,[Burnham_2002]_).
+   ([Akaike1973]_,[Burnham2002]_).
 
 ``BIC``:
-   The Bayesian information criterion for this model [Schwarz_1978]_.
+   The Bayesian information criterion for this model [Schwarz1978]_.
 
 One use of the ``MAP`` class is finding reasonable initial states for MCMC 
 chains. Note that multiple ``Model`` subclasses can handle the same collection 
@@ -316,7 +316,7 @@ own step method are available in :ref:`chap_extending`.
    handle a variable with multiple step methods.
 
 ``goodness()``:
-   Calculates goodness-of-fit (GOF) statistics according to [Brooks_2000]_.
+   Calculates goodness-of-fit (GOF) statistics according to [Brooks2000]_.
 
 ``save_state()``:
    Saves the current state of the sampler, including all stochastics, to the 
@@ -499,7 +499,7 @@ burnin period is over. This can be changed via the ``tune_throughout`` argument
 to ``MCMC.sample``. If an adaptive step method's ``tally`` flag is set (the 
 default for ``Metropolis``), a trace of its tuning parameters will be kept. If 
 you allow tuning to continue throughout the sampling loop, it is important to 
-verify that the 'Diminishing Tuning' condition of [Roberts_2007]_ is satisfied: 
+verify that the 'Diminishing Tuning' condition of [Roberts2007]_ is satisfied: 
 the amount of tuning should decrease to zero, or tuning should become very 
 infrequent.
 
@@ -518,7 +518,7 @@ The ``AdaptativeMetropolis`` (AM) step method works like a regular Metropolis
 step method, with the exception that its variables are block-updated using a 
 multivariate jump distribution whose covariance is tuned during sampling. 
 Although the chain is non-Markovian, it has correct ergodic properties (see 
-[Haario_2001]_).
+[Haario2001]_).
 
 To tell an ``MCMC`` object :math:`M` to handle variables :math:`x`, :math:`y` 
 and :math:`z` with an ``AdaptiveMetropolis`` instance, you might do the 

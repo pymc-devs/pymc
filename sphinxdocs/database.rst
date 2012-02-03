@@ -211,10 +211,10 @@ The ``hdf5`` Database takes the following parameters:
 
 * ``dbcomplib`` (`string`) Compression library (``zlib``, ``bzip2``, ``lzo``)
 
-According the the `pyTables`_ manual, `zlib` ([Roelofs_2010]_) has a fast 
+According the the `pyTables`_ manual, `zlib` ([Roelofs2010]_) has a fast 
 decompression, relatively slow compression, and a good compression ratio. `LZO` 
-([Oberhumer_2008]_) has a fast compression, but a low compression ratio. 
-`bzip2` ([Seward_2007]_) has an excellent compression ratio but requires more 
+([Oberhumer2008]_) has a fast compression, but a low compression ratio. 
+`bzip2` ([Seward2007]_) has an excellent compression ratio but requires more 
 CPU. Note that some of these compression algorithms require additional software 
 to work (see the `pyTables`_ manual).
 

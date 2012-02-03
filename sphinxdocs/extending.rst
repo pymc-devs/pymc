@@ -87,7 +87,7 @@ We can implement this Metropolis-Hastings algorithm with the following step meth
 
 The ``propose`` method sets the step method's stochastic's value to a new value, drawn from a truncated normal distribution. The precision of this distribution is computed from two factors: ``self.proposal_sd``, which can be set with an input argument to Metropolis, and ``self.adaptive_scale_factor``. Metropolis step methods' default tuning behavior is to reduce ``adaptive_scale_factor`` if the acceptance rate is too low, and to increase ``adaptive_scale_factor`` if it is too high. By incorporating ``adaptive_scale_factor`` into the proposal standard deviation, we avoid having to write our own tuning infrastructure. If we don't want the proposal to tune, we don't have to use ``adaptive_scale_factor``.
 
-The ``hastings_factor`` method adjusts for the asymmetric proposal distribution [Gelman_2004]_. It computes the log of the quotient of the 'backward' density and the 'forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero.
+The ``hastings_factor`` method adjusts for the asymmetric proposal distribution [Gelman2004]_. It computes the log of the quotient of the 'backward' density and the 'forward' density. For symmetric proposal distributions, this quotient is 1, so its log is zero.
 
 Having created our custom step method, we need to tell MCMC instances to use it to handle the variable ``cutoff``. This is done in :file:`custom_step.py` with the following line::
 
@@ -179,7 +179,7 @@ Step methods should also maintain the following attributes:
    A list of strings giving the names of any tuning parameters. For 
 	``Metropolis`` instances, this would be ``adaptive_scale_factor``. This 	
 	list is used to keep traces of tuning parameters in order to verify 
-	'diminishing tuning' [Roberts_2007]_.
+	'diminishing tuning' [Roberts2007]_.
 
 All step methods have a property called ``loglike``, which returns the sum of the log-probabilities of the union of the extended children of ``self.stochastics``. This quantity is one term in the log of the Metropolis- Hastings acceptance ratio. The ``logp_plus_loglike`` property gives the sum of that and the log-probabilities of ``self.stochastics``.
 
