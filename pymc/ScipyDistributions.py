@@ -143,13 +143,27 @@ reporting the bug.
             new_class.__init__(self, *args, **kwds)
             self.args, self.kwds = separate_shape_args(self.parents, shape_args)
             self.frozen_rv = self.rv(self.args, self.kwds)
+            
+        def _pymc_dists_to_value(self, args):
+             """Replace arguments that are a pymc.Node with their value."""
+ 	         # This is needed because the scipy rv function transforms
+ 	         # every input argument which causes new pymc lambda
+ 	         # functions to be generated. Thus, when calling this many
+ 	         # many times, excessive amounts of RAM are used.
+ 	        new_args = []
+ 	        for arg in args:
+                if isinstance(arg, pm.Node):
+ 	                new_args.append(arg.value)
+ 	            else:
+ 	                new_args.append(arg)
+            return new_args
 
         def _cdf(self):
             """
             The cumulative distribution function of self conditional on parents
             evaluated at self's current value
             """
-            return self.rv.cdf(self.value, *self.args, **self.kwds)
+            return self.rv.cdf(self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
         cdf = property(_cdf, doc=_cdf.__doc__)
 
         def _sf(self):
@@ -157,7 +171,7 @@ reporting the bug.
             The survival function of self conditional on parents
             evaluated at self's current value
             """
-            return self.rv.sf(self.value, *self.args, **self.kwds)
+            return self.rv.sf(self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
         sf = property(_sf, doc=_sf.__doc__)
 
         def ppf(self, q):
@@ -165,7 +179,7 @@ reporting the bug.
             The percentile point function (inverse cdf) of self conditional on parents.
             Self's value will be set to the return value.
             """
-            self.value = self.rv.ppf(q, *self.args, **self.kwds)
+            self.value = self.rv.ppf(q, *self._pymc_dists_to_value(self.args), **self.kwds)
             return self.value
 
         def isf(self, q):
@@ -173,16 +187,16 @@ reporting the bug.
             The inverse survival function of self conditional on parents.
             Self's value will be set to the return value.
             """
-            self.value = self.rv.isf(q, *self.args, **self.kwds)
+            self.value = self.rv.isf(q, *self._pymc_dists_to_value(self.args), **self.kwds)
             return self.value
 
         def stats(self, moments='mv'):
             """The first few moments of self's distribution conditional on parents"""
-            return self.rv.stats(moments=moments, *self.args, **self.kwds)
+            return self.rv.stats(moments=moments, *self._pymc_dists_to_value(self.args), **self.kwds)
 
         def _entropy(self):
             """The entropy of self's distribution conditional on its parents"""
-            return self.rv.entropy(*self.args, **self.kwds)
+            return self.rv.entropy(*self._pymc_dists_to_value(self.args), **self.kwds)
         entropy = property(_entropy, doc=_entropy.__doc__)
 
     newer_class.__name__ = new_class.__name__
