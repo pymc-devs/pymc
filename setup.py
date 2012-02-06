@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # Do not add setuptools here; use setupegg.py instead. Nose still has problems running
 # tests inside of egg packages, so it is useful to be able to install without eggs as needed.
+
+from __future__ import print_function
+
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os, sys
@@ -28,7 +31,7 @@ if lapack_info:
 
 if not lapack_info or dist in ['bdist', 'sdist']:
     ##inc_dirs = ['blas/BLAS','lapack/double']
-    print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
+    print('No optimized BLAS or Lapack libraries found, building from source. This may take a while...')
     for fname in os.listdir('blas/BLAS'):
         # Make sure this is a Fortran file, and not one of those weird hidden files that
         # pop up sometimes in the tarballs
@@ -68,7 +71,7 @@ if lapack_info:
     config.add_extension(name='gp.incomplete_chol',sources=['pymc/gp/incomplete_chol.f'], extra_info=lapack_info)
 
 if not lapack_info or dist in ['bdist', 'sdist']:
-    print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
+    print('No optimized BLAS or Lapack libraries found, building from source. This may take a while...')
     f_sources = ['pymc/blas_wrap.f']
     for fname in os.listdir('blas/BLAS'):
         if fname[-2:]=='.f':

@@ -20,11 +20,14 @@ Oct. 1, 2009: Added support for multidimensional arrays.
 """
 
 
-import base, ram
+from . import base, ram
 import os, datetime, shutil, re
 import numpy as np
 from numpy import array
 import string
+
+from pymc import six
+from pymc.six import print_
 
 
 __all__ = ['Trace', 'Database', 'load']
@@ -58,12 +61,16 @@ class Trace(ram.Trace):
         path = os.path.join(self.db._directory, self.db.get_chains()[chain], self.name+'.txt')
         arr = self.gettrace(chain=chain)
         
-        with open(path, 'w') as f:
-            print >> f, '# Variable: %s' % self.name
-            print >> f, '# Sample shape: %s' % str(arr.shape)
-            print >> f, '# Date: %s' % datetime.datetime.now()
+        # Following numpy's example.
+        if six.PY3:
+            mode = 'wb'
+        else:
+            mode = 'w'
+        with open(path, mode) as f:
+            f.write(six.b('# Variable: %s\n' % self.name))
+            f.write(six.b('# Sample shape: %s\n' % str(arr.shape)))
+            f.write(six.b('# Date: %s\n' % datetime.datetime.now()))
             np.savetxt(f, arr.reshape((-1, arr[0].size)), delimiter=',')
-            f.close()
 
 class Database(base.Database):
     """Txt Database class."""
@@ -121,8 +128,7 @@ class Database(base.Database):
         np.set_printoptions(threshold=1e6)
         try:
             with open(os.path.join(self._directory, 'state.txt'), 'w') as f:
-                print >> f, state
-                f.close()
+                print_(state, file=f)
         finally:
             np.set_printoptions(**oldstate)
 
@@ -131,7 +137,7 @@ class Database(base.Database):
 def load(dirname):
     """Create a Database instance from the data stored in the directory."""
     if not os.path.exists(dirname):
-        raise AttributeError, 'No txt database named %s'%dirname
+        raise AttributeError('No txt database named %s'%dirname)
 
     db = Database(dirname, dbmode='a')
     chain_folders = [os.path.join(dirname, c) for c in db.get_chains()]
@@ -144,7 +150,7 @@ def load(dirname):
         db.trace_names.append(funnames)
         for file in files:
             name = funname(file)
-            if not data.has_key(name):
+            if name not in data:
                 data[name] = {} # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
             # Read the shape information
             with open(os.path.join(folder, file)) as f:
@@ -154,7 +160,7 @@ def load(dirname):
 
 
     # Create the Traces.
-    for name, values in data.iteritems():
+    for name, values in six.iteritems(data):
         db._traces[name] = Trace(name=name, value=values, db=db)
         setattr(db, name, db._traces[name])
 

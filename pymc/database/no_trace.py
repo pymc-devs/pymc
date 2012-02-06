@@ -4,7 +4,7 @@
 ###
 
 from numpy import zeros,shape
-import base
+from . import base
 import pymc
 
 __all__ = ['Trace', 'Database']

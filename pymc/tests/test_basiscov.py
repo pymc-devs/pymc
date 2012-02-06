@@ -4,6 +4,8 @@ from pymc.gp.cov_funs import *
 from numpy import *
 from copy import copy
 
+from pymc import six
+xrange = six.moves.xrange
 
 def zero_fun(x):
     return zeros(x.shape[:-1],dtype=float)

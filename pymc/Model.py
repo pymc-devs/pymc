@@ -14,17 +14,18 @@ __all__ = ['Model', 'Sampler']
 from numpy import zeros, floor
 from numpy.random import randint
 from pymc import database
-from PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
-from Container import Container, ObjectContainer
+from .PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
+from .Container import Container, ObjectContainer
 import sys,os
 from copy import copy
 from threading import Thread
-import thread
-from Node import ContainerBase
+from .Node import ContainerBase
 from time import sleep
 import pdb
-import utils
-import warnings, exceptions, traceback
+from . import utils
+import warnings, traceback
+
+from .six import print_, reraise
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -70,7 +71,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
-    def __init__(self, input=None, name=None, verbose=0):
+    def __init__(self, input=None, name=None, verbose=-1):
         """Initialize a Model instance.
 
         :Parameters:
@@ -214,7 +215,7 @@ class Sampler(Model):
 
         return -2*sum([v.get_logp() for v in self.observed_stochastics])
 
-    def sample(self, iter, length=None, verbose=None):
+    def sample(self, iter, length=None, verbose=0):
         """
         Draws iter samples from the posterior.
         """
@@ -245,7 +246,7 @@ class Sampler(Model):
         """Reset the status and tell the database to finalize the traces."""
         if self.status in ['running', 'halt']:
             if self.verbose > 0:
-                print '\nSampling finished normally.'
+                print_('\nSampling finished normally.')
             self.status = 'ready'
 
         self.save_state()
@@ -280,7 +281,7 @@ class Sampler(Model):
                 self.tally()
 
                 if not i % 10000 and self.verbose > 0:
-                    print 'Iteration ', i, ' of ', self._iter
+                    print_('Iteration ', i, ' of ', self._iter)
                     sys.stdout.flush()
 
                 self._current_iter += 1
@@ -353,7 +354,7 @@ class Sampler(Model):
             if value in ['running', 'paused', 'halt', 'ready']:
                 self.__status=value
             else:
-                raise AttributeError, value
+                raise AttributeError(value)
         return locals()
     status = property(**status())
 
@@ -410,11 +411,11 @@ class Sampler(Model):
 
                 self.db = module.Database(**self._db_args)
             elif db in database.__modules__:
-                raise ImportError, \
-                    'Database backend `%s` is not properly installed. Please see the documentation for instructions.' % db
+                raise ImportError(\
+                    'Database backend `%s` is not properly installed. Please see the documentation for instructions.' % db)
             else:
-                raise AttributeError, \
-                    'Database backend `%s` is not defined in pymc.database.'%db
+                raise AttributeError(\
+                    'Database backend `%s` is not defined in pymc.database.'%db)
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
@@ -427,7 +428,7 @@ class Sampler(Model):
         self.status = 'paused'
         # The _loop method will react to 'paused' status and stop looping.
         if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
-            print 'Waiting for current iteration to finish...'
+            print_('Waiting for current iteration to finish...')
             while self._sampling_thread.isAlive():
                 sleep(.1)
 
@@ -436,12 +437,12 @@ class Sampler(Model):
         self.status = 'halt'
         # The _halt method is called by _loop.
         if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
-            print 'Waiting for current iteration to finish...'
+            print_('Waiting for current iteration to finish...')
             while self._sampling_thread.isAlive():
                 sleep(.1)
 
     def _halt(self):
-        print 'Halting at iteration ', self._current_iter, ' of ', self._iter
+        print_('Halting at iteration ', self._current_iter, ' of ', self._iter)
         self.db.truncate(self._cur_trace_index)
         self._finalize()
 
@@ -455,13 +456,13 @@ class Sampler(Model):
        Records the value of all tracing variables.
        """
        if self.verbose > 2:
-           print self.__name__ + ' tallying.'
+           print_(self.__name__ + ' tallying.')
        if self._cur_trace_index < self.max_trace_length:
            self.db.tally()
 
        self._cur_trace_index += 1
        if self.verbose > 2:
-           print self.__name__ + ' done tallying.'
+           print_(self.__name__ + ' done tallying.')
 
     def commit(self):
         """
@@ -494,7 +495,7 @@ class Sampler(Model):
         Restarts thread in interactive mode
         """
         if self.status != 'paused':
-            print "No sampling to continue. Please initiate sampling with isample."
+            print_("No sampling to continue. Please initiate sampling with isample.")
             return
 
         def sample_and_finalize():
@@ -523,13 +524,13 @@ class Sampler(Model):
                       own risk.
         """
 
-        print >> out, """==============
+        print_("""==============
  PyMC console
 ==============
 
         PyMC is now sampling. Use the following commands to query or pause the sampler.
-        """
-        print >> out, cmds
+        """, file=out)
+        print_(cmds, file=out)
 
         prompt = True
         try:
@@ -541,11 +542,11 @@ class Sampler(Model):
 
                     if self._exc_info is not None:
                         a,b,c = self._exc_info
-                        raise a, b, c
+                        reraise(a, b, c)
 
                     cmd = utils.getInput().strip()
                     if cmd == 'i':
-                        print >> out,  'Current iteration: ', self._current_iter
+                        print_('Current iteration: ', self._current_iter, file=out)
                         prompt = True
                     elif cmd == 'p':
                         self.status = 'paused'
@@ -561,8 +562,8 @@ class Sampler(Model):
                     elif cmd == '':
                         prompt = False
                     else:
-                        print >> out, 'Unknown command: ', cmd
-                        print >> out, cmds
+                        print_('Unknown command: ', cmd, file=out)
+                        print_(cmds, file=out)
                         prompt = True
 
         except KeyboardInterrupt:
@@ -571,14 +572,14 @@ class Sampler(Model):
 
 
         if self.status == 'ready':
-            print >> out, "Sampling terminated successfully."
+            print_("Sampling terminated successfully.", file=out)
         else:
-            print >> out, 'Waiting for current iteration to finish...'
+            print_('Waiting for current iteration to finish...', file=out)
             while self._sampling_thread.isAlive():
                 sleep(.1)
-            print >> out, 'Exiting interactive prompt...'
+            print_('Exiting interactive prompt...', file=out)
             if self.status == 'paused':
-                print >> out, 'Call icontinue method to continue, or call halt method to truncate traces and stop.'
+                print_('Call icontinue method to continue, or call halt method to truncate traces and stop.', file=out)
 
 
     def get_state(self):
@@ -603,8 +604,8 @@ class Sampler(Model):
         try:
             self.db.savestate(self.get_state())
         except:
-            print 'Warning, unable to save state.'
-            print 'Error message:'
+            print_('Warning, unable to save state.')
+            print_('Error message:')
             traceback.print_exc()
 
     def restore_sampler_state(self):
@@ -626,7 +627,7 @@ class Sampler(Model):
                 sm.value = stoch_state[sm.__name__]
             except:
                 warnings.warn('Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__))
-                #print 'Error message:'
+                #print_('Error message:')
                 #traceback.print_exc()
 
 
@@ -663,7 +664,7 @@ class Sampler(Model):
         elif isinstance(name, Variable):
             return self.db.trace(name.__name__, chain)
         else:
-            raise ValueError, 'Name argument must be string or Variable, got %s.'%name
+            raise ValueError('Name argument must be string or Variable, got %s.'%name)
 
     def _get_deviance(self):
         return self._sum_deviance()
@@ -674,6 +675,6 @@ def check_valid_object_name(sequence):
     names = []
     for o in sequence:
         if o.__name__ in names:
-            raise ValueError, 'A tallyable PyMC object called %s already exists. This will cause problems for some database backends.'%o.__name__
+            raise ValueError('A tallyable PyMC object called %s already exists. This will cause problems for some database backends.'%o.__name__)
         else:
             names.append(o.__name__)

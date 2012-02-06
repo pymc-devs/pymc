@@ -4,6 +4,9 @@ from pymc.NormalApproximation import *
 import pymc as pm
 import numpy as np
 
+from pymc import six
+xrange = six.moves.xrange
+
 class EM(MAP):
     """
     N = EM(input, sampler, db='ram', eps=.001, diff_order = 5)

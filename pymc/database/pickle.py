@@ -10,9 +10,16 @@ versions. Users should use this backend only for shortlived projects.
 
 """
 
-import ram, no_trace, base
+from . import ram, no_trace, base
 import os, datetime, numpy
-import string, cPickle
+import string
+
+try:
+    import cPickle as std_pickle
+except ImportError:
+    import pickle as std_pickle   # In Python 3, cPickle is folded into pickle
+
+from pymc import six
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -50,12 +57,12 @@ class Database(base.Database):
         """Dump traces using cPickle."""
         container={}
         try:
-            for name in self._traces.iterkeys():
+            for name in self._traces:
                 container[name] = self._traces[name]._trace
             container['_state_'] = self._state_
 
-            file = open(self.filename, 'w')
-            cPickle.dump(container, file)
+            file = open(self.filename, 'wb')
+            std_pickle.dump(container, file)
             file.close()
         except AttributeError:
             pass
@@ -66,13 +73,13 @@ def load(filename):
 
     Return a Database instance.
     """
-    file = open(filename, 'r')
-    container = cPickle.load(file)
+    file = open(filename, 'rb')
+    container = std_pickle.load(file)
     file.close()
     db = Database(file.name)
     chains = 0
     funs = set()
-    for k,v in container.iteritems():
+    for k,v in six.iteritems(container):
         if k == '_state_':
            db._state_ = v
         else:

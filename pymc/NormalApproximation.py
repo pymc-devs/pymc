@@ -11,14 +11,18 @@ __docformat__='reStructuredText'
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 __all__ = ['NormApproxMu', 'NormApproxC', 'MAP', 'NormApprox']
 
-from PyMCObjects import Stochastic, Potential
-from Node import ZeroProbability
-from Model import Model, Sampler
+from .PyMCObjects import Stochastic, Potential
+from .Node import ZeroProbability
+from .Model import Model, Sampler
 from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
 from numpy.random import normal
 from numpy.linalg import solve
-from utils import msqrt, check_type, round_array, logp_of_set
+from .utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
+
+from pymc import six
+from pymc.six import print_
+xrange = six.moves.xrange
 
 try:
     from scipy.optimize import fmin_ncg, fmin, fmin_powell, fmin_cg, fmin_bfgs, fmin_ncg, fmin_l_bfgs_b
@@ -45,7 +49,7 @@ class NormApproxMu(object):
     def __getitem__(self, *stochastics):
 
         if not self.owner.fitted:
-            raise ValueError, 'NormApprox object must be fitted before mu can be accessed.'
+            raise ValueError('NormApprox object must be fitted before mu can be accessed.')
 
         tot_len = 0
 
@@ -87,7 +91,7 @@ class NormApproxC(object):
     def __getitem__(self, *stochastics):
 
         if not self.owner.fitted:
-            raise ValueError, 'NormApprox object must be fitted before C can be accessed.'
+            raise ValueError('NormApprox object must be fitted before C can be accessed.')
 
         tot_len = 0
 
@@ -143,9 +147,9 @@ class MAP(Model):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=None):
+    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=-1):
         if not scipy_imported:
-            raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
+            raise ImportError('Scipy must be installed to use NormApprox and MAP.')
 
         Model.__init__(self, input, verbose=verbose)
 
@@ -170,8 +174,8 @@ class MAP(Model):
             self.stochastic_type_dict[stochastic] = type_now
 
             if not type_now is float:
-                print "Warning: Stochastic " + stochastic.__name__ + "'s value is neither numerical nor array with " + \
-                            "floating-point dtype. Recommend fitting method fmin (default)."
+                print_("Warning: Stochastic " + stochastic.__name__ + "'s value is neither numerical nor array with " + \
+                            "floating-point dtype. Recommend fitting method fmin (default).")
 
             # Inspect shapes of all stochastics and create stochastic slices.
             if isinstance(stochastic.value, ndarray):
@@ -243,14 +247,14 @@ class MAP(Model):
 
         if not self.method == 'newton':
             if not scipy_imported:
-                raise ImportError, 'Scipy is required to use EM and NormApprox'
+                raise ImportError('Scipy is required to use EM and NormApprox')
 
         if self.verbose > 0:
             def callback(p):
                 try:
-                    print 'Current log-probability : %f' % self.logp
+                    print_('Current log-probability : %f' % self.logp)
                 except ZeroProbability:
-                    print 'Current log-probability : %f' % -Inf
+                    print_('Current log-probability : %f' % -Inf)
         else:
             def callback(p):
                 pass
@@ -302,7 +306,7 @@ class MAP(Model):
                             iprint=verbose-1)[0]
 
         else:
-            raise ValueError, 'Method unknown.'
+            raise ValueError('Method unknown.')
 
         self._set_stochastics(p)
         self._mu = p
@@ -310,7 +314,7 @@ class MAP(Model):
         try:
             self.logp_at_max = self.logp
         except:
-            raise RuntimeError, 'Posterior probability optimization converged to value with zero probability.'
+            raise RuntimeError('Posterior probability optimization converged to value with zero probability.')
 
         self.AIC = 2. * (self.len - self.logp_at_max) # 2k - 2 ln(L)
         try:
@@ -486,7 +490,7 @@ class NormApprox(MAP, Sampler):
     """
     def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, **kwds):
         if not scipy_imported:
-            raise ImportError, 'Scipy must be installed to use NormApprox and MAP.'
+            raise ImportError('Scipy must be installed to use NormApprox and MAP.')
 
         MAP.__init__(self, input, eps, diff_order)
 

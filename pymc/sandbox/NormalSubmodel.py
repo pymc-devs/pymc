@@ -18,6 +18,9 @@ import cvxopt as cvx
 from cvxopt import base, cholmod
 from IPython.Debugger import Pdb
 
+from pymc import six
+xrange = six.moves.xrange
+
 normal_classes = [Normal, MvNormal, MvNormalCov, MvNormalChol]
 
 __all__ = ['normal_classes', 'sp_to_ar', 'assign_from_sparse', 'slice_by_stochastics', 'spmat_to_backsolver', 'crawl_normal_submodel', 'NormalSubmodel']

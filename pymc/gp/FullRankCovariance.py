@@ -6,10 +6,13 @@ __all__ = ['FullRankCovariance']
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
-from linalg_utils import dpotrf_wrap
-from Covariance import Covariance
-from incomplete_chol import ichol, ichol_continue
+from .GPutils import regularize_array, trisolve
+from .linalg_utils import dpotrf_wrap
+from .Covariance import Covariance
+from .incomplete_chol import ichol, ichol_continue
+
+from pymc import six
+xrange = six.moves.xrange
 
 
 class FullRankCovariance(Covariance):
@@ -95,7 +98,7 @@ class FullRankCovariance(Covariance):
 
         info = dpotrf_wrap(U)
         if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
+            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info)
 
         if return_eval_also:
             return U, C_eval
@@ -156,7 +159,7 @@ class FullRankCovariance(Covariance):
 
         info = dpotrf_wrap(U_new)
         if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
+            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info)
 
         U[N_old:,N_old:] = U_new
         if return_eval_also:
@@ -198,7 +201,7 @@ class FullRankCovariance(Covariance):
 
         if self.ndim is not None:
             if not ndim==self.ndim:
-                raise ValueError, "Dimension of observation mesh is not equal to dimension of base mesh."
+                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 

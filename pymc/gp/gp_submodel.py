@@ -7,13 +7,13 @@ __all__ = ['GaussianProcess','GPEvaluation','GPSubmodel']
 import pymc as pm
 import copy
 import numpy as np
-from Realization import Realization
+from .Realization import Realization
 
 
 __all__ = ['GaussianProcess', 'GPEvaluation', 'GPSubmodel']
 
 def gp_logp(x, M, C, mesh, f_eval, M_obs, C_obs):
-    raise TypeError, 'GP objects have no logp function'
+    raise TypeError('GP objects have no logp function')
 
 def gp_rand(M, C, mesh, f_eval, M_obs, C_obs, size=None):
     # M and C are input pre-observed, so no need to
@@ -44,7 +44,7 @@ class GaussianProcess(pm.Stochastic):
     """
     
     def __init__(self,name,submodel,trace=True,value=None,rseed=False,
-                    observed=False,cache_depth=2,plot=None,verbose=None,isdata=None):
+                    observed=False,cache_depth=2,plot=None,verbose=-1,isdata=None):
                 
         self.submodel = submodel
         
@@ -58,10 +58,10 @@ class GaussianProcess(pm.Stochastic):
         pass
         
     def get_logp(self):
-        raise TypeError, 'Gaussian process %s has no logp.'%self.__name__
+        raise TypeError('Gaussian process %s has no logp.'%self.__name__)
         
     def set_logp(self, new_logp):
-        raise TypeError, 'Gaussian process %s has no logp.'%self.__name__
+        raise TypeError('Gaussian process %s has no logp.'%self.__name__)
         
     def set_value(self, new_value):
         # If this is a new value pulled off the trace, save it the trouble of observing

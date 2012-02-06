@@ -1,8 +1,11 @@
-import isotropic_cov_funs
+from . import isotropic_cov_funs
 import numpy as np
-from isotropic_cov_funs import symmetrize, imul
+from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 from pymc import get_threadpool_size, map_noreturn
+
+from pymc import six
+xrange = six.moves.xrange
 
 __all__ = ['brownian']
 
@@ -60,10 +63,10 @@ def brownian(x,y,amp=1.,scale=1.,origin=None,h=.5,symm=None):
     # multithreaded call.
 
     if h<0 or h>1:
-        raise ValueError, 'Parameter h must be between 0 and 1.'
+        raise ValueError('Parameter h must be between 0 and 1.')
 
     if amp<0. or scale<0.:
-        raise ValueError, 'The amp and scale parameters must be positive.'
+        raise ValueError('The amp and scale parameters must be positive.')
 
     if symm is None:
         symm = (x is y)

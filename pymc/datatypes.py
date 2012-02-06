@@ -5,7 +5,13 @@ from numpy import ubyte, ushort, uintc, uint, ulonglong, uintp
 from numpy import single, float_, longfloat
 from numpy import csingle, complex_, clongfloat
 
-integer_dtypes = [int, uint, long, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
+# These are only used for membership tests, but things break if they are sets
+# rather than lists. TK, Jan 2012.
+integer_dtypes = [int, uint, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
+try:
+    integer_dtypes.append(long)
+except NameError:
+    pass       # long is just int for Python 3
 float_dtypes = [float, single, float_, longfloat]
 complex_dtypes = [complex, csingle, complex_, clongfloat]
 bool_dtypes = [bool, bool_]

@@ -3,17 +3,21 @@
 __docformat__ = 'reStructuredText'
 
 import pymc as pm
-import linalg_utils
+from . import linalg_utils
 import copy
 import types
 import numpy as np
-from gp_submodel import *
+from .gp_submodel import *
 import warnings
 
-from Realization import Realization
-from Mean import Mean
-from Covariance import Covariance
-from GPutils import observe, regularize_array
+from pymc import six
+from pymc.six import print_
+xrange = six.moves.xrange
+
+from .Realization import Realization
+from .Mean import Mean
+from .Covariance import Covariance
+from .GPutils import observe, regularize_array
 
 __all__ = ['wrap_metropolis_for_gp_parents', 'GPEvaluationGibbs', 'GPParentAdaptiveMetropolis', 'GPStepMethod', 'GPEvaluationMetropolis', 'MeshlessGPMetropolis']
 
@@ -31,6 +35,9 @@ def wrap_metropolis_for_gp_parents(metro_class):
     Gaussian processes.
     """
     class wrapper(metro_class):
+        __doc__ = """A modified version of class %s that handles parents of Gaussian processes.
+Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metro_class.__doc__)
+        
         def __init__(self, stochastic, *args, **kwds):
             
             self.metro_class.__init__(self, stochastic, *args, **kwds)
@@ -81,15 +88,13 @@ def wrap_metropolis_for_gp_parents(metro_class):
         
     wrapper.__name__ = 'GPParent%s'%metro_class.__name__
     wrapper.metro_class = metro_class
-    wrapper.__doc__ = """A modified version of class %s that handles parents of Gaussian processes.
-Docstring of class %s: \n\n%s"""%(metro_class.__name__,metro_class.__name__,metro_class.__doc__)
             
     return wrapper
 
 
 # Wrap all registered Metropolis step methods to use GP parents.
 new_sm_dict = {}
-filtered_registry = filter(lambda x: issubclass(x, pm.Metropolis), pm.StepMethodRegistry)
+filtered_registry = [sm for sm in pm.StepMethodRegistry if issubclass(sm, pm.Metropolis)]
 for sm in filtered_registry:
     wrapped_method = wrap_metropolis_for_gp_parents(sm)
     new_sm_dict[wrapped_method.__name__] = wrapped_method
@@ -218,7 +223,7 @@ class GPEvaluationGibbs(pm.Metropolis):
     def reject(self):
         self.rejected += 1
         if self.verbose:
-            print self._id + ' rejecting'
+            print_(self._id + ' rejecting')
         # Revert the field evaluation and the rest of the field.
         self.f_eval.revert()
         self.f.revert()
@@ -229,7 +234,7 @@ class GPEvaluationGibbs(pm.Metropolis):
     def propose(self):
 
         if self.verbose:
-            print self._id + ' proposing'
+            print_(self._id + ' proposing')
 
         fc = pm.gp.fast_matrix_copy
 

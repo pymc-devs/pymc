@@ -13,3 +13,4 @@ develop
 testresults/*
 sphinxdoc/build/*
 *.tmproj
+*.py.bak

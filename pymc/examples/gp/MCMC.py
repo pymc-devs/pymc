@@ -1,4 +1,4 @@
-import PyMCmodel
+from . import PyMCmodel
 from pymc import *
 from pylab import *
 import matplotlib

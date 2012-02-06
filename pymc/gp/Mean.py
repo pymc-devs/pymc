@@ -3,7 +3,7 @@
 __docformat__='reStructuredText'
 
 from numpy import *
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 
 __all__ = ['Mean','zero_fn']
 
@@ -70,7 +70,7 @@ class Mean(object):
 
             self.dev = (obs_vals_new - mean_under_new)
 
-    	    self.reg_mat = C._unobs_reg(self)
+            self.reg_mat = C._unobs_reg(self)
 
         # If self has been observed already:
         elif len(obs_vals_new)>0:
@@ -83,7 +83,7 @@ class Mean(object):
 
 
             # Again, basis covariances get special treatment.
-    	    self.reg_mat = C._obs_reg(self, dev_new, m_old)
+            self.reg_mat = C._obs_reg(self, dev_new, m_old)
 
             # Stack deviations of old and new observations from unobserved mean.
             self.dev = hstack((self.dev, dev_new))
@@ -106,7 +106,7 @@ class Mean(object):
         # Safety.
         if self.ndim is not None:
             if not self.ndim == ndimx:
-                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh."
+                raise ValueError("The number of spatial dimensions of x does not match the number of spatial dimensions of the Mean instance's base mesh.")
 
         # Evaluate the unobserved mean
         M = self.eval_fun(x,**self.params).squeeze()

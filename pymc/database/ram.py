@@ -14,7 +14,7 @@ We would need to catch MemoryError exceptions though.
 
 import pymc
 from numpy import zeros,shape,concatenate, ndarray,dtype
-import base
+from . import base
 import warnings
 import numpy as np
 
@@ -129,7 +129,7 @@ class Trace(base.Trace):
     def __getitem__(self, index):
         chain = self._chain
         if chain is None:
-            return concatenate(self._trace.values())[index]
+            return concatenate(list(self._trace.values()))[index]
         else:
             if chain < 0:
                 chain = range(self.db.chains)[chain]

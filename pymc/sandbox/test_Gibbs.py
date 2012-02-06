@@ -3,12 +3,15 @@ from numpy import *
 from pymc import *
 from numpy.random import randint
 from pylab import *
-from GibbsStepMethods import *
+from .GibbsStepMethods import *
 try:
-    from NormalSubmodel import *
+    from .NormalSubmodel import *
     from NormalModel import *
 except:
     pass
+
+from pymc import six
+xrange = six.moves.xrange
 
 class test_Gibbs(NumpyTestCase):
 

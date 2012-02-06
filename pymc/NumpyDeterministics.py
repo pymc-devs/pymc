@@ -3,11 +3,14 @@ pymc.NumpyDeterministics
 """
 
 __docformat__='reStructuredText'
-import PyMCObjects as pm
+from . import PyMCObjects as pm
 import numpy as np
 from numpy import sum, ones, zeros, ravel, shape, size, newaxis
-from utils import find_element
+from .utils import find_element
 import inspect
+
+from pymc import six
+xrange = six.moves.xrange
 
 #accumulations 
 _boolean_accumulation_deterministics = ['any' , 'all']
@@ -89,7 +92,7 @@ def new_deterministic_class(*new_class_args):
 
             # Figure out what argument names are needed.
             arg_keys = [ 'parents',  'trace', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [ parents,  False, True, None, False, None, None]
+            arg_vals = [ parents,  False, True, None, False, -1]
 
             arg_dict_out = dict(zip(arg_keys, arg_vals))
             args_needed =  parent_names + arg_keys[2:]
@@ -103,7 +106,7 @@ def new_deterministic_class(*new_class_args):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed))
 
 
             # Sort keyword arguments
@@ -115,7 +118,7 @@ def new_deterministic_class(*new_class_args):
                         if k in parents_default:
                             parents[k] = parents_default[k]
                         else:
-                            raise ValueError, 'No value given for parent ' + k
+                            raise ValueError('No value given for parent ' + k)
                 elif k in arg_dict_out.keys():
                     try:
                         arg_dict_out[k] = kwds.pop(k)
@@ -124,7 +127,7 @@ def new_deterministic_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError, 'Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed)
+                raise TypeError('Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
 
             # Call base class initialization method
             if arg_dict_out.pop('debug'):

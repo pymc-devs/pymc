@@ -1,5 +1,6 @@
 import numpy as np
 from copy import copy
+from pymc import six
 
 __all__ = ['plot_GP_envelopes']
 
@@ -56,4 +57,4 @@ def plot_GP_envelopes(f, x, HPD = [.25, .5, .95], transx = None, transy = None):
             env.display(x, alpha=1.-m*.5,new=False)
         centered_envelope(sorted_func_stack, 0.).display(x, alpha=1., new=False)
     except ImportError:
-        print 'Plotter could not be imported; plotting disabled'
+        six.print_('Plotter could not be imported; plotting disabled')

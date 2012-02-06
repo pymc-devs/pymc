@@ -2,6 +2,9 @@
 
 from numpy import *
 
+from pymc import six
+xrange = six.moves.xrange
+
 __all__ = ['fourier_basis']
 
 def fourier_basis(n):

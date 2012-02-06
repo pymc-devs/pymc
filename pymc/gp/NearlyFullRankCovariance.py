@@ -6,11 +6,13 @@ __all__ = ['NearlyFullRankCovariance']
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
-from linalg_utils import diag_call
-from incomplete_chol import ichol_full
-from Covariance import Covariance
+from .GPutils import regularize_array, trisolve
+from .linalg_utils import diag_call
+from .incomplete_chol import ichol_full
+from .Covariance import Covariance
 
+from pymc import six
+xrange = six.moves.xrange
 
 class NearlyFullRankCovariance(Covariance):
 
@@ -72,7 +74,7 @@ class NearlyFullRankCovariance(Covariance):
                 rank_limit rows.
         """
         if rank_limit > 0:
-            raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
+            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         if regularize:
             x=regularize_array(x)
@@ -107,7 +109,7 @@ class NearlyFullRankCovariance(Covariance):
 
         # Arrange output matrix and return.
         if m<0:
-            raise ValueError, "Matrix does not appear to be positive semidefinite"
+            raise ValueError("Matrix does not appear to be positive semidefinite")
 
         if not apply_pivot:
             # Useful for self.observe and Realization.__call__. U is upper triangular.
@@ -164,10 +166,10 @@ class NearlyFullRankCovariance(Covariance):
             x=regularize_array(x)
 
         if rank_limit > 0:
-            raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
+            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         if rank_limit > 0:
-            raise ValueError, 'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.'
+            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         # Concatenation of the old points and new points.
         xtot = vstack((x_old,x))
@@ -223,7 +225,7 @@ class NearlyFullRankCovariance(Covariance):
 
         # Arrange output matrix and return.
         if m<0:
-            raise ValueError, 'Matrix does not appear positive semidefinite.'
+            raise ValueError('Matrix does not appear positive semidefinite.')
 
         if not apply_pivot:
             # Useful for self.observe. U is upper triangular.

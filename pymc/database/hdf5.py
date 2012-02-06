@@ -26,6 +26,8 @@ import tables
 import os, warnings, sys, traceback
 import warnings
 
+from pymc import six
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -253,10 +255,10 @@ class Database(pickle.Database):
 
         # Deprecation of complevel and complib
         # Remove in V2.1
-        if kwds.has_key('complevel'):
+        if 'complevel' in kwds:
             warnings.warn('complevel has been replaced with dbcomplevel.', DeprecationWarning)
             dbcomplevel = kwds.get('complevel')
-        if kwds.has_key('complib'):
+        if 'complib' in kwds:
             warnings.warn('complib has been replaced with dbcomplib.', DeprecationWarning)
             dbcomplib = kwds.get('complib')
         
@@ -296,7 +298,7 @@ class Database(pickle.Database):
                             objects[node._v_name] = [node,]
 
             # Note that the list vlarrays is in reverse order.
-            for k, vlarrays in objects.iteritems():
+            for k, vlarrays in six.iteritems(objects):
                 db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays)
                 setattr(db, k, db._traces[k])
 
@@ -334,22 +336,24 @@ class Database(pickle.Database):
         if isinstance(model, pymc.Model):
             self.model = model
         else:
-            raise AttributeError, 'Not a Model instance.'
+            raise AttributeError('Not a Model instance.')
 
         # Restore the state of the Model from an existing Database.
         # The `load` method will have already created the Trace objects.
         if hasattr(self, '_state_'):
-            names = set(reduce(list.__add__, self.trace_names))
-            for name, fun in model._funs_to_tally.iteritems():
-                if self._traces.has_key(name):
+            names = set()
+            for morenames in self.trace_names:
+                names.update(morenames)
+            for name, fun in six.iteritems(model._funs_to_tally):
+                if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.remove(name)
             if len(names) > 0:
-                raise RuntimeError, "Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names)
+                raise RuntimeError("Some objects from the database have not been assigned a getfunc: %s"% ', '.join(names))
 
         # Create a fresh new state. This is now taken care of in initialize.
         else:
-            for name, fun in model._funs_to_tally.iteritems():
+            for name, fun in six.iteritems(model._funs_to_tally):
                 if np.array(fun()).dtype is np.dtype('object'):
                     self._traces[name] = TraceObject(name, getfunc=fun, db=self)
                 else:
@@ -376,7 +380,7 @@ class Database(pickle.Database):
 
         # Create the Table in the chain# group, and ObjectAtoms in chain#/group#.
         table_descr = {}
-        for name, fun in funs_to_tally.iteritems():
+        for name, fun in six.iteritems(funs_to_tally):
 
             arr = asarray(fun())
 
@@ -417,8 +421,8 @@ class Database(pickle.Database):
 
 
        # Make sure the variables have a corresponding Trace instance.
-        for name, fun in funs_to_tally.iteritems():
-            if not self._traces.has_key(name):
+        for name, fun in six.iteritems(funs_to_tally):
+            if name not in self._traces:
                 if np.array(fun()).dtype is np.dtype('object'):
                     self._traces[name] = TraceObject(name, getfunc=fun, db=self)
                 else:
@@ -492,7 +496,7 @@ Error:
       in terms of PyTables
         columns, and a"""
         D = {}
-        for name, fun in self.model._funs_to_tally.iteritems():
+        for name, fun in six.iteritems(self.model._funs_to_tally):
             arr = asarray(fun())
             D[name] = tables.Col.from_dtype(dtype((arr.dtype,arr.shape)))
         return D, {}
@@ -510,7 +514,7 @@ Error:
             for k,v in self._model_trace_description():
                 assert(stored_descr[k][0]==v[0])
         except:
-            raise "The objects to tally are incompatible with the objects stored in the file."
+            raise ValueError("The objects to tally are incompatible with the objects stored in the file.")
 
     def _gettables(self):
         """Return a list of hdf5 tables name PyMCsamples.
@@ -533,7 +537,7 @@ Error:
         """
 
         if not np.isscalar(chain):
-            raise TypeError, "chain must be a scalar integer."
+            raise TypeError("chain must be a scalar integer.")
 
         table = self._tables[chain]
 
@@ -563,7 +567,7 @@ def load(dbname, dbmode='a'):
         File mode : 'a': append, 'r': read-only.
     """
     if dbmode == 'w':
-        raise AttributeError, "dbmode='w' not allowed for load."
+        raise AttributeError("dbmode='w' not allowed for load.")
     db = Database(dbname, dbmode=dbmode)
 
     return db

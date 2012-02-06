@@ -1,7 +1,13 @@
 from numpy.testing import *
 import numpy as np
 import pymc as pm
-from types import UnboundMethodType
+
+try:
+    from types import UnboundMethodType
+except ImportError:
+    # On Python 3, unbound methods are just functions.
+    def UnboundMethodType(func, inst, cls):
+        return func
 
 submod = pm.gp.GPSubmodel('x5',pm.gp.Mean(lambda x:0*x),pm.gp.FullRankCovariance(pm.gp.cov_funs.exponential.euclidean, amp=1, scale=1),np.linspace(-1,1,21))
 x = [pm.MvNormalCov('x0',np.zeros(5),np.eye(5)),
@@ -27,7 +33,7 @@ for dnim in do_not_implement_methods:
     def meth(self, dnim=dnim):
         for y in x:
             if hasattr(y, '__%s__'%dnim):
-                raise AssertionError, 'Method %s implemented in class %s'%(dnim, y.__class__)
+                raise AssertionError('Method %s implemented in class %s'%(dnim, y.__class__))
     setattr(test_special_methods, 'test_'+dnim, UnboundMethodType(meth, None, test_special_methods))
 
 for dnim in uni_methods:

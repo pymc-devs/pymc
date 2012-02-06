@@ -27,17 +27,21 @@ with a distribution called 'dist' are:
 
 __docformat__='reStructuredText'
 
-import flib
+from . import flib
 import pymc
 import numpy as np
-from Node import ZeroProbability
-from PyMCObjects import Stochastic, Deterministic
-from CommonDeterministics import Lambda
+from .Node import ZeroProbability
+from .PyMCObjects import Stochastic, Deterministic
+from .CommonDeterministics import Lambda
 from numpy import pi, inf
 import itertools
 import pdb
-import utils
+from . import utils
 import warnings
+
+from pymc import six
+from pymc.six import print_
+xrange = six.moves.xrange
 
 def poiscdf(a, x):
     x = np.atleast_1d(x)
@@ -144,6 +148,7 @@ def new_dist_class(*new_class_args):
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
 
     class new_class(Stochastic):
+        __doc__ = docstr
 
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
@@ -151,8 +156,8 @@ def new_dist_class(*new_class_args):
             
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
-            arg_vals = [None, parents, None, False, None, True, True, None, False, None, None]
-            if kwds.has_key('isdata'):
+            arg_vals = [None, parents, None, False, None, True, True, None, False, None, -1]
+            if 'isdata' in kwds:
                 warnings.warn('"isdata" is deprecated, please use "observed" instead.')
                 kwds['observed'] = kwds['isdata']
                 pass
@@ -175,7 +180,7 @@ def new_dist_class(*new_class_args):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError, 'Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed)
+                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed))
 
 
             # Sort keyword arguments
@@ -187,7 +192,7 @@ def new_dist_class(*new_class_args):
                         if k in parents_default:
                             parents[k] = parents_default[k]
                         else:
-                            raise ValueError, 'No value given for parent ' + k
+                            raise ValueError('No value given for parent ' + k)
                 elif k in arg_dict_out.keys():
                     try:
                         arg_dict_out[k] = kwds.pop(k)
@@ -196,7 +201,7 @@ def new_dist_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError, 'Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed)
+                raise TypeError('Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
 
         # Determine size desired for scalar variables.
         # Notes
@@ -237,7 +242,7 @@ def new_dist_class(*new_class_args):
                     parents_shape = None
 
                 def shape_error():
-                    raise ValueError, 'Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape)
+                    raise ValueError('Shapes are incompatible: value %s, largest parent %s, shape argument %s'%(shape, init_val_shape, parents_shape))
 
                 if init_val_shape is not None and shape is not None and init_val_shape != shape:
                     shape_error()
@@ -258,7 +263,7 @@ def new_dist_class(*new_class_args):
 
 
             elif 'size' in kwds.keys():
-                raise ValueError, 'No size argument allowed for multivariate stochastic variables.'
+                raise ValueError('No size argument allowed for multivariate stochastic variables.')
 
             
             # Call base class initialization method
@@ -272,7 +277,6 @@ def new_dist_class(*new_class_args):
     new_class.parent_names = parent_names
     new_class.parents_default = parents_default
     new_class.dtype = dtype
-    new_class.__doc__ = docstr
     new_class.mv = mv
     new_class.raw_fns = {'logp': logp, 'random': random}
 
@@ -325,7 +329,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, observed=False,'
     if not mv:
         docstr += ' size=1,'
-    docstr += ' trace=True, rseed=True, doc=None, verbose=None, debug=False)\n\n'
+    docstr += ' trace=True, rseed=True, doc=None, verbose=-1, debug=False)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
     try: docstr += logp.__doc__
@@ -336,7 +340,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
     wrapped_logp_partial_gradients = {}
 
-    for parameter, func in logp_partial_gradients.iteritems():
+    for parameter, func in six.iteritems(logp_partial_gradients):
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
     
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
@@ -402,7 +406,7 @@ def randomwrap(func):
         dimension = [np.atleast_1d(a).ndim for a in args]
         N = max(length)
         if len(set(dimension))>2:
-            raise 'Dimensions do not agree.'
+            raise('Dimensions do not agree.')
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
 
@@ -414,11 +418,11 @@ def randomwrap(func):
             elif s == N:
                 arr = np.asarray(arg)
             else:
-                raise RuntimeError, 'Arguments size not allowed: %s.' % s
+                raise RuntimeError('Arguments size not allowed: %s.' % s)
             largs.append(arr)
 
         if mv and N >1 and max(dimension)>1 and nr>1:
-            raise 'Multivariate distributions cannot take s>1 and multiple values.'
+            raise ValueError('Multivariate distributions cannot take s>1 and multiple values.')
 
         if mv:
             for i, arg in enumerate(largs[:-1]):
@@ -453,9 +457,9 @@ def debug_wrapper(func, name):
 
     def wrapper(*args, **kwargs):
 
-        print 'Debugging inside %s:' % name
-        print '\tPress \'s\' to step into function for debugging'
-        print '\tCall \'args\' to list function arguments'
+        print_('Debugging inside %s:' % name)
+        print_('\tPress \'s\' to step into function for debugging')
+        print_('\tCall \'args\' to list function arguments')
 
         # Set debugging trace
         pdb.set_trace()
@@ -849,9 +853,9 @@ def categorical_like(x, p):
     
     p = np.atleast_2d(p)
     if any(abs(np.sum(p, 1)-1)>0.0001):
-        print "Probabilities in categorical_like sum to", np.sum(p, 1)
+        print_("Probabilities in categorical_like sum to", np.sum(p, 1))
     if np.array(x).dtype != int:
-        #print "Non-integer values in categorical_like"
+        #print_("Non-integer values in categorical_like")
         return -inf
     return flib.categorical(x, p)
 
@@ -1048,7 +1052,7 @@ def dirichlet_like(x, theta):
     x = np.atleast_2d(x)
     theta = np.atleast_2d(theta)
     if (np.shape(x)[-1]+1) != np.shape(theta)[-1]:
-        raise ValueError, 'The dimension of x in dirichlet_like must be k-1.'
+        raise ValueError('The dimension of x in dirichlet_like must be k-1.')
     return flib.dirichlet(x,theta)
 
 # Exponential----------------------------------------------
@@ -2340,7 +2344,7 @@ def rtruncated_poisson(mu, k, size=None):
     try:
         k=k-1
         m = max(0, np.floor(k+1-mu))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         # More than one mu
         k=np.array(k)-1
         return np.array([rtruncated_poisson(x, i, size)
@@ -2937,7 +2941,7 @@ def name_to_funcs(name, module):
     try:
        logp = module[name+"_like"]
     except:
-        raise "No likelihood found with this name ", name+"_like"
+        raise KeyError("No likelihood found with this name ", name+"_like")
 
     try:
         random = module['r'+name]
@@ -2972,7 +2976,7 @@ Decorate the likelihoods
 
 snapshot = locals().copy()
 likelihoods = {}
-for name, obj in snapshot.iteritems():
+for name, obj in six.iteritems(snapshot):
     if name[-5:] == '_like' and name[:-5] in availabledistributions:
         likelihoods[name[:-5]] = snapshot[name]
 
@@ -2981,7 +2985,7 @@ def local_decorated_likelihoods(obj):
     New interface likelihoods
     """
 
-    for name, like in likelihoods.iteritems():
+    for name, like in six.iteritems(likelihoods):
         obj[name+'_like'] = gofwrapper(like, snapshot)
 
 
@@ -3140,7 +3144,7 @@ Docstring of categorical_like (case where P is a Dirichlet):
 
     def __init__(self, name, p, value=None, dtype=np.int, observed=False,
                  size=None, trace=True, rseed=False, cache_depth=2, plot=None,
-                 verbose=None,**kwds):
+                 verbose=-1,**kwds):
 
         if value is not None:
             if np.isscalar(value):
@@ -3234,7 +3238,7 @@ Otherwise parent p's value should sum to 1.
     parent_names = ['n', 'p']
 
     def __init__(self, name, n, p, trace=True, value=None, rseed=False,
-                 observed=False, cache_depth=2, plot=None, verbose=None,
+                 observed=False, cache_depth=2, plot=None, verbose=-1,
                  **kwds):
 
         if isinstance(p, Dirichlet):
@@ -3295,7 +3299,7 @@ def Impute(name, dist_class, imputable, **parents):
         # Dictionary to hold parents
         these_parents = {}
         # Parse parents
-        for key, parent in parents.iteritems():
+        for key, parent in six.iteritems(parents):
 
             try:
                 # If parent is a PyMCObject

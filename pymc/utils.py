@@ -7,16 +7,20 @@
 import numpy as np
 import sys, inspect, select, os,  time
 from copy import copy
-from PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
+from .PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
                          ZeroProbability)
-import flib
+from . import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh, det, inv
-from Node import logp_of_set, logp_gradient_of_set
+from .Node import logp_of_set, logp_gradient_of_set
 import types
-from datatypes import * 
+from .datatypes import * 
 from collections import defaultdict
+
+from . import six
+from .six import print_
+reduce = six.moves.reduce
 
 from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
                    pi, asarray, ones, atleast_1d, iterable, linspace, diff,
@@ -89,7 +93,7 @@ def round_array(array_in):
         return int(np.round(array_in))
 
 try:
-    from flib import dchdc_wrap
+    from .flib import dchdc_wrap
     def msqrt(C):
         """
         U=incomplete_chol(C)
@@ -107,7 +111,7 @@ try:
         chol = C.copy()
         piv, N = dchdc_wrap(a=chol)
         if N<0:
-            raise ValueError, "Matrix does not appear to be positive semidefinite"
+            raise ValueError("Matrix does not appear to be positive semidefinite")
         return asmatrix(chol[:N,argsort(piv)])
 
 except:
@@ -221,9 +225,9 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
                 strategy = 'digitize'
     else:
         if strategy not in ['binsize', 'digitize', 'searchsort']:
-            raise 'Unknown histogramming strategy.', strategy
+            raise ValueError('Unknown histogramming strategy.', strategy)
         if strategy == 'binsize' and not even:
-            raise 'This binsize strategy cannot be used for uneven bins.'
+            raise ValueError('This binsize strategy cannot be used for uneven bins.')
 
     # Stochastics for the fixed_binsize functions.
     start = float(edges[0])
@@ -392,7 +396,7 @@ def _optimize_binning(x, range, method='Freedman'):
     elif method.lower()=='scott':
         width = 3.49 * x.std()* N**(-1./3)
     else:
-        raise 'Method must be Scott or Freedman', method
+        raise ValueError('Method must be Scott or Freedman', method)
     return int(diff(range)/width)
 
 def normcdf(x, log=False):
@@ -512,7 +516,7 @@ def draw_random(obj, **kwds):
     R.next()
     """
     while True:
-        for k,v in kwds.iteritems():
+        for k,v in six.iteritems(kwds):
             obj.parents[k] = v.next()
         yield obj.random()
 
@@ -644,7 +648,7 @@ def calc_min_interval(x, alpha):
         return min_int
 
     except IndexError:
-        print 'Too few elements for interval calculation'
+        print_('Too few elements for interval calculation')
         return [None,None]
 
 def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
@@ -668,14 +672,14 @@ def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
         return dict(zip(qlist, quants))
 
     except IndexError:
-        print "Too few elements for quantile calculation"
+        print_("Too few elements for quantile calculation")
 
 def coda_output(pymc_object):
     """Generate output files that are compatible with CODA"""
 
-    print
-    print "Generating CODA output"
-    print '='*50
+    print_()
+    print_("Generating CODA output")
+    print_('='*50)
 
     name = pymc_object.__name__
 
@@ -696,7 +700,7 @@ def coda_output(pymc_object):
     for v in variables:
 
         vname = v.__name__
-        print "Processing", vname
+        print_("Processing", vname)
 
         try:
             index = _process_trace(trace_file, index_file, v.trace(), vname, index)
@@ -734,7 +738,7 @@ def log_difference(lx, ly):
     diff = ly - lx
     # Make sure log-difference can succeed
     if np.any(diff>=0):
-        raise ValueError, 'Cannot compute log(x-y), because y>=x for some elements.'
+        raise ValueError('Cannot compute log(x-y), because y>=x for some elements.')
     # Otherwise evaluate log-difference
     return lx + np.log(1.-np.exp(diff))
 
@@ -746,7 +750,7 @@ def getInput():
         import msvcrt
         if msvcrt.kbhit():  # Check for a keyboard hit.
             input += msvcrt.getch()
-            print input
+            print_(input)
         else:
             time.sleep(.1)
 
@@ -773,7 +777,10 @@ def crawl_dataless(sofar, gens):
     matter that there won't be one contiguous group.
     """
     new_gen = set([])
-    all_ext_parents = reduce(set.__or__, [s.extended_parents for s in gens[-1]], set([]))
+    all_ext_parents = set()
+    for s in gens[-1]:
+        all_ext_parents.update(s.extended_parents)
+
     for p in all_ext_parents:
         if p._random is not None and not p.observed:
             if len(p.extended_children-sofar) == 0:

@@ -34,7 +34,7 @@ def moral_graph(model, format='raw', prog='dot', path=None, name=None):
       format='raw' outputs a GraphViz dot file.
     """
     if not pydot_imported:
-        raise ImportError, 'PyDot must be installed to use the moral_graph function.\n PyDot is available from http://dkbza.org/pydot.html'
+        raise ImportError('PyDot must be installed to use the moral_graph function.\n PyDot is available from http://dkbza.org/pydot.html')
 
     model.moral_dot_object = pydot.Dot()
 
@@ -108,7 +108,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     """
 
     if not pydot_imported:
-        raise ImportError, 'PyDot must be installed to use the graph function.\n PyDot is available from http://dkbza.org/pydot.html'
+        raise ImportError('PyDot must be installed to use the graph function.\n PyDot is available from http://dkbza.org/pydot.html')
     pydot_nodes = {}
     pydot_subgraphs = {}
     obj_substitute_names = {}
@@ -118,7 +118,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     def get_obj_names(obj, key):
 
         if isinstance(obj, pm.Stochastic):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             if obj.observed:
                 datum = obj
@@ -136,7 +136,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
                 obj_substitute_names[s] = [s.__name__]
     
         elif isinstance(obj, pm.Deterministic):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             d = obj
             # Deterministics are downward-pointing triangles
@@ -149,7 +149,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
                 obj_substitute_names[d] = []
                     
         elif isinstance(obj, pm.Potential):
-            if obj_substitute_names.has_key(obj):
+            if obj in obj_substitute_names:
                 return obj_substitute_names[obj]
             potential = obj
             # Potentials are squares
@@ -163,7 +163,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
 
 
         elif consts:
-            if obj_substitute_names.has_key(key):
+            if key in obj_substitute_names:
                 return
             else:
                 obj_substitute_names[key] = [key]
@@ -195,7 +195,7 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
         else:
             parent_dict = node.parents
 
-        for key in parent_dict.iterkeys():
+        for key in parent_dict:
             key_val = parent_dict[key]
             label = label_edges*key or ''
 
@@ -233,7 +233,9 @@ def graph(model, format='raw', prog='dot', path=None, name=None, consts=False, l
     if collapse_potentials:
         for potential in model.potentials:
             if collapse_deterministics:
-                potential_parents = reduce(lambda x,y: x.union(set(y)), [get_obj_names(p,None) for p in potential.extended_parents], set())
+                potential_parents = set()
+                for p in potential.extended_parents:
+                    potential_parents.update(get_obj_names(p,None))
             else:
                 potential_parents=set()
                 for parent in potential.parents.values():

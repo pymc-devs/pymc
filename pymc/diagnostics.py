@@ -5,6 +5,10 @@ from pymc.utils import autocorr, autocov
 from copy import copy
 import pdb
 
+from pymc import six
+from pymc.six import print_
+xrange = six.moves.xrange
+
 __all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
 
 def open01(x, limit=1.e-6):
@@ -43,7 +47,7 @@ class diagnostic(object):
                         data = variable.trace()
                     name = variable.__name__
                     if kwargs.get('verbose'):
-                        print "\nDiagnostic for %s ..." % name
+                        print_("\nDiagnostic for %s ..." % name)
                     values[name] = f(data, *args, **kwargs)
                 return values
             except AttributeError:
@@ -132,7 +136,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
     quantiles = {}
     
     if verbose:
-        print "\nExecuting Cook et al. (2006) validation procedure ...\n"
+        print_("\nExecuting Cook et al. (2006) validation procedure ...\n")
     
     # Loop over replicates
     for i in range(replicates):
@@ -147,7 +151,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
             # Generate simuated data for data stochastic
             o.set_value(o.random(), force=True)
             if verbose:
-                print "Data for %s is %s" % (o.__name__, o.value)
+                print_("Data for %s is %s" % (o.__name__, o.value))
         
         param_values = {}
         # Record data-generating parameter values
@@ -180,7 +184,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
             sampler._assign_database_backend(original_backend)
         
         if not i % 10 and i and verbose:
-            print "\tCompleted validation replicate", i
+            print_("\tCompleted validation replicate", i)
 
     
     # Replace backend
@@ -255,7 +259,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
     
     # Filter out invalid intervals
     if first + last >= 1:
-        raise "Invalid intervals for Geweke convergence analysis",(first,last)
+        raise ValueError("Invalid intervals for Geweke convergence analysis",(first,last))
     
     # Initialize list of z-scores
     zscores = []
@@ -340,19 +344,19 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     
     if verbose:
         
-        print "\n========================"
-        print "Raftery-Lewis Diagnostic"
-        print "========================"
-        print
-        print "%s iterations required (assuming independence) to achieve %s accuracy with %i percent probability." % (nmin, r, 100*s)
-        print
-        print "Thinning factor of %i required to produce a first-order Markov chain." % kthin
-        print
-        print "%i iterations to be discarded at the beginning of the simulation (burn-in)." % nburn
-        print
-        print "%s subsequent iterations required." % nprec
-        print
-        print "Thinning factor of %i required to produce an independence chain." % kmind
+        print_("\n========================")
+        print_("Raftery-Lewis Diagnostic")
+        print_("========================")
+        print_()
+        print_("%s iterations required (assuming independence) to achieve %s accuracy with %i percent probability." % (nmin, r, 100*s))
+        print_()
+        print_("Thinning factor of %i required to produce a first-order Markov chain." % kthin)
+        print_()
+        print_("%i iterations to be discarded at the beginning of the simulation (burn-in)." % nburn)
+        print_()
+        print_("%s subsequent iterations required." % nprec)
+        print_()
+        print_("Thinning factor of %i required to produce an independence chain." % kmind)
     
     return output
 
@@ -389,7 +393,7 @@ def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
         import scipy
         from scipy import stats
     except ImportError:
-        raise ImportError, 'SciPy must be installed to use batch_means.'
+        raise ImportError('SciPy must be installed to use batch_means.')
     
     x=x[burn:]
     
@@ -436,7 +440,7 @@ def discrepancy(observed, simulated, expected):
     
     # Print p-value
     count = sum(s>o for o,s in zip(D_obs,D_sim))
-    print 'Bayesian p-value: p=%.3f' % (1.*count/len(D_obs))
+    print_('Bayesian p-value: p=%.3f' % (1.*count/len(D_obs)))
     
     return D_obs, D_sim
 
@@ -480,8 +484,8 @@ def gelman_rubin(x):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    if np.shape(x) < 2:
-        raise ValueError, 'Gelman-Rubin diagnostic requires multiple chains.'
+    if np.shape(x) < (2,):
+        raise ValueError('Gelman-Rubin diagnostic requires multiple chains.')
 
     try:
         m,n = np.shape(x)
@@ -539,11 +543,11 @@ def _find_max_lag(x, rho_limit=0.05, maxmaxlag=20000, verbose=0):
         return maxlag
     
     if maxlag <= 1:
-        print "maxlag = %d, fixing value to 10" % maxlag
+        print_("maxlag = %d, fixing value to 10" % maxlag)
         return 10
     
     if verbose:
-        print "maxlag = %d" % maxlag
+        print_("maxlag = %d" % maxlag)
     return maxlag
 
 def _cut_time(gammas):
@@ -567,12 +571,12 @@ def iat(x, maxlag=None):
     acr = [autocorr(x, lag) for lag in range(1, maxlag+1)]
     
     # Calculate gamma values
-    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag/2)]
+    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag//2)]
     
     cut = _cut_time(gammas)
     
     if cut+1 == len(gammas):
-        print "Not enough lag to calculate IAT"
+        print_("Not enough lag to calculate IAT")
     
     return np.sum(2*gammas[:cut+1]) - 1.0
     

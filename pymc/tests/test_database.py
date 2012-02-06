@@ -217,7 +217,7 @@ class TestSqlite(TestPickle):
         return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
 
     def test_yrestore_state(self):
-        raise nose.SkipTest, "Not implemented."
+        raise nose.SkipTest("Not implemented.")
 
 
 class TestHDF5(TestPickle):
@@ -306,7 +306,7 @@ class testHDF5Objects(TestCase):
     def setUpClass(self):
         if 'hdf5' not in dir(pymc.database):
             raise nose.SkipTest
-        import objectmodel
+        from . import objectmodel
         self.S = pymc.MCMC(objectmodel,
                            db='hdf5',
                            dbname=os.path.join(testdir, 'Objects.hdf5'))
@@ -349,7 +349,7 @@ class testHDF5Objects(TestCase):
 
     def test_yconnect_and_sample(self):
         db = self.load()
-        import objectmodel
+        from . import objectmodel
         S = pymc.MCMC(objectmodel, db=db)
         S.sample(5, progress_bar=0)
         assert_array_equal(db.K(chain=0).shape, (5,))

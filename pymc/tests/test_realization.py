@@ -1,7 +1,7 @@
 from numpy.testing import *
 from pymc.gp import *
-from test_mean import M, x
-from test_cov import C
+from .test_mean import M, x
+from .test_cov import C
 from numpy import *
 from copy import copy
 

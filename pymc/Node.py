@@ -9,6 +9,14 @@ __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 import os, sys, pdb
 import numpy as np
 import types
+from . import six
+
+try:
+    from types import UnboundMethodType
+except ImportError:
+    # On Python 3, unbound methods are just functions.
+    def UnboundMethodType(func, inst, cls):
+        return func
 
 
 def logp_of_set(s):
@@ -17,16 +25,15 @@ def logp_of_set(s):
     for obj in s:
         try:
             logp += obj.logp
+        except ZeroProbability:
+            raise
         except:
-            cls, inst, tb = sys.exc_info()
-            if cls is ZeroProbability:
-                raise cls, inst, tb
-            elif exc is None:
-                exc = (cls, inst, tb)
+            if exc is None:
+                exc = sys.exc_info()
     if exc is None:
         return logp
     else:
-        raise exc[0], exc[1], exc[2]
+        six.reraise(*exc)
 
 def logp_gradient_of_set(variable_set, calculation_set = None):
     """
@@ -93,12 +100,12 @@ class Node(object):
          The base class for :class:`Stochastics` and :class:`Deterministics`.
 
     """
-    def __init__(self, doc, name, parents, cache_depth, verbose=None):
+    def __init__(self, doc, name, parents, cache_depth, verbose=-1):
 
         # Name and docstrings
         self.__doc__ = doc
         if not isinstance(name, str):
-            raise ValueError, 'The name argument must be a string, but received %s.'%name
+            raise ValueError('The name argument must be a string, but received %s.'%name)
         self.__name__ = name
 
         # Level of feedback verbosity
@@ -182,7 +189,7 @@ class Variable(Node):
     
     __array_priority__ = 10
     
-    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=None):
+    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=-1):
 
         self.dtype=dtype
         self.trace=trace
@@ -241,13 +248,13 @@ class ContainerMeta(type):
         type.__init__(cls, name, bases, dict)
 
         def change_method(self, *args, **kwargs):
-            raise NotImplementedError, name + ' instances cannot be changed.'
+            raise NotImplementedError(name + ' instances cannot be changed.')
 
         if cls.register:
             ContainerRegistry.append((cls, cls.containing_classes))
 
             for meth in cls.change_methods:
-                setattr(cls, meth, types.UnboundMethodType(change_method, None, cls))
+                setattr(cls, meth, UnboundMethodType(change_method, None, cls))
         cls.register=False
 
 
@@ -259,7 +266,6 @@ class ContainerBase(object):
       ListContainer, SetContainer, DictContainer, TupleContainer, ArrayContainer
     """
     register = False
-    __metaclass__ = ContainerMeta
     change_methods = []
     containing_classes = []
 
@@ -293,44 +299,43 @@ class ContainerBase(object):
     # Define log-probability property
     logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
+ContainerBase = six.with_metaclass(ContainerMeta, ContainerBase)
+
 StochasticRegistry = []
 class StochasticMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         StochasticRegistry.append(cls)
-class StochasticBase(Variable):
+class StochasticBase(six.with_metaclass(StochasticMeta, Variable)):
     """
     Abstract base class.
 
     :SeeAlso:
       Stochastic, Variable
     """
-    __metaclass__ = StochasticMeta
 
 DeterministicRegistry = []
 class DeterministicMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         DeterministicRegistry.append(cls)
-class DeterministicBase(Variable):
+class DeterministicBase(six.with_metaclass(DeterministicMeta, Variable)):
     """
     Abstract base class.
 
     :SeeAlso:
       Deterministic, Variable
     """
-    __metaclass__ = DeterministicMeta
 
 PotentialRegistry = []
 class PotentialMeta(type):
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         PotentialRegistry.append(cls)
-class PotentialBase(Node):
+class PotentialBase(six.with_metaclass(PotentialMeta, Node)):
     """
     Abstract base class.
 
     :SeeAlso:
       Potential, Variable
     """
-    __metaclass__ = PotentialMeta
