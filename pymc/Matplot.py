@@ -912,7 +912,7 @@ def var_str(name, shape):
     return names 
     
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, rhat=True, main=None, chain_spacing=0.05, vline_pos=0):
+def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, rhat=True, main=None, custom_labels=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
     
@@ -1108,6 +1108,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
         # Increment index
         var += k
+        
+    if custom_labels is not None:
+        labels = custom_labels
         
     # Update margins
     left_margin = max([len(x) for x in labels])*0.015

@@ -546,7 +546,7 @@ class Sampler(Model):
 
                     cmd = utils.getInput().strip()
                     if cmd == 'i':
-                        print_('Current iteration: ', self._current_iter, file=out)
+                        print_('Current iteration: %i of %i' % (self._current_iter, self._iter), file=out)
                         prompt = True
                     elif cmd == 'p':
                         self.status = 'paused'
