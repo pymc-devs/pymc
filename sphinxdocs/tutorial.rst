@@ -16,7 +16,7 @@ disasters in the UK from 1851 to 1962 [Jarrett1979]_.
 .. _disasters_figure:
 
 .. figure:: _images/disasterts.*
-   :width: 800 px
+   :scale: 100
    
    Recorded coal mining disasters in the UK.
 
@@ -182,6 +182,7 @@ We have above created a PyMC probability model, which is simply a linked
 collection of variables. To see the nature of the links, import or run 
 ``disaster_model.py`` and examine ``switchpoint``'s ``parents`` attribute from 
 the Python prompt::
+
 
    >>> from pymc.examples import disaster_model
    >>> disaster_model.switchpoint.parents
