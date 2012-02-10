@@ -107,7 +107,7 @@ class Trace(base.Trace):
         """
         self._trace[chain] = self._trace[chain][:index]
 
-    def gettrace(self, burn=0, thin=1, slicing=None):
+    def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace.
 
         :Stochastics:
@@ -116,7 +116,6 @@ class Trace(base.Trace):
           - chain (int): The index of the chain to fetch. If None, return all chains.
           - slicing: A slice, overriding burn and thin assignement.
         """
-        chain = self._chain
         if slicing is None:
             slicing = slice(burn, None, thin)
         if chain is not None:
