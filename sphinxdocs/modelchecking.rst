@@ -40,7 +40,7 @@ first several hundred iterations, after which all remaining samples of the
 chain may be used to calculate posterior quantities. For more complex 
 models, convergence requires a significantly longer burn-in period; sometimes 
 orders of magnitude more samples are needed. Frequently, lack of convergence 
-will be caused by poor mixing (Figure :ref:`mix`). Recall that *mixing* refers 
+will be caused by poor mixing (Figure 7.1). Recall that *mixing* refers 
 to the degree to which the Markov chain explores the support of the posterior 
 distribution. Poor mixing may stem from inappropriate proposals (if one is 
 using the Metropolis-Hastings sampler) or from attempting to estimate models 
@@ -50,6 +50,7 @@ with highly correlated variables.
 
 .. figure:: _images/poormixing.*
    :alt: Poor mixing figure
+   :scale: 70
    :align: center
 
    An example of a poorly-mixing sample in two dimensions. Notice that the
@@ -92,6 +93,7 @@ lack of convergence, even though chains may appear ergodic.
 
 .. figure:: _images/metastable.*
    :align: center
+   :scale: 70
    
    An example of metastability in a two-dimensional parameter space. The
    chain appears to be stable in one region of the parameter space for an
@@ -104,7 +106,7 @@ convergence is a phenomenon called metastability. Chains may appear to have
 converged to the true equilibrium value, displaying excellent qualities by any 
 of the methods described above. However, after some period of stability around 
 this value, the chain may suddenly move to another region of the parameter 
-space (Figure :ref:`metas`). This period of metastability can sometimes be very 
+space (Figure 7.2). This period of metastability can sometimes be very 
 long, and therefore escape detection by these convergence diagnostics. 
 Unfortunately, there is no statistical technique available for detecting 
 metastability.
@@ -117,7 +119,7 @@ methods exist which are prevalent in the literature. These are considered more
 formal because they are based on existing statistical methods, such as time 
 series analysis.
 
-PyMC currently includes two formal convergence diagnostic methods. The first, 
+PyMC currently includes three formal convergence diagnostic methods. The first, 
 proposed by [Geweke1992]_, is a time-series approach that compares the mean 
 and variance of segments from the beginning and end of a single chain.
    
@@ -159,7 +161,7 @@ departures from the standard normal assumption.
 .. figure:: _images/geweke.*
    :align: center
    :alt: Geweke figure.
-   :width: 600 px
+   :scale: 70
    
    Sample plot of Geweke z-scores for a variable using ``geweke_plot``.
    The occurrence of the scores well within 2 standard deviations of zero
@@ -193,10 +195,12 @@ The arguments are defined as:
 
 * ``verbose`` (optional): Verbosity level for output (defaults to 1).
 
-To illustrate, consider a model ``my_model`` that is used to instantiate a MCMC 
-sampler. The sampler is then run for a given number of iterations::
+To illustrate, consider the sample model ``gelman_bioassay`` that is used to 
+instantiate a MCMC sampler. The sampler is then run for a given number of 
+iterations::
 
-   >>> S = pymc.MCMC(my_model)
+   >>> from pymc.examples import gelman_bioassay
+   >>> S = pymc.MCMC(gelman_bioassay)
    >>> S.sample(10000, burn=5000)
 
 It is easiest simply to pass the entire sampler ``S`` the ``geweke`` function::
@@ -207,12 +211,12 @@ It is easiest simply to pass the entire sampler ``S`` the ``geweke`` function::
 Alternatively, individual stochastics within ``S`` can be analyzed for 
 convergence::
 
-   >>> trace = S.alpha.trace()
+   >>> trace = S.trace("alpha")[:]
    >>> alpha_scores = pymc.geweke(trace, intervals=20)
-   >>> pymc.Matplot.geweke_plot(alpha_scores, 'alpha')
+   >>> pymc.Matplot.geweke_plot(alpha_scores, "alpha")
 
 An example of convergence and non-convergence of a chain using `geweke_plot` is 
-given in Figure :ref:`geweke` .
+given in Figure 7.3.
 
 The second diagnostic provided by PyMC is the [Raftery1995a]_ procedure. This 
 approach estimates the number of iterations required to reach convergence, 
@@ -304,12 +308,44 @@ dictionary containing the diagnostic quantities::
 	
 	Thinning factor of 11 required to produce an independence chain.
 
+The third convergence diagnostic provided by PyMC is the Gelman-Rubin statistic ([Gelman1992]_). This diagnostic uses multiple chains to check for lack of convergence, and is based on the notion that if multiple chains have converged, by definition they should appear very similar to one another; if not, one or more of the chains has failed to converge. 
+
+The Gelman-Rubin diagnostic uses an analysis of variance approach to assessing convergence. That is, it calculates both the between-chain varaince (B) and within-chain varaince (W), and assesses whether they are different enough to worry about convergence. These quantities are calculated by:
+
+
+
+    >>> pymc.gelman_rubin(S)
+    {'alpha': 1.0036389589627821,
+     'beta': 1.001503957313336,
+     'theta': [1.0013923468783055,
+      1.0274479503713816,
+      0.95365716267969636,
+      1.00267321019079]}
+
+By default, when calling the ``summary_plot`` function using nodes with multiple chains, the :math:`\hat{R}` values will be plotted alongside the posterior intervals.
+
+.. _summary_plot:
+
+.. figure:: _images/summary.*
+   :align: center
+   :scale: 70
+
+
+For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.
+
 Additional convergence diagnostics are available in the `R`_ statistical
 package ([R2010]_), via the `CODA`_ module ([Plummer2008]_). PyMC includes a 
 method ``coda`` for exporting model traces in a format that may be directly 
 read by ``coda``::
 
-   pymc.utils.coda(pymc_object)
+    >>> pymc.utils.coda(S)
+
+    Generating CODA output
+    ==================================================
+    Processing deaths
+    Processing beta
+    Processing theta
+    Processing alpha
 
 The lone argument is the PyMC sampler for which output is desired.
 
@@ -388,7 +424,7 @@ will yield a correlation plot as follows::
 .. figure:: _images/autocorr.*
    :align: center
    :alt: Autocorrelation figure
-   :width: 600 px
+   :scale: 70
    
    Sample autocorrelation plots for two Poisson variables from coal mining
    disasters example model.
@@ -467,7 +503,7 @@ distribution (Figure :ref:`gof`).
 .. figure:: _images/gof.*
    :align: center
    :alt: GOF figure
-   :width: 600 px
+   :scale: 70
    
    Data sampled from the posterior predictive distribution of a model for
    some observation :math:`\mathbf{x}`. The true value of
@@ -510,7 +546,7 @@ passing through the origin, as shown in Figure :ref:`deviate`.
 .. figure:: _images/deviates.png
    :align: center
    :alt: deviates figure
-   :width: 600 px
+   :scale: 50
    
    Plot of deviates of observed and simulated data from expected values.
    The cluster of points symmetrically about the 45 degree line (and the
