@@ -165,7 +165,7 @@ class Trace(object):
         from pymc.utils import hpd, quantiles
 
         try:
-            trace = np.squeeze(np.array(self.db.trace(self.name, chain=chain)(), float))[start:]
+            trace = np.squeeze(np.array(self.db.trace(self.name)(chain=chain), float))[start:]
             
             n = len(trace)
             if not n:
