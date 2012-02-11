@@ -12,4 +12,5 @@ docs/database.tex
 develop
 testresults/
 sphinxdocs/_build/
-*.tmproj*.py.bak
+*.tmproj
+*.py.bak
