@@ -242,7 +242,7 @@ class Potential(PotentialBase):
     :SeeAlso: Stochastic, Node, LazyFunction, stoch, dtrm, data, Model, Container
     """
 
-    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=-1, logp_partial_gradients = {}):
+    def __init__(self, logp,  doc, name, parents, cache_depth=2, plot=None, verbose=-1, logp_partial_gradients=None):
 
         if logp_partial_gradients is None:
             logp_partial_gradients = {}
