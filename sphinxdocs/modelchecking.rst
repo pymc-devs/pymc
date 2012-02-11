@@ -308,11 +308,45 @@ dictionary containing the diagnostic quantities::
 	
 	Thinning factor of 11 required to produce an independence chain.
 
-The third convergence diagnostic provided by PyMC is the Gelman-Rubin statistic ([Gelman1992]_). This diagnostic uses multiple chains to check for lack of convergence, and is based on the notion that if multiple chains have converged, by definition they should appear very similar to one another; if not, one or more of the chains has failed to converge. 
+The third convergence diagnostic provided by PyMC is the Gelman-Rubin statistic 
+([Gelman1992]_). This diagnostic uses multiple chains to check for lack of 
+convergence, and is based on the notion that if multiple chains have converged, 
+by definition they should appear very similar to one another; if not, one or 
+more of the chains has failed to converge.
 
-The Gelman-Rubin diagnostic uses an analysis of variance approach to assessing convergence. That is, it calculates both the between-chain varaince (B) and within-chain varaince (W), and assesses whether they are different enough to worry about convergence. These quantities are calculated by:
+The Gelman-Rubin diagnostic uses an analysis of variance approach to assessing 
+convergence. That is, it calculates both the between-chain varaince (B) and 
+within-chain varaince (W), and assesses whether they are different enough to 
+worry about convergence. Assuming :math:`m` chains, each of length :math:`n`, 
+quantities are calculated by:
 
+.. math::
+    B &= \frac{n}{m-1} \sum_{j=1}^m (\bar{\theta}_{.j} - \bar{\theta}_{..})^2 \\
+    W &= \frac{1}{m} \sum_{j=1}^m \left[ \frac{1}{n-1} \sum_{i=1}^n (\theta_{ij} - \bar{\theta}_{.j})^2 \right]
 
+for each scalar estimand :math:`\theta`. Using these values, an estimate of the 
+marginal posterior variance of :math:`\theta` can be calculated:
+
+.. math::
+    \hat{\text{Var}}(\theta | y) = \frac{n-1}{n} W + \frac{1}{n} B
+    
+Assuming :math:`\theta` was initialized to arbitrary starting points in each 
+chain, this quantity will overestimate the true marginal posterior variance. At 
+the same time, :math:`W` will tend to underestimate the within-chain variance 
+early in the sampling run. However, in the limit as :math:`n \rightarrow 
+\infty`, both quantities will converge to the true variance of :math:`\theta`. 
+In light of this, the Gelman-Rubin statistic monitors convergence using the 
+ratio:
+
+.. math::
+    \hat{R} = \sqrt{\frac{\hat{\text{Var}}(\theta | y)}{W}}
+    
+This is called the potential scale reduction, since it is an estimate of the 
+potential reduction in the scale of :math:`\theta` as the number of simulations 
+tends to infinity. In practice, we look for values of :math:`\hat{R}` close to 
+one (say, less than 1.1) to be confident that a particular estimand has 
+converged. In PyMC, the function `gelman_rubin` will calculate :math:`\hat{R}` 
+for each stochastic node in the passed model::
 
     >>> pymc.gelman_rubin(S)
     {'alpha': 1.0036389589627821,
@@ -322,16 +356,18 @@ The Gelman-Rubin diagnostic uses an analysis of variance approach to assessing c
       0.95365716267969636,
       1.00267321019079]}
 
+For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.
+
 By default, when calling the ``summary_plot`` function using nodes with multiple chains, the :math:`\hat{R}` values will be plotted alongside the posterior intervals.
 
 .. _summary_plot:
 
 .. figure:: _images/summary.*
    :align: center
-   :scale: 70
+   :scale: 90
 
-
-For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.
+   Summary plot of parameters from `gelman_bioassay` model, showing credible 
+   intervals on the left and the Gelman-Rubin statistic on the right.
 
 Additional convergence diagnostics are available in the `R`_ statistical
 package ([R2010]_), via the `CODA`_ module ([Plummer2008]_). PyMC includes a 
