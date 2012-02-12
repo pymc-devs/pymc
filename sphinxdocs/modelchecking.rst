@@ -406,13 +406,12 @@ quantified using the autocorrelation function:
 
 .. math::
 
-   \rho_k & = \frac{\mbox{Cov}(X_t,  X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}}
-   
+   \rho_k & = \frac{\mbox{Cov}(X_t,  X_{t+k})}{\sqrt{\mbox{Var}(X_t)\mbox{Var}(X_{t+k})}} \\ 
          & = \frac{E[(X_t - \theta)(X_{t+k} - \theta)]}{\sqrt{E[(X_t - \theta)^2] E[(X_{t+k} - \theta)^2]}}
 
 
 PyMC includes a function for plotting the autocorrelation function for each 
-stochastics in the sampler (Figure :ref:`autocorr`). This allows users to 
+stochastics in the sampler (Figure 7.5). This allows users to 
 examine the relationship among successive samples within sampled chains. 
 Significant autocorrelation suggests that chains require thinning prior to use 
 of the posterior statistics for inference.
@@ -441,17 +440,16 @@ of the posterior statistics for inference.
 
 * ``verbose`` (optional): Verbosity level for output (defaults to 1).
 
-Using any given model `my_model` as an example, autocorrelation plots can be 
-obtained simply by passing the sampler for that model to the `autocorrelation` 
-function (within the `Matplot` module) directly::
+Autocorrelation plots can be obtained simply by passing the sampler to the 
+`autocorrelation` function (within the `Matplot` module) directly::
 
-	>>> S = pymc.MCMC(my_model) 
+	>>> S = pymc.MCMC(gelman_bioassay) 
 	>>> S.sample(10000, burn=5000) 
 	>>> pymc.Matplot.autocorrelation(S)
 	
 Alternatively, variables within a model can be plotted individually. For 
-example, a hypothetical variable `beta` that was estimated using sampler `S` 
-will yield a correlation plot as follows::
+example, the parameter `beta` that was estimated using sampler `S` for the 
+`gelman_bioassay` model will yield a correlation plot as follows::
 
 	>>> pymc.Matplot.autocorrelation(S.beta)
 
@@ -462,8 +460,8 @@ will yield a correlation plot as follows::
    :alt: Autocorrelation figure
    :scale: 70
    
-   Sample autocorrelation plots for two Poisson variables from coal mining
-   disasters example model.
+   Sample autocorrelation plot for the switchpoint variable from the coal 
+   mining disasters example model.
 
 .. % section autocorrelation_plots (end)
 
@@ -476,10 +474,10 @@ Goodness of Fit
 Checking for model convergence is only the first step in the evaluation of MCMC 
 model outputs. It is possible for an entirely unsuitable model to converge, so 
 additional steps are needed to ensure that the estimated model adequately fits 
-the data. One intuitive way for evaluating model fit is to compare model 
-predictions with actual observations. In other words, the fitted model can be 
-used to simulate data, and the distribution of the simulated data should 
-resemble the distribution of the actual data.
+the data. One intuitive way of evaluating model fit is to compare model 
+predictions with the observations used to fit the model. In other words, the 
+fitted model can be used to simulate data, and the distribution of the 
+simulated data should resemble the distribution of the actual data.
 
 Fortunately, simulating data from the model is a natural component of the 
 Bayesian modelling framework. Recall, from the discussion on imputation of 
@@ -498,33 +496,31 @@ example, consider a simple dose-response model, where deaths are modeled as a
 binomial random variable for which the probability of death is a logit-linear 
 function of the dose of a particular drug::
 
-   n = [5]*4 
-	dose = [-.86,-.3,-.05,.73] 
-	x = [0,1,3,5]
+    n = [5]*4 
+    dose = [-.86,-.3,-.05,.73] 
+    x = [0,1,3,5]
 
-	alpha = pymc.Normal('alpha', mu=0.0, tau=0.01) 
-	beta = pymc.Normal('beta', mu=0.0, tau=0.01)
+    alpha = pymc.Normal('alpha', mu=0.0, tau=0.01) 
+    beta = pymc.Normal('beta', mu=0.0, tau=0.01)
 
-	@pymc.deterministic 
-	def theta(a=alpha, b=beta, d=dose):
-		"""theta = inv_logit(a+b)""" 
-		return pymc.invlogit(a+b*d)
-		
-	"""deaths ~ binomial(n, p)""" 
-	deaths = pymc.Binomial('deaths', n=n, p=theta, value=x, observed=True)
+    @pymc.deterministic 
+    def theta(a=alpha, b=beta, d=dose):
+    	"""theta = inv_logit(a+b)""" 
+    	return pymc.invlogit(a+b*d)
+	
+    # deaths ~ binomial(n, p)
+    deaths = pymc.Binomial('deaths', n=n, p=theta, value=x, observed=True)
 
 The posterior predictive distribution of deaths uses the same functional form 
 as the data likelihood, in this case a binomial stochastic. Here is the 
 corresponding sample from the posterior predictive distribution::
 
-	@pymc.deterministic 
-	def deaths_sim(n=n, p=theta):
-		"""deaths_sim = rbinomial(n, p)""" 
-		return pymc.rbinomial(n, p)
+	deaths_sim = pymc.Binomial('deaths_sim', n=n, p=theta)
 
-Notice that the stochastic `pymc.Binomial` has been replaced with a 
-deterministic node that simulates values using `pymc.rbinomial` and the unknown 
-parameters `theta`.
+Notice that the observed stochastic `pymc.Binomial` has been replaced with a 
+stochastic node that is identical in every respect to `deaths`, except that its 
+values are not fixed to be the observed data -- they are left to vary according 
+to the values of the fitted parameters.
 
 The degree to which simulated data correspond to observations can be evaluated 
 in at least two ways. First, these quantities can simply be compared visually. 
@@ -532,7 +528,7 @@ This allows for a qualitative comparison of model-based replicates and
 observations. If there is poor fit, the true value of the data may appear in 
 the tails of the histogram of replicated data, while a good fit will tend to 
 show the true data in high-probability regions of the posterior predictive 
-distribution (Figure :ref:`gof`).
+distribution (Figure 7.6).
 
 .. _gof:
 
@@ -541,9 +537,8 @@ distribution (Figure :ref:`gof`).
    :alt: GOF figure
    :scale: 70
    
-   Data sampled from the posterior predictive distribution of a model for
-   some observation :math:`\mathbf{x}`. The true value of
-   :math:`\mathbf{x}` is shown by the dotted red line.
+   Data sampled from the posterior predictive distribution of a binomial random 
+   variate. The observed value (1) is shown by the dotted red line.
 
 The Matplot package in PyMC provides an easy way of producing such plots, via 
 the ``gof_plot`` function. To illustrate, consider a single data point ``x`` 
@@ -575,14 +570,14 @@ If :math:`p` is very large (e.g. :math:`>0.975`) or very small (e.g.
 :math:`<0.025`) this implies that the model is not consistent with the data, 
 and thus is evidence of lack of fit. Graphically, data and simulated 
 discrepancies plotted together should be clustered along a 45 degree line 
-passing through the origin, as shown in Figure :ref:`deviate`.
+passing through the origin, as shown in Figure 7.7.
 
 .. _deviate:
 
 .. figure:: _images/deviates.png
    :align: center
    :alt: deviates figure
-   :scale: 50
+   :scale: 80
    
    Plot of deviates of observed and simulated data from expected values.
    The cluster of points symmetrically about the 45 degree line (and the
@@ -592,11 +587,11 @@ The ``discrepancy`` function in the ``diagnostics`` package can be used to
 generate discrepancy statistics from arrays of data, simulated values, and 
 expected values::
 
-   D = pymc.utils.discrepancy(x, x_sim, x_exp)
+   D = pymc.discrepancy(x, x_sim, x_exp)
 
-A call to this function returns two arrays of discrepancy values, which can be 
-passed to the ``discrepancy_plot`` function in the `Matplot` module to generate 
-a scatter plot, and if desired, a *p* value::
+A call to this function returns two arrays of discrepancy values (simulated and 
+observed), which can be passed to the ``discrepancy_plot`` function in the 
+`Matplot` module to generate a scatter plot, and if desired, a *p* value::
 
    pymc.Matplot.discrepancy_plot(D, name='D', report_p=True)
 
