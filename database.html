@@ -1,0 +1,333 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6. Saving and managing sampling results &mdash; PyMC 2.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://mathjax.connectmv.com/MathJax.js"></script>
+    <link rel="top" title="PyMC 2.2 documentation" href="index.html" />
+    <link rel="next" title="7. Model checking and diagnostics" href="modelchecking.html" />
+    <link rel="prev" title="5. Fitting Models" href="modelfitting.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modelchecking.html" title="7. Model checking and diagnostics"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modelfitting.html" title="5. Fitting Models"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="saving-and-managing-sampling-results">
+<span id="chap-database"></span><h1>6. Saving and managing sampling results<a class="headerlink" href="#saving-and-managing-sampling-results" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="accessing-sampled-data">
+<span id="accessing-data"></span><h2>6.1. Accessing Sampled Data<a class="headerlink" href="#accessing-sampled-data" title="Permalink to this headline">¶</a></h2>
+<p>The recommended way to access data from an MCMC run, irrespective of the
+database backend, is to use the <tt class="docutils literal"><span class="pre">trace</span></tt> method:</p>
+<div class="highlight-python"><pre>    &gt;&gt;&gt; from pymc.examples import disaster_model
+&gt;&gt;&gt; from pymc import MCMC
+    &gt;&gt;&gt; M = MCMC(disaster_model)
+    &gt;&gt;&gt; M.sample(10)
+Sampling: 100% [00000000000000000000000000000000000000000000000000] Iterations: 10
+    &gt;&gt;&gt; M.trace('early_mean')[:]
+    array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
+            2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])</pre>
+</div>
+<p><tt class="docutils literal"><span class="pre">M.trace('early_mean')</span></tt> returns a copy of the <tt class="docutils literal"><span class="pre">Trace</span></tt> instance associated
+with the tallyable object <cite>early_mean</cite>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;early_mean&#39;</span><span class="p">)</span>
+<span class="go">&lt;pymc.database.ram.Trace object at 0x7fa4877a8b50&gt;</span>
+</pre></div>
+</div>
+<p>Particular subsamples from the trace are obtained using the slice notation
+<tt class="docutils literal"><span class="pre">[]</span></tt>, similar to NumPy arrays. By default, <tt class="docutils literal"><span class="pre">trace</span></tt> returns the samples from
+the last chain. To return the samples from all the chains, use <tt class="docutils literal"><span class="pre">chain=None</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="go">Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;early_mean&#39;</span><span class="p">,</span> <span class="n">chain</span><span class="o">=</span><span class="bp">None</span><span class="p">)[:]</span>
+<span class="go">array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,</span>
+<span class="go">      2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,</span>
+<span class="go">      3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-data-to-disk">
+<span id="saving-data"></span><h2>6.2. Saving Data to Disk<a class="headerlink" href="#saving-data-to-disk" title="Permalink to this headline">¶</a></h2>
+<p>By default, the database backend selected by the <tt class="docutils literal"><span class="pre">MCMC</span></tt> sampler is the
+<tt class="docutils literal"><span class="pre">ram</span></tt> backend, which simply holds the data in memory. Now, we will create a
+sampler that instead will write data to a pickle file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="n">MCMC</span><span class="p">(</span><span class="n">disaster_model</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s">&#39;pickle&#39;</span><span class="p">,</span> <span class="n">dbname</span><span class="o">=</span><span class="s">&#39;Disaster.pickle&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">db</span>
+<span class="go">&lt;pymc.database.pickle.Database object at 0x7fa486623d90&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Note that in this particular case, no data is written to disk before the call
+to <tt class="docutils literal"><span class="pre">db.close</span></tt>. The <tt class="docutils literal"><span class="pre">close</span></tt> method will flush data to disk and prepare the
+database for a potential session exit. Closing a <cite>Python</cite> session without
+calling <tt class="docutils literal"><span class="pre">close</span></tt> beforehand is likely to corrupt the database, making the data
+irretrievable. To simply flush data to disk without closing the database, use
+the <tt class="docutils literal"><span class="pre">commit</span></tt> method.</p>
+<p>Some backends not only have the ability to store the traces, but also the state
+of the step methods at the end of sampling. This is particularly useful when
+long warm-up periods are needed to tune the jump parameters. When the database
+is loaded in a new session, the step methods query the database to fetch the
+state they were in at the end of the last trace.</p>
+<p>Check that you <tt class="docutils literal"><span class="pre">close()</span></tt> the database before closing the Python session.</p>
+</div>
+<div class="section" id="reloading-a-database">
+<span id="reloading-database"></span><h2>6.3. Reloading a Database<a class="headerlink" href="#reloading-a-database" title="Permalink to this headline">¶</a></h2>
+<p>To load a file created in a previous session, use the <tt class="docutils literal"><span class="pre">load</span></tt> function from
+the backend:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;Disaster.pickle&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;early_mean&#39;</span><span class="p">)[:])</span>
+<span class="go">10</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">db</span></tt> object also has a <tt class="docutils literal"><span class="pre">trace</span></tt> method identical to that of <tt class="docutils literal"><span class="pre">Sampler</span></tt>.
+You can hence inspect the results of a model, even when you don&#8217;t have the
+model around.</p>
+<p>To add a new trace to this file, we need to create an MCMC instance. This time,
+instead of setting <tt class="docutils literal"><span class="pre">db='pickle'</span></tt>, we will pass the existing <tt class="docutils literal"><span class="pre">Database</span></tt>
+instance and sample as usual. A new trace will be appended to the first:</p>
+<div class="highlight-python"><pre>    &gt;&gt;&gt; M = MCMC(disaster_model, db=db)
+    &gt;&gt;&gt; M.sample(5)
+Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5
+    &gt;&gt;&gt; len(M.trace('early_model', chain=None)[:])
+    15
+    &gt;&gt;&gt; M.db.close()</pre>
+</div>
+<div class="section" id="the-ram-backend">
+<h3>6.3.1. The <tt class="docutils literal"><span class="pre">ram</span></tt> backend<a class="headerlink" href="#the-ram-backend" title="Permalink to this headline">¶</a></h3>
+<p>Used by default, this backend simply holds a copy in memory, with no output
+written to disk. This is useful for short runs or testing. For long runs
+generating large amount of data, using this backend may fill the available
+memory, forcing the OS to store data in the cache, slowing down all other
+applications.</p>
+</div>
+<div class="section" id="the-no-trace-backend">
+<h3>6.3.2. The <tt class="docutils literal"><span class="pre">no_trace</span></tt> backend<a class="headerlink" href="#the-no-trace-backend" title="Permalink to this headline">¶</a></h3>
+<p>This backend simply does not store the trace. This may be useful for testing purposes.</p>
+</div>
+<div class="section" id="the-txt-backend">
+<h3>6.3.3. The txt backend<a class="headerlink" href="#the-txt-backend" title="Permalink to this headline">¶</a></h3>
+<p>With the <tt class="docutils literal"><span class="pre">txt</span></tt> backend, the data is written to disk in ASCII files. More
+precisely, the <tt class="docutils literal"><span class="pre">dbname</span></tt> argument is used to create a top directory into which
+chain directories, called <tt class="docutils literal"><span class="pre">Chain_&lt;#&gt;</span></tt>, are going to be created each time
+<tt class="docutils literal"><span class="pre">sample</span></tt> is called:</p>
+<div class="highlight-python"><pre>dbname/
+  Chain_0/
+    &lt;object0 name&gt;.txt
+    &lt;object1 name&gt;.txt
+    ...
+  Chain_1/
+    &lt;object0 name&gt;.txt
+    &lt;object1 name&gt;.txt
+    ...
+  ...</pre>
+</div>
+<p>In each one of these chain directories, files named <tt class="docutils literal"><span class="pre">&lt;variable</span> <span class="pre">name&gt;.txt</span></tt> are
+created, storing the values of the variable as rows of text:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># Variable: e</span>
+<span class="c"># Sample shape: (5,)</span>
+<span class="c"># Date: 2008-11-18 17:19:13.554188</span>
+<span class="mf">3.033672373807017486e+00</span>
+<span class="mf">3.033672373807017486e+00</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>While the txt backend makes it easy to load data using other applications and
+programming languages, it is not optimized for speed nor memory efficiency. If
+you plan on generating and handling large datasets, read on for better options.</p>
+</div>
+<div class="section" id="the-pickle-backend">
+<h3>6.3.4. The <tt class="docutils literal"><span class="pre">pickle</span></tt> backend<a class="headerlink" href="#the-pickle-backend" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">pickle</span></tt> database relies on the <tt class="docutils literal"><span class="pre">cPickle</span></tt> module to save the traces.
+Use of this backend is appropriate for small-scale, short-lived projects. For
+longer term or larger projects, the <tt class="docutils literal"><span class="pre">pickle</span></tt> backend should be avoided since
+generated files might be unreadable across different Python versions. The
+<cite>pickled</cite> file is a simple dump of a dictionary containing the NumPy arrays
+storing the traces, as well as the state of the <tt class="docutils literal"><span class="pre">Sampler</span></tt>&#8216;s step methods.</p>
+</div>
+<div class="section" id="the-sqlite-backend">
+<h3>6.3.5. The <tt class="docutils literal"><span class="pre">sqlite</span></tt> backend<a class="headerlink" href="#the-sqlite-backend" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">sqlite</span></tt> backend is based on the python module <a class="reference external" href="http://www.sqlite.org">sqlite3</a> (built-in to
+Python versions greater than 2.4) . It opens an SQL database named <tt class="docutils literal"><span class="pre">dbname</span></tt>,
+and creates one table per tallyable objects. The rows of this table store a
+key, the chain index and the values of the objects:</p>
+<div class="highlight-python"><pre>key (INTT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...</pre>
+</div>
+<p>The key is autoincremented each time a new row is added to the table, that is,
+each time <tt class="docutils literal"><span class="pre">tally</span></tt> is called by the sampler. Note that the <tt class="docutils literal"><span class="pre">savestate</span></tt>
+feature is not implemented, that is, the state of the step methods is not
+stored internally in the database.</p>
+</div>
+<div class="section" id="the-hdf5-backend">
+<h3>6.3.6. The <tt class="docutils literal"><span class="pre">hdf5</span></tt> backend<a class="headerlink" href="#the-hdf5-backend" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">hdf5</span></tt> backend uses <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> to save data in binary HDF5 format. The
+<tt class="docutils literal"><span class="pre">hdf5</span></tt> database is fast and can store huge traces, far larger than the
+available RAM. Data can be compressed and decompressed on the fly to reduce the
+disk footprint. Another feature of this backends is that it can store arbitrary
+objects. Whereas the other backends are limited to numerical values, <tt class="docutils literal"><span class="pre">hdf5</span></tt>
+can tally any object that can be pickled, opening the door for powerful and
+exotic applications (see <tt class="docutils literal"><span class="pre">pymc.gp</span></tt>).</p>
+<p>The internal structure of an HDF5 file storing both numerical values and
+arbitrary objects is as follows:</p>
+<div class="highlight-python"><pre>/ (root)
+  /chain0/ (Group) 'Chain #0'
+    /chain0/PyMCSamples (Table(N,)) 'PyMC Samples'
+    /chain0/group0 (Group) 'Group storing objects.'
+      /chain0/group0/&lt;object0 name&gt; (VLArray(N,)) '&lt;object0 name&gt; samples.'
+      /chain0/group0/&lt;object1 name&gt; (VLArray(N,)) '&lt;object1 name&gt; samples.'
+      ...
+  /chain1/ (Group) 'Chain #1'
+    ...</pre>
+</div>
+<p>All standard numerical values are stored in a <tt class="docutils literal"><span class="pre">Table</span></tt>, while <tt class="docutils literal"><span class="pre">objects</span></tt> are
+stored in individual <tt class="docutils literal"><span class="pre">VLArrays</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">hdf5</span></tt> Database takes the following parameters:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">dbname</span></tt> (<cite>string</cite>) Name of the hdf5 file.</li>
+<li><tt class="docutils literal"><span class="pre">dbmode</span></tt> (<cite>string</cite>) File mode: <tt class="docutils literal"><span class="pre">a</span></tt>: append, <tt class="docutils literal"><span class="pre">w</span></tt>: overwrite, <tt class="docutils literal"><span class="pre">r</span></tt>:
+read-only.</li>
+<li><tt class="docutils literal"><span class="pre">dbcomplevel</span></tt> (<cite>int</cite> (0-9)) Compression level, 0: no compression.</li>
+<li><tt class="docutils literal"><span class="pre">dbcomplib</span></tt> (<cite>string</cite>) Compression library (<tt class="docutils literal"><span class="pre">zlib</span></tt>, <tt class="docutils literal"><span class="pre">bzip2</span></tt>, <tt class="docutils literal"><span class="pre">lzo</span></tt>)</li>
+</ul>
+<p>According the the <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> manual, <cite>zlib</cite> (<a class="reference internal" href="references.html#roelofs2010">[Roelofs2010]</a>) has a fast
+decompression, relatively slow compression, and a good compression ratio. <cite>LZO</cite>
+(<a class="reference internal" href="references.html#oberhumer2008">[Oberhumer2008]</a>) has a fast compression, but a low compression ratio.
+<cite>bzip2</cite> (<a class="reference internal" href="references.html#seward2007">[Seward2007]</a>) has an excellent compression ratio but requires more
+CPU. Note that some of these compression algorithms require additional software
+to work (see the <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> manual).</p>
+</div>
+</div>
+<div class="section" id="writing-a-new-backend">
+<span id="writing-backend"></span><h2>6.4. Writing a New Backend<a class="headerlink" href="#writing-a-new-backend" title="Permalink to this headline">¶</a></h2>
+<p>It is relatively easy to write a new backend for <tt class="docutils literal"><span class="pre">PyMC</span></tt>. The first step is to
+look at the <tt class="docutils literal"><span class="pre">database.base</span></tt> module, which defines barebone <tt class="docutils literal"><span class="pre">Database</span></tt> and
+<tt class="docutils literal"><span class="pre">Trace</span></tt> classes. This module contains documentation on the methods that
+should be defined to get a working backend.</p>
+<p>Testing your new backend should be trivial, since the <tt class="docutils literal"><span class="pre">test_database</span></tt> module
+contains a generic test class that can easily be subclassed to check that the
+basic features required of all backends are implemented and working properly.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">6. Saving and managing sampling results</a><ul>
+<li><a class="reference internal" href="#accessing-sampled-data">6.1. Accessing Sampled Data</a></li>
+<li><a class="reference internal" href="#saving-data-to-disk">6.2. Saving Data to Disk</a></li>
+<li><a class="reference internal" href="#reloading-a-database">6.3. Reloading a Database</a><ul>
+<li><a class="reference internal" href="#the-ram-backend">6.3.1. The <tt class="docutils literal"><span class="pre">ram</span></tt> backend</a></li>
+<li><a class="reference internal" href="#the-no-trace-backend">6.3.2. The <tt class="docutils literal"><span class="pre">no_trace</span></tt> backend</a></li>
+<li><a class="reference internal" href="#the-txt-backend">6.3.3. The txt backend</a></li>
+<li><a class="reference internal" href="#the-pickle-backend">6.3.4. The <tt class="docutils literal"><span class="pre">pickle</span></tt> backend</a></li>
+<li><a class="reference internal" href="#the-sqlite-backend">6.3.5. The <tt class="docutils literal"><span class="pre">sqlite</span></tt> backend</a></li>
+<li><a class="reference internal" href="#the-hdf5-backend">6.3.6. The <tt class="docutils literal"><span class="pre">hdf5</span></tt> backend</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#writing-a-new-backend">6.4. Writing a New Backend</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modelfitting.html"
+                        title="previous chapter">5. Fitting Models</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="modelchecking.html"
+                        title="next chapter">7. Model checking and diagnostics</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/database.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modelchecking.html" title="7. Model checking and diagnostics"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modelfitting.html" title="5. Fitting Models"
+             >previous</a> |</li>
+        <li><a href="index.html">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Christopher J. Fonnesbeck.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1pre.
+    </div>
+  </body>
+</html>

@@ -1,128 +1,222 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset='utf-8'>
 
-  <title>pymc-devs/pymc @ GitHub</title>
 
-  <style type="text/css">
-    body {
-      margin-top: 1.0em;
-      background-color: #f3ffc8;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #000000;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-    h1 { font-size: 3.8em; color: #0c0037; margin-bottom: 3px; }
-    h1 .small { font-size: 0.4em; }
-    h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #0c0037; }
-    h3 { text-align: center; color: #0c0037; }
-    a { color: #0c0037; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-  </style>
-</head>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<body>
-  <a href="https://github.com/pymc-devs/pymc"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
-  <div id="container">
-
-    <div class="download">
-      <a href="https://github.com/pymc-devs/pymc/zipball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/zip.png"></a>
-      <a href="https://github.com/pymc-devs/pymc/tarball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/tar.png"></a>
-    </div>
-
-    <h1><a href="https://github.com/pymc-devs/pymc">PyMC</a>
-      <span class="small">by <a href="https://github.com/pymc-devs">pymc-devs</a></span></h1>
-
-    <div class="description">
-      Bayesian inference in Python
-    </div>
-
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-      <p>PyMC is a python module that implements Bayesian statistical models and fitting 
-algorithms, including Markov chain Monte Carlo. Its flexibility and 
-extensibility make it applicable to a large suite of problems. Along with core 
-sampling functionality, PyMC includes methods for summarizing output, plotting, 
-goodness-of-fit and convergence diagnostics.</p>
+    <title>PyMC User’s Guide &mdash; PyMC 2.2 documentation</title>
     
-
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
-      <h2>Dependencies</h2>
-      <p>* `Python`_ version 2.5 or 2.6.
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://mathjax.connectmv.com/MathJax.js"></script>
+    <link rel="top" title="PyMC 2.2 documentation" href="#" />
+    <link rel="next" title="1. Introduction" href="README.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="README.html" title="1. Introduction"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
 
-* `NumPy`_ (1.4 or newer): The fundamental scientific programming package, it 
-  provides a multidimensional array type and many useful functions for 
-  numerical analysis.
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pymc-user-s-guide">
+<h1>PyMC User&#8217;s Guide<a class="headerlink" href="#pymc-user-s-guide" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="README.html">1. Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="README.html#purpose">1.1. Purpose</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#features">1.2. Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#what-s-new-in-version-2">1.3. What&#8217;s new in version 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#usage">1.4. Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#history">1.5. History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#relationship-to-other-packages">1.6. Relationship to other packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#getting-started">1.7. Getting started</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="INSTALL.html">2. Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#dependencies">2.1. Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#installation-using-easyinstall">2.2. Installation using EasyInstall</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#installing-from-pre-built-binaries">2.3. Installing from pre-built binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#compiling-the-source-code">2.4. Compiling the source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#development-version">2.5. Development version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#running-the-test-suite">2.6. Running the test suite</a></li>
+<li class="toctree-l2"><a class="reference internal" href="INSTALL.html#bugs-and-feature-requests">2.7. Bugs and feature requests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">3. Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#an-example-statistical-model">3.1. An example statistical model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#two-types-of-variables">3.2. Two types of variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#parents-and-children">3.3. Parents and children</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#variables-values-and-log-probabilities">3.4. Variables&#8217; values and log-probabilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#fitting-the-model-with-mcmc">3.5. Fitting the model with MCMC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#fine-tuning-the-mcmc-algorithm">3.6. Fine-tuning the MCMC algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#beyond-the-basics">3.7. Beyond the basics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modelbuilding.html">4. Building models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#the-stochastic-class">4.1. The Stochastic class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#data">4.2. Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#the-deterministic-class">4.3. The Deterministic class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#containers">4.4. Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#the-potential-class">4.5. The Potential class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#graphing-models">4.6. Graphing models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelbuilding.html#class-lazyfunction-and-caching">4.7. Class LazyFunction and caching</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modelfitting.html">5. Fitting Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#creating-models">5.1. Creating models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#the-model-class">5.2. The Model class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#maximum-a-posteriori-estimates">5.3. Maximum a posteriori estimates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#normal-approximations">5.4. Normal approximations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#markov-chain-monte-carlo-the-mcmc-class">5.5. Markov chain Monte Carlo: the MCMC class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#the-sampler-class">5.6. The Sampler class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#step-methods">5.7. Step methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelfitting.html#gibbs-step-methods">5.8. Gibbs step methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">6. Saving and managing sampling results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="database.html#accessing-sampled-data">6.1. Accessing Sampled Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="database.html#saving-data-to-disk">6.2. Saving Data to Disk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="database.html#reloading-a-database">6.3. Reloading a Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="database.html#writing-a-new-backend">6.4. Writing a New Backend</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modelchecking.html">7. Model checking and diagnostics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modelchecking.html#convergence-diagnostics">7.1. Convergence Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelchecking.html#autocorrelation-plots">7.2. Autocorrelation Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modelchecking.html#goodness-of-fit">7.3. Goodness of Fit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">8. Extending PyMC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#nonstandard-stochastics">8.1. Nonstandard Stochastics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#user-defined-step-methods">8.2. User-defined step methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#new-fitting-algorithms">8.3. New fitting algorithms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html#a-second-warning-don-t-update-stochastic-variables-values-in-place">8.4. A second warning: Don&#8217;t update stochastic variables&#8217; values in-place</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="distributions.html">9. Probability distributions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html#discrete-distributions">9.1. Discrete distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html#continuous-distributions">9.2. Continuous distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html#multivariate-discrete-distributions">9.3. Multivariate discrete distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html#multivariate-continuous-distributions">9.4. Multivariate continuous distributions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="conclusion.html">10. Conclusion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conclusion.html#acknowledgements">11. Acknowledgements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">12. Appendix: Markov Chain Monte Carlo</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#monte-carlo-methods-in-bayesian-analysis">12.1. Monte Carlo Methods in Bayesian Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#markov-chains">12.2. Markov Chains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#why-mcmc-works-reversible-markov-chains">12.3. Why MCMC Works: Reversible Markov Chains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#gibbs-sampling">12.4. Gibbs Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#the-metropolis-hastings-algorithm">12.5. The Metropolis-Hastings Algorithm</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">13. List of References</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
 
-* `Matplotlib (optional)`_ : 2D plotting library which produces publication 
-  quality figures in a variety of image formats and interactive environments
 
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/icon.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">PyMC User&#8217;s Guide</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
 
-* `pyTables (optional)`_ : Package for managing hierarchical datasets and
-  designed to efficiently and easily cope with extremely large amounts of data.
-  Requires the `HDF5`_ library.
-
-* `pydot (optional)`_ : Python interface to Graphviz's Dot language, it allows 
-  PyMC to create both directed and non-directed graphical representations of 
-  models. Requires the `Graphviz`_ library.
-
-* `SciPy (optional)`_ : Library of algorithms for mathematics, science and 
-  engineering.
-
-* `IPython (optional)`_ : An enhanced interactive Python shell and an 
-  architecture for interactive parallel computing.
-
-* `nose (optional)`_ : A test discovery-based unittest extension (required to 
-  run the test suite).</p>
-    
-
-    
-      <h2>Install</h2>
-      <p>See install instructions.</p>
-    
-
-    
-      <h2>License</h2>
-      <p>MIT License</p>
-    
-
-    
-      <h2>Authors</h2>
-      <p>Anand Patil (anand.prabhakar.patil@gmail.com)<br/>Chris Fonnesbeck (chris.fonnesbeck@vanderbilt.edu)<br/>David Huard (huardda@angus.meteo.mcgill.ca)<br/>John Salvatier (jsalvatier@gmail.com)<br/>Thomas Wiecki (thomas.wiecki@gmail.com)<br/>      </p>
-    
-
-    
-      <h2>Contact</h2>
-      <p>chris.fonnesbeck@vanderbilt.edu<br/>      </p>
-    
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="https://github.com/pymc-devs/pymc/zipball/master">zip</a> or
-      <a href="https://github.com/pymc-devs/pymc/tarball/master">tar formats.
+  <h4>Next topic</h4>
+  <p class="topless"><a href="README.html"
+                        title="next chapter">1. Introduction</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
     </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/pymc-devs/pymc</pre>
-    </p>
-
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="README.html" title="1. Introduction"
+             >next</a> |</li>
+        <li><a href="#">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
     <div class="footer">
-      get the source code on GitHub : <a href="https://github.com/pymc-devs/pymc">pymc-devs/pymc</a>
+        &copy; Copyright 2011, Christopher J. Fonnesbeck.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1pre.
     </div>
-
-  </div>
-
-</body>
+  </body>
 </html>

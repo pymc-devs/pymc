@@ -1,0 +1,416 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>12. Appendix: Markov Chain Monte Carlo &mdash; PyMC 2.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://mathjax.connectmv.com/MathJax.js"></script>
+    <link rel="top" title="PyMC 2.2 documentation" href="index.html" />
+    <link rel="next" title="13. List of References" href="references.html" />
+    <link rel="prev" title="10. Conclusion" href="conclusion.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="references.html" title="13. List of References"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="conclusion.html" title="10. Conclusion"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="appendix-markov-chain-monte-carlo">
+<span id="chap-mcmc"></span><h1>12. Appendix: Markov Chain Monte Carlo<a class="headerlink" href="#appendix-markov-chain-monte-carlo" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="monte-carlo-methods-in-bayesian-analysis">
+<h2>12.1. Monte Carlo Methods in Bayesian Analysis<a class="headerlink" href="#monte-carlo-methods-in-bayesian-analysis" title="Permalink to this headline">¶</a></h2>
+<p>Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating (drawing samples) from posterior distributions. For example, consider the expected value of a random variable <span class="math">\(\mathbf{x}\)</span>:</p>
+<div class="math">
+\[E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
+{\bf x} = \{x_1,...,x_k\}\]</div>
+<p>where <span class="math">\(k\)</span> (the dimension of vector <span class="math">\(x\)</span>) is perhaps very large. If we can produce a reasonable number of random vectors <span class="math">\(\{{\bf x_i}\}\)</span>, we can use these values to approximate the unknown integral. This process is known as <em>Monte Carlo integration</em>. In general, MC integration allows integrals against probability density functions:</p>
+<div class="math">
+\[I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}\]</div>
+<p>to be estimated by finite sums:</p>
+<div class="math">
+\[\hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),\]</div>
+<p>where <span class="math">\(\mathbf{x}_i\)</span> is a sample from <span class="math">\(f\)</span>. This estimate is valid and useful because:</p>
+<ul class="simple">
+<li>By the strong law of large numbers:</li>
+</ul>
+<div class="math">
+\[\hat{I} \rightarrow I   \mbox{   with probability 1}\]</div>
+<ul class="simple">
+<li>Simulation error can be measured and controlled:</li>
+</ul>
+<div class="math">
+\[   \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\end{equation}\]</div><p>Why is this relevant to Bayesian analysis? If we replace <span class="math">\(f(\mathbf{x})\)</span> with a posterior, <span class="math">\(f(\theta|d)\)</span> and make <span class="math">\(h(\theta)\)</span> an interesting function of the unknown parameter, the resulting expectation is that of the posterior of <span class="math">\(h(\theta)\)</span>:</p>
+<div class="math">
+\[ \begin{equation}
+ E[h(\theta)|d] = \int f(\theta|d) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
+ \end{equation}\]</div><div class="section" id="rejection-sampling">
+<h3>12.1.1. Rejection Sampling<a class="headerlink" href="#rejection-sampling" title="Permalink to this headline">¶</a></h3>
+<p>Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the  ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.</p>
+<p>Posit a function, <span class="math">\(f(x)\)</span> which can be evaluated for any value on the support of <span class="math">\(x:S_x = [A,B]\)</span>, but may not be integrable or easily sampled from. If we can calculate the maximum  value of <span class="math">\(f(x)\)</span>, we can then define a rectangle that is guaranteed to contain all possible values <span class="math">\((x,f(x))\)</span>. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure <a class="reference internal" href="#bound"><em>Rejection sampling of a bounded form. Area is estimated by the ratio of
+accepted (open squares) to total points, multiplied by the rectangle
+area.</em></a>).</p>
+<div class="figure align-center" id="bound">
+<a class="reference internal image-reference" href="_images/reject.png"><img alt="Rejection figure." src="_images/reject.png" /></a>
+<p class="caption">Rejection sampling of a bounded form. Area is estimated by the ratio of
+accepted (open squares) to total points, multiplied by the rectangle
+area.</p>
+</div>
+<div class="math">
+\[\frac{\mbox{Points under curve}}{\mbox{Points generated}} \times \mbox{box area} = \lim_{n \to \infty} \int_A^B f(x) dx\]</div>
+<p>This approach is useful, for example, in estimating the normalizing constant for posterior distributions.</p>
+<div class="figure align-center" id="envelope">
+<a class="reference internal image-reference" href="_images/envelope.png"><img alt="envelope figure" src="_images/envelope.png" /></a>
+<p class="caption">Rejection sampling of an unbounded form using an enveloping distribution.</p>
+</div>
+<p>If <span class="math">\(f(x)\)</span> has unbounded support (i.e. infinite tails), such as a Gaussian distribution, a bounding box is no longer appropriate. We must specify a majorizing (or, enveloping) function, <span class="math">\(g(x)\)</span>, which implies:</p>
+<div class="math">
+\[g(x) \ge  f(x) \qquad\forall x \in (-\infty,\infty)\]</div>
+<p>Having done this, we can now sample <span class="math">\({x_i}\)</span> from <span class="math">\(g(x)\)</span> and accept or reject each of these values based upon <span class="math">\(f(x_i)\)</span>. Specifically, for each draw <span class="math">\(x_i\)</span>, we also draw a uniform random variate <span class="math">\(u_i\)</span> and accept <span class="math">\(x_i\)</span> if <span class="math">\(u_i &lt; f(x_i)/cg(x_i)\)</span>, where <span class="math">\(c\)</span> is a constant (Figure <a class="reference internal" href="#envelope"><em>Rejection sampling of an unbounded form using an enveloping distribution.</em></a>). This approach is made more efficient by choosing an enveloping distribution that is &#8220;close&#8221; to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.</p>
+<p>Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
+</div>
+</div>
+<div class="section" id="markov-chains">
+<h2>12.2. Markov Chains<a class="headerlink" href="#markov-chains" title="Permalink to this headline">¶</a></h2>
+<p>A Markov chain is a special type of <em>stochastic process</em>. The standard definition of a stochastic process is an ordered collection of random variables:</p>
+<div class="math">
+\[\{X_t:t \in T\}\]</div>
+<p>where <span class="math">\(t\)</span> is frequently (but not necessarily) a time index. If we think of <span class="math">\(X_t\)</span> as a state <span class="math">\(X\)</span> at time <span class="math">\(t\)</span>, and invoke the following dependence condition on each state:</p>
+<div class="math">
+\[Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+1} | X_t=x_t)\]</div>
+<p>then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a <em>transition matrix</em> when dealing with discrete states, or more generally, a <em>transition kernel</em>.</p>
+<p>In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as &#8220;mild non-independence&#8221;. MCMC allows us to indirectly generate independent samples from a particular posterior distribution.</p>
+<div class="section" id="jargon-busting">
+<h3>12.2.1. Jargon-busting<a class="headerlink" href="#jargon-busting" title="Permalink to this headline">¶</a></h3>
+<p>Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.</p>
+<ul>
+<li><dl class="first docutils">
+<dt><em>Homogeneity</em>: A Markov chain is homogeneous at step <span class="math">\(t\)</span> if the</dt>
+<dd><p class="first last">transition probabilities are independent of time <span class="math">\(t\)</span>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>Irreducibility</em>: A Markov chain is irreducible if every state is accessible</dt>
+<dd><p class="first last">in one or more steps from any other state. That is, the chain contains no
+absorbing states. This implies that there is a non-zero probability of
+eventually reaching state <span class="math">\(k\)</span> from any other state in the chain.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>Recurrence</em>: States which are visited repeatedly are <em>recurrent</em>. If the</dt>
+<dd><p class="first last">expected time to return to a particular state is bounded, this is known as
+<em>positive recurrence</em>, otherwise the recurrent state is <em>null recurrent</em>.
+Further, a chain is <em>Harris recurrent</em> when it visits all states <span class="math">\(X
+\in S\)</span> infinitely often in the limit as <span class="math">\(t \to \infty\)</span>; this is an
+important characteristic when dealing with unbounded, continuous state
+spaces. Whenever a chain ends up in a closed, irreducible set of Harris
+recurrent states, it stays there forever and visits every state with
+probability one.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>Stationarity</em>: A stationary Markov chain produces the same marginal</dt>
+<dd><blockquote class="first">
+<div><p>distribution when multiplied by the transition kernel.  Thus, if <span class="math">\(P\)</span>
+is some <span class="math">\(n \times n\)</span> transition matrix:</p>
+</div></blockquote>
+<div class="last math">
+\[{\bf \pi P} = {\bf \pi}\]\[  for Markov chain :math:`\pi`. Thus, :math:`\pi` is no longer subscripted,
+  and is referred to as the *limiting distribution* of the chain. In MCMC,
+  the chain explores the state space according to its limiting marginal
+  distribution.\]</div>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>Ergodicity</em>: Ergodicity is an emergent property of Markov chains which are</dt>
+<dd><p class="first last">irreducible, positive Harris recurrent and aperiodic. Ergodicity is defined
+as:</p>
+</dd>
+</dl>
+<div class="math">
+\[\lim_{n \to \infty} Pr^{(n)}(\theta_i \rightarrow \theta_j) = \pi(\theta) \quad \forall \theta_i, \theta_j \in \Theta\]\[  or in words, after many steps the marginal distribution of the chain is the
+  same at one step as at all other steps. This implies that our Markov chain,
+  which we recall is dependent, can generate samples that are independent if
+  we wait long enough between samples. If it means anything to you,
+  ergodicity is the analogue of the strong law of large numbers for Markov
+  chains. For example, take values :math:`\theta_{i+1},\ldots,\theta_{i+n}`
+  from a chain that has reached an ergodic state. A statistic of interest can
+  then be estimated by:\]</div>
+<div class="math">
+\[\frac{1}{n}\sum_{j=i+1}^{i+n} h(\theta_j) \approx \int f(\theta) h(\theta) d\theta\]</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="why-mcmc-works-reversible-markov-chains">
+<h2>12.3. Why MCMC Works: Reversible Markov Chains<a class="headerlink" href="#why-mcmc-works-reversible-markov-chains" title="Permalink to this headline">¶</a></h2>
+<p>Markov chain Monte Carlo simulates a Markov chain for which some function of
+interest (<em>e.g.</em> the joint distribution of the parameters of some model) is the
+unique, invariant limiting distribution. An invariant distribution with respect
+to some Markov chain with transition kernel <span class="math">\(Pr(y \mid x)\)</span> implies that:</p>
+<div class="math">
+\[\int_x Pr(y \mid x) \pi(x) dx = \pi(y).\]</div>
+<p>Invariance is guaranteed for any <strong>reversible</strong> Markov chain. Consider a Markov
+chain in reverse sequence:
+<span class="math">\(\{\theta^{(n)},\theta^{(n-1)},...,\theta^{(0)}\}\)</span>. This sequence is still
+Markovian, because:</p>
+<div class="math">
+\[Pr(\theta^{(k)}=y \mid \theta^{(k+1)}=x,\theta^{(k+2)}=x_1,\ldots ) = Pr(\theta^{(k)}=y \mid \theta^{(k+1)}=x)\]</div>
+<p>Forward and reverse transition probabilities may be related through Bayes
+theorem:</p>
+<div class="math">
+</div>
+<div class="math">
+\[\frac{Pr(\theta^{(k+1)}=x \mid \theta^{(k)}=y) \pi^{(k)}(y)}{\pi^{(k+1)}(x)}\]</div>
+<p>Though not homogeneous in general, <span class="math">\(\pi\)</span> becomes homogeneous if <strong>Do you
+ever call the stationary distribution itself homogeneous?</strong>:</p>
+<ul class="simple">
+<li><span class="math">\(n \rightarrow \infty\)</span></li>
+<li><span class="math">\(\pi^{(i)}=\pi\)</span> for some <span class="math">\(i &lt; k\)</span></li>
+</ul>
+<p>If this chain is homogeneous it is called reversible, because it satisfies the
+<strong>detailed balance equation</strong>:</p>
+<div class="math">
+\[\pi(x)Pr(y \mid x) = \pi(y) Pr(x \mid y)\]</div>
+<p>Reversibility is important because it has the effect of balancing movement
+through the entire state space. When a Markov chain is reversible, <span class="math">\(\pi\)</span>
+is the unique, invariant, stationary distribution of that chain. Hence, if
+<span class="math">\(\pi\)</span> is of interest, we need only find the reversible Markov chain for
+which <span class="math">\(\pi\)</span> is the limiting distribution. This is what MCMC does!</p>
+</div>
+<div class="section" id="gibbs-sampling">
+<h2>12.4. Gibbs Sampling<a class="headerlink" href="#gibbs-sampling" title="Permalink to this headline">¶</a></h2>
+<p>The Gibbs sampler is the simplest and most prevalent MCMC algorithm. If a
+posterior has <span class="math">\(k\)</span> parameters to be estimated, we may condition each
+parameter on current values of the other <span class="math">\(k-1\)</span> parameters, and sample from
+the resultant distributional form (usually easier), and repeat this operation on
+the other parameters in turn. This procedure generates samples from the
+posterior distribution. Note that we have now combined Markov chains
+(conditional independence) and Monte Carlo techniques (estimation by simulation)
+to yield Markov chain Monte Carlo.</p>
+<p>Here is a stereotypical Gibbs sampling algorithm:</p>
+<p>As we can see from the algorithm, each distribution is conditioned on the last
+iteration of its chain values, constituting a Markov chain as advertised. The
+Gibbs sampler has all of the important properties outlined in the previous
+section: it is aperiodic, homogeneous and ergodic. Once the sampler converges,
+all subsequent samples are from the target distribution. This convergence occurs
+at a geometric rate.</p>
+<ol class="arabic">
+<li><p class="first">Choose starting values for states (parameters): <span class="math">\({\bf \theta} = [\theta_1^{(0)},\theta_2^{(0)},\ldots,\theta_k^{(0)}]\)</span></p>
+</li>
+<li><p class="first">Initialize counter <span class="math">\(j=1\)</span></p>
+</li>
+<li><p class="first">Draw the following values from each of the <span class="math">\(k\)</span> conditional distributions:</p>
+<div class="math">
+\[\begin{eqnarray*}
+\theta_1^{(j)} &\sim& \pi(\theta_1 | \theta_2^{(j-1)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) \\
+\theta_2^{(j)} &\sim& \pi(\theta_2 | \theta_1^{(j)},\theta_3^{(j-1)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) \\
+\theta_3^{(j)} &\sim& \pi(\theta_3 | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-1}^{(j-1)},\theta_k^{(j-1)}) \\
+\vdots \\
+\theta_{k-1}^{(j)} &\sim& \pi(\theta_{k-1} | \theta_1^{(j)},\theta_2^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_k^{(j-1)}) \\
+\theta_k^{(j)} &\sim& \pi(\theta_k | \theta_1^{(j)},\theta_2^{(j)},\theta_4^{(j)},\ldots,\theta_{k-2}^{(j)},\theta_{k-1}^{(j)})
+\end{eqnarray*}\]</div></li>
+<li><p class="first">Increment <span class="math">\(j\)</span> and repeat until convergence occurs.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="the-metropolis-hastings-algorithm">
+<h2>12.5. The Metropolis-Hastings Algorithm<a class="headerlink" href="#the-metropolis-hastings-algorithm" title="Permalink to this headline">¶</a></h2>
+<p>The key to success in applying the Gibbs sampler to the estimation of Bayesian
+posteriors is being able to specify the form of the complete conditionals of
+<span class="math">\({\bf \theta}\)</span>. In fact, the algorithm cannot be implemented without them.
+Of course, the posterior conditionals cannot always be neatly specified. In
+contrast to the Gibbs algorithm, the Metropolis-Hastings algorithm generates
+candidate state transitions from an alternate distribution, and accepts or
+rejects each candidate probabilistically.</p>
+<p>Let us first consider a simple Metropolis-Hastings algorithm for a single
+parameter, <span class="math">\(\theta\)</span>. We will use a standard sampling distribution,
+referred to as the <em>proposal distribution</em>, to produce candidate variables
+<span class="math">\(q_t(\theta^{\prime} | \theta)\)</span>. That is, the generated value,
+<span class="math">\(\theta^{\prime}\)</span>, is a <em>possible</em> next value for <span class="math">\(\theta\)</span> at step
+<span class="math">\(t+1\)</span>. We also need to be able to calculate the probability of moving back
+to the original value from the candidate, or
+<span class="math">\(q_t(\theta | \theta^{\prime})\)</span>. These probabilistic ingredients are used
+to define an <em>acceptance ratio</em>:</p>
+<div class="math">
+\[a(\theta^{\prime},\theta) = \frac{q_t(\theta^{\prime} | \theta) \pi(\theta^{\prime})}{q_t(\theta | \theta^{\prime}) \pi(\theta)}\]</div>
+<p>The value of <span class="math">\(\theta^{(t+1)}\)</span> is then determined by:</p>
+<div class="math">
+\[\begin{split}\theta^{(t+1)} = \left\{\begin{array}{l&#64;{\quad \mbox{with prob.} \quad}l}\theta^{\prime} &amp; \min(a(\theta^{\prime},\theta),1) \\ \theta^{(t)} &amp; 1 - \min(a(\theta^{\prime},\theta),1) \end{array}\right.\end{split}\]</div>
+<p>This transition kernel implies that movement is not guaranteed at every step. It
+only occurs if the suggested transition is likely based on the acceptance ratio.</p>
+<p>A single iteration of the Metropolis-Hastings algorithm proceeds as follows:</p>
+<p>The original form of the algorithm specified by Metropolis required that
+<span class="math">\(q_t(\theta^{\prime} | \theta) = q_t(\theta | \theta^{\prime})\)</span>, which
+reduces <span class="math">\(a(\theta^{\prime},\theta)\)</span> to
+<span class="math">\(\pi(\theta^{\prime})/\pi(\theta)\)</span>, but this is not necessary. In either
+case, the state moves to high-density points in the distribution with high
+probability, and to low-density points with low probability. After convergence,
+the Metropolis-Hastings algorithm describes the full target posterior density,
+so all points are recurrent.</p>
+<ol class="arabic simple">
+<li>Sample <span class="math">\(\theta^{\prime}\)</span> from <span class="math">\(q(\theta^{\prime} | \theta^{(t)})\)</span>.</li>
+<li>Generate a Uniform[0,1] random variate <span class="math">\(u\)</span>.</li>
+<li>If <span class="math">\(a(\theta^{\prime},\theta) &gt; u\)</span> then <span class="math">\(\theta^{(t+1)} = \theta^{\prime}\)</span>, otherwise <span class="math">\(\theta^{(t+1)} = \theta^{(t)}\)</span>.</li>
+</ol>
+<div class="section" id="random-walk-metropolis-hastings">
+<h3>12.5.1. Random-walk Metropolis-Hastings<a class="headerlink" href="#random-walk-metropolis-hastings" title="Permalink to this headline">¶</a></h3>
+<p>A practical implementation of the Metropolis-Hastings algorithm makes use of a
+random-walk proposal. Recall that a random walk is a Markov chain that evolves
+according to:</p>
+<div class="math">
+\[\begin{eqnarray*}
+\theta^{(t+1)} &=& \theta^{(t)} + \epsilon_t \\
+\epsilon_t &\sim& f(\phi)
+\end{eqnarray*}\]</div><p>As applied to the MCMC sampling, the random walk is used as a proposal
+distribution, whereby dependent proposals are generated according to:</p>
+<div class="math">
+\[q(\theta^{\prime} | \theta^{(t)}) = f(\theta^{\prime} - \theta^{(t)}) = \theta^{(t)} + \epsilon_t\]</div>
+<p>Generally, the density generating <span class="math">\(\epsilon_t\)</span> is symmetric about zero,
+resulting in a symmetric chain. Chain symmetry implies that
+<span class="math">\(q(\theta^{\prime} | \theta^{(t)}) = q(\theta^{(t)} | \theta^{\prime})\)</span>,
+which reduces the Metropolis-Hastings acceptance ratio to:</p>
+<div class="math">
+\[a(\theta^{\prime},\theta) = \frac{\pi(\theta^{\prime})}{\pi(\theta)}\]</div>
+<p>The choice of the random walk distribution for <span class="math">\(\epsilon_t\)</span> is frequently
+a normal or Student&#8217;s <span class="math">\(t\)</span> density, but it may be any distribution that
+generates an irreducible proposal chain.</p>
+<p>An important consideration is the specification of the scale parameter for the
+random walk error distribution. Large values produce random walk steps that are
+highly exploratory, but tend to produce proposal values in the tails of the
+target distribution, potentially resulting in very small acceptance rates.
+Conversely, small values tend to be accepted more frequently, since they tend to
+produce proposals close to the current parameter value, but may result in chains
+that mix very slowly. Some simulation studies suggest optimal acceptance rates
+in the range of 20-50%. It is often worthwhile to optimize the proposal variance
+by iteratively adjusting its value, according to observed acceptance rates early
+in the MCMC simulation <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/icon.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">12. Appendix: Markov Chain Monte Carlo</a><ul>
+<li><a class="reference internal" href="#monte-carlo-methods-in-bayesian-analysis">12.1. Monte Carlo Methods in Bayesian Analysis</a><ul>
+<li><a class="reference internal" href="#rejection-sampling">12.1.1. Rejection Sampling</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#markov-chains">12.2. Markov Chains</a><ul>
+<li><a class="reference internal" href="#jargon-busting">12.2.1. Jargon-busting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#why-mcmc-works-reversible-markov-chains">12.3. Why MCMC Works: Reversible Markov Chains</a></li>
+<li><a class="reference internal" href="#gibbs-sampling">12.4. Gibbs Sampling</a></li>
+<li><a class="reference internal" href="#the-metropolis-hastings-algorithm">12.5. The Metropolis-Hastings Algorithm</a><ul>
+<li><a class="reference internal" href="#random-walk-metropolis-hastings">12.5.1. Random-walk Metropolis-Hastings</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="conclusion.html"
+                        title="previous chapter">10. Conclusion</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="references.html"
+                        title="next chapter">13. List of References</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/theory.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="references.html" title="13. List of References"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="conclusion.html" title="10. Conclusion"
+             >previous</a> |</li>
+        <li><a href="index.html">PyMC 2.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Christopher J. Fonnesbeck.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1pre.
+    </div>
+  </body>
+</html>
