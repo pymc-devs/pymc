@@ -26,31 +26,4 @@ pdflatex -output-directory=pdf -interaction batchmode UserGuide
 pdflatex -output-directory=pdf -interaction batchmode UserGuide
 cp pdf/UserGuide.pdf .
 
-
-# JSS
-# Some special formatting in the JSS manual.
-# cp pymc.bib jss/
-python manual2article.py README.tex > jss/README.tex
-python manual2article.py INSTALL.tex > jss/INSTALL.tex
-python manual2article.py tutorial.tex > jss/tutorial.tex
-python manual2article.py modelbuilding.tex > jss/modelbuilding.tex
-python manual2article.py modelchecking.tex > jss/modelchecking.tex
-python manual2article.py modelfitting.tex > jss/modelfitting.tex
-python manual2article.py extending.tex > jss/extending.tex
-python manual2article.py database.tex > jss/database.tex
-python manual2article.py conclusion.tex > jss/conclusion.tex
-python manual2article.py theory.tex > jss/theory.tex
-python manual2article.py distributions-module.tex >  jss/distributions-module.tex
-
-# Merge all tex files
-
-cd jss
-python mergetex.py jss_article.tex
-mkdir pdf
-pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
-bibtex pdf/jss_article_merged
-pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
-pdflatex -output-directory=pdf -interaction batchmode jss_article_merged
-cp pdf/jss_article_merged.pdf .
-
-cd ../../
+cd ..

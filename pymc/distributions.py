@@ -648,8 +648,9 @@ def bernoulli_like(x, p):
       - `p` : Probability of success. :math:`0 < p < 1`.
 
     :Example:
+       >>> from pymc import bernoulli_like
        >>> bernoulli_like([0,1,0,1], .4)
-       -2.8542325496673584
+       -2.854232711280291
 
     .. note::
       - :math:`E(x)= p`
@@ -692,8 +693,9 @@ def beta_like(x, alpha, beta):
       - `beta` : beta > 0
 
     :Example:
+      >>> from pymc import beta_like
       >>> beta_like(.4,1,2)
-      0.18232160806655884
+      0.182321556793954
 
     .. note::
       - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`

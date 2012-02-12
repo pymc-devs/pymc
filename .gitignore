@@ -10,7 +10,7 @@ docs/README.tex
 docs/UserGuide.pdf
 docs/database.tex
 develop
-testresults/*
-sphinxdoc/build/*
+testresults/
+sphinxdocs/_build/
 *.tmproj
 *.py.bak
