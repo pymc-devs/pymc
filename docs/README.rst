@@ -2,7 +2,7 @@
 Introduction
 ************
 
-:Date: 25 January 2011
+:Date: 16 February 2011
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
@@ -131,9 +131,9 @@ team for PyMC 2.0. This iteration of the software strives for more flexibility,
 better performance and a better end-user experience than any previous version 
 of PyMC.
 
-PyMC 2.1 has been released in early 2010. It contains numerous bugfixes and 
-optimizations, as well as a few new features. This user guide is written for 
-version 2.1.
+PyMC 2.2 will be released in early 2012. It contains numerous bugfixes and 
+optimizations, as well as a few new features. This user guide has been updated 
+for version 2.2.
 
 
 Relationship to other packages
