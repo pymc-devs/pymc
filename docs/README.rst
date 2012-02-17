@@ -10,6 +10,14 @@ Introduction
 :License: PyMC is released under the MIT license.
 :Version: 2.2
 
+.. _warning:
+
+.. topic::
+    
+    This is a draft of the documentation to accompany PyMC 2.2 when it is 
+    released later this year. If you spot errors, have edits to recommend, or 
+    text to contribute, please open a report on our `issues page`_.
+
 
 Purpose
 =======
@@ -193,3 +201,5 @@ available. More `examples and tutorials`_ are available from the PyMC web site.
 .. _`R packages`: http://cran.r-project.org/web/packages/
 
 .. _`testimonials`: https://github.com/pymc-devs/pymc/wiki/Testimonials
+
+.. _`issues page`: https://github.com/pymc-devs/pymc/issues
