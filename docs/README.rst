@@ -12,7 +12,7 @@ Introduction
 
 .. _warning:
 
-.. topic::
+.. topic:: Documentation under construction
     
     This is a draft of the documentation to accompany PyMC 2.2 when it is 
     released later this year. If you spot errors, have edits to recommend, or 

@@ -647,11 +647,13 @@ function ``pymc.graph.moral_graph``.
 .. _pot:
 
 .. figure:: _images/PotExample.*
-	:scale: 70 %
+    :scale: 70 %
     :width: 800
+    
+    Directed graphical model example. Factor potentials are represented by 
+    rectangles and stochastic variables by ellipses.
 
-	Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.
-
+    
 
 .. _sec_caching:
 

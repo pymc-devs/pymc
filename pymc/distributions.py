@@ -1330,7 +1330,8 @@ def hypergeometric_like(x, n, m, N):
       - `N` : [int] Total number of units in the population.
 
     .. note::
-       :math:`E(X) = \frac{n n}{N}`
+        
+        :math:`E(X) = \frac{n n}{N}`
     """
 
     return flib.hyperg(x, n, m, N)
@@ -1363,6 +1364,7 @@ def inverse_gamma_like(x, alpha, beta):
       - `beta` : Scale parameter (beta > 0).
 
     .. note::
+    
        :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha > 1`
        :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha > 2`
        
@@ -1588,6 +1590,7 @@ def lognormal_like(x, mu, tau):
       - `tau` : Scale parameter (tau > 0).
 
     .. note::
+    
        :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
        :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
 
