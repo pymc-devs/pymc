@@ -424,7 +424,7 @@ This situation can be handled naturally in PyMC::
     
     for i in range(1, N):
     
-        xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+        x[i] = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
     
     @pymc.observed
     def y(value=1, mu=x, tau=100):
@@ -647,11 +647,13 @@ function ``pymc.graph.moral_graph``.
 .. _pot:
 
 .. figure:: _images/PotExample.*
-	:scale: 70 %
+    :scale: 70 %
     :width: 800
+    
+    Directed graphical model example. Factor potentials are represented by 
+    rectangles and stochastic variables by ellipses.
 
-	Directed graphical model example. Factor potentials are represented by rectangles and stochastic variables by ellipses.
-
+    
 
 .. _sec_caching:
 

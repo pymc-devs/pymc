@@ -425,7 +425,7 @@ x[0] = x_0
 
 for i in range(1, N):
 
-    xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+    x[i] = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
 
 @pymc.observed
 def y(value=1, mu=x, tau=100):
@@ -597,7 +597,9 @@ pictured above is much more compact: Directed or mixed graphical models can be
 represented in an undirected form by &#8216;moralizing&#8217;, which is done by the
 function <tt class="docutils literal"><span class="pre">pymc.graph.moral_graph</span></tt>.</p>
 <div class="figure" id="pot">
-<img alt="_images/PotExample.*:scale:70%" src="_images/PotExample.*:scale:70%" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/PotExample3.png"><img alt="_images/PotExample3.png" src="_images/PotExample3.png" style="width: 560.0px;" /></a>
+<p class="caption">Directed graphical model example. Factor potentials are represented by
+rectangles and stochastic variables by ellipses.</p>
 </div>
 </div>
 <div class="section" id="class-lazyfunction-and-caching">

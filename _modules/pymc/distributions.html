@@ -1369,7 +1369,11 @@
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}</span>
+<span class="sd">        f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\ </span>
+<span class="sd">        \end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\ </span>
+<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ </span>
+<span class="sd">        \end{array}}\right)}</span>
+
 
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : [int] Number of successes in a sample drawn from a population.</span>
@@ -1757,7 +1761,10 @@
 <span class="sd">    when the number of items in each category is given by m.</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        \frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}</span>
+<span class="sd">        \frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\ </span>
+<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ </span>
+<span class="sd">        \end{array}}\right)}</span>
+
 
 <span class="sd">    where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.</span>
 

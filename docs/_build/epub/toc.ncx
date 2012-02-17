@@ -1,0 +1,806 @@
+<?xml version="1.0"?>
+<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+  <head>
+    <meta name="dtb:uid" content="unknown"/>
+    <meta name="dtb:depth" content="3"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>PyMC</text>
+  </docTitle>
+  <navMap>
+    <navPoint id="navPoint1" playOrder="1">
+      <navLabel>
+        <text>PyMC User&#39;s Guide</text>
+      </navLabel>
+      <content src="index.html" />
+    </navPoint>
+    <navPoint id="navPoint2" playOrder="2">
+      <navLabel>
+        <text>Introduction</text>
+      </navLabel>
+      <content src="README.html" />
+      <navPoint id="navPoint2" playOrder="2">
+        <navLabel>
+          <text>Introduction</text>
+        </navLabel>
+        <content src="README.html" />
+      </navPoint>
+      <navPoint id="navPoint3" playOrder="3">
+        <navLabel>
+          <text>Purpose</text>
+        </navLabel>
+        <content src="README.html#purpose" />
+      </navPoint>
+      <navPoint id="navPoint4" playOrder="4">
+        <navLabel>
+          <text>Features</text>
+        </navLabel>
+        <content src="README.html#features" />
+      </navPoint>
+      <navPoint id="navPoint5" playOrder="5">
+        <navLabel>
+          <text>What&#39;s new in version 2</text>
+        </navLabel>
+        <content src="README.html#what-s-new-in-version-2" />
+      </navPoint>
+      <navPoint id="navPoint6" playOrder="6">
+        <navLabel>
+          <text>Usage</text>
+        </navLabel>
+        <content src="README.html#usage" />
+      </navPoint>
+      <navPoint id="navPoint7" playOrder="7">
+        <navLabel>
+          <text>History</text>
+        </navLabel>
+        <content src="README.html#history" />
+      </navPoint>
+      <navPoint id="navPoint8" playOrder="8">
+        <navLabel>
+          <text>Relationship to other packages</text>
+        </navLabel>
+        <content src="README.html#relationship-to-other-packages" />
+      </navPoint>
+      <navPoint id="navPoint9" playOrder="9">
+        <navLabel>
+          <text>Getting started</text>
+        </navLabel>
+        <content src="README.html#getting-started" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint10" playOrder="10">
+      <navLabel>
+        <text>Installation</text>
+      </navLabel>
+      <content src="INSTALL.html" />
+      <navPoint id="navPoint10" playOrder="10">
+        <navLabel>
+          <text>Installation</text>
+        </navLabel>
+        <content src="INSTALL.html" />
+      </navPoint>
+      <navPoint id="navPoint11" playOrder="11">
+        <navLabel>
+          <text>Dependencies</text>
+        </navLabel>
+        <content src="INSTALL.html#dependencies" />
+      </navPoint>
+      <navPoint id="navPoint12" playOrder="12">
+        <navLabel>
+          <text>Installation using EasyInstall</text>
+        </navLabel>
+        <content src="INSTALL.html#installation-using-easyinstall" />
+      </navPoint>
+      <navPoint id="navPoint13" playOrder="13">
+        <navLabel>
+          <text>Installing from pre-built binaries</text>
+        </navLabel>
+        <content src="INSTALL.html#installing-from-pre-built-binaries" />
+      </navPoint>
+      <navPoint id="navPoint14" playOrder="14">
+        <navLabel>
+          <text>Compiling the source code</text>
+        </navLabel>
+        <content src="INSTALL.html#compiling-the-source-code" />
+        <navPoint id="navPoint14" playOrder="14">
+          <navLabel>
+            <text>Compiling the source code</text>
+          </navLabel>
+          <content src="INSTALL.html#compiling-the-source-code" />
+        </navPoint>
+        <navPoint id="navPoint15" playOrder="15">
+          <navLabel>
+            <text>Windows</text>
+          </navLabel>
+          <content src="INSTALL.html#windows" />
+        </navPoint>
+        <navPoint id="navPoint16" playOrder="16">
+          <navLabel>
+            <text>Mac OS X or Linux</text>
+          </navLabel>
+          <content src="INSTALL.html#mac-os-x-or-linux" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint17" playOrder="17">
+        <navLabel>
+          <text>Development version</text>
+        </navLabel>
+        <content src="INSTALL.html#development-version" />
+      </navPoint>
+      <navPoint id="navPoint18" playOrder="18">
+        <navLabel>
+          <text>Running the test suite</text>
+        </navLabel>
+        <content src="INSTALL.html#running-the-test-suite" />
+      </navPoint>
+      <navPoint id="navPoint19" playOrder="19">
+        <navLabel>
+          <text>Bugs and feature requests</text>
+        </navLabel>
+        <content src="INSTALL.html#bugs-and-feature-requests" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint20" playOrder="20">
+      <navLabel>
+        <text>Tutorial</text>
+      </navLabel>
+      <content src="tutorial.html" />
+      <navPoint id="navPoint20" playOrder="20">
+        <navLabel>
+          <text>Tutorial</text>
+        </navLabel>
+        <content src="tutorial.html" />
+      </navPoint>
+      <navPoint id="navPoint21" playOrder="21">
+        <navLabel>
+          <text>An example statistical model</text>
+        </navLabel>
+        <content src="tutorial.html#an-example-statistical-model" />
+      </navPoint>
+      <navPoint id="navPoint22" playOrder="22">
+        <navLabel>
+          <text>Two types of variables</text>
+        </navLabel>
+        <content src="tutorial.html#two-types-of-variables" />
+        <navPoint id="navPoint22" playOrder="22">
+          <navLabel>
+            <text>Two types of variables</text>
+          </navLabel>
+          <content src="tutorial.html#two-types-of-variables" />
+        </navPoint>
+        <navPoint id="navPoint23" playOrder="23">
+          <navLabel>
+            <text>Why are data and unknown variables represented by the same object?</text>
+          </navLabel>
+          <content src="tutorial.html#why-are-data-and-unknown-variables-represented-by-the-same-object" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint24" playOrder="24">
+        <navLabel>
+          <text>Parents and children</text>
+        </navLabel>
+        <content src="tutorial.html#parents-and-children" />
+      </navPoint>
+      <navPoint id="navPoint25" playOrder="25">
+        <navLabel>
+          <text>Variables&#39; values and log-probabilities</text>
+        </navLabel>
+        <content src="tutorial.html#variables-values-and-log-probabilities" />
+        <navPoint id="navPoint25" playOrder="25">
+          <navLabel>
+            <text>Variables&#39; values and log-probabilities</text>
+          </navLabel>
+          <content src="tutorial.html#variables-values-and-log-probabilities" />
+        </navPoint>
+        <navPoint id="navPoint26" playOrder="26">
+          <navLabel>
+            <text>Using Variables as parents of other Variables</text>
+          </navLabel>
+          <content src="tutorial.html#using-variables-as-parents-of-other-variables" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint27" playOrder="27">
+        <navLabel>
+          <text>Fitting the model with MCMC</text>
+        </navLabel>
+        <content src="tutorial.html#fitting-the-model-with-mcmc" />
+        <navPoint id="navPoint27" playOrder="27">
+          <navLabel>
+            <text>Fitting the model with MCMC</text>
+          </navLabel>
+          <content src="tutorial.html#fitting-the-model-with-mcmc" />
+        </navPoint>
+        <navPoint id="navPoint28" playOrder="28">
+          <navLabel>
+            <text>What does it mean to fit a model?</text>
+          </navLabel>
+          <content src="tutorial.html#what-does-it-mean-to-fit-a-model" />
+        </navPoint>
+        <navPoint id="navPoint29" playOrder="29">
+          <navLabel>
+            <text>Accessing the samples</text>
+          </navLabel>
+          <content src="tutorial.html#accessing-the-samples" />
+        </navPoint>
+        <navPoint id="navPoint30" playOrder="30">
+          <navLabel>
+            <text>Sampling output</text>
+          </navLabel>
+          <content src="tutorial.html#sampling-output" />
+        </navPoint>
+        <navPoint id="navPoint31" playOrder="31">
+          <navLabel>
+            <text>Imputation of Missing Data</text>
+          </navLabel>
+          <content src="tutorial.html#imputation-of-missing-data" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint32" playOrder="32">
+        <navLabel>
+          <text>Fine-tuning the MCMC algorithm</text>
+        </navLabel>
+        <content src="tutorial.html#fine-tuning-the-mcmc-algorithm" />
+      </navPoint>
+      <navPoint id="navPoint33" playOrder="33">
+        <navLabel>
+          <text>Beyond the basics</text>
+        </navLabel>
+        <content src="tutorial.html#beyond-the-basics" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint34" playOrder="34">
+      <navLabel>
+        <text>Building models</text>
+      </navLabel>
+      <content src="modelbuilding.html" />
+      <navPoint id="navPoint34" playOrder="34">
+        <navLabel>
+          <text>Building models</text>
+        </navLabel>
+        <content src="modelbuilding.html" />
+      </navPoint>
+      <navPoint id="navPoint35" playOrder="35">
+        <navLabel>
+          <text>The Stochastic class</text>
+        </navLabel>
+        <content src="modelbuilding.html#the-stochastic-class" />
+        <navPoint id="navPoint35" playOrder="35">
+          <navLabel>
+            <text>The Stochastic class</text>
+          </navLabel>
+          <content src="modelbuilding.html#the-stochastic-class" />
+        </navPoint>
+        <navPoint id="navPoint36" playOrder="36">
+          <navLabel>
+            <text>Creation of stochastic variables</text>
+          </navLabel>
+          <content src="modelbuilding.html#creation-of-stochastic-variables" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint37" playOrder="37">
+        <navLabel>
+          <text>Data</text>
+        </navLabel>
+        <content src="modelbuilding.html#data" />
+        <navPoint id="navPoint37" playOrder="37">
+          <navLabel>
+            <text>Data</text>
+          </navLabel>
+          <content src="modelbuilding.html#data" />
+        </navPoint>
+        <navPoint id="navPoint38" playOrder="38">
+          <navLabel>
+            <text>Declaring stochastic variables to be data</text>
+          </navLabel>
+          <content src="modelbuilding.html#declaring-stochastic-variables-to-be-data" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint39" playOrder="39">
+        <navLabel>
+          <text>The Deterministic class</text>
+        </navLabel>
+        <content src="modelbuilding.html#the-deterministic-class" />
+        <navPoint id="navPoint39" playOrder="39">
+          <navLabel>
+            <text>The Deterministic class</text>
+          </navLabel>
+          <content src="modelbuilding.html#the-deterministic-class" />
+        </navPoint>
+        <navPoint id="navPoint40" playOrder="40">
+          <navLabel>
+            <text>Creation of deterministic variables</text>
+          </navLabel>
+          <content src="modelbuilding.html#creation-of-deterministic-variables" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint41" playOrder="41">
+        <navLabel>
+          <text>Containers</text>
+        </navLabel>
+        <content src="modelbuilding.html#containers" />
+      </navPoint>
+      <navPoint id="navPoint42" playOrder="42">
+        <navLabel>
+          <text>The Potential class</text>
+        </navLabel>
+        <content src="modelbuilding.html#the-potential-class" />
+        <navPoint id="navPoint42" playOrder="42">
+          <navLabel>
+            <text>The Potential class</text>
+          </navLabel>
+          <content src="modelbuilding.html#the-potential-class" />
+        </navPoint>
+        <navPoint id="navPoint43" playOrder="43">
+          <navLabel>
+            <text>An example of soft data</text>
+          </navLabel>
+          <content src="modelbuilding.html#an-example-of-soft-data" />
+        </navPoint>
+        <navPoint id="navPoint44" playOrder="44">
+          <navLabel>
+            <text>Creation of Potentials</text>
+          </navLabel>
+          <content src="modelbuilding.html#creation-of-potentials" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint45" playOrder="45">
+        <navLabel>
+          <text>Graphing models</text>
+        </navLabel>
+        <content src="modelbuilding.html#graphing-models" />
+      </navPoint>
+      <navPoint id="navPoint46" playOrder="46">
+        <navLabel>
+          <text>Class LazyFunction and caching</text>
+        </navLabel>
+        <content src="modelbuilding.html#class-lazyfunction-and-caching" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint47" playOrder="47">
+      <navLabel>
+        <text>Fitting Models</text>
+      </navLabel>
+      <content src="modelfitting.html" />
+      <navPoint id="navPoint47" playOrder="47">
+        <navLabel>
+          <text>Fitting Models</text>
+        </navLabel>
+        <content src="modelfitting.html" />
+      </navPoint>
+      <navPoint id="navPoint48" playOrder="48">
+        <navLabel>
+          <text>Creating models</text>
+        </navLabel>
+        <content src="modelfitting.html#creating-models" />
+      </navPoint>
+      <navPoint id="navPoint49" playOrder="49">
+        <navLabel>
+          <text>The Model class</text>
+        </navLabel>
+        <content src="modelfitting.html#the-model-class" />
+      </navPoint>
+      <navPoint id="navPoint50" playOrder="50">
+        <navLabel>
+          <text>Maximum a posteriori estimates</text>
+        </navLabel>
+        <content src="modelfitting.html#maximum-a-posteriori-estimates" />
+      </navPoint>
+      <navPoint id="navPoint51" playOrder="51">
+        <navLabel>
+          <text>Normal approximations</text>
+        </navLabel>
+        <content src="modelfitting.html#normal-approximations" />
+      </navPoint>
+      <navPoint id="navPoint52" playOrder="52">
+        <navLabel>
+          <text>Markov chain Monte Carlo: the MCMC class</text>
+        </navLabel>
+        <content src="modelfitting.html#markov-chain-monte-carlo-the-mcmc-class" />
+      </navPoint>
+      <navPoint id="navPoint53" playOrder="53">
+        <navLabel>
+          <text>The Sampler class</text>
+        </navLabel>
+        <content src="modelfitting.html#the-sampler-class" />
+      </navPoint>
+      <navPoint id="navPoint54" playOrder="54">
+        <navLabel>
+          <text>Step methods</text>
+        </navLabel>
+        <content src="modelfitting.html#step-methods" />
+        <navPoint id="navPoint54" playOrder="54">
+          <navLabel>
+            <text>Step methods</text>
+          </navLabel>
+          <content src="modelfitting.html#step-methods" />
+        </navPoint>
+        <navPoint id="navPoint55" playOrder="55">
+          <navLabel>
+            <text>Metropolis step methods</text>
+          </navLabel>
+          <content src="modelfitting.html#metropolis-step-methods" />
+        </navPoint>
+        <navPoint id="navPoint56" playOrder="56">
+          <navLabel>
+            <text>The AdaptiveMetropolis class</text>
+          </navLabel>
+          <content src="modelfitting.html#the-adaptivemetropolis-class" />
+        </navPoint>
+        <navPoint id="navPoint57" playOrder="57">
+          <navLabel>
+            <text>The DiscreteMetropolis class</text>
+          </navLabel>
+          <content src="modelfitting.html#the-discretemetropolis-class" />
+        </navPoint>
+        <navPoint id="navPoint58" playOrder="58">
+          <navLabel>
+            <text>The BinaryMetropolis class</text>
+          </navLabel>
+          <content src="modelfitting.html#the-binarymetropolis-class" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint59" playOrder="59">
+        <navLabel>
+          <text>Gibbs step methods</text>
+        </navLabel>
+        <content src="modelfitting.html#gibbs-step-methods" />
+        <navPoint id="navPoint59" playOrder="59">
+          <navLabel>
+            <text>Gibbs step methods</text>
+          </navLabel>
+          <content src="modelfitting.html#gibbs-step-methods" />
+        </navPoint>
+        <navPoint id="navPoint60" playOrder="60">
+          <navLabel>
+            <text>Granularity of step methods: one-at-a-time vs. block updating</text>
+          </navLabel>
+          <content src="modelfitting.html#granularity-of-step-methods-one-at-a-time-vs-block-updating" />
+        </navPoint>
+        <navPoint id="navPoint61" playOrder="61">
+          <navLabel>
+            <text>Automatic assignment of step methods</text>
+          </navLabel>
+          <content src="modelfitting.html#automatic-assignment-of-step-methods" />
+        </navPoint>
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint62" playOrder="62">
+      <navLabel>
+        <text>Saving and managing sampling results</text>
+      </navLabel>
+      <content src="database.html" />
+      <navPoint id="navPoint62" playOrder="62">
+        <navLabel>
+          <text>Saving and managing sampling results</text>
+        </navLabel>
+        <content src="database.html" />
+      </navPoint>
+      <navPoint id="navPoint63" playOrder="63">
+        <navLabel>
+          <text>Accessing Sampled Data</text>
+        </navLabel>
+        <content src="database.html#accessing-sampled-data" />
+      </navPoint>
+      <navPoint id="navPoint64" playOrder="64">
+        <navLabel>
+          <text>Saving Data to Disk</text>
+        </navLabel>
+        <content src="database.html#saving-data-to-disk" />
+      </navPoint>
+      <navPoint id="navPoint65" playOrder="65">
+        <navLabel>
+          <text>Reloading a Database</text>
+        </navLabel>
+        <content src="database.html#reloading-a-database" />
+        <navPoint id="navPoint65" playOrder="65">
+          <navLabel>
+            <text>Reloading a Database</text>
+          </navLabel>
+          <content src="database.html#reloading-a-database" />
+        </navPoint>
+        <navPoint id="navPoint66" playOrder="66">
+          <navLabel>
+            <text>The ram backend</text>
+          </navLabel>
+          <content src="database.html#the-ram-backend" />
+        </navPoint>
+        <navPoint id="navPoint67" playOrder="67">
+          <navLabel>
+            <text>The no_trace backend</text>
+          </navLabel>
+          <content src="database.html#the-no-trace-backend" />
+        </navPoint>
+        <navPoint id="navPoint68" playOrder="68">
+          <navLabel>
+            <text>The txt backend</text>
+          </navLabel>
+          <content src="database.html#the-txt-backend" />
+        </navPoint>
+        <navPoint id="navPoint69" playOrder="69">
+          <navLabel>
+            <text>The pickle backend</text>
+          </navLabel>
+          <content src="database.html#the-pickle-backend" />
+        </navPoint>
+        <navPoint id="navPoint70" playOrder="70">
+          <navLabel>
+            <text>The sqlite backend</text>
+          </navLabel>
+          <content src="database.html#the-sqlite-backend" />
+        </navPoint>
+        <navPoint id="navPoint71" playOrder="71">
+          <navLabel>
+            <text>The hdf5 backend</text>
+          </navLabel>
+          <content src="database.html#the-hdf5-backend" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint72" playOrder="72">
+        <navLabel>
+          <text>Writing a New Backend</text>
+        </navLabel>
+        <content src="database.html#writing-a-new-backend" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint73" playOrder="73">
+      <navLabel>
+        <text>Model checking and diagnostics</text>
+      </navLabel>
+      <content src="modelchecking.html" />
+      <navPoint id="navPoint73" playOrder="73">
+        <navLabel>
+          <text>Model checking and diagnostics</text>
+        </navLabel>
+        <content src="modelchecking.html" />
+      </navPoint>
+      <navPoint id="navPoint74" playOrder="74">
+        <navLabel>
+          <text>Convergence Diagnostics</text>
+        </navLabel>
+        <content src="modelchecking.html#convergence-diagnostics" />
+        <navPoint id="navPoint74" playOrder="74">
+          <navLabel>
+            <text>Convergence Diagnostics</text>
+          </navLabel>
+          <content src="modelchecking.html#convergence-diagnostics" />
+        </navPoint>
+        <navPoint id="navPoint75" playOrder="75">
+          <navLabel>
+            <text>Informal Methods</text>
+          </navLabel>
+          <content src="modelchecking.html#informal-methods" />
+        </navPoint>
+        <navPoint id="navPoint76" playOrder="76">
+          <navLabel>
+            <text>Formal Methods</text>
+          </navLabel>
+          <content src="modelchecking.html#formal-methods" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint77" playOrder="77">
+        <navLabel>
+          <text>Autocorrelation Plots</text>
+        </navLabel>
+        <content src="modelchecking.html#autocorrelation-plots" />
+      </navPoint>
+      <navPoint id="navPoint78" playOrder="78">
+        <navLabel>
+          <text>Goodness of Fit</text>
+        </navLabel>
+        <content src="modelchecking.html#goodness-of-fit" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint79" playOrder="79">
+      <navLabel>
+        <text>Extending PyMC</text>
+      </navLabel>
+      <content src="extending.html" />
+      <navPoint id="navPoint79" playOrder="79">
+        <navLabel>
+          <text>Extending PyMC</text>
+        </navLabel>
+        <content src="extending.html" />
+      </navPoint>
+      <navPoint id="navPoint80" playOrder="80">
+        <navLabel>
+          <text>Nonstandard Stochastics</text>
+        </navLabel>
+        <content src="extending.html#nonstandard-stochastics" />
+      </navPoint>
+      <navPoint id="navPoint81" playOrder="81">
+        <navLabel>
+          <text>User-defined step methods</text>
+        </navLabel>
+        <content src="extending.html#user-defined-step-methods" />
+        <navPoint id="navPoint81" playOrder="81">
+          <navLabel>
+            <text>User-defined step methods</text>
+          </navLabel>
+          <content src="extending.html#user-defined-step-methods" />
+        </navPoint>
+        <navPoint id="navPoint82" playOrder="82">
+          <navLabel>
+            <text>Example: an asymmetric Metropolis step</text>
+          </navLabel>
+          <content src="extending.html#example-an-asymmetric-metropolis-step" />
+        </navPoint>
+        <navPoint id="navPoint83" playOrder="83">
+          <navLabel>
+            <text>General step methods</text>
+          </navLabel>
+          <content src="extending.html#general-step-methods" />
+        </navPoint>
+        <navPoint id="navPoint84" playOrder="84">
+          <navLabel>
+            <text>Metropolis-Hastings step methods</text>
+          </navLabel>
+          <content src="extending.html#metropolis-hastings-step-methods" />
+        </navPoint>
+        <navPoint id="navPoint85" playOrder="85">
+          <navLabel>
+            <text>Gibbs step methods</text>
+          </navLabel>
+          <content src="extending.html#gibbs-step-methods" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint86" playOrder="86">
+        <navLabel>
+          <text>New fitting algorithms</text>
+        </navLabel>
+        <content src="extending.html#new-fitting-algorithms" />
+        <navPoint id="navPoint86" playOrder="86">
+          <navLabel>
+            <text>New fitting algorithms</text>
+          </navLabel>
+          <content src="extending.html#new-fitting-algorithms" />
+        </navPoint>
+        <navPoint id="navPoint87" playOrder="87">
+          <navLabel>
+            <text>Monte Carlo fitting algorithms</text>
+          </navLabel>
+          <content src="extending.html#monte-carlo-fitting-algorithms" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint88" playOrder="88">
+        <navLabel>
+          <text>A second warning: Don&#39;t update stochastic variables&#39; values in-place</text>
+        </navLabel>
+        <content src="extending.html#a-second-warning-don-t-update-stochastic-variables-values-in-place" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint89" playOrder="89">
+      <navLabel>
+        <text>Probability distributions</text>
+      </navLabel>
+      <content src="distributions.html" />
+      <navPoint id="navPoint89" playOrder="89">
+        <navLabel>
+          <text>Probability distributions</text>
+        </navLabel>
+        <content src="distributions.html" />
+      </navPoint>
+      <navPoint id="navPoint90" playOrder="90">
+        <navLabel>
+          <text>Discrete distributions</text>
+        </navLabel>
+        <content src="distributions.html#discrete-distributions" />
+      </navPoint>
+      <navPoint id="navPoint91" playOrder="91">
+        <navLabel>
+          <text>Continuous distributions</text>
+        </navLabel>
+        <content src="distributions.html#continuous-distributions" />
+      </navPoint>
+      <navPoint id="navPoint92" playOrder="92">
+        <navLabel>
+          <text>Multivariate discrete distributions</text>
+        </navLabel>
+        <content src="distributions.html#multivariate-discrete-distributions" />
+      </navPoint>
+      <navPoint id="navPoint93" playOrder="93">
+        <navLabel>
+          <text>Multivariate continuous distributions</text>
+        </navLabel>
+        <content src="distributions.html#multivariate-continuous-distributions" />
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint94" playOrder="94">
+      <navLabel>
+        <text>Conclusion</text>
+      </navLabel>
+      <content src="conclusion.html" />
+    </navPoint>
+    <navPoint id="navPoint95" playOrder="95">
+      <navLabel>
+        <text>Acknowledgements</text>
+      </navLabel>
+      <content src="conclusion.html#acknowledgements" />
+    </navPoint>
+    <navPoint id="navPoint96" playOrder="96">
+      <navLabel>
+        <text>Appendix: Markov Chain Monte Carlo</text>
+      </navLabel>
+      <content src="theory.html" />
+      <navPoint id="navPoint96" playOrder="96">
+        <navLabel>
+          <text>Appendix: Markov Chain Monte Carlo</text>
+        </navLabel>
+        <content src="theory.html" />
+      </navPoint>
+      <navPoint id="navPoint97" playOrder="97">
+        <navLabel>
+          <text>Monte Carlo Methods in Bayesian Analysis</text>
+        </navLabel>
+        <content src="theory.html#monte-carlo-methods-in-bayesian-analysis" />
+        <navPoint id="navPoint97" playOrder="97">
+          <navLabel>
+            <text>Monte Carlo Methods in Bayesian Analysis</text>
+          </navLabel>
+          <content src="theory.html#monte-carlo-methods-in-bayesian-analysis" />
+        </navPoint>
+        <navPoint id="navPoint98" playOrder="98">
+          <navLabel>
+            <text>Rejection Sampling</text>
+          </navLabel>
+          <content src="theory.html#rejection-sampling" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint99" playOrder="99">
+        <navLabel>
+          <text>Markov Chains</text>
+        </navLabel>
+        <content src="theory.html#markov-chains" />
+        <navPoint id="navPoint99" playOrder="99">
+          <navLabel>
+            <text>Markov Chains</text>
+          </navLabel>
+          <content src="theory.html#markov-chains" />
+        </navPoint>
+        <navPoint id="navPoint100" playOrder="100">
+          <navLabel>
+            <text>Jargon-busting</text>
+          </navLabel>
+          <content src="theory.html#jargon-busting" />
+        </navPoint>
+      </navPoint>
+      <navPoint id="navPoint101" playOrder="101">
+        <navLabel>
+          <text>Why MCMC Works: Reversible Markov Chains</text>
+        </navLabel>
+        <content src="theory.html#why-mcmc-works-reversible-markov-chains" />
+      </navPoint>
+      <navPoint id="navPoint102" playOrder="102">
+        <navLabel>
+          <text>Gibbs Sampling</text>
+        </navLabel>
+        <content src="theory.html#gibbs-sampling" />
+      </navPoint>
+      <navPoint id="navPoint103" playOrder="103">
+        <navLabel>
+          <text>The Metropolis-Hastings Algorithm</text>
+        </navLabel>
+        <content src="theory.html#the-metropolis-hastings-algorithm" />
+        <navPoint id="navPoint103" playOrder="103">
+          <navLabel>
+            <text>The Metropolis-Hastings Algorithm</text>
+          </navLabel>
+          <content src="theory.html#the-metropolis-hastings-algorithm" />
+        </navPoint>
+        <navPoint id="navPoint104" playOrder="104">
+          <navLabel>
+            <text>Random-walk Metropolis-Hastings</text>
+          </navLabel>
+          <content src="theory.html#random-walk-metropolis-hastings" />
+        </navPoint>
+      </navPoint>
+    </navPoint>
+    <navPoint id="navPoint105" playOrder="105">
+      <navLabel>
+        <text>List of References</text>
+      </navLabel>
+      <content src="references.html" />
+    </navPoint>
+  </navMap>
+</ncx>

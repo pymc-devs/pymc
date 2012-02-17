@@ -2,13 +2,21 @@
 Introduction
 ************
 
-:Date: 25 January 2011
+:Date: 16 February 2011
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the MIT license.
 :Version: 2.2
+
+.. _warning:
+
+.. topic:: Documentation under construction
+    
+    This is a draft of the documentation to accompany PyMC 2.2 when it is 
+    released later this year. If you spot errors, have edits to recommend, or 
+    text to contribute, please open a report on our `issues page`_.
 
 
 Purpose
@@ -131,9 +139,9 @@ team for PyMC 2.0. This iteration of the software strives for more flexibility,
 better performance and a better end-user experience than any previous version 
 of PyMC.
 
-PyMC 2.1 has been released in early 2010. It contains numerous bugfixes and 
-optimizations, as well as a few new features. This user guide is written for 
-version 2.1.
+PyMC 2.2 will be released in early 2012. It contains numerous bugfixes and 
+optimizations, as well as a few new features. This user guide has been updated 
+for version 2.2.
 
 
 Relationship to other packages
@@ -193,3 +201,5 @@ available. More `examples and tutorials`_ are available from the PyMC web site.
 .. _`R packages`: http://cran.r-project.org/web/packages/
 
 .. _`testimonials`: https://github.com/pymc-devs/pymc/wiki/Testimonials
+
+.. _`issues page`: https://github.com/pymc-devs/pymc/issues
