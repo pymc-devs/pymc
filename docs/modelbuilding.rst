@@ -424,7 +424,7 @@ This situation can be handled naturally in PyMC::
     
     for i in range(1, N):
     
-        xi = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+        x[i] = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
     
     @pymc.observed
     def y(value=1, mu=x, tau=100):
