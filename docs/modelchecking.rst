@@ -161,7 +161,8 @@ departures from the standard normal assumption.
 .. figure:: _images/geweke.*
    :align: center
    :alt: Geweke figure.
-   :scale: 70
+   :scale: 70 %
+   :width: 800
    
    Sample plot of Geweke z-scores for a variable using ``geweke_plot``.
    The occurrence of the scores well within 2 standard deviations of zero
@@ -458,7 +459,8 @@ example, the parameter `beta` that was estimated using sampler `S` for the
 .. figure:: _images/autocorr.*
    :align: center
    :alt: Autocorrelation figure
-   :scale: 70
+   :scale: 70 %
+   :width: 800
    
    Sample autocorrelation plot for the switchpoint variable from the coal 
    mining disasters example model.
@@ -535,7 +537,8 @@ distribution (Figure 7.6).
 .. figure:: _images/gof.*
    :align: center
    :alt: GOF figure
-   :scale: 70
+   :scale: 70 %
+   :width: 800
    
    Data sampled from the posterior predictive distribution of a binomial random 
    variate. The observed value (1) is shown by the dotted red line.
@@ -577,7 +580,8 @@ passing through the origin, as shown in Figure 7.7.
 .. figure:: _images/deviates.png
    :align: center
    :alt: deviates figure
-   :scale: 80
+   :scale: 80 %
+   :width: 800
    
    Plot of deviates of observed and simulated data from expected values.
    The cluster of points symmetrically about the 45 degree line (and the

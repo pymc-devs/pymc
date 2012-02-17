@@ -16,7 +16,7 @@ disasters in the UK from 1851 to 1962 [Jarrett1979]_.
 .. _disasters_figure:
 
 .. figure:: _images/disasterts.*
-   :scale: 100
+   :width: 800
    
    Recorded coal mining disasters in the UK.
 

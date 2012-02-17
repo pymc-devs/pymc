@@ -1317,7 +1317,11 @@ def hypergeometric_like(x, n, m, N):
 
     .. math::
 
-        f(x \mid n, m, N) = \frac{\binom{m}{x}\binom{N-m}{n-x}}{\binom{N}{n}}
+        f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\ 
+        \end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\ 
+        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ 
+        \end{array}}\right)}
+
 
     :Parameters:
       - `x` : [int] Number of successes in a sample drawn from a population.
@@ -1705,7 +1709,10 @@ def multivariate_hypergeometric_like(x, m):
     when the number of items in each category is given by m.
 
     .. math::
-        \frac{\prod_i \binom{m_i}{x_i}}{\binom{N}{n}}
+        \frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\ 
+        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ 
+        \end{array}}\right)}
+
 
     where :math:`N = \sum_i m_i` and :math:`n = \sum_i x_i`.
 
