@@ -94,7 +94,7 @@ distribution. Poor mixing may stem from inappropriate proposals (if one is
 using the Metropolis-Hastings sampler) or from attempting to estimate models
 with highly correlated variables.</p>
 <div class="figure align-center" id="mix">
-<a class="reference internal image-reference" href="_images/poormixing.png"><img alt="Poor mixing figure" src="_images/poormixing.png" /></a>
+<a class="reference internal image-reference" href="_images/poormixing4.png"><img alt="Poor mixing figure" src="_images/poormixing4.png" /></a>
 <p class="caption">An example of a poorly-mixing sample in two dimensions. Notice that the
 chain is trapped in a region of low probability relative to the mean
 (dot) and variance (oval) of the true posterior quantity.</p>
@@ -129,7 +129,7 @@ constructed using MCMC, and should be observable using this technique. Again,
 however, this approach is only a heuristic method, and cannot always detect
 lack of convergence, even though chains may appear ergodic.</p>
 <div class="figure align-center" id="metas">
-<a class="reference internal image-reference" href="_images/metastable.png"><img alt="_images/metastable.png" src="_images/metastable.png" /></a>
+<a class="reference internal image-reference" href="_images/metastable4.png"><img alt="_images/metastable4.png" src="_images/metastable4.png" /></a>
 <p class="caption">An example of metastability in a two-dimensional parameter space. The
 chain appears to be stable in one region of the parameter space for an
 extended period, then unpredictably jumps to another region of the
@@ -182,7 +182,7 @@ Defaults to 0.5 (<em>i.e.</em> last 50% of chain).</li>
 the 2 standard deviation boundaries around zero. Hence, it is easy to see
 departures from the standard normal assumption.</p>
 <div class="figure align-center" id="geweke">
-<a class="reference internal image-reference" href="_images/geweke.png"><img alt="Geweke figure." src="_images/geweke.png" /></a>
+<a class="reference internal image-reference" href="_images/geweke4.png"><img alt="Geweke figure." src="_images/geweke4.png" style="width: 560.0px;" /></a>
 <p class="caption">Sample plot of Geweke z-scores for a variable using <tt class="docutils literal"><span class="pre">geweke_plot</span></tt>.
 The occurrence of the scores well within 2 standard deviations of zero
 gives not indicate of lack of convergence (top), while deviations exceeding
@@ -350,7 +350,7 @@ for each stochastic node in the passed model:</p>
 <p>For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.</p>
 <p>By default, when calling the <tt class="docutils literal"><span class="pre">summary_plot</span></tt> function using nodes with multiple chains, the <span class="math">\(\hat{R}\)</span> values will be plotted alongside the posterior intervals.</p>
 <div class="figure align-center" id="summary-plot">
-<a class="reference internal image-reference" href="_images/summary.png"><img alt="_images/summary.png" src="_images/summary.png" /></a>
+<a class="reference internal image-reference" href="_images/summary4.png"><img alt="_images/summary4.png" src="_images/summary4.png" /></a>
 <p class="caption">Summary plot of parameters from <cite>gelman_bioassay</cite> model, showing credible
 intervals on the left and the Gelman-Rubin statistic on the right.</p>
 </div>
@@ -416,7 +416,7 @@ example, the parameter <cite>beta</cite> that was estimated using sampler <cite>
 </pre></div>
 </div>
 <div class="figure align-center" id="autocorr">
-<a class="reference internal image-reference" href="_images/autocorr.png"><img alt="Autocorrelation figure" src="_images/autocorr.png" /></a>
+<a class="reference internal image-reference" href="_images/autocorr4.png"><img alt="Autocorrelation figure" src="_images/autocorr4.png" style="width: 560.0px;" /></a>
 <p class="caption">Sample autocorrelation plot for the switchpoint variable from the coal
 mining disasters example model.</p>
 </div>
@@ -478,7 +478,7 @@ the tails of the histogram of replicated data, while a good fit will tend to
 show the true data in high-probability regions of the posterior predictive
 distribution (Figure 7.6).</p>
 <div class="figure align-center" id="gof">
-<a class="reference internal image-reference" href="_images/gof.png"><img alt="GOF figure" src="_images/gof.png" /></a>
+<a class="reference internal image-reference" href="_images/gof4.png"><img alt="GOF figure" src="_images/gof4.png" style="width: 560.0px;" /></a>
 <p class="caption">Data sampled from the posterior predictive distribution of a binomial random
 variate. The observed value (1) is shown by the dotted red line.</p>
 </div>
@@ -509,7 +509,7 @@ and thus is evidence of lack of fit. Graphically, data and simulated
 discrepancies plotted together should be clustered along a 45 degree line
 passing through the origin, as shown in Figure 7.7.</p>
 <div class="figure align-center" id="deviate">
-<a class="reference internal image-reference" href="_images/deviates.png"><img alt="deviates figure" src="_images/deviates.png" /></a>
+<a class="reference internal image-reference" href="_images/deviates4.png"><img alt="deviates figure" src="_images/deviates4.png" style="width: 640.0px;" /></a>
 <p class="caption">Plot of deviates of observed and simulated data from expected values.
 The cluster of points symmetrically about the 45 degree line (and the
 reported p-value) suggests acceptable fit for the modeled parameter.</p>

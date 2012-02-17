@@ -66,7 +66,7 @@ can also be found on the <a class="reference external" href="http://www.python.o
 <p>Consider the following dataset, which is a time series of recorded coal mining
 disasters in the UK from 1851 to 1962 <a class="reference internal" href="references.html#jarrett1979">[Jarrett1979]</a>.</p>
 <div class="figure" id="disasters-figure">
-<a class="reference internal image-reference" href="_images/disasterts.png"><img alt="_images/disasterts.png" src="_images/disasterts.png" /></a>
+<img alt="_images/disasterts1.png" src="_images/disasterts1.png" style="width: 800px;" />
 <p class="caption">Recorded coal mining disasters in the UK.</p>
 </div>
 <p>Occurrences of disasters in the time series is thought to be derived from a
@@ -147,7 +147,7 @@ acceptable.</p>
 </pre></div>
 </div>
 <p>Note that you don&#8217;t have to type in this entire array to follow along; the code
-is available in the source tree, in <a class="reference download internal" href="_downloads/disaster_model.py"><tt class="xref download docutils literal"><span class="pre">this</span> <span class="pre">example</span> <span class="pre">script</span></tt></a>. Next, we create the switchpoint variable
+is available in the source tree, in <a class="reference download internal" href="_downloads/disaster_model1.py"><tt class="xref download docutils literal"><span class="pre">this</span> <span class="pre">example</span> <span class="pre">script</span></tt></a>. Next, we create the switchpoint variable
 <tt class="docutils literal"><span class="pre">switchpoint</span></tt></p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">switchpoint</span> <span class="o">=</span> <span class="n">DiscreteUniform</span><span class="p">(</span><span class="s">&#39;switchpoint&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">110</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s">&#39;Switchpoint[year]&#39;</span><span class="p">)</span>
 </pre></div>
@@ -253,7 +253,7 @@ variable <cite>disasters</cite> is a filled ellipse and deterministic variable <
 a triangle. Arrows point from parent to child and display the label that the
 child assigns to the parent. See section <a class="reference internal" href="modelbuilding.html#graphical"><em>Graphing models</em></a> for more details.</p>
 <div class="figure" id="dag">
-<img alt="_images/DisasterModel2.png" src="_images/DisasterModel2.png" style="width: 600px;" />
+<img alt="_images/DisasterModel21.png" src="_images/DisasterModel21.png" style="width: 600px;" />
 <p class="caption">Directed acyclic graph of the relationships in the coal mining disaster model example.</p>
 </div>
 <p>As the examples above have shown, pymc objects need to have a name assigned,
@@ -458,7 +458,7 @@ of its trace:</p>
 </div>
 <p>You should see something like this:</p>
 <div class="figure">
-<img alt="_images/ltrace.png" src="_images/ltrace.png" style="width: 800px;" />
+<img alt="_images/ltrace1.png" src="_images/ltrace1.png" style="width: 800px;" />
 <p class="caption">Histogram of the marginal posterior probability of parameter <tt class="docutils literal"><span class="pre">late_mean</span></tt>.</p>
 </div>
 <p>PyMC has its own plotting functionality, via the optional <tt class="docutils literal"><span class="pre">matplotlib</span></tt> module
@@ -471,7 +471,7 @@ function that takes the model (or a single parameter) as an argument:</p>
 <p>For each variable in the model, <tt class="docutils literal"><span class="pre">plot</span></tt> generates a composite figure, such as
 this one for the switchpoint in the disasters model:</p>
 <div class="figure">
-<img alt="_images/spost.png" src="_images/spost.png" style="width: 800px;" />
+<img alt="_images/spost1.png" src="_images/spost1.png" style="width: 800px;" />
 <p class="caption">Temporal series, autocorrelation plot and histogram of the samples drawn for
 <tt class="docutils literal"><span class="pre">switchpoint</span></tt>.</p>
 </div>
@@ -628,7 +628,7 @@ the MCMC algorithm, just as unknown model parameters.</p>
 <p>Here, we have used the <tt class="docutils literal"><span class="pre">masked_array</span></tt> function, rather than <tt class="docutils literal"><span class="pre">masked_equal</span></tt>,
 and the value -999 as a placeholder for missing data. The result is the same.</p>
 <div class="figure">
-<img alt="_images/missing.png" src="_images/missing.png" style="width: 800px;" />
+<img alt="_images/missing1.png" src="_images/missing1.png" style="width: 800px;" />
 <p class="caption">Trace, autocorrelation plot and posterior distribution of the missing data
 points in the example.</p>
 </div>
