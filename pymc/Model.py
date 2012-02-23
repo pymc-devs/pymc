@@ -298,14 +298,14 @@ class Sampler(Model):
         """
         pass
 
-    def stats(self, variables=[], alpha=0.05, start=0, batches=100, chain=None):
+    def stats(self, variables=None, alpha=0.05, start=0, batches=100, chain=None):
         """
         Statistical output for variables.
         
         :Parameters:
         variables : iterable
           List or array of variables for which statistics are to be 
-          generated. If it is an empty list, all the tallied variables
+          generated. If it is not specified, all the tallied variables
           are summarized.
           
         alpha : float
@@ -326,7 +326,10 @@ class Sampler(Model):
         """
         
         # If no names provided, run them all
-        variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally] or self._variables_to_tally
+        if variables is None:
+            variables = self._variables_to_tally
+        else:
+            variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally]
 
         stat_dict = {}
 

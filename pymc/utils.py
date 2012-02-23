@@ -5,25 +5,22 @@
 # Author: David Huard, 2006
 
 import numpy as np
-import sys, inspect, select, os,  time
+import sys, select, os,  time
 from copy import copy
-from .PyMCObjects import (Stochastic, Deterministic, Node, Variable, Potential,
-                         ZeroProbability)
+from .PyMCObjects import Variable
 from . import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
-from numpy.linalg import cholesky, eigh, det, inv
-from .Node import logp_of_set, logp_gradient_of_set
+from numpy.linalg import cholesky, eigh
 import types
 from .datatypes import * 
-from collections import defaultdict
 
 from . import six
 from .six import print_
 reduce = six.moves.reduce
 
-from numpy import (sqrt, obj2sctype, ndarray, asmatrix, array, pi, prod, exp,
-                   pi, asarray, ones, atleast_1d, iterable, linspace, diff,
+from numpy import (sqrt, ndarray, asmatrix, array, prod,
+                   asarray, atleast_1d, iterable, linspace, diff,
                    around, log10, zeros, arange, digitize, apply_along_axis,
                    concatenate, bincount, sort, hsplit, argsort, inf, shape,
                    ndim, swapaxes, ravel, diag, cov, transpose as tr)
@@ -651,7 +648,7 @@ def calc_min_interval(x, alpha):
         print_('Too few elements for interval calculation')
         return [None,None]
 
-def quantiles(x, qlist=[2.5, 25, 50, 75, 97.5]):
+def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array"""
 
     # Make a copy of trace

@@ -1,8 +1,7 @@
 from numpy.testing import *
 import numpy as np
-from numpy.random import random, normal
-from pymc.LazyFunction import LazyFunction
-from pymc import stochastic, observed, deterministic, Normal, potential, ZeroProbability
+from numpy.random import normal
+from pymc import stochastic, observed, deterministic, ZeroProbability
 
 verbose = False
 
@@ -27,7 +26,7 @@ while B.value<0.:
         return A + normcoef * normal()
 
 @observed(verbose=verbose)
-def C(value = 0., B=[A,B]):
+def C(value = 0., B=(A,B)):
     if B[0]<0.:
          return -np.Inf
     else:
