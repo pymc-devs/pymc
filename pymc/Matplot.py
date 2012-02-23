@@ -5,26 +5,23 @@ Plotting module using matplotlib.
 from __future__ import division
 
 # Import matplotlib functions
-import matplotlib
 try:
     import matplotlib.gridspec as gridspec
 except ImportError:
     gridspec = None
 import pymc
 import os
-from pylab import bar, hist, plot as pyplot, xlabel, ylabel, xlim, ylim, close, savefig, acorr, mlab
+from pylab import hist, plot as pyplot, xlabel, ylabel, xlim, ylim, savefig, acorr, mlab
 from pylab import figure, subplot, subplots_adjust, gca, scatter, axvline, yticks, xticks
-from pylab import setp, axis, contourf, cm, title, colorbar, clf, fill, show, text
+from pylab import setp, axis, contourf, cm, title, colorbar, fill, text
 from pylab import errorbar
-from pprint import pformat
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes, linspace, concatenate, asarray, ndim
+from numpy import arange, log, ravel, rank, swapaxes, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
-from numpy import apply_along_axis, atleast_1d, min as nmin, max as nmax, abs
-from numpy import append, ones, dtype, indices, array, unique
-from .utils import autocorr as _autocorr, quantiles as calc_quantiles, hpd
-import pdb
+from numpy import min as nmin, max as nmax, abs
+from numpy import append, ones, dtype, indices, array, unique, zeros
+from .utils import quantiles as calc_quantiles, hpd
 try:
     from scipy import special
 except ImportError:
@@ -33,7 +30,9 @@ except ImportError:
 from . import six
 from .six import print_
 
-__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 'geweke_plot', 'gof_plot', 'autocorr_plot', 'pair_posterior', 'summary_plot']
+__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 
+'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 
+'geweke_plot', 'gof_plot', 'pair_posterior', 'summary_plot']
 
 def get_index_list(shape, j):
     """
@@ -63,7 +62,7 @@ def get_index_list(shape, j):
 
     return index_list
 
-def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
+def func_quantiles(node, qlist=(.025, .25, .5, .75, .975)):
     """
     Returns an array whose ith row is the q[i]th quantile of the
     function.
@@ -102,9 +101,9 @@ def func_quantiles(node, qlist=[.025, .25, .5, .75, .975]):
 
     return quants, alphas
 
-def func_envelopes(node, CI=[.25, .5, .95]):
+def func_envelopes(node, CI=(.25, .5, .95)):
     """
-    func_envelopes(node, CI = [.25, .5, .95])
+    func_envelopes(node, CI = (.25, .5, .95))
 
     Returns a list of centered_envelope objects for func_stacks,
     each one corresponding to an element of CI, and one
@@ -717,7 +716,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
 
 # TODO: make sure pair_posterior works.
-def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='./', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
@@ -747,7 +746,6 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', new=Tr
         for p in nodes:
             trueval[p] = None
 
-    np=len(nodes)
     ns = {}
     for p in nodes:
         if not p.value.shape:
@@ -1123,7 +1121,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     xlim(plotrange[0] - 0.05*datarange, plotrange[1] + 0.05*datarange)
     
     # Add variable labels
-    ylabels = yticks([-(l+1) for l in range(len(labels))], labels)        
+    yticks([-(l+1) for l in range(len(labels))], labels)        
             
     # Add title
     if main is not False:

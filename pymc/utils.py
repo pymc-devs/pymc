@@ -12,6 +12,7 @@ from . import flib
 import pdb
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
+from .Node import logp_of_set, logp_gradient_of_set
 import types
 from .datatypes import * 
 

@@ -10,6 +10,7 @@ import os, sys, pdb
 import numpy as np
 import types
 from . import six
+print_ = six.print_
 
 try:
     from types import UnboundMethodType
@@ -38,21 +39,21 @@ def logp_of_set(s):
 def logp_gradient_of_set(variable_set, calculation_set = None):
     """
     Calculates the gradient of the joint log posterior with respect to all the variables in variable_set.
-    Calculation of the log posterior is restricted to the variables in calculation_set. 
-    
+    Calculation of the log posterior is restricted to the variables in calculation_set.
+
     Returns a dictionary of the gradients.
     """
 
     logp_gradients = {}
-    for variable in variable_set:   
+    for variable in variable_set:
         logp_gradients[variable] = logp_gradient(variable, calculation_set)
-                    
+
     return logp_gradients
-    
+
 def logp_gradient(variable, calculation_set = None):
     """
-    Calculates the gradient of the joint log posterior with respect to variable. 
-    Calculation of the log posterior is restricted to the variables in calculation_set. 
+    Calculates the gradient of the joint log posterior with respect to variable.
+    Calculation of the log posterior is restricted to the variables in calculation_set.
     """
     return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children] )
 
@@ -123,7 +124,7 @@ class Node(object):
 
     def _set_parents(self, new_parents):
         # Define parents of this object
-            
+
         # THERE DOES NOT APPEAR TO BE A detach_children() METHOD IN CLASS
         # Remove from current parents
         # if hasattr(self,'_parents'):
@@ -186,9 +187,9 @@ class Variable(Node):
     :SeeAlso:
       Stochastic, Deterministic, Potential, Node
     """
-    
+
     __array_priority__ = 10
-    
+
     def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=-1):
 
         self.dtype=dtype
@@ -221,7 +222,7 @@ class Variable(Node):
     def stats(self, alpha=0.05, start=0, batches=100, chain=None):
         """
         Generate posterior statistics for node.
-        
+
         :Parameters:
         alpha : float
           The alpha level for generating posterior intervals. Defaults to
@@ -230,16 +231,102 @@ class Variable(Node):
         start : int
           The starting index from which to summarize (each) chain. Defaults
           to zero.
-          
+
         batches : int
           Batch size for calculating standard deviation for non-independent
           samples. Defaults to 100.
-          
+
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
         """
         return self.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+
+    def _summarize(self, statdict, index=None, roundto=4):
+        """Generate summary string for a particular element of a Node."""
+
+        buffer = []
+
+        if index is not None:
+            buffer += ['Element %i summary statistics' % index]
+        else:
+            buffer += ['Summary statistics']
+            
+        buffer += ['%s' % '='*len(buffer[-1])]
+        buffer += ['']*2
+
+        iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
+        interval = statdict.keys()[iindex]
+
+        # Print basic stats
+        buffer += ['Mean             SD               %s' % interval]
+        buffer += ['-'*len(buffer[-1])]
+        
+        m = str(round(statdict['mean'][index], roundto))
+        sd = str(round(statdict['standard deviation'][index], roundto))
+        hpd = str(statdict[interval][index].squeeze().round(roundto))
+        buffer += [m + ' '*(17-len(m)) + sd + ' '*(17-len(sd)) + hpd]
+        buffer += ['']*2
+
+        # Print quantiles
+        buffer += ['Posterior quantiles:','']
+        quantile_str = ''
+        for i,q in enumerate([2.5, 25, 50, 75, 97.5]):
+            qstr = str(round(statdict['quantiles'][q][index], roundto))
+            quantile_str += qstr + ' '*(17-i-len(qstr))
+        buffer += [quantile_str]
+
+        buffer += [' |---------------|===============|===============|---------------|']
+        buffer += ['2.5             25              50              75             97.5']
+
+        buffer += ['']
+
+        # Print MC error information
+        buffer += ['A chain length of %i yielded MC error %f\n\n' % (statdict['n'], statdict['mc error'][index])]
+        buffer += ['']
+
+        return buffer
+
+
+    def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=4):
+        """
+        Generate a pretty-printed summary of the node.
+
+        :Parameters:
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
+          
+        roundto : int
+          The number of digits to round posterior statistics.
+        """
+        
+        # Calculate statistics for Node
+        statdict = self.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+        size = np.size(statdict['mean'])
+        
+        print_('\n%s:' % self.__name__)
+        print_(' ')
+        
+        if size==1:
+            lines = self._summarize(statdict, roundto=roundto)
+            print_('\t' + '\n\t'.join(lines))
+        else:
+            for i in range(size):
+                lines = self._summarize(statdict, i, roundto=roundto)
+                print_('\t' + '\n\t'.join(lines))
 
 ContainerRegistry = []
 

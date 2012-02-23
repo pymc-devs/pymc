@@ -340,6 +340,43 @@ class Sampler(Model):
 
         return stat_dict
 
+    def summary(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, roundto=4):
+        """
+        Generate a pretty-printed summary of the model's variables.
+
+        :Parameters:
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
+          
+        roundto : int
+          The number of digits to round posterior statistics.
+        """
+        
+        
+        # If no names provided, run them all
+        if variables is None:
+            variables = self._variables_to_tally
+        else:
+            variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally]
+
+        # Loop over nodes
+        for variable in variables:
+            variable.summary(alpha=alpha, start=start, batches=batches, chain=chain, roundto=roundto)
+
+
     # Property --- status : the sampler state.
     def status():
         doc = \
