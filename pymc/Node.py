@@ -279,10 +279,10 @@ class Variable(Node):
         buffer += [' |---------------|===============|===============|---------------|']
         buffer += ['2.5             25              50              75             97.5']
 
-        buffer += ['']
+        buffer += ['']*2
 
         # Print MC error information
-        buffer += ['A chain length of %i yielded MC error %f\n\n' % (statdict['n'], statdict['mc error'][index])]
+        buffer += ['A chain length of %i yielded MC error of %f\n\n' % (statdict['n'], statdict['mc error'][index])]
         buffer += ['']
 
         return buffer
