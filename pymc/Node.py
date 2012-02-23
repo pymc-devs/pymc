@@ -265,7 +265,7 @@ class Variable(Node):
         m = str(round(statdict['mean'][index], roundto))
         sd = str(round(statdict['standard deviation'][index], roundto))
         hpd = str(statdict[interval][index].squeeze().round(roundto))
-        buffer += [m + ' '*(17-len(m)) + sd + ' '*(17-len(sd)) + hpd]
+        buffer += [m + ' '*(17-len(m)) + sd + ' '*(len(buffer[-1])-len(hpd)-17-len(sd)) + hpd]
         buffer += ['']*2
 
         # Print quantiles
