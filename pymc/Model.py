@@ -340,7 +340,7 @@ class Sampler(Model):
 
         return stat_dict
 
-    def summary(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, roundto=4):
+    def summary(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
         """
         Generate a pretty-printed summary of the model's variables.
 

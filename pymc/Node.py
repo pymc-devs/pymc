@@ -242,58 +242,8 @@ class Variable(Node):
         """
         return self.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
 
-    def _summarize(self, statdict, index=None, roundto=4):
-        """Generate summary string for a particular element of a Node."""
 
-        buffer = []
-
-        if index is not None:
-            buffer += ['Element %i summary statistics' % index]
-        else:
-            buffer += ['Summary statistics']
-            
-        buffer += ['%s' % '='*len(buffer[-1])]
-        buffer += ['']*2
-
-        iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
-        interval = statdict.keys()[iindex]
-
-        # Print basic stats
-        buffer += ['Mean             SD               MC Error        %s' % interval]
-        buffer += ['-'*len(buffer[-1])]
-        
-        # Extract statistics and convert to string
-        m = str(round(statdict['mean'][index], roundto))
-        sd = str(round(statdict['standard deviation'][index], roundto))        
-        mce = str(round(statdict['mc error'][index], roundto))
-        hpd = str(statdict[interval][index].squeeze().round(roundto))
-
-        # Build up string buffer of values
-        valstr = m
-        valstr += ' '*(17-len(m)) + sd
-        valstr += ' '*(17-len(sd)) + mce
-        valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
-
-        buffer += [valstr]
-        buffer += ['']*2
-
-        # Print quantiles
-        buffer += ['Posterior quantiles:','']
-        quantile_str = ''
-        for i,q in enumerate([2.5, 25, 50, 75, 97.5]):
-            qstr = str(round(statdict['quantiles'][q][index], roundto))
-            quantile_str += qstr + ' '*(17-i-len(qstr))
-        buffer += [quantile_str]
-
-        buffer += [' |---------------|===============|===============|---------------|']
-        buffer += ['2.5             25              50              75             97.5']
-
-        buffer += ['']
-
-        return buffer
-
-
-    def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=4):
+    def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
         """
         Generate a pretty-printed summary of the node.
 
@@ -325,13 +275,60 @@ class Variable(Node):
         print_('\n%s:' % self.__name__)
         print_(' ')
         
-        if size==1:
-            lines = self._summarize(statdict, roundto=roundto)
-            print_('\t' + '\n\t'.join(lines))
-        else:
-            for i in range(size):
-                lines = self._summarize(statdict, i, roundto=roundto)
-                print_('\t' + '\n\t'.join(lines))
+        # Initialize buffer
+        buffer = []
+
+        # Title
+        # buffer += ['Summary statistics']
+        # buffer += ['%s' % '='*len(buffer[-1])]
+        # buffer += ['']*2
+
+        # Index to interval label
+        iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
+        interval = statdict.keys()[iindex]
+
+        # Print basic stats
+        buffer += ['Mean             SD               MC Error        %s' % interval]
+        buffer += ['-'*len(buffer[-1])]
+        
+        indices = range(size)
+        if len(indices)==1:
+            indices = [None]
+        
+        for index in indices:
+            # Extract statistics and convert to string
+            m = str(round(statdict['mean'][index], roundto))
+            sd = str(round(statdict['standard deviation'][index], roundto))        
+            mce = str(round(statdict['mc error'][index], roundto))
+            hpd = str(statdict[interval][index].squeeze().round(roundto))
+
+            # Build up string buffer of values
+            valstr = m
+            valstr += ' '*(17-len(m)) + sd
+            valstr += ' '*(17-len(sd)) + mce
+            valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
+
+            buffer += [valstr]
+        
+        buffer += ['']*2
+
+        # Print quantiles
+        buffer += ['Posterior quantiles:','']
+
+        buffer += ['2.5             25              50              75             97.5']
+        buffer += [' |---------------|===============|===============|---------------|']
+
+        for index in indices:
+            quantile_str = ''
+            for i,q in enumerate([2.5, 25, 50, 75, 97.5]):
+                qstr = str(round(statdict['quantiles'][q][index], roundto))
+                quantile_str += qstr + ' '*(17-i-len(qstr))
+            buffer += [quantile_str.strip()]
+
+        buffer += ['']
+
+        print_('\t' + '\n\t'.join(buffer))
+
 
 ContainerRegistry = []
 
