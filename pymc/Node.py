@@ -259,13 +259,22 @@ class Variable(Node):
         interval = statdict.keys()[iindex]
 
         # Print basic stats
-        buffer += ['Mean             SD               %s' % interval]
+        buffer += ['Mean             SD               MC Error        %s' % interval]
         buffer += ['-'*len(buffer[-1])]
         
+        # Extract statistics and convert to string
         m = str(round(statdict['mean'][index], roundto))
-        sd = str(round(statdict['standard deviation'][index], roundto))
+        sd = str(round(statdict['standard deviation'][index], roundto))        
+        mce = str(round(statdict['mc error'][index], roundto))
         hpd = str(statdict[interval][index].squeeze().round(roundto))
-        buffer += [m + ' '*(17-len(m)) + sd + ' '*(len(buffer[-1])-len(hpd)-17-len(sd)) + hpd]
+
+        # Build up string buffer of values
+        valstr = m
+        valstr += ' '*(17-len(m)) + sd
+        valstr += ' '*(17-len(sd)) + mce
+        valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
+
+        buffer += [valstr]
         buffer += ['']*2
 
         # Print quantiles
@@ -279,10 +288,6 @@ class Variable(Node):
         buffer += [' |---------------|===============|===============|---------------|']
         buffer += ['2.5             25              50              75             97.5']
 
-        buffer += ['']*2
-
-        # Print MC error information
-        buffer += ['A chain length of %i yielded MC error of %f\n\n' % (statdict['n'], statdict['mc error'][index])]
         buffer += ['']
 
         return buffer
