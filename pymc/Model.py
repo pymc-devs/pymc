@@ -422,7 +422,7 @@ class Sampler(Model):
         self._variables_to_tally = set()
         for object in self.stochastics | self.deterministics:
             
-            if object.trace:
+            if object.keep_trace:
                 self._variables_to_tally.add(object)
                 try:
                     if object.mask is None:

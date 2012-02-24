@@ -416,7 +416,7 @@ class Database(pickle.Database):
 
         # Store data objects
         for object in self.model.observed_stochastics:
-            if object.trace is True:
+            if object.keep_trace is True:
                 setattr(table.attrs, object.__name__, object.value)
 
 

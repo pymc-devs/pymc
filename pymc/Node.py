@@ -193,7 +193,7 @@ class Variable(Node):
     def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=-1):
 
         self.dtype=dtype
-        self.trace=trace
+        self.keep_trace=trace
         self._plot=plot
         self.children = set()
         self.extended_children = set()
