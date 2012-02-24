@@ -549,7 +549,7 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     #close()
 
 @plotwrapper
-def discrepancy_plot(data, name, report_p=True, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
         print_('Plotting', name+suffix)

@@ -417,9 +417,9 @@ def discrepancy(observed, simulated, expected):
     D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
     
     :Parameters:
-      observed : Iterable of observed values (length n)
-      simulated : Iterable of simulated values (length rxn)
-      expected : Iterable of expected values (length rxn)
+      observed : Iterable of observed values (size=(n,))
+      simulated : Iterable of simulated values (size=(r,n))
+      expected : Iterable of expected values (size=(r,) or (r,n))
     
     :Returns:
       D_obs : Discrepancy of observed values
@@ -434,7 +434,9 @@ def discrepancy(observed, simulated, expected):
         expected = expected.astype(float)
     except AttributeError:
         expected = expected.trace().astype(float)
-    
+    # Ensure expected values are rxn
+    expected = np.resize(expected, simulated.shape)
+
     D_obs = np.sum([(np.sqrt(observed)-np.sqrt(e))**2 for e in expected], 1)
     D_sim = np.sum([(np.sqrt(s)-np.sqrt(e))**2 for s,e in zip(simulated, expected)], 1)
     
