@@ -559,15 +559,17 @@ Freeman-Tukey statistic [Brooks2000]_:
 
 .. math::
 
-   	D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2
+   	D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2,
 
-Model fit is assessed by comparing the discrepancies from observed data to 
-those from simulated data. On average, we expect the difference between them to 
-be zero; hence, the Bayesian *p* value is simply the proportion of simulated 
-discrepancies that are larger than their corresponding observed discrepancies:
+where the :math:`x_j` are data and :math:`e_j` are the corresponding expected 
+values, based on the model. Model fit is assessed by comparing the 
+discrepancies from observed data to those from simulated data. On average, we 
+expect the difference between them to be zero; hence, the Bayesian *p* value is 
+simply the proportion of simulated discrepancies that are larger than their 
+corresponding observed discrepancies:
 
 .. math::
-   	p = Pr[ D(\text{sim}) > D(\text{obs}) ]
+   	p = Pr[ D(x_{\text{sim}}|\theta) > D(x_{\text{obs}}|\theta) ]
 
 If :math:`p` is very large (e.g. :math:`>0.975`) or very small (e.g. 
 :math:`<0.025`) this implies that the model is not consistent with the data, 
@@ -593,9 +595,12 @@ expected values::
 
    D = pymc.discrepancy(x, x_sim, x_exp)
 
-A call to this function returns two arrays of discrepancy values (simulated and 
-observed), which can be passed to the ``discrepancy_plot`` function in the 
-`Matplot` module to generate a scatter plot, and if desired, a *p* value::
+For a dataset of size :math:`n` and an MCMC chain of length :math:`r`, this 
+implies that ``x`` is size ``(n,)``, ``x_sim`` is size ``(r,n)`` and ``x_exp`` 
+is either size ``(r,)`` or ``(r,n)``. A call to this function returns two 
+arrays of discrepancy values (simulated and observed), which can be passed to 
+the ``discrepancy_plot`` function in the `Matplot` module to generate a scatter 
+plot, and if desired, a *p* value::
 
    pymc.Matplot.discrepancy_plot(D, name='D', report_p=True)
 

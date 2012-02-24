@@ -59,17 +59,26 @@
 <span id="chap-mcmc"></span><h1>12. Appendix: Markov Chain Monte Carlo<a class="headerlink" href="#appendix-markov-chain-monte-carlo" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="monte-carlo-methods-in-bayesian-analysis">
 <h2>12.1. Monte Carlo Methods in Bayesian Analysis<a class="headerlink" href="#monte-carlo-methods-in-bayesian-analysis" title="Permalink to this headline">¶</a></h2>
-<p>Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating (drawing samples) from posterior distributions. For example, consider the expected value of a random variable <span class="math">\(\mathbf{x}\)</span>:</p>
+<p>Bayesian analysis often requires integration over multiple dimensions that is
+intractable both via analytic methods or standard methods of numerical
+integration. However, it is often possible to compute these integrals by
+simulating (drawing samples) from posterior distributions. For example,
+consider the expected value of a random variable <span class="math">\(\mathbf{x}\)</span>:</p>
 <div class="math">
 \[E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
 {\bf x} = \{x_1,...,x_k\}\]</div>
-<p>where <span class="math">\(k\)</span> (the dimension of vector <span class="math">\(x\)</span>) is perhaps very large. If we can produce a reasonable number of random vectors <span class="math">\(\{{\bf x_i}\}\)</span>, we can use these values to approximate the unknown integral. This process is known as <em>Monte Carlo integration</em>. In general, MC integration allows integrals against probability density functions:</p>
+<p>where <span class="math">\(k\)</span> (the dimension of vector <span class="math">\(x\)</span>) is perhaps very large. If
+we can produce a reasonable number of random vectors <span class="math">\(\{{\bf x_i}\}\)</span>, we
+can use these values to approximate the unknown integral. This process is known
+as <em>Monte Carlo integration</em>. In general, MC integration allows integrals
+against probability density functions:</p>
 <div class="math">
 \[I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}\]</div>
 <p>to be estimated by finite sums:</p>
 <div class="math">
 \[\hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),\]</div>
-<p>where <span class="math">\(\mathbf{x}_i\)</span> is a sample from <span class="math">\(f\)</span>. This estimate is valid and useful because:</p>
+<p>where <span class="math">\(\mathbf{x}_i\)</span> is a sample from <span class="math">\(f\)</span>. This estimate is valid
+and useful because:</p>
 <ul class="simple">
 <li>By the strong law of large numbers:</li>
 </ul>
@@ -79,49 +88,90 @@
 <li>Simulation error can be measured and controlled:</li>
 </ul>
 <div class="math">
-\[   \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\end{equation}\]</div><p>Why is this relevant to Bayesian analysis? If we replace <span class="math">\(f(\mathbf{x})\)</span> with a posterior, <span class="math">\(f(\theta|d)\)</span> and make <span class="math">\(h(\theta)\)</span> an interesting function of the unknown parameter, the resulting expectation is that of the posterior of <span class="math">\(h(\theta)\)</span>:</p>
+\[   \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n
+   (h(\mathbf{x}_i)-\hat{I})^2\end{equation}\]</div><p>Why is this relevant to Bayesian analysis? If we replace <span class="math">\(f(\mathbf{x})\)</span>
+with a posterior, <span class="math">\(f(\theta|d)\)</span> and make <span class="math">\(h(\theta)\)</span> an interesting
+function of the unknown parameter, the resulting expectation is that of the
+posterior of <span class="math">\(h(\theta)\)</span>:</p>
 <div class="math">
 \[ \begin{equation}
  E[h(\theta)|d] = \int f(\theta|d) h(\theta) d\theta \approx \frac{1}{n}\sum_{i=1}^n h(\theta)
  \end{equation}\]</div><div class="section" id="rejection-sampling">
 <h3>12.1.1. Rejection Sampling<a class="headerlink" href="#rejection-sampling" title="Permalink to this headline">¶</a></h3>
-<p>Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the  ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.</p>
-<p>Posit a function, <span class="math">\(f(x)\)</span> which can be evaluated for any value on the support of <span class="math">\(x:S_x = [A,B]\)</span>, but may not be integrable or easily sampled from. If we can calculate the maximum  value of <span class="math">\(f(x)\)</span>, we can then define a rectangle that is guaranteed to contain all possible values <span class="math">\((x,f(x))\)</span>. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure <a class="reference internal" href="#bound"><em>Rejection sampling of a bounded form. Area is estimated by the ratio of
+<p>Though Monte Carlo integration allows us to estimate integrals that are
+unassailable by analysis and standard numerical methods, it relies on the
+ability to draw samples from the posterior distribution. For known parametric
+forms, this is not a problem; probability integral transforms or bivariate
+techniques (e.g Box-Muller method) may be used to obtain samples from uniform
+pseudo-random variates generated from a computer. Often, however, we cannot
+readily generate random values from non-standard posteriors. In such instances,
+we can use rejection sampling to generate samples.</p>
+<p>Posit a function, <span class="math">\(f(x)\)</span> which can be evaluated for any value on the
+support of <span class="math">\(x:S_x = [A,B]\)</span>, but may not be integrable or easily sampled
+from. If we can calculate the maximum value of <span class="math">\(f(x)\)</span>, we can then define
+a rectangle that is guaranteed to contain all possible values <span class="math">\((x,f(x))\)</span>.
+It is then trivial to generate points over the box and enumerate the values
+that fall under the curve (Figure <a class="reference internal" href="#bound"><em>Rejection sampling of a bounded form. Area is estimated by the ratio of
 accepted (open squares) to total points, multiplied by the rectangle
 area.</em></a>).</p>
 <div class="figure align-center" id="bound">
-<a class="reference internal image-reference" href="_images/reject1.png"><img alt="Rejection figure." src="_images/reject1.png" /></a>
+<a class="reference internal image-reference" href="_images/reject.png"><img alt="Rejection figure." src="_images/reject.png" /></a>
 <p class="caption">Rejection sampling of a bounded form. Area is estimated by the ratio of
 accepted (open squares) to total points, multiplied by the rectangle
 area.</p>
 </div>
 <div class="math">
 \[\frac{\mbox{Points under curve}}{\mbox{Points generated}} \times \mbox{box area} = \lim_{n \to \infty} \int_A^B f(x) dx\]</div>
-<p>This approach is useful, for example, in estimating the normalizing constant for posterior distributions.</p>
+<p>This approach is useful, for example, in estimating the normalizing constant
+for posterior distributions.</p>
 <div class="figure align-center" id="envelope">
-<a class="reference internal image-reference" href="_images/envelope1.png"><img alt="envelope figure" src="_images/envelope1.png" /></a>
+<a class="reference internal image-reference" href="_images/envelope.png"><img alt="envelope figure" src="_images/envelope.png" /></a>
 <p class="caption">Rejection sampling of an unbounded form using an enveloping distribution.</p>
 </div>
-<p>If <span class="math">\(f(x)\)</span> has unbounded support (i.e. infinite tails), such as a Gaussian distribution, a bounding box is no longer appropriate. We must specify a majorizing (or, enveloping) function, <span class="math">\(g(x)\)</span>, which implies:</p>
+<p>If <span class="math">\(f(x)\)</span> has unbounded support (i.e. infinite tails), such as a Gaussian
+distribution, a bounding box is no longer appropriate. We must specify a
+majorizing (or, enveloping) function, <span class="math">\(g(x)\)</span>, which implies:</p>
 <div class="math">
 \[g(x) \ge  f(x) \qquad\forall x \in (-\infty,\infty)\]</div>
-<p>Having done this, we can now sample <span class="math">\({x_i}\)</span> from <span class="math">\(g(x)\)</span> and accept or reject each of these values based upon <span class="math">\(f(x_i)\)</span>. Specifically, for each draw <span class="math">\(x_i\)</span>, we also draw a uniform random variate <span class="math">\(u_i\)</span> and accept <span class="math">\(x_i\)</span> if <span class="math">\(u_i &lt; f(x_i)/cg(x_i)\)</span>, where <span class="math">\(c\)</span> is a constant (Figure <a class="reference internal" href="#envelope"><em>Rejection sampling of an unbounded form using an enveloping distribution.</em></a>). This approach is made more efficient by choosing an enveloping distribution that is &#8220;close&#8221; to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.</p>
-<p>Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
+<p>Having done this, we can now sample <span class="math">\({x_i}\)</span> from <span class="math">\(g(x)\)</span> and accept
+or reject each of these values based upon <span class="math">\(f(x_i)\)</span>. Specifically, for
+each draw <span class="math">\(x_i\)</span>, we also draw a uniform random variate <span class="math">\(u_i\)</span> and
+accept <span class="math">\(x_i\)</span> if <span class="math">\(u_i &lt; f(x_i)/cg(x_i)\)</span>, where <span class="math">\(c\)</span> is a
+constant (Figure <a class="reference internal" href="#envelope"><em>Rejection sampling of an unbounded form using an enveloping distribution.</em></a>). This approach is made more efficient by
+choosing an enveloping distribution that is &#8220;close&#8221; to the target distribution,
+thus maximizing the number of accepted points. Further improvement is gained by
+using optimized algorithms such as importance sampling which, as the name
+implies, samples more frequently from important areas of the distribution.</p>
+<p>Rejection sampling is usually subject to declining performance as the dimension
+of the parameter space increases, so it is used less frequently than MCMC for
+evaluation of posterior distributions <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
 </div>
 </div>
 <div class="section" id="markov-chains">
 <h2>12.2. Markov Chains<a class="headerlink" href="#markov-chains" title="Permalink to this headline">¶</a></h2>
-<p>A Markov chain is a special type of <em>stochastic process</em>. The standard definition of a stochastic process is an ordered collection of random variables:</p>
+<p>A Markov chain is a special type of <em>stochastic process</em>. The standard
+definition of a stochastic process is an ordered collection of random variables:</p>
 <div class="math">
 \[\{X_t:t \in T\}\]</div>
-<p>where <span class="math">\(t\)</span> is frequently (but not necessarily) a time index. If we think of <span class="math">\(X_t\)</span> as a state <span class="math">\(X\)</span> at time <span class="math">\(t\)</span>, and invoke the following dependence condition on each state:</p>
+<p>where <span class="math">\(t\)</span> is frequently (but not necessarily) a time index. If we think
+of <span class="math">\(X_t\)</span> as a state <span class="math">\(X\)</span> at time <span class="math">\(t\)</span>, and invoke the following
+dependence condition on each state:</p>
 <div class="math">
 \[Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+1} | X_t=x_t)\]</div>
-<p>then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a <em>transition matrix</em> when dealing with discrete states, or more generally, a <em>transition kernel</em>.</p>
-<p>In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as &#8220;mild non-independence&#8221;. MCMC allows us to indirectly generate independent samples from a particular posterior distribution.</p>
+<p>then the stochastic process is known as a Markov chain. This conditioning
+specifies that the future depends on the current state, but not past states.
+Thus, the Markov chain wanders about the state space, remembering only where it
+has just been in the last time step. The collection of transition probabilities
+is sometimes called a <em>transition matrix</em> when dealing with discrete states, or
+more generally, a <em>transition kernel</em>.</p>
+<p>In the context of Markov chain Monte Carlo, it is useful to think of the
+Markovian property as &#8220;mild non-independence&#8221;. MCMC allows us to indirectly
+generate independent samples from a particular posterior distribution.</p>
 <div class="section" id="jargon-busting">
 <h3>12.2.1. Jargon-busting<a class="headerlink" href="#jargon-busting" title="Permalink to this headline">¶</a></h3>
-<p>Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.</p>
+<p>Before we move on, it is important to define some general properties of Markov
+chains. They are frequently encountered in the MCMC literature, and some will
+help us decide whether MCMC is producing a useful sample from the posterior.</p>
 <ul>
 <li><dl class="first docutils">
 <dt><em>Homogeneity</em>: A Markov chain is homogeneous at step <span class="math">\(t\)</span> if the</dt>

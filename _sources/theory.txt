@@ -7,13 +7,21 @@ Appendix: Markov Chain Monte Carlo
 Monte Carlo Methods in Bayesian Analysis
 ========================================
 
-Bayesian analysis often requires integration over multiple dimensions that is intractable both via analytic methods or standard methods of numerical integration. However, it is often possible to compute these integrals by simulating (drawing samples) from posterior distributions. For example, consider the expected value of a random variable :math:`\mathbf{x}`:
+Bayesian analysis often requires integration over multiple dimensions that is 
+intractable both via analytic methods or standard methods of numerical 
+integration. However, it is often possible to compute these integrals by 
+simulating (drawing samples) from posterior distributions. For example, 
+consider the expected value of a random variable :math:`\mathbf{x}`:
    
 .. math::
    E[{\bf x}] = \int {\bf x} f({\bf x}) d{\bf x}, \qquad
    {\bf x} = \{x_1,...,x_k\}
 
-where :math:`k` (the dimension of vector :math:`x`) is perhaps very large. If we can produce a reasonable number of random vectors :math:`\{{\bf x_i}\}`, we can use these values to approximate the unknown integral. This process is known as *Monte Carlo integration*. In general, MC integration allows integrals against probability density functions:
+where :math:`k` (the dimension of vector :math:`x`) is perhaps very large. If 
+we can produce a reasonable number of random vectors :math:`\{{\bf x_i}\}`, we 
+can use these values to approximate the unknown integral. This process is known 
+as *Monte Carlo integration*. In general, MC integration allows integrals 
+against probability density functions:
    
 .. math::
    I = \int h(\mathbf{x}) f(\mathbf{x}) \mathbf{dx}
@@ -23,7 +31,8 @@ to be estimated by finite sums:
 .. math::
    \hat{I} = \frac{1}{n}\sum_{i=1}^n h(\mathbf{x}_i),
 
-where :math:`\mathbf{x}_i` is a sample from :math:`f`. This estimate is valid and useful because:
+where :math:`\mathbf{x}_i` is a sample from :math:`f`. This estimate is valid 
+and useful because:
 
 * By the strong law of large numbers:
 
@@ -36,9 +45,13 @@ where :math:`\mathbf{x}_i` is a sample from :math:`f`. This estimate is valid an
 .. math::
   :nowrap:
 
-     \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n (h(\mathbf{x}_i)-\hat{I})^2\end{equation}
-     
-Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})` with a posterior, :math:`f(\theta|d)` and make :math:`h(\theta)` an interesting function of the unknown parameter, the resulting expectation is that of the posterior of :math:`h(\theta)`:
+     \begin{equation}Var(\hat{I}) = \frac{1}{n(n-1)}\sum_{i=1}^n 
+     (h(\mathbf{x}_i)-\hat{I})^2\end{equation}
+
+Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})` 
+with a posterior, :math:`f(\theta|d)` and make :math:`h(\theta)` an interesting 
+function of the unknown parameter, the resulting expectation is that of the 
+posterior of :math:`h(\theta)`:
    
 .. math::
   :nowrap:
@@ -51,9 +64,21 @@ Why is this relevant to Bayesian analysis? If we replace :math:`f(\mathbf{x})` w
 Rejection Sampling
 ------------------
 
-Though Monte Carlo integration allows us to estimate integrals that are unassailable by analysis and standard numerical methods, it relies on the  ability to draw samples from the posterior distribution. For known parametric forms, this is not a problem; probability integral transforms or bivariate techniques (e.g Box-Muller method) may be used to obtain samples from uniform pseudo-random variates generated from a computer. Often, however, we cannot readily generate random values from non-standard posteriors. In such instances, we can use rejection sampling to generate samples.
+Though Monte Carlo integration allows us to estimate integrals that are 
+unassailable by analysis and standard numerical methods, it relies on the 
+ability to draw samples from the posterior distribution. For known parametric 
+forms, this is not a problem; probability integral transforms or bivariate 
+techniques (e.g Box-Muller method) may be used to obtain samples from uniform 
+pseudo-random variates generated from a computer. Often, however, we cannot 
+readily generate random values from non-standard posteriors. In such instances, 
+we can use rejection sampling to generate samples.
 
-Posit a function, :math:`f(x)` which can be evaluated for any value on the support of :math:`x:S_x = [A,B]`, but may not be integrable or easily sampled from. If we can calculate the maximum  value of :math:`f(x)`, we can then define a rectangle that is guaranteed to contain all possible values :math:`(x,f(x))`. It is then trivial to generate points over the box and enumerate the values that fall under the curve (Figure :ref:`bound`).
+Posit a function, :math:`f(x)` which can be evaluated for any value on the 
+support of :math:`x:S_x = [A,B]`, but may not be integrable or easily sampled 
+from. If we can calculate the maximum value of :math:`f(x)`, we can then define 
+a rectangle that is guaranteed to contain all possible values :math:`(x,f(x))`. 
+It is then trivial to generate points over the box and enumerate the values 
+that fall under the curve (Figure :ref:`bound`).
 
 .. _bound:
 
@@ -69,7 +94,8 @@ Posit a function, :math:`f(x)` which can be evaluated for any value on the suppo
 .. math::
    \frac{\mbox{Points under curve}}{\mbox{Points generated}} \times \mbox{box area} = \lim_{n \to \infty} \int_A^B f(x) dx
 
-This approach is useful, for example, in estimating the normalizing constant for posterior distributions.
+This approach is useful, for example, in estimating the normalizing constant 
+for posterior distributions.
 
 .. _envelope:
 
@@ -80,41 +106,61 @@ This approach is useful, for example, in estimating the normalizing constant for
    
    Rejection sampling of an unbounded form using an enveloping distribution.
 
-If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian distribution, a bounding box is no longer appropriate. We must specify a majorizing (or, enveloping) function, :math:`g(x)`, which implies:
-
+If :math:`f(x)` has unbounded support (i.e. infinite tails), such as a Gaussian 
+distribution, a bounding box is no longer appropriate. We must specify a 
+majorizing (or, enveloping) function, :math:`g(x)`, which implies:
    
 .. math::
    g(x) \ge  f(x) \qquad\forall x \in (-\infty,\infty)
 
-Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept or reject each of these values based upon :math:`f(x_i)`. Specifically, for each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a constant (Figure :ref:`envelope`). This approach is made more efficient by choosing an enveloping distribution that is "close" to the target distribution, thus maximizing the number of accepted points. Further improvement is gained by using optimized algorithms such as importance sampling which, as the name implies, samples more frequently from important areas of the distribution.
+Having done this, we can now sample :math:`{x_i}` from :math:`g(x)` and accept 
+or reject each of these values based upon :math:`f(x_i)`. Specifically, for 
+each draw :math:`x_i`, we also draw a uniform random variate :math:`u_i` and 
+accept :math:`x_i` if :math:`u_i < f(x_i)/cg(x_i)`, where :math:`c` is a 
+constant (Figure :ref:`envelope`). This approach is made more efficient by 
+choosing an enveloping distribution that is "close" to the target distribution, 
+thus maximizing the number of accepted points. Further improvement is gained by 
+using optimized algorithms such as importance sampling which, as the name 
+implies, samples more frequently from important areas of the distribution.
 
-Rejection sampling is usually subject to declining performance as the dimension of the parameter space increases, so it is used less frequently than MCMC for evaluation of posterior distributions [Gamerman1997]_.
+Rejection sampling is usually subject to declining performance as the dimension 
+of the parameter space increases, so it is used less frequently than MCMC for 
+evaluation of posterior distributions [Gamerman1997]_.
 
 
 Markov Chains
 =============
 
-A Markov chain is a special type of *stochastic process*. The standard definition of a stochastic process is an ordered collection of random variables:
-
+A Markov chain is a special type of *stochastic process*. The standard 
+definition of a stochastic process is an ordered collection of random variables:
    
 .. math::
    \{X_t:t \in T\}
 
-where :math:`t` is frequently (but not necessarily) a time index. If we think of :math:`X_t` as a state :math:`X` at time :math:`t`, and invoke the following dependence condition on each state:
-
+where :math:`t` is frequently (but not necessarily) a time index. If we think 
+of :math:`X_t` as a state :math:`X` at time :math:`t`, and invoke the following 
+dependence condition on each state:
    
 .. math::
    Pr(X_{t+1}=x_{t+1} | X_t=x_t, X_{t-1}=x_{t-1},\ldots,X_0=x_0) = Pr(X_{t+1}=x_{t+1} | X_t=x_t)
 
-then the stochastic process is known as a Markov chain. This conditioning specifies that the future depends on the current state, but not past states. Thus, the Markov chain wanders about the state space, remembering only where it has just been in the last time step. The collection of transition probabilities is sometimes called a *transition matrix* when dealing with discrete states, or more generally, a *transition kernel*.
+then the stochastic process is known as a Markov chain. This conditioning 
+specifies that the future depends on the current state, but not past states. 
+Thus, the Markov chain wanders about the state space, remembering only where it 
+has just been in the last time step. The collection of transition probabilities 
+is sometimes called a *transition matrix* when dealing with discrete states, or 
+more generally, a *transition kernel*.
 
-In the context of Markov chain Monte Carlo, it is useful to think of the Markovian property as "mild non-independence". MCMC allows us to indirectly generate independent samples from a particular posterior distribution.
-
+In the context of Markov chain Monte Carlo, it is useful to think of the 
+Markovian property as "mild non-independence". MCMC allows us to indirectly 
+generate independent samples from a particular posterior distribution.
 
 Jargon-busting
 --------------
 
-Before we move on, it is important to define some general properties of Markov chains. They are frequently encountered in the MCMC literature, and some will help us decide whether MCMC is producing a useful sample from the posterior.
+Before we move on, it is important to define some general properties of Markov 
+chains. They are frequently encountered in the MCMC literature, and some will 
+help us decide whether MCMC is producing a useful sample from the posterior.
 
 * *Homogeneity*: A Markov chain is homogeneous at step :math:`t` if the
   	transition probabilities are independent of time :math:`t`.

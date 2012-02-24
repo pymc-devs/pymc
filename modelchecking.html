@@ -94,7 +94,7 @@ distribution. Poor mixing may stem from inappropriate proposals (if one is
 using the Metropolis-Hastings sampler) or from attempting to estimate models
 with highly correlated variables.</p>
 <div class="figure align-center" id="mix">
-<a class="reference internal image-reference" href="_images/poormixing1.png"><img alt="Poor mixing figure" src="_images/poormixing1.png" /></a>
+<a class="reference internal image-reference" href="_images/poormixing.png"><img alt="Poor mixing figure" src="_images/poormixing.png" /></a>
 <p class="caption">An example of a poorly-mixing sample in two dimensions. Notice that the
 chain is trapped in a region of low probability relative to the mean
 (dot) and variance (oval) of the true posterior quantity.</p>
@@ -129,7 +129,7 @@ constructed using MCMC, and should be observable using this technique. Again,
 however, this approach is only a heuristic method, and cannot always detect
 lack of convergence, even though chains may appear ergodic.</p>
 <div class="figure align-center" id="metas">
-<a class="reference internal image-reference" href="_images/metastable1.png"><img alt="_images/metastable1.png" src="_images/metastable1.png" /></a>
+<a class="reference internal image-reference" href="_images/metastable.png"><img alt="_images/metastable.png" src="_images/metastable.png" /></a>
 <p class="caption">An example of metastability in a two-dimensional parameter space. The
 chain appears to be stable in one region of the parameter space for an
 extended period, then unpredictably jumps to another region of the
@@ -182,7 +182,7 @@ Defaults to 0.5 (<em>i.e.</em> last 50% of chain).</li>
 the 2 standard deviation boundaries around zero. Hence, it is easy to see
 departures from the standard normal assumption.</p>
 <div class="figure align-center" id="geweke">
-<a class="reference internal image-reference" href="_images/geweke1.png"><img alt="Geweke figure." src="_images/geweke1.png" style="width: 560.0px;" /></a>
+<a class="reference internal image-reference" href="_images/geweke.png"><img alt="Geweke figure." src="_images/geweke.png" style="width: 560.0px;" /></a>
 <p class="caption">Sample plot of Geweke z-scores for a variable using <tt class="docutils literal"><span class="pre">geweke_plot</span></tt>.
 The occurrence of the scores well within 2 standard deviations of zero
 gives not indicate of lack of convergence (top), while deviations exceeding
@@ -350,7 +350,7 @@ for each stochastic node in the passed model:</p>
 <p>For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.</p>
 <p>By default, when calling the <tt class="docutils literal"><span class="pre">summary_plot</span></tt> function using nodes with multiple chains, the <span class="math">\(\hat{R}\)</span> values will be plotted alongside the posterior intervals.</p>
 <div class="figure align-center" id="summary-plot">
-<a class="reference internal image-reference" href="_images/summary1.png"><img alt="_images/summary1.png" src="_images/summary1.png" /></a>
+<a class="reference internal image-reference" href="_images/summary.png"><img alt="_images/summary.png" src="_images/summary.png" /></a>
 <p class="caption">Summary plot of parameters from <cite>gelman_bioassay</cite> model, showing credible
 intervals on the left and the Gelman-Rubin statistic on the right.</p>
 </div>
@@ -416,7 +416,7 @@ example, the parameter <cite>beta</cite> that was estimated using sampler <cite>
 </pre></div>
 </div>
 <div class="figure align-center" id="autocorr">
-<a class="reference internal image-reference" href="_images/autocorr1.png"><img alt="Autocorrelation figure" src="_images/autocorr1.png" style="width: 560.0px;" /></a>
+<a class="reference internal image-reference" href="_images/autocorr.png"><img alt="Autocorrelation figure" src="_images/autocorr.png" style="width: 560.0px;" /></a>
 <p class="caption">Sample autocorrelation plot for the switchpoint variable from the coal
 mining disasters example model.</p>
 </div>
@@ -478,7 +478,7 @@ the tails of the histogram of replicated data, while a good fit will tend to
 show the true data in high-probability regions of the posterior predictive
 distribution (Figure 7.6).</p>
 <div class="figure align-center" id="gof">
-<a class="reference internal image-reference" href="_images/gof1.png"><img alt="GOF figure" src="_images/gof1.png" style="width: 560.0px;" /></a>
+<a class="reference internal image-reference" href="_images/gof.png"><img alt="GOF figure" src="_images/gof.png" style="width: 560.0px;" /></a>
 <p class="caption">Data sampled from the posterior predictive distribution of a binomial random
 variate. The observed value (1) is shown by the dotted red line.</p>
 </div>
@@ -496,20 +496,22 @@ that quantifies the difference between data (observed or simulated) and the
 expected value, conditional on some model. One such discrepancy measure is the
 Freeman-Tukey statistic <a class="reference internal" href="references.html#brooks2000">[Brooks2000]</a>:</p>
 <div class="math">
-\[D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2\]</div>
-<p>Model fit is assessed by comparing the discrepancies from observed data to
-those from simulated data. On average, we expect the difference between them to
-be zero; hence, the Bayesian <em>p</em> value is simply the proportion of simulated
-discrepancies that are larger than their corresponding observed discrepancies:</p>
+\[D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2,\]</div>
+<p>where the <span class="math">\(x_j\)</span> are data and <span class="math">\(e_j\)</span> are the corresponding expected
+values, based on the model. Model fit is assessed by comparing the
+discrepancies from observed data to those from simulated data. On average, we
+expect the difference between them to be zero; hence, the Bayesian <em>p</em> value is
+simply the proportion of simulated discrepancies that are larger than their
+corresponding observed discrepancies:</p>
 <div class="math">
-\[\begin{split}p = Pr[ D(\text{sim}) &gt; D(\text{obs}) ]\end{split}\]</div>
+\[\begin{split}p = Pr[ D(x_{\text{sim}}|\theta) &gt; D(x_{\text{obs}}|\theta) ]\end{split}\]</div>
 <p>If <span class="math">\(p\)</span> is very large (e.g. <span class="math">\(&gt;0.975\)</span>) or very small (e.g.
 <span class="math">\(&lt;0.025\)</span>) this implies that the model is not consistent with the data,
 and thus is evidence of lack of fit. Graphically, data and simulated
 discrepancies plotted together should be clustered along a 45 degree line
 passing through the origin, as shown in Figure 7.7.</p>
 <div class="figure align-center" id="deviate">
-<a class="reference internal image-reference" href="_images/deviates1.png"><img alt="deviates figure" src="_images/deviates1.png" style="width: 640.0px;" /></a>
+<a class="reference internal image-reference" href="_images/deviates.png"><img alt="deviates figure" src="_images/deviates.png" style="width: 640.0px;" /></a>
 <p class="caption">Plot of deviates of observed and simulated data from expected values.
 The cluster of points symmetrically about the 45 degree line (and the
 reported p-value) suggests acceptable fit for the modeled parameter.</p>
@@ -520,9 +522,12 @@ expected values:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">D</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">discrepancy</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_sim</span><span class="p">,</span> <span class="n">x_exp</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>A call to this function returns two arrays of discrepancy values (simulated and
-observed), which can be passed to the <tt class="docutils literal"><span class="pre">discrepancy_plot</span></tt> function in the
-<cite>Matplot</cite> module to generate a scatter plot, and if desired, a <em>p</em> value:</p>
+<p>For a dataset of size <span class="math">\(n\)</span> and an MCMC chain of length <span class="math">\(r\)</span>, this
+implies that <tt class="docutils literal"><span class="pre">x</span></tt> is size <tt class="docutils literal"><span class="pre">(n,)</span></tt>, <tt class="docutils literal"><span class="pre">x_sim</span></tt> is size <tt class="docutils literal"><span class="pre">(r,n)</span></tt> and <tt class="docutils literal"><span class="pre">x_exp</span></tt>
+is either size <tt class="docutils literal"><span class="pre">(r,)</span></tt> or <tt class="docutils literal"><span class="pre">(r,n)</span></tt>. A call to this function returns two
+arrays of discrepancy values (simulated and observed), which can be passed to
+the <tt class="docutils literal"><span class="pre">discrepancy_plot</span></tt> function in the <cite>Matplot</cite> module to generate a scatter
+plot, and if desired, a <em>p</em> value:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">pymc</span><span class="o">.</span><span class="n">Matplot</span><span class="o">.</span><span class="n">discrepancy_plot</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;D&#39;</span><span class="p">,</span> <span class="n">report_p</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
