@@ -21,7 +21,7 @@ from numpy import arange, log, ravel, rank, swapaxes, concatenate, asarray, ndim
 from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
 from numpy import min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique, zeros
-from .utils import quantiles as calc_quantiles, hpd
+from .utils import quantiles as calc_quantiles, hpd as calc_hpd
 try:
     from scipy import special
 except ImportError:
@@ -459,7 +459,7 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
         # Plot vertical lines for median and 95% HPD interval
         quant = calc_quantiles(data)
         axvline(x=quant[50], linewidth=2, color='black')
-        for q in hpd(data, 0.05):
+        for q in calc_hpd(data, 0.05):
             axvline(x=q, linewidth=2, color='grey', linestyle='dotted')
 
         # Smaller tick labels
@@ -910,7 +910,7 @@ def var_str(name, shape):
     return names 
     
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, rhat=True, main=None, custom_labels=None, chain_spacing=0.05, vline_pos=0):
+def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, custom_labels=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
     
@@ -932,6 +932,14 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             
         alpha (optional): float
             Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
+            
+        quartiles (optional): bool
+            Flag for plotting the interquartile range, in addition to the 
+            (1-alpha)*100% intervals (defaults to True).
+            
+        hpd (optional): bool
+            Flag for plotting the highest probability density (HPD) interval 
+            instead of the central (1-alpha)*100% interval (defaults to True).
             
         rhat (optional): bool
             Flag for plotting Gelman-Rubin statistics. Requires 2 or more 
@@ -1034,8 +1042,14 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                 
         # Get quantiles
         data = [calc_quantiles(d, quantiles) for d in traces]
+        if hpd:
+            # Substitute HPD interval
+            for i,d in enumerate(traces):
+                hpd_interval = calc_hpd(d, alpha).T
+                data[i][quantiles[0]] = hpd_interval[0]
+                data[i][quantiles[-1]] = hpd_interval[1]
+
         data = [[d[q] for q in quantiles] for d in data]
-        
         # Ensure x-axis contains range of current interval
         if plotrange:
             plotrange = [min(plotrange[0], nmin(data)), max(plotrange[1], nmax(data))]
