@@ -141,24 +141,24 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
     Return the distribution of sample.
 
     :Stochastics:
-      - `a` : Array sample.
-      - `bins` : Number of bins, or an array of bin edges, in which case the
-                range is not used. If 'Scott' or 'Freeman' is passed, then
-                the named method is used to find the optimal number of bins.
-      - `range` : Lower and upper bin edges, default: [min, max].
-      - `normed` :Boolean, if False, return the number of samples in each bin,
-                if True, return the density.
-      - `weights` : Sample weights. The weights are normed only if normed is
-                True. Should weights.sum() not equal len(a), the total bin count
-                will not be equal to the number of samples.
-      - `axis` : Specifies the dimension along which the histogram is computed.
-                Defaults to None, which aggregates the entire sample array.
-      - `strategy` : Histogramming method (binsize, searchsorted or digitize).
+      `a` : Array sample.
+      `bins` : Number of bins, or an array of bin edges, in which case the
+              range is not used. If 'Scott' or 'Freeman' is passed, then
+              the named method is used to find the optimal number of bins.
+      `range` : Lower and upper bin edges, default: [min, max].
+      `normed` :Boolean, if False, return the number of samples in each bin,
+              if True, return the density.
+      `weights` : Sample weights. The weights are normed only if normed is
+              True. Should weights.sum() not equal len(a), the total bin count
+              will not be equal to the number of samples.
+      `axis` : Specifies the dimension along which the histogram is computed.
+              Defaults to None, which aggregates the entire sample array.
+      `strategy` : Histogramming method (binsize, searchsorted or digitize).
 
     :Return:
-      - `H` : The number of samples in each bin.
+      `H` : The number of samples in each bin.
         If normed is True, H is a frequency distribution.
-      - dict{ 'edges':      The bin edges, including the rightmost edge.
+      dict{ 'edges':      The bin edges, including the rightmost edge.
         'upper':      Upper outliers.
         'lower':      Lower outliers.
         'bincenters': Center of bins.
@@ -545,7 +545,15 @@ def rec_setattr(obj, attr, value):
     setattr(reduce(getattr, attrs[:-1], obj), attrs[-1], value)
 
 def hpd(x, alpha):
-    """Calculate HPD (minimum width BCI) of array for given alpha"""
+    """Calculate HPD (minimum width BCI) of array for given alpha
+    
+    :Arguments:
+      x : Numpy array
+          An array containing MCMC samples
+      alpha : float
+          Desired probability of type I error
+    
+    """
 
     # Make a copy of trace
     x = x.copy()
@@ -650,7 +658,15 @@ def calc_min_interval(x, alpha):
         return [None,None]
 
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
-    """Returns a dictionary of requested quantiles from array"""
+    """Returns a dictionary of requested quantiles from array
+    
+    :Arguments:
+      x : Numpy array
+          An array containing MCMC samples
+      qlist : tuple or list
+          A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
+    
+    """
 
     # Make a copy of trace
     x = x.copy()
@@ -673,7 +689,13 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print_("Too few elements for quantile calculation")
 
 def coda_output(pymc_object):
-    """Generate output files that are compatible with CODA"""
+    """Generate output files that are compatible with CODA
+    
+    :Arguments:
+      pymc_object : Model or Node
+          A PyMC object containing MCMC output.
+    
+    """
 
     print_()
     print_("Generating CODA output")
@@ -731,6 +753,7 @@ def _process_trace(trace_file, index_file, trace, name, index):
 
 def log_difference(lx, ly):
     """Returns log(exp(lx) - exp(ly)) without leaving log space."""
+    
     # Negative log of double-precision infinity
     li=-709.78271289338397
     diff = ly - lx

@@ -16,6 +16,12 @@ class CircularStochastic(Stochastic):
     will be mapped into the interval [lo,hi).
 
     args and kwargs will be passed to Stochastic.__init__.
+    
+    :Attributes:
+      lo : float
+        Lower bound
+      hi : float
+        Upper bound
 
     :SeeAlso: Stochastic
     """
