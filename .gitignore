@@ -8,3 +8,4 @@ develop
 testresults/
 *.tmproj
 *.py.bak
+.DS_Store
