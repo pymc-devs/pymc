@@ -2155,13 +2155,14 @@ def rtruncated_poisson(mu, k, size=None):
     Random truncated Poisson variates with minimum value k, generated
     using rejection sampling.
     """
+
     # Calculate m
     try:
         m = max(0, np.floor(k-mu))
     except (TypeError, ValueError):
         # More than one mu
-        return np.array([rtruncated_poisson(x, i, size)
-                         for x,i in zip(mu, np.resize(k, np.size(mu)))]).T
+        return np.array([rtruncated_poisson(x, i)
+                         for x,i in zip(mu, np.resize(k, np.size(mu)))]).squeeze()
     k-=1
 
     # Calculate constant for acceptance probability
