@@ -1254,10 +1254,10 @@ cf2py threadsafe
           kt = k(i)
         endif
         
-        if (mut .LT. kt) then
-          like = -infinity
-          RETURN
-        endif
+C         if (mut .LT. kt) then
+C           like = -infinity
+C           RETURN
+C         endif
         
         if (kt .LT. 0.0) then
           like = -infinity
@@ -1268,7 +1268,7 @@ cf2py threadsafe
           like = -infinity
           RETURN
         endif
-    
+        
         if (.NOT.((x(i) .EQ. kt) .AND. (mut .EQ. kt))) then
           sumx = sumx + x(i)*dlog(mut) - mut      
           sumfact = sumfact + factln(x(i))
