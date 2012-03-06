@@ -7,24 +7,30 @@ from theano.tensor import switch, log
 from numpy import pi, inf
 from special import gammaln, factln
 
-def Normal(value, mu = 0.0, tau = 1.0):
-    return switch(tau > 0, -0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/pi), -inf)
+def Normal(mu = 0.0, tau = 1.0):
+    def dist(value):
+        return switch(tau > 0, -0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/pi), -inf)
+    return dist
 
 def Beta(value, alpha, beta):
-    return switch((value >= 0) & (value <= 1) &
+    def dist(value):
+        return switch((value >= 0) & (value <= 1) &
                   (alpha > 0) & (beta > 0),
                   gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta) + (alpha- 1)*log(value) + (beta-1)*log(1-value),
                   -inf)
+    return dist
 def Binomial(value, n, p):
-    return switch ((value >= 0) & (n >= value) & (p >= 0) & (p <= 1),
+    def dist(value):
+        return switch ((value >= 0) & (n >= value) & (p >= 0) & (p <= 1),
                    switch(value != 0, value*log(p), 0) + (n-value)*log(1-p) + factln(n)-factln(value)-factln(n-value),
                    -inf)
-    
+    return dist
 def BetaBin(value, alpha, beta, n):
-    return switch ((value >= 0) & (alpha > 0) & (beta > 0) & (n >= value), 
+    def dist(value):
+        return switch ((value >= 0) & (alpha > 0) & (beta > 0) & (n >= value), 
                    gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta)+ gammaln(n+1)- gammaln(value+1)- gammaln(n-value +1) + gammaln(alpha+value)+ gammaln(n+beta-value)- gammaln(beta+alpha+n),
                    -inf)
-
+    return dist
 def Bernoulli(value, p):
     return switch((p >= 0) & (p <= 1), 
                   switch(value, log(p), log(1-p)),

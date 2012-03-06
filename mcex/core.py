@@ -18,6 +18,12 @@ def FreeVariable( name, shape, dtype):
     var.dsize = int(np.prod(shape))
     return var
 
+def CondInd(variable, distribution): 
+    return distribution(variable)
+
+def CondInd_Indirect(variable, proximate_variable, distribution):
+    return distribution(proximate_variable) * grad(proximate_variable, variable)
+
 class ModelView(object):
     """
     encapsulates the probability model
