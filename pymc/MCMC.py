@@ -199,7 +199,7 @@ class MCMC(Sampler):
           - burn_till_tuned: boolean
             If True the Sampler would burn samples until all step methods are tuned.
             A tuned step methods is one that was not tuned for the last `stop_tuning_after` tuning intervals.
-            The burning phase will have a minimum of 'burn' iterations but could be longer if
+            The burn-in phase will have a minimum of 'burn' iterations but could be longer if
             tuning is needed. After the phase is done the sampler will run for another 
             (iter - burn) iterations, and will tally the samples according to the 'thin' argument.
             This means that the total number of iteration is update throughout the sampling
@@ -208,7 +208,7 @@ class MCMC(Sampler):
             will be tuned when sample are being tallied.
           - stop_tuning_adfter: int
             the number of untuned successive tuning interval needed to be reach in order for
-            the burning phase to be done (If burn_till_tuned is True).
+            the burn-in phase to be done (If burn_till_tuned is True).
         """
         
         self.assign_step_methods(verbose=verbose)
