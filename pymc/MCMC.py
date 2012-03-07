@@ -172,8 +172,8 @@ class MCMC(Sampler):
         self._sm_assigned = True
     
     def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True,
-               save_interval=None, verbose=0, progress_bar=True, burn_till_tuned=False,
-               stop_tuning_after=5):
+               save_interval=None, burn_till_tuned=False, stop_tuning_after=5,
+               verbose=0, progress_bar=True):
         """
         sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose, progress_bar)
         
@@ -197,22 +197,30 @@ class MCMC(Sampler):
           - progress_bar : boolean
             Display progress bar while sampling.
           - burn_till_tuned: boolean
-            If True the Sampler would burn samples until all step methods will
-            be tuned. A tuned step methods is one that was not tuned for the last
-            `stop_tuning_after` tuning intervals.
-            After the burn phase was done the sampler would run for another (iter - burn) iteration,
-            and would tally according to the 'thin' argument.
+            If True the Sampler would burn samples until all step methods are tuned.
+            A tuned step methods is one that was not tuned for the last `stop_tuning_after` tuning intervals.
+            The burning phase will have a minimum of 'burn' iterations but could be longer if
+            tuning is needed. After the phase is done the sampler will run for another 
+            (iter - burn) iterations, and will tally the samples according to the 'thin' argument.
+            This means that the total number of iteration is update throughout the sampling
+            procedure.
+            If burn_till_tuned is True it also overrides the tune_thorughout argument, so no step method
+            will be tuned when sample are being tallied.
+          - stop_tuning_adfter: int
+            the number of untuned successive tuning interval needed to be reach in order for
+            the burning phase to be done (If burn_till_tuned is True).
         """
         
         self.assign_step_methods(verbose=verbose)
-
-        if burn_till_tuned and tune_throughout:
-            raise ValueError('Cannot sample when burn_till_tuned and tune_throughout are both True')
+        
         if burn > iter:
             raise ValueError('Burn interval cannot be larger than specified number of iterations.')
 
         self._n_tally = int(iter) - int(burn)
         if burn_till_tuned:
+            tune_throughout = False
+            if verbose > 0:
+                print "burn_til_tuned is True. tune_throughout is set to False"
             burn = int(max(burn, stop_tuning_after * tune_interval))
             iter = self._n_tally + burn
 
