@@ -180,7 +180,7 @@ def new_dist_class(*new_class_args):
                     else:
                         arg_dict_out[k] = args[i]
                 except:
-                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(all_args_needed))
+                    raise ValueError('Too many positional arguments provided. Arguments for class ' + self.__class__.__name__ + ' are: ' + str(args_needed))
 
 
             # Sort keyword arguments
