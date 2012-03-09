@@ -24,6 +24,7 @@ from time import sleep
 import pdb
 from . import utils
 import warnings, traceback
+import itertools
 
 from .six import print_, reraise
 
@@ -122,12 +123,12 @@ class Model(ObjectContainer):
                         value = s.random(**s.parents.value)
                 except:
                     pass
-    
+
     def get_node(self, node_name):
         """Retrieve node with passed name"""
         for node in self.nodes:
             if node.__name__ == node_name:
-                return node 
+                return node
 
 
 
@@ -204,7 +205,7 @@ class Sampler(Model):
         self._iter = None
 
         self._state = ['status', '_current_iter', '_iter']
-        
+
         if hasattr(db, '_traces'):
             # Put traces on objects
             for v in self._variables_to_tally:
@@ -298,16 +299,16 @@ class Sampler(Model):
         """
         pass
 
-    def stats(self, variables=None, alpha=0.05, start=0, batches=100, chain=None):
+    def stats(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Statistical output for variables.
-        
+
         :Parameters:
         variables : iterable
-          List or array of variables for which statistics are to be 
+          List or array of variables for which statistics are to be
           generated. If it is not specified, all the tallied variables
           are summarized.
-          
+
         alpha : float
           The alpha level for generating posterior intervals. Defaults to
           0.05.
@@ -315,16 +316,16 @@ class Sampler(Model):
         start : int
           The starting index from which to summarize (each) chain. Defaults
           to zero.
-          
+
         batches : int
           Batch size for calculating standard deviation for non-independent
           samples. Defaults to 100.
-          
+
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
         """
-        
+
         # If no names provided, run them all
         if variables is None:
             variables = self._variables_to_tally
@@ -336,11 +337,104 @@ class Sampler(Model):
         # Loop over nodes
         for variable in variables:
             # Plot object
-            stat_dict[variable.__name__] = self.trace(variable.__name__).stats(alpha=alpha, start=start, batches=batches, chain=chain)
+            stat_dict[variable.__name__] = self.trace(variable.__name__).stats(alpha=alpha, start=start,
+                batches=batches, chain=chain, quantiles=quantiles)
 
         return stat_dict
 
-    def summary(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
+    def write_csv(self, filename, variables=None, alpha=0.05, start=0, batches=100,
+        chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
+        """
+        Save summary statistics to a csv table.
+
+        :Parameters:
+
+        filename : string
+          Filename to save output.
+
+        variables : iterable
+          List or array of variables for which statistics are to be
+          generated. If it is not specified, all the tallied variables
+          are summarized.
+
+        alpha : float
+          The alpha level for generating posterior intervals. Defaults to
+          0.05.
+
+        start : int
+          The starting index from which to summarize (each) chain. Defaults
+          to zero.
+
+        batches : int
+          Batch size for calculating standard deviation for non-independent
+          samples. Defaults to 100.
+
+        chain : int
+          The index for which chain to summarize. Defaults to None (all
+          chains).
+        """
+
+        # Append 'csv' suffix if there is no suffix on the filename
+        if filename.find('.') == -1:
+            filename += '.csv'
+
+        outfile = open(filename, 'w')
+
+        # Write header to file
+        header = 'Parameter, Mean, SD, MC Error, Lower 95% HPD, Upper 95% HPD'
+        header += ', '.join(['q%s' % i for i in quantiles])
+        outfile.write(header + '\n')
+
+        stats = self.stats(alpha=alpha, start=start, batches=batches, chain=chain, quantiles=quantiles)
+
+        buffer = str()
+        for param in stats:
+
+            values = stats[param]
+
+            try:
+                # Multivariate node
+                shape = values['mean'].shape
+                indices = list(itertools.product(*[range(i) for i in shape]))
+
+                for i in indices:
+                    buffer += self._csv_str(param, values, quantiles, i)
+
+            except AttributeError:
+                # Scalar node
+                buffer += self._csv_str(param, values, quantiles)
+
+        outfile.write(buffer)
+
+        outfile.close()
+
+    def _csv_str(self, param, stats, quantiles, index=None):
+        """Support function for write_csv"""
+
+        buffer = param
+        if not index:
+            buffer += ', '
+        else:
+            buffer += '_'.join([str(i) for i in index]) + ', '
+
+        for stat in ('mean','standard deviation','mc error'):
+            buffer += str(stats[stat][index]) + ', '
+
+        # Index to interval label
+        iindex = [key.split()[-1] for key in stats.keys()].index('interval')
+        interval = stats.keys()[iindex]
+        buffer +=  ', '.join(stats[interval][index].astype(str))
+
+        # Process quantiles
+        qvalues = stats['quantiles']
+        for q in quantiles:
+            buffer += str(qvalues[q][index]) + ', '
+
+        return buffer[:-2] + '\n'
+
+
+    def summary(self, variables=None, alpha=0.05, start=0, batches=100,
+        chain=None, roundto=3, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Generate a pretty-printed summary of the model's variables.
 
@@ -360,12 +454,15 @@ class Sampler(Model):
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
-          
+
         roundto : int
           The number of digits to round posterior statistics.
+
+        quantiles : tuple or list
+          The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
         """
-        
-        
+
+
         # If no names provided, run them all
         if variables is None:
             variables = self._variables_to_tally
@@ -374,7 +471,8 @@ class Sampler(Model):
 
         # Loop over nodes
         for variable in variables:
-            variable.summary(alpha=alpha, start=start, batches=batches, chain=chain, roundto=roundto)
+            variable.summary(alpha=alpha, start=start, batches=batches, chain=chain,
+                roundto=roundto, quantiles=quantiles)
 
 
     # Property --- status : the sampler state.
@@ -421,7 +519,7 @@ class Sampler(Model):
         no_trace = getattr(database, 'no_trace')
         self._variables_to_tally = set()
         for object in self.stochastics | self.deterministics:
-            
+
             if object.keep_trace:
                 self._variables_to_tally.add(object)
                 try:
@@ -459,7 +557,7 @@ class Sampler(Model):
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
-        else:   # What is this for? DH. 
+        else:   # What is this for? DH.
             self.db = db.Database(**self._db_args)
 
     def pause(self):

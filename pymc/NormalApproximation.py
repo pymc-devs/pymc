@@ -1,22 +1,13 @@
-# TODO: Test case for EM algorithm.
-# TODO: Derivatives from the EM algorithm can't actually be used to compute the Hessian for the normal approx.
-
-# Post-2.0-release:
-# TODO: Think about what to do about int-valued stochastics.
-# TODO: Allow constraints if fmin_l_bfgs_b is used.
-
-
 __docformat__='reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 __all__ = ['NormApproxMu', 'NormApproxC', 'MAP', 'NormApprox']
 
-from .PyMCObjects import Stochastic, Potential
 from .Node import ZeroProbability
 from .Model import Model, Sampler
-from numpy import zeros, inner, asmatrix, ndarray, reshape, shape, arange, matrix, where, diag, asarray, isnan, isinf, ravel, log, Inf
+from numpy import zeros, inner, asmatrix, ndarray
+from numpy import reshape, shape, arange, ravel, log, Inf
 from numpy.random import normal
-from numpy.linalg import solve
 from .utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
@@ -30,6 +21,7 @@ try:
     scipy_imported = True
 except ImportError:
     scipy_imported = False
+
 
 class NormApproxMu(object):
     """

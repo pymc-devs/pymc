@@ -219,7 +219,7 @@ class Variable(Node):
 
     plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
 
-    def stats(self, alpha=0.05, start=0, batches=100, chain=None):
+    def stats(self, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Generate posterior statistics for node.
 
@@ -239,8 +239,12 @@ class Variable(Node):
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
+
+        quantiles : tuple or list
+          The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
         """
-        return self.trace.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+        return self.trace.stats(alpha=alpha, start=start, batches=batches, 
+            chain=chain, quantiles=quantiles)
 
 
     def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
@@ -263,18 +267,18 @@ class Variable(Node):
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
-          
+
         roundto : int
           The number of digits to round posterior statistics.
         """
-        
+
         # Calculate statistics for Node
         statdict = self.stats(alpha=alpha, start=start, batches=batches, chain=chain)
         size = np.size(statdict['mean'])
-        
+
         print_('\n%s:' % self.__name__)
         print_(' ')
-        
+
         # Initialize buffer
         buffer = []
 
@@ -290,15 +294,15 @@ class Variable(Node):
         # Print basic stats
         buffer += ['Mean             SD               MC Error        %s' % interval]
         buffer += ['-'*len(buffer[-1])]
-        
+
         indices = range(size)
         if len(indices)==1:
             indices = [None]
-        
+
         for index in indices:
             # Extract statistics and convert to string
             m = str(round(statdict['mean'][index], roundto))
-            sd = str(round(statdict['standard deviation'][index], roundto))        
+            sd = str(round(statdict['standard deviation'][index], roundto))
             mce = str(round(statdict['mc error'][index], roundto))
             hpd = str(statdict[interval][index].squeeze().round(roundto))
 
@@ -309,7 +313,7 @@ class Variable(Node):
             valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
 
             buffer += [valstr]
-        
+
         buffer += ['']*2
 
         # Print quantiles
@@ -320,7 +324,7 @@ class Variable(Node):
 
         for index in indices:
             quantile_str = ''
-            for i,q in enumerate([2.5, 25, 50, 75, 97.5]):
+            for i,q in enumerate((2.5, 25, 50, 75, 97.5)):
                 qstr = str(round(statdict['quantiles'][q][index], roundto))
                 quantile_str += qstr + ' '*(17-i-len(qstr))
             buffer += [quantile_str.strip()]

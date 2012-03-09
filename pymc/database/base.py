@@ -53,6 +53,7 @@ import copy
 __all__=['Trace', 'Database']
 
 from pymc import six
+from pymc import utils
 from pymc.six import print_
 
 class Trace(object):
@@ -137,15 +138,15 @@ class Trace(object):
           The chain index. If None, returns the combined length of all chains.
         """
         pass
-        
-    def stats(self, alpha=0.05, start=0, batches=100, chain=None):
+
+    def stats(self, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Generate posterior statistics for node.
-        
+
         :Parameters:
         name : string
           The name of the tallyable object.
-          
+
         alpha : float
           The alpha level for generating posterior intervals. Defaults to
           0.05.
@@ -153,20 +154,22 @@ class Trace(object):
         start : int
           The starting index from which to summarize (each) chain. Defaults
           to zero.
-          
+
         batches : int
           Batch size for calculating standard deviation for non-independent
           samples. Defaults to 100.
-          
+
         chain : int
           The index for which chain to summarize. Defaults to None (all
           chains).
+
+        quantiles : tuple or list
+          The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
         """
-        from pymc.utils import hpd, quantiles
 
         try:
             trace = np.squeeze(np.array(self.db.trace(self.name)(chain=chain), float))[start:]
-            
+
             n = len(trace)
             if not n:
                 print_('Cannot generate statistics for zero-length trace in', self.__name__)
@@ -177,9 +180,9 @@ class Trace(object):
                 'n': n,
                 'standard deviation': trace.std(0),
                 'mean': trace.mean(0),
-                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(trace, alpha),
+                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): utils.hpd(trace, alpha),
                 'mc error': batchsd(trace, batches),
-                'quantiles': quantiles(trace)
+                'quantiles': utils.quantiles(trace, qlist=quantiles)
             }
         except:
             print_('Could not generate output statistics for', self.name)
@@ -350,7 +353,7 @@ Error:
         trace = copy.copy(self._traces[name])
         trace._chain = chain
         return trace
-        
+
 
 def load(dbname):
     """Return a Database instance from the traces stored on disk.
@@ -368,7 +371,7 @@ def load(dbname):
     """
     pass
 
-    
+
 def batchsd(trace, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent

@@ -14,7 +14,7 @@ from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import cholesky, eigh
 from .Node import logp_of_set, logp_gradient_of_set
 import types
-from .datatypes import * 
+from .datatypes import *
 
 from . import six
 from .six import print_
@@ -405,7 +405,7 @@ def normcdf(x, log=False):
         # return np.where(y>0, np.log(y), -np.inf)
         return np.array([-np.inf if not yi else np.log(yi) for yi in y])
     return y
-    
+
 def lognormcdf(x, mu, tau):
     """Log-normal cumulative density function"""
     x = np.atleast_1d(x)
@@ -546,13 +546,13 @@ def rec_setattr(obj, attr, value):
 
 def hpd(x, alpha):
     """Calculate HPD (minimum width BCI) of array for given alpha
-    
+
     :Arguments:
       x : Numpy array
           An array containing MCMC samples
       alpha : float
           Desired probability of type I error
-    
+
     """
 
     # Make a copy of trace
@@ -659,13 +659,13 @@ def calc_min_interval(x, alpha):
 
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array
-    
+
     :Arguments:
       x : Numpy array
           An array containing MCMC samples
       qlist : tuple or list
           A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
-    
+
     """
 
     # Make a copy of trace
@@ -690,11 +690,11 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
 
 def coda_output(pymc_object):
     """Generate output files that are compatible with CODA
-    
+
     :Arguments:
       pymc_object : Model or Node
           A PyMC object containing MCMC output.
-    
+
     """
 
     print_()
@@ -753,7 +753,7 @@ def _process_trace(trace_file, index_file, trace, name, index):
 
 def log_difference(lx, ly):
     """Returns log(exp(lx) - exp(ly)) without leaving log space."""
-    
+
     # Negative log of double-precision infinity
     li=-709.78271289338397
     diff = ly - lx
@@ -861,66 +861,66 @@ def find_generations(container, with_data = False):
 def append(nodelist, node, label=None, sep='_'):
     """
     Append function to automate the naming of list elements in Containers.
-    
+
     :Arguments:
         - `nodelist` : List containing nodes for Container.
         - `node` : Node to be added to list.
-        - `label` : Label to be appended to list (If not passed, 
+        - `label` : Label to be appended to list (If not passed,
         defaults to element number).
         - `sep` : Separator character for label (defaults to underscore).
-        
+
     :Return:
         - `nodelist` : Passed list with node added.
-    
+
     """
-    
+
     nname = node.__name__
-    
+
     # Determine label
     label = label or len(nodelist)
-    
+
     # Look for separator at the end of name
     ind = nname.rfind(sep)
-    
-    # If there is no separator, we will remove last character and 
+
+    # If there is no separator, we will remove last character and
     # replace with label.
     node.__name__ = nname[:ind] + sep + str(label)
-    
+
     nodelist.append(node)
-    
+
     return nodelist
 
 
-    
+
 #deterministic related utilities
 
 def find_element(names, modules, error_on_fail):
     element = None
     found = False
-    
+
     if type(names) is str:
         names = [names]
-        
+
     if type(modules) is dict or type(modules) is types.ModuleType:
         modules = [modules]
-         
+
     for module in modules:
-        
+
         if type(module) is types.ModuleType:
             module = copy(module.__dict__)
         elif type(module) is dict:
             module = copy(module)
         else:
             raise AttributeError
-        
+
         for name in names:
             try:
                 function = module[name]
                 found = True
             except KeyError:
                 pass
-            
+
     if not found and error_on_fail:
         raise NameError("no function or variable " + str(names) + " in " + str(modules))
-        
+
     return function
