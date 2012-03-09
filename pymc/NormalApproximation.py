@@ -308,9 +308,10 @@ class MAP(Model):
         except:
             raise RuntimeError('Posterior probability optimization converged to value with zero probability.')
 
-        self.AIC = 2. * (self.len - self.logp_at_max) # 2k - 2 ln(L)
+        lnL = sum([x.logp for x in self.observed_stochastics]) # log-likelihood of observed stochastics
+        self.AIC = 2. * (self.len - lnL) # 2k - 2 ln(L)
         try:
-            self.BIC = self.len * log(self.data_len) - 2. * self.logp_at_max # k ln(n) - 2 ln(L)
+            self.BIC = self.len * log(self.data_len) - 2. * lnL # k ln(n) - 2 ln(L)
         except FloatingPointError:
             self.BIC = -Inf
 
