@@ -125,7 +125,7 @@ class FileTransferSpeed(ProgressBarWidget):
                 break
             spd /= 1000
         return self.fmt % (spd, u + self.unit + '/s')
-        
+
 class Iterations(ProgressBarWidget):
     "Widget for showing the tuning state of the algorithm."
     def update(self, pbar):

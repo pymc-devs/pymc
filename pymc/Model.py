@@ -415,7 +415,7 @@ class Sampler(Model):
         if not index:
             buffer += ', '
         else:
-            buffer += '_'.join([str(i) for i in index]) + ', '
+            buffer += '_' + '_'.join([str(i) for i in index]) + ', '
 
         for stat in ('mean','standard deviation','mc error'):
             buffer += str(stats[stat][index]) + ', '

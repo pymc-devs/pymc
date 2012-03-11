@@ -1100,6 +1100,15 @@ class test_inverse_wishart(TestCase):
             calculated = inverse_wishart_prec_like(IW_test,i,self.C_test.I)
             assert_array_almost_equal(calculated, right_answer, decimal=1)
 
+    # def test_wishart_equivalence(self):
+
+    #     IW_test = rinverse_wishart(100,self.C_test)
+
+    #     iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
+    #     wlike = wishart_like(np.linalg.inv(IW_test), 100, np.linalg.inv(self.C_test))
+
+    #     assert_almost_equal(iwlike, wlike, decimal=6)
+
     """
     def test_expval(self):
 

@@ -3,9 +3,10 @@
 build/*
 dist/*
 pymc.egg-info/
+UNKNOWN.egg-info/
 docs/_build
 develop
-testresults/
+testresults
 *.tmproj
 *.py.bak
 .DS_Store
