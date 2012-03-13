@@ -25,15 +25,17 @@ PyMC requires some prerequisite packages to be present on the system.
 Fortunately, there are currently only a few dependencies, and all are freely 
 available online.
 
-* `Python`_ version 2.5 or 2.6.
+* `Python`_ version 2.6 or later.
 
-* `NumPy`_ (1.4 or newer): The fundamental scientific programming package, it 
+* `NumPy`_ (1.6 or newer): The fundamental scientific programming package, it 
   provides a multidimensional array type and many useful functions for 
   numerical analysis.
 
-* `Matplotlib (optional)`_ : 2D plotting library which produces publication 
+* `Matplotlib (1.0 or newer)`_ : 2D plotting library which produces publication 
   quality figures in a variety of image formats and interactive environments
 
+* `SciPy (optional)`_ : Library of algorithms for mathematics, science and 
+  engineering.
 
 * `pyTables (optional)`_ : Package for managing hierarchical datasets and
   designed to efficiently and easily cope with extremely large amounts of data.
@@ -43,9 +45,6 @@ available online.
   PyMC to create both directed and non-directed graphical representations of 
   models. Requires the `Graphviz`_ library.
 
-* `SciPy (optional)`_ : Library of algorithms for mathematics, science and 
-  engineering.
-
 * `IPython (optional)`_ : An enhanced interactive Python shell and an 
   architecture for interactive parallel computing.
 
@@ -54,8 +53,8 @@ available online.
 
 There are prebuilt distributions that include all required dependencies. For 
 Mac OS X users, we recommend the `MacPython`_ distribution or the `Enthought 
-Python Distribution`_ on OS X 10.5 (Leopard) and Python 2.6.1 that ships with 
-OS X 10.6 (Snow Leopard). Windows users should download and install the 
+Python Distribution`_ on OS X 10.5 (Leopard) and Python 2.7 that ships with 
+OS X 10.7 (Lion). Windows users should download and install the 
 `Enthought Python Distribution`_. The Enthought Python Distribution comes 
 bundled with these prerequisites. Note that depending on the currency of these 
 distributions, some packages may need to be updated manually.

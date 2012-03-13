@@ -2638,7 +2638,8 @@ def wishart_like(X, n, Tau):
     `wishart_cov_like`.
 
     .. math::
-        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
+        \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
     where :math:`k` is the rank of X.
 

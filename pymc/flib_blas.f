@@ -427,7 +427,7 @@ c Get the trace and log-sqrt-determinants
       endif
 
       like = -1.0D0*(n + k + 1) * dx
-      like = like + n * db
+      like = like + 0.5D0 * n * db
       like = like - 0.5D0 * tbx
       like = like - (n*k/2.0d0)*dlog(2.0d0)
 
