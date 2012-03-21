@@ -30,8 +30,8 @@ except ImportError:
 from . import six
 from .six import print_
 
-__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope', 
-'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace', 
+__all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope',
+'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace',
 'geweke_plot', 'gof_plot', 'pair_posterior', 'summary_plot']
 
 def get_index_list(shape, j):
@@ -313,7 +313,7 @@ def plotwrapper(f):
             return
         except AttributeError:
             pass
-            
+
         try:
             # Then try Trace type
             data = pymc_obj()[:]
@@ -352,7 +352,8 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), 
+    new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
 
@@ -428,7 +429,8 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
 
 @plotwrapper
-def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, 
+    columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -482,7 +484,8 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 
 
 @plotwrapper
-def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, 
+    num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Internal plotting specification for handling nested arrays
 
     # Stand-alone plot or subplot?
@@ -517,7 +520,8 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
         #close()
 
 @plotwrapper
-def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, 
+    verbose=1):
 
     # Generate Geweke (1992) diagnostic plots
 
@@ -549,7 +553,8 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     #close()
 
 @plotwrapper
-def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./', 
+    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
     if verbose>0:
         print_('Plotting', name+suffix)
@@ -589,7 +594,8 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
-def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', 
+    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
 
     try:
@@ -604,7 +610,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
             n = name or 'MCMC'
             gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
-        
+
     if verbose>0:
         print_('Plotting', (name or 'MCMC') + suffix)
 
@@ -640,7 +646,8 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
     #close()
 
 @plotwrapper
-def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
+def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='./', 
+    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
     """
     Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
 
@@ -650,7 +657,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
         name: string
             The name of the object.
-            
+
         maxlags (optional): int
             The largest discrete value for the autocorrelation to be calculated (defaults to 100).
 
@@ -662,13 +669,13 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
-            
+
         fontmap (optional): dict
             Font mapping for plot labels; most users should not specify this.
-            
+
         verbose (optional): int
             Level of output verbosity.
-            
+
     """
     # Internal plotting specification for handling nested arrays
 
@@ -716,7 +723,8 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
 
 # TODO: make sure pair_posterior works.
-def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='./', new=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='./', new=True, 
+    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
     """
     pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
@@ -907,13 +915,15 @@ def var_str(name, shape):
     #     name = '\n'.join(name.split('_'))
     #     name += '\n'
     names[0] = '%s %s' % (name, names[0])
-    return names 
-    
+    return names
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, custom_labels=None, chain_spacing=0.05, vline_pos=0):
+
+def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', 
+    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, custom_labels=None, 
+    chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
-    
+
     :Arguments:
         pymc_obj: PyMC object, trace or array
             A trace from an MCMC sample or a PyMC object with one or more traces.
@@ -929,38 +939,38 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
 
         path (optional): string
             Specifies location for saving plots (defaults to local directory).
-            
+
         alpha (optional): float
             Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
-            
+
         quartiles (optional): bool
-            Flag for plotting the interquartile range, in addition to the 
+            Flag for plotting the interquartile range, in addition to the
             (1-alpha)*100% intervals (defaults to True).
-            
+
         hpd (optional): bool
-            Flag for plotting the highest probability density (HPD) interval 
+            Flag for plotting the highest probability density (HPD) interval
             instead of the central (1-alpha)*100% interval (defaults to True).
-            
+
         rhat (optional): bool
-            Flag for plotting Gelman-Rubin statistics. Requires 2 or more 
+            Flag for plotting Gelman-Rubin statistics. Requires 2 or more
             chains (defaults to True).
-            
+
         main (optional): string
-            Title for main plot. Passing False results in titles being 
+            Title for main plot. Passing False results in titles being
             suppressed; passing False (default) results in default titles.
-            
+
         chain_spacing (optional): float
             Plot spacing between chains (defaults to 0.05).
-            
+
         vline_pos (optional): numeric
             Location of vertical reference line (defaults to 0).
-    
+
     """
-    
+
     if not gridspec:
         print_('\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.')
         return
-    
+
     # Quantiles to be calculated
     quantiles = [100*alpha/2, 50, 100*(1-alpha/2)]
     if quartiles:
@@ -968,50 +978,50 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
 
     # Range for x-axis
     plotrange = None
-    
+
     # Number of chains
     chains = None
-    
+
     # Gridspec
     gs = None
-    
+
     # Subplots
     interval_plot = None
     rhat_plot = None
-    
+
     try:
         # First try Model type
         vars = pymc_obj._variables_to_tally
-        
+
     except AttributeError:
-        
+
         try:
-            
+
             # Try a database object
             vars = pymc_obj._traces
-        
+
         except AttributeError:
-            
+
             # Assume an iterable
             vars = pymc_obj
 
-    
+
     # Empty list for y-axis labels
     labels = []
     # Counter for current variable
     var = 1
-    
+
     # Make sure there is something to print
     if all([v._plot==False for v in vars]):
         print_('No variables to plot')
         return
-    
+
     for variable in vars:
 
         # If plot flag is off, do not print
         if variable._plot==False:
             continue
-            
+
         # Extract name
         varname = variable.__name__
 
@@ -1025,21 +1035,21 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                i+=1
            except (KeyError, IndexError):
                break
-               
+
         chains = len(traces)
-        
+
         if gs is None:
             # Initialize plot
             if rhat and chains>1:
                 gs = gridspec.GridSpec(1, 2, width_ratios=[3,1])
 
             else:
-                
+
                 gs = gridspec.GridSpec(1, 1)
-                
+
             # Subplot for confidence intervals
             interval_plot = subplot(gs[0])
-                
+
         # Get quantiles
         data = [calc_quantiles(d, quantiles) for d in traces]
         if hpd:
@@ -1055,7 +1065,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             plotrange = [min(plotrange[0], nmin(data)), max(plotrange[1], nmax(data))]
         else:
             plotrange = [nmin(data), nmax(data)]
-        
+
         try:
             # First try missing-value stochastic
             value = variable.get_stoch_value()
@@ -1065,7 +1075,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
 
         # Number of elements in current variable
         k = size(value)
-        
+
         # Append variable name(s) to list
         if k>1:
             names = var_str(varname, shape(value))
@@ -1073,27 +1083,27 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         else:
             labels.append(varname)
             #labels.append('\n'.join(varname.split('_')))
-            
+
         # Add spacing for each chain, if more than one
         e = [0] + [(chain_spacing * ((i+2)/2))*(-1)**i for i in range(chains-1)]
-        
+
         # Loop over chains
         for j,quants in enumerate(data):
-            
+
             # Deal with multivariate nodes
             if k>1:
 
                 for i,q in enumerate(transpose(quants)):
-                    
+
                     # Y coordinate with jitter
                     y = -(var+i) + e[j]
-                    
+
                     if quartiles:
                         # Plot median
                         pyplot(q[2], y, 'bo', markersize=4)
                         # Plot quartile interval
                         errorbar(x=(q[1],q[3]), y=(y,y), linewidth=2, color="blue")
-                        
+
                     else:
                         # Plot median
                         pyplot(q[1], y, 'bo', markersize=4)
@@ -1102,10 +1112,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                     errorbar(x=(q[0],q[-1]), y=(y,y), linewidth=1, color="blue")
 
             else:
-                
+
                 # Y coordinate with jitter
                 y = -var + e[j]
-                
+
                 if quartiles:
                     # Plot median
                     pyplot(quants[2], y, 'bo', markersize=4)
@@ -1114,67 +1124,67 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                 else:
                     # Plot median
                     pyplot(quants[1], y, 'bo', markersize=4)
-                
+
                 # Plot outer interval
                 errorbar(x=(quants[0],quants[-1]), y=(y,y), linewidth=1, color="blue")
-            
+
         # Increment index
         var += k
-        
+
     if custom_labels is not None:
         labels = custom_labels
-        
+
     # Update margins
     left_margin = max([len(x) for x in labels])*0.015
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
-        
+
     # Define range of y-axis
     ylim(-var+0.5, -0.5)
-    
+
     datarange = plotrange[1] - plotrange[0]
     xlim(plotrange[0] - 0.05*datarange, plotrange[1] + 0.05*datarange)
-    
+
     # Add variable labels
-    yticks([-(l+1) for l in range(len(labels))], labels)        
-            
+    yticks([-(l+1) for l in range(len(labels))], labels)
+
     # Add title
     if main is not False:
         plot_title = main or str(int((1-alpha)*100)) + "% Credible Intervals"
         title(plot_title)
-    
+
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
         ticks.tick1On = False
         ticks.tick2On = False
-    
+
     for loc, spine in six.iteritems(interval_plot.spines):
         if loc in ['bottom','top']:
             pass
             #spine.set_position(('outward',10)) # outward by 10 points
         elif loc in ['left','right']:
             spine.set_color('none') # don't draw spine
-      
+
     # Reference line
-    axvline(vline_pos, color='k', linestyle='--')  
-        
+    axvline(vline_pos, color='k', linestyle='--')
+
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
 
         from .diagnostics import gelman_rubin
-        
+
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
-        
+
         if main is not False:
             title("R-hat")
-        
+
         # Set x range
         xlim(0.9,2.1)
-        
+
         # X axis labels
         xticks((1.0,1.5,2.0), ("1", "1.5", "2+"))
         yticks([-(l+1) for l in range(len(labels))], "")
-        
+
         # Calculate diagnostic
         try:
             R = gelman_rubin(pymc_obj)
@@ -1182,43 +1192,43 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             R = {}
             for variable in vars:
                 R[variable.__name__] = gelman_rubin(variable)
-        
+
         i = 1
         for variable in vars:
-            
+
             if variable._plot==False:
                 continue
-            
+
             # Extract name
             varname = variable.__name__
-            
+
             try:
                 value = variable.get_stoch_value()
             except AttributeError:
                 value = variable.value
-                
+
             k = size(value)
-            
+
             if k>1:
                 pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo', markersize=4)
             else:
                 pyplot(min(R[varname], 2), -i, 'bo', markersize=4)
-    
+
             i += k
-            
+
         # Define range of y-axis
         ylim(-i+0.5, -0.5)
-        
+
         # Remove ticklines on y-axes
         for ticks in rhat_plot.yaxis.get_major_ticks():
             ticks.tick1On = False
             ticks.tick2On = False
-        
+
         for loc, spine in six.iteritems(rhat_plot.spines):
             if loc in ['bottom','top']:
                 pass
                 #spine.set_position(('outward',10)) # outward by 10 points
             elif loc in ['left','right']:
                 spine.set_color('none') # don't draw spine
-        
-    savefig("%s%s%s.%s" % (path, name, suffix, format))                
+
+    savefig("%s%s%s.%s" % (path, name, suffix, format))

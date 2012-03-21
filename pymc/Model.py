@@ -381,7 +381,7 @@ class Sampler(Model):
         outfile = open(filename, 'w')
 
         # Write header to file
-        header = 'Parameter, Mean, SD, MC Error, Lower 95% HPD, Upper 95% HPD'
+        header = 'Parameter, Mean, SD, MC Error, Lower 95% HPD, Upper 95% HPD, '
         header += ', '.join(['q%s' % i for i in quantiles])
         outfile.write(header + '\n')
 
@@ -428,13 +428,13 @@ class Sampler(Model):
         # Process quantiles
         qvalues = stats['quantiles']
         for q in quantiles:
-            buffer += str(qvalues[q][index]) + ', '
+            buffer += ', ' + str(qvalues[q][index])
 
-        return buffer[:-2] + '\n'
+        return buffer + '\n'
 
 
     def summary(self, variables=None, alpha=0.05, start=0, batches=100,
-        chain=None, roundto=3, quantiles=(2.5, 25, 50, 75, 97.5)):
+        chain=None, roundto=3):
         """
         Generate a pretty-printed summary of the model's variables.
 
@@ -472,7 +472,7 @@ class Sampler(Model):
         # Loop over nodes
         for variable in variables:
             variable.summary(alpha=alpha, start=start, batches=batches, chain=chain,
-                roundto=roundto, quantiles=quantiles)
+                roundto=roundto)
 
 
     # Property --- status : the sampler state.
